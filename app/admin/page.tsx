@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import Navbar from '../components/Navbar';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -32,9 +33,13 @@ export default function AdminDashboard() {
   if (!userRole) return <p className="p-6">Loading...</p>;
 
   return (
-    <main className="p-6 text-black">
-      <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
-      <p>This is where you’ll manage products, companies, and orders.</p>
+    <main className="text-black">
+      <Navbar />
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
+        <p>This is where you’ll manage users, products, and orders.</p>
+      </div>
     </main>
   );
 }
+
