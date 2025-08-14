@@ -1,15 +1,15 @@
 'use client';
-
+import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const router = useRouter();
 
-  const handleLogout = async () => {
-    // We'll implement this in Step 11
-    alert('Logout not implemented yet');
-  };
+const handleLogout = async () => {
+  await supabase.auth.signOut();
+  router.push('/');
+};
 
   return (
     <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
