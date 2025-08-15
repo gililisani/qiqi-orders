@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
+    // ... keep existing fields ...
+    "baseUrl": ".", 
     "paths": {
       "@/*": ["./*"]
     }
