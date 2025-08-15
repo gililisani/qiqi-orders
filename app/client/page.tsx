@@ -1,23 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
+import { useRouter } from 'next/navigation';
 import Navbar from '../components/Navbar';
 
 export default function ClientDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkUserRole = async () => {
+    const checkRole = async () => {
       const {
         data: { user },
         error: userError,
       } = await supabase.auth.getUser();
 
-      if (!user || userError) {
+      if (userError || !user) {
+        console.error('No user:', userError);
         router.push('/');
         return;
       }
@@ -29,12 +30,13 @@ export default function ClientDashboard() {
         .single();
 
       if (error || !data) {
+        console.error('Error fetching user role:', error);
         router.push('/');
         return;
       }
 
       if (data.role === 'client') {
-        setAuthorized(true);
+        setUserRole('client');
       } else {
         router.push('/admin');
       }
@@ -42,11 +44,10 @@ export default function ClientDashboard() {
       setLoading(false);
     };
 
-    checkUserRole();
+    checkRole();
   }, [router]);
 
   if (loading) return <p className="p-6">Loading...</p>;
-  if (!authorized) return null;
 
   return (
     <main className="text-black">
