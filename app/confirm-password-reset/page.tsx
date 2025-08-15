@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '../../lib/supabaseClient'
 
 export default function ConfirmPasswordResetPage() {
   const [email, setEmail] = useState('')
@@ -19,32 +18,28 @@ export default function ConfirmPasswordResetPage() {
     setSuccess('')
     setLoading(true)
 
-    // ✅ Step 1: Verify OTP with token and email
-    const { error: verifyError } = await supabase.auth.verifyOtp({
-      type: 'recovery',
-      token,
-      email,
-    })
+    try {
+      const response = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, token, newPassword }),
+      })
 
-    if (verifyError) {
-      setError(verifyError.message)
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'Something went wrong.')
+      } else {
+        setSuccess('Password reset successful! Redirecting to login...')
+        setTimeout(() => router.push('/'), 2500)
+      }
+    } catch (err: any) {
+      setError('Failed to connect to server.')
+    } finally {
       setLoading(false)
-      return
     }
-
-    // ✅ Step 2: Update password
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPassword,
-    })
-
-    if (updateError) {
-      setError(updateError.message)
-    } else {
-      setSuccess('Password reset successful! Redirecting to login...')
-      setTimeout(() => router.push('/'), 2500)
-    }
-
-    setLoading(false)
   }
 
   return (
