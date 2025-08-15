@@ -3,7 +3,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { Session } from '@supabase/supabase-js'
 import { ReactNode, useState } from 'react'
-import { SessionContextProvider } from '@supabase/auth-helpers-react'  // <-- WE WILL REMOVE THIS
 
 interface SupabaseProviderProps {
   children: ReactNode
