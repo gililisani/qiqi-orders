@@ -1,24 +1,21 @@
 // app/layout.tsx
-
 import './globals.css'
-import { SupabaseProvider } from '../lib/supabase-provider'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { ReactNode } from 'react'
+import { createClient } from '@/lib/supabase-server'
 import { cookies } from 'next/headers'
-import type { Metadata } from 'next'
+import { Session, SupabaseClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'Qiqi Orders',
   description: 'Submit and manage your Qiqi distributor orders',
 }
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const supabase = createServerComponentClient({ cookies })
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const cookieStore = cookies()
+  const supabase = createClient()
   const {
-    data: { session },
+    data: { session }
   } = await supabase.auth.getSession()
 
   return (
@@ -31,3 +28,5 @@ export default async function RootLayout({
     </html>
   )
 }
+
+// Create a new file for the provider in the next step
