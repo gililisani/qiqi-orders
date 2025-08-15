@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabaseClient'
 
 export default function ConfirmPasswordResetPage() {
+  const [email, setEmail] = useState('')
   const [token, setToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [error, setError] = useState('')
@@ -18,10 +19,11 @@ export default function ConfirmPasswordResetPage() {
     setSuccess('')
     setLoading(true)
 
-    // Step 1: Verify the token
+    // ✅ Step 1: Verify OTP with token and email
     const { error: verifyError } = await supabase.auth.verifyOtp({
       type: 'recovery',
-      token: token,
+      token,
+      email,
     })
 
     if (verifyError) {
@@ -30,7 +32,7 @@ export default function ConfirmPasswordResetPage() {
       return
     }
 
-    // Step 2: Update the password
+    // ✅ Step 2: Update password
     const { error: updateError } = await supabase.auth.updateUser({
       password: newPassword,
     })
@@ -49,6 +51,13 @@ export default function ConfirmPasswordResetPage() {
     <div style={{ padding: 32 }}>
       <h2>Confirm Password Reset</h2>
       <form onSubmit={handleSubmit}>
+        <input
+          type="email"
+          placeholder="Enter your email"
+          value={email}
+          required
+          onChange={(e) => setEmail(e.target.value)}
+        />
         <input
           type="text"
           placeholder="Enter 6-digit code"
