@@ -14,7 +14,7 @@
     "react-dom": "18.3.1",
     "@supabase/supabase-js": "2.45.4",
     "@supabase/auth-helpers-nextjs": "0.7.4",
-    "@supabase/auth-helpers-react": "0.5.7",
+    "@supabase/auth-helpers-react": "0.5.7"
   },
   "devDependencies": {
     "typescript": "5.4.5",
