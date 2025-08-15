@@ -7,7 +7,7 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const hash = window.location.hash.substring(1) // removes the "#"
+      const hash = window.location.hash.substring(1) // remove "#"
       const params = new URLSearchParams(hash)
       const accessToken = params.get('access_token')
       setToken(accessToken)
@@ -15,7 +15,7 @@ export default function ResetPasswordPage() {
   }, [])
 
   return (
-    <div>
+    <div style={{ padding: '2rem' }}>
       <h1>Password Reset</h1>
       {token ? (
         <p>Your token is: <code>{token}</code></p>
