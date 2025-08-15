@@ -1,32 +1,33 @@
 // app/layout.tsx
-import './globals.css'
-import { ReactNode } from 'react'
-import SupabaseProvider from './components/SupabaseProvider'
-import { createClient } from '@/lib/supabaseClient' // or supabase-server if you're SSR-ing
-import { Metadata } from 'next'
+import './globals.css';
+import type { ReactNode } from 'react';
+import { createServerSupabase } from '@/lib/supabaseServer';
+import { SessionContextProvider } from '@supabase/auth-helpers-react';
+import { createBrowserClient } from '@supabase/ssr';
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'Qiqi Orders',
-  description: 'Distributors order page',
-}
+  description: 'Submit and manage your Qiqi distributor orders',
+};
 
-export default async function RootLayout({
-  children,
-}: {
-  children: ReactNode
-}) {
-  const supabase = createClient()
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const supabaseServer = await createServerSupabase();
   const {
     data: { session },
-  } = await supabase.auth.getSession()
+  } = await supabaseServer.auth.getSession();
+
+  const browserSupabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   return (
     <html lang="en">
       <body>
-        <SupabaseProvider session={session}>
+        <SessionContextProvider supabaseClient={browserSupabase} initialSession={session}>
           {children}
-        </SupabaseProvider>
+        </SessionContextProvider>
       </body>
     </html>
-  )
+  );
 }
