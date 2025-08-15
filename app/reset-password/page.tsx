@@ -9,34 +9,29 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Extract access_token from the URL hash
   useEffect(() => {
     const hash = window.location.hash
-    const params = new URLSearchParams(hash.substring(1))
+    const params = new URLSearchParams(hash.substring(1)) // remove #
     const token = params.get('access_token')
-    if (token) {
-      setAccessToken(token)
-      // Manually set the session using the token
-      supabase.auth.setSession({
-        access_token: token,
-        refresh_token: params.get('refresh_token') || ''
-      })
-    }
+    setAccessToken(token)
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!newPassword) {
-      setMessage('Please enter a new password.')
+    if (!accessToken) {
+      setMessage('Missing access token.')
       return
     }
 
     setLoading(true)
     setMessage('')
 
-    const { data, error } = await supabase.auth.updateUser({
-      password: newPassword
-    })
+    const { data, error } = await supabase.auth.updateUser(
+      { password: newPassword },
+      { accessToken }
+    )
 
     setLoading(false)
 
@@ -55,16 +50,16 @@ export default function ResetPasswordPage() {
       ) : (
         <form onSubmit={handleSubmit}>
           <label>
-            New Password:{' '}
+            New Password:
             <input
               type="password"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={e => setNewPassword(e.target.value)}
+              style={{ marginLeft: '0.5rem' }}
               required
             />
           </label>
-          <br />
-          <br />
+          <br /><br />
           <button type="submit" disabled={loading}>
             {loading ? 'Resetting...' : 'Reset Password'}
           </button>
