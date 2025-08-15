@@ -5,31 +5,44 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabaseClient'
 
 export default function ConfirmPasswordResetPage() {
-  const router = useRouter()
   const [token, setToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setSuccess('')
+    setLoading(true)
 
-    const { error } = await supabase.auth.verifyOtp({
+    // Step 1: Verify the token
+    const { error: verifyError } = await supabase.auth.verifyOtp({
       type: 'recovery',
-      token,
+      token: token,
+    })
+
+    if (verifyError) {
+      setError(verifyError.message)
+      setLoading(false)
+      return
+    }
+
+    // Step 2: Update the password
+    const { error: updateError } = await supabase.auth.updateUser({
       password: newPassword,
     })
 
-    if (error) {
-      setError(error.message)
+    if (updateError) {
+      setError(updateError.message)
     } else {
-      setSuccess('Password reset successful! You can now log in.')
-      setTimeout(() => {
-        router.push('/')
-      }, 2000)
+      setSuccess('Password reset successful! Redirecting to login...')
+      setTimeout(() => router.push('/'), 2500)
     }
+
+    setLoading(false)
   }
 
   return (
@@ -50,8 +63,11 @@ export default function ConfirmPasswordResetPage() {
           required
           onChange={(e) => setNewPassword(e.target.value)}
         />
-        <button type="submit">Reset Password</button>
+        <button type="submit" disabled={loading}>
+          {loading ? 'Resetting...' : 'Reset Password'}
+        </button>
       </form>
+
       {success && <p style={{ color: 'green' }}>{success}</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
     </div>
