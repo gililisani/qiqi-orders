@@ -1,7 +1,7 @@
 // app/layout.tsx
 import './globals.css';
 import type { ReactNode } from 'react';
-import { createServerSupabase } from '../../../lib/supabaseServer';
+import { createServerSupabase } from '@/lib/supabaseServer';
 import { SessionContextProvider } from '@supabase/auth-helpers-react';
 import { createBrowserClient } from '@supabase/ssr';
 
