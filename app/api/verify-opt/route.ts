@@ -23,9 +23,17 @@ export async function POST(req: Request) {
   }
 
   // Step 2: Update password
-  const { error: updateError } = await supabase.auth.admin.updateUserByEmail(email, {
-    password: newPassword,
-  })
+const { data: users, error: userFetchError } = await supabase.auth.admin.listUsers()
+if (userFetchError) return NextResponse.json({ error: userFetchError.message }, { status: 500 })
+
+const user = users.find((u) => u.email === email)
+if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+
+const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
+  password: newPassword
+})
+if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+
 
   if (updateError) {
     console.error('Password update error:', updateError.message)
