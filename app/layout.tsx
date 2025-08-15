@@ -20,9 +20,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body className={inter.className}>
-        <SupabaseProvider session={session}>
+
           {children}
-        </SupabaseProvider>
+
       </body>
     </html>
   );
