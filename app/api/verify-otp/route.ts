@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   const userList = await supabase.auth.admin.listUsers()
 
   // Add a type here so TypeScript knows what userList.users contains
-  const users = userList.users as { id: string; email?: string }[]
+  const users = userList.data.users as { id: string; email?: string }[]
 
   const user = users.find((u) => u.email === email)
 
