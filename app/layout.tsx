@@ -1,21 +1,28 @@
 import './globals.css';
-import type { ReactNode } from 'react';
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import { createServerSupabase } from '@/lib/supabaseServer';
+import SupabaseProvider from './supabase-provider';
 
-export const metadata = {
+const inter = Inter({ subsets: ['latin'] });
+
+export const metadata: Metadata = {
   title: 'Qiqi Orders',
-  description: 'Submit and manage your Qiqi distributor orders',
+  description: 'Distributor Order Portal',
 };
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  const supabaseServer = await createServerSupabase();
-  const { data: { session } } = await supabaseServer.auth.getSession();
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createServerSupabase(); // ✅ FIX: await this
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   return (
     <html lang="en">
-      <body>
-        {/* Session object is available to your UI. You can pass it via props or a custom context provider */}
-        {children}
+      <body className={inter.className}>
+        <SupabaseProvider session={session}>
+          {children}
+        </SupabaseProvider>
       </body>
     </html>
   );
