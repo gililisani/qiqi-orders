@@ -1,11 +1,12 @@
 // app/layout.tsx
 
 import './globals.css'
+import { SupabaseProvider } from '../lib/supabase-provider'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { SupabaseProvider } from './supabase-provider'
+import type { Metadata } from 'next'
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Qiqi Orders',
   description: 'Submit and manage your Qiqi distributor orders',
 }
@@ -23,7 +24,9 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
-        <SupabaseProvider session={session}>{children}</SupabaseProvider>
+        <SupabaseProvider session={session}>
+          {children}
+        </SupabaseProvider>
       </body>
     </html>
   )
