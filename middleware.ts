@@ -1,14 +1,13 @@
-// middleware.ts
-import { createMiddlewareClient } from '@supabase/ssr'
-import { NextRequest, NextResponse } from 'next/server'
+// lib/supabase-server.ts
+'use server'
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
-  await supabase.auth.getSession()
-  return res
-}
+import { cookies } from 'next/headers'
+import { createServerClient } from '@supabase/ssr'
 
-export const config = {
-  matcher: ['/admin/:path*', '/client/:path*'],
+export function createClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies }
+  )
 }
