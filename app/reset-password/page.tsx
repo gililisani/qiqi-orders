@@ -3,41 +3,40 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 
-export default function PasswordResetPage() {
+export default function ResetPasswordPage() {
   const [email, setEmail] = useState('')
-  const [submitted, setSubmitted] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleReset = async (e: React.FormEvent) => {
     e.preventDefault()
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://qiqi-orders.vercel.app/confirm-password-reset'
-    })
-    if (!error) {
-      setSubmitted(true)
+    setMessage('')
+    setError('')
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email)
+
+    if (error) {
+      setError(error.message)
     } else {
-      alert('Error sending reset instructions: ' + error.message)
+      setMessage('We sent you instructions to change your password in an email.')
     }
   }
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>Password Reset</h1>
-      {submitted ? (
-        <p>We sent you instructions to change your password in an email.</p>
-      ) : (
-        <form onSubmit={handleSubmit}>
-          <label>Email address:</label><br />
-          <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            style={{ padding: '8px', margin: '8px 0', width: '100%' }}
-          />
-          <br />
-          <button type="submit" style={{ padding: '8px 16px' }}>Send Reset Email</button>
-        </form>
-      )}
+    <div style={{ padding: 32 }}>
+      <h2>Reset Your Password</h2>
+      <form onSubmit={handleReset}>
+        <input
+          type="email"
+          placeholder="Enter your email"
+          value={email}
+          required
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <button type="submit">Send Reset Code</button>
+      </form>
+      {message && <p style={{ color: 'green' }}>{message}</p>}
+      {error && <p style={{ color: 'red' }}>{error}</p>}
     </div>
   )
 }
