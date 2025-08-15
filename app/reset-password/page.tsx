@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -7,7 +9,7 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const hash = window.location.hash.substring(1) // remove "#"
+      const hash = window.location.hash.substring(1)
       const params = new URLSearchParams(hash)
       const accessToken = params.get('access_token')
       setToken(accessToken)
