@@ -19,27 +19,25 @@ export default function ConfirmPasswordResetPage() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/verify-otp', {
+      const res = await fetch('/api/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, token, newPassword }),
       })
 
-      const result = await response.json()
+      const data = await res.json()
 
-      if (!response.ok) {
-        setError(result.error || 'Something went wrong')
-        setLoading(false)
-        return
+      if (!res.ok) {
+        throw new Error(data.error || 'Something went wrong')
       }
 
-      setSuccess('Password reset successful! Redirecting...')
-      setTimeout(() => router.push('/'), 2000)
+      setSuccess('Password reset successful!')
+      setTimeout(() => router.push('/'), 2500)
     } catch (err: any) {
-      setError('Failed to fetch')
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   return (
