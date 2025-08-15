@@ -1,17 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import { supabase } from '../../lib/supabaseClient';
 import Navbar from '../components/Navbar';
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) {
+    const checkUserRole = async () => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (!user || userError) {
         router.push('/');
         return;
       }
@@ -22,15 +28,26 @@ export default function AdminDashboard() {
         .eq('id', user.id)
         .single();
 
-      if (data?.role !== 'admin') {
-        router.push('/client');
-      } else {
-        setUserRole('admin');
+      if (error || !data) {
+        router.push('/');
+        return;
       }
-    });
-  }, []);
 
-  if (!userRole) return <p className="p-6">Loading...</p>;
+      if (data.role === 'admin') {
+        setAuthorized(true);
+      } else {
+        router.push('/client');
+      }
+
+      setLoading(false);
+    };
+
+    checkUserRole();
+  }, [router]);
+
+  if (loading) return <p className="p-6">Loading...</p>;
+
+  if (!authorized) return null;
 
   return (
     <main className="text-black">
@@ -42,4 +59,3 @@ export default function AdminDashboard() {
     </main>
   );
 }
-
