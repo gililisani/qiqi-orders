@@ -1,0 +1,8 @@
+/* app/globals.css */
+body {
+  font-family: system-ui, sans-serif;
+  background-color: #ffffff;
+  color: #000000;
+  margin: 0;
+  padding: 0;
+}
