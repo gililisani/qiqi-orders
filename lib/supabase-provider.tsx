@@ -2,7 +2,14 @@
 
 import { createBrowserClient } from '@supabase/ssr'
 import { Session } from '@supabase/supabase-js'
-import { ReactNode, useState } from 'react'
+import { ReactNode, createContext, useContext, useState } from 'react'
+
+interface SupabaseContextType {
+  supabase: ReturnType<typeof createBrowserClient>
+  session: Session | null
+}
+
+const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined)
 
 interface SupabaseProviderProps {
   children: ReactNode
@@ -18,9 +25,16 @@ export function SupabaseProvider({ children, session }: SupabaseProviderProps) {
   )
 
   return (
-    // Replace with new <SupabaseContext.Provider> below
-    <SessionContextProvider supabaseClient={supabase} initialSession={session}>
+    <SupabaseContext.Provider value={{ supabase, session }}>
       {children}
-    </SessionContextProvider>
+    </SupabaseContext.Provider>
   )
+}
+
+export function useSupabase() {
+  const context = useContext(SupabaseContext)
+  if (!context) {
+    throw new Error('useSupabase must be used within SupabaseProvider')
+  }
+  return context
 }
