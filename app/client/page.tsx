@@ -26,9 +26,37 @@ export default function ClientDashboard() {
           return;
         }
 
-        // For now, just set user as client without checking database
-        console.log('Setting user as client');
-        setUserRole('client');
+        const { data, error } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        console.log('Client page - Role check:', data, error);
+
+        if (error) {
+          console.error('Error fetching user role:', error);
+          // If user doesn't exist in users table, create them as client
+          const { error: insertError } = await supabase
+            .from('users')
+            .insert([{ id: user.id, role: 'client' }]);
+
+          if (insertError) {
+            console.error('Error creating user profile:', insertError);
+            router.push('/login');
+            return;
+          }
+          
+          setUserRole('client');
+        } else if (data?.role === 'client') {
+          setUserRole('client');
+        } else if (data?.role === 'admin') {
+          router.push('/admin');
+          return;
+        } else {
+          // Unknown role, default to client
+          setUserRole('client');
+        }
 
         setLoading(false);
       } catch (err) {
