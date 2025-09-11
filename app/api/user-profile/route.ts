@@ -1,4 +1,4 @@
-import { createServerSupabase } from '../../../lib/supabase-server';
+import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -6,7 +6,16 @@ export async function POST(request: NextRequest) {
     const { userId, email, name, role } = await request.json();
 
     // Use service role to bypass RLS
-    const supabase = await createServerSupabase();
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
 
     // Check if user already exists
     const { data: existingUser, error: checkError } = await supabase
@@ -69,7 +78,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Use service role to bypass RLS
-    const supabase = await createServerSupabase();
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
 
     const { data: user, error } = await supabase
       .from('users')
