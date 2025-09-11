@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     const { userId, email, name, role } = await request.json();
 
     // Use service role to bypass RLS
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
 
     // Check if user already exists
     const { data: existingUser, error: checkError } = await supabase
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Use service role to bypass RLS
-    const supabase = createServerSupabase();
+    const supabase = await createServerSupabase();
 
     const { data: user, error } = await supabase
       .from('users')
