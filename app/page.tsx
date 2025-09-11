@@ -76,7 +76,7 @@ export default function LoginPage() {
         console.error('Error fetching user profile:', profileError);
         // If user doesn't exist in users table, check if they're the super admin
         const isSuperAdmin = user.email === 'gili@qiqiglobal.com';
-        const userRole = isSuperAdmin ? 'admin' : 'client';
+        const userRole = isSuperAdmin ? 'Admin' : 'Client';
         
         const { error: insertError } = await supabase
           .from('users')
@@ -94,7 +94,7 @@ export default function LoginPage() {
         }
         
         // Redirect based on role
-        if (userRole === 'admin') {
+        if (userRole === 'Admin') {
           router.push('/admin');
         } else {
           router.push('/client');
