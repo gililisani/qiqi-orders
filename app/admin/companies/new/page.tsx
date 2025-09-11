@@ -54,14 +54,14 @@ export default function NewCompanyPage() {
         supabase.from('support_fund_levels').select('id, percent').order('percent'),
         supabase.from('subsidiaries').select('id, name').order('name'),
         supabase.from('classes').select('id, name').order('name'),
-        supabase.from('Locations').select('id, name').order('name')
+        supabase.from('Locations').select('id, location_name').order('location_name')
       ]);
 
       setOptions({
         supportFunds: supportFunds.data || [],
         subsidiaries: subsidiaries.data || [],
         classes: classes.data || [],
-        locations: locations.data || []
+        locations: (locations.data || []).map(loc => ({ id: loc.id, name: loc.location_name }))
       });
     } catch (err: any) {
       setError('Failed to load form options: ' + err.message);

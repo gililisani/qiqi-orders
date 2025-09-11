@@ -46,12 +46,12 @@ export default function AdminDashboard() {
           <div className="bg-white p-6 rounded-lg shadow border">
             <h2 className="text-lg font-semibold mb-2">Locations</h2>
             <p className="text-gray-600 mb-4">Manage warehouse locations for NetSuite.</p>
-            <button
-              disabled
-              className="bg-gray-300 text-gray-500 px-4 py-2 rounded cursor-not-allowed"
+            <a
+              href="/admin/locations"
+              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
             >
-              Coming Soon
-            </button>
+              Manage Locations
+            </a>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow border">
@@ -74,6 +74,39 @@ export default function AdminDashboard() {
             >
               Coming Soon
             </button>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <h2 className="text-lg font-semibold mb-2">Support Funds</h2>
+            <p className="text-gray-600 mb-4">Manage support fund percentage levels.</p>
+            <a
+              href="/admin/support-funds"
+              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
+            >
+              Manage Support Funds
+            </a>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <h2 className="text-lg font-semibold mb-2">Subsidiaries</h2>
+            <p className="text-gray-600 mb-4">Manage company subsidiaries.</p>
+            <a
+              href="/admin/subsidiaries"
+              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
+            >
+              Manage Subsidiaries
+            </a>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <h2 className="text-lg font-semibold mb-2">Classes</h2>
+            <p className="text-gray-600 mb-4">Manage company classes.</p>
+            <a
+              href="/admin/classes"
+              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
+            >
+              Manage Classes
+            </a>
           </div>
         </div>
       </div>
