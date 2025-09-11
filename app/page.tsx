@@ -20,18 +20,8 @@ export default function LoginPage() {
         
         if (user) {
           console.log('User already logged in:', user.id);
-          // User is already logged in, redirect based on role
-          const { data: profile } = await supabase
-            .from('users')
-            .select('roll')
-            .eq('id', user.id)
-            .single();
-
-          if (profile?.roll === 'admin') {
-            router.push('/admin');
-          } else {
-            router.push('/client');
-          }
+          // For now, redirect all logged-in users to client
+          router.push('/client');
         }
       } catch (error) {
         console.error('Error checking user:', error);
@@ -62,43 +52,9 @@ export default function LoginPage() {
       const { user } = data;
       console.log('User authenticated:', user?.id);
 
-      // Step 2: Check if user exists in users table
-      const { data: profile, error: profileError } = await supabase
-        .from('users')
-        .select('roll')
-        .eq('id', user.id)
-        .single();
-
-      console.log('Profile data:', profile);
-      console.log('Profile error:', profileError);
-
-      if (profileError) {
-        console.error('Error fetching user profile:', profileError);
-        // If user doesn't exist in users table, create them as client
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert([{ id: user.id, roll: 'client' }]);
-
-        if (insertError) {
-          console.error('Error creating user profile:', insertError);
-          setErrorMsg('Failed to create user profile. Please contact support.');
-          return;
-        }
-        
-        // Redirect to client after creating profile
-        router.push('/client');
-        return;
-      }
-
-      // Step 3: Redirect based on role
-      console.log('Redirecting user with roll:', profile?.roll);
-      if (profile?.roll === 'admin') {
-        console.log('Redirecting to /admin');
-        router.push('/admin');
-      } else {
-        console.log('Redirecting to /client');
-        router.push('/client');
-      }
+      // For now, redirect all users to client page
+      console.log('Redirecting to /client');
+      router.push('/client');
     } catch (err) {
       console.error('Login error:', err);
       setErrorMsg('An unexpected error occurred. Please try again.');
