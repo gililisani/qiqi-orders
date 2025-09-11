@@ -21,13 +21,10 @@ export default function LoginPage() {
         if (user) {
           console.log('User already logged in:', user.id);
           // User is already logged in, redirect based on role
-          const { data: profile } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', user.id)
-            .single();
+          const profileResponse = await fetch(`/api/user-profile?userId=${user.id}`);
+          const profileData = await profileResponse.json();
 
-          if (profile?.role === 'admin') {
+          if (profileData.success && profileData.user?.role?.toLowerCase() === 'admin') {
             router.push('/admin');
           } else {
             router.push('/client');
@@ -62,54 +59,41 @@ export default function LoginPage() {
       const { user } = data;
       console.log('User authenticated:', user?.id);
 
-      // Step 2: Check if user exists in users table
-      const { data: profile, error: profileError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single();
+      // Step 2: Check if user exists in users table using API route
+      const isSuperAdmin = user.email === 'gili@qiqiglobal.com';
+      const userRole = isSuperAdmin ? 'Admin' : 'Client';
+      
+      const profileResponse = await fetch('/api/user-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          role: userRole
+        })
+      });
 
-      console.log('Profile data:', profile);
-      console.log('Profile error:', profileError);
+      const profileData = await profileResponse.json();
+      console.log('Profile API response:', profileData);
 
-      if (profileError) {
-        console.error('Error fetching user profile:', profileError);
-        // If user doesn't exist in users table, check if they're the super admin
-        const isSuperAdmin = user.email === 'gili@qiqiglobal.com';
-        const userRole = isSuperAdmin ? 'Admin' : 'Client';
-        
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert([{ 
-            id: user.id, 
-            email: user.email,
-            role: userRole,
-            name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
-          }]);
-
-        if (insertError) {
-          console.error('Error creating user profile:', insertError);
-          setErrorMsg(`Failed to create user profile: ${insertError.message}. Please contact support.`);
-          return;
-        }
-        
-        // Redirect based on role
-        if (userRole === 'Admin') {
-          router.push('/admin');
-        } else {
-          router.push('/client');
-        }
+      if (!profileData.success) {
+        console.error('Error with user profile:', profileData.error);
+        setErrorMsg(`Failed to create user profile: ${profileData.error}. Please contact support.`);
         return;
       }
 
       // Step 3: Redirect based on role
-      console.log('Redirecting user with role:', profile?.role);
-      console.log('Profile object:', profile);
-      if (profile?.role?.toLowerCase() === 'admin') {
+      const role = profileData.user.role;
+      console.log('Redirecting user with role:', role);
+      
+      if (role?.toLowerCase() === 'admin') {
         console.log('Redirecting to /admin');
         router.push('/admin');
       } else {
-        console.log('Redirecting to /client - role is:', profile?.role);
+        console.log('Redirecting to /client - role is:', role);
         router.push('/client');
       }
     } catch (err) {
