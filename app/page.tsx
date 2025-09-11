@@ -15,28 +15,58 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg('');
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      // Step 1: Authenticate with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setErrorMsg(error.message);
-      return;
-    }
+      if (error) {
+        setErrorMsg(error.message);
+        return;
+      }
 
-    const { user } = data;
+      const { user } = data;
+      console.log('User authenticated:', user?.id);
 
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+      // Step 2: Check if user exists in users table
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
 
-    if (profile?.role === 'admin') {
-      router.push('/admin');
-    } else {
-      router.push('/client');
+      console.log('Profile data:', profile);
+      console.log('Profile error:', profileError);
+
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        // If user doesn't exist in users table, create them as client
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert([{ id: user.id, role: 'client' }]);
+
+        if (insertError) {
+          console.error('Error creating user profile:', insertError);
+          setErrorMsg('Failed to create user profile. Please contact support.');
+          return;
+        }
+        
+        // Redirect to client after creating profile
+        router.push('/client');
+        return;
+      }
+
+      // Step 3: Redirect based on role
+      if (profile?.role === 'admin') {
+        router.push('/admin');
+      } else {
+        router.push('/client');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setErrorMsg('An unexpected error occurred. Please try again.');
     }
   };
 
@@ -68,6 +98,15 @@ export default function LoginPage() {
               required
               className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none"
             />
+          </div>
+
+          <div className="text-right">
+            <a 
+              href="/reset-password" 
+              className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              Forgot Password?
+            </a>
           </div>
 
           {errorMsg && <p className="text-red-600 text-sm">{errorMsg}</p>}
