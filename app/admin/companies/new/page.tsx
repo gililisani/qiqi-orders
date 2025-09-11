@@ -43,6 +43,7 @@ export default function NewCompanyPage() {
     class_id: '',
     location_id: ''
   });
+  const [netsuiteError, setNetsuiteError] = useState('');
 
   useEffect(() => {
     fetchOptions();
@@ -84,6 +85,24 @@ export default function NewCompanyPage() {
     setError('');
 
     try {
+      // Check if NetSuite number already exists
+      const { data: existingCompany, error: checkError } = await supabase
+        .from('companies')
+        .select('id, company_name, netsuite_number')
+        .eq('netsuite_number', formData.netsuite_number)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
+        throw checkError;
+      }
+
+      if (existingCompany) {
+        setError(`A company with NetSuite number "${formData.netsuite_number}" already exists (${existingCompany.company_name}). Please use a different NetSuite number.`);
+        setLoading(false);
+        return;
+      }
+
+      // Create the company
       const { error } = await supabase
         .from('companies')
         .insert([{
@@ -95,13 +114,47 @@ export default function NewCompanyPage() {
           location_id: formData.location_id || null
         }]);
 
-      if (error) throw error;
-
-      window.location.href = '/admin/companies';
+      if (error) {
+        if (error.code === '23505') { // Unique constraint violation
+          setError(`A company with NetSuite number "${formData.netsuite_number}" already exists. Please use a different NetSuite number.`);
+        } else {
+          throw error;
+        }
+      } else {
+        window.location.href = '/admin/companies';
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkNetSuiteNumber = async (netsuiteNumber: string) => {
+    if (!netsuiteNumber.trim()) {
+      setNetsuiteError('');
+      return;
+    }
+
+    try {
+      const { data: existingCompany, error } = await supabase
+        .from('companies')
+        .select('id, company_name, netsuite_number')
+        .eq('netsuite_number', netsuiteNumber)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+        console.error('Error checking NetSuite number:', error);
+        return;
+      }
+
+      if (existingCompany) {
+        setNetsuiteError(`NetSuite number "${netsuiteNumber}" is already used by "${existingCompany.company_name}"`);
+      } else {
+        setNetsuiteError('');
+      }
+    } catch (err) {
+      console.error('Error checking NetSuite number:', err);
     }
   };
 
@@ -111,6 +164,11 @@ export default function NewCompanyPage() {
       ...prev,
       [name]: value
     }));
+
+    // Check NetSuite number in real-time
+    if (name === 'netsuite_number') {
+      checkNetSuiteNumber(value);
+    }
   };
 
   return (
@@ -158,8 +216,15 @@ export default function NewCompanyPage() {
                 value={formData.netsuite_number}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                  netsuiteError 
+                    ? 'border-red-300 focus:ring-red-500' 
+                    : 'border-gray-300 focus:ring-black'
+                }`}
               />
+              {netsuiteError && (
+                <p className="mt-1 text-sm text-red-600">{netsuiteError}</p>
+              )}
             </div>
 
             <div>
@@ -242,7 +307,7 @@ export default function NewCompanyPage() {
           <div className="flex space-x-4">
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !!netsuiteError}
               className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
             >
               {loading ? 'Creating...' : 'Create Company'}
