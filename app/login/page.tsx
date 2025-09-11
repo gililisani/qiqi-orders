@@ -20,8 +20,21 @@ export default function LoginPage() {
 
     if (error) {
       setError(error.message)
+      return
+    }
+
+    const { user } = data
+
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role === 'admin') {
+      router.push('/admin')
     } else {
-      router.push('/client') // Redirect after login
+      router.push('/client')
     }
   }
 
