@@ -1,64 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
-import { useRouter } from 'next/navigation';
-import Navbar from '../components/Navbar';
+import AdminLayout from '../components/AdminLayout';
 
 export default function AdminDashboard() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string | null>(null);
-
-  useEffect(() => {
-    const checkRole = async () => {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        console.error('No user:', userError);
-        router.push('/');
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      console.log('Admin page - User role data:', data);
-      console.log('Admin page - Error:', error);
-
-      if (error || !data) {
-        console.error('Error fetching user role:', error);
-        router.push('/');
-        return;
-      }
-
-      console.log('Admin page - Role check:', data.role, '=== admin?', data.role?.toLowerCase() === 'admin');
-      
-      if (data.role?.toLowerCase() === 'admin') {
-        console.log('Admin page - Setting admin role');
-        setUserRole('admin');
-      } else {
-        console.log('Admin page - Redirecting to client, role was:', data.role);
-        router.push('/client');
-      }
-
-      setLoading(false);
-    };
-
-    checkRole();
-  }, [router]);
-
-  if (loading) return <p className="p-6">Loading...</p>;
 
   return (
-    <main className="text-black">
-      <Navbar />
+    <AdminLayout>
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
         
@@ -130,6 +77,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
-    </main>
+    </AdminLayout>
   );
 }

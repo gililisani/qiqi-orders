@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
-import { useRouter } from 'next/navigation';
-import Navbar from '../../components/Navbar';
+import AdminLayout from '../../components/AdminLayout';
 import Link from 'next/link';
 
 interface Product {
@@ -23,35 +22,14 @@ interface Product {
 }
 
 export default function ProductsPage() {
-  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    checkAdminAccess();
     fetchProducts();
   }, []);
-
-  const checkAdminAccess = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push('/');
-      return;
-    }
-
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile || profile.role !== 'admin') {
-      router.push('/client');
-      return;
-    }
-  };
 
   const fetchProducts = async () => {
     try {
@@ -92,18 +70,16 @@ export default function ProductsPage() {
 
   if (loading) {
     return (
-      <main className="text-black">
-        <Navbar />
+      <AdminLayout>
         <div className="p-6">
           <p>Loading products...</p>
         </div>
-      </main>
+      </AdminLayout>
     );
   }
 
   return (
-    <main className="text-black">
-      <Navbar />
+    <AdminLayout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Products Management</h1>
@@ -213,6 +189,6 @@ export default function ProductsPage() {
           </div>
         )}
       </div>
-    </main>
+    </AdminLayout>
   );
 }
