@@ -39,18 +39,17 @@ export function useAuth(requiredRole?: UserRole) {
         return;
       }
 
-      // Get user profile from database
-      const { data: profile, error: profileError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
+      // Get user profile using API route
+      const profileResponse = await fetch(`/api/user-profile?userId=${authUser.id}`);
+      const profileData = await profileResponse.json();
 
-      if (profileError || !profile) {
-        console.error('Error fetching user profile:', profileError);
+      if (!profileData.success || !profileData.user) {
+        console.error('Error fetching user profile:', profileData.error);
         setError('User profile not found. Please contact support.');
         return;
       }
+
+      const profile = profileData.user;
 
       const userData: AuthUser = {
         id: profile.id,
