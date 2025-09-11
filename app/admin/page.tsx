@@ -56,13 +56,13 @@ export default function AdminDashboard() {
 
           <div className="bg-white p-6 rounded-lg shadow border">
             <h2 className="text-lg font-semibold mb-2">Users</h2>
-            <p className="text-gray-600 mb-4">Manage user accounts and permissions.</p>
-            <button
-              disabled
-              className="bg-gray-300 text-gray-500 px-4 py-2 rounded cursor-not-allowed"
+            <p className="text-gray-600 mb-4">Manage distributor users for each company.</p>
+            <a
+              href="/admin/companies"
+              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
             >
-              Coming Soon
-            </button>
+              Manage Users
+            </a>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow border">
