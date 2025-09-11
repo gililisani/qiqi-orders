@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
+import { handleApiError } from '../../lib/error-handler';
 
 export type UserRole = 'Admin' | 'Client';
 
@@ -79,7 +80,8 @@ export function useAuth(requiredRole?: UserRole) {
 
     } catch (err: any) {
       console.error('Auth error:', err);
-      setError('Authentication error. Please try again.');
+      const errorInfo = handleApiError(err);
+      setError(errorInfo.error);
     } finally {
       setLoading(false);
     }
