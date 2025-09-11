@@ -40,13 +40,24 @@ export default function CompanyViewPage() {
 
   useEffect(() => {
     if (companyId) {
-      fetchCompany();
-      fetchUsers();
+      const loadData = async () => {
+        setLoading(true);
+        setError('');
+        try {
+          await Promise.all([fetchCompany(), fetchUsers()]);
+        } catch (err) {
+          console.error('Error loading data:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadData();
     }
   }, [companyId]);
 
   const fetchCompany = async () => {
     try {
+      console.log('Fetching company with ID:', companyId);
       const { data, error } = await supabase
         .from('companies')
         .select(`
@@ -59,25 +70,37 @@ export default function CompanyViewPage() {
         .eq('id', companyId)
         .single();
 
-      if (error) throw error;
+      console.log('Company query result:', { data, error });
+
+      if (error) {
+        console.error('Error fetching company:', error);
+        throw error;
+      }
       setCompany(data);
     } catch (err: any) {
+      console.error('Company fetch error:', err);
       setError(err.message);
     }
   };
 
   const fetchUsers = async () => {
     try {
+      console.log('Fetching users for company:', companyId);
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('company_id', companyId)
         .order('name', { ascending: true });
 
-      if (error) throw error;
+      console.log('Users query result:', { data, error });
+
+      if (error) {
+        console.error('Error fetching users:', error);
+        throw error;
+      }
       setUsers(data || []);
     } catch (err: any) {
-      console.error('Error fetching users:', err);
+      console.error('Users fetch error:', err);
     }
   };
 
