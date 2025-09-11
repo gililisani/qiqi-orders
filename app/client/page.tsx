@@ -28,7 +28,7 @@ export default function ClientDashboard() {
 
         const { data, error } = await supabase
           .from('users')
-          .select('role')
+          .select('roll')
           .eq('id', user.id)
           .single();
 
@@ -39,7 +39,7 @@ export default function ClientDashboard() {
           // If user doesn't exist in users table, create them as client
           const { error: insertError } = await supabase
             .from('users')
-            .insert([{ id: user.id, role: 'client' }]);
+            .insert([{ id: user.id, roll: 'client' }]);
 
           if (insertError) {
             console.error('Error creating user profile:', insertError);
@@ -48,9 +48,9 @@ export default function ClientDashboard() {
           }
           
           setUserRole('client');
-        } else if (data?.role === 'client') {
+        } else if (data?.roll === 'client') {
           setUserRole('client');
-        } else if (data?.role === 'admin') {
+        } else if (data?.roll === 'admin') {
           router.push('/admin');
           return;
         } else {

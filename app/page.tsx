@@ -23,11 +23,11 @@ export default function LoginPage() {
           // User is already logged in, redirect based on role
           const { data: profile } = await supabase
             .from('users')
-            .select('role')
+            .select('roll')
             .eq('id', user.id)
             .single();
 
-          if (profile?.role === 'admin') {
+          if (profile?.roll === 'admin') {
             router.push('/admin');
           } else {
             router.push('/client');
@@ -65,7 +65,7 @@ export default function LoginPage() {
       // Step 2: Check if user exists in users table
       const { data: profile, error: profileError } = await supabase
         .from('users')
-        .select('role')
+        .select('roll')
         .eq('id', user.id)
         .single();
 
@@ -77,7 +77,7 @@ export default function LoginPage() {
         // If user doesn't exist in users table, create them as client
         const { error: insertError } = await supabase
           .from('users')
-          .insert([{ id: user.id, role: 'client' }]);
+          .insert([{ id: user.id, roll: 'client' }]);
 
         if (insertError) {
           console.error('Error creating user profile:', insertError);
@@ -91,8 +91,8 @@ export default function LoginPage() {
       }
 
       // Step 3: Redirect based on role
-      console.log('Redirecting user with role:', profile?.role);
-      if (profile?.role === 'admin') {
+      console.log('Redirecting user with roll:', profile?.roll);
+      if (profile?.roll === 'admin') {
         console.log('Redirecting to /admin');
         router.push('/admin');
       } else {
