@@ -18,56 +18,60 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Check if user already exists
-    console.log('Checking if user exists...');
-    const { data: existingUser, error: checkError } = await supabase
-      .from('users')
-      .select('id, role, name, email, enabled')
+    console.log('Checking if user exists in admins...');
+    const { data: existingAdmin, error: adminCheckError } = await supabase
+      .from('admins')
+      .select('id, name, email, enabled')
       .eq('id', userId)
       .single();
 
-    console.log('User check result:', { existingUser, checkError });
+    console.log('Admin check result:', { existingAdmin, adminCheckError });
 
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error('Error checking user:', checkError);
-      return NextResponse.json({ error: checkError.message }, { status: 500 });
-    }
-
-    if (existingUser) {
-      // User exists, return their role
-      console.log('User exists, returning profile');
+    if (existingAdmin) {
+      console.log('User is admin, returning profile');
       return NextResponse.json({ 
         success: true, 
-        user: existingUser,
+        user: { ...existingAdmin, role: 'Admin' }, 
         isNew: false 
       });
     }
 
-    // User doesn't exist, create them
-    console.log('User does not exist, creating new user...');
-    const { data: newUser, error: insertError } = await supabase
-      .from('users')
-      .insert([{
-        id: userId,
-        email: email,
-        name: name,
-        role: role,
-        enabled: true
-      }])
+    console.log('Checking if user exists in clients...');
+    const { data: existingClient, error: clientCheckError } = await supabase
+      .from('clients')
+      .select('id, name, email, enabled, company_id')
+      .eq('id', userId)
+      .single();
+
+    console.log('Client check result:', { existingClient, clientCheckError });
+
+    if (existingClient) {
+      console.log('User is client, returning profile');
+      return NextResponse.json({ 
+        success: true, 
+        user: { ...existingClient, role: 'Client' }, 
+        isNew: false 
+      });
+    }
+
+    console.log('User not found in either table, creating new admin...');
+    const { data: newAdmin, error: insertError } = await supabase
+      .from('admins')
+      .insert([{ id: userId, email: email, name: name, enabled: true }])
       .select()
       .single();
 
-    console.log('User creation result:', { newUser, insertError });
+    console.log('Admin creation result:', { newAdmin, insertError });
 
     if (insertError) {
-      console.error('Error creating user:', insertError);
+      console.error('Error creating admin:', insertError);
       return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
 
-    console.log('User created successfully');
+    console.log('Admin created successfully');
     return NextResponse.json({ 
       success: true, 
-      user: newUser,
+      user: { ...newAdmin, role: 'Admin' }, 
       isNew: true 
     });
 
@@ -101,25 +105,42 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    console.log('Looking up user profile...');
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, role, name, email, enabled')
+    console.log('Looking up user profile in admins...');
+    const { data: admin, error: adminError } = await supabase
+      .from('admins')
+      .select('id, name, email, enabled')
       .eq('id', userId)
       .single();
 
-    console.log('User lookup result:', { user, error });
+    console.log('Admin lookup result:', { admin, adminError });
 
-    if (error) {
-      console.error('Error looking up user:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (admin) {
+      console.log('User found as admin');
+      return NextResponse.json({ 
+        success: true, 
+        user: { ...admin, role: 'Admin' } 
+      });
     }
 
-    console.log('User found successfully');
-    return NextResponse.json({ 
-      success: true, 
-      user 
-    });
+    console.log('Looking up user profile in clients...');
+    const { data: client, error: clientError } = await supabase
+      .from('clients')
+      .select('id, name, email, enabled, company_id')
+      .eq('id', userId)
+      .single();
+
+    console.log('Client lookup result:', { client, clientError });
+
+    if (client) {
+      console.log('User found as client');
+      return NextResponse.json({ 
+        success: true, 
+        user: { ...client, role: 'Client' } 
+      });
+    }
+
+    console.log('User not found in either table');
+    return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
 
   } catch (error) {
     console.error('User profile API error:', error);

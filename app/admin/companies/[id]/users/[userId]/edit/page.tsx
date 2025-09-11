@@ -44,7 +44,7 @@ export default function EditUserPage() {
   const fetchUser = async () => {
     try {
       const { data, error } = await supabase
-        .from('users')
+        .from('clients')
         .select('*')
         .eq('id', userId)
         .eq('company_id', companyId)
@@ -88,9 +88,9 @@ export default function EditUserPage() {
     setError('');
 
     try {
-      // Update user profile in our users table
+      // Update client profile in our clients table
       const { error: profileError } = await supabase
-        .from('users')
+        .from('clients')
         .update({
           name: formData.name,
           email: formData.email,
@@ -149,9 +149,9 @@ export default function EditUserPage() {
     try {
       setLoading(true);
       
-      // Delete from our users table first
+      // Delete from our clients table first
       const { error: profileError } = await supabase
-        .from('users')
+        .from('clients')
         .delete()
         .eq('id', userId);
 

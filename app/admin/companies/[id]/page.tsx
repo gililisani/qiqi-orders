@@ -85,22 +85,22 @@ export default function CompanyViewPage() {
 
   const fetchUsers = async () => {
     try {
-      console.log('Fetching users for company:', companyId);
+      console.log('Fetching clients for company:', companyId);
       const { data, error } = await supabase
-        .from('users')
+        .from('clients')
         .select('*')
         .eq('company_id', companyId)
         .order('name', { ascending: true });
 
-      console.log('Users query result:', { data, error });
+      console.log('Clients query result:', { data, error });
 
       if (error) {
-        console.error('Error fetching users:', error);
+        console.error('Error fetching clients:', error);
         throw error;
       }
       setUsers(data || []);
     } catch (err: any) {
-      console.error('Users fetch error:', err);
+      console.error('Clients fetch error:', err);
     }
   };
 
@@ -109,7 +109,7 @@ export default function CompanyViewPage() {
 
     try {
       const { error } = await supabase
-        .from('users')
+        .from('clients')
         .delete()
         .eq('id', userId);
 

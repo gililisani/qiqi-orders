@@ -78,16 +78,15 @@ export default function NewUserPage() {
         throw new Error('Failed to create user account');
       }
 
-      // Then, create the user profile in our users table
+      // Then, create the client profile in our clients table
       const { error: profileError } = await supabase
-        .from('users')
+        .from('clients')
         .insert([{
           id: authData.user.id,
           name: formData.name,
           email: formData.email,
           enabled: formData.enabled,
-          company_id: companyId,
-          role: 'Client' // All users created through admin are clients
+          company_id: companyId
         }]);
 
       if (profileError) {
