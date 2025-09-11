@@ -13,7 +13,6 @@ interface Company {
   subsidiary_id: string;
   class_id: string;
   location_id: string;
-  created_at: string;
   // Related data
   support_fund?: { percent: number };
   subsidiary?: { name: string };
@@ -45,7 +44,7 @@ export default function CompaniesPage() {
           class:classes(name),
           location:Locations(location_name)
         `)
-        .order('created_at', { ascending: false });
+        .order('company_name', { ascending: true });
 
       if (error) throw error;
 
