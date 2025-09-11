@@ -25,7 +25,7 @@ export default function AdminDashboard() {
 
       const { data, error } = await supabase
         .from('users')
-        .select('role')
+        .select('roll')
         .eq('id', user.id)
         .single();
 
@@ -35,7 +35,7 @@ export default function AdminDashboard() {
         return;
       }
 
-      if (data.role === 'admin') {
+      if (data.roll === 'admin') {
         setUserRole('admin');
       } else {
         router.push('/client');
