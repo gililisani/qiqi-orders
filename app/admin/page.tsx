@@ -38,9 +38,9 @@ export default function AdminDashboard() {
         return;
       }
 
-      console.log('Admin page - Role check:', data.role, '=== admin?', data.role === 'admin');
+      console.log('Admin page - Role check:', data.role, '=== admin?', data.role?.toLowerCase() === 'admin');
       
-      if (data.role === 'admin') {
+      if (data.role?.toLowerCase() === 'admin') {
         console.log('Admin page - Setting admin role');
         setUserRole('admin');
       } else {
