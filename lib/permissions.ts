@@ -30,9 +30,11 @@ export const PERMISSIONS = {
 export type Permission = typeof PERMISSIONS.ADMIN[number] | typeof PERMISSIONS.CLIENT[number];
 
 export function hasPermission(userRole: 'Admin' | 'Client', permission: Permission): boolean {
-  return PERMISSIONS[userRole].includes(permission as any);
+  const roleKey = userRole === 'Admin' ? 'ADMIN' : 'CLIENT';
+  return PERMISSIONS[roleKey].includes(permission as any);
 }
 
 export function getRolePermissions(userRole: 'Admin' | 'Client'): readonly Permission[] {
-  return PERMISSIONS[userRole];
+  const roleKey = userRole === 'Admin' ? 'ADMIN' : 'CLIENT';
+  return PERMISSIONS[roleKey];
 }
