@@ -22,7 +22,7 @@ export default function ClientDashboard() {
 
         if (userError || !user) {
           console.error('No user found, redirecting to login');
-          router.push('/login');
+          router.push('/');
           return;
         }
 
@@ -43,7 +43,7 @@ export default function ClientDashboard() {
 
           if (insertError) {
             console.error('Error creating user profile:', insertError);
-            router.push('/login');
+            router.push('/');
             return;
           }
           
@@ -61,7 +61,7 @@ export default function ClientDashboard() {
         setLoading(false);
       } catch (err) {
         console.error('Client page error:', err);
-        router.push('/login');
+        router.push('/');
       }
     };
 
