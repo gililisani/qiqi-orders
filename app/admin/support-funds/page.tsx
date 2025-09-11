@@ -22,20 +22,24 @@ export default function SupportFundsPage() {
 
   const fetchSupportFunds = async () => {
     try {
+      console.log('Fetching support funds...');
       const { data, error } = await supabase
         .from('support_fund_levels')
         .select('*')
         .order('percent', { ascending: true });
 
+      console.log('Support funds query result:', { data, error });
+
       if (error) {
         console.error('Error fetching support funds:', error);
-        setError('Failed to load support funds.');
+        setError('Failed to load support funds: ' + error.message);
       } else {
+        console.log('Support funds data:', data);
         setSupportFunds(data || []);
       }
     } catch (err) {
       console.error('Unexpected error fetching support funds:', err);
-      setError('An unexpected error occurred.');
+      setError('An unexpected error occurred: ' + (err as Error).message);
     } finally {
       setLoading(false);
     }

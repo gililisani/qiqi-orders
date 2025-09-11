@@ -22,16 +22,23 @@ export default function NewSupportFundPage() {
     setError('');
 
     try {
-      const { error } = await supabase
+      console.log('Inserting support fund:', formData);
+      const { data, error } = await supabase
         .from('support_fund_levels')
         .insert([{
           percent: formData.percent
         }]);
 
-      if (error) throw error;
+      console.log('Insert result:', { data, error });
+
+      if (error) {
+        console.error('Insert error:', error);
+        throw error;
+      }
 
       window.location.href = '/admin/support-funds';
     } catch (err: any) {
+      console.error('Submit error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
