@@ -50,12 +50,21 @@ export default function NewCompanyPage() {
 
   const fetchOptions = async () => {
     try {
+      console.log('Fetching options...');
+      
       const [supportFunds, subsidiaries, classes, locations] = await Promise.all([
         supabase.from('support_fund_levels').select('id, percent').order('percent'),
         supabase.from('subsidiaries').select('id, name').order('name'),
         supabase.from('classes').select('id, name').order('name'),
         supabase.from('Locations').select('id, location_name').order('location_name')
       ]);
+
+      console.log('Query results:', {
+        supportFunds: supportFunds,
+        subsidiaries: subsidiaries,
+        classes: classes,
+        locations: locations
+      });
 
       setOptions({
         supportFunds: supportFunds.data || [],
@@ -64,6 +73,7 @@ export default function NewCompanyPage() {
         locations: (locations.data || []).map(loc => ({ id: loc.id, name: loc.location_name }))
       });
     } catch (err: any) {
+      console.error('Error fetching options:', err);
       setError('Failed to load form options: ' + err.message);
     }
   };
