@@ -29,15 +29,22 @@ export default function AdminDashboard() {
         .eq('id', user.id)
         .single();
 
+      console.log('Admin page - User role data:', data);
+      console.log('Admin page - Error:', error);
+
       if (error || !data) {
         console.error('Error fetching user role:', error);
         router.push('/');
         return;
       }
 
+      console.log('Admin page - Role check:', data.role, '=== admin?', data.role === 'admin');
+      
       if (data.role === 'admin') {
+        console.log('Admin page - Setting admin role');
         setUserRole('admin');
       } else {
+        console.log('Admin page - Redirecting to client, role was:', data.role);
         router.push('/client');
       }
 

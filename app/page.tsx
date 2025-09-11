@@ -104,11 +104,12 @@ export default function LoginPage() {
 
       // Step 3: Redirect based on role
       console.log('Redirecting user with role:', profile?.role);
+      console.log('Profile object:', profile);
       if (profile?.role === 'admin') {
         console.log('Redirecting to /admin');
         router.push('/admin');
       } else {
-        console.log('Redirecting to /client');
+        console.log('Redirecting to /client - role is:', profile?.role);
         router.push('/client');
       }
     } catch (err) {
