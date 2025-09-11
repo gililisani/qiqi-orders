@@ -74,19 +74,31 @@ export default function LoginPage() {
 
       if (profileError) {
         console.error('Error fetching user profile:', profileError);
-        // If user doesn't exist in users table, create them as client
+        // If user doesn't exist in users table, check if they're the super admin
+        const isSuperAdmin = user.email === 'gili@qiqiglobal.com';
+        const userRole = isSuperAdmin ? 'admin' : 'client';
+        
         const { error: insertError } = await supabase
           .from('users')
-          .insert([{ id: user.id, role: 'client' }]);
+          .insert([{ 
+            id: user.id, 
+            email: user.email,
+            role: userRole,
+            name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
+          }]);
 
         if (insertError) {
           console.error('Error creating user profile:', insertError);
-          setErrorMsg('Failed to create user profile. Please contact support.');
+          setErrorMsg(`Failed to create user profile: ${insertError.message}. Please contact support.`);
           return;
         }
         
-        // Redirect to client after creating profile
-        router.push('/client');
+        // Redirect based on role
+        if (userRole === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/client');
+        }
         return;
       }
 
