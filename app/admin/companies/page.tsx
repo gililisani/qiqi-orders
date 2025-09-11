@@ -18,7 +18,7 @@ interface Company {
   support_fund?: { percent: number };
   subsidiary?: { name: string };
   class?: { name: string };
-  location?: { name: string };
+  location?: { location_name: string };
   user_count?: number;
   order_count?: number;
   last_login?: string;
@@ -43,7 +43,7 @@ export default function CompaniesPage() {
           support_fund:support_fund_levels(percent),
           subsidiary:subsidiaries(name),
           class:classes(name),
-          location:Locations(name)
+          location:Locations(location_name)
         `)
         .order('created_at', { ascending: false });
 
@@ -157,7 +157,7 @@ export default function CompaniesPage() {
                           <span>Support Fund: {company.support_fund?.percent || 0}%</span>
                           <span>Users: {company.user_count || 0}</span>
                           <span>Orders: {company.order_count || 0}</span>
-                          <span>Location: {company.location?.name || 'N/A'}</span>
+                          <span>Location: {company.location?.location_name || 'N/A'}</span>
                         </div>
                       </div>
                       <div className="flex space-x-2">
