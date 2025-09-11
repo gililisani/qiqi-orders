@@ -12,29 +12,60 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      // Step 1: Authenticate with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error) {
-      setError(error.message)
-      return
-    }
+      if (error) {
+        setError(error.message)
+        return
+      }
 
-    const { user } = data
+      const { user } = data
+      console.log('User authenticated:', user?.id)
 
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+      // Step 2: Check if user exists in users table
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
 
-    if (profile?.role === 'admin') {
-      router.push('/admin')
-    } else {
-      router.push('/client')
+      console.log('Profile data:', profile)
+      console.log('Profile error:', profileError)
+
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError)
+        // If user doesn't exist in users table, create them as client
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert([{ id: user.id, role: 'client' }])
+
+        if (insertError) {
+          console.error('Error creating user profile:', insertError)
+          setError('Failed to create user profile. Please contact support.')
+          return
+        }
+        
+        // Redirect to client after creating profile
+        router.push('/client')
+        return
+      }
+
+      // Step 3: Redirect based on role
+      if (profile?.role === 'admin') {
+        router.push('/admin')
+      } else {
+        router.push('/client')
+      }
+    } catch (err) {
+      console.error('Login error:', err)
+      setError('An unexpected error occurred. Please try again.')
     }
   }
 

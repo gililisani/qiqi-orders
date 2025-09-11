@@ -12,36 +12,57 @@ export default function ClientDashboard() {
 
   useEffect(() => {
     const checkRole = async () => {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      if (userError || !user) {
-        console.error('No user:', userError);
-        router.push('/');
-        return;
+        console.log('Client page - User check:', user?.id, userError);
+
+        if (userError || !user) {
+          console.error('No user found, redirecting to login');
+          router.push('/login');
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        console.log('Client page - Role check:', data, error);
+
+        if (error) {
+          console.error('Error fetching user role:', error);
+          // If user doesn't exist in users table, create them as client
+          const { error: insertError } = await supabase
+            .from('users')
+            .insert([{ id: user.id, role: 'client' }]);
+
+          if (insertError) {
+            console.error('Error creating user profile:', insertError);
+            router.push('/login');
+            return;
+          }
+          
+          setUserRole('client');
+        } else if (data?.role === 'client') {
+          setUserRole('client');
+        } else if (data?.role === 'admin') {
+          router.push('/admin');
+          return;
+        } else {
+          // Unknown role, default to client
+          setUserRole('client');
+        }
+
+        setLoading(false);
+      } catch (err) {
+        console.error('Client page error:', err);
+        router.push('/login');
       }
-
-      const { data, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (error || !data) {
-        console.error('Error fetching user role:', error);
-        router.push('/');
-        return;
-      }
-
-      if (data.role === 'client') {
-        setUserRole('client');
-      } else {
-        router.push('/admin');
-      }
-
-      setLoading(false);
     };
 
     checkRole();
