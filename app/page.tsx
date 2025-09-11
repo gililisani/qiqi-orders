@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
 import Image from 'next/image';
@@ -10,6 +10,38 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          console.log('User already logged in:', user.id);
+          // User is already logged in, redirect based on role
+          const { data: profile } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+          if (profile?.role === 'admin') {
+            router.push('/admin');
+          } else {
+            router.push('/client');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking user:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkUser();
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,9 +91,12 @@ export default function LoginPage() {
       }
 
       // Step 3: Redirect based on role
+      console.log('Redirecting user with role:', profile?.role);
       if (profile?.role === 'admin') {
+        console.log('Redirecting to /admin');
         router.push('/admin');
       } else {
+        console.log('Redirecting to /client');
         router.push('/client');
       }
     } catch (err) {
@@ -69,6 +104,16 @@ export default function LoginPage() {
       setErrorMsg('An unexpected error occurred. Please try again.');
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white px-4">
+        <div className="text-center">
+          <p className="text-lg">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-white px-4">
