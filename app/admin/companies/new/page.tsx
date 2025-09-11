@@ -20,11 +20,16 @@ interface Option {
   percent?: number;
 }
 
+interface SupportFundOption {
+  id: string;
+  percent: number;
+}
+
 export default function NewCompanyPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [options, setOptions] = useState({
-    supportFunds: [] as Option[],
+    supportFunds: [] as SupportFundOption[],
     subsidiaries: [] as Option[],
     classes: [] as Option[],
     locations: [] as Option[]
