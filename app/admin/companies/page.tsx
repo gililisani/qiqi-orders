@@ -53,7 +53,7 @@ export default function CompaniesPage() {
         (data || []).map(async (company) => {
           const [userCount, orderCount] = await Promise.all([
             supabase
-              .from('users')
+              .from('clients')
               .select('id', { count: 'exact' })
               .eq('company_id', company.id),
             supabase

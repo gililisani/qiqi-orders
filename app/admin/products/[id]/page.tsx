@@ -40,13 +40,14 @@ export default function ProductViewPage({ params }: { params: { id: string } }) 
       return;
     }
 
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
+    // Check if user is in admins table
+    const { data: adminProfile } = await supabase
+      .from('admins')
+      .select('id')
       .eq('id', user.id)
       .single();
 
-    if (!profile || profile.role !== 'admin') {
+    if (!adminProfile) {
       router.push('/client');
       return;
     }

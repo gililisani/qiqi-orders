@@ -62,7 +62,7 @@ export default function DebugPage() {
       if (user) {
         console.log('Checking user profile...');
         const { data: profile, error: profileError } = await supabase
-          .from('users')
+          .from('admins')
           .select('*')
           .eq('id', user.id)
           .single();
