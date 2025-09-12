@@ -17,6 +17,7 @@ interface ProductData {
   enable: boolean;
   list_in_support_funds: boolean;
   picture_url?: string;
+  image_file?: File;
 }
 
 export default function BulkUploadProducts() {
@@ -314,7 +315,7 @@ export default function BulkUploadProducts() {
             <li><strong>price_americas:</strong> Americas distributor price (number, required)</li>
             <li><strong>enable:</strong> true/false (required)</li>
             <li><strong>list_in_support_funds:</strong> true/false (required)</li>
-            <li><strong>picture_url:</strong> Image URL (optional)</li>
+            <li><strong>picture_url:</strong> Image URL (optional) - For now, use URLs. Direct image upload coming soon!</li>
           </ul>
         </div>
       </div>

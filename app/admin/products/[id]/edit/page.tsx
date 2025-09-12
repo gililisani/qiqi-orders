@@ -5,6 +5,7 @@ import { supabase } from '../../../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../../../components/Navbar';
 import Link from 'next/link';
+import ImageUpload from '../../../../components/ImageUpload';
 
 interface Product {
   id: number;
@@ -287,19 +288,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Picture URL
-            </label>
-            <input
-              type="url"
-              name="picture_url"
-              value={formData.picture_url}
-              onChange={handleChange}
-              placeholder="https://example.com/image.jpg"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-            />
-          </div>
+          <ImageUpload
+            onImageUploaded={(url) => setFormData(prev => ({ ...prev, picture_url: url }))}
+            currentImageUrl={formData.picture_url}
+          />
 
           <div className="space-y-4">
             <div className="flex space-x-6">
