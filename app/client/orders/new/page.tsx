@@ -67,11 +67,24 @@ export default function NewOrderPage() {
 
   useEffect(() => {
     fetchCompanyData();
+    
+    // Fallback timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      console.log('Loading timeout reached, setting loading to false');
+      setLoading(false);
+    }, 10000); // 10 seconds timeout
+    
+    return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
+    console.log('Company useEffect triggered, company:', company);
     if (company) {
+      console.log('Company found, calling fetchProducts');
       fetchProducts();
+    } else {
+      console.log('No company, setting loading to false');
+      setLoading(false);
     }
   }, [company]);
 
@@ -118,7 +131,9 @@ export default function NewOrderPage() {
         console.log('Setting company:', transformedCompany);
         setCompany(transformedCompany);
       } else {
+        console.log('No company data found');
         setCompany(null);
+        setLoading(false);
       }
     } catch (err: any) {
       console.error('Error in fetchCompanyData:', err);
