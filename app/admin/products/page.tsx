@@ -83,12 +83,20 @@ export default function ProductsPage() {
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Products Management</h1>
-          <Link
-            href="/admin/products/new"
-            className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
-          >
-            Add New Product
-          </Link>
+          <div className="space-x-2">
+            <Link
+              href="/admin/products/bulk-upload"
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:opacity-90 transition"
+            >
+              Bulk Upload
+            </Link>
+            <Link
+              href="/admin/products/new"
+              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
+            >
+              Add New Product
+            </Link>
+          </div>
         </div>
 
         {error && (
