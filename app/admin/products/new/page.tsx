@@ -22,6 +22,8 @@ export default function NewProductPage() {
     price_americas: '',
     enable: true,
     list_in_support_funds: true,
+    visible_to_americas: true,
+    visible_to_international: true,
     picture_url: ''
   });
 
@@ -44,8 +46,8 @@ export default function NewProductPage() {
           price_americas: parseFloat(formData.price_americas),
           enable: formData.enable,
           list_in_support_funds: formData.list_in_support_funds,
-          // visible_to_americas: formData.visible_to_americas,
-          // visible_to_international: formData.visible_to_international,
+          visible_to_americas: formData.visible_to_americas,
+          visible_to_international: formData.visible_to_international,
           picture_url: formData.picture_url || null
         }]);
 
@@ -230,7 +232,31 @@ export default function NewProductPage() {
               </label>
             </div>
 
-            {/* Class visibility fields temporarily disabled until database migration */}
+            <div className="border-t pt-4">
+              <h3 className="text-lg font-medium text-gray-900 mb-3">Client Class Visibility</h3>
+              <div className="flex space-x-6">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="visible_to_americas"
+                    checked={formData.visible_to_americas}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Visible to Americas Clients</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="visible_to_international"
+                    checked={formData.visible_to_international}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Visible to International Clients</span>
+                </label>
+              </div>
+            </div>
           </div>
 
           <div className="flex space-x-4">

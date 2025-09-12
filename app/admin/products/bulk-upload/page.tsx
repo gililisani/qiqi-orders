@@ -16,6 +16,8 @@ interface ProductData {
   price_americas: number;
   enable: boolean;
   list_in_support_funds: boolean;
+  visible_to_americas: boolean;
+  visible_to_international: boolean;
   picture_url?: string;
   image_file?: File;
 }
@@ -54,7 +56,7 @@ export default function BulkUploadProducts() {
       const requiredHeaders = [
         'item_name', 'netsuite_name', 'sku', 'upc', 'size', 
         'case_pack', 'price_international', 'price_americas', 
-        'enable', 'list_in_support_funds'
+        'enable', 'list_in_support_funds', 'visible_to_americas', 'visible_to_international'
       ];
 
       // Check if all required headers are present
@@ -85,6 +87,8 @@ export default function BulkUploadProducts() {
           price_americas: parseFloat(values[headers.indexOf('price_americas')]) || 0,
           enable: values[headers.indexOf('enable')].toLowerCase() === 'true',
           list_in_support_funds: values[headers.indexOf('list_in_support_funds')].toLowerCase() === 'true',
+          visible_to_americas: values[headers.indexOf('visible_to_americas')].toLowerCase() === 'true',
+          visible_to_international: values[headers.indexOf('visible_to_international')].toLowerCase() === 'true',
           picture_url: values[headers.indexOf('picture_url')] || undefined
         };
 
@@ -133,12 +137,12 @@ export default function BulkUploadProducts() {
     const headers = [
       'item_name', 'netsuite_name', 'sku', 'upc', 'size', 
       'case_pack', 'price_international', 'price_americas', 
-      'enable', 'list_in_support_funds', 'picture_url'
+      'enable', 'list_in_support_funds', 'visible_to_americas', 'visible_to_international', 'picture_url'
     ];
     
     const sampleData = [
       'Sample Product', 'Sample NetSuite Name', 'SAMPLE001', '123456789012', '250ml',
-      '12', '25.50', '30.00', 'true', 'true', 'https://example.com/image.jpg'
+      '12', '25.50', '30.00', 'true', 'true', 'true', 'true', 'https://example.com/image.jpg'
     ];
 
     const csvContent = [headers, sampleData].map(row => row.join(',')).join('\n');
@@ -315,6 +319,8 @@ export default function BulkUploadProducts() {
             <li><strong>price_americas:</strong> Americas distributor price (number, required)</li>
             <li><strong>enable:</strong> true/false (required)</li>
             <li><strong>list_in_support_funds:</strong> true/false (required)</li>
+            <li><strong>visible_to_americas:</strong> true/false (required)</li>
+            <li><strong>visible_to_international:</strong> true/false (required)</li>
             <li><strong>picture_url:</strong> Image URL (optional) - For now, use URLs. Direct image upload coming soon!</li>
           </ul>
         </div>
