@@ -47,6 +47,7 @@ export default function NewOrderPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [poNumber, setPoNumber] = useState('');
 
   const getClientType = () => {
     if (!company?.class?.name) return 'Americas';
@@ -283,7 +284,8 @@ export default function NewOrderPage() {
           company_id: company?.id,
           status: 'Open',
           total_value: totals.total,
-          support_fund_used: 0 // Will be calculated in support fund redemption step
+          support_fund_used: 0, // Will be calculated in support fund redemption step
+          po_number: poNumber || null
         }])
         .select()
         .single();
@@ -365,7 +367,7 @@ export default function NewOrderPage() {
         {company && (
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold mb-4">Order Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="text-sm font-medium text-gray-500">Company</label>
                 <p className="text-lg">{company.company_name}</p>
@@ -377,6 +379,16 @@ export default function NewOrderPage() {
               <div>
                 <label className="text-sm font-medium text-gray-500">Support Fund</label>
                 <p className="text-lg">{totals.supportFundPercent}%</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">PO/Cheque Number (Optional)</label>
+                <input
+                  type="text"
+                  value={poNumber}
+                  onChange={(e) => setPoNumber(e.target.value)}
+                  placeholder="Enter PO number"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
               </div>
             </div>
           </div>

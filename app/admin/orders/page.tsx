@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
 import Link from 'next/link';
+import { generateNetSuiteCSV, downloadCSV, OrderForExport } from '../../../lib/csvExport';
 
 interface Order {
   id: string;
@@ -80,10 +81,44 @@ export default function OrdersPage() {
 
   const handleDownloadCSV = async (orderId: string) => {
     try {
-      // For now, we'll just show an alert. We'll implement actual CSV generation later
-      alert(`CSV download for order ${orderId} will be implemented in the next step.`);
+      // Fetch complete order data with all relationships
+      const { data: orderData, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          company:companies(
+            company_name,
+            netsuite_number,
+            po_number,
+            class:classes(name),
+            subsidiary:subsidiaries(name),
+            location:Locations(location_name)
+          ),
+          order_items(
+            quantity,
+            unit_price,
+            total_price,
+            product:Products(sku, item_name)
+          )
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (error) throw error;
+
+      // Generate CSV
+      const csvContent = generateNetSuiteCSV(orderData as OrderForExport);
+      
+      // Create filename with order ID and date
+      const orderDate = new Date(orderData.created_at);
+      const dateStr = orderDate.toISOString().split('T')[0];
+      const filename = `Order_${orderData.id}_${dateStr}.csv`;
+      
+      // Download CSV
+      downloadCSV(csvContent, filename);
     } catch (err: any) {
-      setError(err.message);
+      console.error('Error exporting CSV:', err);
+      alert('Failed to export CSV. Please try again.');
     }
   };
 
