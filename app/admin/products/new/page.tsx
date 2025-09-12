@@ -21,8 +21,6 @@ export default function NewProductPage() {
     price_americas: '',
     enable: true,
     list_in_support_funds: true,
-    visible_to_americas: true,
-    visible_to_international: true,
     picture_url: ''
   });
 
