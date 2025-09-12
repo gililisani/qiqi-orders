@@ -16,7 +16,7 @@ interface Order {
 interface Company {
   company_name: string;
   netsuite_number: string;
-  support_fund?: { percent: number };
+  support_fund?: { percent: number }[];
 }
 
 const statusColors = {
@@ -112,10 +112,10 @@ export default function ClientDashboard() {
           <p className="text-gray-600">
             Manage your orders and place new ones for {company?.company_name || 'your company'}.
           </p>
-          {company?.support_fund && (
+          {company?.support_fund && company.support_fund.length > 0 && (
             <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
               <p className="text-sm text-green-800">
-                <strong>Support Fund:</strong> You have {company.support_fund.percent}% support fund available for each order.
+                <strong>Support Fund:</strong> You have {company.support_fund[0].percent}% support fund available for each order.
               </p>
             </div>
           )}

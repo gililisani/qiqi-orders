@@ -15,7 +15,7 @@ interface Order {
   company?: {
     company_name: string;
     netsuite_number: string;
-    support_fund?: { percent: number };
+    support_fund?: { percent: number }[];
   };
 }
 
@@ -192,7 +192,7 @@ export default function ClientOrderViewPage() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Support Fund %</label>
-                <p className="text-lg">{order.company?.support_fund?.percent || 0}%</p>
+                <p className="text-lg">{order.company?.support_fund?.[0]?.percent || 0}%</p>
               </div>
             </div>
           </div>
