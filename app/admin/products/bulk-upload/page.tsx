@@ -56,10 +56,42 @@ export default function BulkUploadProducts() {
       console.log('CSV Debug Info:');
       lines.forEach((line, index) => {
         const columns = line.split(',').map(v => v.trim());
-        console.log(`Row ${index + 1}: ${columns.length} columns - ${columns.join(' | ')}`);
+        console.log(`Row ${index + 1} (simple split): ${columns.length} columns - ${columns.join(' | ')}`);
       });
 
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      // Parse CSV properly handling quoted fields
+      const parseCSVLine = (line: string): string[] => {
+        const result: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          
+          if (char === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+              // Escaped quote inside quoted field
+              current += '"';
+              i++; // Skip next quote
+            } else {
+              // Toggle quote state
+              inQuotes = !inQuotes;
+            }
+          } else if (char === ',' && !inQuotes) {
+            // Field separator outside quotes
+            result.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        
+        // Add the last field
+        result.push(current.trim());
+        return result;
+      };
+
+      const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
       const requiredHeaders = [
         'item_name', 'netsuite_name', 'sku', 'upc', 'size', 
         'case_pack', 'price_international', 'price_americas', 
@@ -76,7 +108,10 @@ export default function BulkUploadProducts() {
       const parsedProducts: ProductData[] = [];
       
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim());
+        const values = parseCSVLine(lines[i]);
+        
+        // Debug: Show parsed values
+        console.log(`Row ${i + 1} (proper parsing): ${values.length} columns - ${values.join(' | ')}`);
         
         if (values.length !== headers.length) {
           setError(`Row ${i + 1} has incorrect number of columns. Expected ${headers.length}, got ${values.length}. 
