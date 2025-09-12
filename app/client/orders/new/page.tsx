@@ -115,11 +115,15 @@ export default function NewOrderPage() {
         .single();
 
       console.log('Company data result:', { clientData, clientError });
+      console.log('Full clientData structure:', JSON.stringify(clientData, null, 2));
 
       if (clientError) {
         console.error('Company data error:', clientError);
         throw clientError;
       }
+      
+      console.log('clientData?.company:', clientData?.company);
+      console.log('clientData?.company?.[0]:', clientData?.company?.[0]);
       
       const companyData = clientData?.company?.[0];
       if (companyData) {
