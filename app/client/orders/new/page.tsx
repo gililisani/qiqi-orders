@@ -123,9 +123,14 @@ export default function NewOrderPage() {
       }
       
       console.log('clientData?.company:', clientData?.company);
-      console.log('clientData?.company?.[0]:', clientData?.company?.[0]);
       
-      const companyData = clientData?.company?.[0];
+      // Handle both array and single object cases
+      const companyData = Array.isArray(clientData?.company) 
+        ? clientData?.company?.[0] 
+        : clientData?.company;
+        
+      console.log('companyData:', companyData);
+      
       if (companyData) {
         // Transform class from array to single object if needed
         const transformedCompany = {
