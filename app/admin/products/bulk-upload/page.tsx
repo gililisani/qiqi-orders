@@ -52,6 +52,13 @@ export default function BulkUploadProducts() {
         return;
       }
 
+      // Debug: Show column counts for each row
+      console.log('CSV Debug Info:');
+      lines.forEach((line, index) => {
+        const columns = line.split(',').map(v => v.trim());
+        console.log(`Row ${index + 1}: ${columns.length} columns - ${columns.join(' | ')}`);
+      });
+
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
       const requiredHeaders = [
         'item_name', 'netsuite_name', 'sku', 'upc', 'size', 
@@ -72,7 +79,12 @@ export default function BulkUploadProducts() {
         const values = lines[i].split(',').map(v => v.trim());
         
         if (values.length !== headers.length) {
-          setError(`Row ${i + 1} has incorrect number of columns. Expected ${headers.length}, got ${values.length}`);
+          setError(`Row ${i + 1} has incorrect number of columns. Expected ${headers.length}, got ${values.length}. 
+          
+Expected columns: ${headers.join(', ')}
+Received columns: ${values.join(', ')}
+          
+Please check for extra commas, missing fields, or incorrect column order.`);
           return;
         }
 
@@ -185,17 +197,17 @@ export default function BulkUploadProducts() {
             />
           </div>
 
-          <div className="mb-4">
-            <button
-              onClick={downloadTemplate}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:opacity-90 transition mr-2"
-            >
-              Download Template
-            </button>
-            <span className="text-sm text-gray-600">
-              Download the CSV template to see the required format
-            </span>
-          </div>
+            <div className="mb-4">
+              <button
+                onClick={downloadTemplate}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:opacity-90 transition mr-2"
+              >
+                Download Template
+              </button>
+              <span className="text-sm text-gray-600">
+                Download the CSV template to see the required format (13 columns total)
+              </span>
+            </div>
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
