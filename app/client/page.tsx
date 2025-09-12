@@ -57,7 +57,7 @@ export default function ClientDashboard() {
         .single();
 
       if (clientError) throw clientError;
-      setCompany(clientData?.company || null);
+      setCompany(clientData?.company?.[0] || null);
 
       // Get user's orders
       const { data: ordersData, error: ordersError } = await supabase
