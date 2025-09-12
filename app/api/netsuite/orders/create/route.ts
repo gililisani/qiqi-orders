@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createNetSuiteAPI, NetSuiteSalesOrder } from '../../../../lib/netsuite';
+import { createNetSuiteAPI, NetSuiteSalesOrder } from '../../../../../lib/netsuite';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
