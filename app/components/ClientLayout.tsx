@@ -1,43 +1,76 @@
 'use client';
 
 import { useAuth } from '../hooks/useAuth';
-import Navbar from './Navbar';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
 }
 
 export default function ClientLayout({ children }: ClientLayoutProps) {
-  const { user, loading, error, isClient } = useAuth('Client');
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        router.push('/');
+        return;
+      }
+      if (user.role !== 'Client') {
+        router.push('/admin');
+        return;
+      }
+    }
+  }, [user, loading, router]);
 
   if (loading) {
     return (
-      <main className="text-black">
-        <Navbar />
-        <div className="p-6">
-          <p>Loading...</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
         </div>
-      </main>
+      </div>
     );
   }
 
-  if (error || !isClient) {
-    return (
-      <main className="text-black">
-        <Navbar />
-        <div className="p-6">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error || 'Access denied. Client permissions required.'}
-          </div>
-        </div>
-      </main>
-    );
+  if (!user || user.role !== 'Client') {
+    return null;
   }
 
   return (
-    <main className="text-black">
-      <Navbar />
-      {children}
-    </main>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <h1 className="text-xl font-bold text-gray-900">Qiqi Distributors</h1>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-600">
+                Welcome, {user.name}
+              </span>
+              <button
+                onClick={() => {
+                  // Add logout functionality here
+                  window.location.href = '/';
+                }}
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {children}
+      </main>
+    </div>
   );
 }
