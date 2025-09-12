@@ -108,8 +108,18 @@ export default function NewOrderPage() {
         throw clientError;
       }
       
-      console.log('Setting company:', clientData?.company?.[0]);
-      setCompany(clientData?.company?.[0] || null);
+      const companyData = clientData?.company?.[0];
+      if (companyData) {
+        // Transform class from array to single object if needed
+        const transformedCompany = {
+          ...companyData,
+          class: Array.isArray(companyData.class) ? companyData.class[0] : companyData.class
+        };
+        console.log('Setting company:', transformedCompany);
+        setCompany(transformedCompany);
+      } else {
+        setCompany(null);
+      }
     } catch (err: any) {
       console.error('Error in fetchCompanyData:', err);
       setError(err.message);
