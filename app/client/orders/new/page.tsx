@@ -27,7 +27,7 @@ interface Company {
   company_name: string;
   netsuite_number: string;
   support_fund?: { percent: number }[];
-  class?: { name: string }[];
+  class?: { name: string };
 }
 
 interface OrderItem {
@@ -49,16 +49,16 @@ export default function NewOrderPage() {
   const [error, setError] = useState('');
 
   const getClientType = () => {
-    if (!company?.class?.[0]?.name) return 'Americas';
+    if (!company?.class?.name) return 'Americas';
     
-    const className = company.class[0].name.toLowerCase();
+    const className = company.class.name.toLowerCase();
     return className.includes('international') ? 'International' : 'Americas';
   };
 
   const getProductPrice = (product: Product) => {
-    if (!company?.class?.[0]?.name) return product.price_americas;
+    if (!company?.class?.name) return product.price_americas;
     
-    const className = company.class[0].name.toLowerCase();
+    const className = company.class.name.toLowerCase();
     if (className.includes('international')) {
       return product.price_international;
     }
