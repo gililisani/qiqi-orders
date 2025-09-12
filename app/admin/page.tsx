@@ -35,12 +35,12 @@ export default function AdminDashboard() {
           <div className="bg-white p-6 rounded-lg shadow border">
             <h2 className="text-lg font-semibold mb-2">Orders</h2>
             <p className="text-gray-600 mb-4">View and process distributor orders.</p>
-            <button
-              disabled
-              className="bg-gray-300 text-gray-500 px-4 py-2 rounded cursor-not-allowed"
+            <a
+              href="/admin/orders"
+              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
             >
-              Coming Soon
-            </button>
+              Manage Orders
+            </a>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow border">
