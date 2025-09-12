@@ -77,9 +77,13 @@ export default function NewOrderPage() {
 
   const fetchCompanyData = async () => {
     try {
+      console.log('Fetching company data...');
+      
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not found');
+      
+      console.log('User found:', user.id);
 
       // Get user's company info
       const { data: clientData, error: clientError } = await supabase
@@ -97,9 +101,17 @@ export default function NewOrderPage() {
         .eq('id', user.id)
         .single();
 
-      if (clientError) throw clientError;
+      console.log('Company data result:', { clientData, clientError });
+
+      if (clientError) {
+        console.error('Company data error:', clientError);
+        throw clientError;
+      }
+      
+      console.log('Setting company:', clientData?.company?.[0]);
       setCompany(clientData?.company?.[0] || null);
     } catch (err: any) {
+      console.error('Error in fetchCompanyData:', err);
       setError(err.message);
       setLoading(false);
     }
@@ -107,28 +119,42 @@ export default function NewOrderPage() {
 
   const fetchProducts = async () => {
     try {
+      console.log('Fetching products...');
+      
       // Get products visible to this client's class
       const clientClass = getClientType();
       const isInternational = clientClass.toLowerCase().includes('international');
+      
+      console.log('Client class:', clientClass, 'isInternational:', isInternational);
       
       let productsQuery = supabase
         .from('Products')
         .select('*')
         .eq('enable', true);
       
+      // Temporarily disable class filtering to test if columns exist
       // Filter by class visibility
-      if (isInternational) {
-        productsQuery = productsQuery.eq('visible_to_international', true);
-      } else {
-        productsQuery = productsQuery.eq('visible_to_americas', true);
-      }
+      // if (isInternational) {
+      //   productsQuery = productsQuery.eq('visible_to_international', true);
+      // } else {
+      //   productsQuery = productsQuery.eq('visible_to_americas', true);
+      // }
       
+      console.log('Executing products query...');
       const { data: productsData, error: productsError } = await productsQuery
         .order('item_name', { ascending: true });
 
-      if (productsError) throw productsError;
+      console.log('Products query result:', { productsData, productsError });
+
+      if (productsError) {
+        console.error('Products query error:', productsError);
+        throw productsError;
+      }
+      
+      console.log('Setting products:', productsData?.length || 0, 'products');
       setProducts(productsData || []);
     } catch (err: any) {
+      console.error('Error in fetchProducts:', err);
       setError(err.message);
     } finally {
       setLoading(false);
