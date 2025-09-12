@@ -18,6 +18,8 @@ interface Product {
   price_americas: number;
   picture_url?: string;
   list_in_support_funds: boolean;
+  visible_to_americas: boolean;
+  visible_to_international: boolean;
 }
 
 interface Order {
@@ -51,6 +53,13 @@ export default function SupportFundPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const getClientType = () => {
+    if (!order?.company?.class?.[0]?.name) return 'Americas';
+    
+    const className = order.company.class[0].name.toLowerCase();
+    return className.includes('international') ? 'International' : 'Americas';
+  };
+
   useEffect(() => {
     if (orderId) {
       fetchData();
@@ -79,12 +88,24 @@ export default function SupportFundPage() {
       if (orderError) throw orderError;
       setOrder(orderData);
 
-      // Get products eligible for support fund redemption
-      const { data: productsData, error: productsError } = await supabase
+      // Get products eligible for support fund redemption and visible to this client's class
+      const clientClass = getClientType();
+      const isInternational = clientClass.toLowerCase().includes('international');
+      
+      let productsQuery = supabase
         .from('Products')
         .select('*')
         .eq('enable', true)
-        .eq('list_in_support_funds', true)
+        .eq('list_in_support_funds', true);
+      
+      // Filter by class visibility
+      if (isInternational) {
+        productsQuery = productsQuery.eq('visible_to_international', true);
+      } else {
+        productsQuery = productsQuery.eq('visible_to_americas', true);
+      }
+      
+      const { data: productsData, error: productsError } = await productsQuery
         .order('item_name', { ascending: true });
 
       if (productsError) throw productsError;

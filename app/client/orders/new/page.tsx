@@ -18,6 +18,8 @@ interface Product {
   price_americas: number;
   picture_url?: string;
   list_in_support_funds: boolean;
+  visible_to_americas: boolean;
+  visible_to_international: boolean;
 }
 
 interface Company {
@@ -46,11 +48,34 @@ export default function NewOrderPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const getClientType = () => {
+    if (!company?.class?.[0]?.name) return 'Americas';
+    
+    const className = company.class[0].name.toLowerCase();
+    return className.includes('international') ? 'International' : 'Americas';
+  };
+
+  const getProductPrice = (product: Product) => {
+    if (!company?.class?.[0]?.name) return product.price_americas;
+    
+    const className = company.class[0].name.toLowerCase();
+    if (className.includes('international')) {
+      return product.price_international;
+    }
+    return product.price_americas;
+  };
+
   useEffect(() => {
-    fetchData();
+    fetchCompanyData();
   }, []);
 
-  const fetchData = async () => {
+  useEffect(() => {
+    if (company) {
+      fetchProducts();
+    }
+  }, [company]);
+
+  const fetchCompanyData = async () => {
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -74,12 +99,31 @@ export default function NewOrderPage() {
 
       if (clientError) throw clientError;
       setCompany(clientData?.company?.[0] || null);
+    } catch (err: any) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
 
-      // Get all enabled products
-      const { data: productsData, error: productsError } = await supabase
+  const fetchProducts = async () => {
+    try {
+      // Get products visible to this client's class
+      const clientClass = getClientType();
+      const isInternational = clientClass.toLowerCase().includes('international');
+      
+      let productsQuery = supabase
         .from('Products')
         .select('*')
-        .eq('enable', true)
+        .eq('enable', true);
+      
+      // Filter by class visibility
+      if (isInternational) {
+        productsQuery = productsQuery.eq('visible_to_international', true);
+      } else {
+        productsQuery = productsQuery.eq('visible_to_americas', true);
+      }
+      
+      const { data: productsData, error: productsError } = await productsQuery
         .order('item_name', { ascending: true });
 
       if (productsError) throw productsError;
@@ -89,23 +133,6 @@ export default function NewOrderPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const getProductPrice = (product: Product) => {
-    if (!company?.class?.[0]?.name) return product.price_americas;
-    
-    const className = company.class[0].name.toLowerCase();
-    if (className.includes('international')) {
-      return product.price_international;
-    }
-    return product.price_americas;
-  };
-
-  const getClientType = () => {
-    if (!company?.class?.[0]?.name) return 'Americas';
-    
-    const className = company.class[0].name.toLowerCase();
-    return className.includes('international') ? 'International' : 'Americas';
   };
 
   const handleCaseQtyChange = (productId: number, caseQty: number) => {

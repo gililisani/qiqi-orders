@@ -14,6 +14,8 @@ interface Product {
   price_americas: number;
   enable: boolean;
   list_in_support_funds: boolean;
+  visible_to_americas: boolean;
+  visible_to_international: boolean;
   picture_url?: string;
   netsuite_name?: string;
   upc?: string;
@@ -214,6 +216,26 @@ export default function ProductViewPage({ params }: { params: { id: string } }) 
                     product.list_in_support_funds ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
                   }`}>
                     {product.list_in_support_funds ? 'Yes' : 'No'}
+                  </span>
+                </dd>
+              </div>
+              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Visible to Americas</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    product.visible_to_americas ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {product.visible_to_americas ? 'Yes' : 'No'}
+                  </span>
+                </dd>
+              </div>
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Visible to International</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    product.visible_to_international ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {product.visible_to_international ? 'Yes' : 'No'}
                   </span>
                 </dd>
               </div>
