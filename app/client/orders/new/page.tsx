@@ -132,13 +132,26 @@ export default function NewOrderPage() {
         .select('*')
         .eq('enable', true);
       
-      // Temporarily disable class filtering to test if columns exist
-      // Filter by class visibility
-      // if (isInternational) {
-      //   productsQuery = productsQuery.eq('visible_to_international', true);
-      // } else {
-      //   productsQuery = productsQuery.eq('visible_to_americas', true);
-      // }
+      // Check if visibility columns exist by trying a test query
+      const { data: testData, error: testError } = await supabase
+        .from('Products')
+        .select('visible_to_americas, visible_to_international')
+        .limit(1);
+      
+      if (testError && testError.code === 'PGRST116') {
+        // Columns don't exist, use all products
+        console.log('Visibility columns not found, showing all products');
+      } else if (!testError) {
+        // Columns exist, apply class filtering
+        console.log('Visibility columns found, applying class filtering');
+        if (isInternational) {
+          productsQuery = productsQuery.eq('visible_to_international', true);
+        } else {
+          productsQuery = productsQuery.eq('visible_to_americas', true);
+        }
+      } else {
+        console.log('Error checking visibility columns:', testError);
+      }
       
       console.log('Executing products query...');
       const { data: productsData, error: productsError } = await productsQuery
