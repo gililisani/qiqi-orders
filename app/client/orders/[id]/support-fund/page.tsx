@@ -18,8 +18,8 @@ interface Product {
   price_americas: number;
   picture_url?: string;
   list_in_support_funds: boolean;
-  visible_to_americas: boolean;
-  visible_to_international: boolean;
+  // visible_to_americas: boolean;
+  // visible_to_international: boolean;
 }
 
 interface Order {
@@ -98,12 +98,12 @@ export default function SupportFundPage() {
         .eq('enable', true)
         .eq('list_in_support_funds', true);
       
-      // Filter by class visibility
-      if (isInternational) {
-        productsQuery = productsQuery.eq('visible_to_international', true);
-      } else {
-        productsQuery = productsQuery.eq('visible_to_americas', true);
-      }
+      // Filter by class visibility - temporarily disabled until database migration
+      // if (isInternational) {
+      //   productsQuery = productsQuery.eq('visible_to_international', true);
+      // } else {
+      //   productsQuery = productsQuery.eq('visible_to_americas', true);
+      // }
       
       const { data: productsData, error: productsError } = await productsQuery
         .order('item_name', { ascending: true });
