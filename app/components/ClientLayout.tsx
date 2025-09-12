@@ -3,6 +3,7 @@
 import { useAuth } from '../hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -53,15 +54,21 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
               <span className="text-sm text-gray-600">
                 Welcome, {user.name}
               </span>
-              <button
-                onClick={() => {
-                  // Add logout functionality here
+            <button
+              onClick={async () => {
+                try {
+                  await supabase.auth.signOut();
                   window.location.href = '/';
-                }}
-                className="text-sm text-gray-600 hover:text-gray-900"
-              >
-                Logout
-              </button>
+                } catch (error) {
+                  console.error('Error signing out:', error);
+                  // Force redirect even if signOut fails
+                  window.location.href = '/';
+                }
+              }}
+              className="text-sm text-gray-600 hover:text-gray-900"
+            >
+              Logout
+            </button>
             </div>
           </div>
         </div>
