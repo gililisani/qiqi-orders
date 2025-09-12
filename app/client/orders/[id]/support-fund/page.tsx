@@ -142,7 +142,7 @@ export default function SupportFundPage() {
 
   const getSupportFundTotals = () => {
     const supportFundPercent = order?.company?.support_fund?.[0]?.percent || 0;
-    const supportFundEarned = order?.total_value * (supportFundPercent / 100) || 0;
+    const supportFundEarned = (order?.total_value || 0) * (supportFundPercent / 100);
     const supportFundUsed = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
     const remainingSupportFund = supportFundEarned - supportFundUsed;
     const finalTotal = (order?.total_value || 0) - supportFundUsed;
