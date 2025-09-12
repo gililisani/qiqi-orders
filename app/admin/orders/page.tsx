@@ -13,6 +13,8 @@ interface Order {
   support_fund_used: number;
   user_id: string;
   company_id: string;
+  netsuite_sales_order_id?: string;
+  netsuite_status?: string;
   client?: {
     name: string;
     email: string;
@@ -36,6 +38,7 @@ export default function OrdersPage() {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [creatingInNetSuite, setCreatingInNetSuite] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -81,6 +84,43 @@ export default function OrdersPage() {
       alert(`CSV download for order ${orderId} will be implemented in the next step.`);
     } catch (err: any) {
       setError(err.message);
+    }
+  };
+
+  const createOrderInNetSuite = async (orderId: string) => {
+    setCreatingInNetSuite(orderId);
+    setError('');
+
+    try {
+      const response = await fetch('/api/netsuite/orders/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update the order in the local state
+        setOrders(prev => prev.map(order => 
+          order.id === orderId 
+            ? { 
+                ...order, 
+                netsuite_sales_order_id: data.netsuiteOrderId,
+                netsuite_status: 'created'
+              } 
+            : order
+        ));
+        alert(`Order successfully created in NetSuite with ID: ${data.netsuiteOrderId}`);
+      } else {
+        setError(data.error || 'Failed to create order in NetSuite');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to create order in NetSuite');
+    } finally {
+      setCreatingInNetSuite(null);
     }
   };
 
@@ -228,19 +268,34 @@ export default function OrdersPage() {
                       {new Date(order.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <Link
-                          href={`/admin/orders/${order.id}`}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          View
-                        </Link>
-                        <button
-                          onClick={() => handleDownloadCSV(order.id)}
-                          className="text-green-600 hover:text-green-900"
-                        >
-                          CSV
-                        </button>
+                      <div className="flex flex-col space-y-1">
+                        <div className="flex space-x-2">
+                          <Link
+                            href={`/admin/orders/${order.id}`}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            View
+                          </Link>
+                          <button
+                            onClick={() => handleDownloadCSV(order.id)}
+                            className="text-green-600 hover:text-green-900"
+                          >
+                            CSV
+                          </button>
+                        </div>
+                        {order.netsuite_sales_order_id ? (
+                          <div className="text-xs text-green-600">
+                            NetSuite: {order.netsuite_sales_order_id}
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => createOrderInNetSuite(order.id)}
+                            disabled={creatingInNetSuite === order.id}
+                            className="text-xs text-orange-600 hover:text-orange-900 disabled:opacity-50"
+                          >
+                            {creatingInNetSuite === order.id ? 'Creating...' : 'Create in NetSuite'}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -13,13 +13,17 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "@supabase/supabase-js": "2.55.0",
-    "@supabase/ssr": "0.6.1"
+    "@supabase/ssr": "0.6.1",
+    "oauth-1.0a": "^2.2.6",
+    "axios": "^1.6.0",
+    "crypto-js": "^4.2.0"
   },
   "devDependencies": {
     "typescript": "5.4.5",
     "@types/node": "20.11.30",
     "@types/react": "18.2.66",
     "@types/react-dom": "18.2.22",
+    "@types/crypto-js": "^4.2.1",
     "eslint": "8.57.0",
     "eslint-config-next": "14.2.4"
   }

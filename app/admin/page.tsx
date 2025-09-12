@@ -77,6 +77,17 @@ export default function AdminDashboard() {
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow border">
+            <h2 className="text-lg font-semibold mb-2">NetSuite Integration</h2>
+            <p className="text-gray-600 mb-4">Sync products and create orders in NetSuite.</p>
+            <a
+              href="/admin/netsuite"
+              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
+            >
+              NetSuite Integration
+            </a>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow border">
             <h2 className="text-lg font-semibold mb-2">Reports</h2>
             <p className="text-gray-600 mb-4">View sales reports and analytics.</p>
             <button
