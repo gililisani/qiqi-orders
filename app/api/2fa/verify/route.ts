@@ -5,8 +5,11 @@ import { generateTOTPCode, verifyTOTPCode, verifyRecoveryCode } from '../../../.
 export async function POST(request: NextRequest) {
   try {
     const { userId, userType, code, isRecoveryCode = false } = await request.json();
+    
+    console.log('2FA Verify API - Received data:', { userId, userType, code, isRecoveryCode });
 
     if (!userId || !userType || !code) {
+      console.log('2FA Verify API - Missing required fields:', { userId: !!userId, userType: !!userType, code: !!code });
       return NextResponse.json({ error: 'User ID, type, and code required' }, { status: 400 });
     }
 

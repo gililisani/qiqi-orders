@@ -63,19 +63,24 @@ export default function TwoFactorSetup({ userId, userType, onComplete }: TwoFact
     setLoading(true);
     setError('');
 
+    const requestData = { userId, userType, code: verificationCode };
+    console.log('Sending 2FA verification request:', requestData);
+
     try {
       const response = await fetch('/api/2fa/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, userType, code: verificationCode })
+        body: JSON.stringify(requestData)
       });
 
       const data = await response.json();
+      console.log('2FA verification response:', { status: response.status, data });
 
       if (data.success) {
         setStep('complete');
         if (onComplete) onComplete();
       } else {
+        console.error('2FA verification failed:', data.error);
         setError(data.error || 'Invalid verification code');
       }
     } catch (err) {
