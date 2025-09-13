@@ -10,7 +10,10 @@ export async function POST(request: NextRequest) {
 
     if (!userId || !userType || !code) {
       console.log('2FA Verify API - Missing required fields:', { userId: !!userId, userType: !!userType, code: !!code });
-      return NextResponse.json({ error: 'User ID, type, and code required' }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'User ID, type, and code required',
+        debug: { userId: !!userId, userType: !!userType, code: !!code }
+      }, { status: 400 });
     }
 
     if (!['admin', 'client'].includes(userType)) {
@@ -30,6 +33,7 @@ export async function POST(request: NextRequest) {
     );
 
     const tableName = userType === 'admin' ? 'admins' : 'clients';
+    console.log('2FA Verify API - Looking up user in table:', tableName, 'with ID:', userId);
     
     // Get user's 2FA data
     const { data: user, error: userError } = await supabase
@@ -38,8 +42,13 @@ export async function POST(request: NextRequest) {
       .eq('id', userId)
       .single();
 
+    console.log('2FA Verify API - User lookup result:', { user, userError });
+
     if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ 
+        error: 'User not found',
+        debug: { tableName, userId, userError: userError?.message }
+      }, { status: 404 });
     }
 
     let isValid = false;
@@ -63,10 +72,16 @@ export async function POST(request: NextRequest) {
     } else {
       // Verify TOTP code
       if (!user.totp_secret) {
+        console.log('2FA Verify API - No TOTP secret found for user');
         return NextResponse.json({ error: '2FA not set up' }, { status: 400 });
       }
       
+      console.log('2FA Verify API - Verifying TOTP code:', { 
+        secret: user.totp_secret.substring(0, 8) + '...', 
+        code 
+      });
       isValid = verifyTOTPCode(user.totp_secret, code);
+      console.log('2FA Verify API - TOTP verification result:', isValid);
     }
 
     if (!isValid) {
