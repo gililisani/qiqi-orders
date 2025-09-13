@@ -94,6 +94,16 @@ export default function TwoFactorSetup({ userId, userType, onComplete }: TwoFact
     navigator.clipboard.writeText(text);
   };
 
+  const debugUserData = async () => {
+    try {
+      const response = await fetch(`/api/2fa/debug?userId=${userId}&userType=${userType}`);
+      const data = await response.json();
+      console.log('2FA Debug - User data:', data);
+    } catch (err) {
+      console.error('Debug failed:', err);
+    }
+  };
+
   if (step === 'setup') {
     return (
       <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow">
@@ -157,12 +167,20 @@ export default function TwoFactorSetup({ userId, userType, onComplete }: TwoFact
               </div>
             </div>
 
-            <button
-              onClick={() => setStep('verify')}
-              className="w-full bg-black text-white py-2 px-4 rounded hover:opacity-90"
-            >
-              Next: Verify Setup
-            </button>
+            <div className="space-y-2">
+              <button
+                onClick={() => setStep('verify')}
+                className="w-full bg-black text-white py-2 px-4 rounded hover:opacity-90"
+              >
+                Next: Verify Setup
+              </button>
+              <button
+                onClick={debugUserData}
+                className="w-full bg-gray-500 text-white py-2 px-4 rounded hover:opacity-90 text-sm"
+              >
+                Debug: Check User Data
+              </button>
+            </div>
           </div>
         ) : (
           <div className="text-center py-4">

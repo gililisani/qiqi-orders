@@ -46,6 +46,8 @@ export async function POST(request: NextRequest) {
     const qrCodeUrl = generateQRCodeDataURL(totpSecret, user.email, 'Qiqi Orders');
 
     // Store the secret and recovery codes (but don't enable 2FA yet)
+    console.log('2FA Setup API - Updating user with secret:', { userId, tableName, secretLength: totpSecret.length });
+    
     const { error: updateError } = await supabase
       .from(tableName)
       .update({
@@ -55,9 +57,14 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', userId);
 
+    console.log('2FA Setup API - Update result:', { updateError });
+
     if (updateError) {
       console.error('Error updating 2FA setup:', updateError);
-      return NextResponse.json({ error: 'Failed to setup 2FA' }, { status: 500 });
+      return NextResponse.json({ 
+        error: 'Failed to setup 2FA',
+        debug: { updateError: updateError.message, userId, tableName }
+      }, { status: 500 });
     }
 
     return NextResponse.json({
