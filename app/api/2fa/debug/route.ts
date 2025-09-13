@@ -34,6 +34,17 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      userId,
+      userType,
+      tableName,
+      userFound: !!user,
+      userError: userError?.message,
+      hasTotpSecret: !!user?.totp_secret,
+      secretLength: user?.totp_secret?.length || 0,
+      hasRecoveryCodes: !!user?.recovery_codes,
+      recoveryCodesCount: user?.recovery_codes?.length || 0,
+      twoFactorEnabled: user?.two_factor_enabled || false,
+      secretPreview: user?.totp_secret ? user.totp_secret.substring(0, 8) + '...' : 'None',
       debug: {
         userId,
         userType,
