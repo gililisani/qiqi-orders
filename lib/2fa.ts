@@ -121,30 +121,6 @@ export function generateQRCodeDataURL(secret: string, email: string, issuer: str
   return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpauthUrl)}`;
 }
 
-/**
- * Base32 encoding
- */
-function base32Encode(wordArray: CryptoJS.lib.WordArray): string {
-  const bytes = wordArray.toString(CryptoJS.enc.Hex);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 2) {
-    binary += parseInt(bytes.substr(i, 2), 16).toString(2).padStart(8, '0');
-  }
-  
-  // Pad to multiple of 5
-  while (binary.length % 5 !== 0) {
-    binary += '0';
-  }
-  
-  let result = '';
-  for (let i = 0; i < binary.length; i += 5) {
-    const chunk = binary.substr(i, 5);
-    const index = parseInt(chunk, 2);
-    result += BASE32_ALPHABET[index];
-  }
-  
-  return result;
-}
 
 
 /**
