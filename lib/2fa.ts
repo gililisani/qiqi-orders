@@ -2,7 +2,7 @@
 // 2FA utilities using crypto-js for TOTP generation
 
 import CryptoJS from 'crypto-js';
-import { base32Decode } from './base32';
+import { base32Decode, base32Encode } from './base32';
 
 // Base32 alphabet for TOTP secret encoding
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -146,31 +146,6 @@ function base32Encode(wordArray: CryptoJS.lib.WordArray): string {
   return result;
 }
 
-/**
- * Base32 decoding
- */
-function base32Decode(encoded: string): CryptoJS.lib.WordArray {
-  const clean = encoded.replace(/[^A-Z2-7]/g, '').toUpperCase();
-  let binary = '';
-  
-  for (let i = 0; i < clean.length; i++) {
-    const char = clean[i];
-    const index = BASE32_ALPHABET.indexOf(char);
-    if (index === -1) continue;
-    binary += index.toString(2).padStart(5, '0');
-  }
-  
-  // Convert binary to bytes
-  const bytes: number[] = [];
-  for (let i = 0; i < binary.length; i += 8) {
-    const chunk = binary.substr(i, 8);
-    if (chunk.length === 8) {
-      bytes.push(parseInt(chunk, 2));
-    }
-  }
-  
-  return CryptoJS.lib.WordArray.create(bytes);
-}
 
 /**
  * Generate a human-readable secret for display

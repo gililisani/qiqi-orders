@@ -3,7 +3,7 @@
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
-export function base32Decode(input: string): Uint8Array {
+export function base32Decode(input: string): any {
   // Remove padding and convert to uppercase
   const cleanInput = input.replace(/=/g, '').toUpperCase();
   
@@ -34,16 +34,44 @@ export function base32Decode(input: string): Uint8Array {
     }
   }
   
-  return new Uint8Array(bytes);
+  // Convert to CryptoJS WordArray format
+  const wordArray = {
+    words: [],
+    sigBytes: bytes.length
+  };
+  
+  // Convert bytes to words (4 bytes per word)
+  for (let i = 0; i < bytes.length; i += 4) {
+    let word = 0;
+    for (let j = 0; j < 4 && i + j < bytes.length; j++) {
+      word |= (bytes[i + j] << (24 - j * 8));
+    }
+    wordArray.words.push(word);
+  }
+  
+  return wordArray;
 }
 
-export function base32Encode(input: Uint8Array): string {
+export function base32Encode(input: any): string {
   const bits: number[] = [];
   
-  // Convert bytes to bits
-  for (let i = 0; i < input.length; i++) {
-    for (let j = 7; j >= 0; j--) {
-      bits.push((input[i] >> j) & 1);
+  // Convert WordArray to bits
+  if (input.words && input.sigBytes) {
+    // CryptoJS WordArray format
+    for (let i = 0; i < input.sigBytes; i++) {
+      const wordIndex = Math.floor(i / 4);
+      const byteIndex = i % 4;
+      const byte = (input.words[wordIndex] >>> (24 - byteIndex * 8)) & 0xff;
+      for (let j = 7; j >= 0; j--) {
+        bits.push((byte >> j) & 1);
+      }
+    }
+  } else {
+    // Uint8Array format
+    for (let i = 0; i < input.length; i++) {
+      for (let j = 7; j >= 0; j--) {
+        bits.push((input[i] >> j) & 1);
+      }
     }
   }
   
