@@ -61,7 +61,7 @@ export function generateTOTPCode(secret: string, timestamp?: number): string {
 /**
  * Verify TOTP code with tolerance for clock skew
  */
-export function verifyTOTPCode(secret: string, code: string, tolerance: number = 1): boolean {
+export function verifyTOTPCode(secret: string, code: string, tolerance: number = 2): boolean {
   const currentTime = Math.floor(Date.now() / 1000);
   const currentTimeStep = Math.floor(currentTime / 30);
   
