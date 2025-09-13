@@ -6,9 +6,10 @@ import { supabase } from '../../lib/supabaseClient';
 interface TwoFactorManagementProps {
   userId: string;
   userType: 'admin' | 'client';
+  onSetupClick?: () => void;
 }
 
-export default function TwoFactorManagement({ userId, userType }: TwoFactorManagementProps) {
+export default function TwoFactorManagement({ userId, userType, onSetupClick }: TwoFactorManagementProps) {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [verifiedAt, setVerifiedAt] = useState<string | null>(null);
   const [hasRecoveryCodes, setHasRecoveryCodes] = useState(false);
@@ -24,13 +25,17 @@ export default function TwoFactorManagement({ userId, userType }: TwoFactorManag
 
   const fetch2FAStatus = async () => {
     try {
+      console.log('Fetching 2FA status for:', { userId, userType });
       const response = await fetch(`/api/2fa/status?userId=${userId}&userType=${userType}`);
       const data = await response.json();
+      console.log('2FA status response:', data);
 
       if (data.success) {
         setTwoFactorEnabled(data.twoFactorEnabled);
         setVerifiedAt(data.verifiedAt);
         setHasRecoveryCodes(data.hasRecoveryCodes);
+      } else {
+        console.error('2FA status error:', data.error);
       }
     } catch (err) {
       console.error('Failed to fetch 2FA status:', err);
@@ -147,7 +152,7 @@ export default function TwoFactorManagement({ userId, userType }: TwoFactorManag
             Add an extra layer of security to your account by enabling two-factor authentication.
           </p>
           <button
-            onClick={() => window.location.reload()} // This will trigger the setup flow
+            onClick={onSetupClick || (() => window.location.reload())}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Setup 2FA

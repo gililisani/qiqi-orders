@@ -24,7 +24,10 @@ export default function TwoFactorAuthPage() {
       const data = await response.json();
 
       if (data.success) {
+        console.log('Client 2FA page - user data:', data.user);
         setUser({ ...data.user, userType: data.user.role.toLowerCase() });
+      } else {
+        console.error('Client 2FA page - user fetch error:', data.error);
       }
     } catch (error) {
       console.error('Error fetching user:', error);
@@ -78,6 +81,7 @@ export default function TwoFactorAuthPage() {
           <TwoFactorManagement
             userId={user.id}
             userType={user.userType}
+            onSetupClick={() => setShowSetup(true)}
           />
         )}
 
