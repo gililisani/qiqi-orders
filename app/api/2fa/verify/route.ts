@@ -89,10 +89,35 @@ export async function POST(request: NextRequest) {
       console.log('2FA Verify API - Verifying TOTP code:', { 
         secret: totpSecret.substring(0, 8) + '...', 
         code,
-        usingProvidedSecret: !!secret
+        usingProvidedSecret: !!secret,
+        userHasSecret: user ? !!user.totp_secret : 'no user data'
       });
+      
+      // Test the TOTP implementation with the same secret
+      const testCode = generateTOTPCode(totpSecret);
+      console.log('2FA Verify API - Generated test code with same secret:', testCode);
+      
+      // Debug: Check if the secret format is correct
+      console.log('2FA Verify API - Secret format check:', {
+        secretLength: totpSecret.length,
+        secretType: typeof totpSecret,
+        firstChars: totpSecret.substring(0, 10),
+        lastChars: totpSecret.substring(totpSecret.length - 10)
+      });
+      
       isValid = verifyTOTPCode(totpSecret, code);
       console.log('2FA Verify API - TOTP verification result:', isValid);
+      
+      // Additional debugging: try with different time windows
+      if (!isValid) {
+        console.log('2FA Verify API - Verification failed, trying different time windows...');
+        const currentTime = Math.floor(Date.now() / 1000);
+        for (let i = -1; i <= 1; i++) {
+          const testTime = currentTime + (i * 30);
+          const testCodeAtTime = generateTOTPCode(totpSecret, testTime);
+          console.log(`2FA Verify API - Time window ${i}: expected=${testCodeAtTime}, received=${code}, match=${testCodeAtTime === code}`);
+        }
+      }
     }
 
     if (!isValid) {
