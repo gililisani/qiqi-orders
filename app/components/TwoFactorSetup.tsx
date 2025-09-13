@@ -75,6 +75,23 @@ export default function TwoFactorSetup({ userId, userType, onComplete }: TwoFact
     console.log('Local generated code with same secret:', localTestCode);
     const localVerification = verifyTOTPCode(secret, verificationCode);
     console.log('Local verification result:', localVerification);
+    
+    // Debug: Test with different time steps to see what codes are expected
+    const currentTime = Math.floor(Date.now() / 1000);
+    const currentTimeStep = Math.floor(currentTime / 30);
+    console.log('Time debugging:', {
+      currentTime,
+      currentTimeStep,
+      verificationCode,
+      localTestCode
+    });
+    
+    // Test codes for the last few time steps
+    for (let i = -3; i <= 3; i++) {
+      const testTimeStep = currentTimeStep + i;
+      const testCode = generateTOTPCode(secret, testTimeStep * 30);
+      console.log(`Time step ${testTimeStep}: ${testCode} ${testCode === verificationCode ? '← MATCH!' : ''}`);
+    }
 
     // Use the secret that was just generated for verification
     const requestData = { userId, userType, code: verificationCode, secret: secret };

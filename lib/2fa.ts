@@ -2,6 +2,7 @@
 // 2FA utilities using crypto-js for TOTP generation
 
 import CryptoJS from 'crypto-js';
+import { base32Decode } from './base32';
 
 // Base32 alphabet for TOTP secret encoding
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -67,11 +68,24 @@ export function verifyTOTPCode(secret: string, code: string, tolerance: number =
   
   console.log('TOTP Verification Debug:', {
     secret: secret.substring(0, 8) + '...',
+    secretLength: secret.length,
     code,
     currentTime,
     currentTimeStep,
     tolerance
   });
+  
+  // Debug: Check if secret is valid Base32
+  try {
+    const decoded = base32Decode(secret);
+    console.log('Secret decode test:', {
+      originalLength: secret.length,
+      decodedLength: decoded.length,
+      firstBytes: Array.from(decoded.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join(' ')
+    });
+  } catch (e) {
+    console.error('Secret decode error:', e);
+  }
   
   // Check current time step and adjacent time steps for tolerance
   for (let i = -tolerance; i <= tolerance; i++) {
