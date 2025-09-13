@@ -11,10 +11,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(true);
-  const [show2FA, setShow2FA] = useState(false);
-  const [twoFACode, setTwoFACode] = useState('');
-  const [userData, setUserData] = useState<any>(null);
-  const [isRecoveryCode, setIsRecoveryCode] = useState(false);
 
   // Check if user is already logged in
   useEffect(() => {
@@ -89,19 +85,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Step 3: Check if 2FA is enabled
-      const userType = profileData.user.role.toLowerCase();
-      const twoFAStatusResponse = await fetch(`/api/2fa/status?userId=${user.id}&userType=${userType}`);
-      const twoFAStatus = await twoFAStatusResponse.json();
-
-      if (twoFAStatus.success && twoFAStatus.twoFactorEnabled) {
-        // Show 2FA verification form
-        setUserData({ user, profile: profileData.user, userType });
-        setShow2FA(true);
-        return;
-      }
-
-      // Step 4: Redirect based on role (no 2FA required)
+      // Step 3: Redirect based on role
       const role = profileData.user.role;
       console.log('Redirecting user with role:', role);
       
@@ -118,45 +102,6 @@ export default function LoginPage() {
     }
   };
 
-  const handle2FAVerification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg('');
-
-    if (!twoFACode) {
-      setErrorMsg('Please enter a verification code');
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/2fa/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userId: userData.user.id, 
-          userType: userData.userType, 
-          code: twoFACode,
-          isRecoveryCode 
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // 2FA verified, redirect based on role
-        const role = userData.profile.role;
-        if (role?.toLowerCase() === 'admin') {
-          router.push('/admin');
-        } else {
-          router.push('/client');
-        }
-      } else {
-        setErrorMsg(data.error || 'Invalid verification code');
-      }
-    } catch (err) {
-      console.error('2FA verification error:', err);
-      setErrorMsg('Failed to verify code. Please try again.');
-    }
-  };
 
   if (loading) {
     return (
@@ -168,73 +113,6 @@ export default function LoginPage() {
     );
   }
 
-  if (show2FA) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-white px-4">
-        <div className="max-w-md w-full space-y-6 border border-gray-200 p-8 rounded shadow">
-          <div className="flex justify-center mb-4">
-            <Image src="/logo.png" alt="Qiqi Logo" width={120} height={40} />
-          </div>
-          <h2 className="text-center text-2xl font-bold text-black">Two-Factor Authentication</h2>
-          <p className="text-center text-gray-600">
-            Enter the 6-digit code from your authenticator app
-          </p>
-          
-          <form onSubmit={handle2FAVerification} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Verification Code</label>
-              <input
-                type="text"
-                value={twoFACode}
-                onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="000000"
-                required
-                className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none text-center text-lg font-mono tracking-widest"
-                maxLength={6}
-              />
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="isRecoveryCode"
-                checked={isRecoveryCode}
-                onChange={(e) => setIsRecoveryCode(e.target.checked)}
-                className="mr-2"
-              />
-              <label htmlFor="isRecoveryCode" className="text-sm text-gray-700">
-                This is a recovery code
-              </label>
-            </div>
-
-            {errorMsg && <p className="text-red-600 text-sm">{errorMsg}</p>}
-
-            <div className="flex space-x-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShow2FA(false);
-                  setTwoFACode('');
-                  setIsRecoveryCode(false);
-                  setErrorMsg('');
-                }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                disabled={twoFACode.length !== 6}
-                className="flex-1 bg-black text-white py-2 px-4 rounded hover:opacity-90 transition disabled:opacity-50"
-              >
-                Verify
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-white px-4">

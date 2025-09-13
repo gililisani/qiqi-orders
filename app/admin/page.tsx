@@ -65,16 +65,6 @@ export default function AdminDashboard() {
             </a>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">Security</h2>
-            <p className="text-gray-600 mb-4">Manage two-factor authentication and security settings.</p>
-            <a
-              href="/admin/2fa"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
-            >
-              Security Settings
-            </a>
-          </div>
 
           <div className="bg-white p-6 rounded-lg shadow border">
             <h2 className="text-lg font-semibold mb-2">Admins</h2>
