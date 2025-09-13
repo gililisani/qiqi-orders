@@ -35,19 +35,24 @@ export function generateTOTPCode(secret: string, timestamp?: number): string {
   const timeStep = Math.floor(time / 30); // 30-second time step
   
   const key = base32Decode(secret);
+  
+  // Create 8-byte time buffer in big-endian format
   const timeBuffer = new ArrayBuffer(8);
   const timeView = new DataView(timeBuffer);
-  timeView.setUint32(4, timeStep, false); // Big-endian
+  timeView.setUint32(0, 0, false); // High 4 bytes = 0
+  timeView.setUint32(4, timeStep, false); // Low 4 bytes = timeStep
   
+  // Convert to CryptoJS WordArray
   const timeBytes = new Uint8Array(timeBuffer);
   const timeWordArray = CryptoJS.lib.WordArray.create(timeBytes);
   
+  // Generate HMAC-SHA1
   const hmac = CryptoJS.HmacSHA1(timeWordArray, key);
-  const hmacBytes = hmac.toString(CryptoJS.enc.Hex);
+  const hmacHex = hmac.toString(CryptoJS.enc.Hex);
   
-  // Dynamic truncation
-  const offset = parseInt(hmacBytes.slice(-1), 16);
-  const truncated = parseInt(hmacBytes.slice(offset * 2, offset * 2 + 8), 16);
+  // Dynamic truncation (RFC 4226)
+  const offset = parseInt(hmacHex.slice(-1), 16);
+  const truncated = parseInt(hmacHex.slice(offset * 2, offset * 2 + 8), 16);
   const code = (truncated & 0x7fffffff) % 1000000;
   
   return code.toString().padStart(6, '0');
@@ -58,16 +63,29 @@ export function generateTOTPCode(secret: string, timestamp?: number): string {
  */
 export function verifyTOTPCode(secret: string, code: string, tolerance: number = 1): boolean {
   const currentTime = Math.floor(Date.now() / 1000);
+  const currentTimeStep = Math.floor(currentTime / 30);
+  
+  console.log('TOTP Verification Debug:', {
+    secret: secret.substring(0, 8) + '...',
+    code,
+    currentTime,
+    currentTimeStep,
+    tolerance
+  });
   
   // Check current time step and adjacent time steps for tolerance
   for (let i = -tolerance; i <= tolerance; i++) {
-    const timeStep = Math.floor(currentTime / 30) + i;
+    const timeStep = currentTimeStep + i;
     const expectedCode = generateTOTPCode(secret, timeStep * 30);
+    console.log(`Time step ${timeStep}: expected=${expectedCode}, received=${code}, match=${expectedCode === code}`);
+    
     if (expectedCode === code) {
+      console.log('TOTP verification successful!');
       return true;
     }
   }
   
+  console.log('TOTP verification failed - no matching codes found');
   return false;
 }
 
@@ -145,4 +163,36 @@ function base32Decode(encoded: string): CryptoJS.lib.WordArray {
  */
 export function formatSecretForDisplay(secret: string): string {
   return secret.match(/.{1,4}/g)?.join(' ') || secret;
+}
+
+/**
+ * Test TOTP implementation with a known secret and time
+ * This is for debugging purposes
+ */
+export function testTOTPImplementation(): void {
+  console.log('Testing TOTP implementation...');
+  
+  // Test with a known secret (this is just for testing)
+  const testSecret = 'JBSWY3DPEHPK3PXP';
+  const currentTime = Math.floor(Date.now() / 1000);
+  const timeStep = Math.floor(currentTime / 30);
+  
+  console.log('Test parameters:', {
+    secret: testSecret,
+    currentTime,
+    timeStep
+  });
+  
+  // Generate code for current time
+  const code = generateTOTPCode(testSecret, currentTime);
+  console.log('Generated code:', code);
+  
+  // Verify the code
+  const isValid = verifyTOTPCode(testSecret, code);
+  console.log('Verification result:', isValid);
+  
+  // Test with wrong code
+  const wrongCode = '123456';
+  const isWrongValid = verifyTOTPCode(testSecret, wrongCode);
+  console.log('Wrong code verification:', isWrongValid);
 }

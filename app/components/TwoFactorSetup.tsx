@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { formatSecretForDisplay } from '../../lib/2fa';
+import { formatSecretForDisplay, testTOTPImplementation } from '../../lib/2fa';
 
 interface TwoFactorSetupProps {
   userId: string;
@@ -22,6 +22,8 @@ export default function TwoFactorSetup({ userId, userType, onComplete }: TwoFact
   useEffect(() => {
     if (step === 'setup') {
       setup2FA();
+      // Run TOTP test for debugging
+      testTOTPImplementation();
     }
   }, [step]);
 
