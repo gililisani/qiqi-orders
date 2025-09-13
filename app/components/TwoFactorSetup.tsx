@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { formatSecretForDisplay, testTOTPImplementation } from '../../lib/2fa';
+import { formatSecretForDisplay, testTOTPImplementation, generateTOTPCode, verifyTOTPCode } from '../../lib/2fa';
 
 interface TwoFactorSetupProps {
   userId: string;
@@ -22,10 +22,16 @@ export default function TwoFactorSetup({ userId, userType, onComplete }: TwoFact
   useEffect(() => {
     if (step === 'setup') {
       setup2FA();
-      // Run TOTP test for debugging
-      testTOTPImplementation();
     }
   }, [step]);
+
+  // Run TOTP test when we have the actual secret
+  useEffect(() => {
+    if (secret) {
+      console.log('Running TOTP test with actual secret:', secret);
+      testTOTPImplementation(secret);
+    }
+  }, [secret]);
 
   const setup2FA = async () => {
     setLoading(true);
@@ -62,6 +68,13 @@ export default function TwoFactorSetup({ userId, userType, onComplete }: TwoFact
 
     setLoading(true);
     setError('');
+
+    // Debug: Test the secret locally first
+    console.log('Testing secret locally before API call:', secret);
+    const localTestCode = generateTOTPCode(secret);
+    console.log('Local generated code with same secret:', localTestCode);
+    const localVerification = verifyTOTPCode(secret, verificationCode);
+    console.log('Local verification result:', localVerification);
 
     // Use the secret that was just generated for verification
     const requestData = { userId, userType, code: verificationCode, secret: secret };

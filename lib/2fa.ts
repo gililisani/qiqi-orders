@@ -169,18 +169,19 @@ export function formatSecretForDisplay(secret: string): string {
  * Test TOTP implementation with a known secret and time
  * This is for debugging purposes
  */
-export function testTOTPImplementation(): void {
+export function testTOTPImplementation(providedSecret?: string): void {
   console.log('Testing TOTP implementation...');
   
-  // Test with a known secret (this is just for testing)
-  const testSecret = 'JBSWY3DPEHPK3PXP';
+  // Use provided secret or fall back to test secret
+  const testSecret = providedSecret || 'JBSWY3DPEHPK3PXP';
   const currentTime = Math.floor(Date.now() / 1000);
   const timeStep = Math.floor(currentTime / 30);
   
   console.log('Test parameters:', {
     secret: testSecret,
     currentTime,
-    timeStep
+    timeStep,
+    usingProvidedSecret: !!providedSecret
   });
   
   // Generate code for current time
