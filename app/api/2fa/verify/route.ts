@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Verify TOTP code
-      const totpSecret = secret || user.totp_secret;
+      const totpSecret = secret || (user ? user.totp_secret : null);
       
       if (!totpSecret) {
         console.log('2FA Verify API - No TOTP secret found for user');
