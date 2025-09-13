@@ -35,16 +35,24 @@ export async function POST(request: NextRequest) {
     const tableName = userType === 'admin' ? 'admins' : 'clients';
     console.log('2FA Verify API - Looking up user in table:', tableName, 'with ID:', userId);
     
-    // Get user's 2FA data
-    const { data: user, error: userError } = await supabase
-      .from(tableName)
-      .select('totp_secret, recovery_codes, two_factor_enabled')
-      .eq('id', userId)
-      .single();
+    // Get user's 2FA data (only if we don't have a provided secret)
+    let user = null;
+    let userError = null;
+    
+    if (!secret) {
+      const { data: userData, error: userErr } = await supabase
+        .from(tableName)
+        .select('totp_secret, recovery_codes, two_factor_enabled')
+        .eq('id', userId)
+        .single();
+      
+      user = userData;
+      userError = userErr;
+    }
 
-    console.log('2FA Verify API - User lookup result:', { user, userError });
+    console.log('2FA Verify API - User lookup result:', { user, userError, usingProvidedSecret: !!secret });
 
-    if (userError || !user) {
+    if (!secret && (userError || !user)) {
       return NextResponse.json({ 
         error: 'User not found',
         debug: { tableName, userId, userError: userError?.message }
@@ -54,8 +62,8 @@ export async function POST(request: NextRequest) {
     let isValid = false;
 
     if (isRecoveryCode) {
-      // Verify recovery code
-      if (!user.recovery_codes || user.recovery_codes.length === 0) {
+      // Verify recovery code (requires user data)
+      if (!user || !user.recovery_codes || user.recovery_codes.length === 0) {
         return NextResponse.json({ error: 'No recovery codes available' }, { status: 400 });
       }
       
@@ -92,19 +100,32 @@ export async function POST(request: NextRequest) {
     }
 
     // If this is the first verification, enable 2FA
-    if (!user.two_factor_enabled && !isRecoveryCode) {
+    const shouldEnable2FA = (!user || !user.two_factor_enabled) && !isRecoveryCode;
+    
+    if (shouldEnable2FA) {
+      console.log('2FA Verify API - Enabling 2FA for user:', userId);
+      
+      const updateData: any = {
+        two_factor_enabled: true,
+        two_factor_verified_at: new Date().toISOString()
+      };
+      
+      // If we have a provided secret, store it
+      if (secret) {
+        updateData.totp_secret = secret;
+      }
+      
       const { error: enableError } = await supabase
         .from(tableName)
-        .update({
-          two_factor_enabled: true,
-          two_factor_verified_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', userId);
 
       if (enableError) {
         console.error('Error enabling 2FA:', enableError);
         return NextResponse.json({ error: 'Failed to enable 2FA' }, { status: 500 });
       }
+      
+      console.log('2FA Verify API - 2FA enabled successfully');
     }
 
     return NextResponse.json({
