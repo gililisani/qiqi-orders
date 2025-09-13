@@ -63,7 +63,8 @@ export default function TwoFactorSetup({ userId, userType, onComplete }: TwoFact
     setLoading(true);
     setError('');
 
-    const requestData = { userId, userType, code: verificationCode };
+    // Use the secret that was just generated for verification
+    const requestData = { userId, userType, code: verificationCode, secret: secret };
     console.log('Sending 2FA verification request:', requestData);
 
     try {

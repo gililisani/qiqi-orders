@@ -4,9 +4,9 @@ import { generateTOTPCode, verifyTOTPCode, verifyRecoveryCode } from '../../../.
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, userType, code, isRecoveryCode = false } = await request.json();
+    const { userId, userType, code, isRecoveryCode = false, secret } = await request.json();
     
-    console.log('2FA Verify API - Received data:', { userId, userType, code, isRecoveryCode });
+    console.log('2FA Verify API - Received data:', { userId, userType, code, isRecoveryCode, hasSecret: !!secret });
 
     if (!userId || !userType || !code) {
       console.log('2FA Verify API - Missing required fields:', { userId: !!userId, userType: !!userType, code: !!code });
@@ -71,16 +71,19 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Verify TOTP code
-      if (!user.totp_secret) {
+      const totpSecret = secret || user.totp_secret;
+      
+      if (!totpSecret) {
         console.log('2FA Verify API - No TOTP secret found for user');
         return NextResponse.json({ error: '2FA not set up' }, { status: 400 });
       }
       
       console.log('2FA Verify API - Verifying TOTP code:', { 
-        secret: user.totp_secret.substring(0, 8) + '...', 
-        code 
+        secret: totpSecret.substring(0, 8) + '...', 
+        code,
+        usingProvidedSecret: !!secret
       });
-      isValid = verifyTOTPCode(user.totp_secret, code);
+      isValid = verifyTOTPCode(totpSecret, code);
       console.log('2FA Verify API - TOTP verification result:', isValid);
     }
 
