@@ -826,7 +826,7 @@ export default function NewOrderPage() {
                   {totals.supportFundEarned > 0 && (
                     <div className="flex justify-between text-sm text-green-600 pt-2">
                       <span>Credit Earned ({totals.supportFundPercent}%):</span>
-                      <span className="font-medium">${(totals.supportFundEarned - supportFundTotals.subtotal).toFixed(2)}</span>
+                      <span className="font-medium">${(totals.subtotal * totals.supportFundPercent / 100).toFixed(2)}</span>
                     </div>
                   )}
 
@@ -849,6 +849,14 @@ export default function NewOrderPage() {
                           <div className="text-sm font-medium text-green-800">${item.total_price.toFixed(2)}</div>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Support Fund Subtotal */}
+                  {supportFundItems.length > 0 && (
+                    <div className="flex justify-between text-sm font-medium text-green-800 pt-2 border-t border-green-200">
+                      <span>Subtotal:</span>
+                      <span>${supportFundItems.reduce((sum, item) => sum + item.total_price, 0).toFixed(2)}</span>
                     </div>
                   )}
 
