@@ -485,24 +485,41 @@ export default function NewOrderPage() {
     <ClientLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">
-            {showSupportFundRedemption ? 'Redeem Support Funds' : 'New Order'}
-          </h1>
-          {showSupportFundRedemption ? (
-            <button
-              onClick={() => setShowSupportFundRedemption(false)}
-              className="text-gray-600 hover:text-gray-800 transition-colors duration-300 font-medium"
-            >
-              ← Back to Order
-            </button>
-          ) : (
-            <Link
-              href="/client/orders"
-              className="text-gray-600 hover:text-gray-800"
-            >
-              ← Back to Orders
-            </Link>
-          )}
+          <div className="flex items-center space-x-4">
+            <h1 className="text-2xl font-bold text-gray-900">
+              {showSupportFundRedemption ? 'Redeem Support Funds' : 'New Order'}
+            </h1>
+            {totals.supportFundEarned > 0 && (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowSupportFundRedemption(false)}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    !showSupportFundRedemption 
+                      ? 'bg-black text-white' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Original Order
+                </button>
+                <button
+                  onClick={() => setShowSupportFundRedemption(true)}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    showSupportFundRedemption 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Support Funds
+                </button>
+              </div>
+            )}
+          </div>
+          <Link
+            href="/client/orders"
+            className="text-gray-600 hover:text-gray-800"
+          >
+            ← Back to Orders
+          </Link>
         </div>
         {/* Main grid: Left content + Right sticky summary */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -720,28 +737,48 @@ export default function NewOrderPage() {
                       <span className="text-lg font-semibold">${(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0)).toFixed(2)}</span>
                     </div>
                   </div>
-                  <div className="flex justify-end space-x-4">
+                  <div className="flex flex-col space-y-2">
+                    {showSupportFundRedemption ? (
+                      <button
+                        onClick={() => {
+                          const combinedItems = [...orderItems, ...supportFundItems];
+                          setOrderItems(combinedItems);
+                          setShowSupportFundRedemption(false);
+                          handleSubmitWithSupportFund();
+                        }}
+                        disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
+                        className="w-full bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
+                      >
+                        {submitting ? 'Processing...' : 'Complete Order'}
+                      </button>
+                    ) : (
+                      <>
+                        {orderItems.length > 0 && (
+                          <button
+                            onClick={handleSubmit}
+                            disabled={submitting}
+                            className="w-full bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
+                          >
+                            {submitting ? 'Processing...' : 'Complete Order'}
+                          </button>
+                        )}
+                        {totals.supportFundEarned > 0 && (
+                          <button
+                            onClick={() => setShowSupportFundRedemption(true)}
+                            disabled={submitting || orderItems.length === 0}
+                            className="w-full bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
+                          >
+                            Add Support Fund Items
+                          </button>
+                        )}
+                      </>
+                    )}
                     <Link
                       href="/client/orders"
-                      className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition"
+                      className="w-full bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition text-center"
                     >
                       Cancel
                     </Link>
-                    <button
-                      onClick={showSupportFundRedemption 
-                        ? () => {
-                            const combinedItems = [...orderItems, ...supportFundItems];
-                            setOrderItems(combinedItems);
-                            setShowSupportFundRedemption(false);
-                            handleSubmitWithSupportFund();
-                          }
-                        : (totals.supportFundEarned > 0 ? handleSupportFundRedemption : handleSubmit)
-                      }
-                      disabled={submitting || (showSupportFundRedemption ? (orderItems.length === 0 && supportFundItems.length === 0) : orderItems.length === 0)}
-                      className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
-                    >
-                      {submitting ? 'Creating Order...' : (showSupportFundRedemption ? 'Complete Order' : (totals.supportFundEarned > 0 ? 'Next: Redeem Support Funds' : 'Create Order'))}
-                    </button>
                   </div>
                 </>
               ) : (
@@ -828,15 +865,26 @@ export default function NewOrderPage() {
                       {submitting ? 'Processing...' : 'Complete Order'}
                     </button>
                   ) : (
-                    totals.supportFundEarned > 0 && (
-                      <button
-                        onClick={handleSupportFundRedemption}
-                        disabled={submitting || orderItems.length === 0}
-                        className="mt-4 w-full bg-black text-white px-4 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
-                      >
-                        {submitting ? 'Processing...' : 'Next: Redeem Support Funds'}
-                      </button>
-                    )
+                    <div className="mt-4 space-y-2">
+                      {orderItems.length > 0 && (
+                        <button
+                          onClick={handleSubmit}
+                          disabled={submitting}
+                          className="w-full bg-black text-white px-4 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
+                        >
+                          {submitting ? 'Processing...' : 'Complete Order'}
+                        </button>
+                      )}
+                      {totals.supportFundEarned > 0 && (
+                        <button
+                          onClick={() => setShowSupportFundRedemption(true)}
+                          disabled={submitting || orderItems.length === 0}
+                          className="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
+                        >
+                          Add Support Fund Items
+                        </button>
+                      )}
+                    </div>
                   )}
                 </>
               ) : (
