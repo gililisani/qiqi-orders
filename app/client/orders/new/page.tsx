@@ -480,7 +480,6 @@ export default function NewOrderPage() {
   const totals = getOrderTotals();
   const supportFundTotals = getSupportFundTotals();
 
-
   return (
     <ClientLayout>
       <div className="space-y-6">
