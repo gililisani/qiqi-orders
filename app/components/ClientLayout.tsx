@@ -45,7 +45,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <h1 className="text-xl font-bold text-gray-900">Qiqi Distributors</h1>
@@ -76,7 +76,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
 
       {/* Navigation */}
       <nav className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8">
             <a
               href="/client"
@@ -95,7 +95,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="w-full px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
     </div>
