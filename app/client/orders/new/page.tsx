@@ -371,9 +371,9 @@ export default function NewOrderPage() {
           </Link>
         </div>
         {/* Main grid: Left content + Right sticky summary */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 2xl:grid-cols-3 gap-6">
           {/* Left: company info + products */}
-          <div className="xl:col-span-2 space-y-6">
+          <div className="2xl:col-span-2 space-y-6">
             {/* Company Info */}
             {company && (
               <div className="bg-white rounded-lg shadow p-6">
@@ -413,35 +413,35 @@ export default function NewOrderPage() {
 
             {/* Products Table */}
             <div className="bg-white rounded-lg shadow">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
+              <div className="overflow-x-visible">
+                <table className="w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Product
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                         SKU
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                         UPC
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
                         Size
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
                         Case Pack
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Price/Unit
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Case Qty
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                         Total Units
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Total USD
                       </th>
                     </tr>
@@ -453,46 +453,46 @@ export default function NewOrderPage() {
                       
                       return (
                         <tr key={product.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="flex-shrink-0 h-12 w-12">
+                              <div className="flex-shrink-0 h-10 w-10 sm:h-12 sm:w-12">
                                 {product.picture_url ? (
                                   <Image
                                     src={product.picture_url}
                                     alt={product.item_name}
                                     width={48}
                                     height={48}
-                                    className="h-12 w-12 rounded object-cover"
+                                    className="h-10 w-10 sm:h-12 sm:w-12 rounded object-cover"
                                   />
                                 ) : (
-                                  <div className="h-12 w-12 bg-gray-200 rounded flex items-center justify-center">
+                                  <div className="h-10 w-10 sm:h-12 sm:w-12 bg-gray-200 rounded flex items-center justify-center">
                                     <span className="text-gray-400 text-xs">No Image</span>
                                   </div>
                                 )}
                               </div>
-                              <div className="ml-4">
+                              <div className="ml-3 sm:ml-4">
                                 <div className="text-sm font-medium text-gray-900">
                                   {product.item_name}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden sm:table-cell">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 hidden sm:table-cell">
                             {product.sku}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">
                             {product.upc}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden xl:table-cell">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 hidden xl:table-cell">
                             {product.size}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden xl:table-cell">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 hidden xl:table-cell">
                             {product.case_pack}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900">
                             ${unitPrice.toFixed(2)}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap">
                             <input
                               type="number"
                               min="0"
@@ -501,10 +501,10 @@ export default function NewOrderPage() {
                               className="w-16 md:w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-black"
                             />
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden sm:table-cell">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 hidden sm:table-cell">
                             {orderItem?.total_units || 0}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                             ${orderItem?.total_price?.toFixed(2) || '0.00'}
                           </td>
                         </tr>
