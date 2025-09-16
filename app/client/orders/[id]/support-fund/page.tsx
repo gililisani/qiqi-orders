@@ -344,18 +344,24 @@ export default function SupportFundPage() {
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-12 w-12">
                             {product.picture_url ? (
-                              <Image
+                              <img
                                 src={product.picture_url}
                                 alt={product.item_name}
-                                width={48}
-                                height={48}
                                 className="h-12 w-12 rounded object-cover"
+                                onError={(e) => {
+                                  console.error('Image failed to load:', product.picture_url);
+                                  e.currentTarget.style.display = 'none';
+                                  const noImageDiv = e.currentTarget.nextElementSibling as HTMLElement;
+                                  if (noImageDiv) noImageDiv.style.display = 'flex';
+                                }}
                               />
-                            ) : (
-                              <div className="h-12 w-12 bg-gray-200 rounded flex items-center justify-center">
-                                <span className="text-gray-400 text-xs">No Image</span>
-                              </div>
-                            )}
+                            ) : null}
+                            <div 
+                              className="h-12 w-12 bg-gray-200 rounded flex items-center justify-center"
+                              style={{display: product.picture_url ? 'none' : 'flex'}}
+                            >
+                              <span className="text-gray-400 text-xs">No Image</span>
+                            </div>
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">

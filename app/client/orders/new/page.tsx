@@ -607,16 +607,24 @@ export default function NewOrderPage() {
                             <div className="flex items-center min-w-0">
                               <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-hidden bg-gray-200">
                                 {product.picture_url ? (
-                                  <Image
+                                  <img
                                     src={product.picture_url}
                                     alt={product.item_name}
-                                    width={40}
-                                    height={40}
                                     className="h-8 w-8 sm:h-10 sm:w-10 object-cover"
+                                    onError={(e) => {
+                                      console.error('Image failed to load:', product.picture_url);
+                                      e.currentTarget.style.display = 'none';
+                                      const noImageDiv = e.currentTarget.nextElementSibling as HTMLElement;
+                                      if (noImageDiv) noImageDiv.style.display = 'flex';
+                                    }}
                                   />
-                                ) : (
-                                  <div className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center text-gray-400 text-xs">No Image</div>
-                                )}
+                                ) : null}
+                                <div 
+                                  className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center text-gray-400 text-xs"
+                                  style={{display: product.picture_url ? 'none' : 'flex'}}
+                                >
+                                  No Image
+                                </div>
                               </div>
                               <div className="ml-2 flex-1 min-w-0">
                                 <div 
