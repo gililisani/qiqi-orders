@@ -25,6 +25,9 @@
     "@types/react-dom": "18.2.22",
     "@types/crypto-js": "^4.2.1",
     "eslint": "8.57.0",
-    "eslint-config-next": "14.2.4"
+    "eslint-config-next": "14.2.4",
+    "tailwindcss": "^3.4.10",
+    "postcss": "^8.4.41",
+    "autoprefixer": "^10.4.19"
   }
 }
