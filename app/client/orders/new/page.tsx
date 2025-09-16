@@ -493,13 +493,34 @@ export default function NewOrderPage() {
                             ${unitPrice.toFixed(2)}
                           </td>
                           <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap">
-                            <input
-                              type="number"
-                              min="0"
-                              value={orderItem?.case_qty || 0}
-                              onChange={(e) => handleCaseQtyChange(product.id, parseInt(e.target.value) || 0)}
-                              className="w-16 md:w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-black"
-                            />
+                            <div className="inline-flex items-center border border-gray-300 rounded">
+                              <button
+                                type="button"
+                                onClick={() => handleCaseQtyChange(product.id, Math.max(0, (orderItem?.case_qty || 0) - 1))}
+                                className="px-2 py-1 text-gray-700 hover:bg-gray-100"
+                              >
+                                −
+                              </button>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                min={0}
+                                value={orderItem?.case_qty ?? 0}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  const next = val === '' ? 0 : Math.max(0, parseInt(val, 10) || 0);
+                                  handleCaseQtyChange(product.id, next);
+                                }}
+                                className="w-14 md:w-16 px-2 py-1 text-center border-0 focus:outline-none focus:ring-0"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleCaseQtyChange(product.id, (orderItem?.case_qty || 0) + 1)}
+                                className="px-2 py-1 text-gray-700 hover:bg-gray-100"
+                              >
+                                +
+                              </button>
+                            </div>
                           </td>
                           <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 hidden sm:table-cell">
                             {orderItem?.total_units || 0}
