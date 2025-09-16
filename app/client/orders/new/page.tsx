@@ -822,6 +822,14 @@ export default function NewOrderPage() {
                     </div>
                   )}
 
+                  {/* Credit Earned */}
+                  {totals.supportFundEarned > 0 && (
+                    <div className="flex justify-between text-sm text-green-600 pt-2">
+                      <span>Credit Earned ({totals.supportFundPercent}%):</span>
+                      <span className="font-medium">${(totals.supportFundEarned - supportFundTotals.subtotal).toFixed(2)}</span>
+                    </div>
+                  )}
+
                   {/* Support Fund Products Title */}
                   {supportFundItems.length > 0 && (
                     <div className="text-sm font-medium text-gray-700 uppercase tracking-wide mt-4">Support Fund Products</div>
@@ -854,12 +862,6 @@ export default function NewOrderPage() {
                       <span className="text-gray-600">Subtotal:</span>
                       <span className="font-medium">${(totals.subtotal + supportFundTotals.subtotal).toFixed(2)}</span>
                     </div>
-                    {totals.supportFundEarned > 0 && (
-                      <div className="flex justify-between text-sm text-green-600">
-                        <span>Support Fund ({totals.supportFundPercent}%):</span>
-                        <span className="font-medium">${(totals.supportFundEarned - supportFundTotals.subtotal).toFixed(2)}</span>
-                      </div>
-                    )}
                     {supportFundTotals.remainingCredit < 0 && (
                       <div className="flex justify-between text-sm text-red-600">
                         <span>Additional Cost:</span>
