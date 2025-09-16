@@ -44,6 +44,8 @@ export default function NewOrderPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [company, setCompany] = useState<Company | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [supportFundItems, setSupportFundItems] = useState<OrderItem[]>([]);
+  const [showSupportFundRedemption, setShowSupportFundRedemption] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -269,6 +271,63 @@ export default function NewOrderPage() {
     };
   };
 
+  const handleSupportFundRedemption = () => {
+    const totals = getOrderTotals();
+    if (totals.supportFundEarned > 0) {
+      setShowSupportFundRedemption(true);
+    }
+  };
+
+  const handleSupportFundItemChange = (productId: number, caseQty: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    const unitPrice = getProductPrice(product);
+    const totalUnits = caseQty * product.case_pack;
+    const totalPrice = unitPrice * totalUnits;
+
+    setSupportFundItems(prev => {
+      const existingIndex = prev.findIndex(item => item.product_id === productId);
+      
+      if (caseQty === 0) {
+        return prev.filter(item => item.product_id !== productId);
+      }
+
+      const newItem: OrderItem = {
+        product_id: productId,
+        product,
+        case_qty: caseQty,
+        total_units: totalUnits,
+        unit_price: unitPrice,
+        total_price: totalPrice
+      };
+
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = newItem;
+        return updated;
+      } else {
+        return [...prev, newItem];
+      }
+    });
+  };
+
+  const getSupportFundTotals = () => {
+    const subtotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
+    const originalOrderTotals = getOrderTotals();
+    const supportFundEarned = originalOrderTotals.supportFundEarned;
+    const remainingCredit = supportFundEarned - subtotal;
+    const finalTotal = remainingCredit < 0 ? Math.abs(remainingCredit) : 0;
+    
+    return {
+      subtotal,
+      supportFundEarned,
+      remainingCredit,
+      finalTotal,
+      itemCount: supportFundItems.length
+    };
+  };
+
   const handleSubmit = async () => {
     if (orderItems.length === 0) {
       setError('Please add at least one product to your order.');
@@ -328,6 +387,68 @@ export default function NewOrderPage() {
     }
   };
 
+  const handleSubmitWithSupportFund = async () => {
+    if (orderItems.length === 0 && supportFundItems.length === 0) {
+      setError('Please add at least one product to your order.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not found');
+
+      const originalTotals = getOrderTotals();
+      const supportTotals = getSupportFundTotals();
+      
+      const supportFundUsed = Math.min(supportTotals.subtotal, originalTotals.supportFundEarned);
+      const remainingCredit = originalTotals.supportFundEarned - supportFundUsed;
+      const additionalCost = Math.max(0, supportTotals.subtotal - originalTotals.supportFundEarned);
+      const finalTotal = originalTotals.total + additionalCost;
+
+      // Create the order
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          user_id: user.id,
+          company_id: company?.id,
+          status: 'Open',
+          total_value: finalTotal,
+          support_fund_used: supportFundUsed,
+          po_number: poNumber || null
+        }])
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order items (both regular and support fund items)
+      const allItems = [...orderItems, ...supportFundItems];
+      const orderItemsData = allItems.map(item => ({
+        order_id: orderData.id,
+        product_id: item.product_id,
+        quantity: item.total_units,
+        unit_price: item.unit_price,
+        total_price: item.total_price
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItemsData);
+
+      if (itemsError) throw itemsError;
+
+      router.push(`/client/orders/${orderData.id}`);
+    } catch (err: any) {
+      console.error('Error creating order:', err);
+      setError(err.message || 'Failed to create order');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <ClientLayout>
@@ -357,6 +478,202 @@ export default function NewOrderPage() {
   }
 
   const totals = getOrderTotals();
+  const supportFundTotals = getSupportFundTotals();
+
+  if (showSupportFundRedemption) {
+    return (
+      <ClientLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-2xl font-bold text-gray-900">Redeem Support Funds</h1>
+            <button
+              onClick={() => setShowSupportFundRedemption(false)}
+              className="text-gray-600 hover:text-gray-800 transition-colors duration-300 font-medium"
+            >
+              ← Back to Order
+            </button>
+          </div>
+
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-green-800 mb-4">Support Fund Redemption</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium text-green-700">Available Credit</label>
+                <p className="text-lg font-semibold text-green-800">${supportFundTotals.supportFundEarned.toFixed(2)}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-green-700">Items Selected</label>
+                <p className="text-lg font-semibold text-green-800">${supportFundTotals.subtotal.toFixed(2)}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-green-700">
+                  {supportFundTotals.remainingCredit >= 0 ? 'Remaining Credit' : 'Additional Cost'}
+                </label>
+                <p className={`text-lg font-semibold ${supportFundTotals.remainingCredit >= 0 ? 'text-green-800' : 'text-red-600'}`}>
+                  ${Math.abs(supportFundTotals.remainingCredit).toFixed(2)}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 p-3 bg-green-100 rounded-md">
+              <p className="text-sm text-green-700">
+                <strong>Important:</strong> Support fund credit cannot be accumulated and must be redeemed in full with each order. 
+                Any unused credit will be forfeited.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full table-fixed divide-y divide-gray-200" style={{tableLayout: 'fixed'}}>
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '30%'}}>
+                      Product
+                    </th>
+                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell" style={{width: '12%'}}>
+                      SKU
+                    </th>
+                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '8%'}}>
+                      Size
+                    </th>
+                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '8%'}}>
+                      Case Pack
+                    </th>
+                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '10%'}}>
+                      Price/Unit
+                    </th>
+                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '12%'}}>
+                      Case Qty
+                    </th>
+                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell" style={{width: '10%'}}>
+                      Total Units
+                    </th>
+                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '10%'}}>
+                      Total USD
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {products
+                    .filter(p => p.list_in_support_funds)
+                    .map((product) => {
+                      const supportFundItem = supportFundItems.find(item => item.product_id === product.id);
+                      const quantity = supportFundItem?.case_qty || 0;
+                      return (
+                        <tr key={product.id}>
+                          <td className="px-2 py-3 whitespace-nowrap">
+                            <div className="flex items-center min-w-0">
+                              <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-hidden bg-gray-200">
+                                {product.picture_url ? (
+                                  <Image
+                                    src={product.picture_url}
+                                    alt={product.item_name}
+                                    width={40}
+                                    height={40}
+                                    className="h-8 w-8 sm:h-10 sm:w-10 object-cover"
+                                  />
+                                ) : (
+                                  <div className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center text-gray-400 text-xs">No Image</div>
+                                )}
+                              </div>
+                              <div className="ml-2 flex-1 min-w-0">
+                                <div 
+                                  className="text-sm font-medium text-gray-900 truncate" 
+                                  title={product.item_name}
+                                >
+                                  {product.item_name}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden sm:table-cell">
+                            <div className="truncate" title={product.sku}>
+                              {product.sku}
+                            </div>
+                          </td>
+                          <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden xl:table-cell">
+                            <div className="truncate" title={product.size}>
+                              {product.size}
+                            </div>
+                          </td>
+                          <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden xl:table-cell">
+                            {product.case_pack}
+                          </td>
+                          <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 text-center">
+                            ${getProductPrice(product).toFixed(2)}
+                          </td>
+                          <td className="px-2 py-3 whitespace-nowrap text-center">
+                            <div className="inline-flex items-center border border-gray-300 rounded select-none justify-center">
+                              <button
+                                type="button"
+                                onClick={() => handleSupportFundItemChange(product.id, Math.max(0, quantity - 1))}
+                                className="px-1 py-1 text-gray-700 hover:bg-gray-100 focus:outline-none text-sm"
+                              >
+                                −
+                              </button>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={quantity}
+                                onFocus={(e) => e.currentTarget.select()}
+                                onChange={(e) => {
+                                  const val = e.currentTarget.value.replace(/[^0-9]/g, '');
+                                  if (val === '') {
+                                    handleSupportFundItemChange(product.id, 0);
+                                    return;
+                                  }
+                                  const parsed = Number(val);
+                                  handleSupportFundItemChange(product.id, Math.max(0, Math.min(99, Math.floor(parsed))));
+                                }}
+                                className="w-8 px-1 py-1 text-center text-sm focus:outline-none focus:ring-1 focus:ring-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSupportFundItemChange(product.id, quantity + 1)}
+                                className="px-1 py-1 text-gray-700 hover:bg-gray-100 focus:outline-none text-sm"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden sm:table-cell">
+                            {quantity * product.case_pack}
+                          </td>
+                          <td className="px-2 py-3 whitespace-nowrap text-sm font-medium text-gray-900 text-center">
+                            ${(quantity * product.case_pack * getProductPrice(product)).toFixed(2)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="flex justify-between">
+            <button
+              onClick={() => setShowSupportFundRedemption(false)}
+              className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition"
+            >
+              Back to Order
+            </button>
+            <button
+              onClick={() => {
+                const combinedItems = [...orderItems, ...supportFundItems];
+                setOrderItems(combinedItems);
+                setShowSupportFundRedemption(false);
+                handleSubmitWithSupportFund();
+              }}
+              disabled={supportFundTotals.itemCount === 0}
+              className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
+            >
+              Complete Order with Support Funds
+            </button>
+          </div>
+        </div>
+      </ClientLayout>
+    );
+  }
 
   return (
     <ClientLayout>
@@ -572,7 +889,7 @@ export default function NewOrderPage() {
                       Cancel
                     </Link>
                     <button
-                      onClick={handleSubmit}
+                      onClick={totals.supportFundEarned > 0 ? handleSupportFundRedemption : handleSubmit}
                       disabled={submitting || orderItems.length === 0}
                       className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
                     >
@@ -635,9 +952,9 @@ export default function NewOrderPage() {
                   {/* Next: Redeem Support Funds button */}
                   {totals.supportFundEarned > 0 && (
                     <button
-                      onClick={handleSubmit}
+                      onClick={handleSupportFundRedemption}
                       disabled={submitting || orderItems.length === 0}
-                      className="mt-4 w-full bg-black text-white px-4 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
+                      className="mt-4 w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
                     >
                       {submitting ? 'Processing...' : 'Next: Redeem Support Funds'}
                     </button>
