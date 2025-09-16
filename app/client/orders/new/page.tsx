@@ -860,6 +860,26 @@ export default function NewOrderPage() {
                     </div>
                   )}
 
+                  {/* Remaining Credit */}
+                  {totals.supportFundEarned > 0 && (
+                    <div className="flex justify-between text-sm font-medium pt-2">
+                      <span>Remaining Credit:</span>
+                      <span className={(() => {
+                        const creditEarned = totals.subtotal * totals.supportFundPercent / 100;
+                        const supportFundTotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
+                        const remaining = creditEarned - supportFundTotal;
+                        return remaining < 0 ? 'text-red-600' : 'text-green-600';
+                      })()}>
+                        {(() => {
+                          const creditEarned = totals.subtotal * totals.supportFundPercent / 100;
+                          const supportFundTotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
+                          const remaining = creditEarned - supportFundTotal;
+                          return remaining < 0 ? `($${Math.abs(remaining).toFixed(2)})` : `$${remaining.toFixed(2)}`;
+                        })()}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Totals */}
                   <div className="space-y-2 pt-2 border-t">
                     <div className="flex justify-between text-sm">
