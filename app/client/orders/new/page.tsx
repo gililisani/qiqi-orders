@@ -540,103 +540,115 @@ export default function NewOrderPage() {
             </div>
 
             {/* Mobile/Tablet Order Summary (visible below xl) */}
-            {orderItems.length > 0 && (
-              <div className="xl:hidden bg-white rounded-lg shadow p-6 space-y-4">
-                <h2 className="text-lg font-semibold">Order Summary</h2>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Items:</span>
-                    <span className="font-medium">{totals.itemCount}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Subtotal:</span>
-                    <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
-                  </div>
-                  {totals.supportFundEarned > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>Support Fund ({totals.supportFundPercent}%):</span>
-                      <span className="font-medium">${totals.supportFundEarned.toFixed(2)}</span>
+            <div className="xl:hidden bg-white rounded-lg shadow p-6 space-y-4">
+              <h2 className="text-lg font-semibold">Order Summary</h2>
+              {orderItems.length > 0 ? (
+                <>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Items:</span>
+                      <span className="font-medium">{totals.itemCount}</span>
                     </div>
-                  )}
-                  <div className="flex justify-between pt-2 border-t">
-                    <span className="text-lg font-semibold">Total:</span>
-                    <span className="text-lg font-semibold">${totals.total.toFixed(2)}</span>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Subtotal:</span>
+                      <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
+                    </div>
+                    {totals.supportFundEarned > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>Support Fund ({totals.supportFundPercent}%):</span>
+                        <span className="font-medium">${totals.supportFundEarned.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between pt-2 border-t">
+                      <span className="text-lg font-semibold">Total:</span>
+                      <span className="text-lg font-semibold">${totals.total.toFixed(2)}</span>
+                    </div>
                   </div>
+                  <div className="flex justify-end space-x-4">
+                    <Link
+                      href="/client/orders"
+                      className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition"
+                    >
+                      Cancel
+                    </Link>
+                    <button
+                      onClick={handleSubmit}
+                      disabled={submitting || orderItems.length === 0}
+                      className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
+                    >
+                      {submitting ? 'Creating Order...' : (totals.supportFundEarned > 0 ? 'Next: Redeem Support Funds' : 'Create Order')}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Please add items to your order</p>
                 </div>
-                <div className="flex justify-end space-x-4">
-                  <Link
-                    href="/client/orders"
-                    className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition"
-                  >
-                    Cancel
-                  </Link>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={submitting || orderItems.length === 0}
-                    className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
-                  >
-                    {submitting ? 'Creating Order...' : (totals.supportFundEarned > 0 ? 'Next: Redeem Support Funds' : 'Create Order')}
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Right: sticky order summary (visible at xl+) */}
           <div className="hidden xl:block xl:col-span-1">
-            {orderItems.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-6 sticky top-6 space-y-4">
-                <h2 className="text-lg font-semibold">Order Summary</h2>
+            <div className="bg-white rounded-lg shadow p-6 sticky top-6 space-y-4">
+              <h2 className="text-lg font-semibold">Order Summary</h2>
 
-                {/* Item list - compact lines, no images */}
-                <div className="space-y-2">
-                  {orderItems.map((item) => (
-                    <div key={item.product_id} className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0 pr-2">
-                        <div className="text-sm font-medium text-gray-900 truncate leading-tight">{item.product.item_name}</div>
-                        <div className="text-xs text-gray-500 leading-tight">
-                          {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''}
+              {orderItems.length > 0 ? (
+                <>
+                  {/* Item list - compact lines, no images */}
+                  <div className="space-y-2">
+                    {orderItems.map((item) => (
+                      <div key={item.product_id} className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0 pr-2">
+                          <div className="text-sm font-medium text-gray-900 truncate leading-tight">{item.product.item_name}</div>
+                          <div className="text-xs text-gray-500 leading-tight">
+                            {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''}
+                          </div>
                         </div>
+                        <div className="text-sm font-medium text-gray-900">${item.total_price.toFixed(2)}</div>
                       </div>
-                      <div className="text-sm font-medium text-gray-900">${item.total_price.toFixed(2)}</div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
 
-                {/* Totals */}
-                <div className="space-y-2 pt-2 border-t">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Items:</span>
-                    <span className="font-medium">{totals.itemCount}</span>
+                  {/* Totals */}
+                  <div className="space-y-2 pt-2 border-t">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Items:</span>
+                      <span className="font-medium">{totals.itemCount}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Subtotal:</span>
+                      <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
+                    </div>
+                    {totals.supportFundEarned > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>Support Fund ({totals.supportFundPercent}%):</span>
+                        <span className="font-medium">${totals.supportFundEarned.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between pt-2 border-t">
+                      <span className="text-lg font-semibold">Total:</span>
+                      <span className="text-lg font-semibold">${totals.total.toFixed(2)}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Subtotal:</span>
-                    <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
-                  </div>
+
+                  {/* Next: Redeem Support Funds button */}
                   {totals.supportFundEarned > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>Support Fund ({totals.supportFundPercent}%):</span>
-                      <span className="font-medium">${totals.supportFundEarned.toFixed(2)}</span>
-                    </div>
+                    <button
+                      onClick={handleSubmit}
+                      disabled={submitting || orderItems.length === 0}
+                      className="mt-4 w-full bg-black text-white px-4 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
+                    >
+                      {submitting ? 'Processing...' : 'Next: Redeem Support Funds'}
+                    </button>
                   )}
-                  <div className="flex justify-between pt-2 border-t">
-                    <span className="text-lg font-semibold">Total:</span>
-                    <span className="text-lg font-semibold">${totals.total.toFixed(2)}</span>
-                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Please add items to your order</p>
                 </div>
-
-                {/* Next: Redeem Support Funds button */}
-                {totals.supportFundEarned > 0 && (
-                  <button
-                    onClick={handleSubmit}
-                    disabled={submitting || orderItems.length === 0}
-                    className="mt-4 w-full bg-black text-white px-4 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
-                  >
-                    {submitting ? 'Processing...' : 'Next: Redeem Support Funds'}
-                  </button>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
