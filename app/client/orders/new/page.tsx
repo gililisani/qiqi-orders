@@ -452,7 +452,22 @@ export default function NewOrderPage() {
                         <tr key={product.id} className="hover:bg-gray-50">
                           <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="text-sm font-medium text-gray-900">{product.item_name}</div>
+                              <div className="flex-shrink-0 h-10 w-10 sm:h-12 sm:w-12 rounded overflow-hidden bg-gray-200">
+                                {product.picture_url ? (
+                                  <Image
+                                    src={product.picture_url}
+                                    alt={product.item_name}
+                                    width={48}
+                                    height={48}
+                                    className="h-10 w-10 sm:h-12 sm:w-12 object-cover"
+                                  />
+                                ) : (
+                                  <div className="h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center text-gray-400 text-xs">No Image</div>
+                                )}
+                              </div>
+                              <div className="ml-3 sm:ml-4">
+                                <div className="text-sm font-medium text-gray-900">{product.item_name}</div>
+                              </div>
                             </div>
                           </td>
                           <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden sm:table-cell">
