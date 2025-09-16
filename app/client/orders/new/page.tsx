@@ -484,35 +484,9 @@ export default function NewOrderPage() {
     <ClientLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold text-gray-900">
-              {showSupportFundRedemption ? 'Redeem Support Funds' : 'New Order'}
-            </h1>
-            {totals.supportFundEarned > 0 && (
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setShowSupportFundRedemption(false)}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    !showSupportFundRedemption 
-                      ? 'bg-black text-white' 
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  Original Order
-                </button>
-                <button
-                  onClick={() => setShowSupportFundRedemption(true)}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    showSupportFundRedemption 
-                      ? 'bg-green-600 text-white' 
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  Support Funds
-                </button>
-              </div>
-            )}
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {showSupportFundRedemption ? 'Redeem Support Funds' : 'New Order'}
+          </h1>
           <Link
             href="/client/orders"
             className="text-gray-600 hover:text-gray-800"
@@ -560,6 +534,37 @@ export default function NewOrderPage() {
                 {error}
               </div>
             )}
+
+            {/* Tab Navigation */}
+            <div className="bg-white rounded-lg shadow">
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                  <button
+                    onClick={() => setShowSupportFundRedemption(false)}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                      !showSupportFundRedemption
+                        ? 'border-black text-black'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Order Form
+                  </button>
+                  <button
+                    onClick={() => setShowSupportFundRedemption(true)}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                      showSupportFundRedemption
+                        ? 'border-green-600 text-green-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Distributor Support Funds
+                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      ${totals.supportFundEarned.toFixed(2)} available
+                    </span>
+                  </button>
+                </nav>
+              </div>
+            </div>
 
             {/* Products Table */}
             <div className="bg-white rounded-lg shadow">
@@ -769,15 +774,6 @@ export default function NewOrderPage() {
                             {submitting ? 'Processing...' : 'Complete Order'}
                           </button>
                         )}
-                        {totals.supportFundEarned > 0 && (
-                          <button
-                            onClick={() => setShowSupportFundRedemption(true)}
-                            disabled={submitting || orderItems.length === 0}
-                            className="w-full bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
-                          >
-                            Add Support Fund Items
-                          </button>
-                        )}
                       </>
                     )}
                     <Link
@@ -880,15 +876,6 @@ export default function NewOrderPage() {
                           className="w-full bg-black text-white px-4 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
                         >
                           {submitting ? 'Processing...' : 'Complete Order'}
-                        </button>
-                      )}
-                      {totals.supportFundEarned > 0 && (
-                        <button
-                          onClick={() => setShowSupportFundRedemption(true)}
-                          disabled={submitting || orderItems.length === 0}
-                          className="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
-                        >
-                          Add Support Fund Items
                         </button>
                       )}
                     </div>
