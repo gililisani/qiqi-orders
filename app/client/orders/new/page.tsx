@@ -732,10 +732,6 @@ export default function NewOrderPage() {
                       <span className="text-gray-600">Cases:</span>
                       <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.case_qty, 0) + supportFundItems.reduce((sum, item) => sum + item.case_qty, 0)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Subtotal:</span>
-                      <span className="font-medium">${(totals.subtotal + supportFundTotals.subtotal).toFixed(2)}</span>
-                    </div>
                     {totals.supportFundEarned > 0 && (
                       <div className="flex justify-between text-sm text-green-600">
                         <span>Support Fund ({totals.supportFundPercent}%):</span>
@@ -749,7 +745,7 @@ export default function NewOrderPage() {
                       </div>
                     )}
                     <div className="flex justify-between pt-2 border-t">
-                      <span className="text-lg font-semibold">Total:</span>
+                      <span className="text-lg font-semibold">Total Order:</span>
                       <span className="text-lg font-semibold">${(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0)).toFixed(2)}</span>
                     </div>
                   </div>
@@ -894,10 +890,6 @@ export default function NewOrderPage() {
                       <span className="text-gray-600">Cases:</span>
                       <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.case_qty, 0) + supportFundItems.reduce((sum, item) => sum + item.case_qty, 0)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Subtotal:</span>
-                      <span className="font-medium">${(totals.subtotal + supportFundTotals.subtotal).toFixed(2)}</span>
-                    </div>
                     {supportFundTotals.remainingCredit < 0 && (
                       <div className="flex justify-between text-sm text-red-600">
                         <span>Additional Cost:</span>
@@ -905,7 +897,7 @@ export default function NewOrderPage() {
                       </div>
                     )}
                     <div className="flex justify-between pt-2 border-t">
-                      <span className="text-lg font-semibold">Total:</span>
+                      <span className="text-lg font-semibold">Total Order:</span>
                       <span className="text-lg font-semibold">${(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0)).toFixed(2)}</span>
                     </div>
                   </div>
