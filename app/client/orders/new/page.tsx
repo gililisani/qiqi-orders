@@ -465,7 +465,7 @@ export default function NewOrderPage() {
                                   <div className="h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center text-gray-400 text-xs">No Image</div>
                                 )}
                               </div>
-                              <div className="ml-3 sm:ml-4 max-w-[28ch]">
+                              <div className="ml-3 sm:ml-4 flex-1 min-w-0">
                                 <div className="text-sm font-medium text-gray-900 truncate">{product.item_name}</div>
                               </div>
                             </div>
