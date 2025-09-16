@@ -855,7 +855,7 @@ export default function NewOrderPage() {
                   )}
 
                   {/* Remaining Credit */}
-                  {totals.supportFundEarned > 0 && (
+                  {supportFundItems.length > 0 && (
                     <div className="flex justify-between text-sm font-medium pt-2">
                       <span>Remaining Credit:</span>
                       <span className={(() => {
@@ -875,7 +875,7 @@ export default function NewOrderPage() {
                   )}
 
                   {/* Support Fund Disclaimer */}
-                  {totals.supportFundEarned > 0 && (
+                  {supportFundItems.length > 0 && (
                     <div className="text-xs text-gray-500 italic pt-2 space-y-1">
                       <div>• Support Fund credit cannot be accumulated and must be redeemed in full with each order</div>
                       <div>• Any unused Support Fund credit will be forfeited</div>
