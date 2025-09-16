@@ -133,11 +133,15 @@ export default function NewOrderPage() {
       console.log('companyData:', companyData);
       
       if (companyData) {
-        // Transform class from array to single object if needed
+        // Transform class and support_fund shapes consistently
         const transformedCompany = {
           ...companyData,
-          class: Array.isArray(companyData.class) ? companyData.class[0] : companyData.class
-        };
+          class: Array.isArray(companyData.class) ? companyData.class[0] : companyData.class,
+          support_fund: Array.isArray(companyData.support_fund)
+            ? companyData.support_fund
+            : (companyData.support_fund ? [companyData.support_fund] : [])
+        } as Company;
+        console.log('Transformed company support_fund:', transformedCompany.support_fund);
         console.log('Setting company:', transformedCompany);
         setCompany(transformedCompany);
       } else {
@@ -248,7 +252,11 @@ export default function NewOrderPage() {
 
   const getOrderTotals = () => {
     const subtotal = orderItems.reduce((sum, item) => sum + item.total_price, 0);
-    const supportFundPercent = company?.support_fund?.[0]?.percent || 0;
+    // Support fund percent can arrive as array or single
+    const rawSf = company?.support_fund as any;
+    const supportFundPercent = Array.isArray(rawSf)
+      ? (rawSf[0]?.percent || 0)
+      : (rawSf?.percent || 0);
     const supportFundEarned = subtotal * (supportFundPercent / 100);
     const total = subtotal;
 
