@@ -799,7 +799,7 @@ export default function NewOrderPage() {
 
               {orderItems.length > 0 ? (
                 <>
-                  {/* Item list - compact lines, no images */}
+                  {/* Order Form Products */}
                   <div className="space-y-2">
                     {orderItems.map((item) => (
                       <div key={item.product_id} className="flex items-center justify-between">
@@ -812,18 +812,29 @@ export default function NewOrderPage() {
                         <div className="text-sm font-medium text-gray-900">${item.total_price.toFixed(2)}</div>
                       </div>
                     ))}
-                    {supportFundItems.map((item) => (
-                      <div key={`sf-${item.product_id}`} className="flex items-center justify-between bg-green-50 p-2 rounded">
-                        <div className="flex-1 min-w-0 pr-2">
-                          <div className="text-sm font-medium text-green-800 truncate leading-tight">{item.product.item_name}</div>
-                          <div className="text-xs text-green-600 leading-tight">
-                            {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''} (Support Fund)
-                          </div>
-                        </div>
-                        <div className="text-sm font-medium text-green-800">${item.total_price.toFixed(2)}</div>
-                      </div>
-                    ))}
                   </div>
+
+                  {/* Support Fund Products Title */}
+                  {supportFundItems.length > 0 && (
+                    <div className="text-sm font-medium text-gray-700 uppercase tracking-wide mt-4">Support Fund Products</div>
+                  )}
+
+                  {/* Support Fund Products */}
+                  {supportFundItems.length > 0 && (
+                    <div className="space-y-2">
+                      {supportFundItems.map((item) => (
+                        <div key={`sf-${item.product_id}`} className="flex items-center justify-between bg-green-50 p-2 rounded">
+                          <div className="flex-1 min-w-0 pr-2">
+                            <div className="text-sm font-medium text-green-800 truncate leading-tight">{item.product.item_name}</div>
+                            <div className="text-xs text-green-600 leading-tight">
+                              {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''} (Support Fund)
+                            </div>
+                          </div>
+                          <div className="text-sm font-medium text-green-800">${item.total_price.toFixed(2)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Totals */}
                   <div className="space-y-2 pt-2 border-t">
