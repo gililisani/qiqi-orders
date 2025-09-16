@@ -511,10 +511,12 @@ export default function NewOrderPage() {
                     <label className="text-sm font-medium text-gray-500">Client Type</label>
                     <p className="text-lg">{getClientType()}</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Support Fund</label>
-                    <p className="text-lg">{totals.supportFundPercent}%</p>
-                  </div>
+                  {totals.supportFundPercent > 0 && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Support Fund</label>
+                      <p className="text-lg">{totals.supportFundPercent}%</p>
+                    </div>
+                  )}
                   <div>
                     <label className="text-sm font-medium text-gray-500">PO/Cheque Number (Optional)</label>
                     <input
@@ -536,35 +538,37 @@ export default function NewOrderPage() {
             )}
 
             {/* Tab Navigation */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="border-b border-gray-200">
-                <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
-                  <button
-                    onClick={() => setShowSupportFundRedemption(false)}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                      !showSupportFundRedemption
-                        ? 'border-black text-black'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    Order Form
-                  </button>
-                  <button
-                    onClick={() => setShowSupportFundRedemption(true)}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                      showSupportFundRedemption
-                        ? 'border-green-600 text-green-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    Distributor Support Funds
-                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      ${totals.supportFundEarned.toFixed(2)} available
-                    </span>
-                  </button>
-                </nav>
+            {totals.supportFundPercent > 0 && (
+              <div className="bg-white rounded-lg shadow">
+                <div className="border-b border-gray-200">
+                  <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                    <button
+                      onClick={() => setShowSupportFundRedemption(false)}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                        !showSupportFundRedemption
+                          ? 'border-black text-black'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Order Form
+                    </button>
+                    <button
+                      onClick={() => setShowSupportFundRedemption(true)}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                        showSupportFundRedemption
+                          ? 'border-green-600 text-green-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Distributor Support Funds
+                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        ${totals.supportFundEarned.toFixed(2)} available
+                      </span>
+                    </button>
+                  </nav>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Products Table */}
             <div className="bg-white rounded-lg shadow">
@@ -817,7 +821,7 @@ export default function NewOrderPage() {
                   )}
 
                   {/* Credit Earned */}
-                  {totals.supportFundEarned > 0 && (
+                  {totals.supportFundPercent > 0 && (
                     <div className="flex justify-between text-sm text-green-600 pt-2">
                       <span>Credit Earned ({totals.supportFundPercent}%):</span>
                       <span className="font-medium">${(totals.subtotal * totals.supportFundPercent / 100).toFixed(2)}</span>
