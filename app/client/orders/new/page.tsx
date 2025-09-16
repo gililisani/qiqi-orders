@@ -726,7 +726,11 @@ export default function NewOrderPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Items:</span>
-                      <span className="font-medium">{totals.itemCount + supportFundTotals.itemCount}</span>
+                      <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.total_units, 0) + supportFundItems.reduce((sum, item) => sum + item.total_units, 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Cases:</span>
+                      <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.case_qty, 0) + supportFundItems.reduce((sum, item) => sum + item.case_qty, 0)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Subtotal:</span>
@@ -884,7 +888,11 @@ export default function NewOrderPage() {
                   <div className="space-y-2 pt-2 border-t">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Items:</span>
-                      <span className="font-medium">{totals.itemCount + supportFundTotals.itemCount}</span>
+                      <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.total_units, 0) + supportFundItems.reduce((sum, item) => sum + item.total_units, 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Cases:</span>
+                      <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.case_qty, 0) + supportFundItems.reduce((sum, item) => sum + item.case_qty, 0)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Subtotal:</span>
