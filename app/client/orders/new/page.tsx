@@ -450,8 +450,8 @@ export default function NewOrderPage() {
                       
                       return (
                         <tr key={product.id} className="hover:bg-gray-50">
-                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap">
-                            <div className="flex items-center">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap max-w-0">
+                            <div className="flex items-center min-w-0">
                               <div className="flex-shrink-0 h-10 w-10 sm:h-12 sm:w-12 rounded overflow-hidden bg-gray-200">
                                 {product.picture_url ? (
                                   <Image
