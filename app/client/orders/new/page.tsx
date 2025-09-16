@@ -814,6 +814,14 @@ export default function NewOrderPage() {
                     ))}
                   </div>
 
+                  {/* Order Form Subtotal */}
+                  {orderItems.length > 0 && (
+                    <div className="flex justify-between text-sm font-medium text-gray-900 pt-2 border-t">
+                      <span>Subtotal:</span>
+                      <span>${orderItems.reduce((sum, item) => sum + item.total_price, 0).toFixed(2)}</span>
+                    </div>
+                  )}
+
                   {/* Support Fund Products Title */}
                   {supportFundItems.length > 0 && (
                     <div className="text-sm font-medium text-gray-700 uppercase tracking-wide mt-4">Support Fund Products</div>
