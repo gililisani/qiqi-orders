@@ -362,192 +362,240 @@ export default function NewOrderPage() {
             ← Back to Orders
           </Link>
         </div>
+        {/* Main grid: Left content + Right sticky summary */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left: company info + products */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Company Info */}
+            {company && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-lg font-semibold mb-4">Order Information</h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Company</label>
+                    <p className="text-lg">{company.company_name}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Client Type</label>
+                    <p className="text-lg">{getClientType()}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Support Fund</label>
+                    <p className="text-lg">{totals.supportFundPercent}%</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">PO/Cheque Number (Optional)</label>
+                    <input
+                      type="text"
+                      value={poNumber}
+                      onChange={(e) => setPoNumber(e.target.value)}
+                      placeholder="Enter PO number"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
-        {/* Company Info */}
-        {company && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Order Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">Company</label>
-                <p className="text-lg">{company.company_name}</p>
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                {error}
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Client Type</label>
-                <p className="text-lg">{getClientType()}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Support Fund</label>
-                <p className="text-lg">{totals.supportFundPercent}%</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">PO/Cheque Number (Optional)</label>
-                <input
-                  type="text"
-                  value={poNumber}
-                  onChange={(e) => setPoNumber(e.target.value)}
-                  placeholder="Enter PO number"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
-
-        {/* Products Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    SKU
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    UPC
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Size
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Case Pack
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price/Unit
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Case Qty
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total Units
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total USD
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {products.map((product) => {
-                  const orderItem = orderItems.find(item => item.product_id === product.id);
-                  const unitPrice = getProductPrice(product);
-                  
-                  return (
-                    <tr key={product.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-12 w-12">
-                            {product.picture_url ? (
-                              <Image
-                                src={product.picture_url}
-                                alt={product.item_name}
-                                width={48}
-                                height={48}
-                                className="h-12 w-12 rounded object-cover"
-                              />
-                            ) : (
-                              <div className="h-12 w-12 bg-gray-200 rounded flex items-center justify-center">
-                                <span className="text-gray-400 text-xs">No Image</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {product.item_name}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {product.sku}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {product.upc}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {product.size}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {product.case_pack}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${unitPrice.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <input
-                          type="number"
-                          min="0"
-                          value={orderItem?.case_qty || 0}
-                          onChange={(e) => handleCaseQtyChange(product.id, parseInt(e.target.value) || 0)}
-                          className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-black"
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {orderItem?.total_units || 0}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ${orderItem?.total_price?.toFixed(2) || '0.00'}
-                      </td>
+            {/* Products Table */}
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Product
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        SKU
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        UPC
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Size
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Case Pack
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Price/Unit
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Case Qty
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total Units
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total USD
+                      </th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Order Summary */}
-        {orderItems.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Items in Order:</span>
-                <span className="font-medium">{totals.itemCount}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Subtotal:</span>
-                <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
-              </div>
-              {totals.supportFundEarned > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>Support Fund Earned ({totals.supportFundPercent}%):</span>
-                  <span className="font-medium">${totals.supportFundEarned.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="border-t pt-2">
-                <div className="flex justify-between">
-                  <span className="text-lg font-semibold">Total:</span>
-                  <span className="text-lg font-semibold">${totals.total.toFixed(2)}</span>
-                </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {products.map((product) => {
+                      const orderItem = orderItems.find(item => item.product_id === product.id);
+                      const unitPrice = getProductPrice(product);
+                      
+                      return (
+                        <tr key={product.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-12 w-12">
+                                {product.picture_url ? (
+                                  <Image
+                                    src={product.picture_url}
+                                    alt={product.item_name}
+                                    width={48}
+                                    height={48}
+                                    className="h-12 w-12 rounded object-cover"
+                                  />
+                                ) : (
+                                  <div className="h-12 w-12 bg-gray-200 rounded flex items-center justify-center">
+                                    <span className="text-gray-400 text-xs">No Image</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {product.item_name}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {product.sku}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {product.upc}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {product.size}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {product.case_pack}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ${unitPrice.toFixed(2)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="number"
+                              min="0"
+                              value={orderItem?.case_qty || 0}
+                              onChange={(e) => handleCaseQtyChange(product.id, parseInt(e.target.value) || 0)}
+                              className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                            />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {orderItem?.total_units || 0}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            ${orderItem?.total_price?.toFixed(2) || '0.00'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Action Buttons */}
-        <div className="flex justify-end space-x-4">
-          <Link
-            href="/client/orders"
-            className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition"
-          >
-            Cancel
-          </Link>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting || orderItems.length === 0}
-            className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
-          >
-            {submitting ? 'Creating Order...' : 'Create Order'}
-          </button>
+            {/* Action Buttons (hidden if support funds present to avoid duplicate CTAs) */}
+            {!(totals.supportFundEarned > 0) && (
+              <div className="flex justify-end space-x-4">
+                <Link
+                  href="/client/orders"
+                  className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition"
+                >
+                  Cancel
+                </Link>
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting || orderItems.length === 0}
+                  className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
+                >
+                  {submitting ? 'Creating Order...' : 'Create Order'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Right: sticky order summary */}
+          <div className="lg:col-span-1">
+            {orderItems.length > 0 && (
+              <div className="bg-white rounded-lg shadow p-6 sticky top-6 space-y-4">
+                <h2 className="text-lg font-semibold">Order Summary</h2>
+
+                {/* Item list */}
+                <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+                  {orderItems.map((item) => (
+                    <div key={item.product_id} className="flex items-start space-x-3">
+                      <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                        {item.product.picture_url ? (
+                          <Image
+                            src={item.product.picture_url}
+                            alt={item.product.item_name}
+                            width={48}
+                            height={48}
+                            className="w-12 h-12 object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 flex items-center justify-center text-gray-400 text-xs">No Image</div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 truncate">{item.product.item_name}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                      <div className="text-sm font-medium text-gray-900">${item.total_price.toFixed(2)}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Totals */}
+                <div className="space-y-2 pt-2 border-t">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Items:</span>
+                    <span className="font-medium">{totals.itemCount}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
+                  </div>
+                  {totals.supportFundEarned > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Support Fund ({totals.supportFundPercent}%):</span>
+                      <span className="font-medium">${totals.supportFundEarned.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-2 border-t">
+                    <span className="text-lg font-semibold">Total:</span>
+                    <span className="text-lg font-semibold">${totals.total.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {/* Next: Redeem Support Funds button */}
+                {totals.supportFundEarned > 0 && (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitting || orderItems.length === 0}
+                    className="mt-4 w-full bg-black text-white px-4 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
+                  >
+                    {submitting ? 'Processing...' : 'Next: Redeem Support Funds'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </ClientLayout>
