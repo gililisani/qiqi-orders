@@ -738,12 +738,6 @@ export default function NewOrderPage() {
                         <span className="font-medium">${(totals.supportFundEarned - supportFundTotals.subtotal).toFixed(2)}</span>
                       </div>
                     )}
-                    {supportFundTotals.remainingCredit < 0 && (
-                      <div className="flex justify-between text-sm text-red-600">
-                        <span>Additional Cost:</span>
-                        <span className="font-medium">${Math.abs(supportFundTotals.remainingCredit).toFixed(2)}</span>
-                      </div>
-                    )}
                     <div className="flex justify-between pt-2 border-t">
                       <span className="text-lg font-semibold">Total Order:</span>
                       <span className="text-lg font-semibold">${(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0)).toFixed(2)}</span>
@@ -880,6 +874,15 @@ export default function NewOrderPage() {
                     </div>
                   )}
 
+                  {/* Support Fund Disclaimer */}
+                  {totals.supportFundEarned > 0 && (
+                    <div className="text-xs text-gray-500 italic pt-2 space-y-1">
+                      <div>• Support Fund credit cannot be accumulated and must be redeemed in full with each order</div>
+                      <div>• Any unused Support Fund credit will be forfeited</div>
+                      <div>• Negative remaining credit will be added to the grand total</div>
+                    </div>
+                  )}
+
                   {/* Totals */}
                   <div className="space-y-2 pt-2 border-t">
                     <div className="flex justify-between text-sm">
@@ -890,12 +893,6 @@ export default function NewOrderPage() {
                       <span className="text-gray-600">Cases:</span>
                       <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.case_qty, 0) + supportFundItems.reduce((sum, item) => sum + item.case_qty, 0)}</span>
                     </div>
-                    {supportFundTotals.remainingCredit < 0 && (
-                      <div className="flex justify-between text-sm text-red-600">
-                        <span>Additional Cost:</span>
-                        <span className="font-medium">${Math.abs(supportFundTotals.remainingCredit).toFixed(2)}</span>
-                      </div>
-                    )}
                     <div className="flex justify-between pt-2 border-t">
                       <span className="text-lg font-semibold">Total Order:</span>
                       <span className="text-lg font-semibold">${(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0)).toFixed(2)}</span>
