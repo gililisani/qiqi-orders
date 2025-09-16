@@ -594,8 +594,8 @@ export default function NewOrderPage() {
               <div className="bg-white rounded-lg shadow p-6 sticky top-6 space-y-4">
                 <h2 className="text-lg font-semibold">Order Summary</h2>
 
-                {/* Item list */}
-                <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+                {/* Item list - show all items without scroll */}
+                <div className="space-y-3">
                   {orderItems.map((item) => (
                     <div key={item.product_id} className="flex items-start space-x-3">
                       <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
