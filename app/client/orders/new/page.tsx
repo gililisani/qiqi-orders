@@ -420,28 +420,25 @@ export default function NewOrderPage() {
                       <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Product
                       </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                         SKU
                       </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
-                        UPC
-                      </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
                         Size
                       </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
                         Case Pack
                       </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Price/Unit
                       </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Case Qty
                       </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                         Total Units
                       </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Total USD
                       </th>
                     </tr>
@@ -455,45 +452,23 @@ export default function NewOrderPage() {
                         <tr key={product.id} className="hover:bg-gray-50">
                           <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10 sm:h-12 sm:w-12">
-                                {product.picture_url ? (
-                                  <Image
-                                    src={product.picture_url}
-                                    alt={product.item_name}
-                                    width={48}
-                                    height={48}
-                                    className="h-10 w-10 sm:h-12 sm:w-12 rounded object-cover"
-                                  />
-                                ) : (
-                                  <div className="h-10 w-10 sm:h-12 sm:w-12 bg-gray-200 rounded flex items-center justify-center">
-                                    <span className="text-gray-400 text-xs">No Image</span>
-                                  </div>
-                                )}
-                              </div>
-                              <div className="ml-3 sm:ml-4">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {product.item_name}
-                                </div>
-                              </div>
+                              <div className="text-sm font-medium text-gray-900">{product.item_name}</div>
                             </div>
                           </td>
-                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 hidden sm:table-cell">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden sm:table-cell">
                             {product.sku}
                           </td>
-                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">
-                            {product.upc}
-                          </td>
-                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 hidden xl:table-cell">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden xl:table-cell">
                             {product.size}
                           </td>
-                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 hidden xl:table-cell">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden xl:table-cell">
                             {product.case_pack}
                           </td>
-                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 text-center">
                             ${unitPrice.toFixed(2)}
                           </td>
-                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap">
-                            <div className="inline-flex items-center border border-gray-300 rounded select-none">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-center">
+                            <div className="inline-flex items-center border border-gray-300 rounded select-none justify-center">
                               <button
                                 type="button"
                                 onClick={() => handleCaseQtyChange(product.id, Math.max(0, (orderItem?.case_qty || 0) - 1))}
@@ -502,25 +477,21 @@ export default function NewOrderPage() {
                                 −
                               </button>
                               <input
-                                type="number"
+                                type="text"
                                 inputMode="numeric"
-                                step={1}
-                                min={0}
                                 value={orderItem?.case_qty ?? 0}
                                 onFocus={(e) => e.currentTarget.select()}
                                 onChange={(e) => {
-                                  const val = e.currentTarget.value;
+                                  const val = e.currentTarget.value.replace(/[^0-9]/g, '');
                                   // allow temporary empty string while typing
                                   if (val === '') {
                                     handleCaseQtyChange(product.id, 0);
                                     return;
                                   }
                                   const parsed = Number(val);
-                                  if (Number.isFinite(parsed)) {
-                                    handleCaseQtyChange(product.id, Math.max(0, Math.floor(parsed)));
-                                  }
+                                  handleCaseQtyChange(product.id, Math.max(0, Math.min(99, Math.floor(parsed))));
                                 }}
-                                className="w-16 md:w-20 px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-black"
+                                className="w-10 md:w-12 px-1 py-1 text-center focus:outline-none focus:ring-2 focus:ring-black"
                               />
                               <button
                                 type="button"
@@ -531,10 +502,10 @@ export default function NewOrderPage() {
                               </button>
                             </div>
                           </td>
-                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 hidden sm:table-cell">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden sm:table-cell">
                             {orderItem?.total_units || 0}
                           </td>
-                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900 text-center">
                             ${orderItem?.total_price?.toFixed(2) || '0.00'}
                           </td>
                         </tr>
@@ -594,26 +565,13 @@ export default function NewOrderPage() {
               <div className="bg-white rounded-lg shadow p-6 sticky top-6 space-y-4">
                 <h2 className="text-lg font-semibold">Order Summary</h2>
 
-                {/* Item list - show all items without scroll */}
-                <div className="space-y-3">
+                {/* Item list - compact lines, no images */}
+                <div className="space-y-2">
                   {orderItems.map((item) => (
-                    <div key={item.product_id} className="flex items-start space-x-3">
-                      <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                        {item.product.picture_url ? (
-                          <Image
-                            src={item.product.picture_url}
-                            alt={item.product.item_name}
-                            width={48}
-                            height={48}
-                            className="w-12 h-12 object-cover"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 flex items-center justify-center text-gray-400 text-xs">No Image</div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-gray-900 truncate">{item.product.item_name}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">
+                    <div key={item.product_id} className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0 pr-2">
+                        <div className="text-sm font-medium text-gray-900 truncate leading-tight">{item.product.item_name}</div>
+                        <div className="text-xs text-gray-500 leading-tight">
                           {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''}
                         </div>
                       </div>
