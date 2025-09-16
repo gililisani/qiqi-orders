@@ -414,31 +414,31 @@ export default function NewOrderPage() {
             {/* Products Table */}
             <div className="bg-white rounded-lg shadow">
               <div className="overflow-x-auto">
-                <table className="w-full divide-y divide-gray-200">
+                <table className="w-full table-auto divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         Product
                       </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
                         SKU
                       </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
                         Size
                       </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
                         Case Pack
                       </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         Price/Unit
                       </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         Case Qty
                       </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
                         Total Units
                       </th>
-                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         Total USD
                       </th>
                     </tr>
@@ -465,8 +465,8 @@ export default function NewOrderPage() {
                                   <div className="h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center text-gray-400 text-xs">No Image</div>
                                 )}
                               </div>
-                              <div className="ml-3 sm:ml-4">
-                                <div className="text-sm font-medium text-gray-900">{product.item_name}</div>
+                              <div className="ml-3 sm:ml-4 max-w-[28ch]">
+                                <div className="text-sm font-medium text-gray-900 truncate">{product.item_name}</div>
                               </div>
                             </div>
                           </td>
@@ -506,7 +506,7 @@ export default function NewOrderPage() {
                                   const parsed = Number(val);
                                   handleCaseQtyChange(product.id, Math.max(0, Math.min(99, Math.floor(parsed))));
                                 }}
-                                className="w-10 md:w-12 px-1 py-1 text-center focus:outline-none focus:ring-2 focus:ring-black"
+                                className="w-10 md:w-12 px-1 py-1 text-center focus:outline-none focus:ring-2 focus:ring-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               />
                               <button
                                 type="button"
