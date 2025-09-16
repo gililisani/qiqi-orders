@@ -371,9 +371,9 @@ export default function NewOrderPage() {
           </Link>
         </div>
         {/* Main grid: Left content + Right sticky summary */}
-        <div className="grid grid-cols-1 2xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Left: company info + products */}
-          <div className="2xl:col-span-2 space-y-6">
+          <div className="xl:col-span-2 space-y-6">
             {/* Company Info */}
             {company && (
               <div className="bg-white rounded-lg shadow p-6">
@@ -413,7 +413,7 @@ export default function NewOrderPage() {
 
             {/* Products Table */}
             <div className="bg-white rounded-lg shadow">
-              <div className="overflow-x-visible">
+              <div className="overflow-x-auto">
                 <table className="w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
@@ -545,28 +545,51 @@ export default function NewOrderPage() {
               </div>
             </div>
 
-            {/* Action Buttons (hidden if support funds present to avoid duplicate CTAs) */}
-            {!(totals.supportFundEarned > 0) && (
-              <div className="flex justify-end space-x-4">
-                <Link
-                  href="/client/orders"
-                  className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition"
-                >
-                  Cancel
-                </Link>
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting || orderItems.length === 0}
-                  className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
-                >
-                  {submitting ? 'Creating Order...' : 'Create Order'}
-                </button>
+            {/* Mobile/Tablet Order Summary (visible below xl) */}
+            {orderItems.length > 0 && (
+              <div className="xl:hidden bg-white rounded-lg shadow p-6 space-y-4">
+                <h2 className="text-lg font-semibold">Order Summary</h2>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Items:</span>
+                    <span className="font-medium">{totals.itemCount}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
+                  </div>
+                  {totals.supportFundEarned > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Support Fund ({totals.supportFundPercent}%):</span>
+                      <span className="font-medium">${totals.supportFundEarned.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-2 border-t">
+                    <span className="text-lg font-semibold">Total:</span>
+                    <span className="text-lg font-semibold">${totals.total.toFixed(2)}</span>
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-4">
+                  <Link
+                    href="/client/orders"
+                    className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition"
+                  >
+                    Cancel
+                  </Link>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitting || orderItems.length === 0}
+                    className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
+                  >
+                    {submitting ? 'Creating Order...' : (totals.supportFundEarned > 0 ? 'Next: Redeem Support Funds' : 'Create Order')}
+                  </button>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Right: sticky order summary */}
-          <div className="lg:col-span-1">
+          {/* Right: sticky order summary (visible at xl+) */}
+          <div className="hidden xl:block xl:col-span-1">
             {orderItems.length > 0 && (
               <div className="bg-white rounded-lg shadow p-6 sticky top-6 space-y-4">
                 <h2 className="text-lg font-semibold">Order Summary</h2>
