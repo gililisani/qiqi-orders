@@ -493,30 +493,39 @@ export default function NewOrderPage() {
                             ${unitPrice.toFixed(2)}
                           </td>
                           <td className="px-3 sm:px-4 md:px-6 py-3 whitespace-nowrap">
-                            <div className="inline-flex items-center border border-gray-300 rounded">
+                            <div className="inline-flex items-center border border-gray-300 rounded select-none">
                               <button
                                 type="button"
                                 onClick={() => handleCaseQtyChange(product.id, Math.max(0, (orderItem?.case_qty || 0) - 1))}
-                                className="px-2 py-1 text-gray-700 hover:bg-gray-100"
+                                className="px-2 py-1 text-gray-700 hover:bg-gray-100 focus:outline-none"
                               >
                                 −
                               </button>
                               <input
                                 type="number"
                                 inputMode="numeric"
+                                step={1}
                                 min={0}
                                 value={orderItem?.case_qty ?? 0}
+                                onFocus={(e) => e.currentTarget.select()}
                                 onChange={(e) => {
-                                  const val = e.target.value;
-                                  const next = val === '' ? 0 : Math.max(0, parseInt(val, 10) || 0);
-                                  handleCaseQtyChange(product.id, next);
+                                  const val = e.currentTarget.value;
+                                  // allow temporary empty string while typing
+                                  if (val === '') {
+                                    handleCaseQtyChange(product.id, 0);
+                                    return;
+                                  }
+                                  const parsed = Number(val);
+                                  if (Number.isFinite(parsed)) {
+                                    handleCaseQtyChange(product.id, Math.max(0, Math.floor(parsed)));
+                                  }
                                 }}
-                                className="w-14 md:w-16 px-2 py-1 text-center border-0 focus:outline-none focus:ring-0"
+                                className="w-16 md:w-20 px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-black"
                               />
                               <button
                                 type="button"
                                 onClick={() => handleCaseQtyChange(product.id, (orderItem?.case_qty || 0) + 1)}
-                                className="px-2 py-1 text-gray-700 hover:bg-gray-100"
+                                className="px-2 py-1 text-gray-700 hover:bg-gray-100 focus:outline-none"
                               >
                                 +
                               </button>
