@@ -13,6 +13,9 @@ interface FormData {
   subsidiary_id: string;
   class_id: string;
   location_id: string;
+  ship_to: string;
+  incoterm_id: string;
+  payment_terms_id: string;
 }
 
 interface Option {
@@ -37,7 +40,9 @@ export default function EditCompanyPage() {
     supportFunds: [] as SupportFundOption[],
     subsidiaries: [] as Option[],
     classes: [] as Option[],
-    locations: [] as Option[]
+    locations: [] as Option[],
+    incoterms: [] as Option[],
+    paymentTerms: [] as Option[]
   });
 
   const [formData, setFormData] = useState<FormData>({
@@ -46,7 +51,10 @@ export default function EditCompanyPage() {
     support_fund_id: '',
     subsidiary_id: '',
     class_id: '',
-    location_id: ''
+    location_id: '',
+    ship_to: '',
+    incoterm_id: '',
+    payment_terms_id: ''
   });
 
   useEffect(() => {
@@ -72,7 +80,10 @@ export default function EditCompanyPage() {
         support_fund_id: data.support_fund_id || '',
         subsidiary_id: data.subsidiary_id || '',
         class_id: data.class_id || '',
-        location_id: data.location_id || ''
+        location_id: data.location_id || '',
+        ship_to: data.ship_to || '',
+        incoterm_id: data.incoterm_id || '',
+        payment_terms_id: data.payment_terms_id || ''
       });
     } catch (err: any) {
       setError(err.message);
@@ -83,18 +94,22 @@ export default function EditCompanyPage() {
 
   const fetchOptions = async () => {
     try {
-      const [supportFunds, subsidiaries, classes, locations] = await Promise.all([
+      const [supportFunds, subsidiaries, classes, locations, incoterms, paymentTerms] = await Promise.all([
         supabase.from('support_fund_levels').select('id, percent').order('percent'),
         supabase.from('subsidiaries').select('id, name').order('name'),
         supabase.from('classes').select('id, name').order('name'),
-        supabase.from('Locations').select('id, location_name').order('location_name')
+        supabase.from('Locations').select('id, location_name').order('location_name'),
+        supabase.from('incoterms').select('id, name').order('name'),
+        supabase.from('payment_terms').select('id, name').order('name')
       ]);
 
       setOptions({
         supportFunds: supportFunds.data || [],
         subsidiaries: subsidiaries.data || [],
         classes: classes.data || [],
-        locations: (locations.data || []).map(loc => ({ id: loc.id, name: loc.location_name }))
+        locations: (locations.data || []).map(loc => ({ id: loc.id, name: loc.location_name })),
+        incoterms: incoterms.data || [],
+        paymentTerms: paymentTerms.data || []
       });
     } catch (err: any) {
       setError('Failed to load form options: ' + (err as Error).message);
@@ -115,7 +130,10 @@ export default function EditCompanyPage() {
           support_fund_id: formData.support_fund_id || null,
           subsidiary_id: formData.subsidiary_id || null,
           class_id: formData.class_id || null,
-          location_id: formData.location_id || null
+          location_id: formData.location_id || null,
+          ship_to: formData.ship_to || null,
+          incoterm_id: formData.incoterm_id || null,
+          payment_terms_id: formData.payment_terms_id || null
         })
         .eq('id', companyId);
 
@@ -296,6 +314,58 @@ export default function EditCompanyPage() {
                 ))}
               </select>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Incoterm
+              </label>
+              <select
+                name="incoterm_id"
+                value={formData.incoterm_id}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+              >
+                <option value="">Select Incoterm</option>
+                {options.incoterms.map((incoterm) => (
+                  <option key={incoterm.id} value={incoterm.id}>
+                    {incoterm.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Payment Terms
+              </label>
+              <select
+                name="payment_terms_id"
+                value={formData.payment_terms_id}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+              >
+                <option value="">Select Payment Terms</option>
+                {options.paymentTerms.map((term) => (
+                  <option key={term.id} value={term.id}>
+                    {term.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Ship To Address
+            </label>
+            <textarea
+              name="ship_to"
+              value={formData.ship_to}
+              onChange={handleChange}
+              rows={4}
+              placeholder="Enter shipping address and instructions..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+            />
           </div>
 
           <div className="flex space-x-4">

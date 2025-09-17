@@ -12,6 +12,9 @@ interface FormData {
   subsidiary_id: string;
   class_id: string;
   location_id: string;
+  ship_to: string;
+  incoterm_id: string;
+  payment_terms_id: string;
 }
 
 interface Option {
@@ -32,7 +35,9 @@ export default function NewCompanyPage() {
     supportFunds: [] as SupportFundOption[],
     subsidiaries: [] as Option[],
     classes: [] as Option[],
-    locations: [] as Option[]
+    locations: [] as Option[],
+    incoterms: [] as Option[],
+    paymentTerms: [] as Option[]
   });
 
   const [formData, setFormData] = useState<FormData>({
@@ -41,7 +46,10 @@ export default function NewCompanyPage() {
     support_fund_id: '',
     subsidiary_id: '',
     class_id: '',
-    location_id: ''
+    location_id: '',
+    ship_to: '',
+    incoterm_id: '',
+    payment_terms_id: ''
   });
   const [netsuiteError, setNetsuiteError] = useState('');
 
@@ -53,11 +61,13 @@ export default function NewCompanyPage() {
     try {
       console.log('Fetching options...');
       
-      const [supportFunds, subsidiaries, classes, locations] = await Promise.all([
+      const [supportFunds, subsidiaries, classes, locations, incoterms, paymentTerms] = await Promise.all([
         supabase.from('support_fund_levels').select('id, percent').order('percent'),
         supabase.from('subsidiaries').select('id, name').order('name'),
         supabase.from('classes').select('id, name').order('name'),
-        supabase.from('Locations').select('id, location_name').order('location_name')
+        supabase.from('Locations').select('id, location_name').order('location_name'),
+        supabase.from('incoterms').select('id, name').order('name'),
+        supabase.from('payment_terms').select('id, name').order('name')
       ]);
 
       console.log('Query results:', {
@@ -71,7 +81,9 @@ export default function NewCompanyPage() {
         supportFunds: supportFunds.data || [],
         subsidiaries: subsidiaries.data || [],
         classes: classes.data || [],
-        locations: (locations.data || []).map(loc => ({ id: loc.id, name: loc.location_name }))
+        locations: (locations.data || []).map(loc => ({ id: loc.id, name: loc.location_name })),
+        incoterms: incoterms.data || [],
+        paymentTerms: paymentTerms.data || []
       });
     } catch (err: any) {
       console.error('Error fetching options:', err);
@@ -111,7 +123,10 @@ export default function NewCompanyPage() {
           support_fund_id: formData.support_fund_id || null,
           subsidiary_id: formData.subsidiary_id || null,
           class_id: formData.class_id || null,
-          location_id: formData.location_id || null
+          location_id: formData.location_id || null,
+          ship_to: formData.ship_to || null,
+          incoterm_id: formData.incoterm_id || null,
+          payment_terms_id: formData.payment_terms_id || null
         }]);
 
       if (error) {
@@ -302,6 +317,58 @@ export default function NewCompanyPage() {
                 ))}
               </select>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Incoterm
+              </label>
+              <select
+                name="incoterm_id"
+                value={formData.incoterm_id}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+              >
+                <option value="">Select Incoterm</option>
+                {options.incoterms.map((incoterm) => (
+                  <option key={incoterm.id} value={incoterm.id}>
+                    {incoterm.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Payment Terms
+              </label>
+              <select
+                name="payment_terms_id"
+                value={formData.payment_terms_id}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+              >
+                <option value="">Select Payment Terms</option>
+                {options.paymentTerms.map((term) => (
+                  <option key={term.id} value={term.id}>
+                    {term.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Ship To Address
+            </label>
+            <textarea
+              name="ship_to"
+              value={formData.ship_to}
+              onChange={handleChange}
+              rows={4}
+              placeholder="Enter shipping address and instructions..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+            />
           </div>
 
           <div className="flex space-x-4">
