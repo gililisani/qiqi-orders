@@ -48,17 +48,40 @@ export default function OrdersPage() {
 
   const fetchOrders = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch orders first
+      const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
-        .select(`
-          *,
-          client:clients!user_id(name, email),
-          company:companies(company_name, netsuite_number)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setOrders(data || []);
+      if (ordersError) throw ordersError;
+
+      // Fetch client and company data separately
+      const ordersWithDetails = await Promise.all(
+        (ordersData || []).map(async (order) => {
+          // Get client info
+          const { data: clientData } = await supabase
+            .from('clients')
+            .select('name, email')
+            .eq('id', order.user_id)
+            .single();
+
+          // Get company info
+          const { data: companyData } = await supabase
+            .from('companies')
+            .select('company_name, netsuite_number')
+            .eq('id', order.company_id)
+            .single();
+
+          return {
+            ...order,
+            client: clientData,
+            company: companyData
+          };
+        })
+      );
+
+      setOrders(ordersWithDetails);
     } catch (err: any) {
       setError(err.message);
     } finally {
