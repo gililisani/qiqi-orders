@@ -41,47 +41,86 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [creatingInNetSuite, setCreatingInNetSuite] = useState<string | null>(null);
   const [completingOrder, setCompletingOrder] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const ordersPerPage = 10;
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [currentPage, statusFilter]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setCurrentPage(1); // Reset to first page on search
+      fetchOrders();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
 
   const fetchOrders = async () => {
     try {
-      // Fetch orders first
-      const { data: ordersData, error: ordersError } = await supabase
+      setLoading(true);
+      
+      // Build query with filters
+      let query = supabase
         .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' });
+
+      // Apply filters
+      if (statusFilter) {
+        query = query.eq('status', statusFilter);
+      }
+
+      // Apply search filter on order fields first
+      if (searchTerm) {
+        query = query.or(`id.ilike.%${searchTerm}%,po_number.ilike.%${searchTerm}%`);
+      }
+
+      // Add pagination
+      const from = (currentPage - 1) * ordersPerPage;
+      const to = from + ordersPerPage - 1;
+      
+      const { data: ordersData, error: ordersError, count } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if (ordersError) throw ordersError;
+      setTotalOrders(count || 0);
 
-      // Fetch client and company data separately
-      const ordersWithDetails = await Promise.all(
-        (ordersData || []).map(async (order) => {
-          // Get client info
-          const { data: clientData } = await supabase
+      // Efficiently fetch related data in batches
+      if (ordersData && ordersData.length > 0) {
+        const userIds = [...new Set(ordersData.map(order => order.user_id))];
+        const companyIds = [...new Set(ordersData.map(order => order.company_id).filter(Boolean))];
+
+        // Fetch all clients and companies in batch
+        const [clientsResult, companiesResult] = await Promise.all([
+          supabase
             .from('clients')
-            .select('name, email')
-            .eq('id', order.user_id)
-            .single();
-
-          // Get company info
-          const { data: companyData } = await supabase
+            .select('id, name, email')
+            .in('id', userIds),
+          supabase
             .from('companies')
-            .select('company_name, netsuite_number')
-            .eq('id', order.company_id)
-            .single();
+            .select('id, company_name, netsuite_number')
+            .in('id', companyIds)
+        ]);
 
-          return {
-            ...order,
-            client: clientData,
-            company: companyData
-          };
-        })
-      );
+        // Create lookup maps
+        const clientsMap = new Map(clientsResult.data?.map(client => [client.id, client]) || []);
+        const companiesMap = new Map(companiesResult.data?.map(company => [company.id, company]) || []);
 
-      setOrders(ordersWithDetails);
+        // Combine data efficiently
+        const ordersWithDetails = ordersData.map(order => ({
+          ...order,
+          client: clientsMap.get(order.user_id) || null,
+          company: companiesMap.get(order.company_id) || null
+        }));
+
+        setOrders(ordersWithDetails);
+      } else {
+        setOrders([]);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -220,17 +259,8 @@ export default function OrdersPage() {
     }
   };
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
-      order.client?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.client?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.company?.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.company?.netsuite_number.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === '' || order.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  // Remove client-side filtering since we're doing server-side filtering
+  const filteredOrders = orders;
 
   if (loading) {
     return (
@@ -248,7 +278,7 @@ export default function OrdersPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Orders Management</h1>
           <div className="text-sm text-gray-500">
-            {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''}
+            Showing {((currentPage - 1) * ordersPerPage) + 1}-{Math.min(currentPage * ordersPerPage, totalOrders)} of {totalOrders} orders
           </div>
         </div>
 
@@ -414,10 +444,35 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {filteredOrders.length === 0 && (
+        {filteredOrders.length === 0 && !loading && (
           <div className="text-center py-8 text-gray-500">
             <p>No orders found.</p>
             <p className="text-sm mt-2">Orders will appear here when clients place them.</p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalOrders > ordersPerPage && (
+          <div className="mt-6 flex items-center justify-between">
+            <div className="text-sm text-gray-500">
+              Page {currentPage} of {Math.ceil(totalOrders / ordersPerPage)}
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalOrders / ordersPerPage), prev + 1))}
+                disabled={currentPage >= Math.ceil(totalOrders / ordersPerPage)}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>
