@@ -13,6 +13,7 @@ interface Product {
   price_americas: number;
   enable: boolean;
   list_in_support_funds: boolean;
+  qualifies_for_credit_earning: boolean;
   picture_url?: string;
   netsuite_name?: string;
   upc?: string;
