@@ -365,7 +365,8 @@ export default function NewOrderPage() {
         product_id: item.product_id,
         quantity: item.total_units,
         unit_price: item.unit_price,
-        total_price: item.total_price
+        total_price: item.total_price,
+        is_support_fund_item: false
       }));
 
       const { error: itemsError } = await supabase
@@ -442,14 +443,25 @@ export default function NewOrderPage() {
       if (orderError) throw orderError;
 
       // Create order items (both regular and support fund items)
-      const allItems = [...orderItems, ...supportFundItems];
-      const orderItemsData = allItems.map(item => ({
+      const regularItemsData = orderItems.map(item => ({
         order_id: orderData.id,
         product_id: item.product_id,
         quantity: item.total_units,
         unit_price: item.unit_price,
-        total_price: item.total_price
+        total_price: item.total_price,
+        is_support_fund_item: false
       }));
+      
+      const supportFundItemsData = supportFundItems.map(item => ({
+        order_id: orderData.id,
+        product_id: item.product_id,
+        quantity: item.total_units,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        is_support_fund_item: true
+      }));
+      
+      const orderItemsData = [...regularItemsData, ...supportFundItemsData];
 
       const { error: itemsError } = await supabase
         .from('order_items')

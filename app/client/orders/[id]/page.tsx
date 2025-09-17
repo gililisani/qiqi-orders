@@ -117,6 +117,13 @@ export default function ClientOrderViewPage() {
       
       console.log('Order items fetched:', data?.length || 0, 'items');
       console.log('Order items data:', data);
+      
+      // Debug support fund items
+      const supportFundItems = data?.filter(item => item.is_support_fund_item) || [];
+      const regularItems = data?.filter(item => !item.is_support_fund_item) || [];
+      console.log('Support fund items:', supportFundItems.length, supportFundItems);
+      console.log('Regular items:', regularItems.length, regularItems);
+      
       setOrderItems(data || []);
     } catch (err: any) {
       console.error('Error fetching order items:', err);
