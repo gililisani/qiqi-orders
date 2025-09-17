@@ -20,6 +20,7 @@ interface Product {
   list_in_support_funds: boolean;
   visible_to_americas: boolean;
   visible_to_international: boolean;
+  qualifies_for_credit_earning: boolean;
 }
 
 interface Company {
@@ -254,12 +255,17 @@ export default function NewOrderPage() {
 
   const getOrderTotals = () => {
     const subtotal = orderItems.reduce((sum, item) => sum + item.total_price, 0);
+    
+    // FIXED: Only include products that qualify for credit earning
+    const creditEarningItems = orderItems.filter(item => item.product.qualifies_for_credit_earning);
+    const creditEarningSubtotal = creditEarningItems.reduce((sum, item) => sum + item.total_price, 0);
+    
     // Support fund percent can arrive as array or single
     const rawSf = company?.support_fund as any;
     const supportFundPercent = Array.isArray(rawSf)
       ? (rawSf[0]?.percent || 0)
       : (rawSf?.percent || 0);
-    const supportFundEarned = subtotal * (supportFundPercent / 100);
+    const supportFundEarned = creditEarningSubtotal * (supportFundPercent / 100);
     const total = subtotal;
 
     return {

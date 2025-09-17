@@ -32,6 +32,7 @@ interface OrderItem {
     sku: string;
     price_international: number;
     price_americas: number;
+    qualifies_for_credit_earning?: boolean;
   };
 }
 
@@ -104,7 +105,7 @@ export default function ClientOrderViewPage() {
         .from('order_items')
         .select(`
           *,
-          product:Products(item_name, sku, price_international, price_americas)
+          product:Products(item_name, sku, price_international, price_americas, qualifies_for_credit_earning)
         `)
         .eq('order_id', orderId)
         .order('is_support_fund_item', { ascending: true })
@@ -322,8 +323,13 @@ export default function ClientOrderViewPage() {
               const supportFundItems = orderItems.filter(item => item.is_support_fund_item);
               const regularSubtotal = regularItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
               const supportFundItemsTotal = supportFundItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
+              
+              // FIXED: Only include products that qualify for credit earning in credit calculation
+              const creditEarningItems = regularItems.filter(item => item.product?.qualifies_for_credit_earning !== false);
+              const creditEarningSubtotal = creditEarningItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
+              
               const supportFundPercent = order.company?.support_fund?.[0]?.percent || 0;
-              const creditEarned = regularSubtotal * (supportFundPercent / 100);
+              const creditEarned = creditEarningSubtotal * (supportFundPercent / 100);
               
               // Credit Used = Credit Earned - Support Fund Products (don't display if 0)
               const creditUsed = creditEarned - supportFundItemsTotal;
