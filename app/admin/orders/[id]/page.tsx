@@ -43,6 +43,19 @@ interface OrderItem {
   };
 }
 
+interface OrderHistory {
+  id: string;
+  order_id: string;
+  status_from: string | null;
+  status_to: string;
+  changed_by: string | null;
+  changed_by_name: string | null;
+  changed_by_role: string | null;
+  notes: string | null;
+  netsuite_sync_status: string | null;
+  created_at: string;
+}
+
 const statusOptions = [
   { value: 'Open', label: 'Open', color: 'bg-yellow-100 text-yellow-800' },
   { value: 'In Process', label: 'In Process', color: 'bg-blue-100 text-blue-800' },
@@ -56,13 +69,16 @@ export default function OrderViewPage() {
   
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [sendingNotification, setSendingNotification] = useState(false);
 
   useEffect(() => {
     if (orderId) {
       fetchOrder();
       fetchOrderItems();
+      fetchOrderHistory();
     }
   }, [orderId]);
 
@@ -112,6 +128,21 @@ export default function OrderViewPage() {
     }
   };
 
+  const fetchOrderHistory = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('order_history')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setOrderHistory(data || []);
+    } catch (err: any) {
+      console.error('Error fetching order history:', err);
+    }
+  };
+
   const handleStatusChange = async (newStatus: string) => {
     if (!order) return;
 
@@ -123,8 +154,47 @@ export default function OrderViewPage() {
 
       if (error) throw error;
       setOrder(prev => prev ? { ...prev, status: newStatus } : null);
+      
+      // Refresh order history to show the new status change
+      fetchOrderHistory();
+      
+      // Send notification if status changed to certain states
+      if (['In Process', 'Done'].includes(newStatus)) {
+        await sendNotification('status_change');
+      }
     } catch (err: any) {
       setError(err.message);
+    }
+  };
+
+  const sendNotification = async (type: string, customMessage?: string) => {
+    if (!order) return;
+    
+    setSendingNotification(true);
+    try {
+      const response = await fetch('/api/orders/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          type,
+          customMessage
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Refresh history to show notification sent
+        fetchOrderHistory();
+      } else {
+        console.error('Failed to send notification:', data.error);
+      }
+    } catch (err: any) {
+      console.error('Error sending notification:', err);
+    } finally {
+      setSendingNotification(false);
     }
   };
 
@@ -172,6 +242,13 @@ export default function OrderViewPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Order Details</h1>
           <div className="flex space-x-2">
+            <button
+              onClick={() => sendNotification('status_change', 'Order status updated by admin')}
+              disabled={sendingNotification}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
+            >
+              {sendingNotification ? 'Sending...' : 'Send Update'}
+            </button>
             <button
               onClick={handleDownloadCSV}
               className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
@@ -313,6 +390,57 @@ export default function OrderViewPage() {
               <p>No items found for this order.</p>
             </div>
           )}
+        </div>
+
+        {/* Order History */}
+        <div className="mt-6 bg-white rounded-lg shadow border overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold">Order History & Activity</h2>
+          </div>
+          <div className="p-6">
+            {orderHistory.length > 0 ? (
+              <div className="space-y-4">
+                {orderHistory.map((historyItem) => (
+                  <div key={historyItem.id} className="flex items-start space-x-3 pb-4 border-b border-gray-100 last:border-b-0">
+                    <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-1">
+                        {historyItem.status_from && historyItem.status_to ? (
+                          <span className="text-sm font-medium text-gray-900">
+                            Status changed from <span className="px-2 py-1 bg-gray-100 rounded text-xs">{historyItem.status_from}</span> to <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">{historyItem.status_to}</span>
+                          </span>
+                        ) : (
+                          <span className="text-sm font-medium text-gray-900">
+                            {historyItem.notes || `Status set to ${historyItem.status_to}`}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-4 text-xs text-gray-500">
+                        <span>{new Date(historyItem.created_at).toLocaleString()}</span>
+                        {historyItem.changed_by_name && (
+                          <span>by {historyItem.changed_by_name} ({historyItem.changed_by_role})</span>
+                        )}
+                        {historyItem.netsuite_sync_status && (
+                          <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded">
+                            NetSuite: {historyItem.netsuite_sync_status}
+                          </span>
+                        )}
+                      </div>
+                      {historyItem.notes && historyItem.notes !== `Status set to ${historyItem.status_to}` && (
+                        <div className="mt-1 text-sm text-gray-600 italic">
+                          {historyItem.notes}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>No history available for this order.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </AdminLayout>

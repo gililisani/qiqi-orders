@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
       .update({
         netsuite_sales_order_id: netsuiteOrder.id,
         netsuite_status: 'created',
+        status: 'In Process',
         updated_at: new Date().toISOString(),
       })
       .eq('id', orderId);
@@ -111,6 +112,23 @@ export async function POST(request: NextRequest) {
         { error: 'Order created in NetSuite but failed to update local record' },
         { status: 500 }
       );
+    }
+
+    // Send notification about NetSuite sync
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/orders/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: orderId,
+          type: 'netsuite_sync'
+        }),
+      });
+    } catch (notificationError) {
+      console.error('Failed to send NetSuite sync notification:', notificationError);
+      // Don't fail the whole request for notification errors
     }
 
     return NextResponse.json({

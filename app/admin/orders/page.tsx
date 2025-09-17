@@ -40,6 +40,7 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [creatingInNetSuite, setCreatingInNetSuite] = useState<string | null>(null);
+  const [completingOrder, setCompletingOrder] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -156,6 +157,43 @@ export default function OrdersPage() {
       setError(err.message || 'Failed to create order in NetSuite');
     } finally {
       setCreatingInNetSuite(null);
+    }
+  };
+
+  const completeOrder = async (orderId: string) => {
+    setCompletingOrder(orderId);
+    setError('');
+
+    try {
+      const response = await fetch('/api/orders/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update the order in the local state
+        setOrders(prev => prev.map(order => 
+          order.id === orderId 
+            ? { 
+                ...order, 
+                status: 'Done',
+                netsuite_status: 'fulfilled'
+              } 
+            : order
+        ));
+        alert(`Order ${orderId.substring(0, 8)} has been marked as completed.`);
+      } else {
+        setError(data.error || 'Failed to complete order');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to complete order');
+    } finally {
+      setCompletingOrder(null);
     }
   };
 
@@ -318,19 +356,32 @@ export default function OrdersPage() {
                             CSV
                           </button>
                         </div>
-                        {order.netsuite_sales_order_id ? (
-                          <div className="text-xs text-green-600">
-                            NetSuite: {order.netsuite_sales_order_id}
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => createOrderInNetSuite(order.id)}
-                            disabled={creatingInNetSuite === order.id}
-                            className="text-xs text-orange-600 hover:text-orange-900 disabled:opacity-50"
-                          >
-                            {creatingInNetSuite === order.id ? 'Creating...' : 'Create in NetSuite'}
-                          </button>
-                        )}
+                        <div className="space-y-1">
+                          {order.netsuite_sales_order_id ? (
+                            <div className="text-xs text-green-600">
+                              NetSuite: {order.netsuite_sales_order_id}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => createOrderInNetSuite(order.id)}
+                              disabled={creatingInNetSuite === order.id}
+                              className="text-xs text-orange-600 hover:text-orange-900 disabled:opacity-50"
+                            >
+                              {creatingInNetSuite === order.id ? 'Creating...' : 'Create in NetSuite'}
+                            </button>
+                          )}
+                          
+                          {/* Complete Order Button */}
+                          {order.status === 'In Process' && order.netsuite_sales_order_id && (
+                            <button
+                              onClick={() => completeOrder(order.id)}
+                              disabled={completingOrder === order.id}
+                              className="text-xs text-blue-600 hover:text-blue-900 disabled:opacity-50 block"
+                            >
+                              {completingOrder === order.id ? 'Completing...' : 'Mark Complete'}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>

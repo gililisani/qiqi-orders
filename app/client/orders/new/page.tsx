@@ -374,6 +374,23 @@ export default function NewOrderPage() {
 
       if (itemsError) throw itemsError;
 
+      // Send order confirmation notification
+      try {
+        await fetch('/api/orders/notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            orderId: orderData.id,
+            type: 'order_created'
+          }),
+        });
+      } catch (notificationError) {
+        console.error('Failed to send order confirmation:', notificationError);
+        // Don't fail the order creation for notification errors
+      }
+
       // Redirect to support fund redemption if applicable
       if (totals.supportFundEarned > 0) {
         router.push(`/client/orders/${orderData.id}/support-fund`);
@@ -439,6 +456,23 @@ export default function NewOrderPage() {
         .insert(orderItemsData);
 
       if (itemsError) throw itemsError;
+
+      // Send order confirmation notification
+      try {
+        await fetch('/api/orders/notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            orderId: orderData.id,
+            type: 'order_created'
+          }),
+        });
+      } catch (notificationError) {
+        console.error('Failed to send order confirmation:', notificationError);
+        // Don't fail the order creation for notification errors
+      }
 
       router.push(`/client/orders/${orderData.id}`);
     } catch (err: any) {
