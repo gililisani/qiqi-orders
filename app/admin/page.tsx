@@ -111,6 +111,28 @@ export default function AdminDashboard() {
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow border">
+            <h2 className="text-lg font-semibold mb-2">Incoterms</h2>
+            <p className="text-gray-600 mb-4">Manage international commercial terms for shipping.</p>
+            <a
+              href="/admin/incoterms"
+              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
+            >
+              Manage Incoterms
+            </a>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <h2 className="text-lg font-semibold mb-2">Payment Terms</h2>
+            <p className="text-gray-600 mb-4">Configure payment terms and conditions.</p>
+            <a
+              href="/admin/payment-terms"
+              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
+            >
+              Manage Payment Terms
+            </a>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow border">
             <h2 className="text-lg font-semibold mb-2">Subsidiaries</h2>
             <p className="text-gray-600 mb-4">Manage company subsidiaries.</p>
             <a
