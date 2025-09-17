@@ -341,32 +341,28 @@ export default function ClientOrderViewPage() {
               
               return (
                 <>
-                  {/* Regular Items Subtotal */}
+                  {/* Regular Items */}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Regular Items:</span>
                     <span className="font-medium">${regularSubtotal.toFixed(2)}</span>
                   </div>
                   
-                  {/* Credit Used - always show if there are support fund items */}
-                  {showCreditUsed && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Credit Used:</span>
-                      <span className="font-medium">${creditUsed.toFixed(2)}</span>
-                    </div>
-                  )}
+                  {/* Credit Used - always display */}
+                  <div className="flex justify-between text-green-600">
+                    <span>Credit Used:</span>
+                    <span className="font-medium">${creditUsed.toFixed(2)}</span>
+                  </div>
                   
-                  {/* Balance - only if Support Funds > Earned Credit */}
-                  {showBalance && (
-                    <div className="flex justify-between text-orange-600">
-                      <span>Balance:</span>
-                      <span className="font-medium">${balance.toFixed(2)}</span>
-                    </div>
-                  )}
+                  {/* Balance - always display */}
+                  <div className="flex justify-between text-orange-600">
+                    <span>Balance:</span>
+                    <span className="font-medium">${balance.toFixed(2)}</span>
+                  </div>
                   
                   <div className="border-t pt-2">
                     <div className="flex justify-between">
                       <span className="text-lg font-semibold">Total Order Value:</span>
-                      <span className="text-lg font-semibold">${(regularSubtotal + (showBalance ? balance : 0)).toFixed(2)}</span>
+                      <span className="text-lg font-semibold">${(regularSubtotal + balance).toFixed(2)}</span>
                     </div>
                   </div>
                 </>
