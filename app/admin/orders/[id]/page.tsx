@@ -465,13 +465,13 @@ export default function OrderViewPage() {
               const supportFundPercent = order.company?.support_fund?.percent || 0;
               const creditEarned = regularSubtotal * (supportFundPercent / 100);
               
-              // Credit Used = minimum of support fund items total and credit earned
-              const creditUsed = Math.min(supportFundItemsTotal, creditEarned);
+              // Credit Used = Credit Earned - Support Fund Products (don't display if 0)
+              const creditUsed = creditEarned - supportFundItemsTotal;
+              const showCreditUsed = creditUsed > 0;
               
-              // Additional Amount Paid = Support Fund Items Total - Credit Earned
-              // Only show if positive (when support fund items exceed credit earned)
-              const additionalAmountPaid = supportFundItemsTotal - creditEarned;
-              const showAdditionalAmount = additionalAmountPaid > 0;
+              // Additional Amount Paid = Credit Earned - Support Fund Products (only if negative, show as positive)
+              const additionalAmountPaid = creditEarned - supportFundItemsTotal;
+              const showAdditionalAmount = additionalAmountPaid < 0;
               
               return (
                 <>
@@ -481,26 +481,26 @@ export default function OrderViewPage() {
                     <span className="font-medium">${regularSubtotal.toFixed(2)}</span>
                   </div>
                   
-                  {/* Credit Used - show as positive number */}
-                  {creditUsed > 0 && (
+                  {/* Credit Used - only show if positive (don't display 0) */}
+                  {showCreditUsed && (
                     <div className="flex justify-between text-green-600">
                       <span>Credit Used:</span>
                       <span className="font-medium">${creditUsed.toFixed(2)}</span>
                     </div>
                   )}
                   
-                  {/* Additional Amount Paid - only if positive (customer pays extra) */}
+                  {/* Additional Amount Paid - only if negative (show as positive amount) */}
                   {showAdditionalAmount && (
                     <div className="flex justify-between text-orange-600">
                       <span>Additional Amount Paid:</span>
-                      <span className="font-medium">${additionalAmountPaid.toFixed(2)}</span>
+                      <span className="font-medium">${Math.abs(additionalAmountPaid).toFixed(2)}</span>
                     </div>
                   )}
                   
                   <div className="border-t pt-2">
                     <div className="flex justify-between">
                       <span className="text-lg font-semibold">Total Order Value:</span>
-                      <span className="text-lg font-semibold">${(regularSubtotal + (showAdditionalAmount ? additionalAmountPaid : 0)).toFixed(2)}</span>
+                      <span className="text-lg font-semibold">${(regularSubtotal + (showAdditionalAmount ? Math.abs(additionalAmountPaid) : 0)).toFixed(2)}</span>
                     </div>
                   </div>
                 </>
