@@ -52,7 +52,7 @@ export default function OrdersPage() {
         .from('orders')
         .select(`
           *,
-          client:clients!orders_user_id_fkey(name, email),
+          client:clients!user_id(name, email),
           company:companies(company_name, netsuite_number)
         `)
         .order('created_at', { ascending: false });
