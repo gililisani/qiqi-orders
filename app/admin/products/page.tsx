@@ -237,6 +237,7 @@ export default function ProductsPage() {
                         <span>International: ${product.price_international || 0}</span>
                       </div>
                     </div>
+                    </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="flex flex-col space-y-1">
