@@ -39,7 +39,6 @@ export default function ProductsPage() {
       const { data, error } = await supabase
         .from('Products')
         .select('*')
-        .order('sort_order', { ascending: true })
         .order('item_name', { ascending: true });
 
       if (error) throw error;

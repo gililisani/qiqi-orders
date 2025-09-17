@@ -196,7 +196,6 @@ export default function NewOrderPage() {
       
       console.log('Executing products query...');
       const { data: productsData, error: productsError } = await productsQuery
-        .order('sort_order', { ascending: true })
         .order('item_name', { ascending: true });
 
       console.log('Products query result:', { productsData, productsError });
