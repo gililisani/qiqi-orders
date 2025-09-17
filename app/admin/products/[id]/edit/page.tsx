@@ -17,6 +17,7 @@ interface Product {
   list_in_support_funds: boolean;
   visible_to_americas: boolean;
   visible_to_international: boolean;
+  qualifies_for_credit_earning: boolean;
   picture_url?: string;
   netsuite_name?: string;
   upc?: string;
@@ -43,6 +44,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     list_in_support_funds: true,
     visible_to_americas: true,
     visible_to_international: true,
+    qualifies_for_credit_earning: true,
     picture_url: ''
   });
 
@@ -94,6 +96,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         list_in_support_funds: data.list_in_support_funds ?? true,
         visible_to_americas: data.visible_to_americas ?? true,
         visible_to_international: data.visible_to_international ?? true,
+        qualifies_for_credit_earning: data.qualifies_for_credit_earning ?? true,
         picture_url: data.picture_url || ''
       });
     } catch (err: any) {
@@ -124,6 +127,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           list_in_support_funds: formData.list_in_support_funds,
           visible_to_americas: formData.visible_to_americas,
           visible_to_international: formData.visible_to_international,
+          qualifies_for_credit_earning: formData.qualifies_for_credit_earning,
           picture_url: formData.picture_url || null
         })
         .eq('id', params.id);
@@ -318,6 +322,26 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 />
                 <span className="ml-2 text-sm text-gray-700">Eligible for Support Funds</span>
               </label>
+
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="qualifies_for_credit_earning"
+                  checked={formData.qualifies_for_credit_earning}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm text-gray-700">Qualifies for Credit Earning</span>
+              </label>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+              <h4 className="text-sm font-medium text-yellow-800 mb-2">Support Fund Settings Explained:</h4>
+              <ul className="text-sm text-yellow-700 space-y-1">
+                <li><strong>Eligible for Support Funds:</strong> Can this product be purchased WITH support fund credit?</li>
+                <li><strong>Qualifies for Credit Earning:</strong> Does purchasing this product EARN support fund credit?</li>
+                <li><strong>Note:</strong> Kits, discounted items, and promotional items typically should NOT qualify for credit earning.</li>
+              </ul>
             </div>
 
             <div className="border-t pt-4">

@@ -28,10 +28,10 @@ COMMENT ON COLUMN "Products"."qualifies_for_credit_earning" IS 'Indicates if thi
 -- Create index for better query performance
 CREATE INDEX IF NOT EXISTS idx_products_credit_earning ON "Products"("qualifies_for_credit_earning");
 
--- Example: Mark kit products as non-credit-earning (update as needed)
--- UPDATE "Products" 
--- SET "qualifies_for_credit_earning" = FALSE 
--- WHERE "sku" LIKE 'KIT%' OR "item_name" ILIKE '%kit%';
+-- Admin can now control credit earning through the product edit interface
+-- No hardcoded exclusions - all products default to qualifying for credit earning
+-- Use the admin interface to manually set qualifies_for_credit_earning = FALSE for:
+-- - Kits, discounted items, promotional items, etc.
 
 -- Verify the column was added
 SELECT column_name, data_type, is_nullable, column_default

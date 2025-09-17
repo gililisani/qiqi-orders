@@ -250,6 +250,11 @@ export default function ProductsPage() {
                       }`}>
                         {product.list_in_support_funds ? 'Support Funds' : 'No Support Funds'}
                       </span>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        product.qualifies_for_credit_earning ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
+                      }`}>
+                        {product.qualifies_for_credit_earning ? 'Earns Credit' : 'No Credit'}
+                      </span>
                     </div>
                     <div className="flex space-x-2">
                       <Link
