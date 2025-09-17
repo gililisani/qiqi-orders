@@ -86,25 +86,44 @@ export default function OrderViewPage() {
 
   const fetchOrder = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch order first
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .select(`
-          *,
-          client:clients!user_id(name, email),
-          company:companies(
+        .select('*')
+        .eq('id', orderId)
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Fetch related data separately
+      const [clientResult, companyResult] = await Promise.all([
+        supabase
+          .from('clients')
+          .select('name, email')
+          .eq('id', orderData.user_id)
+          .single(),
+        orderData.company_id ? supabase
+          .from('companies')
+          .select(`
             company_name,
             netsuite_number,
             support_fund:support_fund_levels(percent),
             subsidiary:subsidiaries(name),
             class:classes(name),
             location:Locations(location_name)
-          )
-        `)
-        .eq('id', orderId)
-        .single();
+          `)
+          .eq('id', orderData.company_id)
+          .single() : { data: null, error: null }
+      ]);
 
-      if (error) throw error;
-      setOrder(data);
+      // Combine data
+      const combinedOrder = {
+        ...orderData,
+        client: clientResult.data,
+        company: companyResult.data
+      };
+
+      setOrder(combinedOrder);
     } catch (err: any) {
       setError(err.message);
     } finally {
