@@ -18,6 +18,7 @@ interface Product {
   upc?: string;
   size?: string;
   case_pack?: number;
+  sort_order?: number;
   created_at: string;
 }
 
@@ -26,6 +27,8 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
+  const [draggedItem, setDraggedItem] = useState<number | null>(null);
+  const [isReordering, setIsReordering] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -36,7 +39,8 @@ export default function ProductsPage() {
       const { data, error } = await supabase
         .from('Products')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('sort_order', { ascending: true })
+        .order('item_name', { ascending: true });
 
       if (error) throw error;
       setProducts(data || []);
@@ -60,6 +64,72 @@ export default function ProductsPage() {
       fetchProducts(); // Refresh the list
     } catch (err: any) {
       setError(err.message);
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, productId: number) => {
+    setDraggedItem(productId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetProductId: number) => {
+    e.preventDefault();
+    
+    if (!draggedItem || draggedItem === targetProductId) {
+      setDraggedItem(null);
+      return;
+    }
+
+    setIsReordering(true);
+    
+    try {
+      // Find the dragged and target products
+      const draggedProduct = products.find(p => p.id === draggedItem);
+      const targetProduct = products.find(p => p.id === targetProductId);
+      
+      if (!draggedProduct || !targetProduct) return;
+
+      // Create new array with reordered products
+      const newProducts = [...products];
+      const draggedIndex = newProducts.findIndex(p => p.id === draggedItem);
+      const targetIndex = newProducts.findIndex(p => p.id === targetProductId);
+      
+      // Remove dragged item and insert at target position
+      const [movedProduct] = newProducts.splice(draggedIndex, 1);
+      newProducts.splice(targetIndex, 0, movedProduct);
+      
+      // Update sort_order values
+      const updatedProducts = newProducts.map((product, index) => ({
+        ...product,
+        sort_order: index + 1
+      }));
+      
+      setProducts(updatedProducts);
+      
+      // Update database
+      const updates = updatedProducts.map(product => ({
+        id: product.id,
+        sort_order: product.sort_order
+      }));
+      
+      const { error } = await supabase
+        .from('Products')
+        .upsert(updates, { onConflict: 'id' });
+        
+      if (error) throw error;
+      
+    } catch (err: any) {
+      setError(err.message);
+      // Revert on error
+      fetchProducts();
+    } finally {
+      setDraggedItem(null);
+      setIsReordering(false);
     }
   };
 
@@ -116,11 +186,36 @@ export default function ProductsPage() {
         </div>
 
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
+          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+            <p className="text-sm text-gray-600">
+              Drag and drop products to reorder them. The order will be reflected in the Order Form.
+            </p>
+          </div>
           <ul className="divide-y divide-gray-200">
-            {filteredProducts.map((product) => (
-              <li key={product.id}>
+            {filteredProducts.map((product, index) => (
+              <li 
+                key={product.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, product.id)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, product.id)}
+                className={`cursor-move transition-colors ${
+                  draggedItem === product.id ? 'opacity-50' : ''
+                } ${isReordering ? 'pointer-events-none' : ''}`}
+              >
                 <div className="px-4 py-4 flex items-center justify-between">
                   <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="text-sm text-gray-400 font-mono w-8">
+                        {product.sort_order || index + 1}
+                      </div>
+                      <div className="text-gray-400">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
                     {product.picture_url ? (
                       <img
                         src={product.picture_url}
