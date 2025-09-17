@@ -465,10 +465,10 @@ export default function OrderViewPage() {
               const supportFundPercent = order.company?.support_fund?.percent || 0;
               const creditEarned = regularSubtotal * (supportFundPercent / 100);
               
-              // Additional Amount Paid = Credit Earned - Support Fund Items Total
-              // Only show if negative (customer pays extra)
-              const additionalAmountPaid = creditEarned - supportFundItemsTotal;
-              const showAdditionalAmount = additionalAmountPaid < 0;
+              // Additional Amount Paid = Support Fund Items Total - Credit Earned
+              // Only show if positive (customer pays extra beyond their credit)
+              const additionalAmountPaid = supportFundItemsTotal - creditEarned;
+              const showAdditionalAmount = additionalAmountPaid > 0;
               
               return (
                 <>
@@ -494,18 +494,18 @@ export default function OrderViewPage() {
                     </div>
                   )}
                   
-                  {/* Additional Amount Paid - only if negative (customer pays extra) */}
+                  {/* Additional Amount Paid - only if positive (customer pays extra) */}
                   {showAdditionalAmount && (
                     <div className="flex justify-between text-orange-600">
                       <span>Additional Amount Paid:</span>
-                      <span className="font-medium">${Math.abs(additionalAmountPaid).toFixed(2)}</span>
+                      <span className="font-medium">${additionalAmountPaid.toFixed(2)}</span>
                     </div>
                   )}
                   
                   <div className="border-t pt-2">
                     <div className="flex justify-between">
                       <span className="text-lg font-semibold">Total Order Value:</span>
-                      <span className="text-lg font-semibold">${(regularSubtotal + (showAdditionalAmount ? Math.abs(additionalAmountPaid) : 0)).toFixed(2)}</span>
+                      <span className="text-lg font-semibold">${(regularSubtotal + (showAdditionalAmount ? additionalAmountPaid : 0)).toFixed(2)}</span>
                     </div>
                   </div>
                 </>
