@@ -451,6 +451,68 @@ export default function OrderViewPage() {
             )}
           </div>
         </div>
+
+        {/* Order Summary for Admin */}
+        <div className="mt-6 bg-white rounded-lg shadow border p-6">
+          <h2 className="text-lg font-semibold mb-4">Order Financial Summary</h2>
+          <div className="space-y-2">
+            {(() => {
+              // Calculate breakdown
+              const regularItems = orderItems.filter(item => !item.is_support_fund_item);
+              const supportFundItems = orderItems.filter(item => item.is_support_fund_item);
+              const regularSubtotal = regularItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
+              const supportFundItemsTotal = supportFundItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
+              const supportFundPercent = order.company?.support_fund?.percent || 0;
+              const creditEarned = regularSubtotal * (supportFundPercent / 100);
+              
+              // Additional Amount Paid = Credit Earned - Support Fund Items Total
+              // Only show if negative (customer pays extra)
+              const additionalAmountPaid = creditEarned - supportFundItemsTotal;
+              const showAdditionalAmount = additionalAmountPaid < 0;
+              
+              return (
+                <>
+                  {/* Regular Items Subtotal */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Regular Items:</span>
+                    <span className="font-medium">${regularSubtotal.toFixed(2)}</span>
+                  </div>
+                  
+                  {/* Support Fund Credit Earned */}
+                  {creditEarned > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Support Fund Credit Earned ({supportFundPercent}%):</span>
+                      <span className="font-medium">${creditEarned.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  {/* Credit Used */}
+                  {supportFundItemsTotal > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Credit Used:</span>
+                      <span className="font-medium">-${supportFundItemsTotal.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  {/* Additional Amount Paid - only if negative (customer pays extra) */}
+                  {showAdditionalAmount && (
+                    <div className="flex justify-between text-orange-600">
+                      <span>Additional Amount Paid:</span>
+                      <span className="font-medium">${Math.abs(additionalAmountPaid).toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  <div className="border-t pt-2">
+                    <div className="flex justify-between">
+                      <span className="text-lg font-semibold">Total Order Value:</span>
+                      <span className="text-lg font-semibold">${(regularSubtotal + (showAdditionalAmount ? Math.abs(additionalAmountPaid) : 0)).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
       </div>
     </AdminLayout>
   );
