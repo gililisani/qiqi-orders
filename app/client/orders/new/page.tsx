@@ -398,12 +398,9 @@ export default function NewOrderPage() {
         // Don't fail the order creation for notification errors
       }
 
-      // Redirect to support fund redemption if applicable
-      if (totals.supportFundEarned > 0) {
-        router.push(`/client/orders/${orderData.id}/support-fund`);
-      } else {
-        router.push(`/client/orders/${orderData.id}`);
-      }
+      // Order completed successfully - redirect to order details
+      // Credit is forfeited if not used (user chose to complete without support funds)
+      router.push(`/client/orders/${orderData.id}`);
     } catch (err: any) {
       setError(err.message);
     } finally {
