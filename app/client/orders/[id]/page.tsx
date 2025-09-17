@@ -208,8 +208,18 @@ export default function ClientOrderViewPage() {
                 <p className="text-lg font-semibold">${order.total_value?.toFixed(2) || '0.00'}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Support Fund Used</label>
-                <p className="text-lg font-semibold text-green-600">${order.support_fund_used?.toFixed(2) || '0.00'}</p>
+                <label className="text-sm font-medium text-gray-500">Credit Earned</label>
+                <p className="text-lg font-semibold text-green-600">
+                  ${(() => {
+                    // Calculate credit earned from regular items that qualify
+                    const regularItems = orderItems.filter(item => !item.is_support_fund_item);
+                    const creditEarningItems = regularItems.filter(item => item.product?.qualifies_for_credit_earning !== false);
+                    const creditEarningSubtotal = creditEarningItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
+                    const supportFundPercent = order.company?.support_fund?.[0]?.percent || 0;
+                    const creditEarned = creditEarningSubtotal * (supportFundPercent / 100);
+                    return creditEarned.toFixed(2);
+                  })()}
+                </p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Created</label>
