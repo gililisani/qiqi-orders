@@ -88,7 +88,7 @@ export default function OrderViewPage() {
         .from('orders')
         .select(`
           *,
-          client:clients(name, email),
+          client:clients!orders_user_id_fkey(name, email),
           company:companies(
             company_name,
             netsuite_number,
