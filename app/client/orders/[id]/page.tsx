@@ -215,8 +215,21 @@ export default function ClientOrderViewPage() {
                     const regularItems = orderItems.filter(item => !item.is_support_fund_item);
                     const creditEarningItems = regularItems.filter(item => item.product?.qualifies_for_credit_earning !== false);
                     const creditEarningSubtotal = creditEarningItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
-                    const supportFundPercent = order.company?.support_fund?.[0]?.percent || 0;
+                    
+                    // Debug support fund structure
+                    console.log('Order company support_fund:', order.company?.support_fund);
+                    
+                    // Handle different support fund data structures
+                    let supportFundPercent = 0;
+                    const supportFundData = order.company?.support_fund;
+                    if (Array.isArray(supportFundData) && supportFundData.length > 0) {
+                      supportFundPercent = supportFundData[0]?.percent || 0;
+                    } else if (supportFundData && typeof supportFundData === 'object') {
+                      supportFundPercent = (supportFundData as any).percent || 0;
+                    }
+                    
                     const creditEarned = creditEarningSubtotal * (supportFundPercent / 100);
+                    console.log('Credit calculation:', { creditEarningSubtotal, supportFundPercent, creditEarned });
                     return creditEarned.toFixed(2);
                   })()}
                 </p>
