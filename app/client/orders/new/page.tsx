@@ -349,7 +349,7 @@ export default function NewOrderPage() {
         .insert([{
           user_id: user.id,
           company_id: company?.id,
-          status: 'active',
+          status: 'submitted',
           total_value: totals.total,
           support_fund_used: 0, // Will be calculated in support fund redemption step
           po_number: poNumber || null
@@ -414,7 +414,7 @@ export default function NewOrderPage() {
         .insert([{
           user_id: user.id,
           company_id: company?.id,
-          status: 'active',
+          status: 'submitted',
           total_value: finalTotal,
           support_fund_used: supportFundUsed,
           po_number: poNumber || null
