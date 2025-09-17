@@ -331,13 +331,13 @@ export default function ClientOrderViewPage() {
               const supportFundPercent = order.company?.support_fund?.[0]?.percent || 0;
               const creditEarned = creditEarningSubtotal * (supportFundPercent / 100);
               
-              // Credit Used = Credit Earned - Support Fund Products (only display if positive)
-              const creditUsed = creditEarned - supportFundItemsTotal;
+              // Credit Used = lesser of (Earned Credit, Support Funds products total)
+              const creditUsed = Math.min(creditEarned, supportFundItemsTotal);
               const showCreditUsed = creditUsed > 0;
               
-              // Balance = Credit Earned - Support Fund Products (only if negative, show as positive)
-              const balance = creditEarned - supportFundItemsTotal;
-              const showBalance = balance < 0;
+              // Balance = Support Funds products - Earned Credit (only if Support Funds > Earned Credit)
+              const balance = supportFundItemsTotal - creditEarned;
+              const showBalance = supportFundItemsTotal > creditEarned;
               
               return (
                 <>
@@ -347,7 +347,7 @@ export default function ClientOrderViewPage() {
                     <span className="font-medium">${regularSubtotal.toFixed(2)}</span>
                   </div>
                   
-                  {/* Credit Used - only show if positive (don't display 0) */}
+                  {/* Credit Used - always show if there are support fund items */}
                   {showCreditUsed && (
                     <div className="flex justify-between text-green-600">
                       <span>Credit Used:</span>
@@ -355,18 +355,18 @@ export default function ClientOrderViewPage() {
                     </div>
                   )}
                   
-                  {/* Balance - only if negative (show as positive amount) */}
+                  {/* Balance - only if Support Funds > Earned Credit */}
                   {showBalance && (
                     <div className="flex justify-between text-orange-600">
                       <span>Balance:</span>
-                      <span className="font-medium">${Math.abs(balance).toFixed(2)}</span>
+                      <span className="font-medium">${balance.toFixed(2)}</span>
                     </div>
                   )}
                   
                   <div className="border-t pt-2">
                     <div className="flex justify-between">
                       <span className="text-lg font-semibold">Total Order Value:</span>
-                      <span className="text-lg font-semibold">${(regularSubtotal + (showBalance ? Math.abs(balance) : 0)).toFixed(2)}</span>
+                      <span className="text-lg font-semibold">${(regularSubtotal + (showBalance ? balance : 0)).toFixed(2)}</span>
                     </div>
                   </div>
                 </>
