@@ -206,7 +206,8 @@ export default function SupportFundPage() {
           product_id: item.product_id,
           quantity: item.total_units,
           unit_price: item.unit_price,
-          total_price: item.total_price
+          total_price: item.total_price,
+          is_support_fund_item: true
         }));
 
         console.log('Support fund items data to insert:', supportFundItemsData);

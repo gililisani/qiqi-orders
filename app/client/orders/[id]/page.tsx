@@ -26,6 +26,7 @@ interface OrderItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  is_support_fund_item?: boolean;
   product?: {
     item_name: string;
     sku: string;
@@ -106,7 +107,8 @@ export default function ClientOrderViewPage() {
           product:Products(item_name, sku, price_international, price_americas)
         `)
         .eq('order_id', orderId)
-        .order('created_at', { ascending: true });
+        .order('is_support_fund_item', { ascending: true })
+        .order('id', { ascending: true });
 
       if (error) {
         console.error('Order items query error:', error);
@@ -256,10 +258,17 @@ export default function ClientOrderViewPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {orderItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
+                  <tr key={item.id} className={`hover:bg-gray-50 ${item.is_support_fund_item ? 'bg-green-50' : ''}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {item.product?.item_name || 'N/A'}
+                      <div className="flex items-center">
+                        <div className="text-sm font-medium text-gray-900">
+                          {item.product?.item_name || 'N/A'}
+                        </div>
+                        {item.is_support_fund_item && (
+                          <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Support Fund
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -268,10 +277,10 @@ export default function ClientOrderViewPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {item.quantity}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${item.is_support_fund_item ? 'text-green-700 font-medium' : 'text-gray-900'}`}>
                       ${item.unit_price?.toFixed(2) || '0.00'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${item.is_support_fund_item ? 'text-green-700' : 'text-gray-900'}`}>
                       ${item.total_price?.toFixed(2) || '0.00'}
                     </td>
                   </tr>
@@ -300,20 +309,65 @@ export default function ClientOrderViewPage() {
         <div className="bg-white rounded-lg shadow border p-6">
           <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
           <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal:</span>
-              <span className="font-medium">${(order.total_value - (order.support_fund_used || 0)).toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Support Fund Used:</span>
-              <span className="font-medium text-green-600">-${order.support_fund_used?.toFixed(2) || '0.00'}</span>
-            </div>
-            <div className="border-t pt-2">
-              <div className="flex justify-between">
-                <span className="text-lg font-semibold">Total:</span>
-                <span className="text-lg font-semibold">${order.total_value?.toFixed(2) || '0.00'}</span>
-              </div>
-            </div>
+            {(() => {
+              // Calculate breakdown
+              const regularItems = orderItems.filter(item => !item.is_support_fund_item);
+              const supportFundItems = orderItems.filter(item => item.is_support_fund_item);
+              const regularSubtotal = regularItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
+              const supportFundSubtotal = supportFundItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
+              const supportFundPercent = order.company?.support_fund?.[0]?.percent || 0;
+              const creditEarned = regularSubtotal * (supportFundPercent / 100);
+              const additionalAmountPaid = Math.max(0, supportFundSubtotal - creditEarned);
+              
+              return (
+                <>
+                  {/* Regular Items Subtotal */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Regular Items:</span>
+                    <span className="font-medium">${regularSubtotal.toFixed(2)}</span>
+                  </div>
+                  
+                  {/* Support Fund Credit Earned */}
+                  {creditEarned > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Support Fund Credit Earned ({supportFundPercent}%):</span>
+                      <span className="font-medium">${creditEarned.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  {/* Support Fund Items */}
+                  {supportFundSubtotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Support Fund Items:</span>
+                      <span className="font-medium">${supportFundSubtotal.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  {/* Credit Used */}
+                  {supportFundSubtotal > 0 && creditEarned > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Credit Used:</span>
+                      <span className="font-medium">-${Math.min(creditEarned, supportFundSubtotal).toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  {/* Additional Amount Paid */}
+                  {additionalAmountPaid > 0 && (
+                    <div className="flex justify-between text-orange-600">
+                      <span>Additional Amount Paid:</span>
+                      <span className="font-medium">${additionalAmountPaid.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  <div className="border-t pt-2">
+                    <div className="flex justify-between">
+                      <span className="text-lg font-semibold">Total Order Value:</span>
+                      <span className="text-lg font-semibold">${(regularSubtotal + additionalAmountPaid).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>

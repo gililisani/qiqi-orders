@@ -35,6 +35,7 @@ interface OrderItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  is_support_fund_item?: boolean;
   product?: {
     item_name: string;
     sku: string;
@@ -119,7 +120,8 @@ export default function OrderViewPage() {
           product:Products(item_name, sku, price_international, price_americas)
         `)
         .eq('order_id', orderId)
-        .order('created_at', { ascending: true });
+        .order('is_support_fund_item', { ascending: true })
+        .order('id', { ascending: true });
 
       if (error) throw error;
       setOrderItems(data || []);
@@ -362,10 +364,17 @@ export default function OrderViewPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {orderItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
+                  <tr key={item.id} className={`hover:bg-gray-50 ${item.is_support_fund_item ? 'bg-green-50' : ''}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {item.product?.item_name || 'N/A'}
+                      <div className="flex items-center">
+                        <div className="text-sm font-medium text-gray-900">
+                          {item.product?.item_name || 'N/A'}
+                        </div>
+                        {item.is_support_fund_item && (
+                          <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Support Fund
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -374,10 +383,10 @@ export default function OrderViewPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {item.quantity}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${item.is_support_fund_item ? 'text-green-700 font-medium' : 'text-gray-900'}`}>
                       ${item.unit_price?.toFixed(2) || '0.00'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${item.is_support_fund_item ? 'text-green-700' : 'text-gray-900'}`}>
                       ${item.total_price?.toFixed(2) || '0.00'}
                     </td>
                   </tr>
