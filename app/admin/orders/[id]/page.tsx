@@ -469,7 +469,7 @@ export default function OrderViewPage() {
               const totalOrderValue = order.total_value || 0;
               
               // Only calculate the balance
-              const balance = supportFundItemsTotal - creditUsed;
+              const balance = creditUsed - supportFundItemsTotal;
               
               return (
                 <>
