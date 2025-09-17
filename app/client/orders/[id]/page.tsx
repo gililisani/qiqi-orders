@@ -324,20 +324,12 @@ export default function ClientOrderViewPage() {
               const regularSubtotal = regularItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
               const supportFundItemsTotal = supportFundItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
               
-              // FIXED: Only include products that qualify for credit earning in credit calculation
-              const creditEarningItems = regularItems.filter(item => item.product?.qualifies_for_credit_earning !== false);
-              const creditEarningSubtotal = creditEarningItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
+              // Use database values instead of recalculating
+              const creditUsed = order.support_fund_used || 0;
+              const totalOrderValue = order.total_value || 0;
               
-              const supportFundPercent = order.company?.support_fund?.[0]?.percent || 0;
-              const creditEarned = creditEarningSubtotal * (supportFundPercent / 100);
-              
-              // Credit Used = lesser of (Earned Credit, Support Funds products total)
-              const creditUsed = Math.min(creditEarned, supportFundItemsTotal);
-              const showCreditUsed = creditUsed > 0;
-              
-              // Balance = Support Funds products - Earned Credit (only if Support Funds > Earned Credit)
-              const balance = supportFundItemsTotal - creditEarned;
-              const showBalance = supportFundItemsTotal > creditEarned;
+              // Only calculate the balance
+              const balance = supportFundItemsTotal - creditUsed;
               
               return (
                 <>
@@ -362,7 +354,7 @@ export default function ClientOrderViewPage() {
                   <div className="border-t pt-2">
                     <div className="flex justify-between">
                       <span className="text-lg font-semibold">Total Order Value:</span>
-                      <span className="text-lg font-semibold">${(regularSubtotal + balance).toFixed(2)}</span>
+                      <span className="text-lg font-semibold">${totalOrderValue.toFixed(2)}</span>
                     </div>
                   </div>
                 </>
