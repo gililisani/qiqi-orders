@@ -465,8 +465,11 @@ export default function OrderViewPage() {
               const supportFundPercent = order.company?.support_fund?.percent || 0;
               const creditEarned = regularSubtotal * (supportFundPercent / 100);
               
+              // Credit Used = minimum of support fund items total and credit earned
+              const creditUsed = Math.min(supportFundItemsTotal, creditEarned);
+              
               // Additional Amount Paid = Support Fund Items Total - Credit Earned
-              // Only show if positive (customer pays extra beyond their credit)
+              // Only show if positive (when support fund items exceed credit earned)
               const additionalAmountPaid = supportFundItemsTotal - creditEarned;
               const showAdditionalAmount = additionalAmountPaid > 0;
               
@@ -478,19 +481,11 @@ export default function OrderViewPage() {
                     <span className="font-medium">${regularSubtotal.toFixed(2)}</span>
                   </div>
                   
-                  {/* Support Fund Credit Earned */}
-                  {creditEarned > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Support Fund Credit Earned ({supportFundPercent}%):</span>
-                      <span className="font-medium">${creditEarned.toFixed(2)}</span>
-                    </div>
-                  )}
-                  
-                  {/* Credit Used */}
-                  {supportFundItemsTotal > 0 && (
+                  {/* Credit Used - show as positive number */}
+                  {creditUsed > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>Credit Used:</span>
-                      <span className="font-medium">-${supportFundItemsTotal.toFixed(2)}</span>
+                      <span className="font-medium">${creditUsed.toFixed(2)}</span>
                     </div>
                   )}
                   
