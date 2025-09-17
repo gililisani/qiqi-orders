@@ -57,6 +57,17 @@ export default function ClientOrderViewPage() {
     }
   }, [orderId]);
 
+  // Add effect to refresh when returning from support fund page
+  useEffect(() => {
+    const handleFocus = () => {
+      // Refresh order items when page regains focus (user returns from support fund page)
+      fetchOrderItems();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [orderId]);
+
   const fetchOrder = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -87,6 +98,7 @@ export default function ClientOrderViewPage() {
 
   const fetchOrderItems = async () => {
     try {
+      console.log('Fetching order items for order:', orderId);
       const { data, error } = await supabase
         .from('order_items')
         .select(`
@@ -96,10 +108,17 @@ export default function ClientOrderViewPage() {
         .eq('order_id', orderId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Order items query error:', error);
+        throw error;
+      }
+      
+      console.log('Order items fetched:', data?.length || 0, 'items');
+      console.log('Order items data:', data);
       setOrderItems(data || []);
     } catch (err: any) {
       console.error('Error fetching order items:', err);
+      setError(`Failed to load order items: ${err.message}`);
     }
   };
 
@@ -136,12 +155,23 @@ export default function ClientOrderViewPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Order Details</h1>
-          <Link
-            href="/client/orders"
-            className="text-gray-600 hover:text-gray-800"
-          >
-            ← Back to Orders
-          </Link>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => {
+                fetchOrder();
+                fetchOrderItems();
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm"
+            >
+              Refresh
+            </button>
+            <Link
+              href="/client/orders"
+              className="text-gray-600 hover:text-gray-800"
+            >
+              ← Back to Orders
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -252,6 +282,16 @@ export default function ClientOrderViewPage() {
           {orderItems.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               <p>No items found for this order.</p>
+              <p className="text-sm mt-2">If you just completed support fund redemption, try clicking the Refresh button above.</p>
+              <button
+                onClick={() => {
+                  console.log('Manual refresh clicked');
+                  fetchOrderItems();
+                }}
+                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm"
+              >
+                Refresh Items
+              </button>
             </div>
           )}
         </div>

@@ -198,6 +198,9 @@ export default function SupportFundPage() {
 
       // Add support fund items to order_items if any
       if (supportFundItems.length > 0) {
+        console.log('Adding support fund items to order:', orderId);
+        console.log('Support fund items:', supportFundItems);
+        
         const supportFundItemsData = supportFundItems.map(item => ({
           order_id: orderId,
           product_id: item.product_id,
@@ -206,11 +209,37 @@ export default function SupportFundPage() {
           total_price: item.total_price
         }));
 
-        const { error: itemsError } = await supabase
-          .from('order_items')
-          .insert(supportFundItemsData);
+        console.log('Support fund items data to insert:', supportFundItemsData);
 
-        if (itemsError) throw itemsError;
+        const { data: insertedItems, error: itemsError } = await supabase
+          .from('order_items')
+          .insert(supportFundItemsData)
+          .select();
+
+        if (itemsError) {
+          console.error('Error inserting support fund items:', itemsError);
+          throw itemsError;
+        }
+        
+        console.log('Successfully inserted support fund items:', insertedItems);
+      }
+
+      // Send order confirmation notification for the completed order
+      try {
+        await fetch('/api/orders/notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            orderId: orderId,
+            type: 'order_created',
+            customMessage: supportFundItems.length > 0 ? 'Order completed with support fund redemption' : undefined
+          }),
+        });
+      } catch (notificationError) {
+        console.error('Failed to send order confirmation:', notificationError);
+        // Don't fail the order creation for notification errors
       }
 
       router.push(`/client/orders/${orderId}`);
