@@ -803,9 +803,6 @@ export default function NewOrderPage() {
                     {showSupportFundRedemption ? (
                       <button
                         onClick={() => {
-                          const combinedItems = [...orderItems, ...supportFundItems];
-                          setOrderItems(combinedItems);
-                          setShowSupportFundRedemption(false);
                           handleSubmitWithSupportFund();
                         }}
                         disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
@@ -959,9 +956,6 @@ export default function NewOrderPage() {
                   {showSupportFundRedemption ? (
                     <button
                       onClick={() => {
-                        const combinedItems = [...orderItems, ...supportFundItems];
-                        setOrderItems(combinedItems);
-                        setShowSupportFundRedemption(false);
                         handleSubmitWithSupportFund();
                       }}
                       disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
