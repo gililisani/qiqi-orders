@@ -758,7 +758,7 @@ export default function NewOrderPage() {
                           handleSubmitWithSupportFund();
                         }}
                         disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
-                        className="w-full bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
+                        className="w-full bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
                       >
                         {submitting ? 'Processing...' : 'Complete Order'}
                       </button>
@@ -914,7 +914,7 @@ export default function NewOrderPage() {
                         handleSubmitWithSupportFund();
                       }}
                       disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
-                      className="mt-4 w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
+                      className="mt-4 w-full bg-black text-white px-4 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
                     >
                       {submitting ? 'Processing...' : 'Complete Order'}
                     </button>
