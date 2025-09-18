@@ -12,6 +12,7 @@ interface Order {
   status: string;
   total_value: number;
   support_fund_used: number;
+  credit_earned: number;
   po_number: string;
   company?: {
     company_name: string;
@@ -250,18 +251,7 @@ export default function ClientOrderViewPage() {
               <div>
                 <label className="text-sm font-medium text-gray-500">Credit Earned</label>
                 <p className="text-lg text-green-600 font-semibold">
-                  ${(() => {
-                    if (!order.company?.support_fund || !order.company.support_fund[0]) return '0.00';
-                    const supportFundPercent = order.company.support_fund[0].percent;
-                    
-                    // Calculate credit earned from qualifying items
-                    const regularItems = orderItems.filter(item => !item.is_support_fund_item);
-                    const creditEarningItems = regularItems.filter(item => item.product?.qualifies_for_credit_earning);
-                    const creditEarningSubtotal = creditEarningItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
-                    const creditEarned = creditEarningSubtotal * (supportFundPercent / 100);
-                    
-                    return creditEarned.toFixed(2);
-                  })()}
+                  ${order.credit_earned?.toFixed(2) || '0.00'}
                 </p>
               </div>
               <div>

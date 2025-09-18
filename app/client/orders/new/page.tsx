@@ -371,6 +371,7 @@ export default function NewOrderPage() {
           status: 'Open',
           total_value: totals.total,
           support_fund_used: 0, // Will be calculated in support fund redemption step
+          credit_earned: totals.supportFundEarned,
           po_number: finalPONumber
         }])
         .select()
@@ -454,6 +455,7 @@ export default function NewOrderPage() {
           status: 'Open',
           total_value: finalTotal,
           support_fund_used: supportFundUsed,
+          credit_earned: originalTotals.supportFundEarned,
           po_number: finalPONumber
         }])
         .select()

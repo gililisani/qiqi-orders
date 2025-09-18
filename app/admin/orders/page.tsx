@@ -12,6 +12,7 @@ interface Order {
   status: string;
   total_value: number;
   support_fund_used: number;
+  credit_earned: number;
   user_id: string;
   company_id: string;
   po_number: string;

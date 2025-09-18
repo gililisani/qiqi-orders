@@ -11,6 +11,7 @@ interface Order {
   status: string;
   total_value: number;
   support_fund_used: number;
+  credit_earned: number;
 }
 
 interface Company {
