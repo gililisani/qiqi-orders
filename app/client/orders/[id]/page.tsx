@@ -164,7 +164,12 @@ export default function ClientOrderViewPage() {
     <ClientLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Order Details</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Order Summary</h1>
+            {order?.company?.company_name && (
+              <h2 className="text-lg font-medium text-gray-700 mt-1">{order.company.company_name}</h2>
+            )}
+          </div>
           <div className="flex items-center space-x-4">
             <button
               onClick={() => {
@@ -204,37 +209,6 @@ export default function ClientOrderViewPage() {
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Total Value</label>
-                <p className="text-lg font-semibold">${order.total_value?.toFixed(2) || '0.00'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Credit Earned</label>
-                <p className="text-lg font-semibold text-green-600">
-                  ${(() => {
-                    // Calculate credit earned from regular items that qualify
-                    const regularItems = orderItems.filter(item => !item.is_support_fund_item);
-                    const creditEarningItems = regularItems.filter(item => item.product?.qualifies_for_credit_earning !== false);
-                    const creditEarningSubtotal = creditEarningItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
-                    
-                    // Debug support fund structure
-                    console.log('Order company support_fund:', order.company?.support_fund);
-                    
-                    // Handle different support fund data structures
-                    let supportFundPercent = 0;
-                    const supportFundData = order.company?.support_fund;
-                    if (Array.isArray(supportFundData) && supportFundData.length > 0) {
-                      supportFundPercent = supportFundData[0]?.percent || 0;
-                    } else if (supportFundData && typeof supportFundData === 'object') {
-                      supportFundPercent = (supportFundData as any).percent || 0;
-                    }
-                    
-                    const creditEarned = creditEarningSubtotal * (supportFundPercent / 100);
-                    console.log('Credit calculation:', { creditEarningSubtotal, supportFundPercent, creditEarned });
-                    return creditEarned.toFixed(2);
-                  })()}
-                </p>
-              </div>
-              <div>
                 <label className="text-sm font-medium text-gray-500">Created</label>
                 <p className="text-lg">{new Date(order.created_at).toLocaleString()}</p>
               </div>
@@ -248,14 +222,6 @@ export default function ClientOrderViewPage() {
               <div>
                 <label className="text-sm font-medium text-gray-500">Company</label>
                 <p className="text-lg">{order.company?.company_name || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">NetSuite Number</label>
-                <p className="text-lg">{order.company?.netsuite_number || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Support Fund %</label>
-                <p className="text-lg">{order.company?.support_fund?.[0]?.percent || 0}%</p>
               </div>
             </div>
           </div>
