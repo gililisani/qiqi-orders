@@ -73,7 +73,7 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
 
     // Determine tax item based on subsidiary
     const subsidiaryName = order.company.subsidiary?.name || '';
-    const taxItem = subsidiaryName === 'Qiqi Global Ltd.' ? 'ILY – Sales Export' : '';
+    const taxItem = (subsidiaryName.includes('Global') || subsidiaryName === 'Qiqi Global Ltd.') ? 'ILY – Sales Export' : '';
 
     console.log('CSV Generation - Processing', order.order_items.length, 'order items');
     console.log('CSV Generation - External ID:', externalId);
