@@ -24,6 +24,7 @@ export interface OrderForExport {
     product: {
       sku: string;
       item_name: string;
+      netsuite_itemid?: string;
     };
     quantity: number;
     unit_price: number;
@@ -77,7 +78,7 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
       order.company.class?.name || 'Default Class', // Class
       formatSubsidiary(order.company.subsidiary?.name), // Subsidiary
       order.company.location?.location_name || 'Default Location', // Location
-      item.product.sku, // Item
+      `${item.product.sku}${item.product.netsuite_itemid ? ' ' + item.product.netsuite_itemid : ''}`, // Item
       item.quantity.toString(), // Quantity
       'Pending Fulfillment' // Status
     ];

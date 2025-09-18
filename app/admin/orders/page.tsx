@@ -162,7 +162,7 @@ export default function OrdersPage() {
             quantity,
             unit_price,
             total_price,
-            product:Products(sku, item_name)
+            product:Products(sku, item_name, netsuite_itemid)
           )
         `)
         .eq('id', orderId)
