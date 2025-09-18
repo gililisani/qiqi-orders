@@ -22,10 +22,13 @@ interface Order {
   company?: {
     company_name: string;
     netsuite_number: string;
+    ship_to?: string;
     support_fund?: { percent: number };
     subsidiary?: { name: string };
     class?: { name: string };
     location?: { location_name: string };
+    incoterm?: { name: string };
+    payment_term?: { name: string };
   };
 }
 
