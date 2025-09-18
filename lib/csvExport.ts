@@ -100,7 +100,7 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
 
   // Convert to CSV format
   const csvContent = [headers, ...rows]
-    .map(row => row.map(field => `"${field}"`).join('\t'))
+    .map(row => row.map(field => `"${field}"`).join(','))
     .join('\n');
 
   return csvContent;
