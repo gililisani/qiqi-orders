@@ -108,10 +108,13 @@ export default function OrderViewPage() {
           .select(`
             company_name,
             netsuite_number,
+            ship_to,
             support_fund:support_fund_levels(percent),
             subsidiary:subsidiaries(name),
             class:classes(name),
-            location:Locations(location_name)
+            location:Locations(location_name),
+            incoterm:incoterms(name),
+            payment_term:payment_terms(name)
           `)
           .eq('id', orderData.company_id)
           .single() : { data: null, error: null }
@@ -287,8 +290,8 @@ export default function OrderViewPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Order Information */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Block: Order Information */}
           <div className="bg-white p-6 rounded-lg shadow border">
             <h2 className="text-lg font-semibold mb-4">Order Information</h2>
             <div className="space-y-3">
@@ -315,7 +318,47 @@ export default function OrderViewPage() {
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Total Value</label>
+                <label className="text-sm font-medium text-gray-500">Created</label>
+                <p className="text-lg">{new Date(order.created_at).toLocaleString()}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Client Name</label>
+                <p className="text-lg">{order.client?.name || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Email</label>
+                <p className="text-lg">{order.client?.email || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Middle Block: Bill To */}
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <h2 className="text-lg font-semibold mb-4">Bill To</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Company</label>
+                <p className="text-lg">{order.company?.company_name || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">NetSuite Number</label>
+                <p className="text-lg">{order.company?.netsuite_number || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Ship To</label>
+                <div className="text-sm text-gray-700 whitespace-pre-line">
+                  {order.company?.ship_to || 'Not specified'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Block: Order Summary */}
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Total Order</label>
                 <p className="text-lg font-semibold">${order.total_value?.toFixed(2) || '0.00'}</p>
               </div>
               <div>
@@ -333,35 +376,12 @@ export default function OrderViewPage() {
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Created</label>
-                <p className="text-lg">{new Date(order.created_at).toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Client Information */}
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-4">Client Information</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium text-gray-500">Client Name</label>
-                <p className="text-lg">{order.client?.name || 'N/A'}</p>
+                <label className="text-sm font-medium text-gray-500">Incoterm</label>
+                <p className="text-lg">{order.company?.incoterm?.name || 'Not specified'}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Email</label>
-                <p className="text-lg">{order.client?.email || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Company</label>
-                <p className="text-lg">{order.company?.company_name || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">NetSuite Number</label>
-                <p className="text-lg">{order.company?.netsuite_number || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Support Fund %</label>
-                <p className="text-lg">{order.company?.support_fund?.percent || 0}%</p>
+                <label className="text-sm font-medium text-gray-500">Payment Terms</label>
+                <p className="text-lg">{order.company?.payment_term?.name || 'Not specified'}</p>
               </div>
             </div>
           </div>
