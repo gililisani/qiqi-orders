@@ -677,7 +677,7 @@ export default function NewOrderPage() {
                       const unitPrice = getProductPrice(product);
                       
                         return (
-                          <tr key={product.id} className={`hover:bg-gray-50 ${orderItem?.case_qty > 0 ? 'bg-gray-100' : ''}`}>
+                          <tr key={product.id} className={`hover:bg-gray-50 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
                           <td className="px-2 py-3 whitespace-nowrap">
                             <div className="flex items-center min-w-0">
                               <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-hidden bg-gray-200">
