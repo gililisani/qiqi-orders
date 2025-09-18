@@ -14,6 +14,7 @@ interface Order {
   support_fund_used: number;
   user_id: string;
   company_id: string;
+  po_number: string;
   client?: {
     name: string;
     email: string;

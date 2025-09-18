@@ -14,6 +14,7 @@ interface Order {
   support_fund_used: number;
   user_id: string;
   company_id: string;
+  po_number: string;
   netsuite_sales_order_id?: string;
   netsuite_status?: string;
   client?: {
