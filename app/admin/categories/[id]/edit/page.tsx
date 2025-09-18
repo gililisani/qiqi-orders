@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
 import AdminLayout from '../../../../components/AdminLayout';
 import Link from 'next/link';
+import CategoryImageUpload from '../../../../components/CategoryImageUpload';
 
 interface Category {
   id: number;
@@ -180,30 +181,10 @@ export default function EditCategoryPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category Image URL
-              </label>
-              <input
-                type="url"
-                name="image_url"
-                value={formData.image_url}
-                onChange={handleChange}
-                placeholder="https://example.com/category-image.jpg"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+              <CategoryImageUpload
+                onImageUploaded={(url) => setFormData(prev => ({ ...prev, image_url: url }))}
+                currentImageUrl={formData.image_url}
               />
-              <p className="text-xs text-gray-500 mt-1">URL of the category image (recommended size: 300x150px)</p>
-              {formData.image_url && (
-                <div className="mt-2">
-                  <img
-                    src={formData.image_url}
-                    alt="Preview"
-                    className="w-32 h-16 object-cover rounded border"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
             </div>
 
             <div className="space-y-4">
