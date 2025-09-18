@@ -45,7 +45,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     visible_to_americas: true,
     visible_to_international: true,
     qualifies_for_credit_earning: true,
-    picture_url: ''
+    picture_url: '',
+    case_weight: '',
+    hs_code: '',
+    made_in: ''
   });
 
   useEffect(() => {
@@ -97,7 +100,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         visible_to_americas: data.visible_to_americas ?? true,
         visible_to_international: data.visible_to_international ?? true,
         qualifies_for_credit_earning: data.qualifies_for_credit_earning ?? true,
-        picture_url: data.picture_url || ''
+        picture_url: data.picture_url || '',
+        case_weight: data.case_weight?.toString() || '',
+        hs_code: data.hs_code || '',
+        made_in: data.made_in || ''
       });
     } catch (err: any) {
       setError(err.message);
@@ -128,7 +134,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           visible_to_americas: formData.visible_to_americas,
           visible_to_international: formData.visible_to_international,
           qualifies_for_credit_earning: formData.qualifies_for_credit_earning,
-          picture_url: formData.picture_url || null
+          picture_url: formData.picture_url || null,
+          case_weight: formData.case_weight ? parseFloat(formData.case_weight) : null,
+          hs_code: formData.hs_code || null,
+          made_in: formData.made_in || null
         })
         .eq('id', params.id);
 
@@ -298,6 +307,57 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             onImageUploaded={(url) => setFormData(prev => ({ ...prev, picture_url: url }))}
             currentImageUrl={formData.picture_url}
           />
+
+          {/* Packing List Fields */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-blue-800 mb-4">Packing List Information</h3>
+            <p className="text-sm text-blue-700 mb-4">Required for international shipping and customs documentation</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Case Weight (kg)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  name="case_weight"
+                  value={formData.case_weight}
+                  onChange={handleChange}
+                  placeholder="e.g., 12.50"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  HS Code
+                </label>
+                <input
+                  type="text"
+                  name="hs_code"
+                  value={formData.hs_code}
+                  onChange={handleChange}
+                  placeholder="e.g., 3305.10.00"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Made In
+                </label>
+                <input
+                  type="text"
+                  name="made_in"
+                  value={formData.made_in}
+                  onChange={handleChange}
+                  placeholder="e.g., USA, China, Italy"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+            </div>
+          </div>
 
           <div className="space-y-4">
             <div className="flex space-x-6">
