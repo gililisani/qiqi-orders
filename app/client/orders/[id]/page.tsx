@@ -195,8 +195,8 @@ export default function ClientOrderViewPage() {
             <h2 className="text-lg font-semibold mb-4">Order Information</h2>
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-medium text-gray-500">Order ID</label>
-                <p className="text-lg font-mono">{order.id}</p>
+                <label className="text-sm font-medium text-gray-500">PO Number</label>
+                <p className="text-lg font-mono">{order.po_number || 'N/A'}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Status</label>

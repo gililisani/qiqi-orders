@@ -52,6 +52,16 @@ export default function NewOrderPage() {
   const [error, setError] = useState('');
   const [poNumber, setPoNumber] = useState('');
 
+  // Generate 6-character alphanumeric PO number
+  const generatePONumber = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
   const getClientType = () => {
     if (!company?.class?.name) return 'Americas';
     
@@ -349,6 +359,9 @@ export default function NewOrderPage() {
 
       const totals = getOrderTotals();
 
+      // Generate PO number if not provided
+      const finalPONumber = poNumber || generatePONumber();
+
       // Create the order
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
@@ -358,7 +371,7 @@ export default function NewOrderPage() {
           status: 'Open',
           total_value: totals.total,
           support_fund_used: 0, // Will be calculated in support fund redemption step
-          po_number: poNumber || null
+          po_number: finalPONumber
         }])
         .select()
         .single();
@@ -429,6 +442,9 @@ export default function NewOrderPage() {
       const additionalCost = Math.max(0, supportTotals.subtotal - originalTotals.supportFundEarned);
       const finalTotal = originalTotals.total + additionalCost;
 
+      // Generate PO number if not provided
+      const finalPONumber = poNumber || generatePONumber();
+
       // Create the order
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
@@ -438,7 +454,7 @@ export default function NewOrderPage() {
           status: 'Open',
           total_value: finalTotal,
           support_fund_used: supportFundUsed,
-          po_number: poNumber || null
+          po_number: finalPONumber
         }])
         .select()
         .single();
