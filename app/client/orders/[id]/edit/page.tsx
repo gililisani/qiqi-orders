@@ -167,10 +167,15 @@ export default function EditOrderPage() {
         .single();
 
       console.log('EditOrder: Company query result:', { clientData, clientError });
+      console.log('EditOrder: Full clientData structure:', JSON.stringify(clientData, null, 2));
 
       if (clientError) throw clientError;
       
-      const rawCompanyData = clientData?.company?.[0];
+      // Try different ways to access company data
+      console.log('EditOrder: clientData?.company:', clientData?.company);
+      console.log('EditOrder: clientData?.company?.[0]:', clientData?.company?.[0]);
+      
+      const rawCompanyData = clientData?.company || clientData?.company?.[0];
       console.log('EditOrder: Raw company data:', rawCompanyData);
       
       if (rawCompanyData) {
