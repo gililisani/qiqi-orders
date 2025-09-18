@@ -41,6 +41,7 @@ interface OrderItem {
   unit_price: number;
   total_price: number;
   is_support_fund_item?: boolean;
+  sort_order?: number;
   product?: {
     item_name: string;
     sku: string;
@@ -79,6 +80,8 @@ export default function OrderViewPage() {
   const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isReordering, setIsReordering] = useState(false);
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [sendingNotification, setSendingNotification] = useState(false);
 
   useEffect(() => {
@@ -149,6 +152,7 @@ export default function OrderViewPage() {
         `)
         .eq('order_id', orderId)
         .order('is_support_fund_item', { ascending: true })
+        .order('sort_order', { ascending: true })
         .order('id', { ascending: true });
 
       if (error) throw error;
@@ -171,6 +175,64 @@ export default function OrderViewPage() {
     } catch (err: any) {
       console.error('Error fetching order history:', err);
     }
+  };
+
+  const handleReorderProducts = async (newOrder: OrderItem[]) => {
+    try {
+      // Update sort_order for each item
+      const updates = newOrder.map((item, index) => 
+        supabase
+          .from('order_items')
+          .update({ sort_order: index })
+          .eq('id', item.id)
+      );
+
+      await Promise.all(updates);
+      
+      // Refresh order items
+      await fetchOrderItems();
+      
+    } catch (err: any) {
+      console.error('Error reordering products:', err);
+      setError('Failed to reorder products. Please try again.');
+    }
+  };
+
+  const moveItem = (fromIndex: number, toIndex: number) => {
+    const newItems = [...orderItems];
+    const [movedItem] = newItems.splice(fromIndex, 1);
+    newItems.splice(toIndex, 0, movedItem);
+    setOrderItems(newItems);
+    return newItems;
+  };
+
+  const handleDragStart = (e: React.DragEvent, itemId: string) => {
+    setDraggedItem(itemId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetItemId: string) => {
+    e.preventDefault();
+    
+    if (!draggedItem || draggedItem === targetItemId) {
+      setDraggedItem(null);
+      return;
+    }
+
+    const fromIndex = orderItems.findIndex(item => item.id === draggedItem);
+    const toIndex = orderItems.findIndex(item => item.id === targetItemId);
+
+    if (fromIndex !== -1 && toIndex !== -1) {
+      const newOrder = moveItem(fromIndex, toIndex);
+      handleReorderProducts(newOrder);
+    }
+
+    setDraggedItem(null);
   };
 
   const handleStatusChange = async (newStatus: string) => {
@@ -385,13 +447,35 @@ export default function OrderViewPage() {
 
         {/* Order Items */}
         <div className="mt-6 bg-white rounded-lg shadow border overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <h2 className="text-lg font-semibold">Order Items</h2>
+            <div className="flex items-center space-x-4">
+              {isReordering && (
+                <span className="text-sm text-blue-600 font-medium">
+                  Drag and drop rows to reorder products
+                </span>
+              )}
+              <button
+                onClick={() => setIsReordering(!isReordering)}
+                className={`px-4 py-2 rounded text-sm font-medium transition ${
+                  isReordering 
+                    ? 'bg-green-600 text-white hover:bg-green-700' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {isReordering ? 'Done Reordering' : 'Reorder Products'}
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  {isReordering && (
+                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                      Order
+                    </th>
+                  )}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Product
                   </th>
@@ -410,8 +494,26 @@ export default function OrderViewPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {orderItems.map((item) => (
-                  <tr key={item.id} className={`hover:bg-gray-50 ${item.is_support_fund_item ? 'bg-green-50' : ''}`}>
+                {orderItems.map((item, index) => (
+                  <tr 
+                    key={item.id} 
+                    className={`hover:bg-gray-50 ${item.is_support_fund_item ? 'bg-green-50' : ''} ${
+                      isReordering ? 'cursor-move' : ''
+                    } ${draggedItem === item.id ? 'opacity-50' : ''}`}
+                    draggable={isReordering}
+                    onDragStart={(e) => handleDragStart(e, item.id)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, item.id)}
+                  >
+                    {isReordering && (
+                      <td className="px-3 py-4 text-center">
+                        <div className="flex items-center justify-center">
+                          <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M7 2a1 1 0 011 1v2h4V3a1 1 0 112 0v2h2a1 1 0 110 2h-2v4h2a1 1 0 110 2h-2v2a1 1 0 11-2 0v-2H8v2a1 1 0 11-2 0v-2H4a1 1 0 110-2h2V7H4a1 1 0 110-2h2V3a1 1 0 011-1z"/>
+                          </svg>
+                        </div>
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="text-sm font-medium text-gray-900">
