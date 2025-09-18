@@ -13,6 +13,7 @@ interface Category {
   sort_order: number;
   visible_to_americas: boolean;
   visible_to_international: boolean;
+  image_url?: string;
 }
 
 interface Product {
@@ -710,15 +711,55 @@ export default function EditOrderPage() {
                           <React.Fragment key={categoryGroup.category?.id || 'no-category'}>
                             {/* Category Header Row */}
                             {!showSupportFundRedemption && (
-                              <tr className="bg-blue-50 border-t-2 border-blue-200">
-                                <td colSpan={6} className="px-4 py-3">
-                                  <div className="flex items-center">
-                                    <h3 className="text-sm font-semibold text-blue-900">
-                                      {categoryGroup.category?.name || 'Products without Category'}
-                                    </h3>
-                                    <span className="ml-2 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
-                                      {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
-                                    </span>
+                              <tr className="border-t-2 border-gray-300">
+                                <td colSpan={6} className="px-0 py-0">
+                                  <div className="relative">
+                                    {categoryGroup.category?.image_url ? (
+                                      <div className="relative">
+                                        <img
+                                          src={categoryGroup.category.image_url}
+                                          alt={categoryGroup.category.name}
+                                          className="w-full h-20 object-cover"
+                                          onError={(e) => {
+                                            // Fallback to text header if image fails to load
+                                            e.currentTarget.style.display = 'none';
+                                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                            if (fallback) fallback.style.display = 'block';
+                                          }}
+                                        />
+                                        <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+                                          <div className="text-center">
+                                            <h3 className="text-lg font-bold text-white">
+                                              {categoryGroup.category.name}
+                                            </h3>
+                                            <p className="text-sm text-gray-200">
+                                              {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="bg-gray-100 px-4 py-3 flex items-center justify-center">
+                                        <div className="text-center">
+                                          <h3 className="text-lg font-semibold text-gray-900">
+                                            {categoryGroup.category?.name || 'Products without Category'}
+                                          </h3>
+                                          <p className="text-sm text-gray-600">
+                                            {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
+                                    <div style={{display: 'none'}} className="bg-gray-100 px-4 py-3 flex items-center justify-center">
+                                      <div className="text-center">
+                                        <h3 className="text-lg font-semibold text-gray-900">
+                                          {categoryGroup.category?.name || 'Products without Category'}
+                                        </h3>
+                                        <p className="text-sm text-gray-600">
+                                          {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
+                                        </p>
+                                      </div>
+                                    </div>
                                   </div>
                                 </td>
                               </tr>

@@ -12,6 +12,7 @@ interface Category {
   sort_order: number;
   visible_to_americas: boolean;
   visible_to_international: boolean;
+  image_url?: string;
   product_count?: number;
 }
 
@@ -126,8 +127,22 @@ export default function CategoriesPage() {
                   <div className="flex-1">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-blue-600 font-medium text-sm">
+                        {category.image_url ? (
+                          <img
+                            src={category.image_url}
+                            alt={category.name}
+                            className="w-16 h-16 object-cover rounded-lg"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div 
+                          className={`w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center ${category.image_url ? 'hidden' : ''}`}
+                        >
+                          <span className="text-blue-600 font-medium text-lg">
                             {category.sort_order}
                           </span>
                         </div>

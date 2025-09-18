@@ -15,7 +15,8 @@ export default function NewCategoryPage() {
     description: '',
     sort_order: '',
     visible_to_americas: true,
-    visible_to_international: true
+    visible_to_international: true,
+    image_url: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,7 +32,8 @@ export default function NewCategoryPage() {
           description: formData.description || null,
           sort_order: formData.sort_order ? parseInt(formData.sort_order) : 0,
           visible_to_americas: formData.visible_to_americas,
-          visible_to_international: formData.visible_to_international
+          visible_to_international: formData.visible_to_international,
+          image_url: formData.image_url || null
         }]);
 
       if (error) throw error;
@@ -113,20 +115,47 @@ export default function NewCategoryPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Sort Order
-              </label>
-              <input
-                type="number"
-                name="sort_order"
-                value={formData.sort_order}
-                onChange={handleChange}
-                placeholder="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-              <p className="text-xs text-gray-500 mt-1">Lower numbers appear first (0 = first position)</p>
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sort Order
+                </label>
+                <input
+                  type="number"
+                  name="sort_order"
+                  value={formData.sort_order}
+                  onChange={handleChange}
+                  placeholder="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+                <p className="text-xs text-gray-500 mt-1">Lower numbers appear first (0 = first position)</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category Image URL
+                </label>
+                <input
+                  type="url"
+                  name="image_url"
+                  value={formData.image_url}
+                  onChange={handleChange}
+                  placeholder="https://example.com/category-image.jpg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+                <p className="text-xs text-gray-500 mt-1">URL of the category image (recommended size: 300x150px)</p>
+                {formData.image_url && (
+                  <div className="mt-2">
+                    <img
+                      src={formData.image_url}
+                      alt="Preview"
+                      className="w-32 h-16 object-cover rounded border"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
 
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900">Visibility Settings</h3>

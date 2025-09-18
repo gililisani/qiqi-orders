@@ -26,7 +26,8 @@ export default function EditCategoryPage() {
     description: '',
     sort_order: '',
     visible_to_americas: true,
-    visible_to_international: true
+    visible_to_international: true,
+    image_url: ''
   });
 
   useEffect(() => {
@@ -48,7 +49,8 @@ export default function EditCategoryPage() {
         description: data.description || '',
         sort_order: data.sort_order?.toString() || '0',
         visible_to_americas: data.visible_to_americas ?? true,
-        visible_to_international: data.visible_to_international ?? true
+        visible_to_international: data.visible_to_international ?? true,
+        image_url: data.image_url || ''
       });
     } catch (err: any) {
       setError(err.message);
@@ -71,6 +73,7 @@ export default function EditCategoryPage() {
           sort_order: formData.sort_order ? parseInt(formData.sort_order) : 0,
           visible_to_americas: formData.visible_to_americas,
           visible_to_international: formData.visible_to_international,
+          image_url: formData.image_url || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', params.id);
@@ -174,6 +177,33 @@ export default function EditCategoryPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               />
               <p className="text-xs text-gray-500 mt-1">Lower numbers appear first</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Category Image URL
+              </label>
+              <input
+                type="url"
+                name="image_url"
+                value={formData.image_url}
+                onChange={handleChange}
+                placeholder="https://example.com/category-image.jpg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+              />
+              <p className="text-xs text-gray-500 mt-1">URL of the category image (recommended size: 300x150px)</p>
+              {formData.image_url && (
+                <div className="mt-2">
+                  <img
+                    src={formData.image_url}
+                    alt="Preview"
+                    className="w-32 h-16 object-cover rounded border"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
