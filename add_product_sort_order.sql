@@ -8,8 +8,15 @@ ADD COLUMN "sort_order" INTEGER DEFAULT 0;
 -- Update existing products to have incremental sort_order values
 -- This ensures existing products have a default order
 UPDATE "Products" 
-SET "sort_order" = ROW_NUMBER() OVER (ORDER BY "item_name")
-WHERE "sort_order" IS NULL OR "sort_order" = 0;
+SET "sort_order" = subquery.row_num
+FROM (
+  SELECT 
+    id,
+    ROW_NUMBER() OVER (ORDER BY "item_name") as row_num
+  FROM "Products"
+  WHERE "sort_order" IS NULL OR "sort_order" = 0
+) as subquery
+WHERE "Products".id = subquery.id;
 
 -- Create an index for better query performance when ordering by sort_order
 CREATE INDEX idx_products_sort_order ON "Products"("sort_order", "enable");
