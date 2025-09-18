@@ -162,7 +162,7 @@ export default function OrdersPage() {
             quantity,
             unit_price,
             total_price,
-            product:Products(sku, item_name, netsuite_itemid)
+            product:Products(sku, item_name, netsuite_name)
           )
         `)
         .eq('id', orderId)
@@ -171,6 +171,8 @@ export default function OrdersPage() {
       if (error) throw error;
 
       console.log('CSV Export - Order data:', orderData);
+      console.log('CSV Export - Company data:', orderData.company);
+      console.log('CSV Export - Order items:', orderData.order_items);
 
       // Validate required data
       if (!orderData.company) {
@@ -180,8 +182,22 @@ export default function OrdersPage() {
         throw new Error('No order items found for this order');
       }
 
+      // Validate order items have required product data
+      for (const item of orderData.order_items) {
+        if (!item.product) {
+          throw new Error('Product data missing for order item');
+        }
+        if (!item.product.sku) {
+          throw new Error('Product SKU missing for order item');
+        }
+      }
+
+      console.log('CSV Export - All validations passed, generating CSV...');
+
       // Generate CSV
       const csvContent = generateNetSuiteCSV(orderData as OrderForExport);
+      
+      console.log('CSV Export - CSV generated successfully');
       
       // Create filename with PO number and date
       const orderDate = new Date(orderData.created_at);

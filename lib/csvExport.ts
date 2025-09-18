@@ -24,7 +24,7 @@ export interface OrderForExport {
     product: {
       sku: string;
       item_name: string;
-      netsuite_itemid?: string;
+      netsuite_name?: string;
     };
     quantity: number;
     unit_price: number;
@@ -42,31 +42,37 @@ function formatSubsidiary(subsidiaryName?: string): string {
 }
 
 export function generateNetSuiteCSV(order: OrderForExport): string {
-  const headers = [
-    'External ID',
-    'Date',
-    'Type',
-    'Name',
-    'Memo',
-    'Amount',
-    'PO/Cheque Number',
-    'Class',
-    'Subsidiary',
-    'Location',
-    'Item',
-    'Quantity',
-    'Status'
-  ];
+  try {
+    console.log('CSV Generation - Starting with order:', order.id);
+    
+    const headers = [
+      'External ID',
+      'Date',
+      'Type',
+      'Name',
+      'Memo',
+      'Amount',
+      'PO/Cheque Number',
+      'Class',
+      'Subsidiary',
+      'Location',
+      'Item',
+      'Quantity',
+      'Status'
+    ];
 
-  const rows: string[][] = [];
-  let externalIdCounter = 1;
+    const rows: string[][] = [];
+    let externalIdCounter = 1;
 
-  // Format date as dd/mm/yyyy
-  const orderDate = new Date(order.created_at);
-  const formattedDate = `${orderDate.getDate().toString().padStart(2, '0')}/${(orderDate.getMonth() + 1).toString().padStart(2, '0')}/${orderDate.getFullYear()}`;
+    // Format date as dd/mm/yyyy
+    const orderDate = new Date(order.created_at);
+    const formattedDate = `${orderDate.getDate().toString().padStart(2, '0')}/${(orderDate.getMonth() + 1).toString().padStart(2, '0')}/${orderDate.getFullYear()}`;
 
-  // Generate rows for each product
-  order.order_items.forEach((item) => {
+    console.log('CSV Generation - Processing', order.order_items.length, 'order items');
+
+    // Generate rows for each product
+    order.order_items.forEach((item, index) => {
+      console.log(`CSV Generation - Processing item ${index + 1}:`, item);
     const row = [
       `Qiqi${externalIdCounter}`, // External ID
       formattedDate, // Date
@@ -78,7 +84,7 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
       order.company.class?.name || 'Default Class', // Class
       formatSubsidiary(order.company.subsidiary?.name), // Subsidiary
       order.company.location?.location_name || 'Default Location', // Location
-      `${item.product.sku}${item.product.netsuite_itemid ? ' ' + item.product.netsuite_itemid : ''}`, // Item
+      `${item.product.sku}${item.product.netsuite_name ? ' ' + item.product.netsuite_name : ''}`, // Item
       item.quantity.toString(), // Quantity
       'Pending Fulfillment' // Status
     ];
@@ -108,12 +114,20 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
     rows.push(supportFundRow);
   }
 
+  console.log('CSV Generation - Generated', rows.length, 'total rows');
+
   // Convert to CSV format
   const csvContent = [headers, ...rows]
     .map(row => row.map(field => `"${field}"`).join(','))
     .join('\n');
 
+  console.log('CSV Generation - CSV content generated successfully');
   return csvContent;
+  
+  } catch (error) {
+    console.error('CSV Generation Error:', error);
+    throw error;
+  }
 }
 
 export function downloadCSV(csvContent: string, filename: string) {
