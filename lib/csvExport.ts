@@ -31,6 +31,15 @@ export interface OrderForExport {
   }>;
 }
 
+function formatSubsidiary(subsidiaryName?: string): string {
+  const name = subsidiaryName || 'Default Subsidiary';
+  if (name === 'Qiqi INC.') {
+    return 'Qiqi Group : Qiqi Global Ltd. : Qiqi INC.';
+  } else {
+    return `Qiqi Group : ${name}`;
+  }
+}
+
 export function generateNetSuiteCSV(order: OrderForExport): string {
   const headers = [
     'External ID',
@@ -66,7 +75,7 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
       item.total_price.toString(), // Amount
       order.po_number || '', // PO/Cheque Number
       order.company.class?.name || 'Default Class', // Class
-      `Qiqi Group : ${order.company.subsidiary?.name || 'Default Subsidiary'}`, // Subsidiary
+      formatSubsidiary(order.company.subsidiary?.name), // Subsidiary
       order.company.location?.location_name || 'Default Location', // Location
       `${item.product.sku} ${item.product.item_name}`, // Item
       item.quantity.toString(), // Quantity
@@ -88,7 +97,7 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
       (-order.support_fund_used).toString(), // Amount (negative)
       order.po_number || '', // PO/Cheque Number
       order.company.class?.name || 'Default Class', // Class
-      `Qiqi Group : ${order.company.subsidiary?.name || 'Default Subsidiary'}`, // Subsidiary
+      formatSubsidiary(order.company.subsidiary?.name), // Subsidiary
       order.company.location?.location_name || 'Default Location', // Location
       'Partner Discount', // Item
       '', // Quantity (empty for support fund)
