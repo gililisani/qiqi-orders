@@ -1,11 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
 import ClientLayout from '../../../components/ClientLayout';
 import Link from 'next/link';
 import Image from 'next/image';
+
+interface Category {
+  id: number;
+  name: string;
+  sort_order: number;
+  visible_to_americas: boolean;
+  visible_to_international: boolean;
+}
 
 interface Product {
   id: number;
@@ -21,6 +29,8 @@ interface Product {
   visible_to_americas: boolean;
   visible_to_international: boolean;
   qualifies_for_credit_earning: boolean;
+  category_id?: number;
+  category?: Category;
 }
 
 interface Company {
@@ -207,6 +217,10 @@ export default function NewOrderPage() {
       
       console.log('Executing products query...');
       const { data: productsData, error: productsError } = await productsQuery
+        .select(`
+          *,
+          category:categories(*)
+        `)
         .order('item_name', { ascending: true });
 
       console.log('Products query result:', { productsData, productsError });
@@ -224,6 +238,59 @@ export default function NewOrderPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Group products by categories for display
+  const getProductsByCategory = () => {
+    const categorized: { [key: string]: { category: Category | null, products: Product[] } } = {};
+    
+    // First, get all visible categories for this client
+    const isInternational = company?.class?.name?.includes('International') || false;
+    const visibleCategories = new Set<number>();
+    
+    // Group products by their categories
+    products.forEach(product => {
+      if (product.category) {
+        // Check if category is visible to this client class
+        const categoryVisible = isInternational 
+          ? product.category.visible_to_international 
+          : product.category.visible_to_americas;
+        
+        if (categoryVisible) {
+          const categoryKey = `${product.category.sort_order}-${product.category.name}`;
+          if (!categorized[categoryKey]) {
+            categorized[categoryKey] = {
+              category: product.category,
+              products: []
+            };
+          }
+          categorized[categoryKey].products.push(product);
+          visibleCategories.add(product.category.id);
+        }
+      }
+    });
+    
+    // Add products without categories or with invisible categories to "No Category"
+    const orphanedProducts = products.filter(product => 
+      !product.category || 
+      !visibleCategories.has(product.category.id)
+    );
+    
+    if (orphanedProducts.length > 0) {
+      categorized['999-No Category'] = {
+        category: null,
+        products: orphanedProducts
+      };
+    }
+    
+    // Sort categories by sort_order (999 for "No Category" will be last)
+    return Object.entries(categorized)
+      .sort(([keyA], [keyB]) => {
+        const orderA = parseInt(keyA.split('-')[0]);
+        const orderB = parseInt(keyB.split('-')[0]);
+        return orderA - orderB;
+      })
+      .map(([, data]) => data);
   };
 
   const handleCaseQtyChange = (productId: number, caseQty: number) => {
@@ -673,7 +740,35 @@ export default function NewOrderPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {(showSupportFundRedemption ? products.filter(p => p.list_in_support_funds) : products).map((product) => {
+                    {(() => {
+                      const productsToShow = showSupportFundRedemption 
+                        ? products.filter(p => p.list_in_support_funds)
+                        : products;
+                      
+                      const categorizedProducts = showSupportFundRedemption
+                        ? [{ category: null, products: productsToShow }] // Support fund products don't need categorization
+                        : getProductsByCategory();
+                      
+                      return categorizedProducts.map((categoryGroup, categoryIndex) => (
+                        <React.Fragment key={categoryGroup.category?.id || 'no-category'}>
+                          {/* Category Header Row */}
+                          {!showSupportFundRedemption && (
+                            <tr className="bg-blue-50 border-t-2 border-blue-200">
+                              <td colSpan={6} className="px-4 py-3">
+                                <div className="flex items-center">
+                                  <h3 className="text-sm font-semibold text-blue-900">
+                                    {categoryGroup.category?.name || 'Products without Category'}
+                                  </h3>
+                                  <span className="ml-2 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                                    {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          
+                          {/* Products in this category */}
+                          {categoryGroup.products.map((product) => {
                       const orderItem = showSupportFundRedemption 
                         ? supportFundItems.find(item => item.product_id === product.id)
                         : orderItems.find(item => item.product_id === product.id);
@@ -790,8 +885,11 @@ export default function NewOrderPage() {
                             ${orderItem?.total_price?.toFixed(2) || '0.00'}
                           </td>
                         </tr>
-                      );
-                    })}
+                        );
+                        })}
+                        </React.Fragment>
+                      ));
+                    })()}
                   </tbody>
                 </table>
               </div>
