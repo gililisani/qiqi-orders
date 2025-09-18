@@ -175,7 +175,14 @@ export default function EditOrderPage() {
       console.log('EditOrder: clientData?.company:', clientData?.company);
       console.log('EditOrder: clientData?.company?.[0]:', clientData?.company?.[0]);
       
-      const rawCompanyData = clientData?.company || clientData?.company?.[0];
+      // Handle different possible data structures
+      let rawCompanyData: any = null;
+      if (Array.isArray(clientData?.company)) {
+        rawCompanyData = clientData.company[0];
+      } else if (clientData?.company) {
+        rawCompanyData = clientData.company;
+      }
+      
       console.log('EditOrder: Raw company data:', rawCompanyData);
       
       if (rawCompanyData) {
@@ -184,8 +191,8 @@ export default function EditOrderPage() {
           id: rawCompanyData.id,
           company_name: rawCompanyData.company_name,
           netsuite_number: rawCompanyData.netsuite_number,
-          support_fund: rawCompanyData.support_fund || [],
-          class: rawCompanyData.class?.[0] || undefined
+          support_fund: Array.isArray(rawCompanyData.support_fund) ? rawCompanyData.support_fund : (rawCompanyData.support_fund ? [rawCompanyData.support_fund] : []),
+          class: Array.isArray(rawCompanyData.class) ? rawCompanyData.class[0] : rawCompanyData.class
         };
         console.log('EditOrder: Setting company data:', companyData);
         setCompany(companyData);
