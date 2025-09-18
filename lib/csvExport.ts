@@ -77,7 +77,9 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
 
     console.log('CSV Generation - Processing', order.order_items.length, 'order items');
     console.log('CSV Generation - External ID:', externalId);
-    console.log('CSV Generation - Subsidiary for tax:', subsidiaryName, '→ Tax Item:', taxItem);
+    console.log('CSV Generation - Full subsidiary data:', order.company.subsidiary);
+    console.log('CSV Generation - Subsidiary name:', subsidiaryName);
+    console.log('CSV Generation - Tax Item result:', taxItem);
 
     // Generate rows for each product
     order.order_items.forEach((item, index) => {
@@ -116,7 +118,7 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
       formatSubsidiary(order.company.subsidiary?.name), // Subsidiary
       order.company.location?.location_name || 'Default Location', // Location
       'Partner Discount', // Item
-      '', // Quantity (empty for support fund)
+      '1', // Quantity (always 1 for support fund)
       'Pending Fulfillment', // Status
       taxItem // Tax Item
     ];
