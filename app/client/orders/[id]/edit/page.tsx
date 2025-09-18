@@ -12,17 +12,17 @@ interface Product {
   sku: string;
   price_international: number;
   price_americas: number;
+  case_pack: number;
   qualifies_for_credit_earning: boolean;
 }
 
 interface OrderItem {
-  id: string;
   product_id: number;
-  quantity: number;
+  product: Product;
+  case_qty: number;
+  total_units: number;
   unit_price: number;
   total_price: number;
-  is_support_fund_item: boolean;
-  product?: Product;
 }
 
 interface Order {
@@ -49,19 +49,31 @@ export default function EditOrder() {
   const orderId = params?.id as string;
   
   const [order, setOrder] = useState<Order | null>(null);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [company, setCompany] = useState<Company | null>(null);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [supportFundItems, setSupportFundItems] = useState<OrderItem[]>([]);
+  const [showSupportFundRedemption, setShowSupportFundRedemption] = useState(false);
   const [poNumber, setPONumber] = useState('');
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Generate 6-character alphanumeric PO number
+  const generatePONumber = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
 
   useEffect(() => {
     if (orderId) {
       fetchOrder();
-      fetchOrderItems();
       fetchProducts();
+      fetchCompany();
     }
   }, [orderId]);
 
@@ -74,10 +86,7 @@ export default function EditOrder() {
         .from('orders')
         .select(`
           *,
-          company:companies(
-            company_name,
-            support_fund:support_fund_levels(percent)
-          )
+          company:companies(company_name)
         `)
         .eq('id', orderId)
         .eq('user_id', user.id)
@@ -94,22 +103,8 @@ export default function EditOrder() {
       setOrder(data);
       setPONumber(data.po_number || '');
       
-      // Get company info for the user
-      const { data: clientData, error: clientError } = await supabase
-        .from('clients')
-        .select(`
-          company_id,
-          company:companies(
-            id,
-            company_name,
-            support_fund:support_fund_levels(percent)
-          )
-        `)
-        .eq('id', user.id)
-        .single();
-
-      if (clientError) throw clientError;
-      setCompany(clientData?.company?.[0] || null);
+      // Fetch existing order items
+      await fetchOrderItems();
       
     } catch (err: any) {
       setError(err.message);
@@ -124,14 +119,45 @@ export default function EditOrder() {
         .from('order_items')
         .select(`
           *,
-          product:Products(id, item_name, sku, price_international, price_americas, qualifies_for_credit_earning)
+          product:Products(id, item_name, sku, price_international, price_americas, case_pack, qualifies_for_credit_earning)
         `)
         .eq('order_id', orderId)
         .order('is_support_fund_item', { ascending: true })
         .order('id', { ascending: true });
 
       if (error) throw error;
-      setOrderItems(data || []);
+      
+      // Convert database items to our format
+      const regularItems: OrderItem[] = [];
+      const supportItems: OrderItem[] = [];
+      
+      data?.forEach(item => {
+        if (item.product) {
+          const orderItem: OrderItem = {
+            product_id: item.product.id,
+            product: item.product,
+            case_qty: Math.ceil(item.quantity / item.product.case_pack), // Convert back to cases
+            total_units: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price
+          };
+          
+          if (item.is_support_fund_item) {
+            supportItems.push(orderItem);
+          } else {
+            regularItems.push(orderItem);
+          }
+        }
+      });
+      
+      setOrderItems(regularItems);
+      setSupportFundItems(supportItems);
+      
+      // Show support fund redemption if there are support fund items
+      if (supportItems.length > 0) {
+        setShowSupportFundRedemption(true);
+      }
+      
     } catch (err: any) {
       console.error('Error fetching order items:', err);
     }
@@ -151,82 +177,182 @@ export default function EditOrder() {
     }
   };
 
-  const updateQuantity = (itemId: string, newQuantity: number) => {
-    if (newQuantity < 0) return;
-    
-    setOrderItems(items => 
-      items.map(item => {
-        if (item.id === itemId) {
-          const updatedItem = {
-            ...item,
-            quantity: newQuantity,
-            total_price: newQuantity * item.unit_price
-          };
-          return updatedItem;
-        }
-        return item;
-      })
-    );
+  const fetchCompany = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not found');
+
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select(`
+          company_id,
+          company:companies(
+            id,
+            company_name,
+            support_fund:support_fund_levels(percent)
+          )
+        `)
+        .eq('id', user.id)
+        .single();
+
+      if (clientError) throw clientError;
+      setCompany(clientData?.company?.[0] || null);
+      
+    } catch (err: any) {
+      console.error('Error fetching company:', err);
+    }
   };
 
-  const removeItem = (itemId: string) => {
-    setOrderItems(items => items.filter(item => item.id !== itemId));
+  const getProductPrice = (product: Product): number => {
+    return product.price_americas; // Default to Americas pricing
   };
 
-  const addProduct = (productId: number) => {
+  const handleItemChange = (productId: number, caseQty: number) => {
     const product = products.find(p => p.id === productId);
     if (!product) return;
 
-    const newItem: OrderItem = {
-      id: `temp-${Date.now()}`, // Temporary ID for new items
-      product_id: productId,
-      quantity: 1,
-      unit_price: product.price_americas, // Default to Americas pricing
-      total_price: product.price_americas,
-      is_support_fund_item: false,
-      product: product
-    };
+    const unitPrice = getProductPrice(product);
+    const totalUnits = caseQty * product.case_pack;
+    const totalPrice = unitPrice * totalUnits;
 
-    setOrderItems(items => [...items, newItem]);
+    setOrderItems(prev => {
+      const existingIndex = prev.findIndex(item => item.product_id === productId);
+      
+      if (caseQty === 0) {
+        return prev.filter(item => item.product_id !== productId);
+      }
+
+      const newItem: OrderItem = {
+        product_id: productId,
+        product,
+        case_qty: caseQty,
+        total_units: totalUnits,
+        unit_price: unitPrice,
+        total_price: totalPrice
+      };
+
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = newItem;
+        return updated;
+      } else {
+        return [...prev, newItem];
+      }
+    });
   };
 
-  const calculateTotals = () => {
-    const regularItems = orderItems.filter(item => !item.is_support_fund_item);
-    const supportFundItems = orderItems.filter(item => item.is_support_fund_item);
+  const getOrderTotals = () => {
+    const subtotal = orderItems.reduce((sum, item) => sum + item.total_price, 0);
     
-    const regularSubtotal = regularItems.reduce((sum, item) => sum + item.total_price, 0);
-    const supportFundSubtotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
-    
-    // Calculate credit earned from qualifying products
-    const creditEarningItems = regularItems.filter(item => item.product?.qualifies_for_credit_earning);
+    // Only include products that qualify for credit earning
+    const creditEarningItems = orderItems.filter(item => item.product.qualifies_for_credit_earning);
     const creditEarningSubtotal = creditEarningItems.reduce((sum, item) => sum + item.total_price, 0);
-    const supportFundPercent = company?.support_fund?.[0]?.percent || 0;
-    const creditEarned = creditEarningSubtotal * (supportFundPercent / 100);
+    
+    // Support fund percent can arrive as array or single
+    const rawSf = company?.support_fund as any;
+    const supportFundPercent = Array.isArray(rawSf)
+      ? (rawSf[0]?.percent || 0)
+      : (rawSf?.percent || 0);
+    const supportFundEarned = creditEarningSubtotal * (supportFundPercent / 100);
+    const total = subtotal;
+
+    return {
+      subtotal,
+      supportFundPercent,
+      supportFundEarned,
+      total,
+      itemCount: orderItems.length
+    };
+  };
+
+  const handleSupportFundRedemption = () => {
+    const totals = getOrderTotals();
+    if (totals.supportFundEarned > 0) {
+      setShowSupportFundRedemption(true);
+    }
+  };
+
+  const handleSupportFundItemChange = (productId: number, caseQty: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    const unitPrice = getProductPrice(product);
+    const totalUnits = caseQty * product.case_pack;
+    const totalPrice = unitPrice * totalUnits;
+
+    setSupportFundItems(prev => {
+      const existingIndex = prev.findIndex(item => item.product_id === productId);
+      
+      if (caseQty === 0) {
+        return prev.filter(item => item.product_id !== productId);
+      }
+
+      const newItem: OrderItem = {
+        product_id: productId,
+        product,
+        case_qty: caseQty,
+        total_units: totalUnits,
+        unit_price: unitPrice,
+        total_price: totalPrice
+      };
+
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = newItem;
+        return updated;
+      } else {
+        return [...prev, newItem];
+      }
+    });
+  };
+
+  const getSupportFundTotals = () => {
+    const subtotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
+    const originalOrderTotals = getOrderTotals();
+    const supportFundEarned = originalOrderTotals.supportFundEarned;
+    const remainingCredit = supportFundEarned - subtotal;
+    const finalTotal = remainingCredit < 0 ? Math.abs(remainingCredit) : 0;
     
     return {
-      regularSubtotal,
-      supportFundSubtotal,
-      creditEarned,
-      total: regularSubtotal + Math.max(0, supportFundSubtotal - creditEarned)
+      subtotal,
+      supportFundEarned,
+      remainingCredit,
+      finalTotal,
+      itemCount: supportFundItems.length
     };
   };
 
   const handleSave = async () => {
+    if (orderItems.length === 0) {
+      setError('Please add at least one product to your order.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+
     try {
-      setSaving(true);
-      setError('');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not found');
 
-      const totals = calculateTotals();
-      const finalPONumber = poNumber || order?.po_number || '';
+      const originalTotals = getOrderTotals();
+      const supportTotals = getSupportFundTotals();
+      
+      const supportFundUsed = Math.min(supportTotals.subtotal, originalTotals.supportFundEarned);
+      const additionalCost = Math.max(0, supportTotals.subtotal - originalTotals.supportFundEarned);
+      const finalTotal = originalTotals.total + additionalCost;
 
-      // Update order
+      // Generate PO number if not provided
+      const finalPONumber = poNumber || generatePONumber();
+
+      // Update the order
       const { error: orderError } = await supabase
         .from('orders')
         .update({
           po_number: finalPONumber,
-          total_value: totals.total,
-          support_fund_used: totals.supportFundSubtotal,
-          credit_earned: totals.creditEarned
+          total_value: finalTotal,
+          support_fund_used: supportFundUsed,
+          credit_earned: originalTotals.supportFundEarned
         })
         .eq('id', orderId);
 
@@ -240,21 +366,34 @@ export default function EditOrder() {
 
       if (deleteError) throw deleteError;
 
-      // Insert updated order items
-      const orderItemsData = orderItems.map(item => ({
+      // Create order items (both regular and support fund items)
+      const regularItemsData = orderItems.map(item => ({
         order_id: orderId,
         product_id: item.product_id,
-        quantity: item.quantity,
+        quantity: item.total_units,
         unit_price: item.unit_price,
         total_price: item.total_price,
-        is_support_fund_item: item.is_support_fund_item
+        is_support_fund_item: false
       }));
 
-      const { error: insertError } = await supabase
-        .from('order_items')
-        .insert(orderItemsData);
+      const supportFundItemsData = supportFundItems.map(item => ({
+        order_id: orderId,
+        product_id: item.product_id,
+        quantity: item.total_units,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        is_support_fund_item: true
+      }));
 
-      if (insertError) throw insertError;
+      const allItemsData = [...regularItemsData, ...supportFundItemsData];
+
+      if (allItemsData.length > 0) {
+        const { error: insertError } = await supabase
+          .from('order_items')
+          .insert(allItemsData);
+
+        if (insertError) throw insertError;
+      }
 
       // Redirect back to order view
       router.push(`/client/orders/${orderId}`);
@@ -262,7 +401,7 @@ export default function EditOrder() {
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   };
 
@@ -302,7 +441,8 @@ export default function EditOrder() {
     );
   }
 
-  const totals = calculateTotals();
+  const totals = getOrderTotals();
+  const supportFundTotals = getSupportFundTotals();
 
   return (
     <ClientLayout>
@@ -317,10 +457,10 @@ export default function EditOrder() {
           <div className="flex items-center space-x-4">
             <button
               onClick={handleSave}
-              disabled={saving}
+              disabled={submitting}
               className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition text-sm disabled:opacity-50"
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {submitting ? 'Saving...' : 'Save Changes'}
             </button>
             <Link
               href={`/client/orders/${orderId}`}
@@ -348,126 +488,236 @@ export default function EditOrder() {
           </div>
         </div>
 
-        {/* Order Items */}
+        {/* Regular Products */}
         <div className="bg-white rounded-lg shadow border">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Order Items</h3>
-            <select
-              onChange={(e) => {
-                const productId = parseInt(e.target.value);
-                if (productId) {
-                  addProduct(productId);
-                  e.target.value = '';
-                }
-              }}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Add Product</option>
-              {products.map(product => (
-                <option key={product.id} value={product.id}>
-                  {product.item_name} - ${product.price_americas.toFixed(2)}
-                </option>
-              ))}
-            </select>
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold">Regular Products</h3>
           </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Quantity
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Unit Price
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total Price
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {orderItems.map((item) => (
-                  <tr key={item.id} className={item.is_support_fund_item ? 'bg-green-50' : ''}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="text-sm font-medium text-gray-900">
-                          {item.product?.item_name || 'N/A'}
-                        </div>
-                        {item.is_support_fund_item && (
-                          <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Support Fund
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)}
-                        min="0"
-                        className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${item.unit_price?.toFixed(2) || '0.00'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      ${item.total_price?.toFixed(2) || '0.00'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {products.map(product => {
+                const existingItem = orderItems.find(item => item.product_id === product.id);
+                const currentCaseQty = existingItem?.case_qty || 0;
+                
+                return (
+                  <div key={product.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium text-gray-900 text-sm">{product.item_name}</h4>
+                      {product.qualifies_for_credit_earning && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Earns Credit
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mb-2">SKU: {product.sku}</p>
+                    <p className="text-sm text-gray-700 mb-3">
+                      ${getProductPrice(product).toFixed(2)} per unit
+                      <br />
+                      <span className="text-xs text-gray-500">
+                        {product.case_pack} units/case
+                      </span>
+                    </p>
+                    <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => removeItem(item.id)}
-                        className="text-red-600 hover:text-red-800 text-sm"
+                        onClick={() => handleItemChange(product.id, Math.max(0, currentCaseQty - 1))}
+                        className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-300"
                       >
-                        Remove
+                        -
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {orderItems.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <p>No items in this order.</p>
-              <p className="text-sm mt-2">Use the dropdown above to add products.</p>
+                      <span className="w-12 text-center font-medium">{currentCaseQty}</span>
+                      <button
+                        onClick={() => handleItemChange(product.id, currentCaseQty + 1)}
+                        className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white hover:bg-blue-700"
+                      >
+                        +
+                      </button>
+                    </div>
+                    {currentCaseQty > 0 && (
+                      <div className="mt-2 text-xs text-gray-600">
+                        {currentCaseQty} case{currentCaseQty !== 1 ? 's' : ''} = {currentCaseQty * product.case_pack} units
+                        <br />
+                        Total: ${(currentCaseQty * product.case_pack * getProductPrice(product)).toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Order Totals */}
+        {/* Order Summary */}
         <div className="bg-white rounded-lg shadow border p-6">
           <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
           <div className="space-y-2">
             <div className="flex justify-between">
-              <span className="text-gray-600">Regular Items:</span>
-              <span className="font-medium">${totals.regularSubtotal.toFixed(2)}</span>
+              <span className="text-gray-600">Subtotal ({totals.itemCount} items):</span>
+              <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-green-600">
-              <span>Credit Earned ({company?.support_fund?.[0]?.percent || 0}%):</span>
-              <span className="font-medium">${totals.creditEarned.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-orange-600">
-              <span>Support Fund Items:</span>
-              <span className="font-medium">${totals.supportFundSubtotal.toFixed(2)}</span>
-            </div>
+            
+            {/* Credit Earned */}
+            {totals.supportFundPercent > 0 && (
+              <div className="flex justify-between text-sm text-green-600 pt-2">
+                <span>Credit Earned ({totals.supportFundPercent}%):</span>
+                <span className="font-medium">${totals.supportFundEarned.toFixed(2)}</span>
+              </div>
+            )}
+            
             <div className="border-t pt-2">
               <div className="flex justify-between">
-                <span className="text-lg font-semibold">Total Order Value:</span>
+                <span className="text-lg font-semibold">Total:</span>
                 <span className="text-lg font-semibold">${totals.total.toFixed(2)}</span>
               </div>
             </div>
           </div>
+
+          {/* Support Fund Redemption Button */}
+          {totals.supportFundEarned > 0 && !showSupportFundRedemption && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-green-800">Support Fund Available</h4>
+                  <p className="text-sm text-green-700">
+                    You have ${totals.supportFundEarned.toFixed(2)} in support fund credit available to redeem.
+                  </p>
+                </div>
+                <button
+                  onClick={handleSupportFundRedemption}
+                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition text-sm"
+                >
+                  Redeem Credit
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Support Fund Products */}
+        {showSupportFundRedemption && (
+          <div className="bg-white rounded-lg shadow border">
+            <div className="px-6 py-4 border-b border-gray-200 bg-green-50">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-green-800">Support Fund Products</h3>
+                <button
+                  onClick={() => setShowSupportFundRedemption(false)}
+                  className="text-green-600 hover:text-green-800 text-sm"
+                >
+                  Hide
+                </button>
+              </div>
+              <p className="text-sm text-green-700 mt-1">
+                Use your ${totals.supportFundEarned.toFixed(2)} support fund credit to purchase these products.
+              </p>
+            </div>
+            
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {products.map(product => {
+                  const existingItem = supportFundItems.find(item => item.product_id === product.id);
+                  const currentCaseQty = existingItem?.case_qty || 0;
+                  
+                  return (
+                    <div key={product.id} className="border border-green-200 rounded-lg p-4 bg-green-50">
+                      <h4 className="font-medium text-gray-900 text-sm mb-2">{product.item_name}</h4>
+                      <p className="text-xs text-gray-500 mb-2">SKU: {product.sku}</p>
+                      <p className="text-sm text-gray-700 mb-3">
+                        ${getProductPrice(product).toFixed(2)} per unit
+                        <br />
+                        <span className="text-xs text-gray-500">
+                          {product.case_pack} units/case
+                        </span>
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleSupportFundItemChange(product.id, Math.max(0, currentCaseQty - 1))}
+                          className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-300"
+                        >
+                          -
+                        </button>
+                        <span className="w-12 text-center font-medium">{currentCaseQty}</span>
+                        <button
+                          onClick={() => handleSupportFundItemChange(product.id, currentCaseQty + 1)}
+                          className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white hover:bg-green-700"
+                        >
+                          +
+                        </button>
+                      </div>
+                      {currentCaseQty > 0 && (
+                        <div className="mt-2 text-xs text-gray-600">
+                          {currentCaseQty} case{currentCaseQty !== 1 ? 's' : ''} = {currentCaseQty * product.case_pack} units
+                          <br />
+                          Total: ${(currentCaseQty * product.case_pack * getProductPrice(product)).toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Support Fund Totals */}
+              {supportFundItems.length > 0 && (
+                <div className="mt-6 p-4 bg-green-100 border border-green-200 rounded-lg">
+                  <h4 className="text-sm font-semibold text-green-800 mb-2">Support Fund Summary</h4>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>Support Fund Items:</span>
+                      <span className="font-medium">${supportFundTotals.subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Available Credit:</span>
+                      <span className="font-medium">${supportFundTotals.supportFundEarned.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-medium pt-2">
+                      <span>Remaining Credit:</span>
+                      <span className={(() => {
+                        const creditEarned = totals.supportFundEarned;
+                        const supportFundTotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
+                        const remaining = creditEarned - supportFundTotal;
+                        return remaining < 0 ? 'text-red-600' : 'text-green-600';
+                      })()}>
+                        {(() => {
+                          const creditEarned = totals.supportFundEarned;
+                          const supportFundTotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
+                          const remaining = creditEarned - supportFundTotal;
+                          return remaining < 0 ? `($${Math.abs(remaining).toFixed(2)})` : `$${remaining.toFixed(2)}`;
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {supportFundItems.length > 0 && (
+                    <div className="text-xs text-gray-500 italic pt-2 space-y-1">
+                      <div>* Credit cannot be accumulated and must be redeemed in full per order</div>
+                      <div>* Any unused Support Fund credit will be forfeited</div>
+                      <div>* Negative remaining credit will be added to the grand total</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Final Order Summary with Support Fund */}
+              <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <h4 className="text-sm font-semibold text-gray-800 mb-2">Final Order Summary</h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Regular Items:</span>
+                    <span className="font-medium">${totals.total.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Support Fund Items:</span>
+                    <span className="font-medium">${supportFundTotals.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="border-t pt-2">
+                    <div className="flex justify-between">
+                      <span className="text-lg font-semibold">Total Order:</span>
+                      <span className="text-lg font-semibold">${(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0)).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </ClientLayout>
   );
