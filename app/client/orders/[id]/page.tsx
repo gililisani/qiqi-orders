@@ -12,6 +12,7 @@ interface Order {
   status: string;
   total_value: number;
   support_fund_used: number;
+  po_number: string;
   company?: {
     company_name: string;
     netsuite_number: string;
