@@ -87,7 +87,7 @@ export default function ProductsPage() {
         product.id === productId 
           ? { 
               ...product, 
-              category_id: categoryId,
+              category_id: categoryId || undefined,
               category: categoryId ? categories.find(cat => cat.id === categoryId) : undefined
             }
           : product
