@@ -165,8 +165,16 @@ export default function EditOrderPage() {
 
       if (clientError) throw clientError;
       
-      const companyData = clientData?.company?.[0];
-      if (companyData) {
+      const rawCompanyData = clientData?.company?.[0];
+      if (rawCompanyData) {
+        // Extract the first element from array fields to match our interface
+        const companyData: Company = {
+          id: rawCompanyData.id,
+          company_name: rawCompanyData.company_name,
+          netsuite_number: rawCompanyData.netsuite_number,
+          support_fund: rawCompanyData.support_fund || [],
+          class: rawCompanyData.class?.[0] || undefined
+        };
         setCompany(companyData);
       }
       
