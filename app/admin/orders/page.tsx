@@ -154,7 +154,6 @@ export default function OrdersPage() {
           company:companies(
             company_name,
             netsuite_number,
-            po_number,
             class:classes(name),
             subsidiary:subsidiaries(name),
             location:Locations(location_name)
@@ -171,13 +170,24 @@ export default function OrdersPage() {
 
       if (error) throw error;
 
+      console.log('CSV Export - Order data:', orderData);
+
+      // Validate required data
+      if (!orderData.company) {
+        throw new Error('Company data not found for this order');
+      }
+      if (!orderData.order_items || orderData.order_items.length === 0) {
+        throw new Error('No order items found for this order');
+      }
+
       // Generate CSV
       const csvContent = generateNetSuiteCSV(orderData as OrderForExport);
       
-      // Create filename with order ID and date
+      // Create filename with PO number and date
       const orderDate = new Date(orderData.created_at);
       const dateStr = orderDate.toISOString().split('T')[0];
-      const filename = `Order_${orderData.id}_${dateStr}.csv`;
+      const poNumber = orderData.po_number || orderData.id.substring(0, 6);
+      const filename = `Order_${poNumber}_${dateStr}.csv`;
       
       // Download CSV
       downloadCSV(csvContent, filename);

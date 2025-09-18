@@ -6,16 +6,17 @@ export interface OrderForExport {
   po_number?: string;
   total_value: number;
   support_fund_used: number;
+  credit_earned: number;
   company: {
     company_name: string;
     netsuite_number: string;
-    class: {
+    class?: {
       name: string;
     };
-    subsidiary: {
+    subsidiary?: {
       name: string;
     };
-    location: {
+    location?: {
       location_name: string;
     };
   };
@@ -64,9 +65,9 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
       '', // Memo (to be handled later)
       item.total_price.toString(), // Amount
       order.po_number || '', // PO/Cheque Number
-      order.company.class.name, // Class
-      `Qiqi Group : ${order.company.subsidiary.name}`, // Subsidiary
-      order.company.location.location_name, // Location
+      order.company.class?.name || 'Default Class', // Class
+      `Qiqi Group : ${order.company.subsidiary?.name || 'Default Subsidiary'}`, // Subsidiary
+      order.company.location?.location_name || 'Default Location', // Location
       `${item.product.sku} ${item.product.item_name}`, // Item
       item.quantity.toString(), // Quantity
       'Pending Fulfillment' // Status
@@ -86,9 +87,9 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
       'Distributor Support Fund', // Memo
       (-order.support_fund_used).toString(), // Amount (negative)
       order.po_number || '', // PO/Cheque Number
-      order.company.class.name, // Class
-      `Qiqi Group : ${order.company.subsidiary.name}`, // Subsidiary
-      order.company.location.location_name, // Location
+      order.company.class?.name || 'Default Class', // Class
+      `Qiqi Group : ${order.company.subsidiary?.name || 'Default Subsidiary'}`, // Subsidiary
+      order.company.location?.location_name || 'Default Location', // Location
       'Partner Discount', // Item
       '', // Quantity (empty for support fund)
       'Pending Fulfillment' // Status
