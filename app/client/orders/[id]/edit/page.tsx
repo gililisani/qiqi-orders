@@ -109,7 +109,7 @@ export default function EditOrder() {
         .single();
 
       if (clientError) throw clientError;
-      setCompany(clientData?.company);
+      setCompany(clientData?.company?.[0] || null);
       
     } catch (err: any) {
       setError(err.message);
