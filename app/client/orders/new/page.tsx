@@ -676,8 +676,8 @@ export default function NewOrderPage() {
                         : orderItems.find(item => item.product_id === product.id);
                       const unitPrice = getProductPrice(product);
                       
-                      return (
-                        <tr key={product.id} className="hover:bg-gray-50">
+                        return (
+                          <tr key={product.id} className={`hover:bg-gray-50 ${orderItem?.case_qty > 0 ? 'bg-gray-100' : ''}`}>
                           <td className="px-2 py-3 whitespace-nowrap">
                             <div className="flex items-center min-w-0">
                               <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-hidden bg-gray-200">
@@ -708,6 +708,11 @@ export default function NewOrderPage() {
                                 >
                                   {product.item_name}
                                 </div>
+                                {!showSupportFundRedemption && !product.qualifies_for_credit_earning && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
+                                    Not Eligible for Credit
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </td>
