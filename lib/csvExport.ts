@@ -77,7 +77,7 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
       order.company.class?.name || 'Default Class', // Class
       formatSubsidiary(order.company.subsidiary?.name), // Subsidiary
       order.company.location?.location_name || 'Default Location', // Location
-      `${item.product.sku} ${item.product.item_name}`, // Item
+      item.product.sku, // Item
       item.quantity.toString(), // Quantity
       'Pending Fulfillment' // Status
     ];
