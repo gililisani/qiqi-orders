@@ -83,8 +83,13 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
     } else if (subsidiaryName.toLowerCase().includes('inc')) {
       taxItem = ''; // Empty for Qiqi INC
     } else {
-      // Default to export tax for any other subsidiary
+      // Temporary: Force tax item to test if column is working
       taxItem = 'ILY – Sales Export';
+    }
+    
+    // Temporary debug override - force tax item to test column
+    if (!taxItem) {
+      taxItem = 'TEST-TAX-ITEM';
     }
 
     console.log('CSV Generation - Processing', order.order_items.length, 'order items');
