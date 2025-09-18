@@ -64,16 +64,6 @@ export default function ClientOrderViewPage() {
     }
   }, [orderId]);
 
-  // Add effect to refresh when returning from support fund page
-  useEffect(() => {
-    const handleFocus = () => {
-      // Refresh order items when page regains focus (user returns from support fund page)
-      fetchOrderItems();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [orderId]);
 
   const fetchOrder = async () => {
     try {
@@ -179,15 +169,14 @@ export default function ClientOrderViewPage() {
             )}
           </div>
           <div className="flex items-center space-x-4">
-            <button
-              onClick={() => {
-                fetchOrder();
-                fetchOrderItems();
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm"
-            >
-              Refresh
-            </button>
+            {order?.status === 'Open' && (
+              <Link
+                href={`/client/orders/${orderId}/edit`}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm"
+              >
+                Edit Order
+              </Link>
+            )}
             <Link
               href="/client/orders"
               className="text-gray-600 hover:text-gray-800"
@@ -327,16 +316,17 @@ export default function ClientOrderViewPage() {
           {orderItems.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               <p>No items found for this order.</p>
-              <p className="text-sm mt-2">If you just completed support fund redemption, try clicking the Refresh button above.</p>
-              <button
-                onClick={() => {
-                  console.log('Manual refresh clicked');
-                  fetchOrderItems();
-                }}
-                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm"
-              >
-                Refresh Items
-              </button>
+              {order?.status === 'Open' && (
+                <p className="text-sm mt-2">
+                  <Link
+                    href={`/client/orders/${orderId}/edit`}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    Edit this order
+                  </Link>
+                  {' '}to add items.
+                </p>
+              )}
             </div>
           )}
         </div>
