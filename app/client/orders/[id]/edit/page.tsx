@@ -269,10 +269,8 @@ export default function EditOrderPage() {
       setOrderItems(regularItems);
       setSupportFundItems(supportItems);
       
-      // Show support fund redemption if there are support fund items
-      if (supportItems.length > 0) {
-        setShowSupportFundRedemption(true);
-      }
+      // Keep Order Form tab as default, even if there are support fund items
+      // User can manually switch to Support Fund tab if needed
       
     } catch (err: any) {
       console.error('Error fetching order items:', err);
@@ -758,31 +756,54 @@ export default function EditOrderPage() {
               {/* Mobile/Tablet Order Summary (visible below xl) */}
               <div className="xl:hidden bg-white rounded-lg shadow p-6 space-y-4">
                 <h2 className="text-lg font-semibold">Order Summary</h2>
-                {orderItems.length > 0 ? (
+                {(orderItems.length > 0 || supportFundItems.length > 0) ? (
                   <>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Items:</span>
-                        <span className="font-medium">{totals.itemCount}</span>
+                    {/* Regular Items */}
+                    {orderItems.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-medium text-gray-700">Regular Items ({orderItems.length})</h3>
+                        {orderItems.map((item) => (
+                          <div key={item.product_id} className="flex justify-between text-sm">
+                            <span className="text-gray-600 truncate">{item.product.item_name}</span>
+                            <span className="font-medium ml-2">{item.case_qty}cs = ${item.total_price.toFixed(2)}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between border-t pt-2">
+                          <span className="font-medium">Subtotal:</span>
+                          <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Subtotal:</span>
-                        <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
-                      </div>
+                    )}
 
-                      {/* Credit Earned */}
-                      {totals.supportFundPercent > 0 && (
-                        <div className="flex justify-between text-sm text-green-600 pt-2">
-                          <span>Credit Earned ({totals.supportFundPercent}%):</span>
-                          <span className="font-medium">${totals.supportFundEarned.toFixed(2)}</span>
+                    {/* Support Fund Items */}
+                    {supportFundItems.length > 0 && (
+                      <div className="space-y-2 border-t pt-4">
+                        <h3 className="text-sm font-medium text-green-700">Support Fund Items ({supportFundItems.length})</h3>
+                        {supportFundItems.map((item) => (
+                          <div key={item.product_id} className="flex justify-between text-sm">
+                            <span className="text-green-600 truncate">{item.product.item_name}</span>
+                            <span className="font-medium text-green-600 ml-2">{item.case_qty}cs = ${item.total_price.toFixed(2)}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between border-t pt-2">
+                          <span className="font-medium text-green-600">Support Fund Total:</span>
+                          <span className="font-medium text-green-600">${supportFundTotals.subtotal.toFixed(2)}</span>
                         </div>
-                      )}
-                      
-                      <div className="border-t pt-2">
-                        <div className="flex justify-between">
-                          <span className="text-lg font-semibold">Total Order:</span>
-                          <span className="text-lg font-semibold">${(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0)).toFixed(2)}</span>
-                        </div>
+                      </div>
+                    )}
+
+                    {/* Credit Earned */}
+                    {totals.supportFundPercent > 0 && (
+                      <div className="flex justify-between text-sm text-green-600 pt-2">
+                        <span>Credit Earned ({totals.supportFundPercent}%):</span>
+                        <span className="font-medium">${totals.supportFundEarned.toFixed(2)}</span>
+                      </div>
+                    )}
+                    
+                    <div className="border-t pt-2">
+                      <div className="flex justify-between">
+                        <span className="text-lg font-semibold">Total Order:</span>
+                        <span className="text-lg font-semibold">${(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0)).toFixed(2)}</span>
                       </div>
                     </div>
 
@@ -806,26 +827,59 @@ export default function EditOrderPage() {
                 {/* Order Summary */}
                 <div className="bg-white rounded-lg shadow p-6">
                   <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
-                  {orderItems.length > 0 ? (
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Items:</span>
-                        <span className="font-medium">{totals.itemCount}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Subtotal:</span>
-                        <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
-                      </div>
+                  {(orderItems.length > 0 || supportFundItems.length > 0) ? (
+                    <div className="space-y-4">
+                      {/* Regular Items */}
+                      {orderItems.length > 0 && (
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-medium text-gray-700">Regular Items ({orderItems.length})</h3>
+                          <div className="max-h-40 overflow-y-auto space-y-1">
+                            {orderItems.map((item) => (
+                              <div key={item.product_id} className="flex justify-between text-sm">
+                                <span className="text-gray-600 truncate pr-2" title={item.product.item_name}>
+                                  {item.product.item_name}
+                                </span>
+                                <span className="font-medium whitespace-nowrap">{item.case_qty}cs = ${item.total_price.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex justify-between border-t pt-2">
+                            <span className="font-medium">Subtotal:</span>
+                            <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Support Fund Items */}
+                      {supportFundItems.length > 0 && (
+                        <div className="space-y-2 border-t pt-3">
+                          <h3 className="text-sm font-medium text-green-700">Support Fund Items ({supportFundItems.length})</h3>
+                          <div className="max-h-32 overflow-y-auto space-y-1">
+                            {supportFundItems.map((item) => (
+                              <div key={item.product_id} className="flex justify-between text-sm">
+                                <span className="text-green-600 truncate pr-2" title={item.product.item_name}>
+                                  {item.product.item_name}
+                                </span>
+                                <span className="font-medium text-green-600 whitespace-nowrap">{item.case_qty}cs = ${item.total_price.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex justify-between border-t pt-2">
+                            <span className="font-medium text-green-600">Support Fund Total:</span>
+                            <span className="font-medium text-green-600">${supportFundTotals.subtotal.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Credit Earned */}
                       {totals.supportFundPercent > 0 && (
-                        <div className="flex justify-between text-sm text-green-600 pt-2">
+                        <div className="flex justify-between text-sm text-green-600 border-t pt-3">
                           <span>Credit Earned ({totals.supportFundPercent}%):</span>
                           <span className="font-medium">${totals.supportFundEarned.toFixed(2)}</span>
                         </div>
                       )}
                       
-                      <div className="border-t pt-2">
+                      <div className="border-t pt-3">
                         <div className="flex justify-between">
                           <span className="text-lg font-semibold">Total Order:</span>
                           <span className="text-lg font-semibold">${(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0)).toFixed(2)}</span>
