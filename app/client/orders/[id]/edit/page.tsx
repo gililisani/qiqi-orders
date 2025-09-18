@@ -170,7 +170,7 @@ export default function EditOrderPage() {
 
       if (clientError) throw clientError;
       
-      const rawCompanyData = clientData?.company;
+      const rawCompanyData = clientData?.company?.[0];
       console.log('EditOrder: Raw company data:', rawCompanyData);
       
       if (rawCompanyData) {
@@ -179,8 +179,8 @@ export default function EditOrderPage() {
           id: rawCompanyData.id,
           company_name: rawCompanyData.company_name,
           netsuite_number: rawCompanyData.netsuite_number,
-          support_fund: rawCompanyData.support_fund ? [rawCompanyData.support_fund] : [],
-          class: rawCompanyData.class || undefined
+          support_fund: rawCompanyData.support_fund || [],
+          class: rawCompanyData.class?.[0] || undefined
         };
         console.log('EditOrder: Setting company data:', companyData);
         setCompany(companyData);
