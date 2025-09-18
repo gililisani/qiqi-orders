@@ -109,6 +109,7 @@ export default function EditOrderPage() {
 
   const fetchOrder = async () => {
     try {
+      console.log('EditOrder: Fetching order data for ID:', orderId);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not found');
 
@@ -121,6 +122,8 @@ export default function EditOrderPage() {
         .eq('id', orderId)
         .eq('user_id', user.id)
         .single();
+
+      console.log('EditOrder: Order query result:', { data, error });
 
       if (error) throw error;
       
@@ -163,18 +166,23 @@ export default function EditOrderPage() {
         .eq('id', user.id)
         .single();
 
+      console.log('EditOrder: Company query result:', { clientData, clientError });
+
       if (clientError) throw clientError;
       
-      const rawCompanyData = clientData?.company?.[0];
+      const rawCompanyData = clientData?.company;
+      console.log('EditOrder: Raw company data:', rawCompanyData);
+      
       if (rawCompanyData) {
-        // Extract the first element from array fields to match our interface
+        // Handle the company data structure properly
         const companyData: Company = {
           id: rawCompanyData.id,
           company_name: rawCompanyData.company_name,
           netsuite_number: rawCompanyData.netsuite_number,
-          support_fund: rawCompanyData.support_fund || [],
-          class: rawCompanyData.class?.[0] || undefined
+          support_fund: rawCompanyData.support_fund ? [rawCompanyData.support_fund] : [],
+          class: rawCompanyData.class || undefined
         };
+        console.log('EditOrder: Setting company data:', companyData);
         setCompany(companyData);
       }
       
