@@ -76,20 +76,15 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
     console.log('CSV Generation - Raw subsidiary object:', order.company.subsidiary);
     console.log('CSV Generation - Extracted subsidiary name:', `"${subsidiaryName}"`);
     
-    // More robust tax item logic
+    // Tax item logic based on subsidiary
     let taxItem = '';
     if (subsidiaryName.toLowerCase().includes('global')) {
       taxItem = 'ILY – Sales Export';
     } else if (subsidiaryName.toLowerCase().includes('inc')) {
       taxItem = ''; // Empty for Qiqi INC
     } else {
-      // Temporary: Force tax item to test if column is working
+      // Default for other subsidiaries
       taxItem = 'ILY – Sales Export';
-    }
-    
-    // Temporary debug override - force tax item to test column
-    if (!taxItem) {
-      taxItem = 'TEST-TAX-ITEM';
     }
 
     console.log('CSV Generation - Processing', order.order_items.length, 'order items');
