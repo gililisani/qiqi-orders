@@ -756,11 +756,11 @@ export default function EditOrderPage() {
               {/* Mobile/Tablet Order Summary (visible below xl) */}
               <div className="xl:hidden bg-white rounded-lg shadow p-6 space-y-4">
                 <h2 className="text-lg font-semibold">Order Summary</h2>
-                {(orderItems.length > 0 || supportFundItems.length > 0) ? (
+                {orderItems.length > 0 ? (
                   <>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Units:</span>
+                        <span className="text-gray-600">Items:</span>
                         <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.total_units, 0) + supportFundItems.reduce((sum, item) => sum + item.total_units, 0)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
@@ -778,17 +778,26 @@ export default function EditOrderPage() {
                         <span className="text-lg font-semibold">${(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0)).toFixed(2)}</span>
                       </div>
                     </div>
-
-                    {supportFundItems.length > 0 && (
-                      <div className="text-xs text-gray-500 italic pt-2 space-y-1">
-                        <div>* Credit cannot be accumulated and must be redeemed in full per order</div>
-                        <div>* Any unused Support Fund credit will be forfeited</div>
-                        <div>* Negative remaining credit will be added to the grand total</div>
-                      </div>
-                    )}
+                    <div className="flex flex-col space-y-2">
+                      <button
+                        onClick={handleSave}
+                        disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
+                        className="w-full bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
+                      >
+                        {submitting ? 'Saving...' : 'Save Changes'}
+                      </button>
+                      <Link
+                        href={`/client/orders/${orderId}`}
+                        className="w-full bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition text-center"
+                      >
+                        Cancel
+                      </Link>
+                    </div>
                   </>
                 ) : (
-                  <p className="text-gray-500">No items selected</p>
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Please add items to your order</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -797,29 +806,93 @@ export default function EditOrderPage() {
             <div className="hidden xl:block xl:col-span-4">
               <div className="sticky top-8 space-y-6">
                 {/* Order Summary */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
-                  {(orderItems.length > 0 || supportFundItems.length > 0) ? (
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Units:</span>
-                        <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.total_units, 0) + supportFundItems.reduce((sum, item) => sum + item.total_units, 0)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Cases:</span>
-                        <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.case_qty, 0) + supportFundItems.reduce((sum, item) => sum + item.case_qty, 0)}</span>
-                      </div>
-                      {totals.supportFundEarned > 0 && (
-                        <div className="flex justify-between text-sm text-green-600">
-                          <span>Support Fund ({totals.supportFundPercent}%):</span>
-                          <span className="font-medium">${(totals.supportFundEarned - supportFundTotals.subtotal).toFixed(2)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between pt-2 border-t">
-                        <span className="text-lg font-semibold">Total Order:</span>
-                        <span className="text-lg font-semibold">${(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0)).toFixed(2)}</span>
+                <div className="bg-white rounded-lg shadow p-6 sticky top-6 space-y-4">
+                  <h2 className="text-lg font-semibold">Order Summary</h2>
+
+                  {orderItems.length > 0 ? (
+                    <>
+                      {/* Order Form Products */}
+                      <div className="space-y-2">
+                        {orderItems.map((item) => (
+                          <div key={item.product_id} className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0 pr-2">
+                              <div className="text-sm font-medium text-gray-900 truncate leading-tight">{item.product.item_name}</div>
+                              <div className="text-xs text-gray-500 leading-tight">
+                                {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''}
+                              </div>
+                            </div>
+                            <div className="text-sm font-medium text-gray-900">${item.total_price.toFixed(2)}</div>
+                          </div>
+                        ))}
                       </div>
 
+                      {/* Order Form Subtotal */}
+                      {orderItems.length > 0 && (
+                        <div className="flex justify-between text-sm font-medium text-gray-900 pt-2 border-t">
+                          <span>Subtotal:</span>
+                          <span>${orderItems.reduce((sum, item) => sum + item.total_price, 0).toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      {/* Credit Earned */}
+                      {totals.supportFundPercent > 0 && (
+                        <div className="flex justify-between text-sm text-green-600 pt-2">
+                          <span>Credit Earned ({totals.supportFundPercent}%):</span>
+                          <span className="font-medium">${totals.supportFundEarned.toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      {/* Support Fund Products Title */}
+                      {supportFundItems.length > 0 && (
+                        <div className="text-sm font-medium text-gray-700 uppercase tracking-wide mt-4">Support Fund Products</div>
+                      )}
+
+                      {/* Support Fund Products */}
+                      {supportFundItems.length > 0 && (
+                        <div className="space-y-2">
+                          {supportFundItems.map((item) => (
+                            <div key={`sf-${item.product_id}`} className="flex items-center justify-between bg-green-50 p-2 rounded">
+                              <div className="flex-1 min-w-0 pr-2">
+                                <div className="text-sm font-medium text-green-800 truncate leading-tight">{item.product.item_name}</div>
+                                <div className="text-xs text-green-600 leading-tight">
+                                  {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''} (Support Fund)
+                                </div>
+                              </div>
+                              <div className="text-sm font-medium text-green-800">${item.total_price.toFixed(2)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Support Fund Subtotal */}
+                      {supportFundItems.length > 0 && (
+                        <div className="flex justify-between text-sm font-medium text-green-800 pt-2 border-t border-green-200">
+                          <span>Subtotal:</span>
+                          <span>${supportFundItems.reduce((sum, item) => sum + item.total_price, 0).toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      {/* Remaining Credit */}
+                      {supportFundItems.length > 0 && (
+                        <div className="flex justify-between text-sm font-medium pt-2">
+                          <span>Remaining Credit:</span>
+                          <span className={(() => {
+                            const creditEarned = totals.supportFundEarned;
+                            const supportFundTotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
+                            const remaining = creditEarned - supportFundTotal;
+                            return remaining < 0 ? 'text-red-600' : 'text-green-600';
+                          })()}>
+                            {(() => {
+                              const creditEarned = totals.supportFundEarned;
+                              const supportFundTotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
+                              const remaining = creditEarned - supportFundTotal;
+                              return remaining < 0 ? `($${Math.abs(remaining).toFixed(2)})` : `$${remaining.toFixed(2)}`;
+                            })()}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Support Fund Disclaimer */}
                       {supportFundItems.length > 0 && (
                         <div className="text-xs text-gray-500 italic pt-2 space-y-1">
                           <div>* Credit cannot be accumulated and must be redeemed in full per order</div>
@@ -827,9 +900,38 @@ export default function EditOrderPage() {
                           <div>* Negative remaining credit will be added to the grand total</div>
                         </div>
                       )}
-                    </div>
+
+                      {/* Totals */}
+                      <div className="space-y-2 pt-2 border-t">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Items:</span>
+                          <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.total_units, 0) + supportFundItems.reduce((sum, item) => sum + item.total_units, 0)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Cases:</span>
+                          <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.case_qty, 0) + supportFundItems.reduce((sum, item) => sum + item.case_qty, 0)}</span>
+                        </div>
+                        <div className="flex justify-between pt-2 border-t">
+                          <span className="text-lg font-semibold">Total Order:</span>
+                          <span className="text-lg font-semibold">${(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0)).toFixed(2)}</span>
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="mt-4 space-y-2">
+                        <button
+                          onClick={handleSave}
+                          disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
+                          className="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
+                        >
+                          {submitting ? 'Saving...' : 'Save Changes'}
+                        </button>
+                      </div>
+                    </>
                   ) : (
-                    <p className="text-gray-500">No items selected</p>
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">No items selected</p>
+                    </div>
                   )}
                 </div>
 
