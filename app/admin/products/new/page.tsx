@@ -18,6 +18,25 @@ export default function NewProductPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (err: any) {
+      console.error('Error fetching categories:', err);
+    }
+  };
+
   const [formData, setFormData] = useState({
     item_name: '',
     netsuite_name: '',
@@ -64,7 +83,8 @@ export default function NewProductPage() {
           picture_url: formData.picture_url,
           case_weight: formData.case_weight ? parseFloat(formData.case_weight) : null,
           hs_code: formData.hs_code || null,
-          made_in: formData.made_in || null
+          made_in: formData.made_in || null,
+          category_id: formData.category_id || null
         }]);
 
       if (error) throw error;
@@ -270,6 +290,26 @@ export default function NewProductPage() {
                   placeholder="e.g., USA, China, Italy"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category
+                </label>
+                <select
+                  name="category_id"
+                  value={formData.category_id}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                >
+                  <option value="">No Category</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Assign this product to a category for better organization</p>
               </div>
             </div>
           </div>

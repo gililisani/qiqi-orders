@@ -5,6 +5,12 @@ import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
 import Link from 'next/link';
 
+interface Category {
+  id: number;
+  name: string;
+  sort_order: number;
+}
+
 interface Product {
   id: number;
   item_name: string;
@@ -20,11 +26,14 @@ interface Product {
   size?: string;
   case_pack?: number;
   sort_order?: number;
+  category_id?: number;
+  category?: Category;
   created_at: string;
 }
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
@@ -37,9 +46,22 @@ export default function ProductsPage() {
 
   const fetchProducts = async () => {
     try {
+      // Fetch categories first
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (categoriesError) throw categoriesError;
+      setCategories(categoriesData || []);
+
+      // Fetch products with categories
       const { data, error } = await supabase
         .from('Products')
-        .select('*')
+        .select(`
+          *,
+          category:categories(*)
+        `)
         .order('item_name', { ascending: true });
 
       if (error) throw error;
@@ -49,6 +71,67 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCategoryChange = async (productId: number, categoryId: number | null) => {
+    try {
+      const { error } = await supabase
+        .from('Products')
+        .update({ category_id: categoryId })
+        .eq('id', productId);
+
+      if (error) throw error;
+
+      // Update local state
+      setProducts(prev => prev.map(product => 
+        product.id === productId 
+          ? { 
+              ...product, 
+              category_id: categoryId,
+              category: categoryId ? categories.find(cat => cat.id === categoryId) : undefined
+            }
+          : product
+      ));
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  // Group products by categories for display
+  const getProductsByCategory = () => {
+    const categorized: { [key: string]: { category: Category | null, products: Product[] } } = {};
+    
+    // Group products by their categories
+    products.forEach(product => {
+      if (product.category) {
+        const categoryKey = `${product.category.sort_order}-${product.category.name}`;
+        if (!categorized[categoryKey]) {
+          categorized[categoryKey] = {
+            category: product.category,
+            products: []
+          };
+        }
+        categorized[categoryKey].products.push(product);
+      }
+    });
+    
+    // Add products without categories to "No Category"
+    const orphanedProducts = products.filter(product => !product.category);
+    if (orphanedProducts.length > 0) {
+      categorized['999-No Category'] = {
+        category: null,
+        products: orphanedProducts
+      };
+    }
+    
+    // Sort categories by sort_order (999 for "No Category" will be last)
+    return Object.entries(categorized)
+      .sort(([keyA], [keyB]) => {
+        const orderA = parseInt(keyA.split('-')[0]);
+        const orderB = parseInt(keyB.split('-')[0]);
+        return orderA - orderB;
+      })
+      .map(([, data]) => data);
   };
 
   const handleDelete = async (id: number) => {
@@ -188,107 +271,162 @@ export default function ProductsPage() {
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
             <p className="text-sm text-gray-600">
-              Drag and drop products to reorder them. The order will be reflected in the Order Form.
+              Products are organized by categories. Assign products to categories using the dropdown below each product.
             </p>
           </div>
-          <ul className="divide-y divide-gray-200">
-            {filteredProducts.map((product, index) => (
-              <li 
-                key={product.id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, product.id)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, product.id)}
-                className={`cursor-move transition-colors ${
-                  draggedItem === product.id ? 'opacity-50' : ''
-                } ${isReordering ? 'pointer-events-none' : ''}`}
-              >
-                <div className="px-4 py-4 flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <div className="text-sm text-gray-400 font-mono w-8">
-                        {product.sort_order || index + 1}
-                      </div>
-                      <div className="text-gray-400">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-                        </svg>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                    {product.picture_url ? (
-                      <img
-                        src={product.picture_url}
-                        alt={product.item_name}
-                        className="h-16 w-16 object-cover rounded"
-                      />
-                    ) : (
-                      <div className="h-16 w-16 bg-gray-200 rounded flex items-center justify-center">
-                        <span className="text-gray-400 text-xs">No Image</span>
-                      </div>
-                    )}
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {product.item_name || 'Unnamed Product'}
+          
+          {(() => {
+            const categorizedProducts = getProductsByCategory();
+            const filteredCategorizedProducts = categorizedProducts.map(categoryGroup => ({
+              ...categoryGroup,
+              products: categoryGroup.products.filter(product =>
+                product.item_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+            })).filter(categoryGroup => categoryGroup.products.length > 0);
+
+            return filteredCategorizedProducts.map((categoryGroup, categoryIndex) => (
+              <div key={categoryGroup.category?.id || 'no-category'}>
+                {/* Category Header */}
+                <div className="px-4 py-3 bg-blue-50 border-b border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <h3 className="text-lg font-semibold text-blue-900">
+                        {categoryGroup.category?.name || 'Products without Category'}
                       </h3>
-                      <p className="text-sm text-gray-500">SKU: {product.sku || 'N/A'}</p>
-                      <div className="flex space-x-4 text-sm text-gray-500">
-                        <span>Americas: ${product.price_americas || 0}</span>
-                        <span>International: ${product.price_international || 0}</span>
-                      </div>
-                    </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="flex flex-col space-y-1">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        product.enable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {product.enable ? 'Enabled' : 'Disabled'}
-                      </span>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        product.list_in_support_funds ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {product.list_in_support_funds ? 'Support Funds' : 'No Support Funds'}
-                      </span>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        product.qualifies_for_credit_earning ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
-                      }`}>
-                        {product.qualifies_for_credit_earning ? 'Earns Credit' : 'No Credit'}
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
                       </span>
                     </div>
-                    <div className="flex space-x-2">
+                    {categoryGroup.category && (
                       <Link
-                        href={`/admin/products/${product.id}`}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        href={`/admin/categories/${categoryGroup.category.id}/edit`}
+                        className="text-sm text-blue-600 hover:text-blue-800"
                       >
-                        View
+                        Edit Category
                       </Link>
-                      <Link
-                        href={`/admin/products/${product.id}/edit`}
-                        className="text-green-600 hover:text-green-800 text-sm font-medium"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(product.id)}
-                        className="text-red-600 hover:text-red-800 text-sm font-medium"
-                      >
-                        Delete
-                      </button>
-                    </div>
+                    )}
                   </div>
                 </div>
-              </li>
-            ))}
-          </ul>
+
+                {/* Products in this category */}
+                <ul className="divide-y divide-gray-200">
+                  {categoryGroup.products.map((product, index) => (
+                    <li 
+                      key={product.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, product.id)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, product.id)}
+                      className={`cursor-move transition-colors ${
+                        draggedItem === product.id ? 'opacity-50' : ''
+                      } ${isReordering ? 'pointer-events-none' : ''}`}
+                    >
+                      <div className="px-4 py-4 flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-2">
+                            <div className="text-sm text-gray-400 font-mono w-8">
+                              {product.sort_order || index + 1}
+                            </div>
+                            <div className="text-gray-400">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                              </svg>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-4">
+                          {product.picture_url ? (
+                            <img
+                              src={product.picture_url}
+                              alt={product.item_name}
+                              className="h-16 w-16 object-cover rounded"
+                            />
+                          ) : (
+                            <div className="h-16 w-16 bg-gray-200 rounded flex items-center justify-center">
+                              <span className="text-gray-400 text-xs">No Image</span>
+                            </div>
+                          )}
+                          <div>
+                            <h3 className="text-lg font-medium text-gray-900">
+                              {product.item_name || 'Unnamed Product'}
+                            </h3>
+                            <p className="text-sm text-gray-500">SKU: {product.sku || 'N/A'}</p>
+                            <div className="flex space-x-4 text-sm text-gray-500">
+                              <span>Americas: ${product.price_americas || 0}</span>
+                              <span>International: ${product.price_international || 0}</span>
+                            </div>
+                          </div>
+                          </div>
+                        </div>
+                        
+                        {/* Category Assignment Dropdown */}
+                        <div className="flex items-center space-x-4">
+                          <div className="flex flex-col items-end space-y-2">
+                            <label className="text-xs font-medium text-gray-700">Category:</label>
+                            <select
+                              value={product.category_id || ''}
+                              onChange={(e) => handleCategoryChange(product.id, e.target.value ? parseInt(e.target.value) : null)}
+                              className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">No Category</option>
+                              {categories.map(category => (
+                                <option key={category.id} value={category.id}>
+                                  {category.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          
+                          <div className="flex flex-col space-y-1">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              product.enable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {product.enable ? 'Enabled' : 'Disabled'}
+                            </span>
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              product.list_in_support_funds ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {product.list_in_support_funds ? 'Support Funds' : 'No Support Funds'}
+                            </span>
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              product.qualifies_for_credit_earning ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
+                            }`}>
+                              {product.qualifies_for_credit_earning ? 'Earns Credit' : 'No Credit'}
+                            </span>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Link
+                              href={`/admin/products/${product.id}`}
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            >
+                              View
+                            </Link>
+                            <Link
+                              href={`/admin/products/${product.id}/edit`}
+                              className="text-green-600 hover:text-green-800 text-sm font-medium"
+                            >
+                              Edit
+                            </Link>
+                            <button
+                              onClick={() => handleDelete(product.id)}
+                              className="text-red-600 hover:text-red-800 text-sm font-medium"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ));
+          })()}
         </div>
 
-        {filteredProducts.length === 0 && (
+        {products.length === 0 && (
           <div className="text-center py-8">
-            <p className="text-gray-500">
-              {searchTerm ? 'No products found matching your search.' : 'No products found.'}
-            </p>
+            <p className="text-gray-500">No products found.</p>
             <Link
               href="/admin/products/new"
               className="mt-4 inline-block bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"

@@ -7,6 +7,12 @@ import Navbar from '../../../../components/Navbar';
 import Link from 'next/link';
 import ImageUpload from '../../../../components/ImageUpload';
 
+interface Category {
+  id: number;
+  name: string;
+  sort_order: number;
+}
+
 interface Product {
   id: number;
   item_name: string;
@@ -23,6 +29,8 @@ interface Product {
   upc?: string;
   size?: string;
   case_pack?: number;
+  category_id?: number;
+  category?: Category;
   created_at: string;
 }
 
@@ -31,6 +39,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     item_name: '',
     netsuite_name: '',
@@ -48,11 +57,13 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     picture_url: '',
     case_weight: '',
     hs_code: '',
-    made_in: ''
+    made_in: '',
+    category_id: ''
   });
 
   useEffect(() => {
     checkAdminAccess();
+    fetchCategories();
     fetchProduct();
   }, [params.id]);
 
@@ -76,11 +87,28 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (err: any) {
+      console.error('Error fetching categories:', err);
+    }
+  };
+
   const fetchProduct = async () => {
     try {
       const { data, error } = await supabase
         .from('Products')
-        .select('*')
+        .select(`
+          *,
+          category:categories(*)
+        `)
         .eq('id', params.id)
         .single();
 
@@ -103,7 +131,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         picture_url: data.picture_url || '',
         case_weight: data.case_weight?.toString() || '',
         hs_code: data.hs_code || '',
-        made_in: data.made_in || ''
+        made_in: data.made_in || '',
+        category_id: data.category_id?.toString() || ''
       });
     } catch (err: any) {
       setError(err.message);
@@ -135,9 +164,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           visible_to_international: formData.visible_to_international,
           qualifies_for_credit_earning: formData.qualifies_for_credit_earning,
           picture_url: formData.picture_url || null,
-          case_weight: formData.case_weight ? parseFloat(formData.case_weight) : null,
-          hs_code: formData.hs_code || null,
-          made_in: formData.made_in || null
+        case_weight: formData.case_weight ? parseFloat(formData.case_weight) : null,
+        hs_code: formData.hs_code || null,
+        made_in: formData.made_in || null,
+        category_id: formData.category_id || null
         })
         .eq('id', params.id);
 
@@ -355,6 +385,26 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   placeholder="e.g., USA, China, Italy"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category
+                </label>
+                <select
+                  name="category_id"
+                  value={formData.category_id}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                >
+                  <option value="">No Category</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Assign this product to a category for better organization</p>
               </div>
             </div>
           </div>
