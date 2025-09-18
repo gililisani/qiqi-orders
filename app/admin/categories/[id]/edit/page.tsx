@@ -111,12 +111,20 @@ export default function EditCategoryPage() {
             <h1 className="text-2xl font-bold text-gray-900">Edit Category</h1>
             <p className="text-gray-600 mt-1">Update category settings</p>
           </div>
-          <Link
-            href="/admin/categories"
-            className="text-gray-600 hover:text-gray-800"
-          >
-            ← Back to Categories
-          </Link>
+          <div className="flex space-x-3">
+            <Link
+              href="/admin/categories/reorder"
+              className="bg-blue-600 text-white px-3 py-2 rounded hover:opacity-90 transition text-sm"
+            >
+              Reorder Categories
+            </Link>
+            <Link
+              href="/admin/categories"
+              className="text-gray-600 hover:text-gray-800"
+            >
+              ← Back to Categories
+            </Link>
+          </div>
         </div>
 
         {error && (

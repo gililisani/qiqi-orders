@@ -96,12 +96,20 @@ export default function CategoriesPage() {
             <h1 className="text-2xl font-bold text-gray-900">Product Categories</h1>
             <p className="text-gray-600 mt-1">Manage product categories and their visibility settings</p>
           </div>
-          <Link
-            href="/admin/categories/new"
-            className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
-          >
-            Add Category
-          </Link>
+          <div className="flex space-x-3">
+            <Link
+              href="/admin/categories/reorder"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:opacity-90 transition"
+            >
+              Reorder Categories
+            </Link>
+            <Link
+              href="/admin/categories/new"
+              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
+            >
+              Add Category
+            </Link>
+          </div>
         </div>
 
         {error && (
