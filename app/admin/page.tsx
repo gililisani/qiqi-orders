@@ -22,6 +22,17 @@ export default function AdminDashboard() {
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow border">
+            <h2 className="text-lg font-semibold mb-2">Categories</h2>
+            <p className="text-gray-600 mb-4">Organize products into categories and control visibility.</p>
+            <a
+              href="/admin/categories"
+              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
+            >
+              Manage Categories
+            </a>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow border">
             <h2 className="text-lg font-semibold mb-2">Companies</h2>
             <p className="text-gray-600 mb-4">Manage distributor companies and their settings.</p>
             <a

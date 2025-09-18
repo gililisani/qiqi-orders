@@ -7,10 +7,17 @@ import Navbar from '../../../components/Navbar';
 import Link from 'next/link';
 import ImageUpload from '../../../components/ImageUpload';
 
+interface Category {
+  id: number;
+  name: string;
+  description?: string;
+}
+
 export default function NewProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     item_name: '',
     netsuite_name: '',
@@ -28,7 +35,8 @@ export default function NewProductPage() {
     picture_url: '',
     case_weight: '',
     hs_code: '',
-    made_in: ''
+    made_in: '',
+    category_id: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
