@@ -51,64 +51,74 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
       'Type',
       'Name',
       'Memo',
-      'Amount',
+      'Rate',
       'PO/Cheque Number',
       'Class',
       'Subsidiary',
       'Location',
       'Item',
       'Quantity',
-      'Status'
+      'Status',
+      'Tax Item'
     ];
 
     const rows: string[][] = [];
-    let externalIdCounter = 1;
+    
+    // Generate 6-digit External ID (same for all lines in this CSV)
+    const externalId = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Format date as dd/mm/yyyy
     const orderDate = new Date(order.created_at);
     const formattedDate = `${orderDate.getDate().toString().padStart(2, '0')}/${(orderDate.getMonth() + 1).toString().padStart(2, '0')}/${orderDate.getFullYear()}`;
 
+    // Determine tax item based on subsidiary
+    const subsidiaryName = order.company.subsidiary?.name || '';
+    const taxItem = subsidiaryName === 'Qiqi Global Ltd.' ? 'ILY – Sales Export' : '';
+
     console.log('CSV Generation - Processing', order.order_items.length, 'order items');
+    console.log('CSV Generation - External ID:', externalId);
+    console.log('CSV Generation - Subsidiary for tax:', subsidiaryName, '→ Tax Item:', taxItem);
 
     // Generate rows for each product
     order.order_items.forEach((item, index) => {
       console.log(`CSV Generation - Processing item ${index + 1}:`, item);
     const row = [
-      `Qiqi${externalIdCounter}`, // External ID
+      externalId, // External ID (same for all lines)
       formattedDate, // Date
       'Sales Order', // Type
       `${order.company.netsuite_number} ${order.company.company_name}`, // Name
-      '', // Memo (to be handled later)
-      item.total_price.toString(), // Amount
+      '', // Memo (empty for products)
+      item.unit_price.toString(), // Rate (price per item)
       order.po_number || '', // PO/Cheque Number
       order.company.class?.name || 'Default Class', // Class
       formatSubsidiary(order.company.subsidiary?.name), // Subsidiary
       order.company.location?.location_name || 'Default Location', // Location
       `${item.product.sku}${item.product.netsuite_name ? ' ' + item.product.netsuite_name : ''}`, // Item
       item.quantity.toString(), // Quantity
-      'Pending Fulfillment' // Status
+      'Pending Fulfillment', // Status
+      taxItem // Tax Item
     ];
     
     rows.push(row);
-    externalIdCounter++;
   });
 
   // Add support fund redemption row if applicable
   if (order.support_fund_used > 0) {
     const supportFundRow = [
-      `Qiqi${externalIdCounter}`, // External ID
+      externalId, // External ID (same as products)
       formattedDate, // Date
       'Sales Order', // Type
       `${order.company.netsuite_number} ${order.company.company_name}`, // Name
       'Distributor Support Fund', // Memo
-      (-order.support_fund_used).toString(), // Amount (negative)
+      (-order.support_fund_used).toString(), // Rate (negative support fund amount)
       order.po_number || '', // PO/Cheque Number
       order.company.class?.name || 'Default Class', // Class
       formatSubsidiary(order.company.subsidiary?.name), // Subsidiary
       order.company.location?.location_name || 'Default Location', // Location
       'Partner Discount', // Item
       '', // Quantity (empty for support fund)
-      'Pending Fulfillment' // Status
+      'Pending Fulfillment', // Status
+      taxItem // Tax Item
     ];
     
     rows.push(supportFundRow);
