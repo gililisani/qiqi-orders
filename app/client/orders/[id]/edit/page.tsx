@@ -746,8 +746,8 @@ export default function EditOrderPage() {
                         
                         return (
                           <tr key={product.id} className={`hover:bg-gray-50 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                            <td className="px-2 py-3 whitespace-nowrap">
-                              <div className="flex items-center min-w-0">
+                            <td className="px-1 py-2 max-w-0 w-full">
+                              <div className="flex items-center min-w-0 w-full">
                                 <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-hidden bg-gray-200">
                                   {product.picture_url ? (
                                     <img
@@ -769,11 +769,8 @@ export default function EditOrderPage() {
                                     No Image
                                   </div>
                                 </div>
-                                <div className="ml-2 flex-1 min-w-0">
-                                  <div 
-                                    className="text-sm font-medium text-gray-900 truncate" 
-                                    title={product.item_name}
-                                  >
+                                <div className="flex-1 min-w-0 overflow-hidden">
+                                  <div className="text-xs sm:text-sm font-medium text-gray-900 truncate w-full">
                                     {product.item_name}
                                   </div>
                                   {!showSupportFundRedemption && !product.qualifies_for_credit_earning && (

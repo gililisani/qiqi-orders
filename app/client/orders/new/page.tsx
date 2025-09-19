@@ -789,8 +789,8 @@ export default function NewOrderPage() {
                       
                         return (
                           <tr key={product.id} className={`hover:bg-gray-50 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                          <td className="px-1 py-2">
-                            <div className="flex items-center min-w-0">
+                          <td className="px-1 py-2 max-w-0 w-full">
+                            <div className="flex items-center min-w-0 w-full">
                               <div className="flex-shrink-0 h-6 w-6 rounded overflow-hidden bg-gray-200 mr-1">
                                 {product.picture_url ? (
                                   <img
@@ -811,8 +811,8 @@ export default function NewOrderPage() {
                                   •
                                 </div>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-xs sm:text-sm font-medium text-gray-900 truncate">
+                              <div className="flex-1 min-w-0 overflow-hidden">
+                                <div className="text-xs sm:text-sm font-medium text-gray-900 truncate w-full">
                                   {product.item_name}
                                 </div>
                                 {!showSupportFundRedemption && !product.qualifies_for_credit_earning && (
