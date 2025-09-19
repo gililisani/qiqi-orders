@@ -709,13 +709,16 @@ export default function EditOrderPage() {
                           : products;
                         
                         const categorizedProducts = showSupportFundRedemption
-                          ? [{ category: null, products: productsToShow }] // Support fund products don't need categorization
+                          ? getProductsByCategory().map(categoryGroup => ({
+                              ...categoryGroup,
+                              products: categoryGroup.products.filter(p => p.list_in_support_funds)
+                            })).filter(categoryGroup => categoryGroup.products.length > 0)
                           : getProductsByCategory();
                         
                         return categorizedProducts.map((categoryGroup, categoryIndex) => (
                           <React.Fragment key={categoryGroup.category?.id || 'no-category'}>
                             {/* Category Header Row */}
-                            {!showSupportFundRedemption && (
+                            {(
                               <tr className="border-t-2 border-gray-300">
                                 <td colSpan={6} className="px-4 py-4">
                                   <div className="flex items-center">
