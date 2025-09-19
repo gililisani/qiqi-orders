@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import Image from 'next/image';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -47,9 +48,10 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
       <header className="bg-white shadow-sm border-b">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">Qiqi Distributors</h1>
-            </div>
+            <a href="/client" className="flex items-center space-x-3 hover:opacity-90 transition">
+              <Image src="/logo.png" alt="Qiqi Logo" width={80} height={32} />
+              <h1 className="text-xl font-bold text-gray-900">Partners Hub</h1>
+            </a>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">
                 Welcome, {user.name}
