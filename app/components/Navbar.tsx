@@ -12,7 +12,7 @@ const handleLogout = async () => {
 };
 
   return (
-    <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+    <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
       <a href="/admin" className="flex items-center space-x-3 hover:opacity-90 transition">
         <Image src="/logo.png" alt="Qiqi Logo" width={100} height={40} />
         <span className="text-lg font-semibold tracking-wide">Partners Hub</span>
