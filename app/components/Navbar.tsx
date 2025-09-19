@@ -9,6 +9,7 @@ export default function Navbar() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -23,6 +24,19 @@ export default function Navbar() {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
+
+  const handleMouseEnter = (menuName: string) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    setOpenDropdown(menuName);
+  };
+
+  const handleMouseLeave = () => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      setOpenDropdown(null);
+    }, 100); // Small delay to allow moving to dropdown
+  };
 
   const menuItems = [
     {
@@ -75,8 +89,8 @@ export default function Navbar() {
             <div 
               key={menu.name} 
               className="relative"
-              onMouseEnter={() => setOpenDropdown(menu.name)}
-              onMouseLeave={() => setOpenDropdown(null)}
+              onMouseEnter={() => handleMouseEnter(menu.name)}
+              onMouseLeave={handleMouseLeave}
             >
               <button
                 className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded transition-colors"
@@ -93,7 +107,7 @@ export default function Navbar() {
 
               {/* Dropdown */}
               {openDropdown === menu.name && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50">
+                <div className="absolute top-full left-0 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50">
                   {menu.items.map((item) => (
                     <Link
                       key={item.name}
