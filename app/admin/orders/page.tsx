@@ -345,12 +345,12 @@ export default function OrdersPage() {
             <thead style={{ backgroundColor: 'transparent' }}>
               <tr style={{ backgroundColor: 'transparent' }}>
                 <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>PO Number</th>
-                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Client</th>
-                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Company</th>
+                <th className="hidden sm:table-cell px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Client</th>
+                <th className="hidden sm:table-cell px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Company</th>
                 <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Status</th>
-                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Total</th>
-                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Support Fund</th>
-                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Date</th>
+                <th className="hidden sm:table-cell px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Total</th>
+                <th className="hidden sm:table-cell px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Support Fund</th>
+                <th className="hidden sm:table-cell px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Date</th>
                 <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Actions</th>
               </tr>
             </thead>
@@ -362,7 +362,7 @@ export default function OrdersPage() {
                         {order.po_number || 'N/A'}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-6 py-4 whitespace-nowrap text-center">
+                    <td className="hidden sm:table-cell px-2 sm:px-6 py-4 whitespace-nowrap text-center">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {order.client?.name || 'N/A'}
@@ -372,7 +372,7 @@ export default function OrdersPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-2 sm:px-6 py-4 whitespace-nowrap text-center">
+                    <td className="hidden sm:table-cell px-2 sm:px-6 py-4 whitespace-nowrap text-center">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {order.company?.company_name || 'N/A'}
@@ -395,13 +395,13 @@ export default function OrdersPage() {
                         ))}
                       </select>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                       ${order.total_value?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
                       ${order.support_fund_used?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                       {new Date(order.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
