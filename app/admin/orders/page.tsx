@@ -340,36 +340,8 @@ export default function OrdersPage() {
           </select>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto border bg-white" style={{ borderColor: 'rgb(198, 198, 190)' }}>
           <table className="min-w-full">
-            <thead>
-              <tr>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
-                  PO Number
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
-                  Client
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
-                  Company
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
-                  Total Value
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
-                  Support Fund Used
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
               <tbody className="bg-white" style={{ borderColor: 'rgb(198, 198, 190)' }}>
                 {filteredOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50 border-b" style={{ borderColor: 'rgb(198, 198, 190)' }}>
