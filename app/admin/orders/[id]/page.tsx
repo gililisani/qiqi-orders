@@ -318,7 +318,7 @@ export default function OrderViewPage() {
             <p className="text-gray-600 mb-4">{error || 'The order you are looking for does not exist.'}</p>
             <Link
               href="/admin/orders"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
+              className="bg-black text-white px-4 py-2 hover:opacity-90 transition"
             >
               Back to Orders
             </Link>
@@ -330,26 +330,26 @@ export default function OrderViewPage() {
 
   return (
     <AdminLayout>
-      <div className="p-6">
+      <div className="p-6" style={{ backgroundColor: 'rgb(250, 250, 250)', minHeight: '100vh' }}>
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Order Details</h1>
           <div className="flex space-x-2">
             <button
               onClick={() => sendNotification('status_change', 'Order status updated by admin')}
               disabled={sendingNotification}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
+              className="bg-blue-600 text-white px-4 py-2 hover:bg-blue-700 transition disabled:opacity-50"
             >
               {sendingNotification ? 'Sending...' : 'Send Update'}
             </button>
             <button
               onClick={handleDownloadCSV}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
+              className="bg-green-600 text-white px-4 py-2 hover:bg-green-700 transition"
             >
               Download CSV
             </button>
             <Link
               href="/admin/orders"
-              className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition"
+              className="bg-gray-300 text-gray-700 px-4 py-2 hover:bg-gray-400 transition"
             >
               Back to Orders
             </Link>
@@ -358,7 +358,7 @@ export default function OrderViewPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Block: Order Information */}
-          <div className="bg-white p-6 rounded-lg shadow border">
+          <div className="bg-white p-6 border border-gray-300">
             <h2 className="text-lg font-semibold mb-4">Order Information</h2>
             <div className="space-y-3">
               <div>
@@ -371,7 +371,7 @@ export default function OrderViewPage() {
                   <select
                     value={order.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
-                    className={`px-3 py-1 rounded-full border-0 focus:ring-2 focus:ring-black ${
+                    className={`px-3 py-1 border-0 focus:ring-2 focus:ring-black ${
                       statusOptions.find(s => s.value === order.status)?.color || 'bg-gray-100 text-gray-800'
                     }`}
                   >
@@ -399,7 +399,7 @@ export default function OrderViewPage() {
           </div>
 
           {/* Middle Block: Bill To */}
-          <div className="bg-white p-6 rounded-lg shadow border">
+          <div className="bg-white p-6 border border-gray-300">
             <h2 className="text-lg font-semibold mb-4">Bill To</h2>
             <div className="space-y-3">
               <div>
@@ -420,7 +420,7 @@ export default function OrderViewPage() {
           </div>
 
           {/* Right Block: Order Summary */}
-          <div className="bg-white p-6 rounded-lg shadow border">
+          <div className="bg-white p-6 border border-gray-300">
             <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
             <div className="space-y-3">
               <div>
@@ -446,7 +446,7 @@ export default function OrderViewPage() {
         </div>
 
         {/* Order Items */}
-        <div className="mt-6 bg-white rounded-lg shadow border overflow-hidden">
+        <div className="mt-6 bg-white border border-gray-300 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <h2 className="text-lg font-semibold">Order Items</h2>
             <div className="flex items-center space-x-4">
@@ -457,7 +457,7 @@ export default function OrderViewPage() {
               )}
               <button
                 onClick={() => setIsReordering(!isReordering)}
-                className={`px-4 py-2 rounded text-sm font-medium transition ${
+                className={`px-4 py-2 text-sm font-medium transition ${
                   isReordering 
                     ? 'bg-green-600 text-white hover:bg-green-700' 
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -467,9 +467,9 @@ export default function OrderViewPage() {
               </button>
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="overflow-x-auto" style={{ backgroundColor: 'rgb(250, 250, 250)' }}>
+            <table className="w-full">
+              <thead style={{ backgroundColor: 'transparent' }}>
                 <tr>
                   {isReordering && (
                     <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
@@ -493,13 +493,14 @@ export default function OrderViewPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white border" style={{ borderColor: 'rgb(230, 230, 230)' }}>
                 {orderItems.map((item, index) => (
                   <tr 
                     key={item.id} 
-                    className={`hover:bg-gray-50 ${item.is_support_fund_item ? 'bg-green-50' : ''} ${
+                    className={`hover:bg-gray-50 border-b border-solid ${item.is_support_fund_item ? 'bg-green-50' : ''} ${
                       isReordering ? 'cursor-move' : ''
                     } ${draggedItem === item.id ? 'opacity-50' : ''}`}
+                    style={{ borderColor: 'rgb(230, 230, 230)' }}
                     draggable={isReordering}
                     onDragStart={(e) => handleDragStart(e, item.id)}
                     onDragOver={handleDragOver}
@@ -520,7 +521,7 @@ export default function OrderViewPage() {
                           {item.product?.item_name || 'N/A'}
                         </div>
                         {item.is_support_fund_item && (
-                          <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <span className="ml-2 inline-flex items-center px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
                             Support Fund
                           </span>
                         )}
@@ -551,7 +552,7 @@ export default function OrderViewPage() {
         </div>
 
         {/* Order History */}
-        <div className="mt-6 bg-white rounded-lg shadow border overflow-hidden">
+        <div className="mt-6 bg-white border border-gray-300 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold">Order History & Activity</h2>
           </div>
@@ -560,12 +561,12 @@ export default function OrderViewPage() {
               <div className="space-y-4">
                 {orderHistory.map((historyItem) => (
                   <div key={historyItem.id} className="flex items-start space-x-3 pb-4 border-b border-gray-100 last:border-b-0">
-                    <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                    <div className="flex-shrink-0 w-2 h-2 bg-blue-500 mt-2"></div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
                         {historyItem.status_from && historyItem.status_to ? (
                           <span className="text-sm font-medium text-gray-900">
-                            Status changed from <span className="px-2 py-1 bg-gray-100 rounded text-xs">{historyItem.status_from}</span> to <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">{historyItem.status_to}</span>
+                            Status changed from <span className="px-2 py-1 bg-gray-100 text-xs">{historyItem.status_from}</span> to <span className="px-2 py-1 bg-green-100 text-green-800 text-xs">{historyItem.status_to}</span>
                           </span>
                         ) : (
                           <span className="text-sm font-medium text-gray-900">
@@ -579,7 +580,7 @@ export default function OrderViewPage() {
                           <span>by {historyItem.changed_by_name} ({historyItem.changed_by_role})</span>
                         )}
                         {historyItem.netsuite_sync_status && (
-                          <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded">
+                          <span className="px-2 py-1 bg-orange-100 text-orange-800">
                             NetSuite: {historyItem.netsuite_sync_status}
                           </span>
                         )}
@@ -602,7 +603,7 @@ export default function OrderViewPage() {
         </div>
 
         {/* Order Summary for Admin */}
-        <div className="mt-6 bg-white rounded-lg shadow border p-6">
+        <div className="mt-6 bg-white border border-gray-300 p-6">
           <h2 className="text-lg font-semibold mb-4">Order Financial Summary</h2>
           <div className="space-y-2">
             {(() => {
