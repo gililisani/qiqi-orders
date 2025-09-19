@@ -187,7 +187,15 @@ export default function AdminDashboard() {
                       {order.po_number || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.companies?.[0]?.company_name || 'N/A'}
+                      {(() => {
+                        const companies = order.companies;
+                        if (!companies) return 'N/A';
+                        // Handle both array and object cases
+                        const companyName = Array.isArray(companies) 
+                          ? companies[0]?.company_name 
+                          : (companies as any).company_name;
+                        return companyName || 'N/A';
+                      })()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
