@@ -68,14 +68,14 @@ export default function AdminDashboard() {
           id: order.id,
           companies: order.companies,
           companiesType: typeof order.companies,
-          isArray: Array.isArray(order.companies)
+          isArray: Array.isArray(order.companies),
+          companyName: order.companies?.company_name,
+          companiesKeys: order.companies ? Object.keys(order.companies) : 'null'
         });
         
         return {
           ...order,
-          companies: Array.isArray(order.companies) && order.companies.length > 0 
-            ? order.companies[0] 
-            : null
+          companies: order.companies || null
         };
       }) || [];
 
