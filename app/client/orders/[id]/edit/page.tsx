@@ -89,6 +89,11 @@ export default function EditOrderPage() {
     return result;
   };
 
+  // Format currency with thousand separators
+  const formatCurrency = (amount: number) => {
+    return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   const getClientType = () => {
     if (!company?.class?.name) return 'Americas';
     
@@ -795,7 +800,7 @@ export default function EditOrderPage() {
                               {product.case_pack}
                             </td>
                             <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center">
-                              ${unitPrice.toFixed(2)}
+                              {formatCurrency(unitPrice)}
                             </td>
                             <td className="px-2 py-3 whitespace-nowrap text-center">
                               <div className="inline-flex items-center border border-gray-300 rounded select-none justify-center">
@@ -849,7 +854,7 @@ export default function EditOrderPage() {
                               {orderItem?.total_units || 0}
                             </td>
                             <td className="px-1 py-2 pr-4 text-xs sm:text-sm font-medium text-gray-900 text-center">
-                              ${orderItem?.total_price?.toFixed(2) || '0.00'}
+                              {orderItem?.total_price ? formatCurrency(orderItem.total_price) : '$0.00'}
                             </td>
                           </tr>
                           );

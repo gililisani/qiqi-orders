@@ -73,6 +73,11 @@ export default function NewOrderPage() {
     return result;
   };
 
+  // Format currency with thousand separators
+  const formatCurrency = (amount: number) => {
+    return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   const getClientType = () => {
     if (!company?.class?.name) return 'Americas';
     
@@ -837,7 +842,7 @@ export default function NewOrderPage() {
                             {product.case_pack}
                           </td>
                           <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center">
-                            ${unitPrice.toFixed(2)}
+                            {formatCurrency(unitPrice)}
                           </td>
                           <td className="px-1 py-2 text-center" >
                             <div className="inline-flex items-center border border-gray-300 rounded select-none justify-center">
@@ -888,10 +893,10 @@ export default function NewOrderPage() {
                             </div>
                           </td>
                           <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden sm:table-cell" >
-                            {orderItem?.total_units || 0}
+                            {(orderItem?.total_units || 0).toLocaleString()}
                           </td>
                           <td className="px-1 py-2 pr-4 text-xs sm:text-sm font-medium text-gray-900 text-center">
-                            ${orderItem?.total_price?.toFixed(2) || '0.00'}
+                            {orderItem?.total_price ? formatCurrency(orderItem.total_price) : '$0.00'}
                           </td>
                         </tr>
                         );
@@ -921,7 +926,7 @@ export default function NewOrderPage() {
                     {totals.supportFundEarned > 0 && (
                       <div className="flex justify-between text-sm text-green-600">
                         <span>Support Fund ({totals.supportFundPercent}%):</span>
-                        <span className="font-medium">${(totals.supportFundEarned - supportFundTotals.subtotal).toFixed(2)}</span>
+                        <span className="font-medium">${(totals.supportFundEarned - supportFundTotals.subtotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     )}
                     <div className="flex justify-between pt-2 border-t">
