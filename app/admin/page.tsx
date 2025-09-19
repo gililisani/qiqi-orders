@@ -55,7 +55,8 @@ export default function AdminDashboard() {
           total_value,
           status,
           po_number,
-          companies!orders_company_id_fkey(company_name)
+          company_id,
+          companies(company_name)
         `)
         .order('created_at', { ascending: false });
 
