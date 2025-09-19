@@ -1,169 +1,218 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 import AdminLayout from '../components/AdminLayout';
+import Link from 'next/link';
+
+interface Order {
+  id: string;
+  created_at: string;
+  total_value: number;
+  status: string;
+  po_number: string;
+  company: {
+    company_name: string;
+  };
+}
+
+interface DashboardStats {
+  todayOrders: number;
+  todayOrdersValue: number;
+  openOrders: number;
+  inProcessOrders: number;
+}
 
 export default function AdminDashboard() {
+  const [stats, setStats] = useState<DashboardStats>({
+    todayOrders: 0,
+    todayOrdersValue: 0,
+    openOrders: 0,
+    inProcessOrders: 0
+  });
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Format currency helper
+  const formatCurrency = (amount: number) => {
+    return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+
+      // Fetch all orders with company data
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          created_at,
+          total_value,
+          status,
+          po_number,
+          company:companies(company_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Calculate stats
+      const todayOrders = orders?.filter(order => 
+        order.created_at.split('T')[0] === today
+      ) || [];
+      
+      const openOrders = orders?.filter(order => order.status === 'Open') || [];
+      const inProcessOrders = orders?.filter(order => order.status === 'In Process') || [];
+
+      const todayOrdersValue = todayOrders.reduce((sum, order) => sum + (order.total_value || 0), 0);
+
+      setStats({
+        todayOrders: todayOrders.length,
+        todayOrdersValue,
+        openOrders: openOrders.length,
+        inProcessOrders: inProcessOrders.length
+      });
+
+      // Get recent 5 orders
+      setRecentOrders(orders?.slice(0, 5) || []);
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="p-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+        <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Stats Blocks */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Today's Orders */}
           <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">Products</h2>
-            <p className="text-gray-600 mb-4">Manage your product catalog, pricing, and availability.</p>
-            <a
-              href="/admin/products"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
-            >
-              Manage Products
-            </a>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600 mb-2">{stats.todayOrders}</div>
+              <div className="text-sm text-gray-600">New Orders Today</div>
+              <div className="text-xs text-gray-500 mt-1">{formatCurrency(stats.todayOrdersValue)}</div>
+            </div>
           </div>
 
+          {/* Open Orders */}
           <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">Categories</h2>
-            <p className="text-gray-600 mb-4">Organize products into categories and control visibility.</p>
-            <a
-              href="/admin/categories"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
-            >
-              Manage Categories
-            </a>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600 mb-2">{stats.openOrders}</div>
+              <div className="text-sm text-gray-600">Open Orders</div>
+            </div>
           </div>
 
+          {/* In Process Orders */}
           <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">Companies</h2>
-            <p className="text-gray-600 mb-4">Manage distributor companies and their settings.</p>
-            <a
-              href="/admin/companies"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
-            >
-              Manage Companies
-            </a>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-orange-600 mb-2">{stats.inProcessOrders}</div>
+              <div className="text-sm text-gray-600">Orders In Process</div>
+            </div>
           </div>
 
+          {/* Hello Block */}
           <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">Orders</h2>
-            <p className="text-gray-600 mb-4">View and process distributor orders.</p>
-            <a
-              href="/admin/orders"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
-            >
-              Manage Orders
-            </a>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-gray-600 mb-2">HELLO</div>
+              <div className="text-sm text-gray-600">Coming Soon</div>
+            </div>
           </div>
+        </div>
 
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">Locations</h2>
-            <p className="text-gray-600 mb-4">Manage warehouse locations for NetSuite.</p>
-            <a
-              href="/admin/locations"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
-            >
-              Manage Locations
-            </a>
+        {/* Recent Orders Table */}
+        <div className="bg-white rounded-lg shadow border">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold">Recent Orders</h2>
           </div>
-
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">Users (Clients)</h2>
-            <p className="text-gray-600 mb-4">Manage distributor users across all companies.</p>
-            <a
-              href="/admin/users"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
-            >
-              Manage Users
-            </a>
+          <div className="overflow-x-auto">
+            <table className="w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    PO Number
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Company
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {recentOrders.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {order.po_number || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {order.company?.company_name || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        order.status === 'Open' ? 'bg-green-100 text-green-800' :
+                        order.status === 'In Process' ? 'bg-yellow-100 text-yellow-800' :
+                        order.status === 'Done' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {order.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatCurrency(order.total_value || 0)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(order.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <Link
+                        href={`/admin/orders/${order.id}`}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-
-
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">Admins</h2>
-            <p className="text-gray-600 mb-4">Manage system administrators and their permissions.</p>
-            <a
-              href="/admin/admins"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
-            >
-              Manage Admins
-            </a>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">NetSuite Integration</h2>
-            <p className="text-gray-600 mb-4">Sync products and create orders in NetSuite.</p>
-            <a
-              href="/admin/netsuite"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
-            >
-              NetSuite Integration
-            </a>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">Reports</h2>
-            <p className="text-gray-600 mb-4">View sales reports and analytics.</p>
-            <button
-              disabled
-              className="bg-gray-300 text-gray-500 px-4 py-2 rounded cursor-not-allowed"
-            >
-              Coming Soon
-            </button>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">Support Funds</h2>
-            <p className="text-gray-600 mb-4">Manage support fund percentage levels.</p>
-            <a
-              href="/admin/support-funds"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
-            >
-              Manage Support Funds
-            </a>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">Incoterms</h2>
-            <p className="text-gray-600 mb-4">Manage international commercial terms for shipping.</p>
-            <a
-              href="/admin/incoterms"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
-            >
-              Manage Incoterms
-            </a>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">Payment Terms</h2>
-            <p className="text-gray-600 mb-4">Configure payment terms and conditions.</p>
-            <a
-              href="/admin/payment-terms"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
-            >
-              Manage Payment Terms
-            </a>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">Subsidiaries</h2>
-            <p className="text-gray-600 mb-4">Manage company subsidiaries.</p>
-            <a
-              href="/admin/subsidiaries"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
-            >
-              Manage Subsidiaries
-            </a>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-2">Classes</h2>
-            <p className="text-gray-600 mb-4">Manage company classes.</p>
-            <a
-              href="/admin/classes"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition inline-block"
-            >
-              Manage Classes
-            </a>
-          </div>
+          {recentOrders.length === 0 && (
+            <div className="px-6 py-12 text-center text-gray-500">
+              No orders found
+            </div>
+          )}
         </div>
       </div>
     </AdminLayout>

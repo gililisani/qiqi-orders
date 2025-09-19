@@ -9,6 +9,7 @@ export default function Navbar() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [mobileOpenSections, setMobileOpenSections] = useState<string[]>([]);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleLogout = async () => {
@@ -38,11 +39,24 @@ export default function Navbar() {
     }, 100); // Small delay to allow moving to dropdown
   };
 
+  const toggleMobileSection = (sectionName: string) => {
+    setMobileOpenSections(prev => 
+      prev.includes(sectionName) 
+        ? prev.filter(name => name !== sectionName)
+        : [...prev, sectionName]
+    );
+  };
+
   const menuItems = [
     {
-      name: 'Order Management',
+      name: 'Orders',
       items: [
-        { name: 'Orders', href: '/admin/orders' },
+        { name: 'All Orders', href: '/admin/orders' }
+      ]
+    },
+    {
+      name: 'Partners',
+      items: [
         { name: 'Companies', href: '/admin/companies' },
         { name: 'Users', href: '/admin/users' }
       ]
@@ -55,19 +69,20 @@ export default function Navbar() {
       ]
     },
     {
-      name: 'Configuration',
+      name: 'Media',
+      items: [
+        { name: 'Coming Soon', href: '#' }
+      ]
+    },
+    {
+      name: 'System',
       items: [
         { name: 'Support Funds', href: '/admin/support-funds' },
         { name: 'Locations', href: '/admin/locations' },
         { name: 'Classes', href: '/admin/classes' },
         { name: 'Subsidiaries', href: '/admin/subsidiaries' },
         { name: 'Incoterms', href: '/admin/incoterms' },
-        { name: 'Payment Terms', href: '/admin/payment-terms' }
-      ]
-    },
-    {
-      name: 'System',
-      items: [
+        { name: 'Payment Terms', href: '/admin/payment-terms' },
         { name: 'Admins', href: '/admin/admins' },
         { name: 'NetSuite', href: '/admin/netsuite' }
       ]
@@ -124,23 +139,26 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* Desktop Logout */}
-        <button
-          onClick={handleLogout}
-          className="hidden md:block bg-black text-white px-3 py-1 rounded-full text-xs hover:opacity-90 transition"
-        >
-          Log Out
-        </button>
+        {/* Right Side - Logout and Mobile Menu */}
+        <div className="flex items-center space-x-3">
+          {/* Always Visible Logout */}
+          <button
+            onClick={handleLogout}
+            className="bg-black text-white px-3 py-1 rounded-full text-xs hover:opacity-90 transition"
+          >
+            Log Out
+          </button>
 
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu */}
@@ -149,33 +167,36 @@ export default function Navbar() {
           <div className="space-y-1 pt-4">
             {menuItems.map((menu) => (
               <div key={menu.name}>
-                <div className="px-3 py-2 text-sm font-semibold text-gray-900 bg-gray-50">
+                <button
+                  onClick={() => toggleMobileSection(menu.name)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-sm font-semibold text-gray-900 bg-gray-50 hover:bg-gray-100"
+                >
                   {menu.name}
-                </div>
-                <div className="pl-6">
-                  {menu.items.map((item) => (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      {item.name}
-                    </Link>
-                  ))}
-                </div>
+                  <svg 
+                    className={`w-4 h-4 transition-transform ${mobileOpenSections.includes(menu.name) ? 'rotate-180' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {mobileOpenSections.includes(menu.name) && (
+                  <div className="pl-6 bg-white">
+                    {menu.items.map((item) => (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        {item.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
-            
-            {/* Mobile Logout */}
-            <div className="pt-4 border-t border-gray-200 mt-4">
-              <button
-                onClick={handleLogout}
-                className="w-full bg-black text-white px-3 py-2 rounded-full text-sm hover:opacity-90 transition"
-              >
-                Log Out
-              </button>
-            </div>
           </div>
         </div>
       )}
