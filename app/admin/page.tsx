@@ -13,7 +13,7 @@ interface Order {
   po_number: string;
   companies: {
     company_name: string;
-  }[] | null;
+  } | null;
 }
 
 interface DashboardStats {
@@ -87,7 +87,7 @@ export default function AdminDashboard() {
       console.log('Recent Orders Data:', recentOrdersData.map(order => ({
         id: order.id,
         companies: order.companies,
-        companyName: order.companies?.[0]?.company_name
+        companyName: order.companies?.company_name
       })));
       setRecentOrders(recentOrdersData);
 
@@ -193,11 +193,7 @@ export default function AdminDashboard() {
                       {order.po_number || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {(() => {
-                        const companyName = order.companies?.[0]?.company_name;
-                        console.log('Table render - Order:', order.id, 'Companies:', order.companies, 'Name:', companyName);
-                        return companyName || 'N/A';
-                      })()}
+                      {order.companies?.company_name || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
