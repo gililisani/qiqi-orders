@@ -340,21 +340,21 @@ export default function OrdersPage() {
           </select>
         </div>
 
-        <div className="overflow-x-auto border bg-white" style={{ borderColor: 'rgb(230, 230, 230)' }}>
-          <table className="min-w-full">
+        <div className="overflow-x-auto" style={{ backgroundColor: 'rgb(250, 250, 250)' }}>
+          <table className="min-w-full bg-white border" style={{ borderColor: 'rgb(230, 230, 230)' }}>
             <thead>
-              <tr className="bg-white">
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">PO Number</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">Client</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">Company</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">Status</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">Total</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">Support Fund</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">Date</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">Actions</th>
+              <tr>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase">PO Number</th>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase">Client</th>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase">Company</th>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase">Status</th>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase">Total</th>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase">Support Fund</th>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase">Date</th>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white">
+            <tbody>
                 {filteredOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50 border-b border-solid" style={{ borderColor: 'rgb(230, 230, 230)' }}>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
