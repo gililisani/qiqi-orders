@@ -674,25 +674,25 @@ export default function EditOrderPage() {
                       <th className="px-1 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Product
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell" style={{width: '100px'}}>
                         SKU
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '60px'}}>
                         Size
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '70px'}}>
                         Pack
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '80px'}}>
                         Price
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '100px'}}>
                         Qty
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell" style={{width: '80px'}}>
                         Units
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      <th className="px-1 py-2 pr-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '100px'}}>
                         Total
                       </th>
                     </tr>
