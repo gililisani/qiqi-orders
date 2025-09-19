@@ -63,12 +63,23 @@ export default function AdminDashboard() {
       if (error) throw error;
 
       // Transform the data to match our interface (companies should be a single object, not array)
-      const transformedOrders = orders?.map(order => ({
-        ...order,
-        companies: Array.isArray(order.companies) && order.companies.length > 0 
-          ? order.companies[0] 
-          : null
-      })) || [];
+      const transformedOrders = orders?.map(order => {
+        console.log('Raw order data:', {
+          id: order.id,
+          companies: order.companies,
+          companiesType: typeof order.companies,
+          isArray: Array.isArray(order.companies)
+        });
+        
+        return {
+          ...order,
+          companies: Array.isArray(order.companies) && order.companies.length > 0 
+            ? order.companies[0] 
+            : null
+        };
+      }) || [];
+
+      console.log('Transformed orders sample:', transformedOrders.slice(0, 2));
 
       // Calculate stats
       const todayOrders = transformedOrders.filter(order => 
