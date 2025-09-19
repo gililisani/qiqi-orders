@@ -302,9 +302,9 @@ export default function OrdersPage() {
 
   return (
     <AdminLayout>
-      <div className="p-6">
+      <div className="p-6" style={{ backgroundColor: 'rgb(244, 244, 242)', minHeight: '100vh' }}>
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Orders Management</h1>
+          <h1 className="text-2xl font-bold uppercase">ORDERS MANAGEMENT</h1>
           <div className="text-sm text-gray-500">
             Showing {((currentPage - 1) * ordersPerPage) + 1}-{Math.min(currentPage * ordersPerPage, totalOrders)} of {totalOrders} orders
           </div>
@@ -322,12 +322,14 @@ export default function OrdersPage() {
             placeholder="Search orders by client, company, or NetSuite number..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+            className="flex-1 px-3 py-2 border focus:outline-none focus:ring-2 focus:ring-black"
+            style={{ borderColor: 'rgb(198, 198, 190)' }}
           />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+            className="px-3 py-2 border focus:outline-none focus:ring-2 focus:ring-black"
+            style={{ borderColor: 'rgb(198, 198, 190)' }}
           >
             <option value="">All Statuses</option>
             {statusOptions.map(option => (
@@ -338,46 +340,45 @@ export default function OrdersPage() {
           </select>
         </div>
 
-        <div className="bg-white rounded-lg shadow border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    PO Number
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Client
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Company
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total Value
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Support Fund Used
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead>
+              <tr>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
+                  PO Number
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
+                  Client
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
+                  Company
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
+                  Total Value
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
+                  Support Fund Used
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
+                  Created
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+              <tbody className="bg-white" style={{ borderColor: 'rgb(198, 198, 190)' }}>
                 {filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  <tr key={order.id} className="hover:bg-gray-50 border-b" style={{ borderColor: 'rgb(198, 198, 190)' }}>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="text-sm font-medium text-gray-900">
                         {order.po_number || 'N/A'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {order.client?.name || 'N/A'}
@@ -387,7 +388,7 @@ export default function OrdersPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {order.company?.company_name || 'N/A'}
@@ -397,13 +398,11 @@ export default function OrdersPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
                       <select
                         value={order.status}
                         onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                        className={`text-xs px-2 py-1 rounded-full border-0 focus:ring-2 focus:ring-black ${
-                          statusOptions.find(s => s.value === order.status)?.color || 'bg-gray-100 text-gray-800'
-                        }`}
+                        className="text-xs px-2 py-1 bg-black text-white border-0 focus:ring-2 focus:ring-black cursor-pointer"
                       >
                         {statusOptions.map(option => (
                           <option key={option.value} value={option.value}>
@@ -412,17 +411,17 @@ export default function OrdersPage() {
                         ))}
                       </select>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${order.total_value?.toFixed(2) || '0.00'}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+                      ${order.total_value?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${order.support_fund_used?.toFixed(2) || '0.00'}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+                      ${order.support_fund_used?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                       {new Date(order.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex flex-col space-y-1">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
+                      <div className="flex flex-col space-y-1 items-center">
                         <div className="flex space-x-2">
                           <Link
                             href={`/admin/orders/${order.id}`}
@@ -469,7 +468,6 @@ export default function OrdersPage() {
                 ))}
               </tbody>
             </table>
-          </div>
         </div>
 
         {filteredOrders.length === 0 && !loading && (
