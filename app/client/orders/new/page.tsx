@@ -762,7 +762,8 @@ export default function NewOrderPage() {
                                       <img
                                         src={categoryGroup.category.image_url}
                                         alt={categoryGroup.category.name}
-                                        className="w-full h-20 object-cover"
+                                        className="w-full max-h-[100px] object-contain bg-white"
+                                        style={{ maxHeight: '100px' }}
                                         onError={(e) => {
                                           // Fallback to text header if image fails to load
                                           e.currentTarget.style.display = 'none';
@@ -770,14 +771,14 @@ export default function NewOrderPage() {
                                           if (fallback) fallback.style.display = 'block';
                                         }}
                                       />
-                                      <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-                                        <div className="text-center">
-                                          <h3 className="text-lg font-bold text-white">
+                                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 px-4 py-2">
+                                        <div className="flex items-center justify-between">
+                                          <h3 className="text-sm font-semibold text-white">
                                             {categoryGroup.category.name}
                                           </h3>
-                                          <p className="text-sm text-gray-200">
+                                          <span className="text-xs text-gray-200 bg-black bg-opacity-50 px-2 py-1 rounded">
                                             {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
-                                          </p>
+                                          </span>
                                         </div>
                                       </div>
                                     </div>

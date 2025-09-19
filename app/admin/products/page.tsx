@@ -296,7 +296,8 @@ export default function ProductsPage() {
                         <img
                           src={categoryGroup.category.image_url}
                           alt={categoryGroup.category.name}
-                          className="w-full h-20 object-cover"
+                          className="w-full max-h-[100px] object-contain bg-white"
+                          style={{ maxHeight: '100px' }}
                           onError={(e) => {
                             // Fallback to text header if image fails to load
                             e.currentTarget.style.display = 'none';
@@ -304,21 +305,23 @@ export default function ProductsPage() {
                             if (fallback) fallback.style.display = 'block';
                           }}
                         />
-                        <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-between px-4">
-                          <div className="text-center flex-1">
-                            <h3 className="text-lg font-bold text-white">
-                              {categoryGroup.category.name}
-                            </h3>
-                            <p className="text-sm text-gray-200">
-                              {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
-                            </p>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 px-4 py-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="text-sm font-semibold text-white">
+                                {categoryGroup.category.name}
+                              </h3>
+                              <p className="text-xs text-gray-200">
+                                {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
+                              </p>
+                            </div>
+                            <Link
+                              href={`/admin/categories/${categoryGroup.category.id}/edit`}
+                              className="text-xs text-white hover:text-gray-200 bg-black bg-opacity-50 px-2 py-1 rounded"
+                            >
+                              Edit Category
+                            </Link>
                           </div>
-                          <Link
-                            href={`/admin/categories/${categoryGroup.category.id}/edit`}
-                            className="text-sm text-white hover:text-gray-200 bg-black bg-opacity-50 px-3 py-1 rounded"
-                          >
-                            Edit Category
-                          </Link>
                         </div>
                       </div>
                     ) : (
