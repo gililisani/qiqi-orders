@@ -166,3 +166,104 @@ body {
 .custom-table-empty {
   @apply py-12 text-center text-gray-500;
 }
+
+/* ==============================================
+   ADMIN ORDERS MANAGEMENT TABLE DESIGN
+   ============================================== */
+
+/* Table Container */
+.admin-orders-table-container {
+  @apply overflow-x-auto;
+  background-color: rgb(250, 250, 250);
+}
+
+/* Table */
+.admin-orders-table {
+  @apply w-full;
+}
+
+/* Table Header Section */
+.admin-orders-table-header {
+  background-color: transparent;
+}
+
+.admin-orders-table-header-row {
+  background-color: transparent;
+}
+
+.admin-orders-table-header-cell {
+  @apply px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase;
+  background-color: transparent;
+  border: none;
+}
+
+/* Table Body */
+.admin-orders-table-body {
+  @apply bg-white border;
+  border-color: rgb(230, 230, 230);
+}
+
+.admin-orders-table-row {
+  @apply hover:bg-gray-50 border-b border-solid;
+  border-color: rgb(230, 230, 230);
+}
+
+.admin-orders-table-cell {
+  @apply px-2 sm:px-6 py-4 whitespace-nowrap text-center;
+}
+
+.admin-orders-table-cell-hidden-mobile {
+  @apply hidden sm:table-cell px-2 sm:px-6 py-4 whitespace-nowrap text-center;
+}
+
+/* Status Dropdown */
+.admin-orders-status-dropdown {
+  @apply text-xs px-2 py-1 bg-black text-white border-0 focus:ring-2 focus:ring-black cursor-pointer;
+}
+
+/* Actions */
+.admin-orders-actions {
+  @apply px-2 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-center;
+}
+
+.admin-orders-actions-container {
+  @apply flex flex-col space-y-1 items-center;
+}
+
+.admin-orders-action-buttons {
+  @apply flex space-x-2;
+}
+
+.admin-orders-action-link {
+  @apply text-blue-600 hover:text-blue-900;
+}
+
+.admin-orders-csv-button {
+  @apply text-green-600 hover:text-green-900;
+}
+
+.admin-orders-netsuite-button {
+  @apply text-xs text-orange-600 hover:text-orange-900 disabled:opacity-50;
+}
+
+.admin-orders-complete-button {
+  @apply text-xs text-blue-600 hover:text-blue-900 disabled:opacity-50 block;
+}
+
+/* Pagination */
+.admin-orders-pagination {
+  @apply mt-6 flex items-center justify-between;
+}
+
+.admin-orders-pagination-info {
+  @apply text-sm text-gray-500;
+}
+
+.admin-orders-pagination-buttons {
+  @apply flex space-x-2;
+}
+
+.admin-orders-pagination-button {
+  @apply px-3 py-2 border text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed;
+  border-color: rgb(230, 230, 230);
+}
