@@ -62,13 +62,21 @@ export default function AdminDashboard() {
 
       if (error) throw error;
 
+      // Transform the data to match our interface (companies should be a single object, not array)
+      const transformedOrders = orders?.map(order => ({
+        ...order,
+        companies: Array.isArray(order.companies) && order.companies.length > 0 
+          ? order.companies[0] 
+          : null
+      })) || [];
+
       // Calculate stats
-      const todayOrders = orders?.filter(order => 
+      const todayOrders = transformedOrders.filter(order => 
         order.created_at.split('T')[0] === today
-      ) || [];
+      );
       
-      const openOrders = orders?.filter(order => order.status === 'Open') || [];
-      const inProcessOrders = orders?.filter(order => order.status === 'In Process') || [];
+      const openOrders = transformedOrders.filter(order => order.status === 'Open');
+      const inProcessOrders = transformedOrders.filter(order => order.status === 'In Process');
 
       const todayOrdersValue = todayOrders.reduce((sum, order) => sum + (order.total_value || 0), 0);
 
@@ -80,7 +88,7 @@ export default function AdminDashboard() {
       });
 
       // Get recent 5 orders
-      setRecentOrders(orders?.slice(0, 5) || []);
+      setRecentOrders(transformedOrders.slice(0, 5));
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
