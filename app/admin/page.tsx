@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import AdminLayout from '../components/AdminLayout';
 import Link from 'next/link';
+import { generateNetSuiteCSV, downloadCSV, OrderForExport } from '../../lib/csvExport';
 
 interface Order {
   id: string;
@@ -36,6 +37,68 @@ export default function AdminDashboard() {
   // Format currency helper
   const formatCurrency = (amount: number) => {
     return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  // CSV download function
+  const handleDownloadCSV = async (orderId: string) => {
+    try {
+      // Fetch complete order data with all relationships
+      const { data: orderData, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          company:companies(
+            company_name,
+            netsuite_number,
+            class:classes(name),
+            subsidiary:subsidiaries(name),
+            location:Locations(location_name)
+          ),
+          order_items(
+            quantity,
+            unit_price,
+            total_price,
+            product:Products(sku, item_name, netsuite_name)
+          )
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (error) throw error;
+
+      // Validate required data
+      if (!orderData.company) {
+        throw new Error('Company data not found for this order');
+      }
+      if (!orderData.order_items || orderData.order_items.length === 0) {
+        throw new Error('No order items found for this order');
+      }
+
+      // Validate order items have required product data
+      for (const item of orderData.order_items) {
+        if (!item.product) {
+          throw new Error('Product data missing for order item');
+        }
+        if (!item.product.sku) {
+          throw new Error('Product SKU missing for order item');
+        }
+      }
+
+      // Generate CSV
+      const csvContent = generateNetSuiteCSV(orderData as OrderForExport);
+      
+      // Create filename with PO number and date
+      const orderDate = new Date(orderData.created_at);
+      const dateStr = orderDate.toISOString().split('T')[0];
+      const poNumber = orderData.po_number || orderData.id.substring(0, 6);
+      const filename = `Order_${poNumber}_${dateStr}.csv`;
+      
+      // Download CSV
+      downloadCSV(csvContent, filename);
+    } catch (err: any) {
+      console.error('Error exporting CSV:', err);
+      alert('Failed to export CSV. Please try again.');
+    }
   };
 
   useEffect(() => {
@@ -148,7 +211,7 @@ export default function AdminDashboard() {
         {/* Recent Orders Table */}
         <div className="bg-transparent">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold uppercase">RECENT ORDERS</h2>
+            <h2 className="text-lg font-light uppercase">RECENT ORDERS</h2>
             <Link
               href="/admin/orders"
               className="text-sm text-black underline hover:opacity-70 uppercase"
@@ -163,60 +226,45 @@ export default function AdminDashboard() {
                 className="bg-white border border-gray-300 border-dashed p-6 hover:border-black hover:border-dashed transition-colors duration-200"
               >
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
-                  <div>
-                    <div className="text-xs text-gray-500 uppercase">PO Number</div>
-                    <div className="text-sm font-medium text-gray-900">
-                      {order.po_number || 'N/A'}
-                    </div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {order.po_number || 'N/A'}
                   </div>
-                  <div>
-                    <div className="text-xs text-gray-500 uppercase">Company</div>
-                    <div className="text-sm text-gray-900">
-                      {(() => {
-                        const companies = order.companies;
-                        if (!companies) return 'N/A';
-                        // Handle both array and object cases
-                        const companyName = Array.isArray(companies) 
-                          ? companies[0]?.company_name 
-                          : (companies as any).company_name;
-                        return companyName || 'N/A';
-                      })()}
-                    </div>
+                  <div className="text-sm text-gray-900">
+                    {(() => {
+                      const companies = order.companies;
+                      if (!companies) return 'N/A';
+                      // Handle both array and object cases
+                      const companyName = Array.isArray(companies) 
+                        ? companies[0]?.company_name 
+                        : (companies as any).company_name;
+                      return companyName || 'N/A';
+                    })()}
                   </div>
-                  <div>
-                    <div className="text-xs text-gray-500 uppercase">Status</div>
-                    <div 
-                      className="text-sm font-bold border border-black px-2 py-1 inline-block"
-                      style={{ fontFamily: "'ABC P3rman3nt', monospace" }}
+                  <div 
+                    className="text-sm font-bold border border-black px-2 py-1 inline-block"
+                    style={{ fontFamily: "'RTKassebong', monospace" }}
+                  >
+                    {order.status}
+                  </div>
+                  <div className="text-sm text-gray-900">
+                    {formatCurrency(order.total_value || 0)}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {new Date(order.created_at).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Link
+                      href={`/admin/orders/${order.id}`}
+                      className="text-black underline hover:opacity-70 text-sm uppercase"
                     >
-                      {order.status}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 uppercase">Total</div>
-                    <div className="text-sm text-gray-900">
-                      {formatCurrency(order.total_value || 0)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 uppercase">Date</div>
-                    <div className="text-sm text-gray-500">
-                      {new Date(order.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 uppercase">Actions</div>
-                    <div className="flex items-center space-x-2">
-                      <Link
-                        href={`/admin/orders/${order.id}`}
-                        className="text-black underline hover:opacity-70 text-sm"
-                      >
-                        View
-                      </Link>
-                      <button className="bg-black text-white px-2 py-1 text-xs hover:opacity-90 transition">
-                        CSV
-                      </button>
-                    </div>
+                      VIEW
+                    </Link>
+                    <button 
+                      onClick={() => handleDownloadCSV(order.id)}
+                      className="bg-black text-white px-2 py-1 text-xs hover:opacity-90 transition"
+                    >
+                      CSV
+                    </button>
                   </div>
                 </div>
               </div>

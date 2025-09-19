@@ -34,23 +34,13 @@
   font-display: swap;
 }
 
-/* ABC P3rman3nt Font Face Declarations */
+/* RTKassebong Font Face Declarations */
 @font-face {
-  font-family: 'ABC P3rman3nt';
-  src: url('/fonts/ABC P3rman3nt/ABCP3rman3nt-Book.woff2') format('woff2'),
-       url('/fonts/ABC P3rman3nt/ABCP3rman3nt-Book.woff') format('woff'),
-       url('/fonts/ABC P3rman3nt/ABCP3rman3nt-Book.otf') format('opentype');
+  font-family: 'RTKassebong';
+  src: url('/fonts/RTKassebong/RTKassebong-Regular.woff2') format('woff2'),
+       url('/fonts/RTKassebong/RTKassebong-Regular.woff') format('woff'),
+       url('/fonts/RTKassebong/RTKassebong-Regular.ttf') format('truetype');
   font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'ABC P3rman3nt';
-  src: url('/fonts/ABC P3rman3nt/ABCP3rman3nt-Bold.woff2') format('woff2'),
-       url('/fonts/ABC P3rman3nt/ABCP3rman3nt-Bold.woff') format('woff'),
-       url('/fonts/ABC P3rman3nt/ABCP3rman3nt-Bold.otf') format('opentype');
-  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
