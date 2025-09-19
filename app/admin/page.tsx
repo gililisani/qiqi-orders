@@ -223,12 +223,12 @@ export default function AdminDashboard() {
           {/* Table Header */}
           <div className="px-6 py-2 mb-2">
             <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
-              <div className="text-xs text-black uppercase font-medium">PO Number</div>
-              <div className="text-xs text-black uppercase font-medium">Company</div>
-              <div className="text-xs text-black uppercase font-medium">Status</div>
-              <div className="text-xs text-black uppercase font-medium">Total</div>
-              <div className="text-xs text-black uppercase font-medium">Date</div>
-              <div className="text-xs text-black uppercase font-medium">Actions</div>
+              <div className="text-xs text-black uppercase font-medium text-center">PO Number</div>
+              <div className="text-xs text-black uppercase font-medium text-center">Company</div>
+              <div className="text-xs text-black uppercase font-medium text-center">Status</div>
+              <div className="text-xs text-black uppercase font-medium text-center">Total</div>
+              <div className="text-xs text-black uppercase font-medium text-center">Date</div>
+              <div className="text-xs text-black uppercase font-medium text-center">Actions</div>
             </div>
           </div>
           
@@ -236,13 +236,14 @@ export default function AdminDashboard() {
             {recentOrders.map((order) => (
               <div 
                 key={order.id} 
-                className="bg-white border border-gray-300 border-dashed p-6 hover:border-black hover:border-dashed transition-colors duration-200"
+                className="bg-white border border-gray-300 border-dashed hover:border-black hover:border-dashed transition-colors duration-200"
+                style={{ padding: '20px' }}
               >
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
-                  <div className="text-sm font-medium text-gray-900">
+                  <div className="text-sm font-medium text-gray-900 text-center">
                     {order.po_number || 'N/A'}
                   </div>
-                  <div className="text-sm text-gray-900">
+                  <div className="text-sm text-gray-900 text-center">
                     {(() => {
                       const companies = order.companies;
                       if (!companies) return 'N/A';
@@ -253,24 +254,23 @@ export default function AdminDashboard() {
                       return companyName || 'N/A';
                     })()}
                   </div>
-                  <div 
-                    className="text-sm font-normal border border-black px-2 py-1 inline-block text-center"
-                    style={{ 
-                      fontFamily: "'RTKassebong', monospace",
-                      fontWeight: '300',
-                      minWidth: '90px',
-                      width: '90px'
-                    }}
-                  >
-                    {order.status}
+                  <div className="flex justify-center">
+                    <span 
+                      className="text-xs tracking-wide leading-none px-3 pt-1 pb-1 w-fit h-fit grid place-items-center transition-colors duration-0 border border-black uppercase whitespace-nowrap"
+                      style={{ 
+                        fontFamily: "'RTKassebong', monospace"
+                      }}
+                    >
+                      {order.status}
+                    </span>
                   </div>
-                  <div className="text-sm text-gray-900">
+                  <div className="text-sm text-gray-900 text-center">
                     {formatCurrency(order.total_value || 0)}
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-500 text-center">
                     {new Date(order.created_at).toLocaleDateString()}
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center justify-center space-x-2">
                     <Link
                       href={`/admin/orders/${order.id}`}
                       className="text-black underline hover:opacity-70 text-sm uppercase"
