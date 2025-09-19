@@ -303,8 +303,8 @@ export default function OrdersPage() {
   return (
     <AdminLayout>
       <div className="p-6">
-        <div className="custom-table-header">
-          <h1 className="custom-table-title">ORDERS MANAGEMENT</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Orders Management</h1>
           <div className="text-sm text-gray-500">
             Showing {((currentPage - 1) * ordersPerPage) + 1}-{Math.min(currentPage * ordersPerPage, totalOrders)} of {totalOrders} orders
           </div>
@@ -338,134 +338,142 @@ export default function OrdersPage() {
           </select>
         </div>
 
-        <div className="custom-table-container">
-          {/* Table Headers */}
-          <div className="custom-table-column-headers">
-            <div className="grid grid-cols-1 md:grid-cols-8 gap-4 items-center">
-              <div className="custom-table-column-header">PO Number</div>
-              <div className="custom-table-column-header">Client</div>
-              <div className="custom-table-column-header">Company</div>
-              <div className="custom-table-column-header">Status</div>
-              <div className="custom-table-column-header">Total Value</div>
-              <div className="custom-table-column-header">Support Fund Used</div>
-              <div className="custom-table-column-header">Created</div>
-              <div className="custom-table-column-header">Actions</div>
-            </div>
-          </div>
-
-          {/* Table Rows */}
-          <div className="custom-table-rows">
-            {filteredOrders.map((order) => (
-              <div key={order.id} className="custom-table-row">
-                <div className="grid grid-cols-1 md:grid-cols-8 gap-4 items-center">
-                  {/* PO Number */}
-                  <div className="custom-table-cell-primary">
-                    {order.po_number || 'N/A'}
-                  </div>
-
-                  {/* Client */}
-                  <div className="custom-table-cell">
-                    <div className="text-sm font-medium text-gray-900">
-                      {order.client?.name || 'N/A'}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {order.client?.email || 'N/A'}
-                    </div>
-                  </div>
-
-                  {/* Company */}
-                  <div className="custom-table-cell">
-                    <div className="text-sm font-medium text-gray-900">
-                      {order.company?.company_name || 'N/A'}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {order.company?.netsuite_number || 'N/A'}
-                    </div>
-                  </div>
-
-                  {/* Status */}
-                  <div className="custom-status-container">
-                    <select
-                      value={order.status}
-                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                      className="custom-status-badge bg-white cursor-pointer"
-                    >
-                      {statusOptions.map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Total Value */}
-                  <div className="custom-table-cell">
-                    ${order.total_value?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                  </div>
-
-                  {/* Support Fund Used */}
-                  <div className="custom-table-cell">
-                    ${order.support_fund_used?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                  </div>
-
-                  {/* Created Date */}
-                  <div className="custom-table-cell-secondary">
-                    {new Date(order.created_at).toLocaleDateString()}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="custom-table-actions">
-                    <div className="flex flex-col space-y-2">
-                      <div className="flex space-x-2 justify-center">
-                        <Link
-                          href={`/admin/orders/${order.id}`}
-                          className="custom-table-action-button"
-                        >
-                          VIEW
-                        </Link>
-                        <button
-                          onClick={() => handleDownloadCSV(order.id)}
-                          className="custom-table-csv-button"
-                        >
-                          CSV
-                        </button>
+        <div className="bg-white rounded-lg shadow border overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    PO Number
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Company
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total Value
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Support Fund Used
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredOrders.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {order.po_number || 'N/A'}
                       </div>
-                      <div className="space-y-1">
-                        {order.netsuite_sales_order_id ? (
-                          <div className="text-xs text-green-600 text-center">
-                            NetSuite: {order.netsuite_sales_order_id}
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => createOrderInNetSuite(order.id)}
-                            disabled={creatingInNetSuite === order.id}
-                            className="text-xs text-orange-600 hover:text-orange-900 disabled:opacity-50 block text-center"
-                          >
-                            {creatingInNetSuite === order.id ? 'Creating...' : 'Create in NetSuite'}
-                          </button>
-                        )}
-                        
-                        {/* Complete Order Button */}
-                        {order.status === 'In Process' && order.netsuite_sales_order_id && (
-                          <button
-                            onClick={() => completeOrder(order.id)}
-                            disabled={completingOrder === order.id}
-                            className="text-xs text-blue-600 hover:text-blue-900 disabled:opacity-50 block text-center"
-                          >
-                            {completingOrder === order.id ? 'Completing...' : 'Mark Complete'}
-                          </button>
-                        )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {order.client?.name || 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {order.client?.email || 'N/A'}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {order.company?.company_name || 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {order.company?.netsuite_number || 'N/A'}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <select
+                        value={order.status}
+                        onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                        className={`text-xs px-2 py-1 rounded-full border-0 focus:ring-2 focus:ring-black ${
+                          statusOptions.find(s => s.value === order.status)?.color || 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {statusOptions.map(option => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ${order.total_value?.toFixed(2) || '0.00'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ${order.support_fund_used?.toFixed(2) || '0.00'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(order.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex flex-col space-y-1">
+                        <div className="flex space-x-2">
+                          <Link
+                            href={`/admin/orders/${order.id}`}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            View
+                          </Link>
+                          <button
+                            onClick={() => handleDownloadCSV(order.id)}
+                            className="text-green-600 hover:text-green-900"
+                          >
+                            CSV
+                          </button>
+                        </div>
+                        <div className="space-y-1">
+                          {order.netsuite_sales_order_id ? (
+                            <div className="text-xs text-green-600">
+                              NetSuite: {order.netsuite_sales_order_id}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => createOrderInNetSuite(order.id)}
+                              disabled={creatingInNetSuite === order.id}
+                              className="text-xs text-orange-600 hover:text-orange-900 disabled:opacity-50"
+                            >
+                              {creatingInNetSuite === order.id ? 'Creating...' : 'Create in NetSuite'}
+                            </button>
+                          )}
+                          
+                          {/* Complete Order Button */}
+                          {order.status === 'In Process' && order.netsuite_sales_order_id && (
+                            <button
+                              onClick={() => completeOrder(order.id)}
+                              disabled={completingOrder === order.id}
+                              className="text-xs text-blue-600 hover:text-blue-900 disabled:opacity-50 block"
+                            >
+                              {completingOrder === order.id ? 'Completing...' : 'Mark Complete'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
         {filteredOrders.length === 0 && !loading && (
-          <div className="custom-table-empty">
+          <div className="text-center py-8 text-gray-500">
             <p>No orders found.</p>
             <p className="text-sm mt-2">Orders will appear here when clients place them.</p>
           </div>
