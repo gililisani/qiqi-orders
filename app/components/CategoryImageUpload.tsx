@@ -14,6 +14,48 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const resizeImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      img.onload = () => {
+        // Set canvas size to target dimensions (300x150px)
+        canvas.width = 300;
+        canvas.height = 150;
+
+        // Draw and resize the image
+        ctx?.drawImage(img, 0, 0, 300, 150);
+
+        // Convert canvas to blob
+        canvas.toBlob((blob) => {
+          if (blob) {
+            // Create new file with resized image
+            const resizedFile = new File([blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(resizedFile);
+          } else {
+            resolve(file); // Fallback to original if resizing fails
+          }
+        }, 'image/jpeg', 0.9); // 90% quality
+      };
+
+      img.onerror = () => {
+        resolve(file); // Fallback to original if image load fails
+      };
+
+      // Load the image
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -24,24 +66,21 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5MB.');
-      return;
-    }
-
     setUploading(true);
 
     try {
+      // Resize the image before uploading
+      const resizedFile = await resizeImage(file);
+      
       // Create unique filename
-      const fileExt = file.name.split('.').pop();
+      const fileExt = 'jpg'; // Always use JPG after resizing
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `category-images/${fileName}`;
 
-      // Upload file to Supabase Storage
+      // Upload resized file to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('category-images')
-        .upload(filePath, file);
+        .upload(filePath, resizedFile);
 
       if (uploadError) {
         throw uploadError;
@@ -110,7 +149,7 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
                 ×
               </button>
             </div>
-            <p className="text-sm text-gray-600">Recommended size: 300x150px</p>
+            <p className="text-sm text-gray-600">Optimized for category headers</p>
             <p className="text-xs text-gray-500">Click to change image</p>
           </div>
         ) : (
@@ -135,7 +174,7 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
               PNG, JPG, GIF up to 5MB
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              Recommended: 300x150px for best display
+              Images will be automatically resized to 300x150px
             </p>
           </div>
         )}
