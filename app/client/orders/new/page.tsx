@@ -726,7 +726,7 @@ export default function NewOrderPage() {
                       <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
                         Pack
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '70px'}}>
                         Price
                       </th>
                       <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
@@ -735,7 +735,7 @@ export default function NewOrderPage() {
                       <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
                         Units
                       </th>
-                      <th className="px-1 py-2 pr-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      <th className="px-1 py-2 pr-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '90px'}}>
                         Total
                       </th>
                     </tr>
@@ -836,7 +836,7 @@ export default function NewOrderPage() {
                           <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden xl:table-cell" >
                             {product.case_pack}
                           </td>
-                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center" >
+                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center font-mono">
                             ${unitPrice.toFixed(2)}
                           </td>
                           <td className="px-1 py-2 text-center" >
@@ -890,7 +890,7 @@ export default function NewOrderPage() {
                           <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden sm:table-cell" >
                             {orderItem?.total_units || 0}
                           </td>
-                          <td className="px-1 py-2 pr-4 text-xs sm:text-sm font-medium text-gray-900 text-center" >
+                          <td className="px-1 py-2 pr-4 text-xs sm:text-sm font-medium text-gray-900 text-center font-mono">
                             ${orderItem?.total_price?.toFixed(2) || '0.00'}
                           </td>
                         </tr>
