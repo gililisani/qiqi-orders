@@ -341,7 +341,7 @@ export default function OrdersPage() {
         </div>
 
         <div className="overflow-x-auto" style={{ backgroundColor: 'rgb(250, 250, 250)' }}>
-          <table className="w-full bg-white border" style={{ borderColor: 'rgb(230, 230, 230)' }}>
+          <table className="w-full border" style={{ borderColor: 'rgb(230, 230, 230)' }}>
             <thead style={{ backgroundColor: 'transparent' }}>
               <tr style={{ backgroundColor: 'transparent' }}>
                 <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>PO Number</th>
@@ -354,7 +354,7 @@ export default function OrdersPage() {
                 <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white">
                 {filteredOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50 border-b border-solid" style={{ borderColor: 'rgb(230, 230, 230)' }}>
                     <td className="px-2 sm:px-6 py-4 whitespace-nowrap text-center">
