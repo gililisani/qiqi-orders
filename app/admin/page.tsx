@@ -175,7 +175,7 @@ export default function AdminDashboard() {
         {/* Stats Blocks */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Today's Orders */}
-          <div className="bg-white p-6 border border-black">
+          <div className="p-6 border border-black" style={{ backgroundColor: 'rgb(244, 244, 242)' }}>
             <div className="text-center">
               <div className="text-5xl font-bold text-black mb-2">{stats.todayOrders}</div>
               <div className="text-sm text-gray-600">New Orders Today</div>
@@ -184,7 +184,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Open Orders */}
-          <div className="bg-white p-6 border border-black">
+          <div className="p-6 border border-black" style={{ backgroundColor: 'rgb(244, 244, 242)' }}>
             <div className="text-center">
               <div className="text-5xl font-bold text-black mb-2">{stats.openOrders}</div>
               <div className="text-sm text-gray-600">Open Orders</div>
@@ -192,7 +192,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* In Process Orders */}
-          <div className="bg-white p-6 border border-black">
+          <div className="p-6 border border-black" style={{ backgroundColor: 'rgb(244, 244, 242)' }}>
             <div className="text-center">
               <div className="text-5xl font-bold text-black mb-2">{stats.inProcessOrders}</div>
               <div className="text-sm text-gray-600">Orders In Process</div>
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Hello Block */}
-          <div className="bg-white p-6 border border-black">
+          <div className="p-6 border border-black" style={{ backgroundColor: 'rgb(244, 244, 242)' }}>
             <div className="text-center">
               <div className="text-5xl font-bold text-black mb-2">HELLO</div>
               <div className="text-sm text-gray-600">Coming Soon</div>
@@ -219,6 +219,19 @@ export default function AdminDashboard() {
               VIEW ALL
             </Link>
           </div>
+          
+          {/* Table Header */}
+          <div className="p-6 mb-4" style={{ backgroundColor: 'rgb(244, 244, 242)' }}>
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+              <div className="text-xs text-gray-500 uppercase font-medium">PO Number</div>
+              <div className="text-xs text-gray-500 uppercase font-medium">Company</div>
+              <div className="text-xs text-gray-500 uppercase font-medium">Status</div>
+              <div className="text-xs text-gray-500 uppercase font-medium">Total</div>
+              <div className="text-xs text-gray-500 uppercase font-medium">Date</div>
+              <div className="text-xs text-gray-500 uppercase font-medium">Actions</div>
+            </div>
+          </div>
+          
           <div className="space-y-4">
             {recentOrders.map((order) => (
               <div 
@@ -241,9 +254,10 @@ export default function AdminDashboard() {
                     })()}
                   </div>
                   <div 
-                    className="text-sm font-bold border border-black px-2 py-1 inline-block text-center"
+                    className="text-sm font-normal border border-black px-2 py-1 inline-block text-center"
                     style={{ 
                       fontFamily: "'RTKassebong', monospace",
+                      fontWeight: '300',
                       minWidth: '90px',
                       width: '90px'
                     }}
