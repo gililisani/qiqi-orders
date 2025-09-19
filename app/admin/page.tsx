@@ -13,7 +13,7 @@ interface Order {
   po_number: string;
   companies: {
     company_name: string;
-  } | null;
+  }[] | null;
 }
 
 interface DashboardStats {
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
                       {order.po_number || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.companies?.company_name || 'N/A'}
+                      {order.companies?.[0]?.company_name || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
