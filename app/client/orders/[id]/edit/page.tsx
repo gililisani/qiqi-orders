@@ -674,25 +674,25 @@ export default function EditOrderPage() {
                       <th className="px-1 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Product
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell" style={{width: '100px'}}>
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                         SKU
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '60px'}}>
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
                         Size
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '70px'}}>
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
                         Pack
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '80px'}}>
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         Price
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '100px'}}>
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         Qty
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell" style={{width: '80px'}}>
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
                         Units
                       </th>
-                      <th className="px-1 py-2 pr-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '100px'}}>
+                      <th className="px-1 py-2 pr-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         Total
                       </th>
                     </tr>
@@ -746,7 +746,7 @@ export default function EditOrderPage() {
                         
                         return (
                           <tr key={product.id} className={`hover:bg-gray-50 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                            <td className="px-1 py-2 max-w-0" style={{width: '40%', maxWidth: '300px'}}>
+                            <td className="px-1 py-2 max-w-0" style={{maxWidth: '200px'}}>
                               <div className="flex items-center min-w-0 w-full">
                                 <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-hidden bg-gray-200">
                                   {product.picture_url ? (

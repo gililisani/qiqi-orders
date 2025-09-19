@@ -717,25 +717,25 @@ export default function NewOrderPage() {
                       <th className="px-1 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Product
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell" style={{width: '100px'}}>
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                         SKU
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '60px'}}>
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
                         Size
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '70px'}}>
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
                         Pack
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '80px'}}>
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         Price
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '100px'}}>
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         Qty
                       </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell" style={{width: '80px'}}>
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
                         Units
                       </th>
-                      <th className="px-1 py-2 pr-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '100px'}}>
+                      <th className="px-1 py-2 pr-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         Total
                       </th>
                     </tr>
@@ -789,7 +789,7 @@ export default function NewOrderPage() {
                       
                         return (
                           <tr key={product.id} className={`hover:bg-gray-50 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                          <td className="px-1 py-2 max-w-0" style={{maxWidth: '250px'}}>
+                          <td className="px-1 py-2 max-w-0" style={{maxWidth: '200px'}}>
                             <div className="flex items-center min-w-0 w-full">
                               <div className="flex-shrink-0 h-6 w-6 rounded overflow-hidden bg-gray-200 mr-1">
                                 {product.picture_url ? (
@@ -823,23 +823,23 @@ export default function NewOrderPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden sm:table-cell" style={{width: '100px'}}>
+                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden sm:table-cell" >
                             <div className="truncate">
                               {product.sku}
                             </div>
                           </td>
-                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden xl:table-cell" style={{width: '60px'}}>
+                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden xl:table-cell" >
                             <div className="truncate">
                               {product.size}
                             </div>
                           </td>
-                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden xl:table-cell" style={{width: '70px'}}>
+                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden xl:table-cell" >
                             {product.case_pack}
                           </td>
-                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center" style={{width: '80px'}}>
+                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center" >
                             ${unitPrice.toFixed(2)}
                           </td>
-                          <td className="px-1 py-2 text-center" style={{width: '100px'}}>
+                          <td className="px-1 py-2 text-center" >
                             <div className="inline-flex items-center border border-gray-300 rounded select-none justify-center">
                               <button
                                 type="button"
@@ -887,10 +887,10 @@ export default function NewOrderPage() {
                               </button>
                             </div>
                           </td>
-                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden sm:table-cell" style={{width: '80px'}}>
+                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden sm:table-cell" >
                             {orderItem?.total_units || 0}
                           </td>
-                          <td className="px-1 py-2 pr-4 text-xs sm:text-sm font-medium text-gray-900 text-center" style={{width: '100px'}}>
+                          <td className="px-1 py-2 pr-4 text-xs sm:text-sm font-medium text-gray-900 text-center" >
                             ${orderItem?.total_price?.toFixed(2) || '0.00'}
                           </td>
                         </tr>
