@@ -666,34 +666,34 @@ export default function EditOrderPage() {
               )}
 
               {/* Products Table */}
-              <div className="bg-white rounded-lg shadow">
-                <div className="overflow-x-auto">
-                <table className="w-full divide-y divide-gray-200">
+              <div className="bg-white rounded-lg shadow w-full">
+                <div className="w-full">
+                <table className="w-full table-auto divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '35%', minWidth: '120px'}}>
+                      <th className="px-1 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Product
                       </th>
-                      <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell" style={{width: '15%', minWidth: '60px'}}>
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                         SKU
                       </th>
-                      <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '8%', minWidth: '50px'}}>
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
                         Size
                       </th>
-                      <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '8%', minWidth: '60px'}}>
-                        Case Pack
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
+                        Pack
                       </th>
-                      <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '12%', minWidth: '70px'}}>
-                        Price/Unit
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        Price
                       </th>
-                      <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '10%', minWidth: '60px'}}>
-                        Case Qty
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        Qty
                       </th>
-                      <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell" style={{width: '12%', minWidth: '70px'}}>
-                        Total Units
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
+                        Units
                       </th>
-                      <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width: '12%', minWidth: '80px'}}>
-                        Total USD
+                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        Total
                       </th>
                     </tr>
                   </thead>
