@@ -662,7 +662,7 @@ export default function EditOrderPage() {
                       >
                         Distributor Support Funds
                         <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          ${totals.supportFundEarned.toFixed(2)} available
+                          {formatCurrency(totals.supportFundEarned)} available
                         </span>
                       </button>
                     </nav>
@@ -884,12 +884,12 @@ export default function EditOrderPage() {
                       {totals.supportFundEarned > 0 && (
                         <div className="flex justify-between text-sm text-green-600">
                           <span>Support Fund ({totals.supportFundPercent}%):</span>
-                          <span className="font-medium">${(totals.supportFundEarned - supportFundTotals.subtotal).toFixed(2)}</span>
+                          <span className="font-medium">{formatCurrency(totals.supportFundEarned - supportFundTotals.subtotal)}</span>
                         </div>
                       )}
                       <div className="flex justify-between pt-2 border-t">
                         <span className="text-lg font-semibold">Total Order:</span>
-                        <span className="text-lg font-semibold">${(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0)).toFixed(2)}</span>
+                        <span className="text-lg font-semibold">{formatCurrency(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0))}</span>
                       </div>
                     </div>
                     <div className="flex flex-col space-y-2">
@@ -935,7 +935,7 @@ export default function EditOrderPage() {
                                 {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''}
                               </div>
                             </div>
-                            <div className="text-sm font-medium text-gray-900">${item.total_price.toFixed(2)}</div>
+                            <div className="text-sm font-medium text-gray-900">{formatCurrency(item.total_price)}</div>
                           </div>
                         ))}
                       </div>
@@ -944,7 +944,7 @@ export default function EditOrderPage() {
                       {orderItems.length > 0 && (
                         <div className="flex justify-between text-sm font-medium text-gray-900 pt-2 border-t">
                           <span>Subtotal:</span>
-                          <span>${orderItems.reduce((sum, item) => sum + item.total_price, 0).toFixed(2)}</span>
+                          <span>{formatCurrency(orderItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
                         </div>
                       )}
 
@@ -952,7 +952,7 @@ export default function EditOrderPage() {
                       {totals.supportFundPercent > 0 && (
                         <div className="flex justify-between text-sm text-green-600 pt-2">
                           <span>Credit Earned ({totals.supportFundPercent}%):</span>
-                          <span className="font-medium">${totals.supportFundEarned.toFixed(2)}</span>
+                          <span className="font-medium">{formatCurrency(totals.supportFundEarned)}</span>
                         </div>
                       )}
 
@@ -972,7 +972,7 @@ export default function EditOrderPage() {
                                   {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''} (Support Fund)
                                 </div>
                               </div>
-                              <div className="text-sm font-medium text-green-800">${item.total_price.toFixed(2)}</div>
+                              <div className="text-sm font-medium text-green-800">{formatCurrency(item.total_price)}</div>
                             </div>
                           ))}
                         </div>
@@ -982,7 +982,7 @@ export default function EditOrderPage() {
                       {supportFundItems.length > 0 && (
                         <div className="flex justify-between text-sm font-medium text-green-800 pt-2 border-t border-green-200">
                           <span>Subtotal:</span>
-                          <span>${supportFundItems.reduce((sum, item) => sum + item.total_price, 0).toFixed(2)}</span>
+                          <span>{formatCurrency(supportFundItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
                         </div>
                       )}
 
@@ -1000,7 +1000,7 @@ export default function EditOrderPage() {
                               const creditEarned = totals.supportFundEarned;
                               const supportFundTotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
                               const remaining = creditEarned - supportFundTotal;
-                              return remaining < 0 ? `($${Math.abs(remaining).toFixed(2)})` : `$${remaining.toFixed(2)}`;
+                              return remaining < 0 ? `(${formatCurrency(Math.abs(remaining))})` : formatCurrency(remaining);
                             })()}
                           </span>
                         </div>
@@ -1027,7 +1027,7 @@ export default function EditOrderPage() {
                         </div>
                         <div className="flex justify-between pt-2 border-t">
                           <span className="text-lg font-semibold">Total Order:</span>
-                          <span className="text-lg font-semibold">${(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0)).toFixed(2)}</span>
+                          <span className="text-lg font-semibold">{formatCurrency(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0))}</span>
                         </div>
                       </div>
 
@@ -1056,11 +1056,11 @@ export default function EditOrderPage() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span>Support Fund Items:</span>
-                        <span className="font-medium">${supportFundTotals.subtotal.toFixed(2)}</span>
+                        <span className="font-medium">{formatCurrency(supportFundTotals.subtotal)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Available Credit:</span>
-                        <span className="font-medium">${supportFundTotals.supportFundEarned.toFixed(2)}</span>
+                        <span className="font-medium">{formatCurrency(supportFundTotals.supportFundEarned)}</span>
                       </div>
                       <div className="flex justify-between text-sm font-medium pt-2">
                         <span>Remaining Credit:</span>
@@ -1074,7 +1074,7 @@ export default function EditOrderPage() {
                             const creditEarned = totals.supportFundEarned;
                             const supportFundTotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
                             const remaining = creditEarned - supportFundTotal;
-                            return remaining < 0 ? `($${Math.abs(remaining).toFixed(2)})` : `$${remaining.toFixed(2)}`;
+                            return remaining < 0 ? `(${formatCurrency(Math.abs(remaining))})` : formatCurrency(remaining);
                           })()}
                         </span>
                       </div>
