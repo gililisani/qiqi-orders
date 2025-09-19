@@ -83,7 +83,13 @@ export default function AdminDashboard() {
       });
 
       // Get recent 5 orders
-      setRecentOrders(transformedOrders.slice(0, 5));
+      const recentOrdersData = transformedOrders.slice(0, 5);
+      console.log('Recent Orders Data:', recentOrdersData.map(order => ({
+        id: order.id,
+        companies: order.companies,
+        companyName: order.companies?.[0]?.company_name
+      })));
+      setRecentOrders(recentOrdersData);
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -187,7 +193,11 @@ export default function AdminDashboard() {
                       {order.po_number || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.companies?.[0]?.company_name || 'N/A'}
+                      {(() => {
+                        const companyName = order.companies?.[0]?.company_name;
+                        console.log('Table render - Order:', order.id, 'Companies:', order.companies, 'Name:', companyName);
+                        return companyName || 'N/A';
+                      })()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
