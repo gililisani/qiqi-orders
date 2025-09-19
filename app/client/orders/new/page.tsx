@@ -596,7 +596,7 @@ export default function NewOrderPage() {
     return (
       <ClientLayout>
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+          <div className="animate-spin h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
           <p className="text-gray-600">Loading products...</p>
         </div>
       </ClientLayout>
@@ -611,7 +611,7 @@ export default function NewOrderPage() {
           <p className="text-gray-600 mb-4">{error}</p>
           <Link
             href="/client"
-            className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
+            className="bg-black text-white px-4 py-2 hover:opacity-90 transition"
           >
             Back to Dashboard
           </Link>
@@ -643,7 +643,7 @@ export default function NewOrderPage() {
           <div className="xl:col-span-2 space-y-6">
             {/* Company Info */}
             {company && (
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="bg-white border border-gray-300 p-6">
                 <h2 className="text-lg font-semibold mb-4">Order Information</h2>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
@@ -667,7 +667,7 @@ export default function NewOrderPage() {
                       value={poNumber}
                       onChange={(e) => setPoNumber(e.target.value)}
                       placeholder="Enter PO number"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                      className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
                     />
                   </div>
                 </div>
@@ -675,14 +675,14 @@ export default function NewOrderPage() {
             )}
 
             {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3">
                 {error}
               </div>
             )}
 
             {/* Tab Navigation */}
             {totals.supportFundPercent > 0 && (
-              <div className="bg-white rounded-lg shadow">
+              <div className="bg-white border border-gray-300">
                 <div className="border-b border-gray-200">
                   <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
                     <button
@@ -704,7 +704,7 @@ export default function NewOrderPage() {
                       }`}
                     >
                       Distributor Support Funds
-                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
                         {formatCurrency(totals.supportFundEarned)} available
                       </span>
                     </button>
@@ -714,7 +714,7 @@ export default function NewOrderPage() {
             )}
 
             {/* Products Table */}
-            <div className="bg-white rounded-lg shadow w-full">
+            <div className="bg-white border border-gray-300 w-full">
               <div className="w-full">
                 <table className="w-full table-auto divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -799,7 +799,7 @@ export default function NewOrderPage() {
                           <tr key={product.id} className={`hover:bg-gray-50 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
                           <td className="px-1 py-2 max-w-0" style={{maxWidth: '200px'}}>
                             <div className="flex items-center min-w-0 w-full">
-                              <div className="flex-shrink-0 h-6 w-6 rounded overflow-hidden bg-gray-200 mr-1">
+                              <div className="flex-shrink-0 h-6 w-6 overflow-hidden bg-gray-200 mr-1">
                                 {product.picture_url ? (
                                   <img
                                     src={product.picture_url}
@@ -824,7 +824,7 @@ export default function NewOrderPage() {
                                   {product.item_name}
                                 </div>
                                 {!showSupportFundRedemption && !product.qualifies_for_credit_earning && (
-                                  <span className="inline-flex items-center px-1 py-0.5 rounded text-xs bg-red-100 text-red-800">
+                                  <span className="inline-flex items-center px-1 py-0.5 text-xs bg-red-100 text-red-800">
                                     No Credit
                                   </span>
                                 )}
@@ -848,7 +848,7 @@ export default function NewOrderPage() {
                             {formatCurrency(unitPrice)}
                           </td>
                           <td className="px-1 py-2 text-center" >
-                            <div className="inline-flex items-center border border-gray-300 rounded select-none justify-center">
+                            <div className="inline-flex items-center border border-gray-300 select-none justify-center">
                               <button
                                 type="button"
                                 onClick={() => showSupportFundRedemption 
@@ -913,7 +913,7 @@ export default function NewOrderPage() {
             </div>
 
             {/* Mobile/Tablet Order Summary (visible below xl) */}
-            <div className="xl:hidden bg-white rounded-lg shadow p-6 space-y-4">
+            <div className="xl:hidden bg-white border border-gray-300 p-6 space-y-4">
               <h2 className="text-lg font-semibold">Order Summary</h2>
               {orderItems.length > 0 ? (
                 <>
@@ -944,7 +944,7 @@ export default function NewOrderPage() {
                           handleSubmitWithSupportFund();
                         }}
                         disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
-                        className="w-full bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
+                        className="w-full bg-black text-white px-6 py-2 hover:opacity-90 transition disabled:opacity-50"
                       >
                         {submitting ? 'Processing...' : 'Complete Order'}
                       </button>
@@ -954,7 +954,7 @@ export default function NewOrderPage() {
                           <button
                             onClick={handleSubmit}
                             disabled={submitting}
-                            className="w-full bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
+                            className="w-full bg-black text-white px-6 py-2 hover:opacity-90 transition disabled:opacity-50"
                           >
                             {submitting ? 'Processing...' : 'Complete Order'}
                           </button>
@@ -963,7 +963,7 @@ export default function NewOrderPage() {
                     )}
                     <Link
                       href="/client/orders"
-                      className="w-full bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition text-center"
+                      className="w-full bg-gray-300 text-gray-700 px-6 py-2 hover:bg-gray-400 transition text-center"
                     >
                       Cancel
                     </Link>
@@ -979,7 +979,7 @@ export default function NewOrderPage() {
 
           {/* Right: sticky order summary (visible at xl+) */}
           <div className="hidden xl:block xl:col-span-1">
-            <div className="bg-white rounded-lg shadow p-6 sticky top-6 space-y-4">
+            <div className="bg-white border border-gray-300 p-6 sticky top-6 space-y-4">
               <h2 className="text-lg font-semibold">Order Summary</h2>
 
               {orderItems.length > 0 ? (
@@ -1024,7 +1024,7 @@ export default function NewOrderPage() {
                   {supportFundItems.length > 0 && (
                     <div className="space-y-2">
                       {supportFundItems.map((item) => (
-                        <div key={`sf-${item.product_id}`} className="flex items-center justify-between bg-green-50 p-2 rounded">
+                        <div key={`sf-${item.product_id}`} className="flex items-center justify-between bg-green-50 p-2">
                           <div className="flex-1 min-w-0 pr-2">
                             <div className="text-sm font-medium text-green-800 truncate leading-tight">{item.product.item_name}</div>
                             <div className="text-xs text-green-600 leading-tight">
@@ -1097,7 +1097,7 @@ export default function NewOrderPage() {
                         handleSubmitWithSupportFund();
                       }}
                       disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
-                      className="mt-4 w-full bg-black text-white px-4 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
+                      className="mt-4 w-full bg-black text-white px-4 py-2 hover:opacity-90 transition disabled:opacity-50"
                     >
                       {submitting ? 'Processing...' : 'Complete Order'}
                     </button>
