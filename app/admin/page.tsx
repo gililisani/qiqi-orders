@@ -108,7 +108,7 @@ export default function AdminDashboard() {
         {/* Stats Blocks */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Today's Orders */}
-          <div className="bg-white p-6 shadow border border-black">
+          <div className="bg-white p-6 border border-black">
             <div className="text-center">
               <div className="text-5xl font-bold text-black mb-2">{stats.todayOrders}</div>
               <div className="text-sm text-gray-600">New Orders Today</div>
@@ -117,7 +117,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Open Orders */}
-          <div className="bg-white p-6 shadow border border-black">
+          <div className="bg-white p-6 border border-black">
             <div className="text-center">
               <div className="text-5xl font-bold text-black mb-2">{stats.openOrders}</div>
               <div className="text-sm text-gray-600">Open Orders</div>
@@ -125,7 +125,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* In Process Orders */}
-          <div className="bg-white p-6 shadow border border-black">
+          <div className="bg-white p-6 border border-black">
             <div className="text-center">
               <div className="text-5xl font-bold text-black mb-2">{stats.inProcessOrders}</div>
               <div className="text-sm text-gray-600">Orders In Process</div>
@@ -133,7 +133,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Hello Block */}
-          <div className="bg-white p-6 shadow border border-black">
+          <div className="bg-white p-6 border border-black">
             <div className="text-center">
               <div className="text-5xl font-bold text-black mb-2">HELLO</div>
               <div className="text-sm text-gray-600">Coming Soon</div>
@@ -142,7 +142,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent Orders Table */}
-        <div className="bg-white shadow border border-black">
+        <div className="bg-white border border-black">
           <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Recent Orders</h2>
             <Link
