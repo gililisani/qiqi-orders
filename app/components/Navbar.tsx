@@ -72,7 +72,12 @@ export default function Navbar() {
         {/* Desktop Menu */}
         <div className="hidden md:flex items-center space-x-1">
           {menuItems.map((menu) => (
-            <div key={menu.name} className="relative">
+            <div 
+              key={menu.name} 
+              className="relative"
+              onMouseEnter={() => setOpenDropdown(menu.name)}
+              onMouseLeave={() => setOpenDropdown(null)}
+            >
               <button
                 className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded transition-colors"
                 onClick={(e) => {
