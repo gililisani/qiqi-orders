@@ -11,9 +11,9 @@ interface Order {
   total_value: number;
   status: string;
   po_number: string;
-  company: {
+  companies: {
     company_name: string;
-  }[];
+  } | null;
 }
 
 interface DashboardStats {
@@ -55,7 +55,7 @@ export default function AdminDashboard() {
           total_value,
           status,
           po_number,
-          company:companies(company_name)
+          companies!orders_company_id_fkey(company_name)
         `)
         .order('created_at', { ascending: false });
 
@@ -108,43 +108,49 @@ export default function AdminDashboard() {
         {/* Stats Blocks */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Today's Orders */}
-          <div className="bg-white p-6 rounded-lg shadow border">
+          <div className="bg-white p-6 shadow border border-black">
             <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600 mb-2">{stats.todayOrders}</div>
+              <div className="text-5xl font-bold text-black mb-2">{stats.todayOrders}</div>
               <div className="text-sm text-gray-600">New Orders Today</div>
               <div className="text-xs text-gray-500 mt-1">{formatCurrency(stats.todayOrdersValue)}</div>
             </div>
           </div>
 
           {/* Open Orders */}
-          <div className="bg-white p-6 rounded-lg shadow border">
+          <div className="bg-white p-6 shadow border border-black">
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">{stats.openOrders}</div>
+              <div className="text-5xl font-bold text-black mb-2">{stats.openOrders}</div>
               <div className="text-sm text-gray-600">Open Orders</div>
             </div>
           </div>
 
           {/* In Process Orders */}
-          <div className="bg-white p-6 rounded-lg shadow border">
+          <div className="bg-white p-6 shadow border border-black">
             <div className="text-center">
-              <div className="text-3xl font-bold text-orange-600 mb-2">{stats.inProcessOrders}</div>
+              <div className="text-5xl font-bold text-black mb-2">{stats.inProcessOrders}</div>
               <div className="text-sm text-gray-600">Orders In Process</div>
             </div>
           </div>
 
           {/* Hello Block */}
-          <div className="bg-white p-6 rounded-lg shadow border">
+          <div className="bg-white p-6 shadow border border-black">
             <div className="text-center">
-              <div className="text-3xl font-bold text-gray-600 mb-2">HELLO</div>
+              <div className="text-5xl font-bold text-black mb-2">HELLO</div>
               <div className="text-sm text-gray-600">Coming Soon</div>
             </div>
           </div>
         </div>
 
         {/* Recent Orders Table */}
-        <div className="bg-white rounded-lg shadow border">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="bg-white shadow border border-black">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Recent Orders</h2>
+            <Link
+              href="/admin/orders"
+              className="text-sm text-black underline hover:opacity-70"
+            >
+              View All
+            </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full divide-y divide-gray-200">
@@ -177,7 +183,7 @@ export default function AdminDashboard() {
                       {order.po_number || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.company?.[0]?.company_name || 'N/A'}
+                      {order.companies?.company_name || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -196,12 +202,17 @@ export default function AdminDashboard() {
                       {new Date(order.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Link
-                        href={`/admin/orders/${order.id}`}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        View
-                      </Link>
+                      <div className="flex items-center space-x-2">
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="text-black underline hover:opacity-70"
+                        >
+                          View
+                        </Link>
+                        <button className="bg-black text-white px-2 py-1 text-xs hover:opacity-90 transition">
+                          CSV
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
