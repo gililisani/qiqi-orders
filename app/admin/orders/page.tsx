@@ -341,28 +341,28 @@ export default function OrdersPage() {
         </div>
 
         <div className="overflow-x-auto" style={{ backgroundColor: 'rgb(250, 250, 250)' }}>
-          <table className="min-w-full bg-white border" style={{ borderColor: 'rgb(230, 230, 230)' }}>
+          <table className="w-full bg-white border" style={{ borderColor: 'rgb(230, 230, 230)' }}>
             <thead>
               <tr style={{ backgroundColor: 'transparent', border: 'none' }}>
-                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>PO Number</th>
-                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>Client</th>
-                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>Company</th>
-                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>Status</th>
-                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>Total</th>
-                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>Support Fund</th>
-                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>Date</th>
-                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>Actions</th>
+                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>PO Number</th>
+                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Client</th>
+                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Company</th>
+                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Status</th>
+                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Total</th>
+                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Support Fund</th>
+                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Date</th>
+                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
                 {filteredOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50 border-b border-solid" style={{ borderColor: 'rgb(230, 230, 230)' }}>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <td className="px-2 sm:px-6 py-4 whitespace-nowrap text-center">
                       <div className="text-sm font-medium text-gray-900">
                         {order.po_number || 'N/A'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <td className="px-2 sm:px-6 py-4 whitespace-nowrap text-center">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {order.client?.name || 'N/A'}
@@ -372,7 +372,7 @@ export default function OrdersPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <td className="px-2 sm:px-6 py-4 whitespace-nowrap text-center">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {order.company?.company_name || 'N/A'}
@@ -382,7 +382,7 @@ export default function OrdersPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <td className="px-2 sm:px-6 py-4 whitespace-nowrap text-center">
                       <select
                         value={order.status}
                         onChange={(e) => handleStatusChange(order.id, e.target.value)}
