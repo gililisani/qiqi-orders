@@ -789,7 +789,7 @@ export default function NewOrderPage() {
                       
                         return (
                           <tr key={product.id} className={`hover:bg-gray-50 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                          <td className="px-1 py-2 max-w-0 w-full">
+                          <td className="px-1 py-2 max-w-0" style={{width: '40%', maxWidth: '300px'}}>
                             <div className="flex items-center min-w-0 w-full">
                               <div className="flex-shrink-0 h-6 w-6 rounded overflow-hidden bg-gray-200 mr-1">
                                 {product.picture_url ? (
@@ -823,7 +823,7 @@ export default function NewOrderPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden sm:table-cell">
+                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden sm:table-cell" style={{width: '15%'}}>
                             <div className="truncate">
                               {product.sku}
                             </div>
@@ -836,10 +836,10 @@ export default function NewOrderPage() {
                           <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden xl:table-cell">
                             {product.case_pack}
                           </td>
-                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center">
+                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center" style={{width: '15%'}}>
                             ${unitPrice.toFixed(2)}
                           </td>
-                          <td className="px-1 py-2 text-center">
+                          <td className="px-1 py-2 text-center" style={{width: '20%'}}>
                             <div className="inline-flex items-center border border-gray-300 rounded select-none justify-center">
                               <button
                                 type="button"
@@ -887,10 +887,10 @@ export default function NewOrderPage() {
                               </button>
                             </div>
                           </td>
-                          <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden sm:table-cell">
+                          <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center hidden sm:table-cell" style={{width: '12%'}}>
                             {orderItem?.total_units || 0}
                           </td>
-                          <td className="px-2 py-3 whitespace-nowrap text-sm font-medium text-gray-900 text-center">
+                          <td className="px-1 py-2 text-xs sm:text-sm font-medium text-gray-900 text-center" style={{width: '18%'}}>
                             ${orderItem?.total_price?.toFixed(2) || '0.00'}
                           </td>
                         </tr>

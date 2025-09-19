@@ -746,7 +746,7 @@ export default function EditOrderPage() {
                         
                         return (
                           <tr key={product.id} className={`hover:bg-gray-50 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                            <td className="px-1 py-2 max-w-0 w-full">
+                            <td className="px-1 py-2 max-w-0" style={{width: '40%', maxWidth: '300px'}}>
                               <div className="flex items-center min-w-0 w-full">
                                 <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-hidden bg-gray-200">
                                   {product.picture_url ? (
