@@ -342,8 +342,8 @@ export default function OrdersPage() {
 
         <div className="overflow-x-auto" style={{ backgroundColor: 'rgb(250, 250, 250)' }}>
           <table className="w-full bg-white border" style={{ borderColor: 'rgb(230, 230, 230)' }}>
-            <thead>
-              <tr style={{ backgroundColor: 'transparent', border: 'none' }}>
+            <thead style={{ backgroundColor: 'transparent' }}>
+              <tr style={{ backgroundColor: 'transparent' }}>
                 <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>PO Number</th>
                 <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Client</th>
                 <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Company</th>
