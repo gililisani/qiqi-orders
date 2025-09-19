@@ -302,7 +302,7 @@ export default function OrdersPage() {
 
   return (
     <AdminLayout>
-      <div className="p-6" style={{ backgroundColor: 'rgb(244, 244, 242)', minHeight: '100vh' }}>
+      <div className="p-6" style={{ backgroundColor: 'rgb(250, 250, 250)', minHeight: '100vh' }}>
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold uppercase">ORDERS MANAGEMENT</h1>
           <div className="text-sm text-gray-500">
@@ -323,13 +323,13 @@ export default function OrdersPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1 px-3 py-2 border focus:outline-none focus:ring-2 focus:ring-black"
-            style={{ borderColor: 'rgb(198, 198, 190)' }}
+            style={{ borderColor: 'rgb(230, 230, 230)' }}
           />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 border focus:outline-none focus:ring-2 focus:ring-black"
-            style={{ borderColor: 'rgb(198, 198, 190)' }}
+            style={{ borderColor: 'rgb(230, 230, 230)' }}
           >
             <option value="">All Statuses</option>
             {statusOptions.map(option => (
@@ -340,11 +340,11 @@ export default function OrdersPage() {
           </select>
         </div>
 
-        <div className="overflow-x-auto border bg-white" style={{ borderColor: 'rgb(198, 198, 190)' }}>
+        <div className="overflow-x-auto border bg-white" style={{ borderColor: 'rgb(230, 230, 230)' }}>
           <table className="min-w-full">
-              <tbody className="bg-white" style={{ borderColor: 'rgb(198, 198, 190)' }}>
+              <tbody className="bg-white" style={{ borderColor: 'rgb(230, 230, 230)' }}>
                 {filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50 border-b" style={{ borderColor: 'rgb(198, 198, 190)' }}>
+                  <tr key={order.id} className="hover:bg-gray-50 border-b" style={{ borderColor: 'rgb(230, 230, 230)' }}>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="text-sm font-medium text-gray-900">
                         {order.po_number || 'N/A'}
