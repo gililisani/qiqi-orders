@@ -342,9 +342,21 @@ export default function OrdersPage() {
 
         <div className="overflow-x-auto border bg-white" style={{ borderColor: 'rgb(230, 230, 230)' }}>
           <table className="min-w-full">
-              <tbody className="bg-white" style={{ borderColor: 'rgb(230, 230, 230)' }}>
+            <thead>
+              <tr className="bg-white">
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">PO Number</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">Client</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">Company</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">Status</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">Total</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">Support Fund</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">Date</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-black uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white">
                 {filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50 border-b" style={{ borderColor: 'rgb(230, 230, 230)' }}>
+                  <tr key={order.id} className="hover:bg-gray-50 border-b border-solid" style={{ borderColor: 'rgb(230, 230, 230)' }}>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="text-sm font-medium text-gray-900">
                         {order.po_number || 'N/A'}
@@ -459,14 +471,16 @@ export default function OrdersPage() {
               <button
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 border text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ borderColor: 'rgb(230, 230, 230)' }}
               >
                 Previous
               </button>
               <button
                 onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalOrders / ordersPerPage), prev + 1))}
                 disabled={currentPage >= Math.ceil(totalOrders / ordersPerPage)}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 border text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ borderColor: 'rgb(230, 230, 230)' }}
               >
                 Next
               </button>
