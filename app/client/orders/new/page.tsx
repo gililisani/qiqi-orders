@@ -756,30 +756,25 @@ export default function NewOrderPage() {
                           {!showSupportFundRedemption && (
                             <tr className="border-t-2 border-gray-300">
                               <td colSpan={6} className="px-4 py-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center">
-                                    {categoryGroup.category?.image_url ? (
-                                      <img
-                                        src={categoryGroup.category.image_url}
-                                        alt={categoryGroup.category.name}
-                                        className="h-16 object-contain bg-white"
-                                        style={{ 
-                                          height: '64px',
-                                          width: 'auto'
-                                        }}
-                                        onError={(e) => {
-                                          e.currentTarget.style.display = 'none';
-                                        }}
-                                      />
-                                    ) : (
-                                      <h3 className="text-sm sm:text-base font-semibold text-gray-900">
-                                        Products without Category
-                                      </h3>
-                                    )}
-                                  </div>
-                                  <span className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
-                                    {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
-                                  </span>
+                                <div className="flex items-center">
+                                  {categoryGroup.category?.image_url ? (
+                                    <img
+                                      src={categoryGroup.category.image_url}
+                                      alt={categoryGroup.category.name}
+                                      className="object-contain bg-white"
+                                      style={{ 
+                                        height: '45px',
+                                        width: 'auto'
+                                      }}
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                      }}
+                                    />
+                                  ) : (
+                                    <h3 className="text-sm sm:text-base font-semibold text-gray-900">
+                                      {categoryGroup.category?.name || 'Products without Category'}
+                                    </h3>
+                                  )}
                                 </div>
                               </td>
                             </tr>

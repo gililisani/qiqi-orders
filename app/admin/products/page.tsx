@@ -296,9 +296,9 @@ export default function ProductsPage() {
                         <img
                           src={categoryGroup.category.image_url}
                           alt={categoryGroup.category.name}
-                          className="h-16 object-contain bg-white"
+                          className="object-contain bg-white"
                           style={{ 
-                            height: '64px',
+                            height: '45px',
                             width: 'auto'
                           }}
                           onError={(e) => {
@@ -307,23 +307,18 @@ export default function ProductsPage() {
                         />
                       ) : (
                         <h3 className="text-sm sm:text-base font-semibold text-gray-900">
-                          Products without Category
+                          {categoryGroup.category?.name || 'Products without Category'}
                         </h3>
                       )}
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xs sm:text-sm text-gray-600 bg-gray-200 px-2 py-1 rounded-full">
-                        {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
-                      </span>
-                      {categoryGroup.category && (
-                        <Link
-                          href={`/admin/categories/${categoryGroup.category.id}/edit`}
-                          className="text-xs sm:text-sm text-blue-600 hover:text-blue-800"
-                        >
-                          Edit Category
-                        </Link>
-                      )}
-                    </div>
+                    {categoryGroup.category && (
+                      <Link
+                        href={`/admin/categories/${categoryGroup.category.id}/edit`}
+                        className="text-xs sm:text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        Edit Category
+                      </Link>
+                    )}
                   </div>
                 </div>
 
