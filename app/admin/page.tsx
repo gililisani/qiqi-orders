@@ -146,47 +146,32 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent Orders Table */}
-        <div className="bg-white border border-black">
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Recent Orders</h2>
+        <div className="bg-transparent">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold uppercase">RECENT ORDERS</h2>
             <Link
               href="/admin/orders"
-              className="text-sm text-black underline hover:opacity-70"
+              className="text-sm text-black underline hover:opacity-70 uppercase"
             >
-              View All
+              VIEW ALL
             </Link>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    PO Number
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Company
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {recentOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+          <div className="space-y-4">
+            {recentOrders.map((order) => (
+              <div 
+                key={order.id} 
+                className="bg-white border border-gray-300 border-dashed p-6 hover:border-black hover:border-dashed transition-colors duration-200"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase">PO Number</div>
+                    <div className="text-sm font-medium text-gray-900">
                       {order.po_number || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase">Company</div>
+                    <div className="text-sm text-gray-900">
                       {(() => {
                         const companies = order.companies;
                         if (!companies) return 'N/A';
@@ -196,43 +181,49 @@ export default function AdminDashboard() {
                           : (companies as any).company_name;
                         return companyName || 'N/A';
                       })()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        order.status === 'Open' ? 'bg-green-100 text-green-800' :
-                        order.status === 'In Process' ? 'bg-yellow-100 text-yellow-800' :
-                        order.status === 'Done' ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase">Status</div>
+                    <div 
+                      className="text-sm font-bold border border-black px-2 py-1 inline-block"
+                      style={{ fontFamily: "'ABC P3rman3nt', monospace" }}
+                    >
+                      {order.status}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase">Total</div>
+                    <div className="text-sm text-gray-900">
                       {formatCurrency(order.total_value || 0)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase">Date</div>
+                    <div className="text-sm text-gray-500">
                       {new Date(order.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <Link
-                          href={`/admin/orders/${order.id}`}
-                          className="text-black underline hover:opacity-70"
-                        >
-                          View
-                        </Link>
-                        <button className="bg-black text-white px-2 py-1 text-xs hover:opacity-90 transition">
-                          CSV
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase">Actions</div>
+                    <div className="flex items-center space-x-2">
+                      <Link
+                        href={`/admin/orders/${order.id}`}
+                        className="text-black underline hover:opacity-70 text-sm"
+                      >
+                        View
+                      </Link>
+                      <button className="bg-black text-white px-2 py-1 text-xs hover:opacity-90 transition">
+                        CSV
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
           {recentOrders.length === 0 && (
-            <div className="px-6 py-12 text-center text-gray-500">
+            <div className="py-12 text-center text-gray-500">
               No orders found
             </div>
           )}
