@@ -712,28 +712,27 @@ export default function EditOrderPage() {
                             {/* Category Header Row */}
                             {!showSupportFundRedemption && (
                               <tr className="border-t-2 border-gray-300">
-                                <td colSpan={6} className="px-4 py-3">
+                                <td colSpan={6} className="px-4 py-4">
                                   <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-3">
+                                    <div className="flex items-center">
                                       {categoryGroup.category?.image_url ? (
                                         <img
                                           src={categoryGroup.category.image_url}
                                           alt={categoryGroup.category.name}
-                                          className="h-8 sm:h-10 object-contain bg-white border border-gray-200 rounded px-2"
+                                          className="h-16 object-contain bg-white"
                                           style={{ 
-                                            maxHeight: '40px',
-                                            maxWidth: '120px',
-                                            height: 'auto',
+                                            height: '64px',
                                             width: 'auto'
                                           }}
                                           onError={(e) => {
                                             e.currentTarget.style.display = 'none';
                                           }}
                                         />
-                                      ) : null}
-                                      <h3 className="text-sm sm:text-base font-semibold text-gray-900">
-                                        {categoryGroup.category?.name || 'Products without Category'}
-                                      </h3>
+                                      ) : (
+                                        <h3 className="text-sm sm:text-base font-semibold text-gray-900">
+                                          Products without Category
+                                        </h3>
+                                      )}
                                     </div>
                                     <span className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
                                       {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
