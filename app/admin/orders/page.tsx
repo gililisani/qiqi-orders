@@ -340,22 +340,20 @@ export default function OrdersPage() {
           </select>
         </div>
 
-        {/* Detached Table Header */}
-        <div className="px-6 py-2 mb-2">
-          <div className="grid grid-cols-8 gap-4 items-center">
-            <div className="text-xs font-medium text-black uppercase text-center">PO Number</div>
-            <div className="text-xs font-medium text-black uppercase text-center">Client</div>
-            <div className="text-xs font-medium text-black uppercase text-center">Company</div>
-            <div className="text-xs font-medium text-black uppercase text-center">Status</div>
-            <div className="text-xs font-medium text-black uppercase text-center">Total</div>
-            <div className="text-xs font-medium text-black uppercase text-center">Support Fund</div>
-            <div className="text-xs font-medium text-black uppercase text-center">Date</div>
-            <div className="text-xs font-medium text-black uppercase text-center">Actions</div>
-          </div>
-        </div>
-
         <div className="overflow-x-auto" style={{ backgroundColor: 'rgb(250, 250, 250)' }}>
           <table className="min-w-full bg-white border" style={{ borderColor: 'rgb(230, 230, 230)' }}>
+            <thead>
+              <tr style={{ backgroundColor: 'transparent', border: 'none' }}>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>PO Number</th>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>Client</th>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>Company</th>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>Status</th>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>Total</th>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>Support Fund</th>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>Date</th>
+                <th className="px-6 py-2 text-center text-xs font-medium text-black uppercase" style={{ backgroundColor: 'transparent', border: 'none' }}>Actions</th>
+              </tr>
+            </thead>
             <tbody>
                 {filteredOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50 border-b border-solid" style={{ borderColor: 'rgb(230, 230, 230)' }}>
