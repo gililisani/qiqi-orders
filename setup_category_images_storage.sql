@@ -17,34 +17,19 @@ FOR SELECT USING (bucket_id = 'category-images');
 CREATE POLICY "Admin write access for category images" ON storage.objects
 FOR INSERT WITH CHECK (
   bucket_id = 'category-images' AND
-  auth.role() = 'authenticated' AND
-  EXISTS (
-    SELECT 1 FROM auth.users 
-    WHERE auth.users.id = auth.uid() 
-    AND auth.users.raw_user_meta_data->>'role' = 'admin'
-  )
+  auth.role() = 'authenticated'
 );
 
 CREATE POLICY "Admin update access for category images" ON storage.objects
 FOR UPDATE USING (
   bucket_id = 'category-images' AND
-  auth.role() = 'authenticated' AND
-  EXISTS (
-    SELECT 1 FROM auth.users 
-    WHERE auth.users.id = auth.uid() 
-    AND auth.users.raw_user_meta_data->>'role' = 'admin'
-  )
+  auth.role() = 'authenticated'
 );
 
 CREATE POLICY "Admin delete access for category images" ON storage.objects
 FOR DELETE USING (
   bucket_id = 'category-images' AND
-  auth.role() = 'authenticated' AND
-  EXISTS (
-    SELECT 1 FROM auth.users 
-    WHERE auth.users.id = auth.uid() 
-    AND auth.users.raw_user_meta_data->>'role' = 'admin'
-  )
+  auth.role() = 'authenticated'
 );
 
 -- Verify bucket creation
