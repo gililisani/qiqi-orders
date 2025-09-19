@@ -85,23 +85,30 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
     setUploading(true);
 
     try {
+      console.log('Starting upload for file:', file.name, 'Type:', file.type, 'Size:', file.size);
+      
       let fileToUpload = file;
       let fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
 
       // Handle SVG files (no resizing needed)
       if (file.type === 'image/svg+xml') {
+        console.log('Processing SVG file as-is');
         // For SVG files, upload as-is without resizing
         fileToUpload = file;
         fileExt = 'svg';
       } else {
+        console.log('Processing raster image with resizing');
         // For raster images, resize proportionally
         fileToUpload = await resizeImage(file);
         fileExt = 'jpg'; // Always use JPG after resizing
+        console.log('Image resized, new size:', fileToUpload.size);
       }
       
       // Create unique filename
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `category-images/${fileName}`;
+      
+      console.log('Uploading to path:', filePath, 'File size:', fileToUpload.size);
 
       // Upload file to Supabase Storage
       const { error: uploadError } = await supabase.storage
@@ -123,7 +130,21 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
       onImageUploaded(publicUrl);
     } catch (error) {
       console.error('Error uploading category image:', error);
-      alert('Failed to upload image. Please try again.');
+      
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('storage')) {
+          alert('Storage error: Please check if the category-images bucket exists in Supabase.');
+        } else if (error.message.includes('permission')) {
+          alert('Permission error: Please ensure you have admin access.');
+        } else if (error.message.includes('size')) {
+          alert('File too large: Please select an image smaller than 5MB.');
+        } else {
+          alert(`Upload failed: ${error.message}`);
+        }
+      } else {
+        alert('Failed to upload image. Please try again.');
+      }
     } finally {
       setUploading(false);
     }
