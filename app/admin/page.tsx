@@ -241,8 +241,12 @@ export default function AdminDashboard() {
                     })()}
                   </div>
                   <div 
-                    className="text-sm font-bold border border-black px-2 py-1 inline-block"
-                    style={{ fontFamily: "'RTKassebong', monospace" }}
+                    className="text-sm font-bold border border-black px-2 py-1 inline-block text-center"
+                    style={{ 
+                      fontFamily: "'RTKassebong', monospace",
+                      minWidth: '90px',
+                      width: '90px'
+                    }}
                   >
                     {order.status}
                   </div>
