@@ -755,55 +755,32 @@ export default function NewOrderPage() {
                           {/* Category Header Row */}
                           {!showSupportFundRedemption && (
                             <tr className="border-t-2 border-gray-300">
-                              <td colSpan={6} className="px-0 py-0">
-                                <div className="relative">
-                                  {categoryGroup.category?.image_url ? (
-                                    <div className="relative">
+                              <td colSpan={6} className="px-4 py-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-3">
+                                    {categoryGroup.category?.image_url ? (
                                       <img
                                         src={categoryGroup.category.image_url}
                                         alt={categoryGroup.category.name}
-                                        className="w-full max-h-[100px] object-contain bg-white"
-                                        style={{ maxHeight: '100px' }}
+                                        className="h-8 sm:h-10 object-contain bg-white border border-gray-200 rounded px-2"
+                                        style={{ 
+                                          maxHeight: '40px',
+                                          maxWidth: '120px',
+                                          height: 'auto',
+                                          width: 'auto'
+                                        }}
                                         onError={(e) => {
-                                          // Fallback to text header if image fails to load
                                           e.currentTarget.style.display = 'none';
-                                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                                          if (fallback) fallback.style.display = 'block';
                                         }}
                                       />
-                                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 px-4 py-2">
-                                        <div className="flex items-center justify-between">
-                                          <h3 className="text-sm font-semibold text-white">
-                                            {categoryGroup.category.name}
-                                          </h3>
-                                          <span className="text-xs text-gray-200 bg-black bg-opacity-50 px-2 py-1 rounded">
-                                            {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="bg-gray-100 px-4 py-3 flex items-center justify-center">
-                                      <div className="text-center">
-                                        <h3 className="text-lg font-semibold text-gray-900">
-                                          {categoryGroup.category?.name || 'Products without Category'}
-                                        </h3>
-                                        <p className="text-sm text-gray-600">
-                                          {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  )}
-                                  <div style={{display: 'none'}} className="bg-gray-100 px-4 py-3 flex items-center justify-center">
-                                    <div className="text-center">
-                                      <h3 className="text-lg font-semibold text-gray-900">
-                                        {categoryGroup.category?.name || 'Products without Category'}
-                                      </h3>
-                                      <p className="text-sm text-gray-600">
-                                        {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
-                                      </p>
-                                    </div>
+                                    ) : null}
+                                    <h3 className="text-sm sm:text-base font-semibold text-gray-900">
+                                      {categoryGroup.category?.name || 'Products without Category'}
+                                    </h3>
                                   </div>
+                                  <span className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+                                    {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
+                                  </span>
                                 </div>
                               </td>
                             </tr>

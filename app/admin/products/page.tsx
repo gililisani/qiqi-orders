@@ -289,74 +289,37 @@ export default function ProductsPage() {
             return filteredCategorizedProducts.map((categoryGroup, categoryIndex) => (
               <div key={categoryGroup.category?.id || 'no-category'}>
                 {/* Category Header */}
-                <div className="border-b border-gray-300">
-                  <div className="relative">
-                    {categoryGroup.category?.image_url ? (
-                      <div className="relative">
+                <div className="border-b border-gray-300 bg-gray-50">
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      {categoryGroup.category?.image_url ? (
                         <img
                           src={categoryGroup.category.image_url}
                           alt={categoryGroup.category.name}
-                          className="w-full max-h-[100px] object-contain bg-white"
-                          style={{ maxHeight: '100px' }}
+                          className="h-8 sm:h-10 object-contain bg-white border border-gray-200 rounded px-2"
+                          style={{ 
+                            maxHeight: '40px',
+                            maxWidth: '120px',
+                            height: 'auto',
+                            width: 'auto'
+                          }}
                           onError={(e) => {
-                            // Fallback to text header if image fails to load
                             e.currentTarget.style.display = 'none';
-                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                            if (fallback) fallback.style.display = 'block';
                           }}
                         />
-                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 px-4 py-2">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="text-sm font-semibold text-white">
-                                {categoryGroup.category.name}
-                              </h3>
-                              <p className="text-xs text-gray-200">
-                                {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
-                              </p>
-                            </div>
-                            <Link
-                              href={`/admin/categories/${categoryGroup.category.id}/edit`}
-                              className="text-xs text-white hover:text-gray-200 bg-black bg-opacity-50 px-2 py-1 rounded"
-                            >
-                              Edit Category
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-gray-100 px-4 py-3 flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {categoryGroup.category?.name || 'Products without Category'}
-                          </h3>
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-800">
-                            {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                        {categoryGroup.category && (
-                          <Link
-                            href={`/admin/categories/${categoryGroup.category.id}/edit`}
-                            className="text-sm text-gray-600 hover:text-gray-800"
-                          >
-                            Edit Category
-                          </Link>
-                        )}
-                      </div>
-                    )}
-                    <div style={{display: 'none'}} className="bg-gray-100 px-4 py-3 flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {categoryGroup.category?.name || 'Products without Category'}
-                        </h3>
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-800">
-                          {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
-                        </span>
-                      </div>
+                      ) : null}
+                      <h3 className="text-sm sm:text-base font-semibold text-gray-900">
+                        {categoryGroup.category?.name || 'Products without Category'}
+                      </h3>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xs sm:text-sm text-gray-600 bg-gray-200 px-2 py-1 rounded-full">
+                        {categoryGroup.products.length} product{categoryGroup.products.length !== 1 ? 's' : ''}
+                      </span>
                       {categoryGroup.category && (
                         <Link
                           href={`/admin/categories/${categoryGroup.category.id}/edit`}
-                          className="text-sm text-gray-600 hover:text-gray-800"
+                          className="text-xs sm:text-sm text-blue-600 hover:text-blue-800"
                         >
                           Edit Category
                         </Link>
