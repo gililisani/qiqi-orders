@@ -53,3 +53,116 @@
 body {
   margin: 0;
 }
+
+/* ==============================================
+   CUSTOM TABLE DESIGN SYSTEM
+   ============================================== */
+
+/* Table Container */
+.custom-table-container {
+  @apply bg-transparent;
+}
+
+/* Table Header Section */
+.custom-table-header {
+  @apply flex items-center justify-between mb-6;
+}
+
+.custom-table-title {
+  @apply text-lg font-light uppercase;
+}
+
+.custom-table-action-link {
+  @apply text-sm text-black underline hover:opacity-70 uppercase;
+}
+
+/* Table Column Headers */
+.custom-table-column-headers {
+  @apply px-6 py-2 mb-2;
+}
+
+.custom-table-column-headers-grid {
+  @apply grid grid-cols-1 md:grid-cols-6 gap-4 items-center;
+}
+
+.custom-table-column-header {
+  @apply text-xs text-black uppercase font-medium text-center;
+}
+
+/* Table Rows Container */
+.custom-table-rows {
+  @apply space-y-4;
+}
+
+/* Individual Table Row */
+.custom-table-row {
+  @apply bg-white border border-gray-300 border-dashed hover:border-black hover:border-dashed transition-colors duration-200;
+  padding: 20px; /* 15% reduction from original 24px */
+}
+
+.custom-table-row-grid {
+  @apply grid grid-cols-1 md:grid-cols-6 gap-4 items-center;
+}
+
+/* Table Cell Styles */
+.custom-table-cell {
+  @apply text-sm text-gray-900 text-center;
+}
+
+.custom-table-cell-primary {
+  @apply text-sm font-medium text-gray-900 text-center;
+}
+
+.custom-table-cell-secondary {
+  @apply text-sm text-gray-500 text-center;
+}
+
+/* Status Badge */
+.custom-status-badge {
+  @apply text-xs tracking-wide leading-none px-3 pt-1 pb-1 w-fit h-fit grid place-items-center transition-colors duration-0 border border-black uppercase whitespace-nowrap;
+  font-family: 'RTKassebong', monospace;
+}
+
+.custom-status-container {
+  @apply flex justify-center;
+}
+
+/* Actions Cell */
+.custom-table-actions {
+  @apply flex items-center justify-center space-x-2;
+}
+
+.custom-table-action-button {
+  @apply text-black underline hover:opacity-70 text-sm uppercase;
+}
+
+.custom-table-csv-button {
+  @apply bg-black text-white px-2 py-1 text-xs hover:opacity-90 transition;
+}
+
+/* Stats Blocks */
+.custom-stats-block {
+  @apply p-6 border border-black;
+  background-color: rgb(244, 244, 242);
+}
+
+.custom-stats-content {
+  @apply text-center;
+}
+
+.custom-stats-number {
+  @apply text-5xl font-bold text-black mb-2;
+}
+
+.custom-stats-label {
+  @apply text-sm text-gray-600;
+}
+
+.custom-stats-sublabel {
+  @apply text-xs text-gray-500 mt-1;
+}
+
+/* Empty State */
+.custom-table-empty {
+  @apply py-12 text-center text-gray-500;
+}
