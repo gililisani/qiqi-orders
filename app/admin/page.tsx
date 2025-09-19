@@ -221,14 +221,14 @@ export default function AdminDashboard() {
           </div>
           
           {/* Table Header */}
-          <div className="p-6 mb-4" style={{ backgroundColor: 'rgb(244, 244, 242)' }}>
+          <div className="px-6 py-2 mb-2">
             <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
-              <div className="text-xs text-gray-500 uppercase font-medium">PO Number</div>
-              <div className="text-xs text-gray-500 uppercase font-medium">Company</div>
-              <div className="text-xs text-gray-500 uppercase font-medium">Status</div>
-              <div className="text-xs text-gray-500 uppercase font-medium">Total</div>
-              <div className="text-xs text-gray-500 uppercase font-medium">Date</div>
-              <div className="text-xs text-gray-500 uppercase font-medium">Actions</div>
+              <div className="text-xs text-black uppercase font-medium">PO Number</div>
+              <div className="text-xs text-black uppercase font-medium">Company</div>
+              <div className="text-xs text-black uppercase font-medium">Status</div>
+              <div className="text-xs text-black uppercase font-medium">Total</div>
+              <div className="text-xs text-black uppercase font-medium">Date</div>
+              <div className="text-xs text-black uppercase font-medium">Actions</div>
             </div>
           </div>
           
