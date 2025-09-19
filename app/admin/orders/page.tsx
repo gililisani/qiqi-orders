@@ -303,9 +303,9 @@ export default function OrdersPage() {
   return (
     <AdminLayout>
       <div className="p-6" style={{ backgroundColor: 'rgb(250, 250, 250)', minHeight: '100vh' }}>
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold uppercase">ORDERS MANAGEMENT</h1>
-          <div className="text-sm text-gray-500">
+        <div className="flex items-center justify-between mb-6" style={{ backgroundColor: 'transparent' }}>
+          <h1 className="text-2xl font-bold uppercase" style={{ backgroundColor: 'transparent' }}>ORDERS MANAGEMENT</h1>
+          <div className="text-sm text-gray-500" style={{ backgroundColor: 'transparent' }}>
             Showing {((currentPage - 1) * ordersPerPage) + 1}-{Math.min(currentPage * ordersPerPage, totalOrders)} of {totalOrders} orders
           </div>
         </div>
