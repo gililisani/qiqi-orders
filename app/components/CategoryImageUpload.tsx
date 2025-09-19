@@ -21,12 +21,27 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
       const img = new Image();
 
       img.onload = () => {
-        // Set canvas size to target dimensions (300x150px)
-        canvas.width = 300;
-        canvas.height = 150;
+        // Calculate proportional dimensions
+        const maxWidth = 300;
+        const maxHeight = 150;
+        
+        let { width, height } = img;
+        
+        // Calculate scaling factor to fit within max dimensions
+        const scaleX = maxWidth / width;
+        const scaleY = maxHeight / height;
+        const scale = Math.min(scaleX, scaleY); // Use the smaller scale to ensure it fits
+        
+        // Calculate new dimensions
+        const newWidth = Math.round(width * scale);
+        const newHeight = Math.round(height * scale);
+        
+        // Set canvas size to new proportional dimensions
+        canvas.width = newWidth;
+        canvas.height = newHeight;
 
-        // Draw and resize the image
-        ctx?.drawImage(img, 0, 0, 300, 150);
+        // Draw and resize the image proportionally
+        ctx?.drawImage(img, 0, 0, newWidth, newHeight);
 
         // Convert canvas to blob
         canvas.toBlob((blob) => {
@@ -60,27 +75,38 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file.');
+    // Validate file type (including SVG)
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please select a valid image file (JPEG, PNG, GIF, WebP, or SVG).');
       return;
     }
 
     setUploading(true);
 
     try {
-      // Resize the image before uploading
-      const resizedFile = await resizeImage(file);
+      let fileToUpload = file;
+      let fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+
+      // Handle SVG files (no resizing needed)
+      if (file.type === 'image/svg+xml') {
+        // For SVG files, upload as-is without resizing
+        fileToUpload = file;
+        fileExt = 'svg';
+      } else {
+        // For raster images, resize proportionally
+        fileToUpload = await resizeImage(file);
+        fileExt = 'jpg'; // Always use JPG after resizing
+      }
       
       // Create unique filename
-      const fileExt = 'jpg'; // Always use JPG after resizing
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `category-images/${fileName}`;
 
-      // Upload resized file to Supabase Storage
+      // Upload file to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('category-images')
-        .upload(filePath, resizedFile);
+        .upload(filePath, fileToUpload);
 
       if (uploadError) {
         throw uploadError;
@@ -171,10 +197,10 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
               Click to upload a category image
             </p>
             <p className="text-xs text-gray-500">
-              PNG, JPG, GIF up to 5MB
+              PNG, JPG, GIF, WebP, SVG up to 5MB
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              Images will be automatically resized to 300x150px
+              Raster images resized proportionally, SVG uploaded as-is
             </p>
           </div>
         )}

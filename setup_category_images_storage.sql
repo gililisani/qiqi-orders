@@ -7,7 +7,7 @@ VALUES (
   'category-images',
   true,
   5242880, -- 5MB limit
-  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml']
 );
 
 -- Create RLS policies for category images bucket
