@@ -302,188 +302,263 @@ export default function OrdersPage() {
 
   return (
     <AdminLayout>
-      <div className="p-6" style={{ backgroundColor: 'rgb(250, 250, 250)', minHeight: '100vh' }}>
-        <div className="flex items-center justify-between mb-6" style={{ backgroundColor: 'transparent' }}>
-          <h1 className="text-2xl font-bold uppercase" style={{ backgroundColor: 'transparent' }}>ORDERS MANAGEMENT</h1>
-          <div className="text-sm text-gray-500" style={{ backgroundColor: 'transparent' }}>
+      <div className="p-6 bg-gray-50 min-h-screen">
+        {/* Modern Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Orders Management</h1>
+            <p className="text-gray-600 mt-1">Manage and track all orders</p>
+          </div>
+          <div className="text-sm text-gray-500 bg-white px-4 py-2 rounded-lg border">
             Showing {((currentPage - 1) * ordersPerPage) + 1}-{Math.min(currentPage * ordersPerPage, totalOrders)} of {totalOrders} orders
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
             {error}
           </div>
         )}
 
-        <div className="mb-6 flex flex-col sm:flex-row gap-4">
-          <input
-            type="text"
-            placeholder="Search orders by client, company, or NetSuite number..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 px-3 py-2 border focus:outline-none focus:ring-2 focus:ring-black"
-            style={{ borderColor: 'rgb(230, 230, 230)' }}
-          />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border focus:outline-none focus:ring-2 focus:ring-black"
-            style={{ borderColor: 'rgb(230, 230, 230)' }}
-          >
-            <option value="">All Statuses</option>
-            {statusOptions.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+        {/* Modern Action Bar */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-4 flex-1">
+              <div className="relative flex-1 max-w-md">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search orders..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[140px]"
+              >
+                <option value="">All Statuses</option>
+                {statusOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                New Order
+              </button>
+              <button className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+                </svg>
+                Filters
+              </button>
+              <button className="px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export CSV
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="overflow-x-auto" style={{ backgroundColor: 'rgb(250, 250, 250)' }}>
-          <table className="w-full">
-            <thead style={{ backgroundColor: 'transparent' }}>
-              <tr style={{ backgroundColor: 'transparent' }}>
-                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>PO Number</th>
-                <th className="hidden sm:table-cell px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Client</th>
-                <th className="hidden sm:table-cell px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Company</th>
-                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Status</th>
-                <th className="hidden sm:table-cell px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Total</th>
-                <th className="hidden sm:table-cell px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Support Fund</th>
-                <th className="hidden sm:table-cell px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-20 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Date</th>
-                <th className="px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase w-24 sm:w-auto" style={{ backgroundColor: 'transparent', border: 'none' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white border" style={{ borderColor: 'rgb(230, 230, 230)' }}>
-                {filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50 border-b border-solid" style={{ borderColor: 'rgb(230, 230, 230)' }}>
-                    <td className="px-2 sm:px-6 py-4 whitespace-nowrap text-center">
-                      <div className="text-sm font-medium text-gray-900">
-                        {order.po_number || 'N/A'}
-                      </div>
-                    </td>
-                    <td className="hidden sm:table-cell px-2 sm:px-6 py-4 whitespace-nowrap text-center">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {order.client?.name || 'N/A'}
+        {/* Modern Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">PO Number</th>
+                  <th className="hidden sm:table-cell px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Client</th>
+                  <th className="hidden sm:table-cell px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Company</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
+                  <th className="hidden sm:table-cell px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total</th>
+                  <th className="hidden sm:table-cell px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Support Fund</th>
+                  <th className="hidden sm:table-cell px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredOrders.map((order) => {
+                  const statusConfig = statusOptions.find(opt => opt.value === order.status) || statusOptions[0];
+                  
+                  return (
+                    <tr key={order.id} className="hover:bg-gray-50 transition-colors duration-150">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-gray-900">
+                          #{order.po_number || order.id.substring(0, 8)}
                         </div>
+                      </td>
+                      <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                              <span className="text-sm font-medium text-white">
+                                {order.client?.name?.charAt(0)?.toUpperCase() || '?'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {order.client?.name || 'N/A'}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {order.client?.email || 'N/A'}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {order.company?.company_name || 'N/A'}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            NetSuite: {order.company?.netsuite_number || 'N/A'}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <select
+                          value={order.status}
+                          onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                          className={`text-xs font-medium px-3 py-1.5 rounded-full border-0 focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors ${statusConfig.color}`}
+                        >
+                          {statusOptions.map(option => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-gray-900">
+                          ${order.total_value?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                        </div>
+                      </td>
+                      <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          ${order.support_fund_used?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                        </div>
+                      </td>
+                      <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-500">
-                          {order.client?.email || 'N/A'}
+                          {new Date(order.created_at).toLocaleDateString()}
                         </div>
-                      </div>
-                    </td>
-                    <td className="hidden sm:table-cell px-2 sm:px-6 py-4 whitespace-nowrap text-center">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {order.company?.company_name || 'N/A'}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {order.company?.netsuite_number || 'N/A'}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-2 sm:px-6 py-4 whitespace-nowrap text-center">
-                      <select
-                        value={order.status}
-                        onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                        className="text-xs px-2 py-1 bg-black text-white border-0 focus:ring-2 focus:ring-black cursor-pointer"
-                      >
-                        {statusOptions.map(option => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
-                      ${order.total_value?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                    </td>
-                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
-                      ${order.support_fund_used?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                    </td>
-                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                      {new Date(order.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
-                      <div className="flex flex-col space-y-1 items-center">
-                        <div className="flex space-x-2">
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-3">
                           <Link
                             href={`/admin/orders/${order.id}`}
-                            className="text-blue-600 hover:text-blue-900"
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                           >
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
                             View
                           </Link>
                           <button
                             onClick={() => handleDownloadCSV(order.id)}
-                            className="text-green-600 hover:text-green-900"
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
                           >
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
                             CSV
                           </button>
                         </div>
-                        <div className="space-y-1">
+                        
+                        {/* NetSuite Actions */}
+                        <div className="mt-2 space-y-1">
                           {order.netsuite_sales_order_id ? (
-                            <div className="text-xs text-green-600">
-                              NetSuite: {order.netsuite_sales_order_id}
+                            <div className="text-xs text-green-600 font-medium">
+                              ✓ NetSuite: {order.netsuite_sales_order_id}
                             </div>
                           ) : (
                             <button
                               onClick={() => createOrderInNetSuite(order.id)}
                               disabled={creatingInNetSuite === order.id}
-                              className="text-xs text-orange-600 hover:text-orange-900 disabled:opacity-50"
+                              className="text-xs text-orange-600 hover:text-orange-800 disabled:opacity-50 font-medium transition-colors"
                             >
-                              {creatingInNetSuite === order.id ? 'Creating...' : 'Create in NetSuite'}
+                              {creatingInNetSuite === order.id ? 'Creating...' : '→ Create in NetSuite'}
                             </button>
                           )}
                           
-                          {/* Complete Order Button */}
                           {order.status === 'In Process' && order.netsuite_sales_order_id && (
                             <button
                               onClick={() => completeOrder(order.id)}
                               disabled={completingOrder === order.id}
-                              className="text-xs text-blue-600 hover:text-blue-900 disabled:opacity-50 block"
+                              className="block text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50 font-medium transition-colors"
                             >
-                              {completingOrder === order.id ? 'Completing...' : 'Mark Complete'}
+                              {completingOrder === order.id ? 'Completing...' : '✓ Mark Complete'}
                             </button>
                           )}
                         </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
         </div>
 
         {filteredOrders.length === 0 && !loading && (
-          <div className="text-center py-8 text-gray-500">
-            <p>No orders found.</p>
-            <p className="text-sm mt-2">Orders will appear here when clients place them.</p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
+            <p className="text-gray-500">Orders will appear here when clients place them.</p>
           </div>
         )}
 
-        {/* Pagination */}
+        {/* Modern Pagination */}
         {totalOrders > ordersPerPage && (
-          <div className="mt-6 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Page {currentPage} of {Math.ceil(totalOrders / ordersPerPage)}
-            </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-2 border text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ borderColor: 'rgb(230, 230, 230)' }}
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalOrders / ordersPerPage), prev + 1))}
-                disabled={currentPage >= Math.ceil(totalOrders / ordersPerPage)}
-                className="px-3 py-2 border text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ borderColor: 'rgb(230, 230, 230)' }}
-              >
-                Next
-              </button>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center text-sm text-gray-700">
+                <span>Page {currentPage} of {Math.ceil(totalOrders / ordersPerPage)}</span>
+                <span className="mx-2">•</span>
+                <span>{totalOrders} total orders</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalOrders / ordersPerPage), prev + 1))}
+                  disabled={currentPage >= Math.ceil(totalOrders / ordersPerPage)}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                >
+                  Next
+                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         )}
