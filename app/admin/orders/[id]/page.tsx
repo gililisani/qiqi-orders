@@ -48,6 +48,10 @@ interface OrderItem {
     price_international: number;
     price_americas: number;
     qualifies_for_credit_earning?: boolean;
+    case_pack?: number;
+    case_weight?: number;
+    hs_code?: string;
+    made_in?: string;
   };
 }
 
@@ -148,7 +152,7 @@ export default function OrderViewPage() {
         .from('order_items')
         .select(`
           *,
-          product:Products(item_name, sku, price_international, price_americas, qualifies_for_credit_earning)
+          product:Products(item_name, sku, price_international, price_americas, qualifies_for_credit_earning, case_pack, case_weight, hs_code, made_in)
         `)
         .eq('order_id', orderId)
         .order('is_support_fund_item', { ascending: true })
@@ -299,6 +303,89 @@ export default function OrderViewPage() {
     }
   };
 
+  const handleDownloadPackingList = async () => {
+    try {
+      if (!order || !orderItems.length) {
+        setError('No order data available for packing list generation');
+        return;
+      }
+
+      // Generate packing list CSV
+      const packingListCSV = generatePackingListCSV(order, orderItems);
+      
+      // Download the CSV
+      const blob = new Blob([packingListCSV], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `packing_list_${order.po_number || orderId}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const generatePackingListCSV = (order: Order, items: OrderItem[]): string => {
+    const headers = [
+      'PO Number',
+      'Order Date',
+      'Company',
+      'Ship To',
+      'SKU',
+      'Product Name',
+      'Quantity',
+      'Case Pack',
+      'Total Cases',
+      'Case Weight (kg)',
+      'Total Weight (kg)',
+      'HS Code',
+      'Made In'
+    ];
+
+    const rows: string[][] = [];
+    
+    // Add order header information
+    const orderDate = new Date(order.created_at).toLocaleDateString();
+    const companyName = order.company?.company_name || 'N/A';
+    const shipTo = order.company?.ship_to || 'Not specified';
+
+    items.forEach((item) => {
+      const product = item.product;
+      const casePack = product?.case_pack || 1;
+      const totalCases = Math.ceil(item.quantity / casePack);
+      const caseWeight = product?.case_weight || 0;
+      const totalWeight = totalCases * caseWeight;
+
+      const row = [
+        order.po_number || orderId,
+        orderDate,
+        companyName,
+        shipTo,
+        product?.sku || 'N/A',
+        product?.item_name || 'N/A',
+        item.quantity.toString(),
+        casePack.toString(),
+        totalCases.toString(),
+        caseWeight.toString(),
+        totalWeight.toFixed(2),
+        product?.hs_code || 'N/A',
+        product?.made_in || 'N/A'
+      ];
+      
+      rows.push(row);
+    });
+
+    // Convert to CSV format
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+
+    return csvContent;
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -346,6 +433,12 @@ export default function OrderViewPage() {
               className="bg-green-600 text-white px-4 py-2 hover:bg-green-700 transition"
             >
               Download CSV
+            </button>
+            <button
+              onClick={handleDownloadPackingList}
+              className="bg-purple-600 text-white px-4 py-2 hover:bg-purple-700 transition"
+            >
+              Packing List
             </button>
             <Link
               href="/admin/orders"
