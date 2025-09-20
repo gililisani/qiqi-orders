@@ -93,25 +93,9 @@ export default function OrderViewPage() {
     shippingMethod: 'Air',
     netsuiteReference: '',
     notes: '',
-    selectedCompany: 'Qiqi Global Ltd.',
     shipToAddress: ''
   });
 
-  // Company addresses for packing list
-  const companyAddresses = {
-    'Qiqi Global Ltd.': {
-      name: 'Qiqi Global Ltd.',
-      address: '123 Global Street\nLondon, UK\nSW1A 1AA',
-      phone: '+44 20 7123 4567',
-      email: 'info@qiqi-global.com'
-    },
-    'Qiqi INC.': {
-      name: 'Qiqi INC.',
-      address: '456 Business Ave\nNew York, NY 10001\nUnited States',
-      phone: '+1 555 123 4567',
-      email: 'info@qiqi-inc.com'
-    }
-  };
 
   useEffect(() => {
     if (orderId) {
@@ -336,7 +320,7 @@ export default function OrderViewPage() {
       }
 
       // Generate PDF using browser's print functionality
-      const pdfContent = generatePackingListHTML(order, orderItems, packingListData, companyAddresses);
+      const pdfContent = generatePackingListHTML(order, orderItems, packingListData);
       
       // Create a new window for printing
       const printWindow = window.open('', '_blank');
@@ -361,10 +345,10 @@ export default function OrderViewPage() {
     }
   };
 
-  const generatePackingListHTML = (order: Order, items: OrderItem[], data: any, companyAddresses: any): string => {
+  const generatePackingListHTML = (order: Order, items: OrderItem[], data: any): string => {
     const orderDate = new Date(order.created_at).toLocaleDateString();
     const companyName = order.company?.company_name || 'N/A';
-    const selectedCompany = companyAddresses[data.selectedCompany];
+    const subsidiary = order.company?.subsidiary;
     
     // Calculate totals
     let totalCases = 0;
@@ -382,15 +366,12 @@ export default function OrderViewPage() {
       
       return `
         <tr>
-          <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${product?.sku || 'N/A'}</td>
-          <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${product?.item_name || 'N/A'}</td>
-          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.quantity}</td>
-          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${casePack}</td>
-          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${cases}</td>
-          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${caseWeight} kg</td>
-          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${weight.toFixed(2)} kg</td>
-          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${product?.hs_code || 'N/A'}</td>
-          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${product?.made_in || 'N/A'}</td>
+          <td style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 11px;">${product?.sku || 'N/A'}</td>
+          <td style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 11px;">${product?.item_name || 'N/A'}</td>
+          <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 11px;">${item.quantity}</td>
+          <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 11px;">${casePack}</td>
+          <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 11px;">${cases}</td>
+          <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 11px;">${weight.toFixed(2)} kg</td>
         </tr>
       `;
     }).join('');
@@ -401,34 +382,48 @@ export default function OrderViewPage() {
       <head>
         <title>Packing List - ${order.po_number || orderId}</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .company-info { display: flex; justify-content: space-between; margin-bottom: 30px; }
-          .company-box { border: 2px solid #333; padding: 15px; width: 45%; }
-          .order-info { margin-bottom: 30px; }
+          @page { size: A4 portrait; margin: 0.5in; }
+          body { font-family: Arial, sans-serif; margin: 0; color: #333; font-size: 12px; }
+          .header { display: flex; align-items: center; margin-bottom: 20px; }
+          .logo { width: 80px; height: 32px; margin-right: 20px; }
+          .header-title { flex: 1; text-align: center; }
+          .header-title h1 { margin: 0; font-size: 24px; font-weight: bold; }
+          .header-title h2 { margin: 5px 0 0 0; font-size: 16px; }
+          .company-info { display: flex; justify-content: space-between; margin-bottom: 20px; }
+          .company-box { border: 1px solid #333; padding: 10px; width: 48%; font-size: 11px; }
+          .company-box h3 { margin: 0 0 8px 0; font-size: 12px; font-weight: bold; }
+          .order-info { margin-bottom: 20px; font-size: 11px; }
           .order-info table { width: 100%; border-collapse: collapse; }
-          .order-info td { padding: 5px; border: 1px solid #ddd; }
-          .items-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-          .items-table th { background-color: #f5f5f5; font-weight: bold; padding: 10px; border: 1px solid #ddd; text-align: center; }
-          .totals { text-align: right; margin-top: 20px; }
-          .notes { margin-top: 30px; }
-          .signature { margin-top: 50px; display: flex; justify-content: space-between; }
-          @media print { body { margin: 0; } }
+          .order-info td { padding: 3px 8px; border: 1px solid #ddd; }
+          .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
+          .items-table th { background-color: #f5f5f5; font-weight: bold; padding: 8px 6px; border: 1px solid #ddd; text-align: center; font-size: 11px; }
+          .totals { text-align: right; margin-top: 15px; font-size: 11px; }
+          .notes { margin-top: 20px; font-size: 11px; }
+          .signature { margin-top: 30px; display: flex; justify-content: space-between; font-size: 11px; }
+          @media print { 
+            body { margin: 0; }
+            .header { page-break-inside: avoid; }
+            .company-info { page-break-inside: avoid; }
+            .order-info { page-break-inside: avoid; }
+          }
         </style>
       </head>
       <body>
         <div class="header">
-          <h1>PACKING LIST</h1>
-          <h2>Invoice #: ${data.invoiceNumber}</h2>
+          <img src="/logo.png" alt="Qiqi Logo" class="logo" />
+          <div class="header-title">
+            <h1>PACKING LIST</h1>
+            <h2>Invoice #: ${data.invoiceNumber}</h2>
+          </div>
         </div>
 
         <div class="company-info">
           <div class="company-box">
             <h3>FROM:</h3>
-            <div><strong>${selectedCompany.name}</strong></div>
-            <div style="white-space: pre-line;">${selectedCompany.address}</div>
-            <div>Phone: ${selectedCompany.phone}</div>
-            <div>Email: ${selectedCompany.email}</div>
+            <div><strong>${subsidiary?.name || 'N/A'}</strong></div>
+            <div style="white-space: pre-line;">${subsidiary?.ship_from_address || 'Address not configured'}</div>
+            ${subsidiary?.phone ? `<div>Phone: ${subsidiary.phone}</div>` : ''}
+            ${subsidiary?.email ? `<div>Email: ${subsidiary.email}</div>` : ''}
           </div>
           
           <div class="company-box">
@@ -449,7 +444,7 @@ export default function OrderViewPage() {
             <tr>
               <td><strong>Shipping Method:</strong></td>
               <td>${data.shippingMethod}</td>
-              <td><strong>NetSuite Reference:</strong></td>
+              <td><strong>Sales Order:</strong></td>
               <td>${data.netsuiteReference || 'N/A'}</td>
             </tr>
           </table>
@@ -460,13 +455,10 @@ export default function OrderViewPage() {
             <tr>
               <th>SKU</th>
               <th>Product Name</th>
-              <th>Quantity</th>
+              <th>Total Units</th>
               <th>Case Pack</th>
               <th>Cases</th>
-              <th>Case Weight</th>
               <th>Total Weight</th>
-              <th>HS Code</th>
-              <th>Made In</th>
             </tr>
           </thead>
           <tbody>
@@ -477,12 +469,12 @@ export default function OrderViewPage() {
         <div class="totals">
           <table style="margin-left: auto;">
             <tr>
-              <td style="padding: 5px; text-align: right;"><strong>Total Cases:</strong></td>
-              <td style="padding: 5px; text-align: center;"><strong>${totalCases}</strong></td>
+              <td style="padding: 3px 8px; text-align: right;"><strong>Total Cases:</strong></td>
+              <td style="padding: 3px 8px; text-align: center;"><strong>${totalCases}</strong></td>
             </tr>
             <tr>
-              <td style="padding: 5px; text-align: right;"><strong>Total Weight:</strong></td>
-              <td style="padding: 5px; text-align: center;"><strong>${totalWeight.toFixed(2)} kg</strong></td>
+              <td style="padding: 3px 8px; text-align: right;"><strong>Total Weight:</strong></td>
+              <td style="padding: 3px 8px; text-align: center;"><strong>${totalWeight.toFixed(2)} kg</strong></td>
             </tr>
           </table>
         </div>
@@ -490,7 +482,7 @@ export default function OrderViewPage() {
         ${data.notes ? `
         <div class="notes">
           <h3>Notes:</h3>
-          <div style="border: 1px solid #ddd; padding: 15px; min-height: 50px;">
+          <div style="border: 1px solid #ddd; padding: 10px; min-height: 40px;">
             ${data.notes.replace(/\n/g, '<br>')}
           </div>
         </div>
@@ -498,12 +490,12 @@ export default function OrderViewPage() {
 
         <div class="signature">
           <div>
-            <div style="border-top: 1px solid #333; width: 200px; margin-top: 50px;">
+            <div style="border-top: 1px solid #333; width: 180px; margin-top: 30px;">
               <div style="text-align: center;">Shipper Signature</div>
             </div>
           </div>
           <div>
-            <div style="border-top: 1px solid #333; width: 200px; margin-top: 50px;">
+            <div style="border-top: 1px solid #333; width: 180px; margin-top: 30px;">
               <div style="text-align: center;">Date</div>
             </div>
           </div>
@@ -917,33 +909,18 @@ export default function OrderViewPage() {
                   </select>
                 </div>
 
-                {/* NetSuite Reference */}
+                {/* Sales Order Reference */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    NetSuite Sales Order Reference
+                    Sales Order Reference
                   </label>
                   <input
                     type="text"
                     value={packingListData.netsuiteReference}
                     onChange={(e) => setPackingListData(prev => ({ ...prev, netsuiteReference: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
-                    placeholder="Enter NetSuite sales order reference"
+                    placeholder="Enter sales order reference"
                   />
-                </div>
-
-                {/* Company Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    From Company *
-                  </label>
-                  <select
-                    value={packingListData.selectedCompany}
-                    onChange={(e) => setPackingListData(prev => ({ ...prev, selectedCompany: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
-                  >
-                    <option value="Qiqi Global Ltd.">Qiqi Global Ltd.</option>
-                    <option value="Qiqi INC.">Qiqi INC.</option>
-                  </select>
                 </div>
 
                 {/* Ship To Address */}
@@ -973,24 +950,6 @@ export default function OrderViewPage() {
                   />
                 </div>
 
-                {/* Preview Selected Company */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    From Company Details:
-                  </label>
-                  <div className="bg-gray-50 p-4 border border-gray-300">
-                    <div className="font-medium">{companyAddresses[packingListData.selectedCompany as keyof typeof companyAddresses].name}</div>
-                    <div className="text-sm text-gray-700 whitespace-pre-line">
-                      {companyAddresses[packingListData.selectedCompany as keyof typeof companyAddresses].address}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Phone: {companyAddresses[packingListData.selectedCompany as keyof typeof companyAddresses].phone}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Email: {companyAddresses[packingListData.selectedCompany as keyof typeof companyAddresses].email}
-                    </div>
-                  </div>
-                </div>
               </div>
 
               <div className="flex justify-end space-x-3 mt-6">

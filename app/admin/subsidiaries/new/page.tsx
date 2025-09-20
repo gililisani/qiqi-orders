@@ -7,13 +7,21 @@ import Link from 'next/link';
 
 interface FormData {
   name: string;
+  ship_from_address: string;
+  company_address: string;
+  phone: string;
+  email: string;
 }
 
 export default function NewSubsidiaryPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState<FormData>({
-    name: ''
+    name: '',
+    ship_from_address: '',
+    company_address: '',
+    phone: '',
+    email: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,7 +33,11 @@ export default function NewSubsidiaryPage() {
       const { error } = await supabase
         .from('subsidiaries')
         .insert([{
-          name: formData.name
+          name: formData.name,
+          ship_from_address: formData.ship_from_address,
+          company_address: formData.company_address,
+          phone: formData.phone,
+          email: formData.email
         }]);
 
       if (error) throw error;
@@ -38,7 +50,7 @@ export default function NewSubsidiaryPage() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -76,6 +88,64 @@ export default function NewSubsidiaryPage() {
               value={formData.name}
               onChange={handleChange}
               required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Ship From Address *
+            </label>
+            <textarea
+              name="ship_from_address"
+              value={formData.ship_from_address}
+              onChange={handleChange}
+              required
+              rows={4}
+              placeholder="Enter full shipping address for this subsidiary..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Company Address *
+            </label>
+            <textarea
+              name="company_address"
+              value={formData.company_address}
+              onChange={handleChange}
+              required
+              rows={4}
+              placeholder="Enter company address for this subsidiary..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Phone
+            </label>
+            <input
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              placeholder="Enter phone number"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="Enter email address"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
             />
           </div>
