@@ -25,7 +25,13 @@ interface Order {
     netsuite_number: string;
     ship_to?: string;
     support_fund?: { percent: number };
-    subsidiary?: { name: string };
+    subsidiary?: { 
+      name: string;
+      ship_from_address?: string;
+      company_address?: string;
+      phone?: string;
+      email?: string;
+    };
     class?: { name: string };
     location?: { location_name: string };
     incoterm?: { name: string };
@@ -130,7 +136,7 @@ export default function OrderViewPage() {
             netsuite_number,
             ship_to,
             support_fund:support_fund_levels(percent),
-            subsidiary:subsidiaries(name),
+            subsidiary:subsidiaries(name, ship_from_address, company_address, phone, email),
             class:classes(name),
             location:Locations(location_name),
             incoterm:incoterms(name),
