@@ -87,6 +87,31 @@ export default function OrderViewPage() {
   const [isReordering, setIsReordering] = useState(false);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [sendingNotification, setSendingNotification] = useState(false);
+  const [showPackingListForm, setShowPackingListForm] = useState(false);
+  const [packingListData, setPackingListData] = useState({
+    invoiceNumber: '',
+    shippingMethod: 'Air',
+    netsuiteReference: '',
+    notes: '',
+    selectedCompany: 'Qiqi Global Ltd.',
+    shipToAddress: ''
+  });
+
+  // Company addresses for packing list
+  const companyAddresses = {
+    'Qiqi Global Ltd.': {
+      name: 'Qiqi Global Ltd.',
+      address: '123 Global Street\nLondon, UK\nSW1A 1AA',
+      phone: '+44 20 7123 4567',
+      email: 'info@qiqi-global.com'
+    },
+    'Qiqi INC.': {
+      name: 'Qiqi INC.',
+      address: '456 Business Ave\nNew York, NY 10001\nUnited States',
+      phone: '+1 555 123 4567',
+      email: 'info@qiqi-inc.com'
+    }
+  };
 
   useEffect(() => {
     if (orderId) {
@@ -303,87 +328,189 @@ export default function OrderViewPage() {
     }
   };
 
-  const handleDownloadPackingList = async () => {
+  const handleGeneratePackingListPDF = async () => {
     try {
       if (!order || !orderItems.length) {
         setError('No order data available for packing list generation');
         return;
       }
 
-      // Generate packing list CSV
-      const packingListCSV = generatePackingListCSV(order, orderItems);
+      // Generate PDF using browser's print functionality
+      const pdfContent = generatePackingListHTML(order, orderItems, packingListData, companyAddresses);
       
-      // Download the CSV
-      const blob = new Blob([packingListCSV], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `packing_list_${order.po_number || orderId}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Create a new window for printing
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        setError('Unable to open print window. Please check your popup blocker.');
+        return;
+      }
+
+      printWindow.document.write(pdfContent);
+      printWindow.document.close();
+      
+      // Wait for content to load then print
+      printWindow.onload = () => {
+        printWindow.print();
+        printWindow.close();
+      };
+
+      // Close the modal
+      setShowPackingListForm(false);
     } catch (err: any) {
       setError(err.message);
     }
   };
 
-  const generatePackingListCSV = (order: Order, items: OrderItem[]): string => {
-    const headers = [
-      'PO Number',
-      'Order Date',
-      'Company',
-      'Ship To',
-      'SKU',
-      'Product Name',
-      'Quantity',
-      'Case Pack',
-      'Total Cases',
-      'Case Weight (kg)',
-      'Total Weight (kg)',
-      'HS Code',
-      'Made In'
-    ];
-
-    const rows: string[][] = [];
-    
-    // Add order header information
+  const generatePackingListHTML = (order: Order, items: OrderItem[], data: any, companyAddresses: any): string => {
     const orderDate = new Date(order.created_at).toLocaleDateString();
     const companyName = order.company?.company_name || 'N/A';
-    const shipTo = order.company?.ship_to || 'Not specified';
-
-    items.forEach((item) => {
+    const selectedCompany = companyAddresses[data.selectedCompany];
+    
+    // Calculate totals
+    let totalCases = 0;
+    let totalWeight = 0;
+    
+    const itemsHTML = items.map((item) => {
       const product = item.product;
       const casePack = product?.case_pack || 1;
-      const totalCases = Math.ceil(item.quantity / casePack);
+      const cases = Math.ceil(item.quantity / casePack);
       const caseWeight = product?.case_weight || 0;
-      const totalWeight = totalCases * caseWeight;
-
-      const row = [
-        order.po_number || orderId,
-        orderDate,
-        companyName,
-        shipTo,
-        product?.sku || 'N/A',
-        product?.item_name || 'N/A',
-        item.quantity.toString(),
-        casePack.toString(),
-        totalCases.toString(),
-        caseWeight.toString(),
-        totalWeight.toFixed(2),
-        product?.hs_code || 'N/A',
-        product?.made_in || 'N/A'
-      ];
+      const weight = cases * caseWeight;
       
-      rows.push(row);
-    });
+      totalCases += cases;
+      totalWeight += weight;
+      
+      return `
+        <tr>
+          <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${product?.sku || 'N/A'}</td>
+          <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${product?.item_name || 'N/A'}</td>
+          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.quantity}</td>
+          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${casePack}</td>
+          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${cases}</td>
+          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${caseWeight} kg</td>
+          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${weight.toFixed(2)} kg</td>
+          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${product?.hs_code || 'N/A'}</td>
+          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${product?.made_in || 'N/A'}</td>
+        </tr>
+      `;
+    }).join('');
 
-    // Convert to CSV format
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(field => `"${field}"`).join(','))
-      .join('\n');
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Packing List - ${order.po_number || orderId}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .company-info { display: flex; justify-content: space-between; margin-bottom: 30px; }
+          .company-box { border: 2px solid #333; padding: 15px; width: 45%; }
+          .order-info { margin-bottom: 30px; }
+          .order-info table { width: 100%; border-collapse: collapse; }
+          .order-info td { padding: 5px; border: 1px solid #ddd; }
+          .items-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          .items-table th { background-color: #f5f5f5; font-weight: bold; padding: 10px; border: 1px solid #ddd; text-align: center; }
+          .totals { text-align: right; margin-top: 20px; }
+          .notes { margin-top: 30px; }
+          .signature { margin-top: 50px; display: flex; justify-content: space-between; }
+          @media print { body { margin: 0; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>PACKING LIST</h1>
+          <h2>Invoice #: ${data.invoiceNumber}</h2>
+        </div>
 
-    return csvContent;
+        <div class="company-info">
+          <div class="company-box">
+            <h3>FROM:</h3>
+            <div><strong>${selectedCompany.name}</strong></div>
+            <div style="white-space: pre-line;">${selectedCompany.address}</div>
+            <div>Phone: ${selectedCompany.phone}</div>
+            <div>Email: ${selectedCompany.email}</div>
+          </div>
+          
+          <div class="company-box">
+            <h3>SHIP TO:</h3>
+            <div><strong>${companyName}</strong></div>
+            <div style="white-space: pre-line;">${data.shipToAddress}</div>
+          </div>
+        </div>
+
+        <div class="order-info">
+          <table>
+            <tr>
+              <td><strong>PO Number:</strong></td>
+              <td>${order.po_number || orderId}</td>
+              <td><strong>Order Date:</strong></td>
+              <td>${orderDate}</td>
+            </tr>
+            <tr>
+              <td><strong>Shipping Method:</strong></td>
+              <td>${data.shippingMethod}</td>
+              <td><strong>NetSuite Reference:</strong></td>
+              <td>${data.netsuiteReference || 'N/A'}</td>
+            </tr>
+          </table>
+        </div>
+
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Product Name</th>
+              <th>Quantity</th>
+              <th>Case Pack</th>
+              <th>Cases</th>
+              <th>Case Weight</th>
+              <th>Total Weight</th>
+              <th>HS Code</th>
+              <th>Made In</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHTML}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <table style="margin-left: auto;">
+            <tr>
+              <td style="padding: 5px; text-align: right;"><strong>Total Cases:</strong></td>
+              <td style="padding: 5px; text-align: center;"><strong>${totalCases}</strong></td>
+            </tr>
+            <tr>
+              <td style="padding: 5px; text-align: right;"><strong>Total Weight:</strong></td>
+              <td style="padding: 5px; text-align: center;"><strong>${totalWeight.toFixed(2)} kg</strong></td>
+            </tr>
+          </table>
+        </div>
+
+        ${data.notes ? `
+        <div class="notes">
+          <h3>Notes:</h3>
+          <div style="border: 1px solid #ddd; padding: 15px; min-height: 50px;">
+            ${data.notes.replace(/\n/g, '<br>')}
+          </div>
+        </div>
+        ` : ''}
+
+        <div class="signature">
+          <div>
+            <div style="border-top: 1px solid #333; width: 200px; margin-top: 50px;">
+              <div style="text-align: center;">Shipper Signature</div>
+            </div>
+          </div>
+          <div>
+            <div style="border-top: 1px solid #333; width: 200px; margin-top: 50px;">
+              <div style="text-align: center;">Date</div>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
   };
 
   if (loading) {
@@ -435,7 +562,7 @@ export default function OrderViewPage() {
               Download CSV
             </button>
             <button
-              onClick={handleDownloadPackingList}
+              onClick={() => setShowPackingListForm(true)}
               className="bg-purple-600 text-white px-4 py-2 hover:bg-purple-700 transition"
             >
               Packing List
@@ -744,6 +871,151 @@ export default function OrderViewPage() {
             })()}
           </div>
         </div>
+
+        {/* Packing List Form Modal */}
+        {showPackingListForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Generate Packing List</h2>
+                <button
+                  onClick={() => setShowPackingListForm(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Invoice Number */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Invoice Number *
+                  </label>
+                  <input
+                    type="text"
+                    value={packingListData.invoiceNumber}
+                    onChange={(e) => setPackingListData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
+                    placeholder="Enter invoice number"
+                    required
+                  />
+                </div>
+
+                {/* Shipping Method */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Shipping Method *
+                  </label>
+                  <select
+                    value={packingListData.shippingMethod}
+                    onChange={(e) => setPackingListData(prev => ({ ...prev, shippingMethod: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
+                  >
+                    <option value="Air">Air</option>
+                    <option value="Ocean">Ocean</option>
+                  </select>
+                </div>
+
+                {/* NetSuite Reference */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    NetSuite Sales Order Reference
+                  </label>
+                  <input
+                    type="text"
+                    value={packingListData.netsuiteReference}
+                    onChange={(e) => setPackingListData(prev => ({ ...prev, netsuiteReference: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
+                    placeholder="Enter NetSuite sales order reference"
+                  />
+                </div>
+
+                {/* Company Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    From Company *
+                  </label>
+                  <select
+                    value={packingListData.selectedCompany}
+                    onChange={(e) => setPackingListData(prev => ({ ...prev, selectedCompany: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
+                  >
+                    <option value="Qiqi Global Ltd.">Qiqi Global Ltd.</option>
+                    <option value="Qiqi INC.">Qiqi INC.</option>
+                  </select>
+                </div>
+
+                {/* Ship To Address */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ship To Address *
+                  </label>
+                  <textarea
+                    value={packingListData.shipToAddress || order?.company?.ship_to || ''}
+                    onChange={(e) => setPackingListData(prev => ({ ...prev, shipToAddress: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black h-24"
+                    placeholder="Enter shipping address"
+                    required
+                  />
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    value={packingListData.notes}
+                    onChange={(e) => setPackingListData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black h-24"
+                    placeholder="Enter any additional notes for the packing list"
+                  />
+                </div>
+
+                {/* Preview Selected Company */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    From Company Details:
+                  </label>
+                  <div className="bg-gray-50 p-4 border border-gray-300">
+                    <div className="font-medium">{companyAddresses[packingListData.selectedCompany as keyof typeof companyAddresses].name}</div>
+                    <div className="text-sm text-gray-700 whitespace-pre-line">
+                      {companyAddresses[packingListData.selectedCompany as keyof typeof companyAddresses].address}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Phone: {companyAddresses[packingListData.selectedCompany as keyof typeof companyAddresses].phone}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Email: {companyAddresses[packingListData.selectedCompany as keyof typeof companyAddresses].email}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowPackingListForm(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (!packingListData.invoiceNumber || !packingListData.shipToAddress) {
+                      alert('Please fill in all required fields (Invoice Number and Ship To Address)');
+                      return;
+                    }
+                    handleGeneratePackingListPDF();
+                  }}
+                  className="px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 transition"
+                >
+                  Generate PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );
