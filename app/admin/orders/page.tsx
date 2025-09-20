@@ -516,6 +516,7 @@ export default function OrdersPage() {
                 })}
               </tbody>
             </table>
+          </div>
         </div>
 
         {filteredOrders.length === 0 && !loading && (
