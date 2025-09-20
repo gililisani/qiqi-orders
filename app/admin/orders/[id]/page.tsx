@@ -98,8 +98,7 @@ export default function OrderViewPage() {
     invoiceNumber: '',
     shippingMethod: 'Air',
     netsuiteReference: '',
-    notes: '',
-    shipToAddress: ''
+    notes: ''
   });
 
 
@@ -435,7 +434,7 @@ export default function OrderViewPage() {
           <div class="company-box">
             <h3>SHIP TO:</h3>
             <div><strong>${companyName}</strong></div>
-            <div style="white-space: pre-line;">${data.shipToAddress}</div>
+            <div style="white-space: pre-line;">${order.company?.ship_to || 'Ship To Address not configured'}</div>
           </div>
         </div>
 
@@ -929,19 +928,6 @@ export default function OrderViewPage() {
                   />
                 </div>
 
-                {/* Ship To Address */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ship To Address *
-                  </label>
-                  <textarea
-                    value={packingListData.shipToAddress || order?.company?.ship_to || ''}
-                    onChange={(e) => setPackingListData(prev => ({ ...prev, shipToAddress: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black h-24"
-                    placeholder="Enter shipping address"
-                    required
-                  />
-                </div>
 
                 {/* Notes */}
                 <div>
@@ -967,8 +953,12 @@ export default function OrderViewPage() {
                 </button>
                 <button
                   onClick={() => {
-                    if (!packingListData.invoiceNumber || !packingListData.shipToAddress) {
-                      alert('Please fill in all required fields (Invoice Number and Ship To Address)');
+                    if (!packingListData.invoiceNumber) {
+                      alert('Please fill in the Invoice Number');
+                      return;
+                    }
+                    if (!order?.company?.ship_to) {
+                      alert('Company Ship To Address is not configured. Please update the company information first.');
                       return;
                     }
                     handleGeneratePackingListPDF();

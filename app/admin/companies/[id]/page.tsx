@@ -14,11 +14,16 @@ interface Company {
   subsidiary_id: string;
   class_id: string;
   location_id: string;
+  ship_to?: string;
+  incoterm_id?: string;
+  payment_term_id?: string;
   // Related data
   support_fund?: { percent: number };
   subsidiary?: { name: string };
   class?: { name: string };
   location?: { location_name: string };
+  incoterm?: { name: string };
+  payment_term?: { name: string };
 }
 
 interface User {
@@ -65,7 +70,9 @@ export default function CompanyViewPage() {
           support_fund:support_fund_levels(percent),
           subsidiary:subsidiaries(name),
           class:classes(name),
-          location:Locations(location_name)
+          location:Locations(location_name),
+          incoterm:incoterms(name),
+          payment_term:payment_terms(name)
         `)
         .eq('id', companyId)
         .single();
@@ -199,6 +206,26 @@ export default function CompanyViewPage() {
                 <label className="text-sm font-medium text-gray-500">Location</label>
                 <p className="text-lg">{company.location?.location_name || 'N/A'}</p>
               </div>
+              {company.ship_to && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Ship To Address</label>
+                  <div className="text-sm text-gray-700 whitespace-pre-line bg-gray-50 p-3 rounded border">
+                    {company.ship_to}
+                  </div>
+                </div>
+              )}
+              {company.incoterm && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Incoterm</label>
+                  <p className="text-lg">{company.incoterm.name}</p>
+                </div>
+              )}
+              {company.payment_term && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Payment Terms</label>
+                  <p className="text-lg">{company.payment_term.name}</p>
+                </div>
+              )}
             </div>
           </div>
 
