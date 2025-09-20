@@ -9,6 +9,10 @@ interface Subsidiary {
   id: string;
   name: string;
   created_at: string;
+  ship_from_address?: string;
+  company_address?: string;
+  phone?: string;
+  email?: string;
 }
 
 export default function SubsidiariesPage() {
@@ -112,6 +116,20 @@ export default function SubsidiariesPage() {
                       <h3 className="text-lg font-medium text-gray-900">
                         {subsidiary.name}
                       </h3>
+                      <div className="mt-1 text-sm text-gray-500">
+                        {subsidiary.phone && (
+                          <span className="mr-4">📞 {subsidiary.phone}</span>
+                        )}
+                        {subsidiary.email && (
+                          <span>✉️ {subsidiary.email}</span>
+                        )}
+                      </div>
+                      {subsidiary.ship_from_address && (
+                        <div className="mt-2 text-xs text-gray-600">
+                          <strong>Ship From:</strong> {subsidiary.ship_from_address.substring(0, 100)}
+                          {subsidiary.ship_from_address.length > 100 && '...'}
+                        </div>
+                      )}
                     </div>
                     <div className="flex space-x-2">
                       <Link
