@@ -354,6 +354,7 @@ export default function OrderViewPage() {
     const orderDate = new Date(order.created_at).toLocaleDateString();
     const companyName = order.company?.company_name || 'N/A';
     const subsidiary = order.company?.subsidiary;
+    const packingListDate = new Date().toLocaleDateString();
     
     // Calculate totals
     let totalCases = 0;
@@ -371,12 +372,12 @@ export default function OrderViewPage() {
       
       return `
         <tr>
-          <td style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 11px;">${product?.sku || 'N/A'}</td>
-          <td style="border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 11px;">${product?.item_name || 'N/A'}</td>
-          <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 11px;">${item.quantity}</td>
-          <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 11px;">${casePack}</td>
-          <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 11px;">${cases}</td>
-          <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 11px;">${weight.toFixed(2)} kg</td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: left; font-size: 11px;">${product?.sku || 'N/A'}</td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: left; font-size: 11px;">${product?.item_name || 'N/A'}</td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: center; font-size: 11px;">${item.quantity}</td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: center; font-size: 11px;">${casePack}</td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: center; font-size: 11px;">${cases}</td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: center; font-size: 11px;">${weight.toFixed(2)} kg</td>
         </tr>
       `;
     }).join('');
@@ -385,76 +386,90 @@ export default function OrderViewPage() {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Packing List - ${order.po_number || orderId}</title>
+        <title>Packing List - ${data.invoiceNumber}</title>
         <style>
-          @page { size: A4 portrait; margin: 0.5in; }
+          @page { size: A4 portrait; margin: 0.2in; }
           body { font-family: Arial, sans-serif; margin: 0; color: #333; font-size: 12px; }
-          .header { display: flex; align-items: center; margin-bottom: 20px; }
-          .logo { width: 80px; height: 32px; margin-right: 20px; }
-          .header-title { flex: 1; text-align: center; }
-          .header-title h1 { margin: 0; font-size: 24px; font-weight: bold; }
-          .header-title h2 { margin: 5px 0 0 0; font-size: 16px; }
-          .company-info { display: flex; justify-content: space-between; margin-bottom: 20px; }
-          .company-box { border: 1px solid #333; padding: 10px; width: 48%; font-size: 11px; }
-          .company-box h3 { margin: 0 0 8px 0; font-size: 12px; font-weight: bold; }
-          .order-info { margin-bottom: 20px; font-size: 11px; }
-          .order-info table { width: 100%; border-collapse: collapse; }
-          .order-info td { padding: 3px 8px; border: 1px solid #ddd; }
+          .top-section { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+          .subsidiary-info { flex: 1; }
+          .subsidiary-title { font-size: 24px; font-weight: bold; margin-bottom: 8px; }
+          .subsidiary-address { font-size: 11px; margin-bottom: 4px; white-space: pre-line; }
+          .subsidiary-contact { font-size: 11px; margin-bottom: 2px; }
+          .logo-container { text-align: right; }
+          .logo { width: 120px; height: auto; }
+          .divider-line { border-top: 1px solid #000; margin: 15px 0; }
+          .three-blocks { display: flex; justify-content: space-between; margin-bottom: 15px; }
+          .block { flex: 1; margin: 0 10px; }
+          .block-title { font-size: 11px; font-weight: bold; margin-bottom: 8px; }
+          .block-content { font-size: 11px; }
+          .packing-list-title { font-size: 16px; font-weight: bold; margin: 15px 0 5px 0; }
+          .packing-list-divider { border-top: 1px solid #000; margin-bottom: 10px; }
           .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
-          .items-table th { background-color: #f5f5f5; font-weight: bold; padding: 8px 6px; border: 1px solid #ddd; text-align: center; font-size: 11px; }
+          .items-table th { background-color: #f5f5f5; font-weight: bold; padding: 8px 6px; border: 1px solid #000; text-align: center; font-size: 11px; }
+          .items-table td { border: 1px solid #000; padding: 6px; }
           .totals { text-align: right; margin-top: 15px; font-size: 11px; }
           .notes { margin-top: 20px; font-size: 11px; }
           .signature { margin-top: 30px; display: flex; justify-content: space-between; font-size: 11px; }
           @media print { 
             body { margin: 0; }
-            .header { page-break-inside: avoid; }
-            .company-info { page-break-inside: avoid; }
-            .order-info { page-break-inside: avoid; }
+            .top-section { page-break-inside: avoid; }
+            .three-blocks { page-break-inside: avoid; }
           }
         </style>
       </head>
       <body>
-        <div class="header">
-          <img src="/logo.png" alt="Qiqi Logo" class="logo" />
-          <div class="header-title">
-            <h1>PACKING LIST</h1>
-            <h2>Invoice #: ${data.invoiceNumber}</h2>
+        <!-- Top Section: Subsidiary Info + Logo -->
+        <div class="top-section">
+          <div class="subsidiary-info">
+            <div class="subsidiary-title">${subsidiary?.name || 'N/A'}</div>
+            <div class="subsidiary-address">${subsidiary?.ship_from_address || 'Address not configured'}</div>
+            ${subsidiary?.phone ? `<div class="subsidiary-contact">Phone: ${subsidiary.phone}</div>` : ''}
+            ${subsidiary?.email ? `<div class="subsidiary-contact">Email: ${subsidiary.email}</div>` : ''}
+          </div>
+          <div class="logo-container">
+            <img src="/QIQI-Logo.svg" alt="Qiqi Logo" class="logo" />
           </div>
         </div>
 
-        <div class="company-info">
-          <div class="company-box">
-            <h3>FROM:</h3>
-            <div><strong>${subsidiary?.name || 'N/A'}</strong></div>
-            <div style="white-space: pre-line;">${subsidiary?.ship_from_address || 'Address not configured'}</div>
-            ${subsidiary?.phone ? `<div>Phone: ${subsidiary.phone}</div>` : ''}
-            ${subsidiary?.email ? `<div>Email: ${subsidiary.email}</div>` : ''}
+        <!-- First Divider Line -->
+        <div class="divider-line"></div>
+
+        <!-- Three Blocks Section -->
+        <div class="three-blocks">
+          <!-- Left Block: Ship To -->
+          <div class="block">
+            <div class="block-title">Ship To</div>
+            <div class="block-content">
+              <div><strong>${companyName}</strong></div>
+              <div style="white-space: pre-line; margin-top: 4px;">${order.company?.ship_to || 'Ship To Address not configured'}</div>
+            </div>
           </div>
           
-          <div class="company-box">
-            <h3>SHIP TO:</h3>
-            <div><strong>${companyName}</strong></div>
-            <div style="white-space: pre-line;">${order.company?.ship_to || 'Ship To Address not configured'}</div>
+          <!-- Middle Block: Empty for now -->
+          <div class="block">
+            <div class="block-content">Hello</div>
+          </div>
+          
+          <!-- Right Block: Order Details -->
+          <div class="block">
+            <div class="block-content">
+              <div style="margin-bottom: 4px;"><strong>Date:</strong> ${packingListDate}</div>
+              <div style="margin-bottom: 4px;"><strong>Destination Country:</strong> [To be added]</div>
+              <div style="margin-bottom: 4px;"><strong>Invoice number:</strong> ${data.invoiceNumber}</div>
+              <div style="margin-bottom: 4px;"><strong>Method:</strong> ${data.shippingMethod}</div>
+              <div style="margin-bottom: 4px;"><strong>Reference:</strong> ${data.netsuiteReference || 'N/A'}</div>
+            </div>
           </div>
         </div>
 
-        <div class="order-info">
-          <table>
-            <tr>
-              <td><strong>PO Number:</strong></td>
-              <td>${order.po_number || orderId}</td>
-              <td><strong>Order Date:</strong></td>
-              <td>${orderDate}</td>
-            </tr>
-            <tr>
-              <td><strong>Shipping Method:</strong></td>
-              <td>${data.shippingMethod}</td>
-              <td><strong>Sales Order:</strong></td>
-              <td>${data.netsuiteReference || 'N/A'}</td>
-            </tr>
-          </table>
-        </div>
+        <!-- Second Divider Line -->
+        <div class="divider-line"></div>
 
+        <!-- Packing List Title -->
+        <div class="packing-list-title">Packing List</div>
+        <div class="packing-list-divider"></div>
+
+        <!-- Items Table -->
         <table class="items-table">
           <thead>
             <tr>
