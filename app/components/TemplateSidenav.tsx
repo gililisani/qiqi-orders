@@ -113,10 +113,7 @@ export default function TemplateSidenav({
     };
   }, [setOpenSidenav]);
 
-  const collapseItemClasses =
-    sidenavType === "dark"
-      ? "tw-text-white hover:tw-bg-opacity-25 focus:tw-bg-opacity-100 active:tw-bg-opacity-10 hover:tw-text-white focus:tw-text-white active:tw-text-white"
-      : "";
+  const collapseItemClasses = "";
   const collapseHeaderClasses =
     "tw-border-b-0 !tw-p-3 tw-text-inherit hover:tw-text-inherit focus:tw-text-inherit active:tw-text-inherit";
   const activeRouteClasses = `${collapseItemClasses} ${COLORS[sidenavColor]} tw-text-white active:tw-text-white hover:tw-text-white focus:tw-text-white`;
