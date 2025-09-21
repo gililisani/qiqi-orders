@@ -10,75 +10,7 @@ html, body {
 }
 
 @layer utilities {
-  .text-white {
-    @apply text-white;
-  }
-  .absolute {
-    @apply absolute;
-  }
-  .top-2\/4 {
-    @apply top-2/4;
-  }
-  .left-2\/4 {
-    @apply left-2/4;
-  }
-  .-translate-y-2\/4 {
-    @apply -translate-y-2/4;
-  }
-  .-translate-x-2\/4 {
-    @apply -translate-x-2/4;
-  }
-  .pointer-events-none {
-    @apply pointer-events-none;
-  }
-  .opacity-0 {
-    @apply opacity-0;
-  }
-  .transition-opacity {
-    @apply transition-opacity;
-  }
-  .w-3\.5 {
-    @apply w-3.5;
-  }
-  .h-3\.5 {
-    @apply h-3.5;
-  }
-  .w-5 {
-    @apply w-5;
-  }
-  .h-5 {
-    @apply h-5;
-  }
-  .left-1 {
-    @apply left-1;
-  }
-  .ml-4 {
-    @apply ml-4;
-  }
-  .mt-px {
-    @apply mt-px;
-  }
-  .top-1\/2 {
-    @apply top-1/2;
-  }
-  .left-1\/2 {
-    @apply left-1/2;
-  }
-  .transform {
-    @apply transform;
-  }
-  .-translate-y-1\/2 {
-    @apply -translate-y-1/2;
-  }
-  .-translate-x-1\/2 {
-    @apply -translate-x-1/2;
-  }
-  .z-20 {
-    @apply z-20;
-  }
-  .overflow-hidden {
-    @apply overflow-hidden;
-  }
+  /* Custom utilities only - remove redundant ones that Tailwind already provides */
 }
 
 .peer:checked ~ .peer-checked\:opacity-100 {
