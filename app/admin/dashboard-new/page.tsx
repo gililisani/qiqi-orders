@@ -175,18 +175,12 @@ export default function TemplateDashboard() {
 
       {/* Main Content */}
       <div className="tw-p-4 xl:tw-ml-80">
-        {/* Navbar */}
-        <TemplateNavbar 
-          openSidenav={openSidenav} 
-          setOpenSidenav={setOpenSidenav} 
-        />
-
         {/* Dashboard Content */}
         <div className="tw-mt-8 tw-mb-4">
           {/* Statistics Cards */}
           <div className="tw-grid tw-grid-cols-1 tw-gap-6 tw-mb-8 md:tw-grid-cols-2 lg:tw-grid-cols-4">
             {/* Today's Orders */}
-            <div className="tw-relative tw-flex tw-flex-col tw-bg-white tw-clip-border tw-rounded-xl tw-shadow-md tw-shadow-blue-gray-500/5">
+            <div className="tw-relative tw-flex tw-flex-col tw-bg-white tw-clip-border tw-rounded-xl tw-shadow-md tw-shadow-blue-gray-500/5 tw-border tw-border-blue-gray-100">
               <div className="tw-relative tw-mx-4 tw-mt-4 tw-overflow-hidden tw-bg-gradient-to-tr tw-from-blue-600 tw-to-blue-400 tw-clip-border tw-rounded-xl tw-shadow-lg tw-shadow-blue-500/40 tw-grid tw-place-items-center tw-h-16 tw-w-16">
                 <ShoppingBagIcon />
               </div>
@@ -201,7 +195,7 @@ export default function TemplateDashboard() {
             </div>
 
             {/* Today's Revenue */}
-            <div className="tw-relative tw-flex tw-flex-col tw-bg-white tw-clip-border tw-rounded-xl tw-shadow-md tw-shadow-blue-gray-500/5">
+            <div className="tw-relative tw-flex tw-flex-col tw-bg-white tw-clip-border tw-rounded-xl tw-shadow-md tw-shadow-blue-gray-500/5 tw-border tw-border-blue-gray-100">
               <div className="tw-relative tw-mx-4 tw-mt-4 tw-overflow-hidden tw-bg-gradient-to-tr tw-from-green-600 tw-to-green-400 tw-clip-border tw-rounded-xl tw-shadow-lg tw-shadow-green-500/40 tw-grid tw-place-items-center tw-h-16 tw-w-16">
                 <CurrencyDollarIcon />
               </div>
@@ -216,7 +210,7 @@ export default function TemplateDashboard() {
             </div>
 
             {/* Open Orders */}
-            <div className="tw-relative tw-flex tw-flex-col tw-bg-white tw-clip-border tw-rounded-xl tw-shadow-md tw-shadow-blue-gray-500/5">
+            <div className="tw-relative tw-flex tw-flex-col tw-bg-white tw-clip-border tw-rounded-xl tw-shadow-md tw-shadow-blue-gray-500/5 tw-border tw-border-blue-gray-100">
               <div className="tw-relative tw-mx-4 tw-mt-4 tw-overflow-hidden tw-bg-gradient-to-tr tw-from-orange-600 tw-to-orange-400 tw-clip-border tw-rounded-xl tw-shadow-lg tw-shadow-orange-500/40 tw-grid tw-place-items-center tw-h-16 tw-w-16">
                 <ClockIcon />
               </div>
@@ -231,7 +225,7 @@ export default function TemplateDashboard() {
             </div>
 
             {/* In Process Orders */}
-            <div className="tw-relative tw-flex tw-flex-col tw-bg-white tw-clip-border tw-rounded-xl tw-shadow-md tw-shadow-blue-gray-500/5">
+            <div className="tw-relative tw-flex tw-flex-col tw-bg-white tw-clip-border tw-rounded-xl tw-shadow-md tw-shadow-blue-gray-500/5 tw-border tw-border-blue-gray-100">
               <div className="tw-relative tw-mx-4 tw-mt-4 tw-overflow-hidden tw-bg-gradient-to-tr tw-from-purple-600 tw-to-purple-400 tw-clip-border tw-rounded-xl tw-shadow-lg tw-shadow-purple-500/40 tw-grid tw-place-items-center tw-h-16 tw-w-16">
                 <CheckCircleIcon />
               </div>
@@ -256,22 +250,22 @@ export default function TemplateDashboard() {
               <table className="tw-table-auto tw-text-left tw-w-full tw-min-w-max">
                 <thead>
                   <tr className="tw-bg-blue-gray-50">
-                    <th className="tw-px-6 tw-py-3 tw-text-xs tw-font-bold tw-text-blue-gray-600 tw-uppercase tw-tracking-wide">
+                    <th className="tw-px-6 tw-py-3 tw-text-xs tw-font-bold tw-text-blue-gray-600 tw-uppercase tw-tracking-wide tw-border-b tw-border-blue-gray-200">
                       Order ID
                     </th>
-                    <th className="tw-px-6 tw-py-3 tw-text-xs tw-font-bold tw-text-blue-gray-600 tw-uppercase tw-tracking-wide">
+                    <th className="tw-px-6 tw-py-3 tw-text-xs tw-font-bold tw-text-blue-gray-600 tw-uppercase tw-tracking-wide tw-border-b tw-border-blue-gray-200">
                       Date
                     </th>
-                    <th className="tw-px-6 tw-py-3 tw-text-xs tw-font-bold tw-text-blue-gray-600 tw-uppercase tw-tracking-wide">
+                    <th className="tw-px-6 tw-py-3 tw-text-xs tw-font-bold tw-text-blue-gray-600 tw-uppercase tw-tracking-wide tw-border-b tw-border-blue-gray-200">
                       Company
                     </th>
-                    <th className="tw-px-6 tw-py-3 tw-text-xs tw-font-bold tw-text-blue-gray-600 tw-uppercase tw-tracking-wide">
+                    <th className="tw-px-6 tw-py-3 tw-text-xs tw-font-bold tw-text-blue-gray-600 tw-uppercase tw-tracking-wide tw-border-b tw-border-blue-gray-200">
                       Status
                     </th>
-                    <th className="tw-px-6 tw-py-3 tw-text-xs tw-font-bold tw-text-blue-gray-600 tw-uppercase tw-tracking-wide">
+                    <th className="tw-px-6 tw-py-3 tw-text-xs tw-font-bold tw-text-blue-gray-600 tw-uppercase tw-tracking-wide tw-border-b tw-border-blue-gray-200">
                       Total
                     </th>
-                    <th className="tw-px-6 tw-py-3 tw-text-xs tw-font-bold tw-text-blue-gray-600 tw-uppercase tw-tracking-wide">
+                    <th className="tw-px-6 tw-py-3 tw-text-xs tw-font-bold tw-text-blue-gray-600 tw-uppercase tw-tracking-wide tw-border-b tw-border-blue-gray-200">
                       Actions
                     </th>
                   </tr>
@@ -279,21 +273,21 @@ export default function TemplateDashboard() {
                 <tbody>
                   {recentOrders.map((order) => (
                     <tr key={order.id} className="tw-border-b tw-border-blue-gray-100 hover:tw-bg-blue-gray-50">
-                      <td className="tw-px-6 tw-py-4 tw-text-sm tw-font-medium tw-text-blue-gray-900">
+                      <td className="tw-px-6 tw-py-4 tw-text-sm tw-font-medium tw-text-blue-gray-900 tw-border-r tw-border-blue-gray-100">
                         #{order.id.slice(-8)}
                       </td>
-                      <td className="tw-px-6 tw-py-4 tw-text-sm tw-text-blue-gray-600">
+                      <td className="tw-px-6 tw-py-4 tw-text-sm tw-text-blue-gray-600 tw-border-r tw-border-blue-gray-100">
                         {formatDate(order.created_at)}
                       </td>
-                      <td className="tw-px-6 tw-py-4 tw-text-sm tw-text-blue-gray-600">
+                      <td className="tw-px-6 tw-py-4 tw-text-sm tw-text-blue-gray-600 tw-border-r tw-border-blue-gray-100">
                         {order.companies?.[0]?.company_name || 'N/A'}
                       </td>
-                      <td className="tw-px-6 tw-py-4">
+                      <td className="tw-px-6 tw-py-4 tw-border-r tw-border-blue-gray-100">
                         <span className={`tw-inline-flex tw-px-2 tw-py-1 tw-text-xs tw-font-semibold tw-rounded-full ${getStatusColor(order.status)}`}>
                           {order.status}
                         </span>
                       </td>
-                      <td className="tw-px-6 tw-py-4 tw-text-sm tw-font-medium tw-text-blue-gray-900">
+                      <td className="tw-px-6 tw-py-4 tw-text-sm tw-font-medium tw-text-blue-gray-900 tw-border-r tw-border-blue-gray-100">
                         {formatCurrency(order.total_value)}
                       </td>
                       <td className="tw-px-6 tw-py-4 tw-text-sm">

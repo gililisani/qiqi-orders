@@ -63,31 +63,22 @@ export default function TemplateNavbar({
   const [layout, page] = pathname.split("/").filter((el) => el !== "");
 
   return (
-    <nav
-      className={`tw-rounded-xl tw-transition-all tw-max-w-full ${
-        fixedNavbar
-          ? "tw-sticky tw-top-4 tw-z-40 tw-py-3 tw-shadow-md tw-shadow-blue-gray-500/5 tw-bg-white"
-          : "tw-px-0 tw-py-1 tw-bg-transparent"
-      }`}
-    >
+    <nav className="tw-px-0 tw-py-1 tw-bg-transparent tw-transition-all tw-max-w-full">
       <div className="tw-flex tw-flex-col tw-justify-between tw-gap-2 md:tw-flex-row md:tw-items-center">
         <div className="tw-capitalize">
-          <div className={`tw-bg-transparent tw-transition-all ${fixedNavbar ? "tw-mt-1" : ""}`}>
+          <div className="tw-bg-transparent tw-transition-all tw-flex tw-items-center">
             <Link href="/admin/dashboard-new">
               <button className="tw-p-2 tw-rounded-lg hover:tw-bg-gray-100 tw-transition-colors">
                 <HomeIcon />
               </button>
             </Link>
             <span className="tw-text-sm tw-text-blue-gray-500 tw-opacity-50 tw-transition-all hover:tw-text-blue-gray-700 hover:tw-opacity-100 tw-mx-2">
-              {layout}
+              /
             </span>
             <span className="tw-text-sm tw-text-blue-gray-500 tw-font-normal">
-              {page?.split("-").join(" ")}
+              {page?.split("-").join(" ") || "Dashboard"}
             </span>
           </div>
-          <h6 className="tw-text-xl tw-font-semibold tw-text-blue-gray-900 tw-mt-1">
-            {page?.split("-").join(" ") || "Dashboard"}
-          </h6>
         </div>
         
         <div className="tw-flex tw-items-center">
