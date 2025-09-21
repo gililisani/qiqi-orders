@@ -111,7 +111,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
+      <div className="min-h-screen bg-blue-gray-50/50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Spinner className="h-12 w-12" />
           <Typography variant="h6" color="blue-gray">
@@ -124,7 +124,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   if (error || !isAdmin) {
     return (
-      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-blue-gray-50/50 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <Alert color="red" className="mb-4">
             {error || 'Access denied. Admin permissions required.'}
@@ -140,7 +140,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-blue-gray-50/50">
       {/* Sidebar - Template2 Style */}
       <aside
         className={`${sidenavTypes[sidenavType]} ${
