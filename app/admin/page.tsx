@@ -195,7 +195,7 @@ export default function AdminDashboard() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Today's Orders */}
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border border-card">
             <CardBody className="text-center">
               <div className="flex justify-center mb-4">
                 <div className="p-3 bg-blue-50 rounded-full">
@@ -215,7 +215,7 @@ export default function AdminDashboard() {
           </Card>
 
           {/* Open Orders */}
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border border-card">
             <CardBody className="text-center">
               <div className="flex justify-center mb-4">
                 <div className="p-3 bg-orange-50 rounded-full">
@@ -232,7 +232,7 @@ export default function AdminDashboard() {
           </Card>
 
           {/* In Process Orders */}
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border border-card">
             <CardBody className="text-center">
               <div className="flex justify-center mb-4">
                 <div className="p-3 bg-green-50 rounded-full">
@@ -249,7 +249,7 @@ export default function AdminDashboard() {
           </Card>
 
           {/* Welcome Card */}
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border border-card">
             <CardBody className="text-center">
               <div className="flex justify-center mb-4">
                 <div className="p-3 bg-purple-50 rounded-full">
@@ -267,7 +267,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent Orders */}
-        <Card className="shadow-sm">
+        <Card className="shadow-sm border border-card">
           <CardHeader floated={false} shadow={false} className="rounded-none">
             <div className="flex items-center justify-between">
               <Typography variant="h5" color="blue-gray">
