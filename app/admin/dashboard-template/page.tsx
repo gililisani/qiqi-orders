@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createClientSupabase } from "../../../lib/supabaseClient";
+import { supabase } from "../../../lib/supabaseClient";
 import TemplateSidenav from "../../components/TemplateSidenav";
 import TemplateNavbar from "../../components/TemplateNavbar";
 
@@ -40,8 +40,6 @@ export default function TemplateDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const supabase = createClientSupabase();
-
       // Fetch statistics
       const [ordersResult, companiesResult] = await Promise.all([
         supabase.from('orders').select('*'),
