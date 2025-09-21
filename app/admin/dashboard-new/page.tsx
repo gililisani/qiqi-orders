@@ -157,7 +157,7 @@ export default function TemplateDashboard() {
 
   if (loading) {
     return (
-      <div className="tw-min-h-screen">
+      <div className="tw-min-h-screen tw-bg-blue-gray-50/50">
         <div className="tw-flex tw-items-center tw-justify-center tw-h-screen">
           <div className="tw-animate-spin tw-rounded-full tw-h-32 tw-w-32 tw-border-b-2 tw-border-blue-gray-900"></div>
         </div>
@@ -166,7 +166,7 @@ export default function TemplateDashboard() {
   }
 
   return (
-    <div className="tw-min-h-screen">
+    <div className="tw-min-h-screen tw-bg-blue-gray-50/50">
       {/* Sidenav */}
       <TemplateSidenav 
         openSidenav={openSidenav} 
