@@ -4,9 +4,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global background color - Creative Tim template standard */
+/* Global background color - Template2 standard (#f6f7f8) */
 html, body {
-  @apply bg-blue-gray-50/50;
+  @apply bg-gray-50;
 }
 
 @layer utilities {

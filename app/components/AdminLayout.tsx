@@ -5,21 +5,15 @@ import { useAuth } from '../hooks/useAuth';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
-  Card,
+  Button,
   Typography,
-  List,
-  ListItem,
-  ListItemPrefix,
-  Accordion,
-  AccordionHeader,
-  AccordionBody,
   IconButton,
   Navbar,
   Spinner,
   Alert,
 } from '../components/MaterialTailwind';
+import { useMaterialTailwindController, setOpenSidenav } from '../context';
 import {
-  ChevronDownIcon,
   XMarkIcon,
   Bars3Icon,
   HomeIcon,
@@ -28,8 +22,6 @@ import {
   CubeIcon,
   ShoppingCartIcon,
   TagIcon,
-  MapPinIcon,
-  BanknotesIcon,
   DocumentTextIcon,
   Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
@@ -40,94 +32,86 @@ interface AdminLayoutProps {
 
 const adminRoutes = [
   {
-    name: 'Dashboard',
-    path: '/admin',
-    icon: <HomeIcon className="h-5 w-5" />,
-  },
-  {
-    name: 'Orders',
-    path: '/admin/orders',
-    icon: <ShoppingCartIcon className="h-5 w-5" />,
-  },
-  {
-    name: 'Products',
-    path: '/admin/products',
-    icon: <CubeIcon className="h-5 w-5" />,
+    layout: 'admin',
+    title: 'Dashboard',
     pages: [
-      { name: 'All Products', path: '/admin/products' },
-      { name: 'Add Product', path: '/admin/products/new' },
-      { name: 'Bulk Upload', path: '/admin/products/bulk-upload' },
+      {
+        name: 'Dashboard',
+        path: '',
+        icon: <HomeIcon className="h-5 w-5" />,
+      },
+      {
+        name: 'Orders',
+        path: '/orders',
+        icon: <ShoppingCartIcon className="h-5 w-5" />,
+      },
     ],
   },
   {
-    name: 'Categories',
-    path: '/admin/categories',
-    icon: <TagIcon className="h-5 w-5" />,
+    layout: 'admin',
+    title: 'Management',
     pages: [
-      { name: 'All Categories', path: '/admin/categories' },
-      { name: 'Add Category', path: '/admin/categories/new' },
-      { name: 'Reorder', path: '/admin/categories/reorder' },
+      {
+        name: 'Products',
+        path: '/products',
+        icon: <CubeIcon className="h-5 w-5" />,
+      },
+      {
+        name: 'Categories',
+        path: '/categories',
+        icon: <TagIcon className="h-5 w-5" />,
+      },
+      {
+        name: 'Companies',
+        path: '/companies',
+        icon: <BuildingOffice2Icon className="h-5 w-5" />,
+      },
+      {
+        name: 'Users',
+        path: '/users',
+        icon: <UserGroupIcon className="h-5 w-5" />,
+      },
+      {
+        name: 'Admins',
+        path: '/admins',
+        icon: <UserGroupIcon className="h-5 w-5" />,
+      },
     ],
   },
   {
-    name: 'Companies',
-    path: '/admin/companies',
-    icon: <BuildingOffice2Icon className="h-5 w-5" />,
+    layout: 'admin',
+    title: 'Settings',
     pages: [
-      { name: 'All Companies', path: '/admin/companies' },
-      { name: 'Add Company', path: '/admin/companies/new' },
+      {
+        name: 'NetSuite',
+        path: '/netsuite',
+        icon: <DocumentTextIcon className="h-5 w-5" />,
+      },
+      {
+        name: 'Configuration',
+        path: '/locations',
+        icon: <Cog6ToothIcon className="h-5 w-5" />,
+      },
     ],
-  },
-  {
-    name: 'Users',
-    path: '/admin/users',
-    icon: <UserGroupIcon className="h-5 w-5" />,
-    pages: [
-      { name: 'All Users', path: '/admin/users' },
-      { name: 'Add User', path: '/admin/users/new' },
-    ],
-  },
-  {
-    name: 'Admins',
-    path: '/admin/admins',
-    icon: <UserGroupIcon className="h-5 w-5" />,
-    pages: [
-      { name: 'All Admins', path: '/admin/admins' },
-      { name: 'Add Admin', path: '/admin/admins/new' },
-    ],
-  },
-  {
-    name: 'Settings',
-    icon: <Cog6ToothIcon className="h-5 w-5" />,
-    pages: [
-      { name: 'Locations', path: '/admin/locations' },
-      { name: 'Payment Terms', path: '/admin/payment-terms' },
-      { name: 'Incoterms', path: '/admin/incoterms' },
-      { name: 'Subsidiaries', path: '/admin/subsidiaries' },
-      { name: 'Support Funds', path: '/admin/support-funds' },
-      { name: 'Classes', path: '/admin/classes' },
-    ],
-  },
-  {
-    name: 'NetSuite',
-    path: '/admin/netsuite',
-    icon: <DocumentTextIcon className="h-5 w-5" />,
   },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, loading, error, isAdmin } = useAuth('Admin');
   const pathname = usePathname();
-  const [openSidenav, setOpenSidenav] = React.useState(false);
-  const [openCollapse, setOpenCollapse] = React.useState<string | null>(null);
+  const [controller, dispatch] = useMaterialTailwindController();
+  const { sidenavColor, sidenavType, openSidenav } = controller;
 
-  const handleOpenCollapse = (value: string) => {
-    setOpenCollapse((cur) => (cur === value ? null : value));
+  // Template2's sidebar types - exactly like the demo
+  const sidenavTypes = {
+    dark: "bg-gradient-to-br from-gray-800 to-gray-900",
+    white: "bg-white shadow-sm",
+    transparent: "bg-transparent",
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-blue-gray-50/50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Spinner className="h-12 w-12" />
           <Typography variant="h6" color="blue-gray">
@@ -140,7 +124,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   if (error || !isAdmin) {
     return (
-      <div className="min-h-screen bg-blue-gray-50/50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <Alert color="red" className="mb-4">
             {error || 'Access denied. Admin permissions required.'}
@@ -156,81 +140,80 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-blue-gray-50/50">
-      {/* Sidebar */}
-      <Card
-        className={`fixed top-4 left-4 z-50 h-[calc(100vh-2rem)] w-full max-w-[18rem] p-4 shadow-xl transition-all duration-300 ease-in-out xl:left-4 ${
-          openSidenav ? 'left-4' : '-left-72'
-        }`}
+    <div className="min-h-screen bg-gray-50">
+      {/* Sidebar - Template2 Style */}
+      <aside
+        className={`${sidenavTypes[sidenavType]} ${
+          openSidenav ? "translate-x-0" : "-translate-x-80"
+        } fixed inset-0 z-50 my-4 ml-4 h-[calc(100vh-32px)] w-72 rounded-xl transition-transform duration-300 xl:translate-x-0 border border-blue-gray-100`}
       >
-        <div className="mb-2 flex items-center gap-1 p-4">
-          <Typography variant="h6" color="blue-gray">
-            Qiqi Orders Admin
-          </Typography>
+        <div className="relative">
+          <Link href="/admin" className="py-6 px-8 text-center">
+            <Typography
+              variant="h6"
+              color={sidenavType === "dark" ? "white" : "blue-gray"}
+            >
+              Qiqi Orders Admin
+            </Typography>
+          </Link>
+          <IconButton
+            variant="text"
+            color="white"
+            size="sm"
+            ripple={false}
+            className="absolute right-0 top-0 grid rounded-br-none rounded-tl-none xl:hidden"
+            onClick={() => setOpenSidenav(dispatch, false)}
+          >
+            <XMarkIcon strokeWidth={2.5} className="h-5 w-5 text-white" />
+          </IconButton>
         </div>
-        <IconButton
-          ripple={false}
-          size="sm"
-          variant="text"
-          className="absolute top-1 right-1 block xl:hidden"
-          onClick={() => setOpenSidenav(false)}
-        >
-          <XMarkIcon className="h-5 w-5" />
-        </IconButton>
-        <List className="overflow-y-auto">
-          {adminRoutes.map(({ name, path, icon, pages }, key) =>
-            pages ? (
-              <Accordion
-                key={key}
-                open={openCollapse === name}
-                icon={
-                  <ChevronDownIcon
-                    strokeWidth={2.5}
-                    className={`mx-auto h-3 w-3 transition-transform ${
-                      openCollapse === name ? 'rotate-180' : ''
-                    }`}
-                  />
-                }
-              >
-                <ListItem className="p-0" selected={openCollapse === name}>
-                  <AccordionHeader
-                    onClick={() => handleOpenCollapse(name)}
-                    className="border-b-0 p-3"
+        <div className="m-4">
+          {adminRoutes.map(({ layout, title, pages }, key) => (
+            <ul key={key} className="mb-4 flex flex-col gap-1">
+              {title && (
+                <li className="mx-3.5 mt-4 mb-2">
+                  <Typography
+                    variant="small"
+                    color={sidenavType === "dark" ? "white" : "blue-gray"}
+                    className="font-black uppercase opacity-75"
                   >
-                    <ListItemPrefix>{icon}</ListItemPrefix>
-                    <Typography color="blue-gray" className="mr-auto font-normal">
-                      {name}
-                    </Typography>
-                  </AccordionHeader>
-                </ListItem>
-                <AccordionBody className="py-1">
-                  <List className="p-0">
-                    {pages.map((page: any, pageKey: number) => (
-                      <Link href={page.path} key={pageKey}>
-                        <ListItem
-                          className={pathname === page.path ? 'bg-blue-500 text-white' : ''}
+                    {title}
+                  </Typography>
+                </li>
+              )}
+              {pages.map(({ icon, name, path }) => {
+                const isActive = pathname === `/admin${path}`;
+                return (
+                  <li key={name}>
+                    <Link href={`/admin${path}`}>
+                      <Button
+                        variant={isActive ? "gradient" : "text"}
+                        color={
+                          isActive
+                            ? sidenavColor
+                            : sidenavType === "dark"
+                            ? "white"
+                            : "blue-gray"
+                        }
+                        className="flex items-center gap-4 px-4 capitalize"
+                        fullWidth
+                      >
+                        {icon}
+                        <Typography
+                          color="inherit"
+                          className="font-medium capitalize"
                         >
-                          <ListItemPrefix>
-                            <div className="h-3 w-3" />
-                          </ListItemPrefix>
-                          {page.name}
-                        </ListItem>
-                      </Link>
-                    ))}
-                  </List>
-                </AccordionBody>
-              </Accordion>
-            ) : (
-              <Link href={path!} key={key}>
-                <ListItem className={pathname === path ? 'bg-blue-500 text-white' : ''}>
-                  <ListItemPrefix>{icon}</ListItemPrefix>
-                  {name}
-                </ListItem>
-              </Link>
-            )
-          )}
-        </List>
-      </Card>
+                          {name}
+                        </Typography>
+                      </Button>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          ))}
+        </div>
+      </aside>
 
       {/* Main Content */}
       <div className="p-4 xl:ml-80">
@@ -247,7 +230,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 size="sm"
                 variant="text"
                 className="block xl:hidden"
-                onClick={() => setOpenSidenav(true)}
+                onClick={() => setOpenSidenav(dispatch, true)}
               >
                 <Bars3Icon className="h-5 w-5" />
               </IconButton>
