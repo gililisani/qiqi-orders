@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createClientSupabase } from "../../lib/supabaseClient";
+import { createClientSupabase } from "../../../lib/supabaseClient";
 import TemplateSidenav from "../../components/TemplateSidenav";
 import TemplateNavbar from "../../components/TemplateNavbar";
 
