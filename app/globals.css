@@ -6,7 +6,7 @@
 
 /* Global background color - Creative Tim template standard */
 html, body {
-  @apply tw-bg-blue-gray-50/50;
+  @apply tw-bg-blue-gray-50;
 }
 
 @layer utilities {
