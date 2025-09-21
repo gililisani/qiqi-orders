@@ -175,6 +175,12 @@ export default function TemplateDashboard() {
 
       {/* Main Content */}
       <div className="tw-p-4 xl:tw-ml-80">
+        {/* Navbar */}
+        <TemplateNavbar 
+          openSidenav={openSidenav} 
+          setOpenSidenav={setOpenSidenav} 
+        />
+
         {/* Dashboard Content */}
         <div className="tw-mt-8 tw-mb-4">
           {/* Statistics Cards */}
