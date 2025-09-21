@@ -5,23 +5,6 @@ import { createClientSupabase } from "../../lib/supabaseClient";
 import TemplateSidenav from "../../components/TemplateSidenav";
 import TemplateNavbar from "../../components/TemplateNavbar";
 
-// @material-tailwind/react
-import {
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  Typography,
-} from "@material-tailwind/react";
-
-// @heroicons/react
-import { 
-  ShoppingBagIcon,
-  CurrencyDollarIcon,
-  UserGroupIcon,
-  ClockIcon
-} from "@heroicons/react/24/outline";
-
 interface Order {
   id: string;
   order_number: string;
@@ -149,177 +132,146 @@ export default function TemplateDashboard() {
           <div className="tw-my-6 tw-grid tw-gap-6 md:tw-grid-cols-2 xl:tw-grid-cols-4">
             
             {/* Total Orders */}
-            <Card className="tw-border tw-border-blue-gray-100 tw-shadow-sm">
-              <div className="tw-flex tw-justify-between">
-                <CardHeader
-                  variant="gradient"
-                  color="blue"
-                  floated={false}
-                  shadow={false}
-                  className="tw-absolute !tw-grid tw-h-12 tw-w-12 tw-place-items-center"
-                >
-                  <ShoppingBagIcon className="tw-w-6 tw-h-6 tw-text-white" />
-                </CardHeader>
-                <CardBody className="!tw-p-4 tw-text-right">
-                  <Typography
-                    variant="small"
-                    className="!tw-font-normal tw-text-blue-gray-600"
-                  >
+            <div className="tw-border tw-border-blue-gray-100 tw-shadow-sm tw-rounded-xl tw-bg-white tw-overflow-hidden">
+              <div className="tw-flex tw-justify-between tw-relative">
+                <div className="tw-absolute tw-grid tw-h-12 tw-w-12 tw-place-items-center tw-m-4 tw-rounded-lg tw-bg-gradient-to-tr tw-from-blue-600 tw-to-blue-400">
+                  <svg className="tw-w-6 tw-h-6 tw-text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
+                <div className="tw-p-4 tw-text-right tw-ml-16">
+                  <p className="tw-text-xs tw-font-normal tw-text-blue-gray-600 tw-mb-1">
                     Total Orders
-                  </Typography>
-                  <Typography variant="h4" color="blue-gray">
+                  </p>
+                  <h4 className="tw-text-2xl tw-font-bold tw-text-blue-gray-900">
                     {stats.totalOrders}
-                  </Typography>
-                </CardBody>
+                  </h4>
+                </div>
               </div>
-              <CardFooter className="tw-border-t tw-border-blue-gray-50 !tw-p-4">
-                <Typography className="!tw-font-normal tw-text-blue-gray-600">
+              <div className="tw-border-t tw-border-blue-gray-50 tw-p-4">
+                <p className="tw-text-xs tw-font-normal tw-text-blue-gray-600">
                   <strong className="tw-text-green-500">+12%</strong>
                   &nbsp;from last month
-                </Typography>
-              </CardFooter>
-            </Card>
+                </p>
+              </div>
+            </div>
 
             {/* Total Revenue */}
-            <Card className="tw-border tw-border-blue-gray-100 tw-shadow-sm">
-              <div className="tw-flex tw-justify-between">
-                <CardHeader
-                  variant="gradient"
-                  color="green"
-                  floated={false}
-                  shadow={false}
-                  className="tw-absolute !tw-grid tw-h-12 tw-w-12 tw-place-items-center"
-                >
-                  <CurrencyDollarIcon className="tw-w-6 tw-h-6 tw-text-white" />
-                </CardHeader>
-                <CardBody className="!tw-p-4 tw-text-right">
-                  <Typography
-                    variant="small"
-                    className="!tw-font-normal tw-text-blue-gray-600"
-                  >
+            <div className="tw-border tw-border-blue-gray-100 tw-shadow-sm tw-rounded-xl tw-bg-white tw-overflow-hidden">
+              <div className="tw-flex tw-justify-between tw-relative">
+                <div className="tw-absolute tw-grid tw-h-12 tw-w-12 tw-place-items-center tw-m-4 tw-rounded-lg tw-bg-gradient-to-tr tw-from-green-600 tw-to-green-400">
+                  <svg className="tw-w-6 tw-h-6 tw-text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                </div>
+                <div className="tw-p-4 tw-text-right tw-ml-16">
+                  <p className="tw-text-xs tw-font-normal tw-text-blue-gray-600 tw-mb-1">
                     Total Revenue
-                  </Typography>
-                  <Typography variant="h4" color="blue-gray">
+                  </p>
+                  <h4 className="tw-text-2xl tw-font-bold tw-text-blue-gray-900">
                     {formatCurrency(stats.totalRevenue)}
-                  </Typography>
-                </CardBody>
+                  </h4>
+                </div>
               </div>
-              <CardFooter className="tw-border-t tw-border-blue-gray-50 !tw-p-4">
-                <Typography className="!tw-font-normal tw-text-blue-gray-600">
+              <div className="tw-border-t tw-border-blue-gray-50 tw-p-4">
+                <p className="tw-text-xs tw-font-normal tw-text-blue-gray-600">
                   <strong className="tw-text-green-500">+8%</strong>
                   &nbsp;from last month
-                </Typography>
-              </CardFooter>
-            </Card>
+                </p>
+              </div>
+            </div>
 
             {/* Total Customers */}
-            <Card className="tw-border tw-border-blue-gray-100 tw-shadow-sm">
-              <div className="tw-flex tw-justify-between">
-                <CardHeader
-                  variant="gradient"
-                  color="orange"
-                  floated={false}
-                  shadow={false}
-                  className="tw-absolute !tw-grid tw-h-12 tw-w-12 tw-place-items-center"
-                >
-                  <UserGroupIcon className="tw-w-6 tw-h-6 tw-text-white" />
-                </CardHeader>
-                <CardBody className="!tw-p-4 tw-text-right">
-                  <Typography
-                    variant="small"
-                    className="!tw-font-normal tw-text-blue-gray-600"
-                  >
+            <div className="tw-border tw-border-blue-gray-100 tw-shadow-sm tw-rounded-xl tw-bg-white tw-overflow-hidden">
+              <div className="tw-flex tw-justify-between tw-relative">
+                <div className="tw-absolute tw-grid tw-h-12 tw-w-12 tw-place-items-center tw-m-4 tw-rounded-lg tw-bg-gradient-to-tr tw-from-orange-600 tw-to-orange-400">
+                  <svg className="tw-w-6 tw-h-6 tw-text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div className="tw-p-4 tw-text-right tw-ml-16">
+                  <p className="tw-text-xs tw-font-normal tw-text-blue-gray-600 tw-mb-1">
                     Total Customers
-                  </Typography>
-                  <Typography variant="h4" color="blue-gray">
+                  </p>
+                  <h4 className="tw-text-2xl tw-font-bold tw-text-blue-gray-900">
                     {stats.totalCustomers}
-                  </Typography>
-                </CardBody>
+                  </h4>
+                </div>
               </div>
-              <CardFooter className="tw-border-t tw-border-blue-gray-50 !tw-p-4">
-                <Typography className="!tw-font-normal tw-text-blue-gray-600">
+              <div className="tw-border-t tw-border-blue-gray-50 tw-p-4">
+                <p className="tw-text-xs tw-font-normal tw-text-blue-gray-600">
                   <strong className="tw-text-green-500">+3%</strong>
                   &nbsp;from last month
-                </Typography>
-              </CardFooter>
-            </Card>
+                </p>
+              </div>
+            </div>
 
             {/* Pending Orders */}
-            <Card className="tw-border tw-border-blue-gray-100 tw-shadow-sm">
-              <div className="tw-flex tw-justify-between">
-                <CardHeader
-                  variant="gradient"
-                  color="purple"
-                  floated={false}
-                  shadow={false}
-                  className="tw-absolute !tw-grid tw-h-12 tw-w-12 tw-place-items-center"
-                >
-                  <ClockIcon className="tw-w-6 tw-h-6 tw-text-white" />
-                </CardHeader>
-                <CardBody className="!tw-p-4 tw-text-right">
-                  <Typography
-                    variant="small"
-                    className="!tw-font-normal tw-text-blue-gray-600"
-                  >
+            <div className="tw-border tw-border-blue-gray-100 tw-shadow-sm tw-rounded-xl tw-bg-white tw-overflow-hidden">
+              <div className="tw-flex tw-justify-between tw-relative">
+                <div className="tw-absolute tw-grid tw-h-12 tw-w-12 tw-place-items-center tw-m-4 tw-rounded-lg tw-bg-gradient-to-tr tw-from-purple-600 tw-to-purple-400">
+                  <svg className="tw-w-6 tw-h-6 tw-text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="tw-p-4 tw-text-right tw-ml-16">
+                  <p className="tw-text-xs tw-font-normal tw-text-blue-gray-600 tw-mb-1">
                     Pending Orders
-                  </Typography>
-                  <Typography variant="h4" color="blue-gray">
+                  </p>
+                  <h4 className="tw-text-2xl tw-font-bold tw-text-blue-gray-900">
                     {stats.pendingOrders}
-                  </Typography>
-                </CardBody>
+                  </h4>
+                </div>
               </div>
-              <CardFooter className="tw-border-t tw-border-blue-gray-50 !tw-p-4">
-                <Typography className="!tw-font-normal tw-text-blue-gray-600">
+              <div className="tw-border-t tw-border-blue-gray-50 tw-p-4">
+                <p className="tw-text-xs tw-font-normal tw-text-blue-gray-600">
                   <strong className="tw-text-orange-500">-2%</strong>
                   &nbsp;from last month
-                </Typography>
-              </CardFooter>
-            </Card>
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Recent Orders Table */}
-          <Card className="tw-mb-6 tw-border tw-border-blue-gray-100 tw-shadow-sm">
-            <div className="tw-flex tw-items-center">
-              <CardHeader
-                floated={false}
-                variant="gradient"
-                color="gray"
-                className="tw-grid tw-h-16 tw-w-16 tw-place-items-center"
-              >
-                <ShoppingBagIcon className="tw-h-7 tw-w-7 tw-text-white" />
-              </CardHeader>
-              <Typography variant="h6" color="blue-gray" className="tw-mt-3">
+          <div className="tw-mb-6 tw-border tw-border-blue-gray-100 tw-shadow-sm tw-rounded-xl tw-bg-white tw-overflow-hidden">
+            <div className="tw-flex tw-items-center tw-p-6">
+              <div className="tw-grid tw-h-16 tw-w-16 tw-place-items-center tw-rounded-lg tw-bg-gradient-to-tr tw-from-gray-600 tw-to-gray-400 tw-mr-4">
+                <svg className="tw-h-7 tw-w-7 tw-text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </div>
+              <h6 className="tw-text-lg tw-font-semibold tw-text-blue-gray-900">
                 Recent Orders
-              </Typography>
+              </h6>
             </div>
-            <CardBody className="tw-overflow-x-auto">
+            <div className="tw-overflow-x-auto tw-p-6">
               <table className="tw-w-full tw-min-w-max tw-table-auto">
                 <thead>
                   <tr className="tw-border-b tw-border-blue-gray-200">
                     <th className="tw-py-3 tw-px-4 tw-text-left">
-                      <Typography className="tw-text-xs tw-font-medium tw-capitalize tw-text-blue-gray-500">
+                      <p className="tw-text-xs tw-font-medium tw-capitalize tw-text-blue-gray-500">
                         Order Number
-                      </Typography>
+                      </p>
                     </th>
                     <th className="tw-py-3 tw-px-4 tw-text-left">
-                      <Typography className="tw-text-xs tw-font-medium tw-capitalize tw-text-blue-gray-500">
+                      <p className="tw-text-xs tw-font-medium tw-capitalize tw-text-blue-gray-500">
                         Company
-                      </Typography>
+                      </p>
                     </th>
                     <th className="tw-py-3 tw-px-4 tw-text-center">
-                      <Typography className="tw-text-xs tw-font-medium tw-capitalize tw-text-blue-gray-500">
+                      <p className="tw-text-xs tw-font-medium tw-capitalize tw-text-blue-gray-500">
                         Status
-                      </Typography>
+                      </p>
                     </th>
                     <th className="tw-py-3 tw-px-4 tw-text-center">
-                      <Typography className="tw-text-xs tw-font-medium tw-capitalize tw-text-blue-gray-500">
+                      <p className="tw-text-xs tw-font-medium tw-capitalize tw-text-blue-gray-500">
                         Amount
-                      </Typography>
+                      </p>
                     </th>
                     <th className="tw-py-3 tw-px-4 tw-text-center">
-                      <Typography className="tw-text-xs tw-font-medium tw-capitalize tw-text-blue-gray-500">
+                      <p className="tw-text-xs tw-font-medium tw-capitalize tw-text-blue-gray-500">
                         Date
-                      </Typography>
+                      </p>
                     </th>
                   </tr>
                 </thead>
@@ -330,22 +282,14 @@ export default function TemplateDashboard() {
                       className="tw-border-b tw-border-blue-gray-50 hover:tw-bg-blue-gray-50"
                     >
                       <td className="tw-py-3 tw-px-4">
-                        <Typography
-                          variant="small"
-                          color="blue-gray"
-                          className="!tw-font-normal"
-                        >
+                        <p className="tw-text-sm tw-font-normal tw-text-blue-gray-900">
                           {order.order_number}
-                        </Typography>
+                        </p>
                       </td>
                       <td className="tw-py-3 tw-px-4">
-                        <Typography
-                          variant="small"
-                          color="blue-gray"
-                          className="!tw-font-normal"
-                        >
+                        <p className="tw-text-sm tw-font-normal tw-text-blue-gray-900">
                           {order.company?.name || 'N/A'}
-                        </Typography>
+                        </p>
                       </td>
                       <td className="tw-py-3 tw-px-4 tw-text-center">
                         <span className={`tw-inline-flex tw-items-center tw-px-2.5 tw-py-0.5 tw-rounded-full tw-text-xs tw-font-medium ${getStatusColor(order.status)}`}>
@@ -353,29 +297,21 @@ export default function TemplateDashboard() {
                         </span>
                       </td>
                       <td className="tw-py-3 tw-px-4 tw-text-center">
-                        <Typography
-                          variant="small"
-                          color="blue-gray"
-                          className="!tw-font-normal"
-                        >
+                        <p className="tw-text-sm tw-font-normal tw-text-blue-gray-900">
                           {formatCurrency(order.total_amount)}
-                        </Typography>
+                        </p>
                       </td>
                       <td className="tw-py-3 tw-px-4 tw-text-center">
-                        <Typography
-                          variant="small"
-                          color="blue-gray"
-                          className="!tw-font-normal"
-                        >
+                        <p className="tw-text-sm tw-font-normal tw-text-blue-gray-900">
                           {new Date(order.created_at).toLocaleDateString()}
-                        </Typography>
+                        </p>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </CardBody>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>
