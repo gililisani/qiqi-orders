@@ -7,10 +7,7 @@
 /* Background color will be handled by layout containers */
 
 @layer utilities {
-  /* Custom border color for Material Tailwind cards */
-  .border-card {
-    border-color: #d0d8dc;
-  }
+  /* Custom utilities only - remove redundant ones that Tailwind already provides */
 }
 
 .peer:checked ~ .peer-checked\:opacity-100 {
