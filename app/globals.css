@@ -1,270 +1,165 @@
-/* app/globals.css */
+@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Satoshi Font Face Declarations */
-@font-face {
-  font-family: 'Satoshi';
-  src: url('/fonts/satoshi/Satoshi-Regular.woff2') format('woff2'),
-       url('/fonts/satoshi/Satoshi-Regular.woff') format('woff'),
-       url('/fonts/satoshi/Satoshi-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
+@layer utilities {
+  .text-white {
+    @apply tw-text-white;
+  }
+  .absolute {
+    @apply tw-absolute;
+  }
+  .top-2\/4 {
+    @apply tw-top-2/4;
+  }
+  .left-2\/4 {
+    @apply tw-left-2/4;
+  }
+  .-translate-y-2\/4 {
+    @apply -tw-translate-y-2/4;
+  }
+  .-translate-x-2\/4 {
+    @apply -tw-translate-x-2/4;
+  }
+  .pointer-events-none {
+    @apply tw-pointer-events-none;
+  }
+  .opacity-0 {
+    @apply tw-opacity-0;
+  }
+  .transition-opacity {
+    @apply tw-transition-opacity;
+  }
+  .w-3\.5 {
+    @apply tw-w-3.5;
+  }
+  .h-3\.5 {
+    @apply tw-h-3.5;
+  }
+  .w-5 {
+    @apply tw-w-5;
+  }
+  .h-5 {
+    @apply tw-h-5;
+  }
+  .left-1 {
+    @apply tw-left-1;
+  }
+  .ml-4 {
+    @apply tw-ml-4;
+  }
+  .mt-px {
+    @apply tw-mt-px;
+  }
+  .top-1\/2 {
+    @apply tw-top-1/2;
+  }
+  .left-1\/2 {
+    @apply tw-left-1/2;
+  }
+  .transform {
+    @apply tw-transform;
+  }
+  .-translate-y-1\/2 {
+    @apply -tw-translate-y-1/2;
+  }
+  .-translate-x-1\/2 {
+    @apply -tw-translate-x-1/2;
+  }
+  .z-20 {
+    @apply tw-z-20;
+  }
+  .overflow-hidden {
+    @apply tw-overflow-hidden;
+  }
 }
 
-@font-face {
-  font-family: 'Satoshi';
-  src: url('/fonts/satoshi/Satoshi-Medium.woff2') format('woff2'),
-       url('/fonts/satoshi/Satoshi-Medium.woff') format('woff'),
-       url('/fonts/satoshi/Satoshi-Medium.ttf') format('truetype');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
+.tw-peer:checked ~ .peer-checked\:opacity-100 {
+  opacity: 1;
 }
 
-@font-face {
-  font-family: 'Satoshi';
-  src: url('/fonts/satoshi/Satoshi-Bold.woff2') format('woff2'),
-       url('/fonts/satoshi/Satoshi-Bold.woff') format('woff'),
-       url('/fonts/satoshi/Satoshi-Bold.ttf') format('truetype');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
+/* full calendar */
+.fc-media-screen {
+  @apply !tw-h-full !tw-max-h-[420px] !tw-text-gray-900;
 }
 
-/* RTKassebong Font Face Declarations */
-@font-face {
-  font-family: 'RTKassebong';
-  src: url('/fonts/RTKassebong/RTKassebong-Regular.woff2') format('woff2'),
-       url('/fonts/RTKassebong/RTKassebong-Regular.woff') format('woff'),
-       url('/fonts/RTKassebong/RTKassebong-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
+.fc-theme-standard,
+.fc-scrollgrid {
+  @apply !tw-border-0 !tw-border-r-0;
 }
 
-/* Apply Satoshi font globally */
-* {
-  font-family: 'Satoshi', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+.fc-theme-standard thead,
+tr,
+th {
+  @apply !tw-border-l-0 !tw-border-r-0;
 }
 
-body {
-  margin: 0;
-  background-color: #f0f2f5;
+.fc-theme-standard td,
+th {
+  @apply !tw-text-sm !tw-text-blue-gray-500;
 }
 
-/* ==============================================
-   CUSTOM TABLE DESIGN SYSTEM
-   ============================================== */
-
-/* Table Container */
-.custom-table-container {
-  @apply bg-transparent;
+.fc th {
+  @apply !tw-text-center;
 }
 
-/* Table Header Section */
-.custom-table-header {
-  @apply flex items-center justify-between mb-6;
+.fc .fc-daygrid-day-number {
+  @apply !tw-text-center !tw-w-full !tw-text-sm;
 }
 
-.custom-table-title {
-  @apply text-lg font-light uppercase;
+.fc-scrollgrid-section.fc-scrollgrid-section-header td {
+  @apply !tw-border !tw-border-blue-gray-100/50;
 }
 
-.custom-table-action-link {
-  @apply text-sm text-black underline hover:opacity-70 uppercase;
+.fc-scrollgrid-section.fc-scrollgrid-section-body.fc-scrollgrid-section-liquid
+  > td {
+  @apply !tw-border-0;
 }
 
-/* Table Column Headers */
-.custom-table-column-headers {
-  @apply px-6 py-2 mb-2;
+.fc-scrollgrid-sync-table {
+  @apply !tw-h-auto;
 }
 
-.custom-table-column-headers-grid {
-  @apply grid grid-cols-1 md:grid-cols-6 gap-4 items-center;
+.fc .fc-view-harness-active > .fc-view {
+  @apply !tw-relative !tw-h-full;
 }
 
-.custom-table-column-header {
-  @apply text-xs text-black uppercase font-medium text-center;
+.fc .fc-scroller-liquid-absolute {
+  @apply !tw-static;
 }
 
-/* Table Rows Container */
-.custom-table-rows {
-  @apply space-y-4;
+.fc-daygrid-event {
+  @apply !tw-px-1.5 !tw-py-0.5 !tw-border-0 !tw-rounded-md !tw-text-sm !tw-font-medium;
 }
 
-/* Individual Table Row */
-.custom-table-row {
-  @apply bg-white border border-gray-300 border-dashed hover:border-black hover:border-dashed transition-colors duration-200;
-  padding: 20px; /* 15% reduction from original 24px */
+.fc-event-title {
+  @apply !tw-text-sm !tw-w-full !tw-font-normal;
 }
 
-.custom-table-row-grid {
-  @apply grid grid-cols-1 md:grid-cols-6 gap-4 items-center;
+.fc-button,
+.fc-today-button,
+.fc-button:disabled {
+  @apply !tw-align-middle !tw-select-none !tw-font-sans !tw-font-bold !tw-text-center !tw-uppercase !tw-transition-all disabled:!tw-opacity-50 disabled:!tw-shadow-none disabled:!tw-pointer-events-none !tw-text-xs !tw-pt-1 !tw-pb-3 !tw-px-3 !tw-rounded-lg !tw-bg-gray-900 !tw-text-white !tw-shadow-md !tw-shadow-gray-900/10 hover:!tw-shadow-lg hover:!tw-shadow-gray-900/20 focus:!tw-opacity-[0.85] focus:!tw-shadow-none active:!tw-opacity-[0.85] active:!tw-shadow-none;
 }
 
-/* Table Cell Styles */
-.custom-table-cell {
-  @apply text-sm text-gray-900 text-center;
+.fc .fc-button .fc-icon {
+  @apply !tw-text-sm;
 }
 
-.custom-table-cell-primary {
-  @apply text-sm font-medium text-gray-900 text-center;
+.fc-toolbar-title {
+  @apply !tw-font-bold !tw-text-lg;
 }
 
-.custom-table-cell-secondary {
-  @apply text-sm text-gray-500 text-center;
+.event {
+  @apply !tw-bg-gradient-to-tr !tw-from-gray-900 !tw-to-gray-800;
 }
 
-/* Status Badge */
-.custom-status-badge {
-  @apply text-xs tracking-wide leading-none px-3 pt-1 pb-1 w-fit h-fit grid place-items-center transition-colors duration-0 border border-black uppercase whitespace-nowrap;
-  font-family: 'RTKassebong', monospace;
+.fc-today-button.fc-button.fc-button-primary {
+  @apply !tw-py-2;
 }
 
-.custom-status-container {
-  @apply flex justify-center;
-}
-
-/* Actions Cell */
-.custom-table-actions {
-  @apply flex items-center justify-center space-x-2;
-}
-
-.custom-table-action-button {
-  @apply text-black underline hover:opacity-70 text-sm uppercase;
-}
-
-.custom-table-csv-button {
-  @apply bg-black text-white px-2 py-1 text-xs hover:opacity-90 transition;
-}
-
-/* Stats Blocks */
-.custom-stats-block {
-  @apply p-6 border border-black;
-  background-color: rgb(244, 244, 242);
-}
-
-.custom-stats-content {
-  @apply text-center;
-}
-
-.custom-stats-number {
-  @apply text-5xl font-bold text-black mb-2;
-}
-
-.custom-stats-label {
-  @apply text-sm text-gray-600;
-}
-
-.custom-stats-sublabel {
-  @apply text-xs text-gray-500 mt-1;
-}
-
-/* Empty State */
-.custom-table-empty {
-  @apply py-12 text-center text-gray-500;
-}
-
-/* ==============================================
-   ADMIN ORDERS MANAGEMENT TABLE DESIGN
-   ============================================== */
-
-/* Table Container */
-.admin-orders-table-container {
-  @apply overflow-x-auto;
-  background-color: rgb(250, 250, 250);
-}
-
-/* Table */
-.admin-orders-table {
-  @apply w-full;
-}
-
-/* Table Header Section */
-.admin-orders-table-header {
-  background-color: transparent;
-}
-
-.admin-orders-table-header-row {
-  background-color: transparent;
-}
-
-.admin-orders-table-header-cell {
-  @apply px-2 sm:px-6 py-2 text-center text-xs font-medium text-black uppercase;
-  background-color: transparent;
-  border: none;
-}
-
-/* Table Body */
-.admin-orders-table-body {
-  @apply bg-white border;
-  border-color: rgb(230, 230, 230);
-}
-
-.admin-orders-table-row {
-  @apply hover:bg-gray-50 border-b border-solid;
-  border-color: rgb(230, 230, 230);
-}
-
-.admin-orders-table-cell {
-  @apply px-2 sm:px-6 py-4 whitespace-nowrap text-center;
-}
-
-.admin-orders-table-cell-hidden-mobile {
-  @apply hidden sm:table-cell px-2 sm:px-6 py-4 whitespace-nowrap text-center;
-}
-
-/* Status Dropdown */
-.admin-orders-status-dropdown {
-  @apply text-xs px-2 py-1 bg-black text-white border-0 focus:ring-2 focus:ring-black cursor-pointer;
-}
-
-/* Actions */
-.admin-orders-actions {
-  @apply px-2 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-center;
-}
-
-.admin-orders-actions-container {
-  @apply flex flex-col space-y-1 items-center;
-}
-
-.admin-orders-action-buttons {
-  @apply flex space-x-2;
-}
-
-.admin-orders-action-link {
-  @apply text-blue-600 hover:text-blue-900;
-}
-
-.admin-orders-csv-button {
-  @apply text-green-600 hover:text-green-900;
-}
-
-.admin-orders-netsuite-button {
-  @apply text-xs text-orange-600 hover:text-orange-900 disabled:opacity-50;
-}
-
-.admin-orders-complete-button {
-  @apply text-xs text-blue-600 hover:text-blue-900 disabled:opacity-50 block;
-}
-
-/* Pagination */
-.admin-orders-pagination {
-  @apply mt-6 flex items-center justify-between;
-}
-
-.admin-orders-pagination-info {
-  @apply text-sm text-gray-500;
-}
-
-.admin-orders-pagination-buttons {
-  @apply flex space-x-2;
-}
-
-.admin-orders-pagination-button {
-  @apply px-3 py-2 border text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed;
-  border-color: rgb(230, 230, 230);
+.fc-prev-button.fc-button.fc-button-primary {
+  @apply !tw-mr-1;
 }
