@@ -18,6 +18,7 @@ import {
   Spinner,
   Alert,
 } from '../components/MaterialTailwind';
+import { useMaterialTailwindController, setOpenSidenav } from '../context';
 import {
   ChevronDownIcon,
   XMarkIcon,
@@ -118,7 +119,8 @@ const adminRoutes = [
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, loading, error, isAdmin } = useAuth('Admin');
   const pathname = usePathname();
-  const [openSidenav, setOpenSidenav] = React.useState(false);
+  const [controller, dispatch] = useMaterialTailwindController();
+  const { sidenavType, sidenavColor, openSidenav } = controller;
   const [openCollapse, setOpenCollapse] = React.useState<string | null>(null);
 
   const handleOpenCollapse = (value: string) => {
@@ -159,8 +161,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     <div className="min-h-screen bg-blue-gray-50/50">
       {/* Sidebar */}
       <Card
-        className={`fixed top-4 left-4 z-50 h-[calc(100vh-2rem)] w-full max-w-[18rem] p-4 shadow-xl transition-all duration-300 ease-in-out xl:left-4 ${
+        color={sidenavType === "dark" ? "gray" : sidenavType === "transparent" ? "transparent" : "white"}
+        shadow={sidenavType !== "transparent"}
+        className={`fixed top-4 left-4 z-50 h-[calc(100vh-2rem)] w-full max-w-[18rem] p-4 transition-all duration-300 ease-in-out xl:left-4 ${
           openSidenav ? 'left-4' : '-left-72'
+        } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
+          sidenavType === "dark" ? "!text-white" : "text-gray-900"
         }`}
       >
         <div className="mb-2 flex items-center gap-1 p-4">
@@ -173,7 +179,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           size="sm"
           variant="text"
           className="absolute top-1 right-1 block xl:hidden"
-          onClick={() => setOpenSidenav(false)}
+          onClick={() => setOpenSidenav(dispatch, false)}
         >
           <XMarkIcon className="h-5 w-5" />
         </IconButton>
@@ -247,7 +253,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 size="sm"
                 variant="text"
                 className="block xl:hidden"
-                onClick={() => setOpenSidenav(true)}
+                onClick={() => setOpenSidenav(dispatch, true)}
               >
                 <Bars3Icon className="h-5 w-5" />
               </IconButton>
