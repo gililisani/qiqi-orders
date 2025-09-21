@@ -5,6 +5,21 @@ import { supabase } from '../../lib/supabaseClient';
 import AdminLayout from '../components/AdminLayout';
 import Link from 'next/link';
 import { generateNetSuiteCSV, downloadCSV, OrderForExport } from '../../lib/csvExport';
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Typography,
+  Button,
+  Chip,
+  Spinner,
+} from '../components/MaterialTailwind';
+import { 
+  ShoppingCartIcon, 
+  ClockIcon, 
+  CogIcon, 
+  HandRaisedIcon 
+} from '@heroicons/react/24/outline';
 
 interface Order {
   id: string;
@@ -158,9 +173,12 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="p-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center gap-4">
+            <Spinner className="h-12 w-12" />
+            <Typography variant="h6" color="blue-gray">
+              Loading dashboard...
+            </Typography>
           </div>
         </div>
       </AdminLayout>
@@ -169,131 +187,258 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      <div className="space-y-6">
+        <Typography variant="h4" color="blue-gray" className="font-bold">
+          Dashboard Overview
+        </Typography>
         
-        {/* Stats Blocks */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Today's Orders */}
-          <div className="p-6 border border-black" style={{ backgroundColor: 'rgb(244, 244, 242)' }}>
-            <div className="text-center">
-              <div className="text-5xl font-bold text-black mb-2">{stats.todayOrders}</div>
-              <div className="text-sm text-gray-600">New Orders Today</div>
-              <div className="text-xs text-gray-500 mt-1">{formatCurrency(stats.todayOrdersValue)}</div>
-            </div>
-          </div>
-
-          {/* Open Orders */}
-          <div className="p-6 border border-black" style={{ backgroundColor: 'rgb(244, 244, 242)' }}>
-            <div className="text-center">
-              <div className="text-5xl font-bold text-black mb-2">{stats.openOrders}</div>
-              <div className="text-sm text-gray-600">Open Orders</div>
-            </div>
-          </div>
-
-          {/* In Process Orders */}
-          <div className="p-6 border border-black" style={{ backgroundColor: 'rgb(244, 244, 242)' }}>
-            <div className="text-center">
-              <div className="text-5xl font-bold text-black mb-2">{stats.inProcessOrders}</div>
-              <div className="text-sm text-gray-600">Orders In Process</div>
-            </div>
-          </div>
-
-          {/* Hello Block */}
-          <div className="p-6 border border-black" style={{ backgroundColor: 'rgb(244, 244, 242)' }}>
-            <div className="text-center">
-              <div className="text-5xl font-bold text-black mb-2">HELLO</div>
-              <div className="text-sm text-gray-600">Coming Soon</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Orders Table */}
-        <div className="bg-transparent">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-light uppercase">RECENT ORDERS</h2>
-            <Link
-              href="/admin/orders"
-              className="text-sm text-black underline hover:opacity-70 uppercase"
-            >
-              VIEW ALL
-            </Link>
-          </div>
-          
-          {/* Table Header */}
-          <div className="px-6 py-2 mb-2">
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
-              <div className="text-xs text-black uppercase font-medium text-center">PO Number</div>
-              <div className="text-xs text-black uppercase font-medium text-center">Company</div>
-              <div className="text-xs text-black uppercase font-medium text-center">Status</div>
-              <div className="text-xs text-black uppercase font-medium text-center">Total</div>
-              <div className="text-xs text-black uppercase font-medium text-center">Date</div>
-              <div className="text-xs text-black uppercase font-medium text-center">Actions</div>
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            {recentOrders.map((order) => (
-              <div 
-                key={order.id} 
-                className="bg-white border border-gray-300 border-dashed hover:border-black hover:border-dashed transition-colors duration-200"
-                style={{ padding: '20px' }}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
-                  <div className="text-sm font-medium text-gray-900 text-center">
-                    {order.po_number || 'N/A'}
-                  </div>
-                  <div className="text-sm text-gray-900 text-center">
-                    {(() => {
-                      const companies = order.companies;
-                      if (!companies) return 'N/A';
-                      // Handle both array and object cases
-                      const companyName = Array.isArray(companies) 
-                        ? companies[0]?.company_name 
-                        : (companies as any).company_name;
-                      return companyName || 'N/A';
-                    })()}
-                  </div>
-                  <div className="flex justify-center">
-                    <span 
-                      className="text-xs tracking-wide leading-none px-3 pt-1 pb-1 w-fit h-fit grid place-items-center transition-colors duration-0 border border-black uppercase whitespace-nowrap"
-                      style={{ 
-                        fontFamily: "'RTKassebong', monospace"
-                      }}
-                    >
-                      {order.status}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-900 text-center">
-                    {formatCurrency(order.total_value || 0)}
-                  </div>
-                  <div className="text-sm text-gray-500 text-center">
-                    {new Date(order.created_at).toLocaleDateString()}
-                  </div>
-                  <div className="flex items-center justify-center space-x-2">
-                    <Link
-                      href={`/admin/orders/${order.id}`}
-                      className="text-black underline hover:opacity-70 text-sm uppercase"
-                    >
-                      VIEW
-                    </Link>
-                    <button 
-                      onClick={() => handleDownloadCSV(order.id)}
-                      className="bg-black text-white px-2 py-1 text-xs hover:opacity-90 transition"
-                    >
-                      CSV
-                    </button>
-                  </div>
+          <Card className="shadow-sm">
+            <CardBody className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="p-3 bg-blue-50 rounded-full">
+                  <ShoppingCartIcon className="h-8 w-8 text-blue-500" />
                 </div>
               </div>
-            ))}
-          </div>
-          {recentOrders.length === 0 && (
-            <div className="py-12 text-center text-gray-500">
-              No orders found
-            </div>
-          )}
+              <Typography variant="h2" color="blue-gray" className="mb-2">
+                {stats.todayOrders}
+              </Typography>
+              <Typography variant="small" color="blue-gray" className="font-medium">
+                New Orders Today
+              </Typography>
+              <Typography variant="small" color="gray" className="mt-1">
+                {formatCurrency(stats.todayOrdersValue)}
+              </Typography>
+            </CardBody>
+          </Card>
+
+          {/* Open Orders */}
+          <Card className="shadow-sm">
+            <CardBody className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="p-3 bg-orange-50 rounded-full">
+                  <ClockIcon className="h-8 w-8 text-orange-500" />
+                </div>
+              </div>
+              <Typography variant="h2" color="blue-gray" className="mb-2">
+                {stats.openOrders}
+              </Typography>
+              <Typography variant="small" color="blue-gray" className="font-medium">
+                Open Orders
+              </Typography>
+            </CardBody>
+          </Card>
+
+          {/* In Process Orders */}
+          <Card className="shadow-sm">
+            <CardBody className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="p-3 bg-green-50 rounded-full">
+                  <CogIcon className="h-8 w-8 text-green-500" />
+                </div>
+              </div>
+              <Typography variant="h2" color="blue-gray" className="mb-2">
+                {stats.inProcessOrders}
+              </Typography>
+              <Typography variant="small" color="blue-gray" className="font-medium">
+                Orders In Process
+              </Typography>
+            </CardBody>
+          </Card>
+
+          {/* Welcome Card */}
+          <Card className="shadow-sm">
+            <CardBody className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="p-3 bg-purple-50 rounded-full">
+                  <HandRaisedIcon className="h-8 w-8 text-purple-500" />
+                </div>
+              </div>
+              <Typography variant="h2" color="blue-gray" className="mb-2">
+                HELLO
+              </Typography>
+              <Typography variant="small" color="blue-gray" className="font-medium">
+                Welcome Admin
+              </Typography>
+            </CardBody>
+          </Card>
         </div>
+
+        {/* Recent Orders */}
+        <Card className="shadow-sm">
+          <CardHeader floated={false} shadow={false} className="rounded-none">
+            <div className="flex items-center justify-between">
+              <Typography variant="h5" color="blue-gray">
+                Recent Orders
+              </Typography>
+              <Link href="/admin/orders">
+                <Button variant="text" size="sm" className="flex items-center gap-2">
+                  View All
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                    stroke="currentColor"
+                    className="h-4 w-4"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
+                    />
+                  </svg>
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardBody className="overflow-scroll px-0">
+            {recentOrders.length > 0 ? (
+              <table className="w-full min-w-max table-auto text-left">
+                <thead>
+                  <tr>
+                    <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="font-normal leading-none opacity-70"
+                      >
+                        PO Number
+                      </Typography>
+                    </th>
+                    <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="font-normal leading-none opacity-70"
+                      >
+                        Company
+                      </Typography>
+                    </th>
+                    <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="font-normal leading-none opacity-70"
+                      >
+                        Status
+                      </Typography>
+                    </th>
+                    <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="font-normal leading-none opacity-70"
+                      >
+                        Total
+                      </Typography>
+                    </th>
+                    <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="font-normal leading-none opacity-70"
+                      >
+                        Date
+                      </Typography>
+                    </th>
+                    <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="font-normal leading-none opacity-70"
+                      >
+                        Actions
+                      </Typography>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentOrders.map((order, index) => {
+                    const isLast = index === recentOrders.length - 1;
+                    const classes = isLast ? "p-4" : "p-4 border-b border-blue-gray-50";
+                    
+                    return (
+                      <tr key={order.id}>
+                        <td className={classes}>
+                          <Typography variant="small" color="blue-gray" className="font-bold">
+                            {order.po_number || 'N/A'}
+                          </Typography>
+                        </td>
+                        <td className={classes}>
+                          <Typography variant="small" color="blue-gray" className="font-normal">
+                            {(() => {
+                              const companies = order.companies;
+                              if (!companies) return 'N/A';
+                              const companyName = Array.isArray(companies) 
+                                ? companies[0]?.company_name 
+                                : (companies as any).company_name;
+                              return companyName || 'N/A';
+                            })()}
+                          </Typography>
+                        </td>
+                        <td className={classes}>
+                          <Chip
+                            size="sm"
+                            variant="ghost"
+                            value={order.status}
+                            color={
+                              order.status === 'Open'
+                                ? 'orange'
+                                : order.status === 'In Process'
+                                ? 'blue'
+                                : order.status === 'Completed'
+                                ? 'green'
+                                : 'blue-gray'
+                            }
+                          />
+                        </td>
+                        <td className={classes}>
+                          <Typography variant="small" color="blue-gray" className="font-medium">
+                            {formatCurrency(order.total_value || 0)}
+                          </Typography>
+                        </td>
+                        <td className={classes}>
+                          <Typography variant="small" color="blue-gray" className="font-normal">
+                            {new Date(order.created_at).toLocaleDateString()}
+                          </Typography>
+                        </td>
+                        <td className={classes}>
+                          <div className="flex items-center gap-2">
+                            <Link href={`/admin/orders/${order.id}`}>
+                              <Button variant="text" size="sm">
+                                View
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="filled"
+                              size="sm"
+                              color="blue-gray"
+                              onClick={() => handleDownloadCSV(order.id)}
+                            >
+                              CSV
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <div className="py-12 text-center">
+                <Typography variant="h6" color="blue-gray" className="mb-2">
+                  No orders found
+                </Typography>
+                <Typography variant="small" color="gray">
+                  Orders will appear here once they are created.
+                </Typography>
+              </div>
+            )}
+          </CardBody>
+        </Card>
       </div>
     </AdminLayout>
   );

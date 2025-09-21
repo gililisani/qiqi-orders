@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { createServerSupabase } from '../lib/supabase-server';
 import { SupabaseProvider } from '../lib/supabase-provider';
+import MaterialThemeProvider from './components/ThemeProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -21,7 +22,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <body className={inter.className}>
         <SupabaseProvider session={session}>
-          {children}
+          <MaterialThemeProvider>
+            {children}
+          </MaterialThemeProvider>
         </SupabaseProvider>
       </body>
     </html>
