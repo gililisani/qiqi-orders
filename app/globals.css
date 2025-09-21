@@ -6,165 +6,165 @@
 
 /* Global background color - Creative Tim template standard */
 html, body {
-  @apply tw-bg-blue-gray-50/50;
+  @apply bg-blue-gray-50/50;
 }
 
 @layer utilities {
   .text-white {
-    @apply tw-text-white;
+    @apply text-white;
   }
   .absolute {
-    @apply tw-absolute;
+    @apply absolute;
   }
   .top-2\/4 {
-    @apply tw-top-2/4;
+    @apply top-2/4;
   }
   .left-2\/4 {
-    @apply tw-left-2/4;
+    @apply left-2/4;
   }
   .-translate-y-2\/4 {
-    @apply -tw-translate-y-2/4;
+    @apply -translate-y-2/4;
   }
   .-translate-x-2\/4 {
-    @apply -tw-translate-x-2/4;
+    @apply -translate-x-2/4;
   }
   .pointer-events-none {
-    @apply tw-pointer-events-none;
+    @apply pointer-events-none;
   }
   .opacity-0 {
-    @apply tw-opacity-0;
+    @apply opacity-0;
   }
   .transition-opacity {
-    @apply tw-transition-opacity;
+    @apply transition-opacity;
   }
   .w-3\.5 {
-    @apply tw-w-3.5;
+    @apply w-3.5;
   }
   .h-3\.5 {
-    @apply tw-h-3.5;
+    @apply h-3.5;
   }
   .w-5 {
-    @apply tw-w-5;
+    @apply w-5;
   }
   .h-5 {
-    @apply tw-h-5;
+    @apply h-5;
   }
   .left-1 {
-    @apply tw-left-1;
+    @apply left-1;
   }
   .ml-4 {
-    @apply tw-ml-4;
+    @apply ml-4;
   }
   .mt-px {
-    @apply tw-mt-px;
+    @apply mt-px;
   }
   .top-1\/2 {
-    @apply tw-top-1/2;
+    @apply top-1/2;
   }
   .left-1\/2 {
-    @apply tw-left-1/2;
+    @apply left-1/2;
   }
   .transform {
-    @apply tw-transform;
+    @apply transform;
   }
   .-translate-y-1\/2 {
-    @apply -tw-translate-y-1/2;
+    @apply -translate-y-1/2;
   }
   .-translate-x-1\/2 {
-    @apply -tw-translate-x-1/2;
+    @apply -translate-x-1/2;
   }
   .z-20 {
-    @apply tw-z-20;
+    @apply z-20;
   }
   .overflow-hidden {
-    @apply tw-overflow-hidden;
+    @apply overflow-hidden;
   }
 }
 
-.tw-peer:checked ~ .peer-checked\:opacity-100 {
+.peer:checked ~ .peer-checked\:opacity-100 {
   opacity: 1;
 }
 
 /* full calendar */
 .fc-media-screen {
-  @apply !tw-h-full !tw-max-h-[420px] !tw-text-gray-900;
+  @apply !h-full !max-h-[420px] !text-gray-900;
 }
 
 .fc-theme-standard,
 .fc-scrollgrid {
-  @apply !tw-border-0 !tw-border-r-0;
+  @apply !border-0 !border-r-0;
 }
 
 .fc-theme-standard thead,
 tr,
 th {
-  @apply !tw-border-l-0 !tw-border-r-0;
+  @apply !border-l-0 !border-r-0;
 }
 
 .fc-theme-standard td,
 th {
-  @apply !tw-text-sm !tw-text-blue-gray-500;
+  @apply !text-sm !text-blue-gray-500;
 }
 
 .fc th {
-  @apply !tw-text-center;
+  @apply !text-center;
 }
 
 .fc .fc-daygrid-day-number {
-  @apply !tw-text-center !tw-w-full !tw-text-sm;
+  @apply !text-center !w-full !text-sm;
 }
 
 .fc-scrollgrid-section.fc-scrollgrid-section-header td {
-  @apply !tw-border !tw-border-blue-gray-100/50;
+  @apply !border !border-blue-gray-100/50;
 }
 
 .fc-scrollgrid-section.fc-scrollgrid-section-body.fc-scrollgrid-section-liquid
   > td {
-  @apply !tw-border-0;
+  @apply !border-0;
 }
 
 .fc-scrollgrid-sync-table {
-  @apply !tw-h-auto;
+  @apply !h-auto;
 }
 
 .fc .fc-view-harness-active > .fc-view {
-  @apply !tw-relative !tw-h-full;
+  @apply !relative !h-full;
 }
 
 .fc .fc-scroller-liquid-absolute {
-  @apply !tw-static;
+  @apply !static;
 }
 
 .fc-daygrid-event {
-  @apply !tw-px-1.5 !tw-py-0.5 !tw-border-0 !tw-rounded-md !tw-text-sm !tw-font-medium;
+  @apply !px-1.5 !py-0.5 !border-0 !rounded-md !text-sm !font-medium;
 }
 
 .fc-event-title {
-  @apply !tw-text-sm !tw-w-full !tw-font-normal;
+  @apply !text-sm !w-full !font-normal;
 }
 
 .fc-button,
 .fc-today-button,
 .fc-button:disabled {
-  @apply !tw-align-middle !tw-select-none !tw-font-sans !tw-font-bold !tw-text-center !tw-uppercase !tw-transition-all disabled:!tw-opacity-50 disabled:!tw-shadow-none disabled:!tw-pointer-events-none !tw-text-xs !tw-pt-1 !tw-pb-3 !tw-px-3 !tw-rounded-lg !tw-bg-gray-900 !tw-text-white !tw-shadow-md !tw-shadow-gray-900/10 hover:!tw-shadow-lg hover:!tw-shadow-gray-900/20 focus:!tw-opacity-[0.85] focus:!tw-shadow-none active:!tw-opacity-[0.85] active:!tw-shadow-none;
+  @apply !align-middle !select-none !font-sans !font-bold !text-center !uppercase !transition-all disabled:!opacity-50 disabled:!shadow-none disabled:!pointer-events-none !text-xs !pt-1 !pb-3 !px-3 !rounded-lg !bg-gray-900 !text-white !shadow-md !shadow-gray-900/10 hover:!shadow-lg hover:!shadow-gray-900/20 focus:!opacity-[0.85] focus:!shadow-none active:!opacity-[0.85] active:!shadow-none;
 }
 
 .fc .fc-button .fc-icon {
-  @apply !tw-text-sm;
+  @apply !text-sm;
 }
 
 .fc-toolbar-title {
-  @apply !tw-font-bold !tw-text-lg;
+  @apply !font-bold !text-lg;
 }
 
 .event {
-  @apply !tw-bg-gradient-to-tr !tw-from-gray-900 !tw-to-gray-800;
+  @apply !bg-gradient-to-tr !from-gray-900 !to-gray-800;
 }
 
 .fc-today-button.fc-button.fc-button-primary {
-  @apply !tw-py-2;
+  @apply !py-2;
 }
 
 .fc-prev-button.fc-button.fc-button-primary {
-  @apply !tw-mr-1;
+  @apply !mr-1;
 }
