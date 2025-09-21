@@ -6,7 +6,6 @@
 
 /* Global background color - Creative Tim template standard */
 html, body {
-  background-color: rgba(248, 250, 252, 0.5) !important;
   @apply tw-bg-blue-gray-50/50;
 }
 
