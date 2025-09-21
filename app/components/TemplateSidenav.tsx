@@ -91,7 +91,7 @@ export default function TemplateSidenav({
   setOpenSidenav = () => {},
 }: PropTypes) {
   const pathname = usePathname();
-  const sidenavType = "white";
+  const sidenavType: "white" | "dark" | "transparent" = "white";
   const sidenavColor = "blue-gray";
 
   const sidenavRef = React.useRef(null);
