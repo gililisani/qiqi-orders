@@ -4,6 +4,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global background color - Creative Tim template standard */
+body {
+  @apply tw-bg-blue-gray-50/50;
+}
+
 @layer utilities {
   .text-white {
     @apply tw-text-white;
