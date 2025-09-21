@@ -147,7 +147,7 @@ export default function TemplateDashboard() {
           <div className="tw-my-6 tw-grid tw-gap-6 md:tw-grid-cols-2 xl:tw-grid-cols-4">
             
             {/* Total Orders */}
-            <Card className="tw-border tw-border-blue-gray-100 tw-shadow-sm">
+            <Card placeholder="" className="tw-border tw-border-blue-gray-100 tw-shadow-sm">
               <div className="tw-flex tw-justify-between">
                 <CardHeader
                   variant="gradient"
@@ -179,7 +179,7 @@ export default function TemplateDashboard() {
             </Card>
 
             {/* Total Revenue */}
-            <Card className="tw-border tw-border-blue-gray-100 tw-shadow-sm">
+            <Card placeholder="" className="tw-border tw-border-blue-gray-100 tw-shadow-sm">
               <div className="tw-flex tw-justify-between">
                 <CardHeader
                   variant="gradient"
@@ -211,7 +211,7 @@ export default function TemplateDashboard() {
             </Card>
 
             {/* Total Customers */}
-            <Card className="tw-border tw-border-blue-gray-100 tw-shadow-sm">
+            <Card placeholder="" className="tw-border tw-border-blue-gray-100 tw-shadow-sm">
               <div className="tw-flex tw-justify-between">
                 <CardHeader
                   variant="gradient"
@@ -243,7 +243,7 @@ export default function TemplateDashboard() {
             </Card>
 
             {/* Pending Orders */}
-            <Card className="tw-border tw-border-blue-gray-100 tw-shadow-sm">
+            <Card placeholder="" className="tw-border tw-border-blue-gray-100 tw-shadow-sm">
               <div className="tw-flex tw-justify-between">
                 <CardHeader
                   variant="gradient"
@@ -276,7 +276,7 @@ export default function TemplateDashboard() {
           </div>
 
           {/* Recent Orders Table */}
-          <Card className="tw-mb-6 tw-border tw-border-blue-gray-100 tw-shadow-sm">
+          <Card placeholder="" className="tw-mb-6 tw-border tw-border-blue-gray-100 tw-shadow-sm">
             <div className="tw-flex tw-items-center">
               <CardHeader
                 floated={false}
