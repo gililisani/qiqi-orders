@@ -103,7 +103,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { sidenavColor, sidenavType, openSidenav } = controller;
 
   // Template2's sidebar types - exactly like the demo
-  const sidenavTypes = {
+  const sidenavTypes: { [key: string]: string } = {
     dark: "bg-gradient-to-br from-gray-800 to-gray-900",
     white: "bg-white shadow-sm",
     transparent: "bg-transparent",
