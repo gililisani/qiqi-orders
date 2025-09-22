@@ -138,15 +138,20 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-blue-gray-900 mb-4">
             Partners Hub
           </h1>
-          <Typography variant="h2" className="!font-bold mb-4">
-            Sign In
-          </Typography>
-          <Typography className="text-lg !font-normal !text-blue-gray-500">
-            Enter your email and password to Sign In.
-          </Typography>
         </div>
 
-        <form onSubmit={handleLogin} className="mb-2">
+        {/* White Block Design */}
+        <div className="bg-white rounded-xl border border-blue-gray-100 shadow-sm p-8">
+          <div className="text-center mb-6">
+            <Typography variant="h4" className="!font-bold mb-2">
+              Sign In
+            </Typography>
+            <Typography className="text-base !font-normal !text-blue-gray-500">
+              Enter your email and password to Sign In.
+            </Typography>
+          </div>
+
+          <form onSubmit={handleLogin} className="mb-2">
             <div className="mb-6 flex flex-col gap-6">
               <div>
                 <Typography
@@ -224,7 +229,8 @@ export default function LoginPage() {
                 </Link>
               </Typography>
             </div>
-        </form>
+          </form>
+        </div>
       </div>
     </section>
   );
