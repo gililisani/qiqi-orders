@@ -20,28 +20,6 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAutoFilled, setIsAutoFilled] = useState(false);
-
-  // Handle auto-fill detection
-  useEffect(() => {
-    const checkAutoFill = () => {
-      const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement;
-      const passwordInput = document.querySelector('input[type="password"]') as HTMLInputElement;
-      
-      if (emailInput && emailInput.value && !email) {
-        setEmail(emailInput.value);
-        setIsAutoFilled(true);
-      }
-      if (passwordInput && passwordInput.value && !password) {
-        setPassword(passwordInput.value);
-        setIsAutoFilled(true);
-      }
-    };
-
-    // Check for auto-fill after component mounts
-    const timeout = setTimeout(checkAutoFill, 200);
-    return () => clearTimeout(timeout);
-  }, [email, password]);
 
   // Check if user is already logged in
   useEffect(() => {
