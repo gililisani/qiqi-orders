@@ -159,14 +159,14 @@ export default function LoginPage() {
                   color="blue-gray"
                   className="mb-2 !font-medium"
                 >
-                  Your email
+                  Your email <span className="text-red-500">*</span>
                 </Typography>
                 <Input 
                   size="lg" 
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
+                  required={false}
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
@@ -179,14 +179,14 @@ export default function LoginPage() {
                   color="blue-gray"
                   className="mb-2 !font-medium"
                 >
-                  Password
+                  Password <span className="text-red-500">*</span>
                 </Typography>
                 <Input 
                   type="password" 
                   size="lg" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
+                  required={false}
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
