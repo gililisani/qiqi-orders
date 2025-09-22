@@ -164,6 +164,7 @@ export default function LoginPage() {
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
+                  crossOrigin={undefined}
                 />
               </div>
               <div>
@@ -184,6 +185,7 @@ export default function LoginPage() {
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
+                  crossOrigin={undefined}
                 />
               </div>
             </div>
