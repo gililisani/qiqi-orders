@@ -97,3 +97,34 @@ th {
 .fc-prev-button.fc-button.fc-button-primary {
   @apply !mr-1;
 }
+
+/* Fix Material Tailwind Input labels for auto-fill */
+@layer components {
+  /* Force label to float when input has value (including auto-fill) */
+  .material-tailwind-input input:not(:placeholder-shown) + label,
+  .material-tailwind-input input:-webkit-autofill + label,
+  .material-tailwind-input input:-webkit-autofill:hover + label,
+  .material-tailwind-input input:-webkit-autofill:focus + label,
+  .material-tailwind-input input:-webkit-autofill:active + label {
+    transform: translateY(-0.75rem) scale(0.75);
+    color: rgb(59 130 246);
+  }
+
+  /* Ensure auto-filled inputs have proper styling */
+  .material-tailwind-input input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px white inset !important;
+    -webkit-text-fill-color: rgb(31 41 55) !important;
+  }
+
+  /* Alternative approach: target Material Tailwind's specific classes */
+  [class*="peer"]:not(:placeholder-shown) ~ [class*="peer-placeholder-shown"] {
+    transform: translateY(-0.75rem) scale(0.75);
+    color: rgb(59 130 246);
+  }
+
+  /* Handle auto-fill specifically */
+  [class*="peer"]:-webkit-autofill ~ [class*="peer-placeholder-shown"] {
+    transform: translateY(-0.75rem) scale(0.75);
+    color: rgb(59 130 246);
+  }
+}
