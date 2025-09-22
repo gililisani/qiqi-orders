@@ -153,30 +153,38 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="mb-2">
             <div className="mb-6 flex flex-col gap-6">
-              <Input 
-                size="lg" 
-                label="Your email" 
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder={undefined}
-                onPointerEnterCapture={undefined}
-                onPointerLeaveCapture={undefined}
-                crossOrigin={undefined}
-              />
-              <Input 
-                type="password" 
-                size="lg" 
-                label="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder={undefined}
-                onPointerEnterCapture={undefined}
-                onPointerLeaveCapture={undefined}
-                crossOrigin={undefined}
-              />
+              <div>
+                <label className="block text-sm font-medium text-blue-gray-700 mb-2">
+                  Your email
+                </label>
+                <Input 
+                  size="lg" 
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder={undefined}
+                  onPointerEnterCapture={undefined}
+                  onPointerLeaveCapture={undefined}
+                  crossOrigin={undefined}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-blue-gray-700 mb-2">
+                  Password
+                </label>
+                <Input 
+                  type="password" 
+                  size="lg" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder={undefined}
+                  onPointerEnterCapture={undefined}
+                  onPointerLeaveCapture={undefined}
+                  crossOrigin={undefined}
+                />
+              </div>
             </div>
 
             {errorMsg && (
