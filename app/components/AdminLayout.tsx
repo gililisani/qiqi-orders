@@ -246,7 +246,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
             <div className="flex items-center gap-2">
               <Typography variant="small" color="blue-gray">
-                Welcome, {user?.user_metadata?.name || user?.email?.split('@')[0] || 'Admin'}
+                Welcome, {user?.email?.split('@')[0] || 'Admin'}
               </Typography>
             </div>
           </div>
