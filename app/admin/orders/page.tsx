@@ -12,7 +12,9 @@ import {
   Typography,
   Button,
   Chip,
+  IconButton,
 } from '../../components/MaterialTailwind';
+import { ArrowRightIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 interface Order {
   id: string;
@@ -365,41 +367,19 @@ export default function OrdersPage() {
             <div className="flex gap-2">
               <Link
                 href="/admin/orders/new"
-                className="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+                className="inline-flex items-center px-3 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-500 transition-colors"
               >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 New Order
               </Link>
-              <button className="inline-flex items-center px-3 py-2 border border-gray-200 text-gray-600 text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
-                </svg>
-                Filters
-              </button>
-              <button className="inline-flex items-center px-3 py-2 border border-gray-200 text-gray-600 text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Export CSV
-              </button>
             </div>
           </div>
         </div>
 
         {/* Material Tailwind Table */}
         <Card className="border border-blue-gray-100 shadow-sm">
-          <CardHeader floated={false} shadow={false} className="rounded-none">
-            <div className="flex items-center justify-between">
-              <Typography variant="h5" color="blue-gray">
-                Orders Management
-              </Typography>
-              <div className="text-xs text-gray-400">
-                Showing {((currentPage - 1) * ordersPerPage) + 1}-{Math.min(currentPage * ordersPerPage, totalOrders)} of {totalOrders} orders
-              </div>
-            </div>
-          </CardHeader>
           <CardBody className="overflow-x-scroll px-0 pt-0 pb-2">
             <table className="w-full min-w-[640px] table-auto">
               <thead>
@@ -563,37 +543,47 @@ export default function OrdersPage() {
           </div>
         )}
 
-        {/* Modern Pagination */}
+        {/* Material Tailwind Pagination */}
         {totalOrders > ordersPerPage && (
-          <div className="bg-white rounded-md border border-gray-200 p-4 mt-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center text-sm text-gray-700">
-                <span>Page {currentPage} of {Math.ceil(totalOrders / ordersPerPage)}</span>
-                <span className="mx-2">•</span>
-                <span>{totalOrders} total orders</span>
+          <div className="flex items-center justify-between mt-4 px-4">
+            <div className="flex items-center text-sm text-gray-700">
+              <span>Page {currentPage} of {Math.ceil(totalOrders / ordersPerPage)}</span>
+              <span className="mx-2">•</span>
+              <span>{totalOrders} total orders</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="text"
+                className="flex items-center gap-2"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                <ArrowLeftIcon strokeWidth={2} className="h-4 w-4" /> Previous
+              </Button>
+              <div className="flex items-center gap-2">
+                {Array.from({ length: Math.min(5, Math.ceil(totalOrders / ordersPerPage)) }, (_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <IconButton
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "filled" : "text"}
+                      color="gray"
+                      onClick={() => setCurrentPage(pageNum)}
+                    >
+                      {pageNum}
+                    </IconButton>
+                  );
+                })}
               </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="inline-flex items-center px-3 py-2 border border-gray-200 text-sm font-medium rounded-md text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
-                >
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Previous
-                </button>
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalOrders / ordersPerPage), prev + 1))}
-                  disabled={currentPage >= Math.ceil(totalOrders / ordersPerPage)}
-                  className="inline-flex items-center px-3 py-2 border border-gray-200 text-sm font-medium rounded-md text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
-                >
-                  Next
-                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
+              <Button
+                variant="text"
+                className="flex items-center gap-2"
+                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalOrders / ordersPerPage), prev + 1))}
+                disabled={currentPage >= Math.ceil(totalOrders / ordersPerPage)}
+              >
+                Next
+                <ArrowRightIcon strokeWidth={2} className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         )}
