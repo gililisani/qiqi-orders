@@ -166,7 +166,6 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required={false}
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
@@ -186,7 +185,6 @@ export default function LoginPage() {
                   size="lg" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required={false}
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
