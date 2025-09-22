@@ -4,6 +4,15 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
 import Link from 'next/link';
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Typography,
+  Button,
+  Chip,
+  Breadcrumbs,
+} from '../../components/MaterialTailwind';
 
 interface Company {
   id: string;

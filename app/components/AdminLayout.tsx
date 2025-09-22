@@ -118,6 +118,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     router.push(href);
   };
 
+  // Auto-open correct submenu based on current path
+  React.useEffect(() => {
+    const p = pathname || '';
+    setOpenPartners(p.startsWith('/admin/companies') || p.startsWith('/admin/users'));
+    setOpenProducts(p.startsWith('/admin/products') || p.startsWith('/admin/categories'));
+    setOpenSystem(
+      p.startsWith('/admin/support-funds') ||
+      p.startsWith('/admin/locations') ||
+      p.startsWith('/admin/classes') ||
+      p.startsWith('/admin/subsidiaries') ||
+      p.startsWith('/admin/incoterms') ||
+      p.startsWith('/admin/payment-terms') ||
+      p.startsWith('/admin/admins') ||
+      p.startsWith('/admin/netsuite')
+    );
+  }, [pathname]);
+
   // Template2's sidebar types - exactly like the demo
   const sidenavTypes: { [key: string]: string } = {
     dark: "bg-gradient-to-br from-gray-800 to-gray-900",
