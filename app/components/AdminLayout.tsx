@@ -104,22 +104,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { sidenavColor, sidenavType, openSidenav } = controller;
   const [isNavigating, setIsNavigating] = React.useState(false);
 
-  // Handle navigation loading
+  // Handle navigation loading with pathname changes
   React.useEffect(() => {
-    const handleStart = () => setIsNavigating(true);
-    const handleComplete = () => setIsNavigating(false);
+    setIsNavigating(false);
+  }, [pathname]);
 
-    // Listen for route changes
-    const originalPush = router.push;
-    router.push = (...args) => {
-      handleStart();
-      return originalPush.apply(router, args).finally(handleComplete);
-    };
-
-    return () => {
-      router.push = originalPush;
-    };
-  }, [router]);
+  const handleNavigation = (href: string) => {
+    setIsNavigating(true);
+    router.push(href);
+  };
 
   // Template2's sidebar types - exactly like the demo
   const sidenavTypes: { [key: string]: string } = {
@@ -206,28 +199,27 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 const isActive = pathname === `/admin${path}`;
                 return (
                   <li key={name}>
-                    <Link href={`/admin${path}`}>
-                      <Button
-                        variant={isActive ? "gradient" : "text"}
-                        color={
-                          isActive
-                            ? sidenavColor
-                            : sidenavType === "dark"
-                            ? "white"
-                            : "blue-gray"
-                        }
-                        className="flex items-center gap-4 px-4 capitalize"
-                        fullWidth
+                    <Button
+                      variant={isActive ? "gradient" : "text"}
+                      color={
+                        isActive
+                          ? sidenavColor
+                          : sidenavType === "dark"
+                          ? "white"
+                          : "blue-gray"
+                      }
+                      className="flex items-center gap-4 px-4 capitalize"
+                      fullWidth
+                      onClick={() => handleNavigation(`/admin${path}`)}
+                    >
+                      {icon}
+                      <Typography
+                        color="inherit"
+                        className="font-medium capitalize"
                       >
-                        {icon}
-                        <Typography
-                          color="inherit"
-                          className="font-medium capitalize"
-                        >
-                          {name}
-                        </Typography>
-                      </Button>
-                    </Link>
+                        {name}
+                      </Typography>
+                    </Button>
                   </li>
                 );
               })}
