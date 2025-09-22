@@ -245,7 +245,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <Button
                     variant={pathname === '/admin/companies' ? 'gradient' : 'text'}
                     color={pathname === '/admin/companies' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')}
-                    className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md"
+                    className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md text-left font-normal"
                     fullWidth
                     onClick={() => handleNavigation('/admin/companies')}
                   >
@@ -254,7 +254,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <Button
                     variant={pathname === '/admin/users' ? 'gradient' : 'text'}
                     color={pathname === '/admin/users' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')}
-                    className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md"
+                    className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md text-left font-normal"
                     fullWidth
                     onClick={() => handleNavigation('/admin/users')}
                   >
@@ -284,7 +284,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <Button
                     variant={pathname === '/admin/products' ? 'gradient' : 'text'}
                     color={pathname === '/admin/products' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')}
-                    className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md"
+                    className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md text-left font-normal"
                     fullWidth
                     onClick={() => handleNavigation('/admin/products')}
                   >
@@ -293,7 +293,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <Button
                     variant={pathname === '/admin/categories' ? 'gradient' : 'text'}
                     color={pathname === '/admin/categories' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')}
-                    className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md"
+                    className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md text-left font-normal"
                     fullWidth
                     onClick={() => handleNavigation('/admin/categories')}
                   >
@@ -320,14 +320,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </Button>
               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${openSystem ? 'max-h-96' : 'max-h-0'}`}>
                 <div className="pl-10 py-1 grid gap-1">
-                  <Button variant={pathname === '/admin/support-funds' ? 'gradient' : 'text'} color={pathname === '/admin/support-funds' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/support-funds')}>Support Funds</Button>
-                  <Button variant={pathname === '/admin/locations' ? 'gradient' : 'text'} color={pathname === '/admin/locations' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/locations')}>Locations</Button>
-                  <Button variant={pathname === '/admin/classes' ? 'gradient' : 'text'} color={pathname === '/admin/classes' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/classes')}>Classes</Button>
-                  <Button variant={pathname === '/admin/subsidiaries' ? 'gradient' : 'text'} color={pathname === '/admin/subsidiaries' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/subsidiaries')}>Subsidiaries</Button>
-                  <Button variant={pathname === '/admin/incoterms' ? 'gradient' : 'text'} color={pathname === '/admin/incoterms' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/incoterms')}>Incoterms</Button>
-                  <Button variant={pathname === '/admin/payment-terms' ? 'gradient' : 'text'} color={pathname === '/admin/payment-terms' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/payment-terms')}>Payment Terms</Button>
-                  <Button variant={pathname === '/admin/admins' ? 'gradient' : 'text'} color={pathname === '/admin/admins' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/admins')}>Admins</Button>
-                  <Button variant={pathname === '/admin/netsuite' ? 'gradient' : 'text'} color={pathname === '/admin/netsuite' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/netsuite')}>NetSuite</Button>
+                  <Button variant={pathname === '/admin/support-funds' ? 'gradient' : 'text'} color={pathname === '/admin/support-funds' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md text-left font-normal" fullWidth onClick={() => handleNavigation('/admin/support-funds')}>Support Funds</Button>
+                  <Button variant={pathname === '/admin/locations' ? 'gradient' : 'text'} color={pathname === '/admin/locations' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md text-left font-normal" fullWidth onClick={() => handleNavigation('/admin/locations')}>Locations</Button>
+                  <Button variant={pathname === '/admin/classes' ? 'gradient' : 'text'} color={pathname === '/admin/classes' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md text-left font-normal" fullWidth onClick={() => handleNavigation('/admin/classes')}>Classes</Button>
+                  <Button variant={pathname === '/admin/subsidiaries' ? 'gradient' : 'text'} color={pathname === '/admin/subsidiaries' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md text-left font-normal" fullWidth onClick={() => handleNavigation('/admin/subsidiaries')}>Subsidiaries</Button>
+                  <Button variant={pathname === '/admin/incoterms' ? 'gradient' : 'text'} color={pathname === '/admin/incoterms' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md text-left font-normal" fullWidth onClick={() => handleNavigation('/admin/incoterms')}>Incoterms</Button>
+                  <Button variant={pathname === '/admin/payment-terms' ? 'gradient' : 'text'} color={pathname === '/admin/payment-terms' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md text-left font-normal" fullWidth onClick={() => handleNavigation('/admin/payment-terms')}>Payment Terms</Button>
+                  <Button variant={pathname === '/admin/admins' ? 'gradient' : 'text'} color={pathname === '/admin/admins' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md text-left font-normal" fullWidth onClick={() => handleNavigation('/admin/admins')}>Admins</Button>
+                  <Button variant={pathname === '/admin/netsuite' ? 'gradient' : 'text'} color={pathname === '/admin/netsuite' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md text-left font-normal" fullWidth onClick={() => handleNavigation('/admin/netsuite')}>NetSuite</Button>
                 </div>
               </div>
             </li>
