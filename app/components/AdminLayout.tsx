@@ -24,6 +24,7 @@ import {
   TagIcon,
   DocumentTextIcon,
   Cog6ToothIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 
 interface AdminLayoutProps {
@@ -103,6 +104,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [controller, dispatch] = useMaterialTailwindController();
   const { sidenavColor, sidenavType, openSidenav } = controller;
   const [isNavigating, setIsNavigating] = React.useState(false);
+  const [openPartners, setOpenPartners] = React.useState(false);
+  const [openProducts, setOpenProducts] = React.useState(false);
+  const [openSystem, setOpenSystem] = React.useState(false);
 
   // Handle navigation loading with pathname changes
   React.useEffect(() => {
@@ -175,39 +179,155 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </IconButton>
         </div>
         <div className="m-4">
-          {adminRoutes.map(({ layout, title, pages }, key) => (
-            <ul key={key} className="mb-4 flex flex-col gap-1">
-              {/* section titles removed per spec */}
-              {pages.map(({ icon, name, path }) => {
-                const isActive = pathname === `/admin${path}`;
-                return (
-                  <li key={name}>
-                    <Button
-                      variant={isActive ? "gradient" : "text"}
-                      color={
-                        isActive
-                          ? sidenavColor
-                          : sidenavType === "dark"
-                          ? "white"
-                          : "blue-gray"
-                      }
-                      className="flex items-center gap-4 px-4 capitalize"
-                      fullWidth
-                      onClick={() => handleNavigation(`/admin${path}`)}
-                    >
-                      {icon}
-                      <Typography
-                        color="inherit"
-                        className="font-medium capitalize"
-                      >
-                        {name}
-                      </Typography>
-                    </Button>
-                  </li>
-                );
-              })}
-            </ul>
-          ))}
+          <ul className="flex flex-col gap-1">
+            {/* 1. Dashboard */}
+            <li>
+              <Button
+                variant={pathname === '/admin' ? 'gradient' : 'text'}
+                color={pathname === '/admin' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')}
+                className="flex items-center gap-4 px-4 capitalize"
+                fullWidth
+                onClick={() => handleNavigation('/admin')}
+              >
+                <HomeIcon className="h-5 w-5" />
+                <Typography color="inherit" className="font-medium capitalize">Dashboard</Typography>
+              </Button>
+            </li>
+
+            {/* 2. Orders */}
+            <li>
+              <Button
+                variant={pathname === '/admin/orders' ? 'gradient' : 'text'}
+                color={pathname === '/admin/orders' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')}
+                className="flex items-center gap-4 px-4 capitalize"
+                fullWidth
+                onClick={() => handleNavigation('/admin/orders')}
+              >
+                <ShoppingCartIcon className="h-5 w-5" />
+                <Typography color="inherit" className="font-medium capitalize">Orders</Typography>
+              </Button>
+            </li>
+
+            {/* 3. Partners (submenu) */}
+            <li>
+              <Button
+                variant="text"
+                color={sidenavType === 'dark' ? 'white' : 'blue-gray'}
+                className="flex items-center justify-between px-4"
+                fullWidth
+                onClick={() => setOpenPartners(v => !v)}
+              >
+                <span className="flex items-center gap-4">
+                  <BuildingOffice2Icon className="h-5 w-5" />
+                  <Typography color="inherit" className="font-medium capitalize">Partners</Typography>
+                </span>
+                <ChevronDownIcon className={`h-4 w-4 transition-transform ${openPartners ? 'rotate-180' : ''}`} />
+              </Button>
+              {openPartners && (
+                <div className="pl-10 py-1 flex flex-col gap-1">
+                  <Button
+                    variant={pathname === '/admin/companies' ? 'gradient' : 'text'}
+                    color={pathname === '/admin/companies' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')}
+                    className="justify-start px-3"
+                    fullWidth
+                    onClick={() => handleNavigation('/admin/companies')}
+                  >
+                    Companies
+                  </Button>
+                  <Button
+                    variant={pathname === '/admin/users' ? 'gradient' : 'text'}
+                    color={pathname === '/admin/users' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')}
+                    className="justify-start px-3"
+                    fullWidth
+                    onClick={() => handleNavigation('/admin/users')}
+                  >
+                    Users
+                  </Button>
+                </div>
+              )}
+            </li>
+
+            {/* 4. Products (submenu) */}
+            <li>
+              <Button
+                variant="text"
+                color={sidenavType === 'dark' ? 'white' : 'blue-gray'}
+                className="flex items-center justify-between px-4"
+                fullWidth
+                onClick={() => setOpenProducts(v => !v)}
+              >
+                <span className="flex items-center gap-4">
+                  <CubeIcon className="h-5 w-5" />
+                  <Typography color="inherit" className="font-medium capitalize">Products</Typography>
+                </span>
+                <ChevronDownIcon className={`h-4 w-4 transition-transform ${openProducts ? 'rotate-180' : ''}`} />
+              </Button>
+              {openProducts && (
+                <div className="pl-10 py-1 flex flex-col gap-1">
+                  <Button
+                    variant={pathname === '/admin/products' ? 'gradient' : 'text'}
+                    color={pathname === '/admin/products' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')}
+                    className="justify-start px-3"
+                    fullWidth
+                    onClick={() => handleNavigation('/admin/products')}
+                  >
+                    Products
+                  </Button>
+                  <Button
+                    variant={pathname === '/admin/categories' ? 'gradient' : 'text'}
+                    color={pathname === '/admin/categories' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')}
+                    className="justify-start px-3"
+                    fullWidth
+                    onClick={() => handleNavigation('/admin/categories')}
+                  >
+                    Categories
+                  </Button>
+                </div>
+              )}
+            </li>
+
+            {/* 5. System (submenu) */}
+            <li>
+              <Button
+                variant="text"
+                color={sidenavType === 'dark' ? 'white' : 'blue-gray'}
+                className="flex items-center justify-between px-4"
+                fullWidth
+                onClick={() => setOpenSystem(v => !v)}
+              >
+                <span className="flex items-center gap-4">
+                  <Cog6ToothIcon className="h-5 w-5" />
+                  <Typography color="inherit" className="font-medium capitalize">System</Typography>
+                </span>
+                <ChevronDownIcon className={`h-4 w-4 transition-transform ${openSystem ? 'rotate-180' : ''}`} />
+              </Button>
+              {openSystem && (
+                <div className="pl-10 py-1 grid gap-1">
+                  <Button variant={pathname === '/admin/support-funds' ? 'gradient' : 'text'} color={pathname === '/admin/support-funds' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/support-funds')}>Support Funds</Button>
+                  <Button variant={pathname === '/admin/locations' ? 'gradient' : 'text'} color={pathname === '/admin/locations' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/locations')}>Locations</Button>
+                  <Button variant={pathname === '/admin/classes' ? 'gradient' : 'text'} color={pathname === '/admin/classes' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/classes')}>Classes</Button>
+                  <Button variant={pathname === '/admin/subsidiaries' ? 'gradient' : 'text'} color={pathname === '/admin/subsidiaries' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/subsidiaries')}>Subsidiaries</Button>
+                  <Button variant={pathname === '/admin/incoterms' ? 'gradient' : 'text'} color={pathname === '/admin/incoterms' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/incoterms')}>Incoterms</Button>
+                  <Button variant={pathname === '/admin/payment-terms' ? 'gradient' : 'text'} color={pathname === '/admin/payment-terms' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/payment-terms')}>Payment Terms</Button>
+                  <Button variant={pathname === '/admin/admins' ? 'gradient' : 'text'} color={pathname === '/admin/admins' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/admins')}>Admins</Button>
+                  <Button variant={pathname === '/admin/netsuite' ? 'gradient' : 'text'} color={pathname === '/admin/netsuite' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/netsuite')}>NetSuite</Button>
+                </div>
+              )}
+            </li>
+
+            {/* 6. Media (coming soon) */}
+            <li>
+              <Button
+                variant="text"
+                color={sidenavType === 'dark' ? 'white' : 'blue-gray'}
+                className="flex items-center gap-4 px-4 capitalize"
+                fullWidth
+              >
+                <TagIcon className="h-5 w-5" />
+                <Typography color="inherit" className="font-medium capitalize">Media (coming soon)</Typography>
+              </Button>
+            </li>
+          </ul>
         </div>
       </aside>
 
