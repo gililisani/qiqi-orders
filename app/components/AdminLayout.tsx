@@ -148,12 +148,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         } fixed inset-0 z-50 my-4 ml-4 h-[calc(100vh-32px)] w-72 rounded-xl transition-transform duration-300 xl:translate-x-0 border border-blue-gray-100`}
       >
         <div className="relative">
-          <Link href="/admin" className="py-6 px-8 text-center">
+          <Link href="/admin" className="py-6 px-8 text-center flex flex-col items-center gap-2">
+            <img src="/QIQI-Logo.svg" className="h-8 w-auto" alt="logo" />
             <Typography
               variant="h6"
               color={sidenavType === "dark" ? "white" : "blue-gray"}
+              className="font-bold"
             >
-              Qiqi Orders Admin
+              PARTNERS HUB ADMIN
             </Typography>
           </Link>
           <IconButton
@@ -244,7 +246,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
             <div className="flex items-center gap-2">
               <Typography variant="small" color="blue-gray">
-                Welcome, {user?.email}
+                Welcome, {user?.user_metadata?.name || user?.email?.split('@')[0] || 'Admin'}
               </Typography>
             </div>
           </div>
