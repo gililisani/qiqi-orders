@@ -200,6 +200,80 @@ export default function AdminDashboard() {
         <Typography variant="h4" color="blue-gray" className="font-bold">
           Dashboard Overview
         </Typography>
+        
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Today's Orders */}
+          <Card className="border border-blue-gray-100 shadow-sm">
+            <CardBody className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="p-3 bg-blue-50 rounded-full">
+                  <ShoppingCartIcon className="h-8 w-8 text-blue-500" />
+                </div>
+              </div>
+              <Typography variant="h2" color="blue-gray" className="mb-2">
+                {stats.todayOrders}
+              </Typography>
+              <Typography variant="small" color="blue-gray" className="font-medium">
+                New Orders Today
+              </Typography>
+              <Typography variant="small" color="gray" className="mt-1">
+                {formatCurrency(stats.todayOrdersValue)}
+              </Typography>
+            </CardBody>
+          </Card>
+
+          {/* Open Orders */}
+          <Card className="border border-blue-gray-100 shadow-sm">
+            <CardBody className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="p-3 bg-orange-50 rounded-full">
+                  <ClockIcon className="h-8 w-8 text-orange-500" />
+                </div>
+              </div>
+              <Typography variant="h2" color="blue-gray" className="mb-2">
+                {stats.openOrders}
+              </Typography>
+              <Typography variant="small" color="blue-gray" className="font-medium">
+                Open Orders
+              </Typography>
+            </CardBody>
+          </Card>
+
+          {/* In Process Orders */}
+          <Card className="border border-blue-gray-100 shadow-sm">
+            <CardBody className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="p-3 bg-green-50 rounded-full">
+                  <CogIcon className="h-8 w-8 text-green-500" />
+                </div>
+              </div>
+              <Typography variant="h2" color="blue-gray" className="mb-2">
+                {stats.inProcessOrders}
+              </Typography>
+              <Typography variant="small" color="blue-gray" className="font-medium">
+                Orders In Process
+              </Typography>
+            </CardBody>
+          </Card>
+
+          {/* Welcome Card */}
+          <Card className="border border-blue-gray-100 shadow-sm">
+            <CardBody className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="p-3 bg-purple-50 rounded-full">
+                  <HandRaisedIcon className="h-8 w-8 text-purple-500" />
+                </div>
+              </div>
+              <Typography variant="h2" color="blue-gray" className="mb-2">
+                HELLO
+              </Typography>
+              <Typography variant="small" color="blue-gray" className="font-medium">
+                Welcome Admin
+              </Typography>
+            </CardBody>
+          </Card>
+        </div>
 
         {/* Recent Orders */}
         <Card className="border border-blue-gray-100 shadow-sm">

@@ -221,9 +221,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className="p-4 xl:ml-80">
         {/* Top Navbar */}
         <Navbar
-          className="sticky top-4 z-40 flex h-max max-w-full rounded-xl border border-white/80 bg-white/80 py-2 px-4 text-white shadow-md backdrop-blur-2xl backdrop-saturate-200"
+          className="sticky top-4 z-40 flex h-max max-w-full py-2 px-4"
           fullWidth
-          blurred
+          variant="transparent"
         >
           <div className="flex items-center justify-between text-blue-gray-900">
             <div className="flex items-center gap-2">
