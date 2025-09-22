@@ -22,6 +22,7 @@ import {
   IconButton as MTIconButton,
   Navbar as MTNavbar,
   Alert as MTAlert,
+  Breadcrumbs as MTBreadcrumbs,
 } from "@material-tailwind/react";
 
 // Add default props to handle the TypeScript errors
@@ -93,4 +94,8 @@ export const Navbar = React.forwardRef<any, any>((props, ref) => (
 
 export const Alert = React.forwardRef<any, any>((props, ref) => (
   <MTAlert ref={ref} {...defaultProps} {...props} />
+));
+
+export const Breadcrumbs = React.forwardRef<any, any>((props, ref) => (
+  <MTBreadcrumbs ref={ref} {...defaultProps} {...props} />
 ));
