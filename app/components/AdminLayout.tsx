@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Button,
@@ -99,8 +99,27 @@ const adminRoutes = [
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, loading, error, isAdmin } = useAuth('Admin');
   const pathname = usePathname();
+  const router = useRouter();
   const [controller, dispatch] = useMaterialTailwindController();
   const { sidenavColor, sidenavType, openSidenav } = controller;
+  const [isNavigating, setIsNavigating] = React.useState(false);
+
+  // Handle navigation loading
+  React.useEffect(() => {
+    const handleStart = () => setIsNavigating(true);
+    const handleComplete = () => setIsNavigating(false);
+
+    // Listen for route changes
+    const originalPush = router.push;
+    router.push = (...args) => {
+      handleStart();
+      return originalPush.apply(router, args).finally(handleComplete);
+    };
+
+    return () => {
+      router.push = originalPush;
+    };
+  }, [router]);
 
   // Template2's sidebar types - exactly like the demo
   const sidenavTypes: { [key: string]: string } = {
@@ -247,7 +266,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </div>
 
         {/* Page Content */}
-        <div className="mt-4">
+        <div className="mt-4 relative">
+          {isNavigating && (
+            <div className="absolute inset-0 bg-blue-gray-50/50 flex items-center justify-center z-40">
+              <div className="flex flex-col items-center gap-4">
+                <Spinner className="h-8 w-8" />
+                <Typography variant="small" color="blue-gray">
+                  Loading...
+                </Typography>
+              </div>
+            </div>
+          )}
           {children}
         </div>
       </div>
