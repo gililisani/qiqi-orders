@@ -5,6 +5,14 @@ import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
 import Link from 'next/link';
 import { generateNetSuiteCSV, downloadCSV, OrderForExport } from '../../../lib/csvExport';
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Typography,
+  Button,
+  Chip,
+} from '../../components/MaterialTailwind';
 
 interface Order {
   id: string;
@@ -380,138 +388,161 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {/* Modern Table */}
-        <div className="bg-white rounded-md border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
+        {/* Material Tailwind Table */}
+        <Card className="border border-blue-gray-100 shadow-sm">
+          <CardHeader floated={false} shadow={false} className="rounded-none">
+            <div className="flex items-center justify-between">
+              <Typography variant="h5" color="blue-gray">
+                Orders Management
+              </Typography>
+              <div className="text-xs text-gray-400">
+                Showing {((currentPage - 1) * ordersPerPage) + 1}-{Math.min(currentPage * ordersPerPage, totalOrders)} of {totalOrders} orders
+              </div>
+            </div>
+          </CardHeader>
+          <CardBody className="overflow-x-scroll px-0 pt-0 pb-2">
+            <table className="w-full min-w-[640px] table-auto">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO Number</th>
-                  <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                  <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                  <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Support Fund</th>
-                  <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  {["PO Number", "Client", "Company", "Status", "Total", "Support Fund", "Date", "Actions"].map((el) => (
+                    <th
+                      key={el}
+                      className="border-b border-blue-gray-50 py-3 px-5 text-left"
+                    >
+                      <Typography
+                        variant="small"
+                        className="text-[11px] font-bold uppercase text-blue-gray-400"
+                      >
+                        {el}
+                      </Typography>
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {filteredOrders.map((order) => {
-                  const statusConfig = statusOptions.find(opt => opt.value === order.status) || statusOptions[0];
+              <tbody>
+                {filteredOrders.map((order, index) => {
+                  const className = `py-3 px-5 ${
+                    index === filteredOrders.length - 1
+                      ? ""
+                      : "border-b border-blue-gray-50"
+                  }`;
                   
                   return (
-                    <tr key={order.id} className="hover:bg-gray-25 transition-colors duration-150">
-                      <td className="px-6 py-3 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">
-                          #{order.po_number || order.id.substring(0, 8)}
-                        </div>
-                      </td>
-                      <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                              <span className="text-sm font-medium text-white">
-                                {order.client?.name?.charAt(0)?.toUpperCase() || '?'}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {order.client?.name || 'N/A'}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {order.client?.email || 'N/A'}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {order.company?.company_name || 'N/A'}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            NetSuite: {order.company?.netsuite_number || 'N/A'}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3 whitespace-nowrap">
-                        <select
-                          value={order.status}
-                          onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                          className={`text-xs font-medium px-3 py-1.5 rounded-full border-0 focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors ${statusConfig.color}`}
+                    <tr key={order.id}>
+                      <td className={className}>
+                        <Typography
+                          variant="small"
+                          color="blue-gray"
+                          className="font-semibold"
                         >
-                          {statusOptions.map(option => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
+                          #{order.po_number || order.id.substring(0, 8)}
+                        </Typography>
                       </td>
-                      <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">
+                      <td className={className}>
+                        <div>
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="font-semibold"
+                          >
+                            {order.client?.name || 'N/A'}
+                          </Typography>
+                          <Typography className="text-xs font-normal text-blue-gray-500">
+                            {order.client?.email || 'N/A'}
+                          </Typography>
+                        </div>
+                      </td>
+                      <td className={className}>
+                        <div>
+                          <Typography className="text-xs font-semibold text-blue-gray-600">
+                            {order.company?.company_name || 'N/A'}
+                          </Typography>
+                          <Typography className="text-xs font-normal text-blue-gray-500">
+                            NetSuite: {order.company?.netsuite_number || 'N/A'}
+                          </Typography>
+                        </div>
+                      </td>
+                      <td className={className}>
+                        <Chip
+                          variant="gradient"
+                          color={
+                            order.status === 'Open'
+                              ? 'orange'
+                              : order.status === 'In Process'
+                              ? 'blue'
+                              : order.status === 'Done'
+                              ? 'green'
+                              : order.status === 'Cancelled'
+                              ? 'red'
+                              : 'blue-gray'
+                          }
+                          value={order.status}
+                          className="py-0.5 px-2 text-[11px] font-medium w-fit"
+                        />
+                      </td>
+                      <td className={className}>
+                        <Typography className="text-xs font-semibold text-blue-gray-600">
                           ${order.total_value?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                        </div>
+                        </Typography>
                       </td>
-                      <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                      <td className={className}>
+                        <Typography className="text-xs font-semibold text-blue-gray-600">
                           ${order.support_fund_used?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                        </div>
+                        </Typography>
                       </td>
-                      <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
+                      <td className={className}>
+                        <Typography className="text-xs font-semibold text-blue-gray-600">
                           {new Date(order.created_at).toLocaleDateString()}
-                        </div>
+                        </Typography>
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap">
-                        <div className="flex items-center space-x-3">
-                          <Link
-                            href={`/admin/orders/${order.id}`}
-                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-                          >
-                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            View
-                          </Link>
-                          <button
-                            onClick={() => handleDownloadCSV(order.id)}
-                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
-                          >
-                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            CSV
-                          </button>
-                        </div>
-                        
-                        {/* NetSuite Actions */}
-                        <div className="mt-2 space-y-1">
-                          {order.netsuite_sales_order_id ? (
-                            <div className="text-xs text-green-600 font-medium">
-                              ✓ NetSuite: {order.netsuite_sales_order_id}
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => createOrderInNetSuite(order.id)}
-                              disabled={creatingInNetSuite === order.id}
-                              className="text-xs text-orange-600 hover:text-orange-800 disabled:opacity-50 font-medium transition-colors"
+                      <td className={className}>
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-3">
+                            <Link href={`/admin/orders/${order.id}`}>
+                              <Typography
+                                as="a"
+                                className="text-xs font-semibold text-blue-gray-600 cursor-pointer hover:text-blue-500"
+                              >
+                                View
+                              </Typography>
+                            </Link>
+                            <Typography
+                              as="button"
+                              onClick={() => handleDownloadCSV(order.id)}
+                              className="text-xs font-semibold text-blue-gray-600 cursor-pointer hover:text-blue-500"
                             >
-                              {creatingInNetSuite === order.id ? 'Creating...' : '→ Create in NetSuite'}
-                            </button>
-                          )}
+                              CSV
+                            </Typography>
+                          </div>
                           
-                          {order.status === 'In Process' && order.netsuite_sales_order_id && (
-                            <button
-                              onClick={() => completeOrder(order.id)}
-                              disabled={completingOrder === order.id}
-                              className="block text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50 font-medium transition-colors"
-                            >
-                              {completingOrder === order.id ? 'Completing...' : '✓ Mark Complete'}
-                            </button>
-                          )}
+                          {/* NetSuite Actions */}
+                          <div className="space-y-1">
+                            {order.netsuite_sales_order_id ? (
+                              <Typography className="text-xs text-green-600 font-medium">
+                                ✓ NetSuite: {order.netsuite_sales_order_id}
+                              </Typography>
+                            ) : (
+                              <Typography
+                                as="button"
+                                onClick={() => createOrderInNetSuite(order.id)}
+                                className="text-xs text-orange-600 hover:text-orange-800 disabled:opacity-50 font-medium cursor-pointer"
+                                disabled={creatingInNetSuite === order.id}
+                              >
+                                {creatingInNetSuite === order.id ? 'Creating...' : '→ Create in NetSuite'}
+                              </Typography>
+                            )}
+                            
+                            {order.status === 'In Process' && order.netsuite_sales_order_id && (
+                              <Typography
+                                as="button"
+                                onClick={() => completeOrder(order.id)}
+                                className="block text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50 font-medium cursor-pointer"
+                                disabled={completingOrder === order.id}
+                              >
+                                {completingOrder === order.id ? 'Completing...' : '✓ Mark Complete'}
+                              </Typography>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -519,8 +550,8 @@ export default function OrdersPage() {
                 })}
               </tbody>
             </table>
-          </div>
-        </div>
+          </CardBody>
+        </Card>
 
         {filteredOrders.length === 0 && !loading && (
           <div className="bg-white rounded-md border border-gray-200 p-8 text-center">
