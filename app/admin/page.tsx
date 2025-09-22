@@ -294,81 +294,51 @@ export default function AdminDashboard() {
               </Link>
             </div>
           </CardHeader>
-          <CardBody className="overflow-scroll px-0">
+          <CardBody className="overflow-x-scroll px-0 pt-0 pb-2">
             {recentOrders.length > 0 ? (
-              <table className="w-full min-w-max table-auto text-left">
+              <table className="w-full min-w-[640px] table-auto">
                 <thead>
                   <tr>
-                    <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
-                      <Typography
-                        variant="small"
-                        color="blue-gray"
-                        className="font-normal leading-none opacity-70"
+                    {["PO Number", "Company", "Status", "Total", "Date", "Actions"].map((el) => (
+                      <th
+                        key={el}
+                        className="border-b border-blue-gray-50 py-3 px-5 text-left"
                       >
-                        PO Number
-                      </Typography>
-                    </th>
-                    <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
-                      <Typography
-                        variant="small"
-                        color="blue-gray"
-                        className="font-normal leading-none opacity-70"
-                      >
-                        Company
-                      </Typography>
-                    </th>
-                    <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
-                      <Typography
-                        variant="small"
-                        color="blue-gray"
-                        className="font-normal leading-none opacity-70"
-                      >
-                        Status
-                      </Typography>
-                    </th>
-                    <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
-                      <Typography
-                        variant="small"
-                        color="blue-gray"
-                        className="font-normal leading-none opacity-70"
-                      >
-                        Total
-                      </Typography>
-                    </th>
-                    <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
-                      <Typography
-                        variant="small"
-                        color="blue-gray"
-                        className="font-normal leading-none opacity-70"
-                      >
-                        Date
-                      </Typography>
-                    </th>
-                    <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
-                      <Typography
-                        variant="small"
-                        color="blue-gray"
-                        className="font-normal leading-none opacity-70"
-                      >
-                        Actions
-                      </Typography>
-                    </th>
+                        <Typography
+                          variant="small"
+                          className="text-[11px] font-bold uppercase text-blue-gray-400"
+                        >
+                          {el}
+                        </Typography>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {recentOrders.map((order, index) => {
-                    const isLast = index === recentOrders.length - 1;
-                    const classes = isLast ? "p-4" : "p-4 border-b border-blue-gray-50";
+                    const className = `py-3 px-5 ${
+                      index === recentOrders.length - 1
+                        ? ""
+                        : "border-b border-blue-gray-50"
+                    }`;
                     
                     return (
                       <tr key={order.id}>
-                        <td className={classes}>
-                          <Typography variant="small" color="blue-gray" className="font-bold">
+                        <td className={className}>
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="font-semibold"
+                          >
                             {order.po_number || 'N/A'}
                           </Typography>
                         </td>
-                        <td className={classes}>
-                          <Typography variant="small" color="blue-gray" className="font-normal">
+                        <td className={className}>
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="font-semibold"
+                          >
                             {(() => {
                               const companies = order.companies;
                               if (!companies) return 'N/A';
@@ -379,11 +349,9 @@ export default function AdminDashboard() {
                             })()}
                           </Typography>
                         </td>
-                        <td className={classes}>
+                        <td className={className}>
                           <Chip
-                            size="sm"
-                            variant="ghost"
-                            value={order.status}
+                            variant="gradient"
                             color={
                               order.status === 'Open'
                                 ? 'orange'
@@ -393,33 +361,37 @@ export default function AdminDashboard() {
                                 ? 'green'
                                 : 'blue-gray'
                             }
+                            value={order.status}
+                            className="py-0.5 px-2 text-[11px] font-medium w-fit"
                           />
                         </td>
-                        <td className={classes}>
-                          <Typography variant="small" color="blue-gray" className="font-medium">
+                        <td className={className}>
+                          <Typography className="text-xs font-semibold text-blue-gray-600">
                             {formatCurrency(order.total_value || 0)}
                           </Typography>
                         </td>
-                        <td className={classes}>
-                          <Typography variant="small" color="blue-gray" className="font-normal">
+                        <td className={className}>
+                          <Typography className="text-xs font-semibold text-blue-gray-600">
                             {new Date(order.created_at).toLocaleDateString()}
                           </Typography>
                         </td>
-                        <td className={classes}>
-                          <div className="flex items-center gap-2">
+                        <td className={className}>
+                          <div className="flex items-center gap-3">
                             <Link href={`/admin/orders/${order.id}`}>
-                              <Button variant="text" size="sm">
+                              <Typography
+                                as="a"
+                                className="text-xs font-semibold text-blue-gray-600 cursor-pointer hover:text-blue-500"
+                              >
                                 View
-                              </Button>
+                              </Typography>
                             </Link>
-                            <Button
-                              variant="filled"
-                              size="sm"
-                              color="blue-gray"
+                            <Typography
+                              as="button"
                               onClick={() => handleDownloadCSV(order.id)}
+                              className="text-xs font-semibold text-blue-gray-600 cursor-pointer hover:text-blue-500"
                             >
                               CSV
-                            </Button>
+                            </Typography>
                           </div>
                         </td>
                       </tr>
