@@ -97,7 +97,7 @@ const adminRoutes = [
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  const { user, loading, error, isAdmin } = useAuth('Admin');
+  const { user, loading, error, isAdmin, logout } = useAuth('Admin');
   const pathname = usePathname();
   const router = useRouter();
   const [controller, dispatch] = useMaterialTailwindController();
@@ -161,14 +161,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       >
         <div className="relative">
           <Link href="/admin" className="py-6 px-8 text-center flex flex-col items-center gap-2">
-            <img src="/QIQI-Logo.svg" className="h-8 w-auto" alt="logo" />
-            <Typography
-              variant="h6"
-              color={sidenavType === "dark" ? "white" : "blue-gray"}
-              className="font-bold"
-            >
-              PARTNERS HUB ADMIN
-            </Typography>
+            <img src="/QIQI-Logo.svg" className="h-12 w-auto" alt="logo" />
           </Link>
           <IconButton
             variant="text"
@@ -184,17 +177,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <div className="m-4">
           {adminRoutes.map(({ layout, title, pages }, key) => (
             <ul key={key} className="mb-4 flex flex-col gap-1">
-              {title && (
-                <li className="mx-3.5 mt-4 mb-2">
-                  <Typography
-                    variant="small"
-                    color={sidenavType === "dark" ? "white" : "blue-gray"}
-                    className="font-black uppercase opacity-75"
-                  >
-                    {title}
-                  </Typography>
-                </li>
-              )}
+              {/* section titles removed per spec */}
               {pages.map(({ icon, name, path }) => {
                 const isActive = pathname === `/admin${path}`;
                 return (
@@ -247,13 +230,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               color="blue-gray"
               className="font-medium"
             >
-              Admin Dashboard
+              PARTNERS HUB ADMIN
             </Typography>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Typography variant="small" color="blue-gray">
               Welcome, {user?.email?.split('@')[0] || 'Admin'}
             </Typography>
+            <Button size="sm" variant="text" color="blue-gray" onClick={logout}>
+              Logout
+            </Button>
           </div>
         </div>
 
