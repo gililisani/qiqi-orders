@@ -153,44 +153,20 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="mb-2">
             <div className="mb-6 flex flex-col gap-6">
-              <div>
-                <Typography
-                  variant="small"
-                  color="blue-gray"
-                  className="mb-2 !font-medium"
-                >
-                  Your email <span className="text-red-500">*</span>
-                </Typography>
-                <Input 
-                  size="lg" 
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder={undefined}
-                  onPointerEnterCapture={undefined}
-                  onPointerLeaveCapture={undefined}
-                  crossOrigin={undefined}
-                />
-              </div>
-              <div>
-                <Typography
-                  variant="small"
-                  color="blue-gray"
-                  className="mb-2 !font-medium"
-                >
-                  Password <span className="text-red-500">*</span>
-                </Typography>
-                <Input 
-                  type="password" 
-                  size="lg" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={undefined}
-                  onPointerEnterCapture={undefined}
-                  onPointerLeaveCapture={undefined}
-                  crossOrigin={undefined}
-                />
-              </div>
+              <Input 
+                label="Your email" 
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <Input 
+                type="password" 
+                label="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
 
             {errorMsg && (
