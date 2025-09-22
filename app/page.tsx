@@ -128,21 +128,23 @@ export default function LoginPage() {
   }
 
   return (
-    <section className="grid grid-cols-1 xl:grid-cols-2 items-center h-full min-h-screen">
-      {/* Left Column - Login Form */}
-      <div className="w-full min-h-screen grid place-items-center bg-white">
-        <div className="w-full max-w-md px-8">
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-6">
-              <img src="/QIQI-Logo.svg" alt="Qiqi Logo" className="h-16 w-auto" />
-            </div>
-            <Typography variant="h2" className="!font-bold mb-4">
-              Sign In
-            </Typography>
-            <Typography className="text-lg !font-normal !text-blue-gray-500">
-              Enter your email and password to Sign In.
-            </Typography>
+    <section className="flex items-center justify-center h-full min-h-screen bg-blue-gray-50/50">
+      {/* Centered Login Form */}
+      <div className="w-full max-w-md px-8">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-6">
+            <img src="/QIQI-Logo.svg" alt="Qiqi Logo" className="h-16 w-auto" />
           </div>
+          <h1 className="text-3xl font-bold text-blue-gray-900 mb-4">
+            Partners Hub
+          </h1>
+          <Typography variant="h2" className="!font-bold mb-4">
+            Sign In
+          </Typography>
+          <Typography className="text-lg !font-normal !text-blue-gray-500">
+            Enter your email and password to Sign In.
+          </Typography>
+        </div>
 
           <form onSubmit={handleLogin} className="mb-2">
             <div className="mb-6 flex flex-col gap-6">
@@ -223,52 +225,6 @@ export default function LoginPage() {
               </Typography>
             </div>
           </form>
-        </div>
-      </div>
-
-      {/* Right Column - Pattern Image */}
-      <div className="p-8 hidden xl:block bg-gradient-to-br from-blue-gray-50 to-blue-gray-100">
-        <div className="h-full flex items-center justify-center">
-          <div className="text-center">
-            <Typography variant="h3" color="blue-gray" className="mb-4 font-bold">
-              Welcome to Partners Hub
-            </Typography>
-            <Typography variant="h6" color="blue-gray" className="mb-8">
-              Your gateway to streamlined order management
-            </Typography>
-            <div className="grid grid-cols-1 gap-4 max-w-sm mx-auto">
-              <div className="flex items-center gap-3 p-4 bg-white rounded-lg shadow-sm">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <Typography variant="small" color="blue-gray">
-                  Real-time order tracking
-                </Typography>
-              </div>
-              <div className="flex items-center gap-3 p-4 bg-white rounded-lg shadow-sm">
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <Typography variant="small" color="blue-gray">
-                  Secure partner access
-                </Typography>
-              </div>
-              <div className="flex items-center gap-3 p-4 bg-white rounded-lg shadow-sm">
-                <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <Typography variant="small" color="blue-gray">
-                  Integrated NetSuite sync
-                </Typography>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </section>
