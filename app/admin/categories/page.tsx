@@ -4,6 +4,15 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
 import Link from 'next/link';
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Typography,
+  Button,
+  Chip,
+  Breadcrumbs,
+} from '../../components/MaterialTailwind';
 
 interface Category {
   id: number;
@@ -92,23 +101,28 @@ export default function CategoriesPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
+        {/* Breadcrumbs */}
+        <Breadcrumbs>
+          <Link href="/admin" className="opacity-60">
+            Admin
+          </Link>
+          <span>Categories</span>
+        </Breadcrumbs>
+
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Product Categories</h1>
-            <p className="text-gray-600 mt-1">Manage product categories and their visibility settings</p>
-          </div>
+          <Typography variant="h4" color="blue-gray" className="font-bold">
+            Product Categories
+          </Typography>
           <div className="flex space-x-3">
-            <Link
-              href="/admin/categories/reorder"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:opacity-90 transition"
-            >
-              Reorder Categories
+            <Link href="/admin/categories/reorder">
+              <Button variant="outlined" size="sm">
+                Reorder Categories
+              </Button>
             </Link>
-            <Link
-              href="/admin/categories/new"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
-            >
-              Add Category
+            <Link href="/admin/categories/new">
+              <Button variant="filled" size="sm">
+                Add Category
+              </Button>
             </Link>
           </div>
         </div>
@@ -119,99 +133,128 @@ export default function CategoriesPage() {
           </div>
         )}
 
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          <ul className="divide-y divide-gray-200">
-            {categories.map((category) => (
-              <li key={category.id}>
-                <div className="px-4 py-4 flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        {category.image_url ? (
-                          <img
-                            src={category.image_url}
-                            alt={category.name}
-                            className="w-16 h-16 object-cover rounded-lg"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                              if (fallback) fallback.style.display = 'flex';
-                            }}
-                          />
-                        ) : null}
-                        <div 
-                          className={`w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center ${category.image_url ? 'hidden' : ''}`}
-                        >
-                          <span className="text-blue-600 font-medium text-lg">
-                            {category.sort_order}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="ml-4 flex-1">
-                        <div className="flex items-center">
-                          <h3 className="text-lg font-medium text-gray-900">
+        {/* Material Tailwind Table */}
+        <Card className="border border-blue-gray-100 shadow-sm">
+          <CardHeader floated={false} shadow={false} className="rounded-none">
+            <div className="flex items-center justify-between">
+              <Typography variant="h5" color="blue-gray">
+                Categories Management
+              </Typography>
+            </div>
+          </CardHeader>
+          <CardBody className="overflow-x-scroll px-0 pt-0 pb-2">
+            <table className="w-full min-w-[640px] table-auto">
+              <thead>
+                <tr>
+                  {["Order", "Category", "Products", "Americas", "International", "Actions"].map((el) => (
+                    <th
+                      key={el}
+                      className="border-b border-blue-gray-50 py-3 px-5 text-left"
+                    >
+                      <Typography
+                        variant="small"
+                        className="text-[11px] font-bold uppercase text-blue-gray-400"
+                      >
+                        {el}
+                      </Typography>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {categories.map((category, index) => {
+                  const className = `py-3 px-5 ${
+                    index === categories.length - 1
+                      ? ""
+                      : "border-b border-blue-gray-50"
+                  }`;
+                  
+                  return (
+                    <tr key={category.id}>
+                      <td className={className}>
+                        <Typography className="text-xs font-semibold text-blue-gray-600">
+                          {category.sort_order}
+                        </Typography>
+                      </td>
+                      <td className={className}>
+                        <div>
+                          <Typography
+                            variant="small"
+                            color="blue-gray"
+                            className="font-semibold"
+                          >
                             {category.name}
-                          </h3>
-                          <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            {category.product_count} products
-                          </span>
+                          </Typography>
+                          {category.description && (
+                            <Typography className="text-xs font-normal text-blue-gray-500">
+                              {category.description}
+                            </Typography>
+                          )}
                         </div>
-                        {category.description && (
-                          <p className="text-sm text-gray-500 mt-1">{category.description}</p>
-                        )}
-                        <div className="flex items-center mt-2 space-x-4">
-                          <div className="flex items-center">
-                            <span className="text-xs text-gray-500 mr-2">Americas:</span>
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              category.visible_to_americas 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {category.visible_to_americas ? 'Visible' : 'Hidden'}
-                            </span>
-                          </div>
-                          <div className="flex items-center">
-                            <span className="text-xs text-gray-500 mr-2">International:</span>
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              category.visible_to_international 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {category.visible_to_international ? 'Visible' : 'Hidden'}
-                            </span>
-                          </div>
+                      </td>
+                      <td className={className}>
+                        <Chip
+                          variant="ghost"
+                          color="blue-gray"
+                          value={`${category.product_count || 0} products`}
+                          className="py-0.5 px-2 text-[11px] font-medium w-fit"
+                        />
+                      </td>
+                      <td className={className}>
+                        <Chip
+                          variant="gradient"
+                          color={category.visible_to_americas ? "green" : "red"}
+                          value={category.visible_to_americas ? "Visible" : "Hidden"}
+                          className="py-0.5 px-2 text-[11px] font-medium w-fit"
+                        />
+                      </td>
+                      <td className={className}>
+                        <Chip
+                          variant="gradient"
+                          color={category.visible_to_international ? "green" : "red"}
+                          value={category.visible_to_international ? "Visible" : "Hidden"}
+                          className="py-0.5 px-2 text-[11px] font-medium w-fit"
+                        />
+                      </td>
+                      <td className={className}>
+                        <div className="flex items-center gap-3">
+                          <Link href={`/admin/categories/${category.id}/edit`}>
+                            <Typography
+                              as="a"
+                              className="text-xs font-semibold text-blue-gray-600 cursor-pointer hover:text-blue-500"
+                            >
+                              Edit
+                            </Typography>
+                          </Link>
+                          <Typography
+                            as="button"
+                            onClick={() => handleDelete(category.id, category.name)}
+                            className="text-xs font-semibold text-red-600 cursor-pointer hover:text-red-500"
+                          >
+                            Delete
+                          </Typography>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Link
-                      href={`/admin/categories/${category.id}/edit`}
-                      className="text-blue-600 hover:text-blue-900 text-sm"
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(category.id, category.name)}
-                      className="text-red-600 hover:text-red-900 text-sm"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </CardBody>
+        </Card>
 
         {categories.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No categories found.</p>
-            <Link
-              href="/admin/categories/new"
-              className="text-blue-600 hover:text-blue-800 mt-2 inline-block"
-            >
-              Create your first category
+          <div className="py-12 text-center">
+            <Typography variant="h6" color="blue-gray" className="mb-2">
+              No categories found
+            </Typography>
+            <Typography variant="small" color="gray">
+              Categories will help organize your products.
+            </Typography>
+            <Link href="/admin/categories/new" className="mt-4 inline-block">
+              <Button variant="filled" size="sm">
+                Create your first category
+              </Button>
             </Link>
           </div>
         )}
