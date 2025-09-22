@@ -277,14 +277,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <CubeIcon className="h-5 w-5" />
                   <Typography color="inherit" className="font-medium capitalize">Products</Typography>
                 </span>
-                <ChevronDownIcon className={`h-4 w-4 transition-transform ${openProducts ? 'rotate-180' : ''}`} />
+                <ChevronDownIcon className={`h-4 w-4 transition-transform duration-300 ${openProducts ? 'rotate-180' : ''}`} />
               </Button>
-              {openProducts && (
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${openProducts ? 'max-h-40' : 'max-h-0'}`}>
                 <div className="pl-10 py-1 flex flex-col gap-1">
                   <Button
                     variant={pathname === '/admin/products' ? 'gradient' : 'text'}
                     color={pathname === '/admin/products' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')}
-                    className="justify-start px-3"
+                    className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md"
                     fullWidth
                     onClick={() => handleNavigation('/admin/products')}
                   >
@@ -293,14 +293,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <Button
                     variant={pathname === '/admin/categories' ? 'gradient' : 'text'}
                     color={pathname === '/admin/categories' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')}
-                    className="justify-start px-3"
+                    className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md"
                     fullWidth
                     onClick={() => handleNavigation('/admin/categories')}
                   >
                     Categories
                   </Button>
                 </div>
-              )}
+              </div>
             </li>
 
             {/* 5. System (submenu) */}
@@ -316,20 +316,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <Cog6ToothIcon className="h-5 w-5" />
                   <Typography color="inherit" className="font-medium capitalize">System</Typography>
                 </span>
-                <ChevronDownIcon className={`h-4 w-4 transition-transform ${openSystem ? 'rotate-180' : ''}`} />
+                <ChevronDownIcon className={`h-4 w-4 transition-transform duration-300 ${openSystem ? 'rotate-180' : ''}`} />
               </Button>
-              {openSystem && (
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${openSystem ? 'max-h-96' : 'max-h-0'}`}>
                 <div className="pl-10 py-1 grid gap-1">
-                  <Button variant={pathname === '/admin/support-funds' ? 'gradient' : 'text'} color={pathname === '/admin/support-funds' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/support-funds')}>Support Funds</Button>
-                  <Button variant={pathname === '/admin/locations' ? 'gradient' : 'text'} color={pathname === '/admin/locations' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/locations')}>Locations</Button>
-                  <Button variant={pathname === '/admin/classes' ? 'gradient' : 'text'} color={pathname === '/admin/classes' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/classes')}>Classes</Button>
-                  <Button variant={pathname === '/admin/subsidiaries' ? 'gradient' : 'text'} color={pathname === '/admin/subsidiaries' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/subsidiaries')}>Subsidiaries</Button>
-                  <Button variant={pathname === '/admin/incoterms' ? 'gradient' : 'text'} color={pathname === '/admin/incoterms' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/incoterms')}>Incoterms</Button>
-                  <Button variant={pathname === '/admin/payment-terms' ? 'gradient' : 'text'} color={pathname === '/admin/payment-terms' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/payment-terms')}>Payment Terms</Button>
-                  <Button variant={pathname === '/admin/admins' ? 'gradient' : 'text'} color={pathname === '/admin/admins' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/admins')}>Admins</Button>
-                  <Button variant={pathname === '/admin/netsuite' ? 'gradient' : 'text'} color={pathname === '/admin/netsuite' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3" fullWidth onClick={() => handleNavigation('/admin/netsuite')}>NetSuite</Button>
+                  <Button variant={pathname === '/admin/support-funds' ? 'gradient' : 'text'} color={pathname === '/admin/support-funds' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/support-funds')}>Support Funds</Button>
+                  <Button variant={pathname === '/admin/locations' ? 'gradient' : 'text'} color={pathname === '/admin/locations' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/locations')}>Locations</Button>
+                  <Button variant={pathname === '/admin/classes' ? 'gradient' : 'text'} color={pathname === '/admin/classes' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/classes')}>Classes</Button>
+                  <Button variant={pathname === '/admin/subsidiaries' ? 'gradient' : 'text'} color={pathname === '/admin/subsidiaries' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/subsidiaries')}>Subsidiaries</Button>
+                  <Button variant={pathname === '/admin/incoterms' ? 'gradient' : 'text'} color={pathname === '/admin/incoterms' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/incoterms')}>Incoterms</Button>
+                  <Button variant={pathname === '/admin/payment-terms' ? 'gradient' : 'text'} color={pathname === '/admin/payment-terms' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/payment-terms')}>Payment Terms</Button>
+                  <Button variant={pathname === '/admin/admins' ? 'gradient' : 'text'} color={pathname === '/admin/admins' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/admins')}>Admins</Button>
+                  <Button variant={pathname === '/admin/netsuite' ? 'gradient' : 'text'} color={pathname === '/admin/netsuite' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')} className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md" fullWidth onClick={() => handleNavigation('/admin/netsuite')}>NetSuite</Button>
                 </div>
-              )}
+              </div>
             </li>
 
             {/* 6. Media (coming soon) */}
