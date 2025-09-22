@@ -21,27 +21,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fix auto-fill label positioning
-  useEffect(() => {
-    const checkAutoFill = () => {
-      const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement;
-      const passwordInput = document.querySelector('input[type="password"]') as HTMLInputElement;
-      
-      if (emailInput && emailInput.value) {
-        emailInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      if (passwordInput && passwordInput.value) {
-        passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    };
-
-    // Check immediately and after a short delay for auto-fill
-    checkAutoFill();
-    const timeout = setTimeout(checkAutoFill, 100);
-    
-    return () => clearTimeout(timeout);
-  }, []);
-
   // Check if user is already logged in
   useEffect(() => {
     const checkUser = async () => {
