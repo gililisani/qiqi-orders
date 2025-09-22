@@ -160,13 +160,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </Link>
           <IconButton
             variant="text"
-            color="white"
+            color={sidenavType === "dark" ? "white" : "blue-gray"}
             size="sm"
             ripple={false}
-            className="absolute right-0 top-0 grid rounded-br-none rounded-tl-none xl:hidden"
+            className="absolute right-2 top-2 xl:hidden z-50"
             onClick={() => setOpenSidenav(dispatch, false)}
           >
-            <XMarkIcon strokeWidth={2.5} className="h-5 w-5 text-white" />
+            <XMarkIcon strokeWidth={2.5} className="h-5 w-5" />
           </IconButton>
         </div>
         <div className="m-4">
@@ -219,38 +219,32 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Main Content */}
       <div className="p-4 xl:ml-80">
-        {/* Top Navbar */}
-        <Navbar
-          className="sticky top-4 z-40 flex h-max max-w-full py-2 px-4"
-          fullWidth
-          variant="transparent"
-        >
-          <div className="flex items-center justify-between text-blue-gray-900">
-            <div className="flex items-center gap-2">
-              <IconButton
-                ripple={false}
-                size="sm"
-                variant="text"
-                className="block xl:hidden"
-                onClick={() => setOpenSidenav(dispatch, true)}
-              >
-                <Bars3Icon className="h-5 w-5" />
-              </IconButton>
-              <Typography
-                as="a"
-                href="#"
-                className="mr-4 cursor-pointer py-1.5 font-medium"
-              >
-                Admin Dashboard
-              </Typography>
-            </div>
-            <div className="flex items-center gap-2">
-              <Typography variant="small" color="blue-gray">
-                Welcome, {user?.email?.split('@')[0] || 'Admin'}
-              </Typography>
-            </div>
+        {/* Top Navbar - Clean Design */}
+        <div className="flex items-center justify-between py-2 px-4">
+          <div className="flex items-center gap-2">
+            <IconButton
+              ripple={false}
+              size="sm"
+              variant="text"
+              className="block xl:hidden z-50"
+              onClick={() => setOpenSidenav(dispatch, true)}
+            >
+              <Bars3Icon className="h-5 w-5" />
+            </IconButton>
+            <Typography
+              variant="h5"
+              color="blue-gray"
+              className="font-medium"
+            >
+              Admin Dashboard
+            </Typography>
           </div>
-        </Navbar>
+          <div className="flex items-center gap-2">
+            <Typography variant="small" color="blue-gray">
+              Welcome, {user?.email?.split('@')[0] || 'Admin'}
+            </Typography>
+          </div>
+        </div>
 
         {/* Page Content */}
         <div className="mt-4">
