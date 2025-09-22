@@ -97,3 +97,9 @@ th {
 .fc-prev-button.fc-button.fc-button-primary {
   @apply !mr-1;
 }
+
+/* Fix for Material Tailwind Input auto-fill label positioning */
+input:-webkit-autofill ~ label {
+  transform: translateY(-0.75rem) scale(0.75) !important;
+  color: rgb(59 130 246) !important;
+}
