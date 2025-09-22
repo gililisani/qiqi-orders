@@ -205,19 +205,12 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Merged Orders Stats - Takes 3 columns */}
           <Card className="border border-blue-gray-100 shadow-sm lg:col-span-3">
-            <CardBody className="relative">
-              {/* Template Chart Icon */}
-              <div className="bg-clip-border mt-4 mx-4 rounded-xl overflow-hidden bg-gradient-to-tr from-gray-900 to-gray-800 text-white shadow-gray-900/20 absolute grid h-12 w-12 place-items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="w-6 h-6 text-white">
-                  <path d="M18.375 2.25c-1.035 0-1.875.84-1.875 1.875v15.75c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875V4.125c0-1.036-.84-1.875-1.875-1.875h-.75zM9.75 8.625c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v11.25c0 1.035-.84 1.875-1.875 1.875h-.75a1.875 1.875 0 01-1.875-1.875V8.625zM3 13.125c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v6.75c0 1.035-.84 1.875-1.875 1.875h-.75A1.875 1.875 0 013 19.875v-6.75z"></path>
-                </svg>
-              </div>
-              
+            <CardBody className="py-8">
               {/* Stats Content */}
-              <div className="ml-20 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
                 {/* Today's Orders */}
-                <div className="text-center">
-                  <Typography variant="h3" color="blue-gray" className="mb-1">
+                <div className="text-center flex flex-col justify-center">
+                  <Typography variant="h1" color="blue-gray" className="mb-2 text-6xl font-bold">
                     {stats.todayOrders}
                   </Typography>
                   <Typography variant="small" color="blue-gray" className="font-medium">
@@ -229,8 +222,8 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Open Orders */}
-                <div className="text-center">
-                  <Typography variant="h3" color="blue-gray" className="mb-1">
+                <div className="text-center flex flex-col justify-center">
+                  <Typography variant="h1" color="blue-gray" className="mb-2 text-6xl font-bold">
                     {stats.openOrders}
                   </Typography>
                   <Typography variant="small" color="blue-gray" className="font-medium">
@@ -239,8 +232,8 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* In Process Orders */}
-                <div className="text-center">
-                  <Typography variant="h3" color="blue-gray" className="mb-1">
+                <div className="text-center flex flex-col justify-center">
+                  <Typography variant="h1" color="blue-gray" className="mb-2 text-6xl font-bold">
                     {stats.inProcessOrders}
                   </Typography>
                   <Typography variant="small" color="blue-gray" className="font-medium">
@@ -253,12 +246,7 @@ export default function AdminDashboard() {
 
           {/* Welcome Card - Takes 1 column */}
           <Card className="border border-blue-gray-100 shadow-sm">
-            <CardBody className="text-center">
-              <div className="flex justify-center mb-4">
-                <div className="p-3 bg-purple-50 rounded-full">
-                  <HandRaisedIcon className="h-8 w-8 text-purple-500" />
-                </div>
-              </div>
+            <CardBody className="text-center py-6">
               <Typography variant="h2" color="blue-gray" className="mb-2">
                 HELLO
               </Typography>
