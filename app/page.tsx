@@ -146,7 +146,7 @@ export default function LoginPage() {
           </Typography>
         </div>
 
-          <form onSubmit={handleLogin} className="mb-2">
+        <form onSubmit={handleLogin} className="mb-2">
             <div className="mb-6 flex flex-col gap-6">
               <div>
                 <Typography
@@ -224,8 +224,7 @@ export default function LoginPage() {
                 </Link>
               </Typography>
             </div>
-          </form>
-        </div>
+        </form>
       </div>
     </section>
   );
