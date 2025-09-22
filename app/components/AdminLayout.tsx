@@ -238,14 +238,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <BuildingOffice2Icon className="h-5 w-5" />
                   <Typography color="inherit" className="font-medium capitalize">Partners</Typography>
                 </span>
-                <ChevronDownIcon className={`h-4 w-4 transition-transform ${openPartners ? 'rotate-180' : ''}`} />
+                <ChevronDownIcon className={`h-4 w-4 transition-transform duration-300 ${openPartners ? 'rotate-180' : ''}`} />
               </Button>
-              {openPartners && (
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${openPartners ? 'max-h-40' : 'max-h-0'}`}>
                 <div className="pl-10 py-1 flex flex-col gap-1">
                   <Button
                     variant={pathname === '/admin/companies' ? 'gradient' : 'text'}
                     color={pathname === '/admin/companies' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')}
-                    className="justify-start px-3"
+                    className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md"
                     fullWidth
                     onClick={() => handleNavigation('/admin/companies')}
                   >
@@ -254,14 +254,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <Button
                     variant={pathname === '/admin/users' ? 'gradient' : 'text'}
                     color={pathname === '/admin/users' ? sidenavColor : (sidenavType === 'dark' ? 'white' : 'blue-gray')}
-                    className="justify-start px-3"
+                    className="justify-start px-3 hover:bg-blue-gray-50/50 rounded-md"
                     fullWidth
                     onClick={() => handleNavigation('/admin/users')}
                   >
                     Users
                   </Button>
                 </div>
-              )}
+              </div>
             </li>
 
             {/* 4. Products (submenu) */}
