@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
 import AdminLayout from '../../../components/AdminLayout';
+import InnerPageShell from '../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 
 interface Company {
@@ -159,24 +160,19 @@ export default function CompanyViewPage() {
   return (
     <AdminLayout>
       <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">{company.company_name}</h1>
-          <div className="flex space-x-2">
-            <Link
-              href={`/admin/companies/${company.id}/edit`}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-            >
-              Edit Company
-            </Link>
-            <Link
-              href="/admin/companies"
-              className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition"
-            >
-              Back to Companies
-            </Link>
-          </div>
-        </div>
-
+        <InnerPageShell
+          title={company.company_name}
+          breadcrumbs={[
+            { label: 'Companies', href: '/admin/companies' },
+            { label: company.company_name || 'Company' },
+          ]}
+          actions={
+            <>
+              <Link href={`/admin/companies/${company.id}/edit`} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Edit Company</Link>
+              <Link href="/admin/companies" className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition">Back</Link>
+            </>
+          }
+        >
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Company Details */}
           <div className="bg-white p-6 rounded-lg shadow border">
@@ -284,6 +280,7 @@ export default function CompanyViewPage() {
             )}
           </div>
         </div>
+        </InnerPageShell>
       </div>
     </AdminLayout>
   );

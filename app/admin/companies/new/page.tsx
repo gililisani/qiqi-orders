@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
 import AdminLayout from '../../../components/AdminLayout';
+import InnerPageShell from '../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 
 interface FormData {
@@ -189,15 +190,11 @@ export default function NewCompanyPage() {
   return (
     <AdminLayout>
       <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Add New Company</h1>
-          <Link
-            href="/admin/companies"
-            className="text-gray-600 hover:text-gray-800"
-          >
-            ← Back to Companies
-          </Link>
-        </div>
+        <InnerPageShell
+          title="Add New Company"
+          breadcrumbs={[{ label: 'Companies', href: '/admin/companies' }, { label: 'New' }]}
+          actions={<Link href="/admin/companies" className="text-gray-600 hover:text-gray-800">← Back</Link>}
+        >
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -387,6 +384,7 @@ export default function NewCompanyPage() {
             </Link>
           </div>
         </form>
+        </InnerPageShell>
       </div>
     </AdminLayout>
   );
