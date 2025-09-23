@@ -54,7 +54,7 @@ export default function TopNavbar() {
                 </button>
                 <div 
                   className={`absolute left-0 top-full mt-2 w-56 transition-all duration-200 ${
-                    openMenu === "orders" ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+                    openMenu === "orders" ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
                   }`} 
                   onMouseEnter={() => onEnter("orders")} 
                   onMouseLeave={onLeave}
@@ -71,7 +71,7 @@ export default function TopNavbar() {
                       </button>
                       <div 
                         className={`absolute left-full top-0 ml-2 w-48 transition-all duration-200 ${
-                          openSub === "status" ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+                          openSub === "status" ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
                         }`}
                       >
                         <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
@@ -96,7 +96,7 @@ export default function TopNavbar() {
                 </button>
                 <div 
                   className={`absolute left-0 top-full mt-2 w-56 transition-all duration-200 ${
-                    openMenu === "products" ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+                    openMenu === "products" ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
                   }`} 
                   onMouseEnter={() => onEnter("products")} 
                   onMouseLeave={onLeave}
@@ -118,7 +118,7 @@ export default function TopNavbar() {
                 </button>
                 <div 
                   className={`absolute left-0 top-full mt-2 w-64 transition-all duration-200 ${
-                    openMenu === "system" ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+                    openMenu === "system" ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
                   }`} 
                   onMouseEnter={() => onEnter("system")} 
                   onMouseLeave={onLeave}
