@@ -43,8 +43,34 @@ export default function FormKitPage() {
           </Card>
         </section>
 
-        <Card header={<h2 className="font-semibold">Page Shell Example</h2>}>
-          <p className="text-sm text-gray-600">Use this block style for inner pages without tables.</p>
+        {/* Blocks: exact border/shadow examples */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card header={<h2 className="font-semibold">Block (Default)</h2>}>
+            <p className="text-sm text-gray-600">This block uses border-gray-100 and shadow-md to match the Creative Tim billing layout.</p>
+          </Card>
+          <Card header={<h2 className="font-semibold">Block (With Content)</h2>}>
+            <div className="space-y-2 text-sm text-gray-700">
+              <p>Use cards for grouped information or form sections.</p>
+              <p>Outer container background should be a light gray; inner blocks are white.</p>
+            </div>
+          </Card>
+        </section>
+
+        {/* Links: Edit / View / Delete */}
+        <Card header={<h2 className="font-semibold">Links</h2>}>
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <a className="text-blue-600 hover:text-blue-800" href="#">Edit</a>
+            <a className="text-gray-700 hover:text-gray-900" href="#">View</a>
+            <a className="text-red-600 hover:text-red-800" href="#">Delete</a>
+          </div>
+        </Card>
+
+        {/* Labels: Enabled / Disabled */}
+        <Card header={<h2 className="font-semibold">Labels</h2>}>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-800">Enabled</span>
+            <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-gray-200 text-gray-800">Disabled</span>
+          </div>
         </Card>
       </div>
     </AdminLayout>
