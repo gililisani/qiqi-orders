@@ -39,7 +39,7 @@ export default function TopNavbar() {
 
             {/* Center: Nav */}
             <nav className="hidden lg:flex items-center gap-6 text-sm whitespace-nowrap">
-              <a className="text-gray-700 hover:text-gray-900" href="#">Dashboard</a>
+              <a className="text-gray-700 hover:text-gray-900" href="/admin">Dashboard</a>
 
               {/* Orders */}
               <div className="relative" onMouseEnter={() => onEnter("orders")} onMouseLeave={onLeave}>
@@ -57,8 +57,8 @@ export default function TopNavbar() {
                   onMouseLeave={onLeave}
                 >
                   <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
-                    <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Orders</a>
-                    <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">New Order</a>
+                    <a href="/admin/orders" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Orders</a>
+                    <a href="/client/orders/new" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">New Order</a>
                     <div className="relative" onMouseEnter={() => onEnterSub("status")} onMouseLeave={onLeaveSub}>
                       <button className="w-full flex items-center justify-between rounded px-3 py-2 text-gray-700 hover:bg-gray-50">
                         <span>Status</span>
@@ -99,8 +99,9 @@ export default function TopNavbar() {
                   onMouseLeave={onLeave}
                 >
                   <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
-                    <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Products</a>
-                    <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">New Product</a>
+                    <a href="/admin/products" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Products</a>
+                    <a href="/admin/products/new" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">New Product</a>
+                    <a href="/admin/categories" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Categories</a>
                   </div>
                 </div>
               </div>
@@ -121,14 +122,16 @@ export default function TopNavbar() {
                   onMouseLeave={onLeave}
                 >
                   <div className="border border-[#e5e5e5] rounded-xl bg-white p-2 grid grid-cols-1">
-                    <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Companies</a>
-                    <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Users</a>
-                    <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Products</a>
-                    <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Categories</a>
-                    <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Subsidiaries</a>
-                    <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Support Funds</a>
-                    <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Incoterms</a>
-                    <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Payment Terms</a>
+                    <a href="/admin/companies" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Companies</a>
+                    <a href="/admin/users" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Users</a>
+                    <a href="/admin/admins" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Admins</a>
+                    <a href="/admin/subsidiaries" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Subsidiaries</a>
+                    <a href="/admin/support-funds" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Support Funds</a>
+                    <a href="/admin/locations" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Locations</a>
+                    <a href="/admin/classes" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Classes</a>
+                    <a href="/admin/incoterms" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Incoterms</a>
+                    <a href="/admin/payment-terms" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Payment Terms</a>
+                    <a href="/admin/netsuite" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">NetSuite</a>
                   </div>
                 </div>
               </div>
@@ -167,12 +170,12 @@ export default function TopNavbar() {
           {mobileOpen && (
             <div className="lg:hidden border-t border-[#e5e5e5] py-2 text-sm">
               <div className="grid gap-1 py-2">
-                <a className="px-2 py-2 rounded hover:bg-gray-50" href="#">Dashboard</a>
+                <a className="px-2 py-2 rounded hover:bg-gray-50" href="/admin">Dashboard</a>
                 <details>
                   <summary className="px-2 py-2 rounded hover:bg-gray-50 cursor-pointer">Orders</summary>
                   <div className="pl-4 py-1 grid">
-                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">All Orders</a>
-                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">New Order</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/orders">All Orders</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/client/orders/new">New Order</a>
                     <details>
                       <summary className="px-2 py-1 rounded hover:bg-gray-50 cursor-pointer">Status</summary>
                       <div className="pl-4 py-1 grid">
@@ -187,21 +190,24 @@ export default function TopNavbar() {
                 <details>
                   <summary className="px-2 py-2 rounded hover:bg-gray-50 cursor-pointer">Products</summary>
                   <div className="pl-4 py-1 grid">
-                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">All Products</a>
-                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">New Product</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/products">All Products</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/products/new">New Product</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/categories">Categories</a>
                   </div>
                 </details>
                 <details>
                   <summary className="px-2 py-2 rounded hover:bg-gray-50 cursor-pointer">System</summary>
                   <div className="pl-4 py-1 grid">
-                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">Companies</a>
-                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">Users</a>
-                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">Products</a>
-                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">Categories</a>
-                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">Subsidiaries</a>
-                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">Support Funds</a>
-                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">Incoterms</a>
-                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">Payment Terms</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/companies">Companies</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/users">Users</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/admins">Admins</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/subsidiaries">Subsidiaries</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/support-funds">Support Funds</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/locations">Locations</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/classes">Classes</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/incoterms">Incoterms</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/payment-terms">Payment Terms</a>
+                    <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/netsuite">NetSuite</a>
                   </div>
                 </details>
               </div>
