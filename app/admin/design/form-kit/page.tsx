@@ -117,11 +117,13 @@ export default function FormKitPage() {
           {/* Pagination inside the same block */}
           <div className="mt-4 flex items-center justify-between">
             <p className="text-sm text-gray-600">Showing 1-2 of 2</p>
-            <nav className="isolate inline-flex -space-x-px rounded-md" aria-label="Pagination">
-              <a href="#" className="px-3 py-1.5 text-sm text-gray-700 border border-[#e5e5e5] rounded-l hover:bg-gray-50">Previous</a>
-              <a href="#" className="px-3 py-1.5 text-sm text-gray-700 border-t border-b border-[#e5e5e5] hover:bg-gray-50">1</a>
-              <a href="#" className="px-3 py-1.5 text-sm text-gray-700 border-t border-b border-[#e5e5e5] hover:bg-gray-50">2</a>
-              <a href="#" className="px-3 py-1.5 text-sm text-gray-700 border border-[#e5e5e5] rounded-r hover:bg-gray-50">Next</a>
+            <nav className="inline-flex items-center gap-1" aria-label="Pagination">
+              <a href="#" className="px-3 py-1.5 text-sm text-gray-700 border border-[#e5e5e5] rounded hover:bg-gray-50">Prev</a>
+              <a href="#" className="px-3 py-1.5 text-sm text-white bg-black border border-black rounded">1</a>
+              <a href="#" className="px-3 py-1.5 text-sm text-gray-700 border border-[#e5e5e5] rounded hover:bg-gray-50">2</a>
+              <a href="#" className="px-3 py-1.5 text-sm text-gray-700 border border-[#e5e5e5] rounded hover:bg-gray-50">3</a>
+              <span className="px-2 text-gray-500">…</span>
+              <a href="#" className="px-3 py-1.5 text-sm text-gray-700 border border-[#e5e5e5] rounded hover:bg-gray-50">Next</a>
             </nav>
           </div>
         </Card>
