@@ -72,6 +72,52 @@ export default function FormKitPage() {
             <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-gray-200 text-gray-800">Disabled</span>
           </div>
         </Card>
+
+        {/* Table design */}
+        <Card header={<h2 className="font-semibold">Table</h2>}>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y border border-[#e5e5e5] rounded-lg overflow-hidden">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y">
+                <tr>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">Acme Corp</td>
+                  <td className="px-4 py-3 whitespace-nowrap"><span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-800">Enabled</span></td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    <div className="flex gap-3">
+                      <a className="text-blue-600 hover:text-blue-800" href="#">Edit</a>
+                      <a className="text-gray-700 hover:text-gray-900" href="#">View</a>
+                      <a className="text-red-600 hover:text-red-800" href="#">Delete</a>
+                    </div>
+                  </td>
+                </tr>
+                <tr className="bg-gray-50/60">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">Globex</td>
+                  <td className="px-4 py-3 whitespace-nowrap"><span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-gray-200 text-gray-800">Disabled</span></td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    <div className="flex gap-3">
+                      <a className="text-blue-600 hover:text-blue-800" href="#">Edit</a>
+                      <a className="text-gray-700 hover:text-gray-900" href="#">View</a>
+                      <a className="text-red-600 hover:text-red-800" href="#">Delete</a>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {/* Error message */}
+        <Card header={<h2 className="font-semibold">Error Message</h2>}>
+          <div className="border border-red-300 bg-red-50 text-red-800 rounded-md px-4 py-3 text-sm">
+            Something went wrong while saving. Please check the highlighted fields and try again.
+          </div>
+        </Card>
       </div>
     </AdminLayout>
   );
