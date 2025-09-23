@@ -33,10 +33,7 @@ export default function TopNavbar() {
           <div className="h-14 flex items-center justify-between">
             {/* Left: Logo / Title */}
             <div className="flex items-center gap-3">
-              <svg className="h-10 w-10" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="100" height="100" rx="20" fill="#000000"/>
-                <text x="50" y="60" textAnchor="middle" fill="white" fontSize="32" fontWeight="bold" fontFamily="Arial, sans-serif">Q</text>
-              </svg>
+              <img src="/QIQI-Logo.svg" alt="Qiqi Logo" className="h-10 w-auto" />
               <span className="text-sm font-semibold tracking-tight">Qiqi Partners Hub</span>
             </div>
 
