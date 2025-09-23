@@ -8,7 +8,7 @@ import FormField from '../../../components/ui/FormField';
 export default function FormKitPage() {
   return (
     <AdminLayout>
-      <div className="p-6 space-y-8">
+      <div className="p-6 space-y-8 bg-gray-50 min-h-screen">
         <h1 className="text-2xl font-bold">Form Kit</h1>
 
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
