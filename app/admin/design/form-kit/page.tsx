@@ -65,27 +65,31 @@ export default function FormKitPage() {
           </div>
         </Card>
 
-        {/* Labels: Enabled / Disabled */}
+        {/* Labels: Enabled / Disabled and Statuses */}
         <Card header={<h2 className="font-semibold">Labels</h2>}>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-800">Enabled</span>
             <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-gray-200 text-gray-800">Disabled</span>
+            <span className="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-gray-200 text-gray-800">Open</span>
+            <span className="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-green-100 text-green-800">Done</span>
+            <span className="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-blue-100 text-blue-800">In Process</span>
+            <span className="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-red-100 text-red-800">Cancelled</span>
           </div>
         </Card>
 
         {/* Table design */}
         <Card header={<h2 className="font-semibold">Table</h2>}>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y border border-[#e5e5e5] rounded-lg overflow-hidden">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
+              <thead>
+                <tr className="border-b border-[#e5e5e5]">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y">
-                <tr>
+              <tbody>
+                <tr className="hover:bg-gray-50 border-b border-[#e5e5e5]">
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">Acme Corp</td>
                   <td className="px-4 py-3 whitespace-nowrap"><span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-800">Enabled</span></td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
@@ -96,7 +100,7 @@ export default function FormKitPage() {
                     </div>
                   </td>
                 </tr>
-                <tr className="bg-gray-50/60">
+                <tr className="hover:bg-gray-50 border-b border-[#e5e5e5]">
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">Globex</td>
                   <td className="px-4 py-3 whitespace-nowrap"><span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-gray-200 text-gray-800">Disabled</span></td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
@@ -109,6 +113,16 @@ export default function FormKitPage() {
                 </tr>
               </tbody>
             </table>
+          </div>
+          {/* Pagination inside the same block */}
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-sm text-gray-600">Showing 1-2 of 2</p>
+            <nav className="isolate inline-flex -space-x-px rounded-md" aria-label="Pagination">
+              <a href="#" className="px-3 py-1.5 text-sm text-gray-700 border border-[#e5e5e5] rounded-l hover:bg-gray-50">Previous</a>
+              <a href="#" className="px-3 py-1.5 text-sm text-gray-700 border-t border-b border-[#e5e5e5] hover:bg-gray-50">1</a>
+              <a href="#" className="px-3 py-1.5 text-sm text-gray-700 border-t border-b border-[#e5e5e5] hover:bg-gray-50">2</a>
+              <a href="#" className="px-3 py-1.5 text-sm text-gray-700 border border-[#e5e5e5] rounded-r hover:bg-gray-50">Next</a>
+            </nav>
           </div>
         </Card>
 
