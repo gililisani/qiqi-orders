@@ -36,7 +36,7 @@ export default function InnerPageShell({ title, breadcrumbs = [], actions, foote
           </nav>
         )}
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">{title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{title}</h1>
           {actions && <div className="shrink-0 flex gap-2">{actions}</div>}
         </div>
       </div>
@@ -46,7 +46,7 @@ export default function InnerPageShell({ title, breadcrumbs = [], actions, foote
       </div>
 
       {footerActions && (
-        <div className="sticky bottom-0 left-0 right-0 mt-8 border-t border-gray-200 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+        <div className="sticky bottom-0 left-0 right-0 mt-8 border-t border-gray-100 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/60">
           <div className="max-w-7xl mx-auto px-4 py-3 flex justify-end gap-2">
             {footerActions}
           </div>

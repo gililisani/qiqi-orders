@@ -8,12 +8,12 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function Card({ header, footer, className = "", children, ...props }: CardProps) {
-  const base = "bg-white border border-gray-200 rounded-lg shadow-sm";
+  const base = "bg-white border border-gray-100 rounded-xl shadow-md";
   return (
     <div className={[base, className].filter(Boolean).join(" ")} {...props}>
-      {header && <div className="px-4 py-3 border-b border-gray-200">{header}</div>}
-      <div className="px-4 py-4">{children}</div>
-      {footer && <div className="px-4 py-3 border-t border-gray-200">{footer}</div>}
+      {header && <div className="px-6 py-4 border-b border-gray-100">{header}</div>}
+      <div className="px-6 py-5">{children}</div>
+      {footer && <div className="px-6 py-4 border-t border-gray-100">{footer}</div>}
     </div>
   );
 }
