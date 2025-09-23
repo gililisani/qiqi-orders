@@ -4,10 +4,12 @@ import AdminLayout from '../../../components/AdminLayout';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import FormField from '../../../components/ui/FormField';
+import TopNavbar from '../../../components/ui/TopNavbar';
 
 export default function FormKitPage() {
   return (
     <AdminLayout>
+      <TopNavbar />
       <div className="p-6 space-y-8">
         <h1 className="text-2xl font-bold">Form Kit</h1>
 
