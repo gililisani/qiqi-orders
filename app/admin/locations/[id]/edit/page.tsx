@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '../../../../lib/supabaseClient';
-import AdminLayout from '../../../components/AdminLayout';
+import { supabase } from '../../../../../lib/supabaseClient';
+import AdminLayout from '../../../../components/AdminLayout';
 import Link from 'next/link';
 
 export default function EditLocationPage() {
