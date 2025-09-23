@@ -38,7 +38,7 @@ export default function TopNavbar() {
             </div>
 
             {/* Center: Nav */}
-            <nav className="hidden md:flex items-center gap-6 text-sm">
+            <nav className="hidden lg:flex items-center gap-6 text-sm whitespace-nowrap">
               <a className="text-gray-700 hover:text-gray-900" href="#">Dashboard</a>
 
               {/* Orders */}
@@ -136,18 +136,23 @@ export default function TopNavbar() {
 
             {/* Right: user + actions */}
             <div className="flex items-center gap-3">
-              <button className="hidden md:inline-flex h-8 items-center rounded-full border border-[#e5e5e5] px-3 text-xs text-gray-700 hover:bg-gray-50">
+              <button className="hidden lg:inline-flex h-8 items-center rounded-full border border-[#e5e5e5] px-3 text-xs text-gray-700 hover:bg-gray-50 whitespace-nowrap">
                 Feedback
               </button>
-              <div className="hidden md:flex items-center gap-2 text-sm text-gray-700">
+              {/* Desktop user info */}
+              <div className="hidden lg:flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
                 <span>Hi</span>
                 <strong>John Smith</strong>
                 <span className="text-gray-300">|</span>
                 <button className="text-red-600 hover:text-red-700">Logout</button>
               </div>
+              {/* Mobile logout - always visible */}
+              <div className="lg:hidden flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
+                <button className="text-red-600 hover:text-red-700">Logout</button>
+              </div>
               {/* Hamburger */}
               <button 
-                className="md:hidden inline-flex h-8 w-8 items-center justify-center rounded border border-[#e5e5e5]" 
+                className="lg:hidden inline-flex h-8 w-8 items-center justify-center rounded border border-[#e5e5e5]" 
                 onClick={() => setMobileOpen(v => !v)} 
                 aria-label="Toggle menu"
               >
@@ -160,7 +165,7 @@ export default function TopNavbar() {
 
           {/* Mobile panel */}
           {mobileOpen && (
-            <div className="md:hidden border-t border-[#e5e5e5] py-2 text-sm">
+            <div className="lg:hidden border-t border-[#e5e5e5] py-2 text-sm">
               <div className="grid gap-1 py-2">
                 <a className="px-2 py-2 rounded hover:bg-gray-50" href="#">Dashboard</a>
                 <details>
@@ -199,9 +204,6 @@ export default function TopNavbar() {
                     <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">Payment Terms</a>
                   </div>
                 </details>
-                <div className="px-2 py-2 text-gray-700">
-                  Hi <strong>John Smith</strong> · <button className="text-red-600 hover:text-red-700">Logout</button>
-                </div>
               </div>
             </div>
           )}
