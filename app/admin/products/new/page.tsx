@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import Navbar from '../../../components/Navbar';
+import AdminLayout from '../../../components/AdminLayout';
 import Link from 'next/link';
 import ImageUpload from '../../../components/ImageUpload';
+import Card from '../../../components/ui/Card';
+import FormField from '../../../components/ui/FormField';
 
 interface Category {
   id: number;
@@ -106,153 +108,133 @@ export default function NewProductPage() {
   };
 
   return (
-    <main className="text-black">
-      <Navbar />
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Add New Product</h1>
-          <Link
-            href="/admin/products"
-            className="text-gray-600 hover:text-gray-800"
-          >
-            ← Back to Products
-          </Link>
+    <AdminLayout>
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-gray-900">Add New Product</h1>
+          <Link href="/admin/products" className="text-gray-600 hover:text-gray-900">← Back to Products</Link>
         </div>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
+          <Card>
+            <div className="border border-red-300 bg-red-50 text-red-800 rounded-md px-4 py-3 text-sm">
+              {error}
+            </div>
+          </Card>
         )}
 
-        <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Item Name *
-              </label>
-              <input
-                type="text"
-                name="item_name"
-                value={formData.item_name}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <Card header={<h2 className="font-semibold">Basic Information</h2>}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField label="Item Name *" htmlFor="item_name">
+                <input
+                  id="item_name"
+                  type="text"
+                  name="item_name"
+                  value={formData.item_name}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                NetSuite Name
-              </label>
-              <input
-                type="text"
-                name="netsuite_name"
-                value={formData.netsuite_name}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
+              <FormField label="NetSuite Name" htmlFor="netsuite_name">
+                <input
+                  id="netsuite_name"
+                  type="text"
+                  name="netsuite_name"
+                  value={formData.netsuite_name}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                SKU *
-              </label>
-              <input
-                type="text"
-                name="sku"
-                value={formData.sku}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
+              <FormField label="SKU *" htmlFor="sku">
+                <input
+                  id="sku"
+                  type="text"
+                  name="sku"
+                  value={formData.sku}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                UPC
-              </label>
-              <input
-                type="text"
-                name="upc"
-                value={formData.upc}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
+              <FormField label="UPC" htmlFor="upc">
+                <input
+                  id="upc"
+                  type="text"
+                  name="upc"
+                  value={formData.upc}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Size
-              </label>
-              <input
-                type="text"
-                name="size"
-                value={formData.size}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
+              <FormField label="Size" htmlFor="size">
+                <input
+                  id="size"
+                  type="text"
+                  name="size"
+                  value={formData.size}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Case Pack
-              </label>
-              <input
-                type="number"
-                name="case_pack"
-                value={formData.case_pack}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
+              <FormField label="Case Pack" htmlFor="case_pack">
+                <input
+                  id="case_pack"
+                  type="number"
+                  name="case_pack"
+                  value={formData.case_pack}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Americas Price (USD) *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                name="price_americas"
-                value={formData.price_americas}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
+              <FormField label="Americas Price (USD) *" htmlFor="price_americas">
+                <input
+                  id="price_americas"
+                  type="number"
+                  step="0.01"
+                  name="price_americas"
+                  value={formData.price_americas}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                International Price (USD) *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                name="price_international"
-                value={formData.price_international}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
+              <FormField label="International Price (USD) *" htmlFor="price_international">
+                <input
+                  id="price_international"
+                  type="number"
+                  step="0.01"
+                  name="price_international"
+                  value={formData.price_international}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </FormField>
             </div>
-          </div>
+          </Card>
 
-          <ImageUpload
-            onImageUploaded={(url) => setFormData(prev => ({ ...prev, picture_url: url }))}
-            currentImageUrl={formData.picture_url}
-          />
+          <Card header={<h2 className="font-semibold">Product Image</h2>}>
+            <ImageUpload
+              onImageUploaded={(url) => setFormData(prev => ({ ...prev, picture_url: url }))}
+              currentImageUrl={formData.picture_url}
+            />
+          </Card>
 
           {/* Packing List Fields */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-blue-800 mb-4">Packing List Information</h3>
-            <p className="text-sm text-blue-700 mb-4">Required for international shipping and customs documentation</p>
-            
+          <Card header={<h2 className="font-semibold">Packing List Information</h2>}>
+            <p className="text-sm text-gray-600 mb-4">Required for international shipping and customs documentation</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Case Weight (kg)
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Case Weight (kg)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -293,9 +275,7 @@ export default function NewProductPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                 <select
                   name="category_id"
                   value={formData.category_id}
@@ -312,9 +292,9 @@ export default function NewProductPage() {
                 <p className="text-xs text-gray-500 mt-1">Assign this product to a category for better organization</p>
               </div>
             </div>
-          </div>
+          </Card>
 
-          <div className="space-y-4">
+          <Card header={<h2 className="font-semibold">Visibility & Eligibility</h2>}>
             <div className="flex space-x-6">
               <label className="flex items-center">
                 <input
@@ -349,16 +329,6 @@ export default function NewProductPage() {
                 <span className="ml-2 text-sm text-gray-700">Qualifies for Credit Earning</span>
               </label>
             </div>
-
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-              <h4 className="text-sm font-medium text-yellow-800 mb-2">Support Fund Settings Explained:</h4>
-              <ul className="text-sm text-yellow-700 space-y-1">
-                <li><strong>Eligible for Support Funds:</strong> Can this product be purchased WITH support fund credit?</li>
-                <li><strong>Qualifies for Credit Earning:</strong> Does purchasing this product EARN support fund credit?</li>
-                <li><strong>Note:</strong> Kits, discounted items, and promotional items typically should NOT qualify for credit earning.</li>
-              </ul>
-            </div>
-
             <div className="border-t pt-4">
               <h3 className="text-lg font-medium text-gray-900 mb-3">Client Class Visibility</h3>
               <div className="flex space-x-6">
@@ -384,7 +354,7 @@ export default function NewProductPage() {
                 </label>
               </div>
             </div>
-          </div>
+          </Card>
 
           <div className="flex space-x-4">
             <button
@@ -403,6 +373,6 @@ export default function NewProductPage() {
           </div>
         </form>
       </div>
-    </main>
+    </AdminLayout>
   );
 }
