@@ -17,6 +17,9 @@ interface Order {
   user_id: string;
   company_id: string;
   po_number: string;
+  packing_slip_generated?: boolean;
+  packing_slip_generated_at?: string;
+  packing_slip_generated_by?: string;
   client?: {
     name: string;
     email: string;
@@ -95,14 +98,15 @@ export default function OrderViewPage() {
   const [isReordering, setIsReordering] = useState(false);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [sendingNotification, setSendingNotification] = useState(false);
-  const [showPackingListForm, setShowPackingListForm] = useState(false);
+  const [showPackingSlipForm, setShowPackingSlipForm] = useState(false);
   const [currentUserName, setCurrentUserName] = useState<string>('');
-  const [packingListData, setPackingListData] = useState({
+  const [packingSlipData, setPackingSlipData] = useState({
     invoiceNumber: '',
     shippingMethod: 'Air',
     netsuiteReference: '',
     notes: ''
   });
+  const [packingSlipGenerated, setPackingSlipGenerated] = useState(false);
 
 
   useEffect(() => {
@@ -138,7 +142,7 @@ export default function OrderViewPage() {
       // Fetch order first
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .select('*')
+        .select('*, packing_slip_generated, packing_slip_generated_at, packing_slip_generated_by')
         .eq('id', orderId)
         .single();
 
@@ -340,34 +344,52 @@ export default function OrderViewPage() {
     }
   };
 
-  const handleGeneratePackingListPDF = async () => {
+  const handleGeneratePackingSlip = async () => {
     try {
       if (!order || !orderItems.length) {
-        setError('No order data available for packing list generation');
+        setError('No order data available for packing slip generation');
         return;
       }
 
-      // Generate PDF using browser's print functionality
-      const pdfContent = generatePackingListHTML(order, orderItems, packingListData);
-      
-      // Create a new window for printing
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        setError('Unable to open print window. Please check your popup blocker.');
-        return;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not found');
 
-      printWindow.document.write(pdfContent);
-      printWindow.document.close();
-      
-      // Wait for content to load then print
-      printWindow.onload = () => {
-        printWindow.print();
-        printWindow.close();
-      };
+      // Save packing slip data to database
+      const { data: packingSlipRecord, error: packingSlipError } = await supabase
+        .from('packing_slips')
+        .insert({
+          order_id: orderId,
+          invoice_number: packingSlipData.invoiceNumber,
+          shipping_method: packingSlipData.shippingMethod,
+          netsuite_reference: packingSlipData.netsuiteReference,
+          notes: packingSlipData.notes,
+          created_by: user.id
+        })
+        .select()
+        .single();
 
+      if (packingSlipError) throw packingSlipError;
+
+      // Update order to mark packing slip as generated
+      const { error: orderUpdateError } = await supabase
+        .from('orders')
+        .update({
+          packing_slip_generated: true,
+          packing_slip_generated_at: new Date().toISOString(),
+          packing_slip_generated_by: user.id
+        })
+        .eq('id', orderId);
+
+      if (orderUpdateError) throw orderUpdateError;
+
+      // Refresh order data
+      await fetchOrder();
+      
       // Close the modal
-      setShowPackingListForm(false);
+      setShowPackingSlipForm(false);
+
+      // Redirect to packing slip view page
+      window.location.href = `/admin/orders/${orderId}/packing-slip`;
     } catch (err: any) {
       setError(err.message);
     }
@@ -596,12 +618,19 @@ export default function OrderViewPage() {
             >
               Download CSV
             </button>
-            <button
-              onClick={() => setShowPackingListForm(true)}
-              className="bg-purple-600 text-white px-4 py-2 hover:bg-purple-700 transition"
-            >
-              Packing List
-            </button>
+            {order.status !== 'Open' && order.status !== 'Cancelled' && (
+              <Link
+                href={order.packing_slip_generated ? `/admin/orders/${orderId}/packing-slip` : '#'}
+                onClick={!order.packing_slip_generated ? () => setShowPackingSlipForm(true) : undefined}
+                className={`px-4 py-2 transition ${
+                  order.packing_slip_generated 
+                    ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                }`}
+              >
+                {order.packing_slip_generated ? 'Packing Slip' : 'Generate Packing Slip'}
+              </Link>
+            )}
             <Link
               href="/admin/orders"
               className="bg-gray-300 text-gray-700 px-4 py-2 hover:bg-gray-400 transition"
@@ -907,13 +936,13 @@ export default function OrderViewPage() {
         </Card>
 
         {/* Packing List Form Modal */}
-        {showPackingListForm && (
+        {showPackingSlipForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">Generate Packing List</h2>
+                <h2 className="text-xl font-bold">Generate Packing Slip</h2>
                 <button
-                  onClick={() => setShowPackingListForm(false)}
+                  onClick={() => setShowPackingSlipForm(false)}
                   className="text-gray-500 hover:text-gray-700 text-2xl"
                 >
                   ×
@@ -928,7 +957,7 @@ export default function OrderViewPage() {
                   </label>
                   <input
                     type="text"
-                    value={packingListData.invoiceNumber}
+                    value={packingSlipData.invoiceNumber}
                     onChange={(e) => setPackingListData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
                     placeholder="Enter invoice number"
@@ -942,7 +971,7 @@ export default function OrderViewPage() {
                     Shipping Method *
                   </label>
                   <select
-                    value={packingListData.shippingMethod}
+                    value={packingSlipData.shippingMethod}
                     onChange={(e) => setPackingListData(prev => ({ ...prev, shippingMethod: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
                   >
@@ -958,7 +987,7 @@ export default function OrderViewPage() {
                   </label>
                   <input
                     type="text"
-                    value={packingListData.netsuiteReference}
+                    value={packingSlipData.netsuiteReference}
                     onChange={(e) => setPackingListData(prev => ({ ...prev, netsuiteReference: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
                     placeholder="Enter sales order reference"
@@ -972,7 +1001,7 @@ export default function OrderViewPage() {
                     Notes
                   </label>
                   <textarea
-                    value={packingListData.notes}
+                    value={packingSlipData.notes}
                     onChange={(e) => setPackingListData(prev => ({ ...prev, notes: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black h-24"
                     placeholder="Enter any additional notes for the packing list"
@@ -983,14 +1012,14 @@ export default function OrderViewPage() {
 
               <div className="flex justify-end space-x-3 mt-6">
                 <button
-                  onClick={() => setShowPackingListForm(false)}
+                  onClick={() => setShowPackingSlipForm(false)}
                   className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => {
-                    if (!packingListData.invoiceNumber) {
+                    if (!packingSlipData.invoiceNumber) {
                       alert('Please fill in the Invoice Number');
                       return;
                     }
@@ -998,7 +1027,7 @@ export default function OrderViewPage() {
                       alert('Company Ship To Address is not configured. Please update the company information first.');
                       return;
                     }
-                    handleGeneratePackingListPDF();
+                    handleGeneratePackingSlip();
                   }}
                   className="px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 transition"
                 >
