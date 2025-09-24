@@ -5,6 +5,8 @@ import { useParams } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
 import AdminLayout from '../../../../components/AdminLayout';
 import Link from 'next/link';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface Order {
   id: string;
@@ -82,6 +84,13 @@ export default function PackingSlipViewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isPrintMode, setIsPrintMode] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editData, setEditData] = useState({
+    invoice_number: '',
+    shipping_method: 'Air',
+    netsuite_reference: '',
+    notes: ''
+  });
 
   useEffect(() => {
     if (orderId) {
@@ -126,6 +135,16 @@ export default function PackingSlipViewPage() {
       setOrder(orderResult.data);
       setOrderItems(itemsResult.data || []);
       setPackingSlip(packingSlipResult.data);
+      
+      // Populate edit form with existing data
+      if (packingSlipResult.data) {
+        setEditData({
+          invoice_number: packingSlipResult.data.invoice_number,
+          shipping_method: packingSlipResult.data.shipping_method,
+          netsuite_reference: packingSlipResult.data.netsuite_reference || '',
+          notes: packingSlipResult.data.notes || ''
+        });
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -133,10 +152,59 @@ export default function PackingSlipViewPage() {
     }
   };
 
-  const handlePrint = () => {
-    setIsPrintMode(true);
-    window.print();
-    setIsPrintMode(false);
+  const handleDownloadPDF = async () => {
+    try {
+      const element = document.getElementById('packing-slip-content');
+      if (!element) return;
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210;
+      const pageHeight = 295;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`packing-slip-${packingSlip?.invoice_number || 'invoice'}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    }
+  };
+
+  const handleEdit = async () => {
+    try {
+      const { error } = await supabase
+        .from('packing_slips')
+        .update(editData)
+        .eq('id', packingSlip?.id);
+
+      if (error) throw error;
+
+      // Refresh data
+      await fetchData();
+      setShowEditForm(false);
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
 
   const generatePackingSlipHTML = (order: Order, items: OrderItem[], packingSlip: PackingSlip): string => {
@@ -339,11 +407,19 @@ export default function PackingSlipViewPage() {
               </div>
               <div className="flex space-x-3">
                 <button
-                  onClick={handlePrint}
+                  onClick={handleDownloadPDF}
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  Print / Save PDF
+                  Download PDF
                 </button>
+                {order?.status !== 'Done' && order?.status !== 'Cancelled' && (
+                  <button
+                    onClick={() => setShowEditForm(true)}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Edit
+                  </button>
+                )}
                 <Link
                   href={`/admin/orders/${orderId}`}
                   className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
@@ -357,7 +433,7 @@ export default function PackingSlipViewPage() {
 
         {/* Packing Slip Content */}
         <div className="max-w-4xl mx-auto p-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+          <div id="packing-slip-content" className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
             {/* Header */}
             <div className="flex justify-between items-start mb-8 pb-6 border-b border-gray-200">
               <div>
@@ -491,6 +567,97 @@ export default function PackingSlipViewPage() {
             </div>
           </div>
         </div>
+
+        {/* Edit Form Modal */}
+        {showEditForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Edit Packing Slip</h2>
+                <button
+                  onClick={() => setShowEditForm(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Invoice Number */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Invoice Number *
+                  </label>
+                  <input
+                    type="text"
+                    value={editData.invoice_number}
+                    onChange={(e) => setEditData(prev => ({ ...prev, invoice_number: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
+                    placeholder="Enter invoice number"
+                    required
+                  />
+                </div>
+
+                {/* Shipping Method */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Shipping Method *
+                  </label>
+                  <select
+                    value={editData.shipping_method}
+                    onChange={(e) => setEditData(prev => ({ ...prev, shipping_method: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
+                  >
+                    <option value="Air">Air</option>
+                    <option value="Ocean">Ocean</option>
+                  </select>
+                </div>
+
+                {/* Sales Order Reference */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sales Order Reference
+                  </label>
+                  <input
+                    type="text"
+                    value={editData.netsuite_reference}
+                    onChange={(e) => setEditData(prev => ({ ...prev, netsuite_reference: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
+                    placeholder="Enter sales order reference"
+                  />
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    value={editData.notes}
+                    onChange={(e) => setEditData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black h-24"
+                    placeholder="Enter any additional notes for the packing slip"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowEditForm(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEdit}
+                  className="px-4 py-2 bg-green-600 text-white hover:bg-green-700 transition"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );
