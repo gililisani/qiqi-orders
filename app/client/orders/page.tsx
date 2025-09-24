@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import ClientLayout from '../../components/ClientLayout';
+import Card from '../../components/ui/Card';
 import Link from 'next/link';
 
 interface Order {
@@ -96,15 +97,14 @@ export default function ClientOrdersPage() {
             New Order
           </Link>
         </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Filter Orders</h2>
-            <div className="flex items-center space-x-4">
+        <Card header={<h2 className="font-semibold">Filter Orders</h2>}>
+          <div className="flex items-center justify-between pb-4">
+            <div></div>
+            <div className="flex items-center gap-4">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                className="px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
               >
                 <option value="">All Statuses</option>
                 <option value="Open">Open</option>
@@ -112,7 +112,7 @@ export default function ClientOrdersPage() {
                 <option value="Done">Done</option>
                 <option value="Cancelled">Cancelled</option>
               </select>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-600">
                 {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -120,60 +120,38 @@ export default function ClientOrdersPage() {
 
           {filteredOrders.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      PO Number
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total Value
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Support Fund Used
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+              <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
+                <thead>
+                  <tr className="border-b border-[#e5e5e5]">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">PO Number</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Total Value</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Support Fund Used</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Created</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody>
                   {filteredOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {order.po_number || 'N/A'}
-                        </div>
+                    <tr key={order.id} className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{order.po_number || 'N/A'}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          statusColors[order.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase ${
+                          order.status === 'Open' ? 'bg-gray-200 text-gray-800' :
+                          order.status === 'In Process' ? 'bg-blue-100 text-blue-800' :
+                          order.status === 'Done' ? 'bg-green-100 text-green-800' :
+                          order.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
                         }`}>
                           {order.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${order.total_value?.toFixed(2) || '0.00'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${order.support_fund_used?.toFixed(2) || '0.00'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(order.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <Link
-                          href={`/client/orders/${order.id}`}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          View Details
-                        </Link>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${order.total_value?.toFixed(2) || '0.00'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${order.support_fund_used?.toFixed(2) || '0.00'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{new Date(order.created_at).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                        <Link href={`/client/orders/${order.id}`} className="text-gray-700 hover:text-gray-900">View Details</Link>
                       </td>
                     </tr>
                   ))}
@@ -185,13 +163,13 @@ export default function ClientOrdersPage() {
               <p>No orders found.</p>
               <Link
                 href="/client/orders/new"
-                className="mt-2 inline-block bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
+                className="mt-2 inline-block bg-black text-white px-4 py-2 hover:opacity-90 transition"
               >
                 Place Your First Order
               </Link>
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </ClientLayout>
   );
