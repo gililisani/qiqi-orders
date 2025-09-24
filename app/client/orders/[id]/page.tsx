@@ -175,6 +175,15 @@ export default function ClientOrderViewPage() {
       if (!user) throw new Error('User not found');
 
       // Save packing slip data to database
+      console.log('Creating packing slip with data:', {
+        order_id: orderId,
+        invoice_number: packingSlipData.invoiceNumber,
+        shipping_method: packingSlipData.shippingMethod,
+        netsuite_reference: packingSlipData.netsuiteReference,
+        notes: packingSlipData.notes,
+        created_by: user.id
+      });
+
       const { data: packingSlipRecord, error: packingSlipError } = await supabase
         .from('packing_slips')
         .insert({
@@ -188,7 +197,10 @@ export default function ClientOrderViewPage() {
         .select()
         .single();
 
-      if (packingSlipError) throw packingSlipError;
+      if (packingSlipError) {
+        console.error('Packing slip creation error:', packingSlipError);
+        throw packingSlipError;
+      }
 
       // Update order to mark packing slip as generated
       const { error: orderUpdateError } = await supabase
