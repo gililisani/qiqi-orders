@@ -60,7 +60,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <TopNavbar />
 
       {/* Container with max-width for page content only */}
-      <div className="mx-auto w-full max-w-[1600px] px-4 lg:px-6 xl:px-10 space-y-16">
+      <div className="mx-auto w-full max-w-[1600px] px-4 lg:px-6 xl:px-10 pt-12 space-y-16">
         {/* Main Content */}
         <div className="relative">
           {isNavigating && (
