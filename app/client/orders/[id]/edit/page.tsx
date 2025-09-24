@@ -583,8 +583,7 @@ export default function EditOrderPage() {
   const supportFundTotals = getSupportFundTotals();
   const clientType = getClientType();
 
-  return (
-    <ClientLayout>
+  return (<ClientLayout>
       <div className="space-y-6">
         <div className="xl:grid xl:grid-cols-12 xl:gap-8">
           {/* Main Content */}
@@ -1070,6 +1069,5 @@ export default function EditOrderPage() {
           </div>
         </div>
       </div>
-    </ClientLayout>
-  );
+    </ClientLayout>);
 }
