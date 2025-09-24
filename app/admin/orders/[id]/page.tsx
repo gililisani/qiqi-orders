@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
 import AdminLayout from '../../../components/AdminLayout';
+import Card from '../../../components/ui/Card';
 import Link from 'next/link';
 
 interface Order {
@@ -556,8 +557,8 @@ export default function OrderViewPage() {
 
   return (
     <AdminLayout>
-      <div className="p-6" style={{ backgroundColor: 'rgb(250, 250, 250)', minHeight: '100vh' }}>
-        <div className="flex items-center justify-between mb-6">
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Order Details</h1>
           <div className="flex space-x-2">
             <button
@@ -590,8 +591,7 @@ export default function OrderViewPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Block: Order Information */}
-          <div className="bg-white p-6 border border-gray-300">
-            <h2 className="text-lg font-semibold mb-4">Order Information</h2>
+          <Card header={<h2 className="text-lg font-semibold">Order Information</h2>}>
             <div className="space-y-3">
               <div>
                 <label className="text-sm font-medium text-gray-500">PO Number</label>
@@ -603,8 +603,16 @@ export default function OrderViewPage() {
                   <select
                     value={order.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
-                    className={`px-3 py-1 border-0 focus:ring-2 focus:ring-black ${
-                      statusOptions.find(s => s.value === order.status)?.color || 'bg-gray-100 text-gray-800'
+                    className={`px-3 py-1 border border-[#e5e5e5] rounded text-sm ${
+                      order.status === 'Open'
+                        ? 'bg-gray-200 text-gray-800'
+                        : order.status === 'In Process'
+                        ? 'bg-blue-100 text-blue-800'
+                        : order.status === 'Done'
+                        ? 'bg-green-100 text-green-800'
+                        : order.status === 'Cancelled'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-gray-100 text-gray-800'
                     }`}
                   >
                     {statusOptions.map(option => (
@@ -628,11 +636,10 @@ export default function OrderViewPage() {
                 <p className="text-lg">{order.client?.email || 'N/A'}</p>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Middle Block: Bill To */}
-          <div className="bg-white p-6 border border-gray-300">
-            <h2 className="text-lg font-semibold mb-4">Bill To</h2>
+          <Card header={<h2 className="text-lg font-semibold">Bill To</h2>}>
             <div className="space-y-3">
               <div>
                 <label className="text-sm font-medium text-gray-500">Company</label>
@@ -649,11 +656,10 @@ export default function OrderViewPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Right Block: Order Summary */}
-          <div className="bg-white p-6 border border-gray-300">
-            <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
+          <Card header={<h2 className="text-lg font-semibold">Order Summary</h2>}>
             <div className="space-y-3">
               <div>
                 <label className="text-sm font-medium text-gray-500">Total Order</label>
@@ -674,12 +680,12 @@ export default function OrderViewPage() {
                 <p className="text-lg">{order.company?.payment_term?.name || 'Not specified'}</p>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Order Items */}
-        <div className="mt-6 bg-white border border-gray-300 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <Card header={
+          <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">Order Items</h2>
             <div className="flex items-center space-x-4">
               {isReordering && (
@@ -689,7 +695,7 @@ export default function OrderViewPage() {
               )}
               <button
                 onClick={() => setIsReordering(!isReordering)}
-                className={`px-4 py-2 text-sm font-medium transition ${
+                className={`px-3 py-1.5 text-sm font-medium rounded transition ${
                   isReordering 
                     ? 'bg-green-600 text-white hover:bg-green-700' 
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -699,40 +705,40 @@ export default function OrderViewPage() {
               </button>
             </div>
           </div>
-          <div className="overflow-x-auto" style={{ backgroundColor: 'rgb(250, 250, 250)' }}>
-            <table className="w-full">
-              <thead style={{ backgroundColor: 'transparent' }}>
-                <tr>
+        }>
+          <div className="overflow-x-auto">
+            <table className="min-w-full border border-[#e5e5e5]">
+              <thead>
+                <tr className="border-b border-[#e5e5e5]">
                   {isReordering && (
-                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider w-12">
                       Order
                     </th>
                   )}
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Product
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                     SKU
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Quantity
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Unit Price
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Total Price
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white border" style={{ borderColor: 'rgb(230, 230, 230)' }}>
+              <tbody>
                 {orderItems.map((item, index) => (
-                  <tr 
+                  <tr
                     key={item.id} 
-                    className={`hover:bg-gray-50 border-b border-solid ${item.is_support_fund_item ? 'bg-green-50' : ''} ${
+                    className={`hover:bg-gray-50 border-b border-[#e5e5e5] ${item.is_support_fund_item ? 'bg-green-50' : ''} ${
                       isReordering ? 'cursor-move' : ''
                     } ${draggedItem === item.id ? 'opacity-50' : ''}`}
-                    style={{ borderColor: 'rgb(230, 230, 230)' }}
                     draggable={isReordering}
                     onDragStart={(e) => handleDragStart(e, item.id)}
                     onDragOver={handleDragOver}
@@ -747,28 +753,28 @@ export default function OrderViewPage() {
                         </div>
                       </td>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="text-sm font-medium text-gray-900">
                           {item.product?.item_name || 'N/A'}
                         </div>
                         {item.is_support_fund_item && (
-                          <span className="ml-2 inline-flex items-center px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
+                          <span className="ml-2 inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-800">
                             Support Fund
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {item.product?.sku || 'N/A'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                       {item.quantity}
                     </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${item.is_support_fund_item ? 'text-green-700 font-medium' : 'text-gray-900'}`}>
+                    <td className={`px-4 py-3 whitespace-nowrap text-sm ${item.is_support_fund_item ? 'text-green-700 font-medium' : 'text-gray-900'}`}>
                       ${item.unit_price?.toFixed(2) || '0.00'}
                     </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${item.is_support_fund_item ? 'text-green-700' : 'text-gray-900'}`}>
+                    <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${item.is_support_fund_item ? 'text-green-700' : 'text-gray-900'}`}>
                       ${item.total_price?.toFixed(2) || '0.00'}
                     </td>
                   </tr>
@@ -781,24 +787,20 @@ export default function OrderViewPage() {
               <p>No items found for this order.</p>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Order History */}
-        <div className="mt-6 bg-white border border-gray-300 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold">Order History & Activity</h2>
-          </div>
-          <div className="p-6">
+        <Card header={<h2 className="text-lg font-semibold">Order History & Activity</h2>}>
             {orderHistory.length > 0 ? (
               <div className="space-y-4">
                 {orderHistory.map((historyItem) => (
-                  <div key={historyItem.id} className="flex items-start space-x-3 pb-4 border-b border-gray-100 last:border-b-0">
+                <div key={historyItem.id} className="flex items-start space-x-3 pb-4 border-b border-[#e5e5e5] last:border-b-0">
                     <div className="flex-shrink-0 w-2 h-2 bg-blue-500 mt-2"></div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
                         {historyItem.status_from && historyItem.status_to ? (
                           <span className="text-sm font-medium text-gray-900">
-                            Status changed from <span className="px-2 py-1 bg-gray-100 text-xs">{historyItem.status_from}</span> to <span className="px-2 py-1 bg-green-100 text-green-800 text-xs">{historyItem.status_to}</span>
+                            Status changed from <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-gray-200 text-gray-800">{historyItem.status_from}</span> to <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-800">{historyItem.status_to}</span>
                           </span>
                         ) : (
                           <span className="text-sm font-medium text-gray-900">
@@ -812,7 +814,7 @@ export default function OrderViewPage() {
                           <span>by {historyItem.changed_by_name} ({historyItem.changed_by_role})</span>
                         )}
                         {historyItem.netsuite_sync_status && (
-                          <span className="px-2 py-1 bg-orange-100 text-orange-800">
+                        <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800">
                             NetSuite: {historyItem.netsuite_sync_status}
                           </span>
                         )}
@@ -831,12 +833,10 @@ export default function OrderViewPage() {
                 <p>No history available for this order.</p>
               </div>
             )}
-          </div>
-        </div>
+        </Card>
 
         {/* Order Summary for Admin */}
-        <div className="mt-6 bg-white border border-gray-300 p-6">
-          <h2 className="text-lg font-semibold mb-4">Order Financial Summary</h2>
+        <Card header={<h2 className="text-lg font-semibold">Order Financial Summary</h2>}>
           <div className="space-y-2">
             {(() => {
               // Calculate breakdown
@@ -882,7 +882,7 @@ export default function OrderViewPage() {
               );
             })()}
           </div>
-        </div>
+        </Card>
 
         {/* Packing List Form Modal */}
         {showPackingListForm && (
