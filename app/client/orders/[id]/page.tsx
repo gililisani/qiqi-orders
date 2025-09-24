@@ -189,7 +189,7 @@ export default function ClientOrderViewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
           {/* Left Block: Order Information */}
           <Card header={<h2 className="font-semibold">Order Information</h2>}>
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div>
                 <label className="text-sm font-medium text-gray-500">PO Number</label>
                 <p className="text-lg font-mono">{order.po_number || 'N/A'}</p>
@@ -211,7 +211,7 @@ export default function ClientOrderViewPage() {
 
           {/* Middle Block: Bill To */}
           <Card header={<h2 className="font-semibold">Bill To</h2>}>
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div>
                 <label className="text-sm font-medium text-gray-500">Company</label>
                 <p className="text-lg">{order.company?.company_name || 'N/A'}</p>
@@ -227,7 +227,7 @@ export default function ClientOrderViewPage() {
 
           {/* Right Block: Order Summary */}
           <Card header={<h2 className="font-semibold">Order Summary</h2>}>
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div>
                 <label className="text-sm font-medium text-gray-500">Total Order</label>
                 <p className="text-lg font-semibold">${order.total_value?.toFixed(2) || '0.00'}</p>
@@ -305,7 +305,7 @@ export default function ClientOrderViewPage() {
 
         {/* Order Totals */}
         <Card header={<h2 className="font-semibold">Totals</h2>}>
-          <div className="space-y-2">
+          <div className="space-y-1">
             {(() => {
               // Calculate breakdown
               const regularItems = orderItems.filter(item => !item.is_support_fund_item);
