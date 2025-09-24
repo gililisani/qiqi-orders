@@ -584,11 +584,10 @@ export default function EditOrderPage() {
 
   return (
     <ClientLayout>
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="xl:grid xl:grid-cols-12 xl:gap-8">
-            {/* Main Content */}
-            <div className="xl:col-span-8 space-y-6">
+      <div className="space-y-6">
+        <div className="xl:grid xl:grid-cols-12 xl:gap-8">
+          {/* Main Content */}
+          <div className="xl:col-span-8 space-y-6">
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div>
@@ -1085,7 +1084,6 @@ export default function EditOrderPage() {
                   </div>
                 )}
               </div>
-            </div>
           </div>
         </div>
       </div>
