@@ -58,7 +58,6 @@ export default function TopNavbar() {
                   <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
                     <a href="/admin/orders" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Orders</a>
                     <a href="/admin/orders/new" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">New Order (Admin)</a>
-                    <a href="/client/orders/new" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">New Order (Client)</a>
                   </div>
                 </div>
             </div>
