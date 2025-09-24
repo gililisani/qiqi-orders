@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { supabase } from "../../lib/supabaseClient";
 
 export default function TopNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [openSub, setOpenSub] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('Loading...');
   const closeTimers = useRef<{ main?: any; sub?: any }>({});
 
   const onEnter = (key: string) => {
@@ -25,6 +27,30 @@ export default function TopNavbar() {
   const onLeaveSub = () => {
     closeTimers.current.sub = setTimeout(() => setOpenSub(null), 150);
   };
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const response = await fetch(`/api/user-profile?userId=${user.id}`);
+          const data = await response.json();
+          if (data.success && data.user?.name) {
+            setUserName(data.user.name);
+          } else {
+            setUserName('User');
+          }
+        } else {
+          setUserName('Guest');
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        setUserName('User');
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   return (
     <div className="sticky top-0 z-50 w-full bg-transparent">
@@ -123,7 +149,7 @@ export default function TopNavbar() {
             {/* Desktop user info */}
             <div className="hidden lg:flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
               <span>Hi</span>
-              <strong>John Smith</strong>
+              <strong>{userName}</strong>
               <span className="text-gray-300">|</span>
               <button className="text-red-600 hover:text-red-700">Logout</button>
             </div>
