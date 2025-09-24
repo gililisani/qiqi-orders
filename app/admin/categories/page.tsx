@@ -4,15 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
 import Link from 'next/link';
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  Typography,
-  Button,
-  Chip,
-  Breadcrumbs,
-} from '../../components/MaterialTailwind';
+import Card from '../../components/ui/Card';
 
 interface Category {
   id: number;
@@ -100,30 +92,12 @@ export default function CategoriesPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        {/* Breadcrumbs */}
-        <Breadcrumbs>
-          <Link href="/admin" className="opacity-60">
-            Admin
-          </Link>
-          <span>Categories</span>
-        </Breadcrumbs>
-
+      <div className="space-y-8">
         <div className="flex justify-between items-center">
-          <Typography variant="h4" color="blue-gray" className="font-bold">
-            Product Categories
-          </Typography>
-          <div className="flex space-x-3">
-            <Link href="/admin/categories/reorder">
-              <Button variant="outlined" size="sm">
-                Reorder Categories
-              </Button>
-            </Link>
-            <Link href="/admin/categories/new">
-              <Button variant="filled" size="sm">
-                Add Category
-              </Button>
-            </Link>
+          <h1 className="text-2xl font-semibold text-gray-900">Product Categories</h1>
+          <div className="flex gap-3">
+            <Link href="/admin/categories/reorder" className="px-3 py-2 border border-[#e5e5e5] rounded text-sm hover:bg-gray-50">Reorder Categories</Link>
+            <Link href="/admin/categories/new" className="px-3 py-2 bg-black text-white rounded text-sm hover:bg-gray-900">Add Category</Link>
           </div>
         </div>
 
@@ -133,129 +107,64 @@ export default function CategoriesPage() {
           </div>
         )}
 
-        {/* Material Tailwind Table */}
-        <Card className="border border-blue-gray-100 shadow-sm">
-          <CardHeader floated={false} shadow={false} className="rounded-none">
-            <div className="flex items-center justify-between">
-              <Typography variant="h5" color="blue-gray">
-                Categories Management
-              </Typography>
-            </div>
-          </CardHeader>
-          <CardBody className="overflow-x-scroll px-0 pt-0 pb-2">
-            <table className="w-full min-w-[640px] table-auto">
+        <Card header={<h2 className="text-lg font-semibold">Categories Management</h2>}>
+          <div className="overflow-x-auto">
+            <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
               <thead>
-                <tr>
-                  {["Order", "Category", "Products", "Americas", "International", "Actions"].map((el) => (
-                    <th
-                      key={el}
-                      className="border-b border-blue-gray-50 py-3 px-5 text-left"
-                    >
-                      <Typography
-                        variant="small"
-                        className="text-[11px] font-bold uppercase text-blue-gray-400"
-                      >
-                        {el}
-                      </Typography>
-                    </th>
+                <tr className="border-b border-[#e5e5e5]">
+                  {['Order','Image','Category','Products','Americas','International','Actions'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {categories.map((category, index) => {
-                  const className = `py-3 px-5 ${
-                    index === categories.length - 1
-                      ? ""
-                      : "border-b border-blue-gray-50"
-                  }`;
-                  
-                  return (
-                    <tr key={category.id}>
-                      <td className={className}>
-                        <Typography className="text-xs font-semibold text-blue-gray-600">
-                          {category.sort_order}
-                        </Typography>
-                      </td>
-                      <td className={className}>
-                        <div>
-                          <Typography
-                            variant="small"
-                            color="blue-gray"
-                            className="font-semibold"
-                          >
-                            {category.name}
-                          </Typography>
-                          {category.description && (
-                            <Typography className="text-xs font-normal text-blue-gray-500">
-                              {category.description}
-                            </Typography>
-                          )}
-                        </div>
-                      </td>
-                      <td className={className}>
-                        <Chip
-                          variant="ghost"
-                          color="blue-gray"
-                          value={`${category.product_count || 0} products`}
-                          className="py-0.5 px-2 text-[11px] font-medium w-fit"
-                        />
-                      </td>
-                      <td className={className}>
-                        <Chip
-                          variant="gradient"
-                          color={category.visible_to_americas ? "green" : "red"}
-                          value={category.visible_to_americas ? "Visible" : "Hidden"}
-                          className="py-0.5 px-2 text-[11px] font-medium w-fit"
-                        />
-                      </td>
-                      <td className={className}>
-                        <Chip
-                          variant="gradient"
-                          color={category.visible_to_international ? "green" : "red"}
-                          value={category.visible_to_international ? "Visible" : "Hidden"}
-                          className="py-0.5 px-2 text-[11px] font-medium w-fit"
-                        />
-                      </td>
-                      <td className={className}>
-                        <div className="flex items-center gap-3">
-                          <Link href={`/admin/categories/${category.id}/edit`}>
-                            <Typography
-                              as="a"
-                              className="text-xs font-semibold text-blue-gray-600 cursor-pointer hover:text-blue-500"
-                            >
-                              Edit
-                            </Typography>
-                          </Link>
-                          <Typography
-                            as="button"
-                            onClick={() => handleDelete(category.id, category.name)}
-                            className="text-xs font-semibold text-red-600 cursor-pointer hover:text-red-500"
-                          >
-                            Delete
-                          </Typography>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {categories.map((category) => (
+                  <tr key={category.id} className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{category.sort_order}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <img
+                        src={category.image_url || '/logo.png'}
+                        alt={category.name}
+                        className="h-12 w-12 rounded object-cover border border-[#e5e5e5]"
+                      />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-gray-800">{category.name}</span>
+                        {category.description ? (
+                          <span className="text-xs text-gray-500">{category.description}</span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{category.product_count || 0} products</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${category.visible_to_americas ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {category.visible_to_americas ? 'Visible' : 'Hidden'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${category.visible_to_international ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {category.visible_to_international ? 'Visible' : 'Hidden'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      <div className="flex items-center gap-3">
+                        <Link className="text-blue-600 hover:text-blue-800" href={`/admin/categories/${category.id}/edit`}>Edit</Link>
+                        <button onClick={() => handleDelete(category.id, category.name)} className="text-red-600 hover:text-red-800">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
-          </CardBody>
+          </div>
         </Card>
 
         {categories.length === 0 && (
           <div className="py-12 text-center">
-            <Typography variant="h6" color="blue-gray" className="mb-2">
-              No categories found
-            </Typography>
-            <Typography variant="small" color="gray">
-              Categories will help organize your products.
-            </Typography>
-            <Link href="/admin/categories/new" className="mt-4 inline-block">
-              <Button variant="filled" size="sm">
-                Create your first category
-              </Button>
-            </Link>
+            <h3 className="text-base font-medium text-gray-900 mb-1">No categories found</h3>
+            <p className="text-sm text-gray-500">Categories will help organize your products.</p>
+            <Link href="/admin/categories/new" className="mt-4 inline-block px-3 py-2 bg-black text-white rounded text-sm hover:bg-gray-900">Create your first category</Link>
           </div>
         )}
       </div>
