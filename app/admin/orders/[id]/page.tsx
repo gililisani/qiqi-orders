@@ -578,7 +578,7 @@ export default function OrderViewPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-8">
+      <div className="space-y-8 pb-16">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Order Details</h1>
           <div className="flex space-x-2">
@@ -614,34 +614,36 @@ export default function OrderViewPage() {
           {/* Left Block: Order Information */}
           <Card header={<h2 className="text-lg font-semibold">Order Information</h2>}>
             <div className="space-y-2 px-6">
-              <div>
-                <label className="text-sm font-medium text-gray-500">PO Number</label>
-                <p className="text-lg font-mono">{order.po_number || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Status</label>
-                <div className="mt-1">
-                  <select
-                    value={order.status}
-                    onChange={(e) => handleStatusChange(e.target.value)}
-                    className={`px-3 py-1 border border-[#e5e5e5] rounded text-sm ${
-                      order.status === 'Open'
-                        ? 'bg-gray-200 text-gray-800'
-                        : order.status === 'In Process'
-                        ? 'bg-blue-100 text-blue-800'
-                        : order.status === 'Done'
-                        ? 'bg-green-100 text-green-800'
-                        : order.status === 'Cancelled'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {statusOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">PO Number</label>
+                  <p className="text-lg font-mono">{order.po_number || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Status</label>
+                  <div className="mt-1">
+                    <select
+                      value={order.status}
+                      onChange={(e) => handleStatusChange(e.target.value)}
+                      className={`px-3 py-1 border border-[#e5e5e5] rounded text-sm ${
+                        order.status === 'Open'
+                          ? 'bg-gray-200 text-gray-800'
+                          : order.status === 'In Process'
+                          ? 'bg-blue-100 text-blue-800'
+                          : order.status === 'Done'
+                          ? 'bg-green-100 text-green-800'
+                          : order.status === 'Cancelled'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {statusOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
               <div>
@@ -650,14 +652,6 @@ export default function OrderViewPage() {
                   {new Date(order.created_at).toLocaleString()}
                   {currentUserName && ` by ${currentUserName}`}
                 </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Client Name</label>
-                <p className="text-lg">{order.client?.name || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Email</label>
-                <p className="text-lg">{order.client?.email || 'N/A'}</p>
               </div>
             </div>
           </Card>
