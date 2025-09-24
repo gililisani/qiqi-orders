@@ -48,38 +48,18 @@ export default function TopNavbar() {
                   <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.093l3.71-3.86a.75.75 0 011.08 1.04l-4.24 4.41a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd"/>
                 </svg>
               </button>
-              <div 
-                className={`absolute left-0 top-full mt-2 w-56 transition-all duration-200 ${
-                  openMenu === "orders" ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
-                }`} 
-                onMouseEnter={() => onEnter("orders")} 
-                onMouseLeave={onLeave}
-              >
-                <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
-                  <a href="/admin/orders" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Orders</a>
-                  <a href="/client/orders/new" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">New Order</a>
-                  <div className="relative" onMouseEnter={() => onEnterSub("status")} onMouseLeave={onLeaveSub}>
-                    <button className="w-full flex items-center justify-between rounded px-3 py-2 text-gray-700 hover:bg-gray-50">
-                      <span>Status</span>
-                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M7.21 5.23a.75.75 0 011.06-.02l4.41 4.24a.75.75 0 010 1.08l-4.41 4.24a.75.75 0 11-1.04-1.08L11.09 10 7.23 6.29a.75.75 0 01-.02-1.06z" clipRule="evenodd"/>
-                      </svg>
-                    </button>
-                    <div 
-                      className={`absolute left-full top-0 ml-2 w-48 transition-all duration-200 ${
-                        openSub === "status" ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
-                      }`}
-                    >
-                      <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
-                        <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Open</a>
-                        <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">In Process</a>
-                        <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Done</a>
-                        <a href="#" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Cancelled</a>
-                      </div>
-                    </div>
+                <div 
+                  className={`absolute left-0 top-full mt-2 w-56 transition-all duration-200 ${
+                    openMenu === "orders" ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
+                  }`} 
+                  onMouseEnter={() => onEnter("orders")} 
+                  onMouseLeave={onLeave}
+                >
+                  <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
+                    <a href="/admin/orders" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Orders</a>
+                    <a href="/client/orders/new" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">New Order</a>
                   </div>
                 </div>
-              </div>
             </div>
 
             {/* Products */}
@@ -90,19 +70,18 @@ export default function TopNavbar() {
                   <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.093l3.71-3.86a.75.75 0 011.08 1.04l-4.24 4.41a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd"/>
                 </svg>
               </button>
-              <div 
-                className={`absolute left-0 top-full mt-2 w-56 transition-all duration-200 ${
-                  openMenu === "products" ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
-                }`} 
-                onMouseEnter={() => onEnter("products")} 
-                onMouseLeave={onLeave}
-              >
-                <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
-                  <a href="/admin/products" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Products</a>
-                  <a href="/admin/products/new" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">New Product</a>
-                  <a href="/admin/categories" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Categories</a>
+                <div 
+                  className={`absolute left-0 top-full mt-2 w-56 transition-all duration-200 ${
+                    openMenu === "products" ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
+                  }`} 
+                  onMouseEnter={() => onEnter("products")} 
+                  onMouseLeave={onLeave}
+                >
+                  <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
+                    <a href="/admin/products" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Products</a>
+                    <a href="/admin/categories" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Categories</a>
+                  </div>
                 </div>
-              </div>
             </div>
 
             {/* System */}
