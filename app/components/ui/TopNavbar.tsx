@@ -52,6 +52,15 @@ export default function TopNavbar() {
     fetchUserData();
   }, []);
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   return (
     <div className="sticky top-0 z-50 w-full bg-transparent">
       <div className="bg-white border-b border-[#e5e5e5] px-3 py-2">
@@ -151,11 +160,11 @@ export default function TopNavbar() {
               <span>Hi</span>
               <strong>{userName}</strong>
               <span className="text-gray-300">|</span>
-              <button className="text-red-600 hover:text-red-700">Logout</button>
+              <button onClick={handleLogout} className="text-red-600 hover:text-red-700">Logout</button>
             </div>
             {/* Mobile logout - always visible */}
             <div className="lg:hidden flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
-              <button className="text-red-600 hover:text-red-700">Logout</button>
+              <button onClick={handleLogout} className="text-red-600 hover:text-red-700">Logout</button>
             </div>
             {/* Hamburger */}
             <button 
@@ -179,23 +188,13 @@ export default function TopNavbar() {
                 <summary className="px-2 py-2 rounded hover:bg-gray-50 cursor-pointer">Orders</summary>
                 <div className="pl-4 py-1 grid">
                   <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/orders">All Orders</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/client/orders/new">New Order</a>
-                  <details>
-                    <summary className="px-2 py-1 rounded hover:bg-gray-50 cursor-pointer">Status</summary>
-                    <div className="pl-4 py-1 grid">
-                      <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">Open</a>
-                      <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">In Process</a>
-                      <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">Done</a>
-                      <a className="px-2 py-1 rounded hover:bg-gray-50" href="#">Cancelled</a>
-                    </div>
-                  </details>
+                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/orders/new">New Order (Admin)</a>
                 </div>
               </details>
               <details>
                 <summary className="px-2 py-2 rounded hover:bg-gray-50 cursor-pointer">Products</summary>
                 <div className="pl-4 py-1 grid">
                   <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/products">All Products</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/products/new">New Product</a>
                   <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/categories">Categories</a>
                 </div>
               </details>
