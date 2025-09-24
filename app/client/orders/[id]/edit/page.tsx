@@ -589,464 +589,388 @@ export default function EditOrderPage() {
         <div className="xl:grid xl:grid-cols-12 xl:gap-8">
           {/* Main Content */}
           <div className="xl:col-span-8 space-y-6">
-              {/* Header */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Edit Order</h1>
-                  <p className="text-gray-600 mt-1">
-                    {company.company_name} - {clientType} Pricing
-                  </p>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={handleSave}
-                    disabled={submitting || orderItems.length === 0}
-                    className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {submitting ? 'Updating...' : 'Update Order'}
-                  </button>
-                  <Link
-                    href={`/client/orders/${orderId}`}
-                    className="text-gray-600 hover:text-gray-800"
-                  >
-                    Cancel
-                  </Link>
-                </div>
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Edit Order</h1>
+                <p className="text-gray-600 mt-1">
+                  {company.company_name} - {clientType} Pricing
+                </p>
               </div>
-
-              {/* PO Number */}
-              <Card header={<h3 className="font-semibold">Order Details</h3>}>
-                <div className="max-w-md">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    PO/Cheque Number (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={poNumber}
-                    onChange={(e) => setPoNumber(e.target.value)}
-                    placeholder="Enter PO/Cheque number or leave blank for auto-generation"
-                    className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
-                  />
-                </div>
-              </Card>
-
-              {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                  {error}
-                </div>
-              )}
-
-              {/* Tab Navigation */}
-              {totals.supportFundPercent > 0 && (
-                <Card>
-                  <div className="border-b border-[#e5e5e5]">
-                    <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
-                      <button
-                        onClick={() => setShowSupportFundRedemption(false)}
-                        className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                          !showSupportFundRedemption
-                            ? 'border-black text-black'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        Order Form
-                      </button>
-                      <button
-                        onClick={() => setShowSupportFundRedemption(true)}
-                        className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                          showSupportFundRedemption
-                            ? 'border-green-600 text-green-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        Distributor Support Funds
-                        <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {formatCurrency(totals.supportFundEarned)} available
-                        </span>
-                      </button>
-                    </nav>
-                  </div>
-                </Card>
-              )}
-
-              {/* Products Table */}
-              <Card>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
-                    <thead>
-                      <tr className="border-b border-[#e5e5e5]">
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Product</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider hidden sm:table-cell">SKU</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Size</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Pack</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '70px'}}>Price</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">Qty</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Units</th>
-                        <th className="px-4 py-3 pr-4 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '90px'}}>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        const productsToShow = showSupportFundRedemption 
-                          ? products.filter(p => p.list_in_support_funds)
-                          : products;
-                        
-                        const categorizedProducts = showSupportFundRedemption
-                          ? getProductsByCategory().map(categoryGroup => ({
-                              ...categoryGroup,
-                              products: categoryGroup.products.filter(p => p.list_in_support_funds)
-                            })).filter(categoryGroup => categoryGroup.products.length > 0)
-                          : getProductsByCategory();
-                        
-                        return categorizedProducts.map((categoryGroup, categoryIndex) => (
-                          <React.Fragment key={categoryGroup.category?.id || 'no-category'}>
-                            {/* Category Header Row */}
-                            {(
-                              <tr className="border-t-2 border-[#e5e5e5]">
-                                <td colSpan={8} className="px-4 py-4">
-                                  <div className="flex items-center">
-                                    {categoryGroup.category?.image_url ? (
-                                      <img
-                                        src={categoryGroup.category.image_url}
-                                        alt={categoryGroup.category.name}
-                                        className="object-contain bg-white"
-                                        style={{ 
-                                          height: '45px',
-                                          width: 'auto'
-                                        }}
-                                        onError={(e) => {
-                                          e.currentTarget.style.display = 'none';
-                                        }}
-                                      />
-                                    ) : (
-                                      <h3 className="text-sm sm:text-base font-semibold text-gray-900">
-                                        {categoryGroup.category?.name || 'Products without Category'}
-                                      </h3>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
-                            
-                            {/* Products in this category */}
-                            {categoryGroup.products.map((product) => {
-                        const orderItem = showSupportFundRedemption 
-                          ? supportFundItems.find(item => item.product_id === product.id)
-                          : orderItems.find(item => item.product_id === product.id);
-                        const unitPrice = getProductPrice(product);
-                        
-                        return (
-                          <tr key={product.id} className={`hover:bg-gray-50 border-b border-[#e5e5e5] ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                            <td className="px-4 py-3 max-w-0" style={{maxWidth: '200px'}}>
-                              <div className="flex items-center min-w-0 w-full">
-                                <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-hidden bg-gray-200">
-                                  {product.picture_url ? (
-                                    <img
-                                      src={product.picture_url}
-                                      alt={product.item_name}
-                                      className="h-8 w-8 sm:h-10 sm:w-10 object-cover"
-                                      onError={(e) => {
-                                        console.error('Image failed to load:', product.picture_url);
-                                        e.currentTarget.style.display = 'none';
-                                        const noImageDiv = e.currentTarget.nextElementSibling as HTMLElement;
-                                        if (noImageDiv) noImageDiv.style.display = 'flex';
-                                      }}
-                                    />
-                                  ) : null}
-                                  <div 
-                                    className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center text-gray-400 text-xs"
-                                    style={{display: product.picture_url ? 'none' : 'flex'}}
-                                  >
-                                    No Image
-                                  </div>
-                                </div>
-                                <div className="flex-1 min-w-0 overflow-hidden">
-                                  <div className="text-xs sm:text-sm font-medium text-gray-900 truncate w-full">
-                                    {product.item_name}
-                                  </div>
-                                  {!showSupportFundRedemption && !product.qualifies_for_credit_earning && (
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
-                                      Not Eligible for Credit
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden sm:table-cell">
-                              <div className="truncate" title={product.sku}>
-                                {product.sku}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden xl:table-cell">
-                              <div className="truncate" title={product.size}>
-                                {product.size}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden xl:table-cell">
-                              {product.case_pack}
-                            </td>
-                            <td className="px-4 py-3 text-xs sm:text-sm text-gray-900 text-center">
-                              {formatCurrency(unitPrice)}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-center">
-                              <div className="inline-flex items-center border border-gray-300 rounded select-none justify-center">
-                                <button
-                                  type="button"
-                                  onClick={() => showSupportFundRedemption 
-                                    ? handleSupportFundItemChange(product.id, Math.max(0, (orderItem?.case_qty || 0) - 1))
-                                    : handleCaseQtyChange(product.id, Math.max(0, (orderItem?.case_qty || 0) - 1))
-                                  }
-                                  className="px-1 py-1 text-gray-700 hover:bg-gray-100 focus:outline-none text-sm"
-                                >
-                                  −
-                                </button>
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  value={orderItem?.case_qty ?? 0}
-                                  onFocus={(e) => e.currentTarget.select()}
-                                  onChange={(e) => {
-                                    const val = e.currentTarget.value.replace(/[^0-9]/g, '');
-                                    if (val === '') {
-                                      if (showSupportFundRedemption) {
-                                        handleSupportFundItemChange(product.id, 0);
-                                      } else {
-                                        handleCaseQtyChange(product.id, 0);
-                                      }
-                                      return;
-                                    }
-                                    const parsed = Number(val);
-                                    if (showSupportFundRedemption) {
-                                      handleSupportFundItemChange(product.id, Math.max(0, Math.min(99, Math.floor(parsed))));
-                                    } else {
-                                      handleCaseQtyChange(product.id, Math.max(0, Math.min(99, Math.floor(parsed))));
-                                    }
-                                  }}
-                                  className="w-8 px-1 py-1 text-center text-sm focus:outline-none focus:ring-1 focus:ring-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => showSupportFundRedemption 
-                                    ? handleSupportFundItemChange(product.id, (orderItem?.case_qty || 0) + 1)
-                                    : handleCaseQtyChange(product.id, (orderItem?.case_qty || 0) + 1)
-                                  }
-                                  className="px-1 py-1 text-gray-700 hover:bg-gray-100 focus:outline-none text-sm"
-                                >
-                                  +
-                                </button>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden sm:table-cell">
-                              {orderItem?.total_units || 0}
-                            </td>
-                            <td className="px-4 py-3 pr-4 text-xs sm:text-sm font-medium text-gray-900 text-center">
-                              {orderItem?.total_price ? formatCurrency(orderItem.total_price) : '$0.00'}
-                            </td>
-                          </tr>
-                          );
-                          })}
-                          </React.Fragment>
-                        ));
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-
-              {/* Mobile/Tablet Order Summary (visible below xl) */}
-              <Card header={<h2 className="font-semibold">Order Summary</h2>}>
-                {orderItems.length > 0 ? (
-                  <>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Items:</span>
-                        <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.total_units, 0) + supportFundItems.reduce((sum, item) => sum + item.total_units, 0)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Cases:</span>
-                        <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.case_qty, 0) + supportFundItems.reduce((sum, item) => sum + item.case_qty, 0)}</span>
-                      </div>
-                      {totals.supportFundEarned > 0 && (
-                        <div className="flex justify-between text-sm text-green-600">
-                          <span>Support Fund ({totals.supportFundPercent}%):</span>
-                          <span className="font-medium">{formatCurrency(totals.supportFundEarned - supportFundTotals.subtotal)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between pt-2 border-t">
-                        <span className="text-lg font-semibold">Total Order:</span>
-                        <span className="text-lg font-semibold">{formatCurrency(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0))}</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col space-y-2">
-                      <button
-                        onClick={handleSave}
-                        disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
-                        className="w-full bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
-                      >
-                        {submitting ? 'Updating...' : 'Update Order'}
-                      </button>
-                      <Link
-                        href={`/client/orders/${orderId}`}
-                        className="w-full bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition text-center"
-                      >
-                        Cancel
-                      </Link>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">Please add items to your order</p>
-                  </div>
-                )}
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={handleSave}
+                  disabled={submitting || orderItems.length === 0}
+                  className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? 'Updating...' : 'Update Order'}
+                </button>
+                <Link
+                  href={`/client/orders/${orderId}`}
+                  className="text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </Link>
               </div>
             </div>
 
-            {/* Desktop Sidebar (visible on xl+) */}
-            <div className="hidden xl:block xl:col-span-4">
-              <div className="sticky top-8 space-y-6">
-                {/* Order Summary */}
-                <div className="bg-white rounded-lg shadow p-6 sticky top-6 space-y-4">
-                  <h2 className="text-lg font-semibold">Order Summary</h2>
+            {/* PO Number */}
+            <Card header={<h3 className="font-semibold">Order Details</h3>}>
+              <div className="max-w-md">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  PO/Cheque Number (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={poNumber}
+                  onChange={(e) => setPoNumber(e.target.value)}
+                  placeholder="Enter PO/Cheque number or leave blank for auto-generation"
+                  className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+            </Card>
 
-                  {orderItems.length > 0 ? (
-                    <>
-                      {/* Order Form Products */}
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                {error}
+              </div>
+            )}
+
+            {/* Tab Navigation */}
+            {totals.supportFundPercent > 0 && (
+              <Card>
+                <div className="border-b border-[#e5e5e5]">
+                  <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                    <button
+                      onClick={() => setShowSupportFundRedemption(false)}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                        !showSupportFundRedemption
+                          ? 'border-black text-black'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Order Form
+                    </button>
+                    <button
+                      onClick={() => setShowSupportFundRedemption(true)}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                        showSupportFundRedemption
+                          ? 'border-green-600 text-green-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Distributor Support Funds
+                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {formatCurrency(totals.supportFundEarned)} available
+                      </span>
+                    </button>
+                  </nav>
+                </div>
+              </Card>
+            )}
+
+            {/* Products Table */}
+            <Card>
+              <div className="overflow-x-auto">
+                <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
+                  <thead>
+                    <tr className="border-b border-[#e5e5e5]">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Product</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider hidden sm:table-cell">SKU</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Size</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Pack</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '70px'}}>Price</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">Qty</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Units</th>
+                      <th className="px-4 py-3 pr-4 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '90px'}}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const productsToShow = showSupportFundRedemption 
+                        ? products.filter(p => p.list_in_support_funds)
+                        : products;
+                      
+                      const categorizedProducts = showSupportFundRedemption
+                        ? getProductsByCategory().map(categoryGroup => ({
+                            ...categoryGroup,
+                            products: categoryGroup.products.filter(p => p.list_in_support_funds)
+                          })).filter(categoryGroup => categoryGroup.products.length > 0)
+                        : getProductsByCategory();
+                      
+                      return categorizedProducts.map((categoryGroup, categoryIndex) => (
+                        <React.Fragment key={categoryGroup.category?.id || 'no-category'}>
+                          {/* Category Header Row */}
+                          {(
+                            <tr className="border-t-2 border-[#e5e5e5]">
+                              <td colSpan={8} className="px-4 py-4">
+                                <div className="flex items-center">
+                                  {categoryGroup.category?.image_url ? (
+                                    <img
+                                      src={categoryGroup.category.image_url}
+                                      alt={categoryGroup.category.name}
+                                      className="object-contain bg-white"
+                                      style={{ 
+                                        height: '45px',
+                                        width: 'auto'
+                                      }}
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                      }}
+                                    />
+                                  ) : (
+                                    <h3 className="text-sm sm:text-base font-semibold text-gray-900">
+                                      {categoryGroup.category?.name || 'Products without Category'}
+                                    </h3>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          
+                          {/* Products in this category */}
+                          {categoryGroup.products.map((product) => {
+                            const orderItem = showSupportFundRedemption 
+                              ? supportFundItems.find(item => item.product_id === product.id)
+                              : orderItems.find(item => item.product_id === product.id);
+                            const unitPrice = getProductPrice(product);
+                            
+                            return (
+                              <tr key={product.id} className={`hover:bg-gray-50 border-b border-[#e5e5e5] ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
+                                <td className="px-4 py-3 max-w-0" style={{maxWidth: '200px'}}>
+                                  <div className="flex items-center min-w-0 w-full">
+                                    <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-hidden bg-gray-200">
+                                      {product.picture_url ? (
+                                        <img
+                                          src={product.picture_url}
+                                          alt={product.item_name}
+                                          className="h-8 w-8 sm:h-10 sm:w-10 object-cover"
+                                          onError={(e) => {
+                                            console.error('Image failed to load:', product.picture_url);
+                                            e.currentTarget.style.display = 'none';
+                                            const noImageDiv = e.currentTarget.nextElementSibling as HTMLElement;
+                                            if (noImageDiv) noImageDiv.style.display = 'flex';
+                                          }}
+                                        />
+                                      ) : null}
+                                      <div 
+                                        className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center text-gray-400 text-xs"
+                                        style={{display: product.picture_url ? 'none' : 'flex'}}
+                                      >
+                                        No Image
+                                      </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0 overflow-hidden">
+                                      <div className="text-xs sm:text-sm font-medium text-gray-900 truncate w-full">
+                                        {product.item_name}
+                                      </div>
+                                      {!showSupportFundRedemption && !product.qualifies_for_credit_earning && (
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
+                                          Not Eligible for Credit
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden sm:table-cell">
+                                  <div className="truncate" title={product.sku}>
+                                    {product.sku}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden xl:table-cell">
+                                  <div className="truncate" title={product.size}>
+                                    {product.size}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden xl:table-cell">
+                                  {product.case_pack}
+                                </td>
+                                <td className="px-4 py-3 text-xs sm:text-sm text-gray-900 text-center">
+                                  {formatCurrency(unitPrice)}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-center">
+                                  <div className="inline-flex items-center border border-gray-300 rounded select-none justify-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => showSupportFundRedemption 
+                                        ? handleSupportFundItemChange(product.id, Math.max(0, (orderItem?.case_qty || 0) - 1))
+                                        : handleCaseQtyChange(product.id, Math.max(0, (orderItem?.case_qty || 0) - 1))
+                                      }
+                                      className="px-1 py-1 text-gray-700 hover:bg-gray-100 focus:outline-none text-sm"
+                                    >
+                                      −
+                                    </button>
+                                    <input
+                                      type="text"
+                                      inputMode="numeric"
+                                      value={orderItem?.case_qty ?? 0}
+                                      onFocus={(e) => e.currentTarget.select()}
+                                      onChange={(e) => {
+                                        const val = e.currentTarget.value.replace(/[^0-9]/g, '');
+                                        if (val === '') {
+                                          if (showSupportFundRedemption) {
+                                            handleSupportFundItemChange(product.id, 0);
+                                          } else {
+                                            handleCaseQtyChange(product.id, 0);
+                                          }
+                                          return;
+                                        }
+                                        const parsed = Number(val);
+                                        if (showSupportFundRedemption) {
+                                          handleSupportFundItemChange(product.id, Math.max(0, Math.min(99, Math.floor(parsed))));
+                                        } else {
+                                          handleCaseQtyChange(product.id, Math.max(0, Math.min(99, Math.floor(parsed))));
+                                        }
+                                      }}
+                                      className="w-8 px-1 py-1 text-center text-sm focus:outline-none focus:ring-1 focus:ring-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => showSupportFundRedemption 
+                                        ? handleSupportFundItemChange(product.id, (orderItem?.case_qty || 0) + 1)
+                                        : handleCaseQtyChange(product.id, (orderItem?.case_qty || 0) + 1)
+                                      }
+                                      className="px-1 py-1 text-gray-700 hover:bg-gray-100 focus:outline-none text-sm"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden sm:table-cell">
+                                  {orderItem?.total_units || 0}
+                                </td>
+                                <td className="px-4 py-3 pr-4 text-xs sm:text-sm font-medium text-gray-900 text-center">
+                                  {orderItem?.total_price ? formatCurrency(orderItem.total_price) : '$0.00'}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </React.Fragment>
+                      ));
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* Mobile/Tablet Order Summary (visible below xl) */}
+            <Card header={<h2 className="font-semibold">Order Summary</h2>}>
+              {orderItems.length > 0 ? (
+                <>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Items:</span>
+                      <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.total_units, 0) + supportFundItems.reduce((sum, item) => sum + item.total_units, 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Cases:</span>
+                      <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.case_qty, 0) + supportFundItems.reduce((sum, item) => sum + item.case_qty, 0)}</span>
+                    </div>
+                    {totals.supportFundEarned > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>Support Fund ({totals.supportFundPercent}%):</span>
+                        <span className="font-medium">{formatCurrency(totals.supportFundEarned - supportFundTotals.subtotal)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between pt-2 border-t">
+                      <span className="text-lg font-semibold">Total Order:</span>
+                      <span className="text-lg font-semibold">{formatCurrency(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0))}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col space-y-2">
+                    <button
+                      onClick={handleSave}
+                      disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
+                      className="w-full bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
+                    >
+                      {submitting ? 'Updating...' : 'Update Order'}
+                    </button>
+                    <Link
+                      href={`/client/orders/${orderId}`}
+                      className="w-full bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition text-center"
+                    >
+                      Cancel
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Please add items to your order</p>
+                </div>
+              )}
+            </Card>
+          </div>
+
+          {/* Desktop Sidebar (visible on xl+) */}
+          <div className="hidden xl:block xl:col-span-4">
+            <div className="sticky top-8 space-y-6">
+              {/* Order Summary */}
+              <Card header={<h2 className="font-semibold">Order Summary</h2>}>
+                {orderItems.length > 0 ? (
+                  <>
+                    {/* Order Form Products */}
+                    <div className="space-y-2">
+                      {orderItems.map((item) => (
+                        <div key={item.product_id} className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0 pr-2">
+                            <div className="text-sm font-medium text-gray-900 truncate leading-tight">{item.product.item_name}</div>
+                            <div className="text-xs text-gray-500 leading-tight">
+                              {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+                          <div className="text-sm font-medium text-gray-900">{formatCurrency(item.total_price)}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Order Form Subtotal */}
+                    {orderItems.length > 0 && (
+                      <div className="flex justify-between text-sm font-medium text-gray-900 pt-2 border-t">
+                        <span>Subtotal:</span>
+                        <span>{formatCurrency(orderItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
+                      </div>
+                    )}
+
+                    {/* Credit Earned */}
+                    {totals.supportFundPercent > 0 && (
+                      <div className="flex justify-between text-sm text-green-600 pt-2">
+                        <span>Credit Earned ({totals.supportFundPercent}%):</span>
+                        <span className="font-medium">{formatCurrency(totals.supportFundEarned)}</span>
+                      </div>
+                    )}
+
+                    {/* Support Fund Products Title */}
+                    {supportFundItems.length > 0 && (
+                      <div className="text-sm font-medium text-gray-700 uppercase tracking-wide mt-4">Support Fund Products</div>
+                    )}
+
+                    {/* Support Fund Products */}
+                    {supportFundItems.length > 0 && (
                       <div className="space-y-2">
-                        {orderItems.map((item) => (
-                          <div key={item.product_id} className="flex items-center justify-between">
+                        {supportFundItems.map((item) => (
+                          <div key={`sf-${item.product_id}`} className="flex items-center justify-between bg-green-50 p-2 rounded">
                             <div className="flex-1 min-w-0 pr-2">
-                              <div className="text-sm font-medium text-gray-900 truncate leading-tight">{item.product.item_name}</div>
-                              <div className="text-xs text-gray-500 leading-tight">
-                                {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''}
+                              <div className="text-sm font-medium text-green-800 truncate leading-tight">{item.product.item_name}</div>
+                              <div className="text-xs text-green-600 leading-tight">
+                                {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''} (Support Fund)
                               </div>
                             </div>
-                            <div className="text-sm font-medium text-gray-900">{formatCurrency(item.total_price)}</div>
+                            <div className="text-sm font-medium text-green-800">{formatCurrency(item.total_price)}</div>
                           </div>
                         ))}
                       </div>
+                    )}
 
-                      {/* Order Form Subtotal */}
-                      {orderItems.length > 0 && (
-                        <div className="flex justify-between text-sm font-medium text-gray-900 pt-2 border-t">
-                          <span>Subtotal:</span>
-                          <span>{formatCurrency(orderItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
-                        </div>
-                      )}
-
-                      {/* Credit Earned */}
-                      {totals.supportFundPercent > 0 && (
-                        <div className="flex justify-between text-sm text-green-600 pt-2">
-                          <span>Credit Earned ({totals.supportFundPercent}%):</span>
-                          <span className="font-medium">{formatCurrency(totals.supportFundEarned)}</span>
-                        </div>
-                      )}
-
-                      {/* Support Fund Products Title */}
-                      {supportFundItems.length > 0 && (
-                        <div className="text-sm font-medium text-gray-700 uppercase tracking-wide mt-4">Support Fund Products</div>
-                      )}
-
-                      {/* Support Fund Products */}
-                      {supportFundItems.length > 0 && (
-                        <div className="space-y-2">
-                          {supportFundItems.map((item) => (
-                            <div key={`sf-${item.product_id}`} className="flex items-center justify-between bg-green-50 p-2 rounded">
-                              <div className="flex-1 min-w-0 pr-2">
-                                <div className="text-sm font-medium text-green-800 truncate leading-tight">{item.product.item_name}</div>
-                                <div className="text-xs text-green-600 leading-tight">
-                                  {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''} (Support Fund)
-                                </div>
-                              </div>
-                              <div className="text-sm font-medium text-green-800">{formatCurrency(item.total_price)}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Support Fund Subtotal */}
-                      {supportFundItems.length > 0 && (
-                        <div className="flex justify-between text-sm font-medium text-green-800 pt-2 border-t border-green-200">
-                          <span>Subtotal:</span>
-                          <span>{formatCurrency(supportFundItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
-                        </div>
-                      )}
-
-                      {/* Remaining Credit */}
-                      {supportFundItems.length > 0 && (
-                        <div className="flex justify-between text-sm font-medium pt-2">
-                          <span>Remaining Credit:</span>
-                          <span className={(() => {
-                            const creditEarned = totals.supportFundEarned;
-                            const supportFundTotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
-                            const remaining = creditEarned - supportFundTotal;
-                            return remaining < 0 ? 'text-red-600' : 'text-green-600';
-                          })()}>
-                            {(() => {
-                              const creditEarned = totals.supportFundEarned;
-                              const supportFundTotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
-                              const remaining = creditEarned - supportFundTotal;
-                              return remaining < 0 ? `(${formatCurrency(Math.abs(remaining))})` : formatCurrency(remaining);
-                            })()}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Support Fund Disclaimer */}
-                      {supportFundItems.length > 0 && (
-                        <div className="text-xs text-gray-500 italic pt-2 space-y-1">
-                          <div>* Credit cannot be accumulated and must be redeemed in full per order</div>
-                          <div>* Any unused Support Fund credit will be forfeited</div>
-                          <div>* Negative remaining credit will be added to the grand total</div>
-                        </div>
-                      )}
-
-                      {/* Totals */}
-                      <div className="space-y-2 pt-2 border-t">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Items:</span>
-                          <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.total_units, 0) + supportFundItems.reduce((sum, item) => sum + item.total_units, 0)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Cases:</span>
-                          <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.case_qty, 0) + supportFundItems.reduce((sum, item) => sum + item.case_qty, 0)}</span>
-                        </div>
-                        <div className="flex justify-between pt-2 border-t">
-                          <span className="text-lg font-semibold">Total Order:</span>
-                          <span className="text-lg font-semibold">{formatCurrency(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0))}</span>
-                        </div>
+                    {/* Support Fund Subtotal */}
+                    {supportFundItems.length > 0 && (
+                      <div className="flex justify-between text-sm font-medium text-green-800 pt-2 border-t border-green-200">
+                        <span>Subtotal:</span>
+                        <span>{formatCurrency(supportFundItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
                       </div>
+                    )}
 
-                      {/* Action buttons */}
-                      <div className="mt-4 space-y-2">
-                        <button
-                          onClick={handleSave}
-                          disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
-                          className="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
-                        >
-                          {submitting ? 'Updating...' : 'Update Order'}
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500">No items selected</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Support Fund Summary */}
-                {showSupportFundRedemption && supportFundItems.length > 0 && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold text-green-800 mb-4">Support Fund Summary</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Support Fund Items:</span>
-                        <span className="font-medium">{formatCurrency(supportFundTotals.subtotal)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Available Credit:</span>
-                        <span className="font-medium">{formatCurrency(supportFundTotals.supportFundEarned)}</span>
-                      </div>
+                    {/* Remaining Credit */}
+                    {supportFundItems.length > 0 && (
                       <div className="flex justify-between text-sm font-medium pt-2">
                         <span>Remaining Credit:</span>
                         <span className={(() => {
@@ -1063,10 +987,83 @@ export default function EditOrderPage() {
                           })()}
                         </span>
                       </div>
+                    )}
+
+                    {/* Support Fund Disclaimer */}
+                    {supportFundItems.length > 0 && (
+                      <div className="text-xs text-gray-500 italic pt-2 space-y-1">
+                        <div>* Credit cannot be accumulated and must be redeemed in full per order</div>
+                        <div>* Any unused Support Fund credit will be forfeited</div>
+                        <div>* Negative remaining credit will be added to the grand total</div>
+                      </div>
+                    )}
+
+                    {/* Totals */}
+                    <div className="space-y-2 pt-2 border-t">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Items:</span>
+                        <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.total_units, 0) + supportFundItems.reduce((sum, item) => sum + item.total_units, 0)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Cases:</span>
+                        <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.case_qty, 0) + supportFundItems.reduce((sum, item) => sum + item.case_qty, 0)}</span>
+                      </div>
+                      <div className="flex justify-between pt-2 border-t">
+                        <span className="text-lg font-semibold">Total Order:</span>
+                        <span className="text-lg font-semibold">{formatCurrency(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0))}</span>
+                      </div>
                     </div>
+
+                    {/* Action buttons */}
+                    <div className="mt-4 space-y-2">
+                      <button
+                        onClick={handleSave}
+                        disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
+                        className="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
+                      >
+                        {submitting ? 'Updating...' : 'Update Order'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No items selected</p>
                   </div>
                 )}
               </Card>
+
+              {/* Support Fund Summary */}
+              {showSupportFundRedemption && supportFundItems.length > 0 && (
+                <Card header={<h3 className="text-lg font-semibold text-green-800 mb-4">Support Fund Summary</h3>}>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Support Fund Items:</span>
+                      <span className="font-medium">{formatCurrency(supportFundTotals.subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Available Credit:</span>
+                      <span className="font-medium">{formatCurrency(supportFundTotals.supportFundEarned)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-medium pt-2">
+                      <span>Remaining Credit:</span>
+                      <span className={(() => {
+                        const creditEarned = totals.supportFundEarned;
+                        const supportFundTotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
+                        const remaining = creditEarned - supportFundTotal;
+                        return remaining < 0 ? 'text-red-600' : 'text-green-600';
+                      })()}>
+                        {(() => {
+                          const creditEarned = totals.supportFundEarned;
+                          const supportFundTotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
+                          const remaining = creditEarned - supportFundTotal;
+                          return remaining < 0 ? `(${formatCurrency(Math.abs(remaining))})` : formatCurrency(remaining);
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              )}
+            </div>
           </div>
         </div>
       </div>
