@@ -270,51 +270,90 @@ export default function ProductsPage() {
           />
         </div>
 
-        <Card header={<h2 className="text-lg font-semibold">Products</h2>}>
-          <div className="overflow-x-auto">
-            <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
-              <thead>
-                <tr className="border-b border-[#e5e5e5]">
-                  {['Image','Item','SKU','Category','Americas','International','Status','Actions'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50 border-b border-[#e5e5e5]">
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {product.picture_url ? (
-                        <img src={product.picture_url} alt={product.item_name} className="h-12 w-12 rounded object-cover border border-[#e5e5e5]" />
-                      ) : (
-                        <div className="h-12 w-12 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">No Image</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{product.item_name}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{product.sku}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{product.category?.name || '—'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${product.price_americas || 0}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${product.price_international || 0}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex flex-col gap-1">
-                        <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.enable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{product.enable ? 'Enabled' : 'Disabled'}</span>
-                        <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.list_in_support_funds ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{product.list_in_support_funds ? 'Support Funds' : 'No Support Funds'}</span>
-                        <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.qualifies_for_credit_earning ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>{product.qualifies_for_credit_earning ? 'Earns Credit' : 'No Credit'}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      <div className="flex items-center gap-3">
-                        <Link className="text-blue-600 hover:text-blue-800" href={`/admin/products/${product.id}`}>View</Link>
-                        <Link className="text-green-600 hover:text-green-800" href={`/admin/products/${product.id}/edit`}>Edit</Link>
-                        <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-800">Delete</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+        {/* Group by Category with Form Kit tables per category */}
+        {(() => {
+          const categorizedProducts = getProductsByCategory();
+          const filteredCategorizedProducts = categorizedProducts.map(categoryGroup => ({
+            ...categoryGroup,
+            products: categoryGroup.products.filter(product =>
+              product.item_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+          })).filter(categoryGroup => categoryGroup.products.length > 0);
+
+          return filteredCategorizedProducts.map((categoryGroup) => (
+            <Card
+              key={categoryGroup.category?.id || 'no-category'}
+              header={
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {categoryGroup.category?.image_url ? (
+                      <img src={categoryGroup.category.image_url} alt={categoryGroup.category.name} className="h-8 w-auto" />
+                    ) : (
+                      <h3 className="text-base font-semibold text-gray-900">{categoryGroup.category?.name || 'Products without Category'}</h3>
+                    )}
+                  </div>
+                  {categoryGroup.category && (
+                    <Link href={`/admin/categories/${categoryGroup.category.id}/edit`} className="text-sm text-blue-600 hover:text-blue-800">Edit Category</Link>
+                  )}
+                </div>
+              }
+            >
+              <div className="overflow-x-auto">
+                <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
+                  <thead>
+                    <tr className="border-b border-[#e5e5e5]">
+                      {['Image','Item','SKU','Americas','International','Status','Actions'].map(h => (
+                        <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {categoryGroup.products.map((product, index) => (
+                      <tr key={product.id} className={`hover:bg-gray-50 border-b border-[#e5e5e5] ${draggedItem === product.id ? 'opacity-50' : ''}`}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, product.id)}
+                          onDragOver={handleDragOver}
+                          onDrop={(e) => handleDrop(e, product.id)}
+                      >
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {product.picture_url ? (
+                            <img src={product.picture_url} alt={product.item_name} className="h-12 w-12 rounded object-cover border border-[#e5e5e5]" />
+                          ) : (
+                            <div className="h-12 w-12 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">No Image</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          <div className="flex items-center gap-3">
+                            <span className="text-gray-400 font-mono w-8">{product.sort_order || index + 1}</span>
+                            <span className="font-medium">{product.item_name || 'Unnamed Product'}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{product.sku}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${product.price_americas || 0}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${product.price_international || 0}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.enable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{product.enable ? 'Enabled' : 'Disabled'}</span>
+                            <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.list_in_support_funds ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{product.list_in_support_funds ? 'Support Funds' : 'No Support Funds'}</span>
+                            <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.qualifies_for_credit_earning ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>{product.qualifies_for_credit_earning ? 'Earns Credit' : 'No Credit'}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+                          <div className="flex items-center gap-3">
+                            <Link className="text-blue-600 hover:text-blue-800" href={`/admin/products/${product.id}`}>View</Link>
+                            <Link className="text-green-600 hover:text-green-800" href={`/admin/products/${product.id}/edit`}>Edit</Link>
+                            <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-800">Delete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          ));
+        })()}
 
         {products.length === 0 && (
           <div className="text-center py-8">
