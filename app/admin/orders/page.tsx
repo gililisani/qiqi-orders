@@ -5,16 +5,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
 import Link from 'next/link';
 import { generateNetSuiteCSV, downloadCSV, OrderForExport } from '../../../lib/csvExport';
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  Typography,
-  Button,
-  Chip,
-  IconButton,
-} from '../../components/MaterialTailwind';
-import { ArrowRightIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import Card from '../../components/ui/Card';
 
 interface Order {
   id: string;
@@ -303,7 +294,7 @@ export default function OrdersPage() {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="p-6">
+        <div className="py-6">
           <p>Loading orders...</p>
         </div>
       </AdminLayout>
@@ -312,11 +303,11 @@ export default function OrdersPage() {
 
   return (
     <AdminLayout>
-      <div className="p-6 min-h-screen">
+      <div className="space-y-8">
         {/* Modern Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Orders Management</h1>
+            <h1 className="text-2xl font-semibold text-gray-900">Orders</h1>
             <p className="text-gray-500 mt-1 text-sm">Manage and track all orders</p>
           </div>
           <div className="text-xs text-gray-400">
@@ -334,7 +325,7 @@ export default function OrdersPage() {
         )}
 
         {/* Modern Action Bar */}
-        <div className="mb-6">
+        <div>
           <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
             <div className="flex flex-col sm:flex-row gap-4 flex-1">
               <div className="relative flex-1 max-w-md">
@@ -365,10 +356,7 @@ export default function OrdersPage() {
               </select>
             </div>
             <div className="flex gap-2">
-              <Link
-                href="/admin/orders/new"
-                className="inline-flex items-center px-3 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-500 transition-colors"
-              >
+              <Link href="/admin/orders/new" className="inline-flex items-center px-3 py-2 bg-black text-white text-sm font-medium rounded hover:bg-gray-900">
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
@@ -378,159 +366,114 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {/* Material Tailwind Table */}
-        <Card className="border border-blue-gray-100 shadow-sm">
-          <CardBody className="overflow-x-scroll px-0 pt-0 pb-2">
-            <table className="w-full min-w-[640px] table-auto">
+        {/* Table (Form Kit style) */}
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
               <thead>
-                <tr>
-                  {["PO Number", "Client", "Company", "Status", "Total", "Support Fund", "Date", "Actions"].map((el) => (
-                    <th
-                      key={el}
-                      className="border-b border-blue-gray-50 py-3 px-5 text-left"
-                    >
-                      <Typography
-                        variant="small"
-                        className="text-[11px] font-bold uppercase text-blue-gray-400"
-                      >
-                        {el}
-                      </Typography>
-                    </th>
+                <tr className="border-b border-[#e5e5e5]">
+                  {['PO Number','Client','Company','Status','Total','Support Fund','Date','Actions'].map((el) => (
+                    <th key={el} className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">{el}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map((order, index) => {
-                  const className = `py-3 px-5 ${
-                    index === filteredOrders.length - 1
-                      ? ""
-                      : "border-b border-blue-gray-50"
-                  }`;
-                  
-                  return (
-                    <tr key={order.id}>
-                      <td className={className}>
-                        <Typography
-                          variant="small"
-                          color="blue-gray"
-                          className="font-semibold"
-                        >
-                          #{order.po_number || order.id.substring(0, 8)}
-                        </Typography>
-                      </td>
-                      <td className={className}>
-                        <div>
-                          <Typography
-                            variant="small"
-                            color="blue-gray"
-                            className="font-semibold"
+                {filteredOrders.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">#{order.po_number || order.id.substring(0, 8)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-gray-800">{order.client?.name || 'N/A'}</span>
+                        <span className="text-xs text-gray-500">{order.client?.email || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-gray-800">{order.company?.company_name || 'N/A'}</span>
+                        <span className="text-xs text-gray-500">NetSuite: {order.company?.netsuite_number || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase ${
+                        order.status === 'Open'
+                          ? 'bg-gray-200 text-gray-800'
+                          : order.status === 'In Process'
+                          ? 'bg-blue-100 text-blue-800'
+                          : order.status === 'Done'
+                          ? 'bg-green-100 text-green-800'
+                          : order.status === 'Cancelled'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>{order.status}</span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${order.total_value?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${order.support_fund_used?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{new Date(order.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      <div className="flex gap-3">
+                        <Link className="text-blue-600 hover:text-blue-800" href={`/admin/orders/${order.id}`}>View</Link>
+                        <button onClick={() => handleDownloadCSV(order.id)} className="text-gray-700 hover:text-gray-900">CSV</button>
+                      </div>
+                      {/* NetSuite Actions */}
+                      <div className="mt-1 space-y-1">
+                        {order.netsuite_sales_order_id ? (
+                          <span className="text-xs text-green-600 font-medium">✓ NetSuite: {order.netsuite_sales_order_id}</span>
+                        ) : (
+                          <button
+                            onClick={() => createOrderInNetSuite(order.id)}
+                            className="text-xs text-orange-600 hover:text-orange-800 disabled:opacity-50 font-medium"
+                            disabled={creatingInNetSuite === order.id}
                           >
-                            {order.client?.name || 'N/A'}
-                          </Typography>
-                          <Typography className="text-xs font-normal text-blue-gray-500">
-                            {order.client?.email || 'N/A'}
-                          </Typography>
-                        </div>
-                      </td>
-                      <td className={className}>
-                        <div>
-                          <Typography className="text-xs font-semibold text-blue-gray-600">
-                            {order.company?.company_name || 'N/A'}
-                          </Typography>
-                          <Typography className="text-xs font-normal text-blue-gray-500">
-                            NetSuite: {order.company?.netsuite_number || 'N/A'}
-                          </Typography>
-                        </div>
-                      </td>
-                      <td className={className}>
-                        <Chip
-                          variant="gradient"
-                          color={
-                            order.status === 'Open'
-                              ? 'orange'
-                              : order.status === 'In Process'
-                              ? 'blue'
-                              : order.status === 'Done'
-                              ? 'green'
-                              : order.status === 'Cancelled'
-                              ? 'red'
-                              : 'blue-gray'
-                          }
-                          value={order.status}
-                          className="py-0.5 px-2 text-[11px] font-medium w-fit"
-                        />
-                      </td>
-                      <td className={className}>
-                        <Typography className="text-xs font-semibold text-blue-gray-600">
-                          ${order.total_value?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                        </Typography>
-                      </td>
-                      <td className={className}>
-                        <Typography className="text-xs font-semibold text-blue-gray-600">
-                          ${order.support_fund_used?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                        </Typography>
-                      </td>
-                      <td className={className}>
-                        <Typography className="text-xs font-semibold text-blue-gray-600">
-                          {new Date(order.created_at).toLocaleDateString()}
-                        </Typography>
-                      </td>
-                      <td className={className}>
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-3">
-                            <Link href={`/admin/orders/${order.id}`}>
-                              <Typography
-                                as="a"
-                                className="text-xs font-semibold text-blue-gray-600 cursor-pointer hover:text-blue-500"
-                              >
-                                View
-                              </Typography>
-                            </Link>
-                            <Typography
-                              as="button"
-                              onClick={() => handleDownloadCSV(order.id)}
-                              className="text-xs font-semibold text-blue-gray-600 cursor-pointer hover:text-blue-500"
-                            >
-                              CSV
-                            </Typography>
-                          </div>
-                          
-                          {/* NetSuite Actions */}
-                          <div className="space-y-1">
-                            {order.netsuite_sales_order_id ? (
-                              <Typography className="text-xs text-green-600 font-medium">
-                                ✓ NetSuite: {order.netsuite_sales_order_id}
-                              </Typography>
-                            ) : (
-                              <Typography
-                                as="button"
-                                onClick={() => createOrderInNetSuite(order.id)}
-                                className="text-xs text-orange-600 hover:text-orange-800 disabled:opacity-50 font-medium cursor-pointer"
-                                disabled={creatingInNetSuite === order.id}
-                              >
-                                {creatingInNetSuite === order.id ? 'Creating...' : '→ Create in NetSuite'}
-                              </Typography>
-                            )}
-                            
-                            {order.status === 'In Process' && order.netsuite_sales_order_id && (
-                              <Typography
-                                as="button"
-                                onClick={() => completeOrder(order.id)}
-                                className="block text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50 font-medium cursor-pointer"
-                                disabled={completingOrder === order.id}
-                              >
-                                {completingOrder === order.id ? 'Completing...' : '✓ Mark Complete'}
-                              </Typography>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                            {creatingInNetSuite === order.id ? 'Creating...' : '→ Create in NetSuite'}
+                          </button>
+                        )}
+                        {order.status === 'In Process' && order.netsuite_sales_order_id && (
+                          <button
+                            onClick={() => completeOrder(order.id)}
+                            className="block text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50 font-medium"
+                            disabled={completingOrder === order.id}
+                          >
+                            {completingOrder === order.id ? 'Completing...' : '✓ Mark Complete'}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
-          </CardBody>
+          </div>
+          {/* Pagination (Form Kit style) */}
+          {totalOrders > ordersPerPage && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-gray-600">Page {currentPage} of {Math.ceil(totalOrders / ordersPerPage)}</p>
+              <nav className="inline-flex items-center gap-1" aria-label="Pagination">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 text-sm text-gray-700 border border-[#e5e5e5] rounded hover:bg-gray-50 disabled:opacity-50"
+                >Prev</button>
+                {Array.from({ length: Math.min(5, Math.ceil(totalOrders / ordersPerPage)) }, (_, i) => {
+                  const pageNum = i + 1;
+                  const isActive = currentPage === pageNum;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`${isActive ? 'text-white bg-black border border-black' : 'text-gray-700 border border-[#e5e5e5] hover:bg-gray-50'} px-3 py-1.5 text-sm rounded`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalOrders / ordersPerPage), prev + 1))}
+                  disabled={currentPage >= Math.ceil(totalOrders / ordersPerPage)}
+                  className="px-3 py-1.5 text-sm text-gray-700 border border-[#e5e5e5] rounded hover:bg-gray-50 disabled:opacity-50"
+                >Next</button>
+              </nav>
+            </div>
+          )}
         </Card>
 
         {filteredOrders.length === 0 && !loading && (
@@ -540,51 +483,6 @@ export default function OrdersPage() {
             </svg>
             <h3 className="text-base font-medium text-gray-900 mb-1">No orders found</h3>
             <p className="text-sm text-gray-500">Orders will appear here when clients place them.</p>
-          </div>
-        )}
-
-        {/* Material Tailwind Pagination */}
-        {totalOrders > ordersPerPage && (
-          <div className="flex items-center justify-between mt-4 px-4">
-            <div className="flex items-center text-sm text-gray-700">
-              <span>Page {currentPage} of {Math.ceil(totalOrders / ordersPerPage)}</span>
-              <span className="mx-2">•</span>
-              <span>{totalOrders} total orders</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="text"
-                className="flex items-center gap-2"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-              >
-                <ArrowLeftIcon strokeWidth={2} className="h-4 w-4" /> Previous
-              </Button>
-              <div className="flex items-center gap-2">
-                {Array.from({ length: Math.min(5, Math.ceil(totalOrders / ordersPerPage)) }, (_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <IconButton
-                      key={pageNum}
-                      variant={currentPage === pageNum ? "filled" : "text"}
-                      color="gray"
-                      onClick={() => setCurrentPage(pageNum)}
-                    >
-                      {pageNum}
-                    </IconButton>
-                  );
-                })}
-              </div>
-              <Button
-                variant="text"
-                className="flex items-center gap-2"
-                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalOrders / ordersPerPage), prev + 1))}
-                disabled={currentPage >= Math.ceil(totalOrders / ordersPerPage)}
-              >
-                Next
-                <ArrowRightIcon strokeWidth={2} className="h-4 w-4" />
-              </Button>
-            </div>
           </div>
         )}
       </div>
