@@ -639,7 +639,7 @@ export default function EditOrderPage() {
             {/* Tab Navigation */}
             {totals.supportFundPercent > 0 && (
               <Card>
-                <div className="border-b border-[#e5e5e5]">
+                <div>
                   <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
                     <button
                       onClick={() => setShowSupportFundRedemption(false)}
