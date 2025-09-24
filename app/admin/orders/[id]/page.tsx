@@ -78,6 +78,7 @@ interface OrderHistory {
 const statusOptions = [
   { value: 'Open', label: 'Open', color: 'bg-yellow-100 text-yellow-800' },
   { value: 'In Process', label: 'In Process', color: 'bg-blue-100 text-blue-800' },
+  { value: 'Ready', label: 'Ready', color: 'bg-orange-100 text-orange-800' },
   { value: 'Done', label: 'Done', color: 'bg-green-100 text-green-800' },
   { value: 'Cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-800' }
 ];
@@ -630,6 +631,8 @@ export default function OrderViewPage() {
                           ? 'bg-gray-200 text-gray-800'
                           : order.status === 'In Process'
                           ? 'bg-blue-100 text-blue-800'
+                          : order.status === 'Ready'
+                          ? 'bg-orange-100 text-orange-800'
                           : order.status === 'Done'
                           ? 'bg-green-100 text-green-800'
                           : order.status === 'Cancelled'

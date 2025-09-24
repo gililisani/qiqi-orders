@@ -19,6 +19,7 @@ interface Order {
 const statusColors = {
   'Open': 'bg-yellow-100 text-yellow-800',
   'In Process': 'bg-blue-100 text-blue-800',
+  'Ready': 'bg-orange-100 text-orange-800',
   'Done': 'bg-green-100 text-green-800',
   'Cancelled': 'bg-red-100 text-red-800'
 };
@@ -141,6 +142,7 @@ export default function ClientOrdersPage() {
                         <span className={`inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase ${
                           order.status === 'Open' ? 'bg-gray-200 text-gray-800' :
                           order.status === 'In Process' ? 'bg-blue-100 text-blue-800' :
+                          order.status === 'Ready' ? 'bg-orange-100 text-orange-800' :
                           order.status === 'Done' ? 'bg-green-100 text-green-800' :
                           order.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
                         }`}>
