@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
+import Card from '../../components/ui/Card';
 import Link from 'next/link';
 
 interface Category {
@@ -234,8 +235,8 @@ export default function ProductsPage() {
 
   return (
     <AdminLayout>
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
+      <div className="space-y-8">
+        <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Products Management</h1>
           <div className="space-x-2">
             <Link
@@ -259,7 +260,7 @@ export default function ProductsPage() {
           </div>
         )}
 
-        <div className="mb-4">
+        <div>
           <input
             type="text"
             placeholder="Search products by name or SKU..."
@@ -269,173 +270,51 @@ export default function ProductsPage() {
           />
         </div>
 
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-            <p className="text-sm text-gray-600">
-              Products are organized by categories. Assign products to categories using the dropdown below each product.
-            </p>
-          </div>
-          
-          {(() => {
-            const categorizedProducts = getProductsByCategory();
-            const filteredCategorizedProducts = categorizedProducts.map(categoryGroup => ({
-              ...categoryGroup,
-              products: categoryGroup.products.filter(product =>
-                product.item_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
-              )
-            })).filter(categoryGroup => categoryGroup.products.length > 0);
-
-            return filteredCategorizedProducts.map((categoryGroup, categoryIndex) => (
-              <div key={categoryGroup.category?.id || 'no-category'}>
-                {/* Category Header */}
-                <div className="border-b border-gray-300 bg-gray-50">
-                  <div className="px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center">
-                      {categoryGroup.category?.image_url ? (
-                        <img
-                          src={categoryGroup.category.image_url}
-                          alt={categoryGroup.category.name}
-                          className="object-contain bg-white"
-                          style={{ 
-                            height: '45px',
-                            width: 'auto'
-                          }}
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <h3 className="text-sm sm:text-base font-semibold text-gray-900">
-                          {categoryGroup.category?.name || 'Products without Category'}
-                        </h3>
-                      )}
-                    </div>
-                    {categoryGroup.category && (
-                      <Link
-                        href={`/admin/categories/${categoryGroup.category.id}/edit`}
-                        className="text-xs sm:text-sm text-blue-600 hover:text-blue-800"
-                      >
-                        Edit Category
-                      </Link>
-                    )}
-                  </div>
-                </div>
-
-                {/* Products in this category */}
-                <ul className="divide-y divide-gray-200">
-                  {categoryGroup.products.map((product, index) => (
-                    <li 
-                      key={product.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, product.id)}
-                      onDragOver={handleDragOver}
-                      onDrop={(e) => handleDrop(e, product.id)}
-                      className={`cursor-move transition-colors ${
-                        draggedItem === product.id ? 'opacity-50' : ''
-                      } ${isReordering ? 'pointer-events-none' : ''}`}
-                    >
-                      <div className="px-4 py-4 flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center space-x-2">
-                            <div className="text-sm text-gray-400 font-mono w-8">
-                              {product.sort_order || index + 1}
-                            </div>
-                            <div className="text-gray-400">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-                              </svg>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-4">
-                          {product.picture_url ? (
-                            <img
-                              src={product.picture_url}
-                              alt={product.item_name}
-                              className="h-16 w-16 object-cover rounded"
-                            />
-                          ) : (
-                            <div className="h-16 w-16 bg-gray-200 rounded flex items-center justify-center">
-                              <span className="text-gray-400 text-xs">No Image</span>
-                            </div>
-                          )}
-                          <div>
-                            <h3 className="text-lg font-medium text-gray-900">
-                              {product.item_name || 'Unnamed Product'}
-                            </h3>
-                            <p className="text-sm text-gray-500">SKU: {product.sku || 'N/A'}</p>
-                            <div className="flex space-x-4 text-sm text-gray-500">
-                              <span>Americas: ${product.price_americas || 0}</span>
-                              <span>International: ${product.price_international || 0}</span>
-                            </div>
-                          </div>
-                          </div>
-                        </div>
-                        
-                        {/* Category Assignment Dropdown */}
-                        <div className="flex items-center space-x-4">
-                          <div className="flex flex-col items-end space-y-2">
-                            <label className="text-xs font-medium text-gray-700">Category:</label>
-                            <select
-                              value={product.category_id || ''}
-                              onChange={(e) => handleCategoryChange(product.id, e.target.value ? parseInt(e.target.value) : null)}
-                              className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">No Category</option>
-                              {categories.map(category => (
-                                <option key={category.id} value={category.id}>
-                                  {category.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          
-                          <div className="flex flex-col space-y-1">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              product.enable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {product.enable ? 'Enabled' : 'Disabled'}
-                            </span>
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              product.list_in_support_funds ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {product.list_in_support_funds ? 'Support Funds' : 'No Support Funds'}
-                            </span>
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              product.qualifies_for_credit_earning ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
-                            }`}>
-                              {product.qualifies_for_credit_earning ? 'Earns Credit' : 'No Credit'}
-                            </span>
-                          </div>
-                          <div className="flex space-x-2">
-                            <Link
-                              href={`/admin/products/${product.id}`}
-                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                            >
-                              View
-                            </Link>
-                            <Link
-                              href={`/admin/products/${product.id}/edit`}
-                              className="text-green-600 hover:text-green-800 text-sm font-medium"
-                            >
-                              Edit
-                            </Link>
-                            <button
-                              onClick={() => handleDelete(product.id)}
-                              className="text-red-600 hover:text-red-800 text-sm font-medium"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </li>
+        <Card header={<h2 className="text-lg font-semibold">Products</h2>}>
+          <div className="overflow-x-auto">
+            <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
+              <thead>
+                <tr className="border-b border-[#e5e5e5]">
+                  {['Image','Item','SKU','Category','Americas','International','Status','Actions'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">{h}</th>
                   ))}
-                </ul>
-              </div>
-            ));
-          })()}
-        </div>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map((product) => (
+                  <tr key={product.id} className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {product.picture_url ? (
+                        <img src={product.picture_url} alt={product.item_name} className="h-12 w-12 rounded object-cover border border-[#e5e5e5]" />
+                      ) : (
+                        <div className="h-12 w-12 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">No Image</div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{product.item_name}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{product.sku}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{product.category?.name || '—'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${product.price_americas || 0}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${product.price_international || 0}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.enable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{product.enable ? 'Enabled' : 'Disabled'}</span>
+                        <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.list_in_support_funds ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{product.list_in_support_funds ? 'Support Funds' : 'No Support Funds'}</span>
+                        <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.qualifies_for_credit_earning ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>{product.qualifies_for_credit_earning ? 'Earns Credit' : 'No Credit'}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      <div className="flex items-center gap-3">
+                        <Link className="text-blue-600 hover:text-blue-800" href={`/admin/products/${product.id}`}>View</Link>
+                        <Link className="text-green-600 hover:text-green-800" href={`/admin/products/${product.id}/edit`}>Edit</Link>
+                        <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-800">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
 
         {products.length === 0 && (
           <div className="text-center py-8">
