@@ -15,6 +15,10 @@ interface Order {
   support_fund_used: number;
   credit_earned: number;
   po_number: string;
+  user?: {
+    name: string;
+    email: string;
+  };
   company?: {
     company_name: string;
     netsuite_number: string;
@@ -74,6 +78,7 @@ export default function ClientOrderViewPage() {
         .from('orders')
         .select(`
           *,
+          user:clients(name, email),
           company:companies(
             company_name,
             netsuite_number,
@@ -204,7 +209,10 @@ export default function ClientOrderViewPage() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Created</label>
-                <p className="text-sm text-gray-600">{new Date(order.created_at).toLocaleString()}</p>
+                <p className="text-sm text-gray-600">
+                  {new Date(order.created_at).toLocaleString()}
+                  {order.user?.name && ` by ${order.user.name}`}
+                </p>
               </div>
             </div>
           </Card>
@@ -253,7 +261,7 @@ export default function ClientOrderViewPage() {
         </div>
 
         {/* Order Items */}
-        <Card header={<h2 className="font-semibold">Order Items</h2>}>
+        <Card header={<h2 className="font-semibold">Items</h2>}>
           <div className="px-6 overflow-x-auto">
             <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
               <thead>
