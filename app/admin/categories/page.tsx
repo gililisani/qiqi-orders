@@ -35,6 +35,9 @@ export default function CategoriesPage() {
 
       if (error) throw error;
 
+      // Debug log to help diagnose empty results / RLS issues
+      console.log('[Categories] fetched rows:', data?.length || 0, { error });
+
       setCategories(data || []);
     } catch (err: any) {
       setError(err.message);
