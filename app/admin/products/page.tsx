@@ -303,7 +303,7 @@ export default function ProductsPage() {
                 <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
                   <thead>
                     <tr className="border-b border-[#e5e5e5]">
-                      {['Image','Item','SKU','Americas','International','Status','Actions'].map(h => (
+                      {['Image','Item','SKU','Americas','International','Status','Assign','Actions'].map(h => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
@@ -337,6 +337,21 @@ export default function ProductsPage() {
                             <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.enable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{product.enable ? 'Enabled' : 'Disabled'}</span>
                             <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.list_in_support_funds ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{product.list_in_support_funds ? 'Support Funds' : 'No Support Funds'}</span>
                             <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.qualifies_for_credit_earning ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>{product.qualifies_for_credit_earning ? 'Earns Credit' : 'No Credit'}</span>
+                          </div>
+                        </td>
+                        {/* Assign Category */}
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={product.category_id || ''}
+                              onChange={(e) => handleCategoryChange(product.id, e.target.value ? parseInt(e.target.value) : null)}
+                              className="text-sm border border-[#e5e5e5] rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-black"
+                            >
+                              <option value="">No Category</option>
+                              {categories.map((category) => (
+                                <option key={category.id} value={category.id}>{category.name}</option>
+                              ))}
+                            </select>
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">
