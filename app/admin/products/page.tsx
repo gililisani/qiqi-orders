@@ -303,9 +303,14 @@ export default function ProductsPage() {
                 <table className="w-full table-fixed border border-[#e5e5e5] rounded-lg overflow-hidden">
                   <thead>
                     <tr className="border-b border-[#e5e5e5]">
-                      {['Image','Item','SKU','Americas','International','Status','Assign','Actions'].map(h => (
-                        <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">{h}</th>
-                      ))}
+                      <th className="w-16 px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Image</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Item</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">SKU</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Americas</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">International</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Assign</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -316,7 +321,7 @@ export default function ProductsPage() {
                           onDragOver={handleDragOver}
                           onDrop={(e) => handleDrop(e, product.id)}
                       >
-                        <td className="px-4 py-3 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap w-16">
                           {product.picture_url ? (
                             <img src={product.picture_url} alt={product.item_name} className="h-12 w-12 rounded object-cover border border-[#e5e5e5]" />
                           ) : (
