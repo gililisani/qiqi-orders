@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
-import ClientLayout from '../../../../components/ClientLayout';
-import Card from '../../../../components/ui/Card';
+import ClientLayout from '../../../components/ClientLayout';
+import Card from '../../../components/ui/Card';
 import Link from 'next/link';
 import Image from 'next/image';
 
