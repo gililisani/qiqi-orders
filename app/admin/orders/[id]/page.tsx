@@ -95,6 +95,7 @@ export default function OrderViewPage() {
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [sendingNotification, setSendingNotification] = useState(false);
   const [showPackingListForm, setShowPackingListForm] = useState(false);
+  const [currentUserName, setCurrentUserName] = useState<string>('');
   const [packingListData, setPackingListData] = useState({
     invoiceNumber: '',
     shippingMethod: 'Air',
@@ -105,11 +106,31 @@ export default function OrderViewPage() {
 
   useEffect(() => {
     if (orderId) {
+      fetchCurrentUser();
       fetchOrder();
       fetchOrderItems();
       fetchOrderHistory();
     }
   }, [orderId]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: adminData, error } = await supabase
+        .from('admins')
+        .select('name')
+        .eq('id', user.id)
+        .single();
+
+      if (!error && adminData?.name) {
+        setCurrentUserName(adminData.name);
+      }
+    } catch (err) {
+      console.error('Error fetching current user:', err);
+    }
+  };
 
   const fetchOrder = async () => {
     try {
@@ -592,7 +613,7 @@ export default function OrderViewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Block: Order Information */}
           <Card header={<h2 className="text-lg font-semibold">Order Information</h2>}>
-            <div className="space-y-3">
+            <div className="space-y-2 px-6">
               <div>
                 <label className="text-sm font-medium text-gray-500">PO Number</label>
                 <p className="text-lg font-mono">{order.po_number || 'N/A'}</p>
@@ -625,7 +646,10 @@ export default function OrderViewPage() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Created</label>
-                <p className="text-lg">{new Date(order.created_at).toLocaleString()}</p>
+                <p className="text-sm text-gray-600">
+                  {new Date(order.created_at).toLocaleString()}
+                  {currentUserName && ` by ${currentUserName}`}
+                </p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Client Name</label>
@@ -640,7 +664,7 @@ export default function OrderViewPage() {
 
           {/* Middle Block: Bill To */}
           <Card header={<h2 className="text-lg font-semibold">Bill To</h2>}>
-            <div className="space-y-3">
+            <div className="space-y-2 px-6">
               <div>
                 <label className="text-sm font-medium text-gray-500">Company</label>
                 <p className="text-lg">{order.company?.company_name || 'N/A'}</p>
@@ -660,7 +684,7 @@ export default function OrderViewPage() {
 
           {/* Right Block: Order Summary */}
           <Card header={<h2 className="text-lg font-semibold">Order Summary</h2>}>
-            <div className="space-y-3">
+            <div className="space-y-2 px-6">
               <div>
                 <label className="text-sm font-medium text-gray-500">Total Order</label>
                 <p className="text-lg font-semibold">${order.total_value?.toFixed(2) || '0.00'}</p>
@@ -671,13 +695,15 @@ export default function OrderViewPage() {
                   ${order.credit_earned?.toFixed(2) || '0.00'}
                 </p>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Incoterm</label>
-                <p className="text-lg">{order.company?.incoterm?.name || 'Not specified'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Payment Terms</label>
-                <p className="text-lg">{order.company?.payment_term?.name || 'Not specified'}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Incoterm</label>
+                  <p className="text-lg">{order.company?.incoterm?.name || 'Not specified'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Payment Terms</label>
+                  <p className="text-lg">{order.company?.payment_term?.name || 'Not specified'}</p>
+                </div>
               </div>
             </div>
           </Card>
@@ -686,7 +712,7 @@ export default function OrderViewPage() {
         {/* Order Items */}
         <Card header={
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Order Items</h2>
+            <h2 className="text-lg font-semibold">Items</h2>
             <div className="flex items-center space-x-4">
               {isReordering && (
                 <span className="text-sm text-blue-600 font-medium">
@@ -837,7 +863,7 @@ export default function OrderViewPage() {
 
         {/* Order Summary for Admin */}
         <Card header={<h2 className="text-lg font-semibold">Order Financial Summary</h2>}>
-          <div className="space-y-2">
+          <div className="space-y-1 px-6">
             {(() => {
               // Calculate breakdown
               const regularItems = orderItems.filter(item => !item.is_support_fund_item);
