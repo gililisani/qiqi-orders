@@ -661,11 +661,10 @@ export default function OrderViewPage() {
             <div className="space-y-2 px-6">
               <div>
                 <label className="text-sm font-medium text-gray-500">Company</label>
-                <p className="text-lg">{order.company?.company_name || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">NetSuite Number</label>
-                <p className="text-lg">{order.company?.netsuite_number || 'N/A'}</p>
+                <p className="text-lg">
+                  {order.company?.netsuite_number && `[${order.company.netsuite_number}] `}
+                  {order.company?.company_name || 'N/A'}
+                </p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Ship To</label>
