@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
 import ClientLayout from '../../../components/ClientLayout';
+import Card from '../../../components/ui/Card';
 import Link from 'next/link';
 
 interface Order {
@@ -41,12 +42,11 @@ interface OrderItem {
   };
 }
 
-const statusColors = {
-  'Open': 'bg-yellow-100 text-yellow-800',
-  'In Process': 'bg-blue-100 text-blue-800',
-  'Done': 'bg-green-100 text-green-800',
-  'Cancelled': 'bg-red-100 text-red-800'
-};
+const statusBadgeClasses = (status: string) =>
+  status === 'Open' ? 'bg-gray-200 text-gray-800' :
+  status === 'In Process' ? 'bg-blue-100 text-blue-800' :
+  status === 'Done' ? 'bg-green-100 text-green-800' :
+  status === 'Cancelled' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800';
 
 export default function ClientOrderViewPage() {
   const params = useParams();
@@ -172,7 +172,7 @@ export default function ClientOrderViewPage() {
             {order?.status === 'Open' && (
               <Link
                 href={`/client/orders/${orderId}/edit`}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm"
+                className="bg-black text-white px-4 py-2 hover:opacity-90 transition text-sm"
               >
                 Edit Order
               </Link>
@@ -188,126 +188,98 @@ export default function ClientOrderViewPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
           {/* Left Block: Order Information */}
-          <div className="bg-white p-3 md:p-6 rounded-lg shadow border">
-            <h2 className="text-base md:text-lg font-semibold mb-2 md:mb-4">Order Information</h2>
-            <div className="space-y-2 md:space-y-3">
+          <Card header={<h2 className="font-semibold">Order Information</h2>}>
+            <div className="space-y-3">
               <div>
-                <label className="text-xs md:text-sm font-medium text-gray-500">PO Number</label>
-                <p className="text-sm md:text-lg font-mono">{order.po_number || 'N/A'}</p>
+                <label className="text-sm font-medium text-gray-500">PO Number</label>
+                <p className="text-lg font-mono">{order.po_number || 'N/A'}</p>
               </div>
               <div>
-                <label className="text-xs md:text-sm font-medium text-gray-500">Status</label>
+                <label className="text-sm font-medium text-gray-500">Status</label>
                 <div className="mt-1">
-                  <span className={`inline-flex items-center px-2 py-0.5 md:px-2.5 rounded-full text-xs font-medium ${
-                    statusColors[order.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span className={`inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase ${statusBadgeClasses(order.status)}`}>
                     {order.status}
                   </span>
                 </div>
               </div>
               <div>
-                <label className="text-xs md:text-sm font-medium text-gray-500">Created</label>
-                <p className="text-sm md:text-lg">{new Date(order.created_at).toLocaleString()}</p>
+                <label className="text-sm font-medium text-gray-500">Created</label>
+                <p className="text-lg">{new Date(order.created_at).toLocaleString()}</p>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Middle Block: Bill To */}
-          <div className="bg-white p-3 md:p-6 rounded-lg shadow border">
-            <h2 className="text-base md:text-lg font-semibold mb-2 md:mb-4">Bill To</h2>
-            <div className="space-y-2 md:space-y-3">
+          <Card header={<h2 className="font-semibold">Bill To</h2>}>
+            <div className="space-y-3">
               <div>
-                <label className="text-xs md:text-sm font-medium text-gray-500">Company</label>
-                <p className="text-sm md:text-lg">{order.company?.company_name || 'N/A'}</p>
+                <label className="text-sm font-medium text-gray-500">Company</label>
+                <p className="text-lg">{order.company?.company_name || 'N/A'}</p>
               </div>
               <div>
-                <label className="text-xs md:text-sm font-medium text-gray-500">Ship To</label>
-                <div className="text-xs md:text-sm text-gray-700 whitespace-pre-line">
+                <label className="text-sm font-medium text-gray-500">Ship To</label>
+                <div className="text-sm text-gray-700 whitespace-pre-line">
                   {order.company?.ship_to || 'Not specified'}
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Right Block: Order Summary */}
-          <div className="bg-white p-3 md:p-6 rounded-lg shadow border">
-            <h2 className="text-base md:text-lg font-semibold mb-2 md:mb-4">Order Summary</h2>
-            <div className="space-y-2 md:space-y-3">
+          <Card header={<h2 className="font-semibold">Order Summary</h2>}>
+            <div className="space-y-3">
               <div>
-                <label className="text-xs md:text-sm font-medium text-gray-500">Total Order</label>
-                <p className="text-sm md:text-lg font-semibold">${order.total_value?.toFixed(2) || '0.00'}</p>
+                <label className="text-sm font-medium text-gray-500">Total Order</label>
+                <p className="text-lg font-semibold">${order.total_value?.toFixed(2) || '0.00'}</p>
               </div>
               <div>
-                <label className="text-xs md:text-sm font-medium text-gray-500">Credit Earned</label>
-                <p className="text-sm md:text-lg text-green-600 font-semibold">
+                <label className="text-sm font-medium text-gray-500">Credit Earned</label>
+                <p className="text-lg text-green-600 font-semibold">
                   ${order.credit_earned?.toFixed(2) || '0.00'}
                 </p>
               </div>
               <div>
-                <label className="text-xs md:text-sm font-medium text-gray-500">Incoterm</label>
-                <p className="text-sm md:text-lg">{order.company?.incoterm?.name || 'Not specified'}</p>
+                <label className="text-sm font-medium text-gray-500">Incoterm</label>
+                <p className="text-lg">{order.company?.incoterm?.name || 'Not specified'}</p>
               </div>
               <div>
-                <label className="text-xs md:text-sm font-medium text-gray-500">Payment Terms</label>
-                <p className="text-sm md:text-lg">{order.company?.payment_term?.name || 'Not specified'}</p>
+                <label className="text-sm font-medium text-gray-500">Payment Terms</label>
+                <p className="text-lg">{order.company?.payment_term?.name || 'Not specified'}</p>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Order Items */}
-        <div className="bg-white rounded-lg shadow border overflow-hidden">
-          <div className="px-3 py-3 md:px-6 md:py-4 border-b border-gray-200">
-            <h2 className="text-base md:text-lg font-semibold">Order Items</h2>
-          </div>
+        <Card header={<h2 className="font-semibold">Order Items</h2>}>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-2 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-2 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    SKU
-                  </th>
-                  <th className="px-2 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Quantity
-                  </th>
-                  <th className="px-2 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Unit Price
-                  </th>
-                  <th className="px-2 py-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total Price
-                  </th>
+            <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
+              <thead>
+                <tr className="border-b border-[#e5e5e5]">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Product</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">SKU</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Quantity</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Unit Price</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Total Price</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody>
                 {orderItems.map((item) => (
-                  <tr key={item.id} className={`hover:bg-gray-50 ${item.is_support_fund_item ? 'bg-green-50' : ''}`}>
-                    <td className="px-2 py-2 md:px-6 md:py-4 whitespace-nowrap">
-                      <div className="flex flex-col md:flex-row md:items-center">
-                        <div className="text-xs md:text-sm font-medium text-gray-900">
+                  <tr key={item.id} className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-medium text-gray-900">
                           {item.product?.item_name || 'N/A'}
                         </div>
                         {item.is_support_fund_item && (
-                          <span className="mt-1 md:ml-2 md:mt-0 inline-flex items-center px-2 py-0.5 md:px-2.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Support Fund
-                          </span>
+                          <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-800">Support Fund</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-2 py-2 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500">
-                      {item.product?.sku || 'N/A'}
-                    </td>
-                    <td className="px-2 py-2 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900">
-                      {item.quantity}
-                    </td>
-                    <td className={`px-2 py-2 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm ${item.is_support_fund_item ? 'text-green-700 font-medium' : 'text-gray-900'}`}>
-                      ${item.unit_price?.toFixed(2) || '0.00'}
-                    </td>
-                    <td className={`px-2 py-2 md:px-6 md:py-4 whitespace-nowrap text-xs md:text-sm font-medium ${item.is_support_fund_item ? 'text-green-700' : 'text-gray-900'}`}>
-                      ${item.total_price?.toFixed(2) || '0.00'}
-                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{item.product?.sku || 'N/A'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
+                    <td className={`px-4 py-3 whitespace-nowrap text-sm ${item.is_support_fund_item ? 'text-green-700 font-medium' : 'text-gray-900'}`}>${item.unit_price?.toFixed(2) || '0.00'}</td>
+                    <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${item.is_support_fund_item ? 'text-green-700' : 'text-gray-900'}`}>${item.total_price?.toFixed(2) || '0.00'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -329,12 +301,11 @@ export default function ClientOrderViewPage() {
               )}
             </div>
           )}
-        </div>
+        </Card>
 
-        {/* Order Summary */}
-        <div className="bg-white rounded-lg shadow border p-3 md:p-6">
-          <h2 className="text-base md:text-lg font-semibold mb-2 md:mb-4">Order Summary</h2>
-          <div className="space-y-1 md:space-y-2">
+        {/* Order Totals */}
+        <Card header={<h2 className="font-semibold">Totals</h2>}>
+          <div className="space-y-2">
             {(() => {
               // Calculate breakdown
               const regularItems = orderItems.filter(item => !item.is_support_fund_item);
@@ -351,35 +322,32 @@ export default function ClientOrderViewPage() {
               
               return (
                 <>
-                  {/* Regular Items */}
                   <div className="flex justify-between">
-                    <span className="text-sm md:text-base text-gray-600">Regular Items:</span>
-                    <span className="text-sm md:text-base font-medium">${regularSubtotal.toFixed(2)}</span>
+                    <span className="text-sm text-gray-600">Regular Items:</span>
+                    <span className="text-sm font-medium">${regularSubtotal.toFixed(2)}</span>
                   </div>
-                  
-                  {/* Credit Used - always display */}
+
                   <div className="flex justify-between text-green-600">
-                    <span className="text-sm md:text-base">Credit Used:</span>
-                    <span className="text-sm md:text-base font-medium">${creditUsed.toFixed(2)}</span>
+                    <span className="text-sm">Credit Used:</span>
+                    <span className="text-sm font-medium">${creditUsed.toFixed(2)}</span>
                   </div>
-                  
-                  {/* Balance - always display */}
+
                   <div className="flex justify-between text-orange-600">
-                    <span className="text-sm md:text-base">Balance:</span>
-                    <span className="text-sm md:text-base font-medium">${balance.toFixed(2)}</span>
+                    <span className="text-sm">Balance:</span>
+                    <span className="text-sm font-medium">${balance.toFixed(2)}</span>
                   </div>
-                  
-                  <div className="border-t pt-1 md:pt-2">
+
+                  <div className="border-t pt-2">
                     <div className="flex justify-between">
-                      <span className="text-base md:text-lg font-semibold">Total Order Value:</span>
-                      <span className="text-base md:text-lg font-semibold">${totalOrderValue.toFixed(2)}</span>
+                      <span className="text-lg font-semibold">Total Order Value:</span>
+                      <span className="text-lg font-semibold">${totalOrderValue.toFixed(2)}</span>
                     </div>
                   </div>
                 </>
               );
             })()}
           </div>
-        </div>
+        </Card>
       </div>
     </ClientLayout>
   );
