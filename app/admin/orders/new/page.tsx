@@ -497,8 +497,9 @@ export default function AdminNewOrderPage() {
               <div className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Order Information</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField label="Select Company">
+                  <FormField label="Select Company" htmlFor="admin-select-company">
                     <select
+                      id="admin-select-company"
                       value={selectedCompany?.id || ''}
                       onChange={(e) => {
                         const company = companies.find(c => c.id === e.target.value);
@@ -532,8 +533,9 @@ export default function AdminNewOrderPage() {
                 </div>
                 
                 <div className="mt-4">
-                  <FormField label="PO/Cheque Number (Optional)">
+                  <FormField label="PO/Cheque Number (Optional)" htmlFor="admin-po-number">
                     <input
+                      id="admin-po-number"
                       type="text"
                       value={poNumber}
                       onChange={(e) => setPoNumber(e.target.value)}
