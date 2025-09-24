@@ -189,7 +189,7 @@ export default function ClientOrderViewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
           {/* Left Block: Order Information */}
           <Card header={<h2 className="font-semibold">Order Information</h2>}>
-            <div className="space-y-2">
+            <div className="px-6 space-y-2">
               <div>
                 <label className="text-sm font-medium text-gray-500">PO Number</label>
                 <p className="text-lg font-mono">{order.po_number || 'N/A'}</p>
@@ -204,14 +204,14 @@ export default function ClientOrderViewPage() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Created</label>
-                <p className="text-lg">{new Date(order.created_at).toLocaleString()}</p>
+                <p className="text-sm text-gray-600">{new Date(order.created_at).toLocaleString()}</p>
               </div>
             </div>
           </Card>
 
           {/* Middle Block: Bill To */}
           <Card header={<h2 className="font-semibold">Bill To</h2>}>
-            <div className="space-y-2">
+            <div className="px-6 space-y-2">
               <div>
                 <label className="text-sm font-medium text-gray-500">Company</label>
                 <p className="text-lg">{order.company?.company_name || 'N/A'}</p>
@@ -227,7 +227,7 @@ export default function ClientOrderViewPage() {
 
           {/* Right Block: Order Summary */}
           <Card header={<h2 className="font-semibold">Order Summary</h2>}>
-            <div className="space-y-2">
+            <div className="px-6 space-y-2">
               <div>
                 <label className="text-sm font-medium text-gray-500">Total Order</label>
                 <p className="text-lg font-semibold">${order.total_value?.toFixed(2) || '0.00'}</p>
@@ -238,13 +238,15 @@ export default function ClientOrderViewPage() {
                   ${order.credit_earned?.toFixed(2) || '0.00'}
                 </p>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Incoterm</label>
-                <p className="text-lg">{order.company?.incoterm?.name || 'Not specified'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Payment Terms</label>
-                <p className="text-lg">{order.company?.payment_term?.name || 'Not specified'}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Incoterm</label>
+                  <p className="text-sm text-gray-600">{order.company?.incoterm?.name || 'Not specified'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Payment Terms</label>
+                  <p className="text-sm text-gray-600">{order.company?.payment_term?.name || 'Not specified'}</p>
+                </div>
               </div>
             </div>
           </Card>
@@ -252,7 +254,7 @@ export default function ClientOrderViewPage() {
 
         {/* Order Items */}
         <Card header={<h2 className="font-semibold">Order Items</h2>}>
-          <div className="overflow-x-auto">
+          <div className="px-6 overflow-x-auto">
             <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
               <thead>
                 <tr className="border-b border-[#e5e5e5]">
@@ -305,7 +307,7 @@ export default function ClientOrderViewPage() {
 
         {/* Order Totals */}
         <Card header={<h2 className="font-semibold">Totals</h2>}>
-          <div className="space-y-1">
+          <div className="px-6 space-y-1">
             {(() => {
               // Calculate breakdown
               const regularItems = orderItems.filter(item => !item.is_support_fund_item);
