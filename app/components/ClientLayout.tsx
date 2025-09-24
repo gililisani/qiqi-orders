@@ -109,7 +109,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     <div className="min-h-screen bg-blue-gray-50/50">
       <TopNavbarClient />
       {/* Global container like Admin */}
-      <div className="mx-auto w-full max-w-[1600px] px-4 lg:px-6 xl:px-10 pt-12 space-y-16">
+      <div className="mx-auto w-full max-w-[1600px] px-4 lg:px-6 xl:px-10 pt-12 pb-16 space-y-16">
         {/* Main Content */}
         <div className="relative">
           {children}
