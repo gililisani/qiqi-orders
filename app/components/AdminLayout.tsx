@@ -56,11 +56,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-blue-gray-50/50">
-      {/* Container with max-width for all content */}
-      <div className="mx-auto max-w-7xl space-y-16 p-4">
-        {/* Top Navigation Bar */}
-        <TopNavbar />
+      {/* Full-width sticky top navbar (no max width, no top padding) */}
+      <TopNavbar />
 
+      {/* Container with max-width for page content only */}
+      <div className="mx-auto max-w-7xl space-y-16 p-4">
         {/* Main Content */}
         <div className="relative">
           {isNavigating && (
