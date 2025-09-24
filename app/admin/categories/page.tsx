@@ -30,21 +30,12 @@ export default function CategoriesPage() {
     try {
       const { data, error } = await supabase
         .from('categories')
-        .select(`
-          *,
-          product_count:Products(count)
-        `)
-        .order('sort_order');
+        .select('id,name,description,sort_order,visible_to_americas,visible_to_international,image_url')
+        .order('sort_order', { ascending: true });
 
       if (error) throw error;
-      
-      // Transform the data to get product counts
-      const categoriesWithCounts = data?.map(cat => ({
-        ...cat,
-        product_count: cat.product_count?.[0]?.count || 0
-      })) || [];
-      
-      setCategories(categoriesWithCounts);
+
+      setCategories(data || []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -136,7 +127,7 @@ export default function CategoriesPage() {
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{category.product_count || 0} products</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{category.product_count ?? 0} products</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${category.visible_to_americas ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         {category.visible_to_americas ? 'Visible' : 'Hidden'}
