@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
 import ClientLayout from '../../../../components/ClientLayout';
+import Card from '../../../../components/ui/Card';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -614,8 +615,7 @@ export default function EditOrderPage() {
               </div>
 
               {/* PO Number */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold mb-4">Order Details</h3>
+              <Card header={<h3 className="font-semibold">Order Details</h3>}>
                 <div className="max-w-md">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     PO/Cheque Number (Optional)
@@ -625,10 +625,10 @@ export default function EditOrderPage() {
                     value={poNumber}
                     onChange={(e) => setPoNumber(e.target.value)}
                     placeholder="Enter PO/Cheque number or leave blank for auto-generation"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                    className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
                   />
                 </div>
-              </div>
+              </Card>
 
               {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -638,8 +638,8 @@ export default function EditOrderPage() {
 
               {/* Tab Navigation */}
               {totals.supportFundPercent > 0 && (
-                <div className="bg-white rounded-lg shadow">
-                  <div className="border-b border-gray-200">
+                <Card>
+                  <div className="border-b border-[#e5e5e5]">
                     <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
                       <button
                         onClick={() => setShowSupportFundRedemption(false)}
@@ -666,42 +666,26 @@ export default function EditOrderPage() {
                       </button>
                     </nav>
                   </div>
-                </div>
+                </Card>
               )}
 
               {/* Products Table */}
-              <div className="bg-white rounded-lg shadow w-full">
-                <div className="w-full">
-                <table className="w-full table-auto divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-1 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Product
-                      </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                        SKU
-                      </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
-                        Size
-                      </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
-                        Pack
-                      </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '70px'}}>
-                        Price
-                      </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Qty
-                      </th>
-                      <th className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
-                        Units
-                      </th>
-                      <th className="px-1 py-2 pr-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '90px'}}>
-                        Total
-                      </th>
-                    </tr>
-                  </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+              <Card>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
+                    <thead>
+                      <tr className="border-b border-[#e5e5e5]">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Product</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider hidden sm:table-cell">SKU</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Size</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Pack</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '70px'}}>Price</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">Qty</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Units</th>
+                        <th className="px-4 py-3 pr-4 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '90px'}}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
                       {(() => {
                         const productsToShow = showSupportFundRedemption 
                           ? products.filter(p => p.list_in_support_funds)
@@ -718,8 +702,8 @@ export default function EditOrderPage() {
                           <React.Fragment key={categoryGroup.category?.id || 'no-category'}>
                             {/* Category Header Row */}
                             {(
-                              <tr className="border-t-2 border-gray-300">
-                                <td colSpan={6} className="px-4 py-4">
+                              <tr className="border-t-2 border-[#e5e5e5]">
+                                <td colSpan={8} className="px-4 py-4">
                                   <div className="flex items-center">
                                     {categoryGroup.category?.image_url ? (
                                       <img
@@ -752,8 +736,8 @@ export default function EditOrderPage() {
                         const unitPrice = getProductPrice(product);
                         
                         return (
-                          <tr key={product.id} className={`hover:bg-gray-50 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                            <td className="px-1 py-2 max-w-0" style={{maxWidth: '200px'}}>
+                          <tr key={product.id} className={`hover:bg-gray-50 border-b border-[#e5e5e5] ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
+                            <td className="px-4 py-3 max-w-0" style={{maxWidth: '200px'}}>
                               <div className="flex items-center min-w-0 w-full">
                                 <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-hidden bg-gray-200">
                                   {product.picture_url ? (
@@ -788,23 +772,23 @@ export default function EditOrderPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden sm:table-cell">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden sm:table-cell">
                               <div className="truncate" title={product.sku}>
                                 {product.sku}
                               </div>
                             </td>
-                            <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden xl:table-cell">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden xl:table-cell">
                               <div className="truncate" title={product.size}>
                                 {product.size}
                               </div>
                             </td>
-                            <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden xl:table-cell">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden xl:table-cell">
                               {product.case_pack}
                             </td>
-                            <td className="px-1 py-2 text-xs sm:text-sm text-gray-900 text-center">
+                            <td className="px-4 py-3 text-xs sm:text-sm text-gray-900 text-center">
                               {formatCurrency(unitPrice)}
                             </td>
-                            <td className="px-2 py-3 whitespace-nowrap text-center">
+                            <td className="px-4 py-3 whitespace-nowrap text-center">
                               <div className="inline-flex items-center border border-gray-300 rounded select-none justify-center">
                                 <button
                                   type="button"
@@ -852,10 +836,10 @@ export default function EditOrderPage() {
                                 </button>
                               </div>
                             </td>
-                            <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden sm:table-cell">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center hidden sm:table-cell">
                               {orderItem?.total_units || 0}
                             </td>
-                            <td className="px-1 py-2 pr-4 text-xs sm:text-sm font-medium text-gray-900 text-center">
+                            <td className="px-4 py-3 pr-4 text-xs sm:text-sm font-medium text-gray-900 text-center">
                               {orderItem?.total_price ? formatCurrency(orderItem.total_price) : '$0.00'}
                             </td>
                           </tr>
@@ -867,11 +851,10 @@ export default function EditOrderPage() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </Card>
 
               {/* Mobile/Tablet Order Summary (visible below xl) */}
-              <div className="xl:hidden bg-white rounded-lg shadow p-6 space-y-4">
-                <h2 className="text-lg font-semibold">Order Summary</h2>
+              <Card header={<h2 className="font-semibold">Order Summary</h2>}>
                 {orderItems.length > 0 ? (
                   <>
                     <div className="space-y-2">
@@ -1083,7 +1066,7 @@ export default function EditOrderPage() {
                     </div>
                   </div>
                 )}
-              </div>
+              </Card>
           </div>
         </div>
       </div>
