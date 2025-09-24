@@ -28,7 +28,7 @@ export default function TopNavbar() {
 
   return (
     <div className="sticky top-0 z-50 w-full bg-transparent">
-      <div className="border border-[#e5e5e5] rounded-xl bg-white px-3 py-2">
+      <div className="bg-white border-b border-[#e5e5e5] px-3 py-2">
         <div className="h-14 flex items-center justify-between">
           {/* Left: Logo / Title */}
           <div className="flex items-center gap-3">
