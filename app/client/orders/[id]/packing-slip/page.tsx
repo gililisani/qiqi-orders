@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
 import ClientLayout from '../../../../components/ClientLayout';
+import Card from '../../../../components/ui/Card';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -242,121 +243,95 @@ export default function ClientPackingSlipViewPage() {
 
   return (
     <ClientLayout>
-      <div className="min-h-screen bg-blue-gray-50/50">
-        {/* Header - Hidden in print */}
-        <div className={`bg-white shadow-sm border-b ${isPrintMode ? 'hidden' : ''}`}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Packing Slip</h1>
-                <p className="text-sm text-gray-600">Invoice #{packingSlip.invoice_number}</p>
-              </div>
-              <div className="flex space-x-3">
-                <button
-                  onClick={handleDownloadPDF}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Download PDF
-                </button>
-                {order?.status !== 'Done' && order?.status !== 'Cancelled' && (
-                  <button
-                    onClick={() => setShowEditForm(true)}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    Edit
-                  </button>
-                )}
-                <Link
-                  href={`/client/orders/${orderId}`}
-                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
-                >
-                  Back to Order
-                </Link>
-              </div>
-            </div>
+      <div className="space-y-8 pb-16">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Packing Slip</h1>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={handleDownloadPDF}
+              className="bg-blue-600 text-white px-4 py-2 hover:bg-blue-700 transition disabled:opacity-50"
+            >
+              Download PDF
+            </button>
+            {order?.status !== 'Done' && order?.status !== 'Cancelled' && (
+              <button
+                onClick={() => setShowEditForm(true)}
+                className="bg-green-600 text-white px-4 py-2 hover:bg-green-700 transition"
+              >
+                Edit
+              </button>
+            )}
+            <Link
+              href={`/client/orders/${orderId}`}
+              className="text-gray-600 hover:text-gray-800"
+            >
+              ← Back to Order
+            </Link>
           </div>
         </div>
 
         {/* Packing Slip Content */}
-        <div className="max-w-4xl mx-auto p-6">
-          <div id="packing-slip-content" className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            {/* Header */}
-            <div className="flex justify-between items-start mb-8 pb-6 border-b border-gray-200">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  {order.company?.subsidiary?.name || 'Qiqi Partners'}
-                </h1>
-                <div className="text-gray-600 text-sm leading-relaxed">
-                  {order.company?.subsidiary?.ship_from_address || 'Address not configured'}
-                </div>
-                {order.company?.subsidiary?.phone && (
-                  <div className="text-gray-600 text-sm">Phone: {order.company.subsidiary.phone}</div>
-                )}
-                {order.company?.subsidiary?.email && (
-                  <div className="text-gray-600 text-sm">Email: {order.company.subsidiary.email}</div>
-                )}
-              </div>
-              <div className="text-right">
+        <Card header="">
+          <div id="packing-slip-content" className="space-y-6">
+            {/* Top Section: Logo, Subsidiary Info, and Ship To */}
+            <div className="flex justify-between items-start">
+              {/* Left: Logo and Subsidiary Info */}
+              <div className="flex items-start space-x-4">
                 <img src="/QIQI-Logo.svg" alt="Qiqi Logo" className="h-16 w-auto" />
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 mb-1">
+                    {order.company?.subsidiary?.name || 'Qiqi Partners'}
+                  </h2>
+                  <div className="text-sm text-gray-600 whitespace-pre-line">
+                    {order.company?.subsidiary?.ship_from_address || 'Address not configured'}
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* Packing Slip Title */}
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900">PACKING SLIP</h2>
-            </div>
-
-            {/* Details Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 p-6 bg-gray-50 rounded-lg">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Ship To</h3>
-                <div className="text-gray-900">
-                  <div className="font-semibold">{order.company?.company_name || 'N/A'}</div>
-                  <div className="mt-1 whitespace-pre-line text-sm">
+              {/* Right: Ship To Details */}
+              <div className="text-right">
+                <h3 className="font-bold text-gray-900 mb-2">Ship To</h3>
+                <div className="text-sm text-gray-600">
+                  <div className="font-medium">{order.company?.company_name || 'N/A'}</div>
+                  <div className="whitespace-pre-line">
                     {order.company?.ship_to || 'Ship To Address not configured'}
                   </div>
                 </div>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Order Details</h3>
-                <div className="space-y-1 text-sm">
-                  <div><span className="font-medium">Date:</span> {new Date().toLocaleDateString()}</div>
-                  <div><span className="font-medium">Invoice:</span> {packingSlip.invoice_number}</div>
-                  <div><span className="font-medium">Method:</span> {packingSlip.shipping_method}</div>
-                  <div><span className="font-medium">Reference:</span> {packingSlip.netsuite_reference || 'N/A'}</div>
-                </div>
+            </div>
+
+            {/* Packing Slip Title and Number */}
+            <div className="flex justify-end">
+              <div className="text-right">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Packing Slip</h2>
+                <div className="text-sm text-gray-600">#{packingSlip.invoice_number}</div>
               </div>
             </div>
 
             {/* Items Table */}
             <div className="mb-8">
-              <table className="min-w-full">
+              <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">SKU</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">Product Name</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">Total Units</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">Case Pack</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">Cases</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">Total Weight</th>
+                  <tr className="border-b border-[#e5e5e5]">
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">SKU</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Case Pack</th>
+                    <th className="text-right py-3 px-4 font-medium text-gray-600">Case Qty</th>
+                    <th className="text-right py-3 px-4 font-medium text-gray-600">Total Units</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody>
                   {orderItems.map((item) => {
                     const product = item.product;
                     const casePack = product?.case_pack || 1;
-                    const cases = Math.ceil(item.quantity / casePack);
-                    const caseWeight = product?.case_weight || 0;
-                    const weight = cases * caseWeight;
+                    const totalUnits = item.quantity * casePack;
                     
                     return (
-                      <tr key={item.id}>
-                        <td className="px-4 py-3 text-sm text-gray-900">{product?.sku || 'N/A'}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{product?.item_name || 'N/A'}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-center">{item.quantity}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-center">{casePack}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-center">{cases}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-center">{weight.toFixed(2)} kg</td>
+                      <tr key={item.id} className="border-b border-[#e5e5e5] hover:bg-gray-50">
+                        <td className="py-3 px-4 text-sm text-gray-900">{product?.sku || 'N/A'}</td>
+                        <td className="py-3 px-4 text-sm text-gray-900">{casePack}</td>
+                        <td className="py-3 px-4 text-sm text-gray-900 text-right">{item.quantity}</td>
+                        <td className="py-3 px-4 text-sm text-gray-900 text-right">{totalUnits}</td>
                       </tr>
                     );
                   })}
@@ -365,54 +340,28 @@ export default function ClientPackingSlipViewPage() {
             </div>
 
             {/* Totals */}
-            <div className="flex justify-end mb-8">
-              <div className="text-right">
+            <div className="flex justify-end">
+              <div className="text-right space-y-2">
                 <div className="flex justify-between py-2">
-                  <span className="font-medium text-gray-900">Total Cases:</span>
+                  <span className="font-medium text-gray-900">Total Units:</span>
                   <span className="font-bold text-gray-900 ml-8">
                     {orderItems.reduce((sum, item) => {
                       const casePack = item.product?.case_pack || 1;
-                      return sum + Math.ceil(item.quantity / casePack);
+                      return sum + (item.quantity * casePack);
                     }, 0)}
                   </span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span className="font-medium text-gray-900">Total Weight:</span>
+                  <span className="font-medium text-gray-900">Total Cases:</span>
                   <span className="font-bold text-gray-900 ml-8">
-                    {orderItems.reduce((sum, item) => {
-                      const casePack = item.product?.case_pack || 1;
-                      const cases = Math.ceil(item.quantity / casePack);
-                      const caseWeight = item.product?.case_weight || 0;
-                      return sum + (cases * caseWeight);
-                    }, 0).toFixed(2)} kg
+                    {orderItems.reduce((sum, item) => sum + item.quantity, 0)}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Notes */}
-            {packingSlip.notes && (
-              <div className="mb-8 p-6 bg-gray-50 rounded-lg">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Notes</h3>
-                <p className="text-gray-700 whitespace-pre-line">{packingSlip.notes}</p>
-              </div>
-            )}
-
-            {/* Signature Section */}
-            <div className="flex justify-between mt-12">
-              <div className="text-center">
-                <div className="border-t border-gray-400 pt-2 w-48">
-                  <div className="text-sm text-gray-600">Shipper Signature</div>
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="border-t border-gray-400 pt-2 w-48">
-                  <div className="text-sm text-gray-600">Date</div>
-                </div>
-              </div>
-            </div>
           </div>
-        </div>
+        </Card>
 
         {/* Edit Form Modal */}
         {showEditForm && (
