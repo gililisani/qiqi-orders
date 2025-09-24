@@ -15,10 +15,6 @@ interface Order {
   support_fund_used: number;
   credit_earned: number;
   po_number: string;
-  user?: {
-    name: string;
-    email: string;
-  };
   company?: {
     company_name: string;
     netsuite_number: string;
@@ -60,14 +56,34 @@ export default function ClientOrderViewPage() {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [currentUserName, setCurrentUserName] = useState<string>('');
 
   useEffect(() => {
     if (orderId) {
+      fetchCurrentUser();
       fetchOrder();
       fetchOrderItems();
     }
   }, [orderId]);
 
+  const fetchCurrentUser = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: clientData, error } = await supabase
+        .from('clients')
+        .select('name')
+        .eq('id', user.id)
+        .single();
+
+      if (!error && clientData?.name) {
+        setCurrentUserName(clientData.name);
+      }
+    } catch (err) {
+      console.error('Error fetching current user:', err);
+    }
+  };
 
   const fetchOrder = async () => {
     try {
@@ -78,7 +94,6 @@ export default function ClientOrderViewPage() {
         .from('orders')
         .select(`
           *,
-          user:clients(name, email),
           company:companies(
             company_name,
             netsuite_number,
@@ -211,7 +226,7 @@ export default function ClientOrderViewPage() {
                 <label className="text-sm font-medium text-gray-500">Created</label>
                 <p className="text-sm text-gray-600">
                   {new Date(order.created_at).toLocaleString()}
-                  {order.user?.name && ` by ${order.user.name}`}
+                  {currentUserName && ` by ${currentUserName}`}
                 </p>
               </div>
             </div>
