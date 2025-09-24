@@ -958,7 +958,7 @@ export default function OrderViewPage() {
                   <input
                     type="text"
                     value={packingSlipData.invoiceNumber}
-                    onChange={(e) => setPackingListData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                    onChange={(e) => setPackingSlipData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
                     placeholder="Enter invoice number"
                     required
@@ -972,7 +972,7 @@ export default function OrderViewPage() {
                   </label>
                   <select
                     value={packingSlipData.shippingMethod}
-                    onChange={(e) => setPackingListData(prev => ({ ...prev, shippingMethod: e.target.value }))}
+                    onChange={(e) => setPackingSlipData(prev => ({ ...prev, shippingMethod: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
                   >
                     <option value="Air">Air</option>
@@ -988,7 +988,7 @@ export default function OrderViewPage() {
                   <input
                     type="text"
                     value={packingSlipData.netsuiteReference}
-                    onChange={(e) => setPackingListData(prev => ({ ...prev, netsuiteReference: e.target.value }))}
+                    onChange={(e) => setPackingSlipData(prev => ({ ...prev, netsuiteReference: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
                     placeholder="Enter sales order reference"
                   />
@@ -1002,7 +1002,7 @@ export default function OrderViewPage() {
                   </label>
                   <textarea
                     value={packingSlipData.notes}
-                    onChange={(e) => setPackingListData(prev => ({ ...prev, notes: e.target.value }))}
+                    onChange={(e) => setPackingSlipData(prev => ({ ...prev, notes: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black h-24"
                     placeholder="Enter any additional notes for the packing list"
                   />
