@@ -300,7 +300,7 @@ export default function ProductsPage() {
               }
             >
               <div className="overflow-x-auto">
-                <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
+                <table className="w-full table-fixed border border-[#e5e5e5] rounded-lg overflow-hidden">
                   <thead>
                     <tr className="border-b border-[#e5e5e5]">
                       {['Image','Item','SKU','Americas','International','Status','Assign','Actions'].map(h => (
@@ -323,15 +323,15 @@ export default function ProductsPage() {
                             <div className="h-12 w-12 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">No Image</div>
                           )}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          <div className="flex items-center gap-3">
-                            <span className="text-gray-400 font-mono w-8">{product.sort_order || index + 1}</span>
-                            <span className="font-medium">{product.item_name || 'Unnamed Product'}</span>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-gray-400 font-mono shrink-0 w-8">{product.sort_order || index + 1}</span>
+                            <span className="font-medium truncate max-w-[180px]">{product.item_name || 'Unnamed Product'}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{product.sku}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${product.price_americas || 0}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${product.price_international || 0}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700 break-all max-w-[120px]">{product.sku}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">${product.price_americas || 0}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">${product.price_international || 0}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex flex-col gap-1">
                             <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.enable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{product.enable ? 'Enabled' : 'Disabled'}</span>
@@ -354,7 +354,7 @@ export default function ProductsPage() {
                             </select>
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        <td className="px-4 py-3 text-sm">
                           <div className="flex items-center gap-3">
                             <Link className="text-blue-600 hover:text-blue-800" href={`/admin/products/${product.id}`}>View</Link>
                             <Link className="text-green-600 hover:text-green-800" href={`/admin/products/${product.id}/edit`}>Edit</Link>
