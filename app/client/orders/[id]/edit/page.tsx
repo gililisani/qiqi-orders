@@ -925,8 +925,8 @@ export default function EditOrderPage() {
 
                     {/* Order Form Subtotal */}
                     {orderItems.length > 0 && (
-                      <div className="pt-2 border-t">
-                        <div className="flex justify-between text-sm font-medium text-gray-900 px-6">
+                      <div className="pt-2 border-t px-6">
+                        <div className="flex justify-between text-sm font-medium text-gray-900">
                           <span>Subtotal:</span>
                           <span>{formatCurrency(orderItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
                         </div>
@@ -965,8 +965,8 @@ export default function EditOrderPage() {
 
                     {/* Support Fund Subtotal */}
                     {supportFundItems.length > 0 && (
-                      <div className="pt-2 border-t border-green-200">
-                        <div className="flex justify-between text-sm font-medium text-green-800 px-6">
+                      <div className="pt-2 border-t border-green-200 px-6">
+                        <div className="flex justify-between text-sm font-medium text-green-800">
                           <span>Subtotal:</span>
                           <span>{formatCurrency(supportFundItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
                         </div>
