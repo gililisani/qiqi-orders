@@ -312,25 +312,55 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   };
 
   const getProductsByCategory = () => {
-    const categoryMap = new Map<number, { category?: Category; products: Product[] }>();
+    const categorized: { [key: string]: { category: Category | null, products: Product[] } } = {};
     
+    // First, get all visible categories for this client
+    const isInternational = company?.class?.name?.includes('International') || false;
+    const visibleCategories = new Set<number>();
+    
+    // Group products by their categories
     products.forEach(product => {
-      const categoryId = product.category_id || 0;
-      if (!categoryMap.has(categoryId)) {
-        categoryMap.set(categoryId, {
-          category: product.category,
-          products: []
-        });
+      if (product.category) {
+        // Check if category is visible to this client class
+        const categoryVisible = isInternational 
+          ? product.category.visible_to_international 
+          : product.category.visible_to_americas;
+        
+        if (categoryVisible) {
+          const categoryKey = `${product.category.sort_order}-${product.category.name}`;
+          if (!categorized[categoryKey]) {
+            categorized[categoryKey] = {
+              category: product.category,
+              products: []
+            };
+          }
+          categorized[categoryKey].products.push(product);
+          visibleCategories.add(product.category.id);
+        }
       }
-      categoryMap.get(categoryId)!.products.push(product);
     });
-
-    return Array.from(categoryMap.values()).sort((a, b) => {
-      if (!a.category && !b.category) return 0;
-      if (!a.category) return 1;
-      if (!b.category) return -1;
-      return a.category.sort_order - b.category.sort_order;
-    });
+    
+    // Add products without categories or with invisible categories to "No Category"
+    const orphanedProducts = products.filter(product => 
+      !product.category || 
+      !visibleCategories.has(product.category.id)
+    );
+    
+    if (orphanedProducts.length > 0) {
+      categorized['999-No Category'] = {
+        category: null,
+        products: orphanedProducts
+      };
+    }
+    
+    // Sort categories by sort_order (999 for "No Category" will be last)
+    return Object.entries(categorized)
+      .sort(([keyA], [keyB]) => {
+        const orderA = parseInt(keyA.split('-')[0]);
+        const orderB = parseInt(keyB.split('-')[0]);
+        return orderA - orderB;
+      })
+      .map(([, data]) => data);
   };
 
   const handleCaseQtyChange = (productId: number, newQty: number) => {
