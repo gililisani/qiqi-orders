@@ -17,6 +17,8 @@ interface Order {
   user_id: string;
   company_id: string;
   po_number: string;
+  invoice_number?: string | null;
+  so_number?: string | null;
   packing_slip_generated?: boolean;
   packing_slip_generated_at?: string;
   packing_slip_generated_by?: string;
@@ -107,6 +109,9 @@ export default function OrderViewPage() {
     notes: ''
   });
   const [packingSlipGenerated, setPackingSlipGenerated] = useState(false);
+  const [adminInvoiceNumber, setAdminInvoiceNumber] = useState<string>('');
+  const [adminSoNumber, setAdminSoNumber] = useState<string>('');
+  const [savingAdminFields, setSavingAdminFields] = useState<boolean>(false);
 
 
   useEffect(() => {
@@ -142,7 +147,7 @@ export default function OrderViewPage() {
       // Fetch order first
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .select('*, packing_slip_generated, packing_slip_generated_at, packing_slip_generated_by')
+        .select('*, packing_slip_generated, packing_slip_generated_at, packing_slip_generated_by, invoice_number, so_number')
         .eq('id', orderId)
         .single();
 
@@ -180,10 +185,29 @@ export default function OrderViewPage() {
       };
 
       setOrder(combinedOrder);
+      setAdminInvoiceNumber(orderData.invoice_number || '');
+      setAdminSoNumber(orderData.so_number || '');
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveAdminOrderRefs = async () => {
+    if (!order) return;
+    try {
+      setSavingAdminFields(true);
+      const { error } = await supabase
+        .from('orders')
+        .update({ invoice_number: adminInvoiceNumber || null, so_number: adminSoNumber || null })
+        .eq('id', orderId);
+      if (error) throw error;
+      setOrder(prev => prev ? { ...prev, invoice_number: adminInvoiceNumber || null, so_number: adminSoNumber || null } as Order : prev);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSavingAdminFields(false);
     }
   };
 
@@ -689,6 +713,38 @@ export default function OrderViewPage() {
                     </select>
                   </div>
                 </div>
+              </div>
+              {/* Admin-only: Invoice/SO Numbers */}
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Invoice Number</label>
+                  <input
+                    type="text"
+                    value={adminInvoiceNumber}
+                    onChange={(e) => setAdminInvoiceNumber(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-[#e5e5e5] text-sm"
+                    placeholder="Enter invoice number"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">SO Number</label>
+                  <input
+                    type="text"
+                    value={adminSoNumber}
+                    onChange={(e) => setAdminSoNumber(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-[#e5e5e5] text-sm"
+                    placeholder="Enter SO number"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={handleSaveAdminOrderRefs}
+                  disabled={savingAdminFields}
+                  className="px-3 py-1.5 bg-black text-white text-sm hover:opacity-90 disabled:opacity-50"
+                >
+                  {savingAdminFields ? 'Saving…' : 'Save'}
+                </button>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Created</label>
