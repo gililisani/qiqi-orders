@@ -93,12 +93,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const isNewMode = !orderId;
 
   useEffect(() => {
-    console.log('OrderFormView useEffect:', { isEditMode, orderId, role });
     if (isEditMode && orderId) {
-      console.log('Fetching order for edit mode');
       fetchOrder();
     } else {
-      console.log('Fetching products for new mode');
       setLoading(true);
       // Initialize order for new mode
       setOrder({ id: '', po_number: '', status: 'Open', company_id: '' });
@@ -112,12 +109,10 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const fetchOrder = async () => {
     try {
       setLoading(true);
-      console.log('fetchOrder called for orderId:', orderId, 'role:', role);
       
       // For clients, first verify they can access this order
       if (role === 'client') {
         const { data: { user } } = await supabase.auth.getUser();
-        console.log('Client user for order fetch:', user);
         if (!user) throw new Error('No user found');
 
         // Check if this order belongs to the client
@@ -136,7 +131,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           .eq('user_id', user.id)
           .single();
 
-        console.log('Order check result:', orderCheck, 'Error:', orderCheckError);
         if (orderCheckError || !orderCheck) {
           throw new Error('Order not found or access denied');
         }
@@ -174,7 +168,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         .from('order_items')
         .select(`
           *,
-          product:products(*)
+          product:Products(*)
         `)
         .eq('order_id', orderId)
         .eq('is_support_fund_item', false);
@@ -187,7 +181,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         .from('order_items')
         .select(`
           *,
-          product:products(*)
+          product:Products(*)
         `)
         .eq('order_id', orderId)
         .eq('is_support_fund_item', true);
@@ -216,7 +210,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     const classFilter = companyData.class?.name === 'Americas' ? 'americas' : 'international';
     
     const { data: productsData, error: productsError } = await supabase
-      .from('products')
+      .from('Products')
       .select(`
         *,
         category:categories(*)
@@ -230,11 +224,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
   const fetchProducts = async () => {
     try {
-      console.log('fetchProducts called for role:', role);
       if (role === 'client') {
         // For clients, fetch user's company first
         const { data: { user } } = await supabase.auth.getUser();
-        console.log('Client user:', user);
         if (!user) throw new Error('No user found');
 
         const { data: clientData, error: clientError } = await supabase
@@ -246,7 +238,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           .eq('id', user.id)
           .single();
 
-        console.log('Client data:', clientData, 'Error:', clientError);
         if (clientError) throw clientError;
         
         if (clientData.company) {
@@ -257,7 +248,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         }
       } else {
         // For admin, we don't fetch products until a company is selected
-        console.log('Admin mode - not fetching products yet');
         setLoading(false);
       }
     } catch (error) {
