@@ -134,8 +134,8 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
               : Promise.resolve({ data: [], error: null } as any)
           ]);
 
-          const cMap = new Map((clientsResult.data || []).map((c: ClientLite) => [c.id, c]));
-          const coMap = new Map((companiesResult.data || []).map((c: CompanyLite) => [c.id, c]));
+          const cMap = new Map<string, ClientLite>((clientsResult.data || []).map((c: ClientLite) => [c.id, c]));
+          const coMap = new Map<string, CompanyLite>((companiesResult.data || []).map((c: CompanyLite) => [c.id, c]));
           setClientsMap(cMap);
           setCompaniesMap(coMap);
           setOrders(ordersData || []);
