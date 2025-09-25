@@ -220,6 +220,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
     if (productsError) throw productsError;
     setProducts(productsData || []);
+    setLoading(false);
   };
 
   const fetchProducts = async () => {
@@ -245,6 +246,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           await fetchProductsForCompany(clientData.company);
         } else {
           setError('No company found for client');
+          setLoading(false);
         }
       } else {
         // For admin, we don't fetch products until a company is selected
