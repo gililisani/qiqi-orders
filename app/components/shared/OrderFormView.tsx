@@ -754,8 +754,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       {/* Products Table and Order Summary Layout */}
       {company && products.length > 0 && (
         <div className="grid grid-cols-1 xl:grid-cols-8 gap-6">
-          {/* Products Table - Takes up 5 columns on xl, full width on smaller screens */}
-          <div className="xl:col-span-5">
+          {/* Products Table - Takes up 6 columns on xl, full width on smaller screens */}
+          <div className="xl:col-span-6">
             <Card>
               <div className="overflow-x-auto">
                 <table className="min-w-full">
@@ -933,8 +933,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         </Card>
           </div>
 
-          {/* Order Summary - Takes up 3 columns on xl, full width on smaller screens */}
-          <div className="xl:col-span-3 xl:sticky xl:top-32 xl:self-start">
+          {/* Order Summary - Takes up 2 columns on xl, full width on smaller screens */}
+          <div className="xl:col-span-2 xl:sticky xl:top-32 xl:self-start">
           <Card>
             <div className="px-6 py-4 border-b border-[#e5e5e5]">
               <h3 className="text-lg font-semibold text-gray-900">Order Summary</h3>
