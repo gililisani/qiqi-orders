@@ -211,7 +211,10 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   };
 
   const fetchProductsForCompany = async (companyData: Company) => {
-    const classFilter = companyData.class?.name === 'Americas' ? 'americas' : 'international';
+    const classFilter = companyData.class?.name?.toLowerCase().includes('americas') || companyData.class?.name?.toLowerCase().includes('north america') ? 'americas' : 'international';
+    console.log('fetchProductsForCompany - company class name:', companyData.class?.name);
+    console.log('fetchProductsForCompany - classFilter:', classFilter);
+    console.log('fetchProductsForCompany - filter column:', `visible_to_${classFilter}`);
     
     const { data: productsData, error: productsError } = await supabase
       .from('Products')
