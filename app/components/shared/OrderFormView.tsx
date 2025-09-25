@@ -96,6 +96,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     if (isEditMode && orderId) {
       fetchOrder();
     } else {
+      setLoading(true);
+      // Initialize order for new mode
+      setOrder({ id: '', po_number: '', status: 'Open', company_id: '' });
       fetchProducts();
       if (role === 'admin') {
         fetchCompanies();
@@ -118,6 +121,14 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         .single();
 
       if (orderError) throw orderError;
+      
+      // Check if user can edit this order
+      if (role === 'client' && orderData.status !== 'Open') {
+        setError('You can only edit orders with "Open" status');
+        setLoading(false);
+        return;
+      }
+      
       setOrder(orderData);
 
       // Set company
@@ -216,6 +227,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     } catch (error) {
       console.error('Error fetching products:', error);
       setError('Failed to load products');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -390,7 +403,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           .from('orders')
           .insert({
             company_id: company.id,
-            po_number: order?.po_number || null,
+            po_number: (order && order.po_number) || null,
             status: 'Open'
           })
           .select()
@@ -436,7 +449,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         const { error: updateError } = await supabase
           .from('orders')
           .update({
-            po_number: order?.po_number || null
+            po_number: (order && order.po_number) || null
           })
           .eq('id', orderId);
 
@@ -572,8 +585,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
               <input
                 type="text"
                 id="po-number"
-                value={order?.po_number || ''}
-                onChange={(e) => setOrder(prev => prev ? { ...prev, po_number: e.target.value } : null)}
+                value={(order && order.po_number) || ''}
+                onChange={(e) => setOrder(prev => prev ? { ...prev, po_number: e.target.value } : { id: '', po_number: e.target.value, status: 'Open', company_id: '' })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter PO number..."
               />
