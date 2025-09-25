@@ -686,23 +686,26 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         </Card>
       )}
 
-      {/* Products Table */}
+      {/* Products Table and Order Summary Layout */}
       {company && products.length > 0 && (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider">Product</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider hidden sm:table-cell">SKU</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Size</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Pack</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '70px'}}>Price</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap">Qty</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Units</th>
-                  <th className="px-4 py-3 pr-4 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '90px'}}>Total</th>
-                </tr>
-              </thead>
+        <div className="grid grid-cols-1 xl:grid-cols-8 gap-6">
+          {/* Products Table - Takes up 5 columns on xl, full width on smaller screens */}
+          <div className="xl:col-span-5">
+            <Card>
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider">Product</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider hidden sm:table-cell">SKU</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Size</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Pack</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '70px'}}>Price</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap">Qty</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Units</th>
+                      <th className="px-4 py-3 pr-4 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '90px'}}>Total</th>
+                    </tr>
+                  </thead>
               <tbody>
                 {(() => {
                   const productsToShow = showSupportFundRedemption 
@@ -858,11 +861,10 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
             </table>
           </div>
         </Card>
-      )}
+          </div>
 
-      {/* Order Summary */}
-      <div className="xl:grid xl:grid-cols-12 xl:gap-8 xl:mt-0 mt-6">
-        <div className="xl:col-span-4">
+          {/* Order Summary - Takes up 3 columns on xl, full width on smaller screens */}
+          <div className="xl:col-span-3">
           <Card>
             <div className="px-6 py-4 border-b border-[#e5e5e5]">
               <h3 className="text-lg font-semibold text-gray-900">Order Summary</h3>
@@ -990,8 +992,10 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
               </div>
             </div>
           </Card>
+          </div>
         </div>
-      </div>
+      )}
+
     </div>
   );
 }
