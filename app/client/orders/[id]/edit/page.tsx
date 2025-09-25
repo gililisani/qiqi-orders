@@ -737,31 +737,21 @@ export default function EditOrderPage() {
                             
                             return (
                               <tr key={product.id} className={`hover:bg-gray-50 border-b border-[#e5e5e5] ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                                <td className="px-4 py-3 max-w-0 relative" style={{maxWidth: '200px'}}>
+                                <td className="px-4 py-3 max-w-0 relative overflow-visible" style={{maxWidth: '200px'}}>
                                   <div className="flex items-center min-w-0 w-full">
-                                    <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-hidden relative group">
+                                    <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-visible">
                                       {product.picture_url ? (
-                                        <>
-                                          <img
-                                            src={product.picture_url}
-                                            alt={product.item_name}
-                                            className="h-8 w-8 sm:h-10 sm:w-10 object-cover cursor-pointer"
-                                            onError={(e) => {
-                                              console.error('Image failed to load:', product.picture_url);
-                                              e.currentTarget.style.display = 'none';
-                                              const noImageDiv = e.currentTarget.nextElementSibling?.nextElementSibling as HTMLElement;
-                                              if (noImageDiv) noImageDiv.style.display = 'flex';
-                                            }}
-                                          />
-                                          {/* CSS-only hover overlay with fixed positioning */}
-                                          <div className="fixed top-1/2 left-1/2 w-48 h-48 bg-white border border-gray-300 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[9999] transform -translate-x-1/2 -translate-y-1/2">
-                                            <img
-                                              src={product.picture_url}
-                                              alt={product.item_name}
-                                              className="w-full h-full object-contain rounded-lg p-2"
-                                            />
-                                          </div>
-                                        </>
+                                        <img
+                                          src={product.picture_url}
+                                          alt={product.item_name}
+                                          className="h-8 w-8 sm:h-10 sm:w-10 object-cover cursor-pointer transition-transform duration-200 hover:scale-150 hover:z-50 hover:relative"
+                                          onError={(e) => {
+                                            console.error('Image failed to load:', product.picture_url);
+                                            e.currentTarget.style.display = 'none';
+                                            const noImageDiv = e.currentTarget.nextElementSibling as HTMLElement;
+                                            if (noImageDiv) noImageDiv.style.display = 'flex';
+                                          }}
+                                        />
                                       ) : null}
                                       <div 
                                         className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center text-gray-400 text-xs"
