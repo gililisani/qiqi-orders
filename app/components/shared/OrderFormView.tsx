@@ -212,9 +212,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
   const fetchProductsForCompany = async (companyData: Company) => {
     const classFilter = companyData.class?.name?.toLowerCase().includes('americas') || companyData.class?.name?.toLowerCase().includes('north america') ? 'americas' : 'international';
-    console.log('fetchProductsForCompany - company class name:', companyData.class?.name);
-    console.log('fetchProductsForCompany - classFilter:', classFilter);
-    console.log('fetchProductsForCompany - filter column:', `visible_to_${classFilter}`);
     
     const { data: productsData, error: productsError } = await supabase
       .from('Products')
@@ -311,7 +308,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
   const getProductPrice = (product: Product): number => {
     if (!company) return 0;
-    return company.class?.name === 'Americas' ? product.price_americas : product.price_international;
+    const isAmericas = company.class?.name?.toLowerCase().includes('americas') || company.class?.name?.toLowerCase().includes('north america');
+    return isAmericas ? product.price_americas : product.price_international;
   };
 
   const getProductsByCategory = () => {
@@ -319,20 +317,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     
     // First, get all visible categories for this client
     const isInternational = company?.class?.name?.includes('International') || false;
-    console.log('getProductsByCategory - company class:', company?.class?.name);
-    console.log('getProductsByCategory - isInternational:', isInternational);
-    console.log('getProductsByCategory - products count:', products.length);
-    console.log('getProductsByCategory - sample product categories:', products.slice(0, 3).map(p => ({ name: p.item_name, category: p.category?.name, visible_to_americas: p.category?.visible_to_americas, visible_to_international: p.category?.visible_to_international })));
-    
-    // Check for KITS products specifically
-    const kitsProducts = products.filter(p => p.category?.name?.toLowerCase().includes('kit'));
-    console.log('getProductsByCategory - KITS products found:', kitsProducts.length);
-    console.log('getProductsByCategory - KITS products details:', kitsProducts.map(p => ({ name: p.item_name, category: p.category?.name, visible_to_americas: p.category?.visible_to_americas, visible_to_international: p.category?.visible_to_international })));
-    
-    // Check all unique categories
-    const allCategories = [...new Set(products.map(p => p.category?.name).filter(Boolean))];
-    console.log('getProductsByCategory - all categories:', allCategories);
-    
     const visibleCategories = new Set<number>();
     
     // Group products by their categories
