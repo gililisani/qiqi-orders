@@ -856,7 +856,7 @@ export default function EditOrderPage() {
           </div>
 
           {/* Responsive Sidebar */}
-          <div className="xl:col-span-4">
+          <div className="xl:col-span-4 xl:mt-0 mt-6">
             <div className="sticky top-8 space-y-6">
               {/* Order Summary */}
               <Card header={<h2 className="font-semibold">Order Summary</h2>}>
