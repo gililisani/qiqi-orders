@@ -913,12 +913,12 @@ export default function EditOrderPage() {
                       {orderItems.map((item) => (
                         <div key={item.product_id} className="flex items-center justify-between">
                           <div className="flex-1 min-w-0 pr-2">
-                            <div className="text-sm font-medium text-gray-900 truncate leading-tight">{item.product.item_name}</div>
+                            <div className="text-xs font-medium text-gray-900 truncate leading-tight">{item.product.item_name}</div>
                             <div className="text-xs text-gray-500 leading-tight">
                               {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''}
                             </div>
                           </div>
-                          <div className="text-sm font-medium text-gray-900">{formatCurrency(item.total_price)}</div>
+                          <div className="text-xs font-medium text-gray-900">{formatCurrency(item.total_price)}</div>
                         </div>
                       ))}
                     </div>
@@ -927,7 +927,7 @@ export default function EditOrderPage() {
                     {orderItems.length > 0 && (
                       <div className="px-6">
                         <div className="pt-2 border-t">
-                          <div className="flex justify-between text-sm font-medium text-gray-900">
+                          <div className="flex justify-between text-base font-bold text-gray-900">
                             <span>Subtotal:</span>
                             <span>{formatCurrency(orderItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
                           </div>
@@ -945,12 +945,12 @@ export default function EditOrderPage() {
 
                     {/* Support Fund Products Title */}
                     {supportFundItems.length > 0 && (
-                      <div className="text-sm font-medium text-gray-700 uppercase tracking-wide mt-4 px-6">Support Fund Products</div>
+                      <div className="text-sm font-bold text-gray-700 uppercase tracking-wide mt-4 px-6 pb-2 border-b border-gray-200">Support Fund Products</div>
                     )}
 
                     {/* Support Fund Products */}
                     {supportFundItems.length > 0 && (
-                      <div className="space-y-2 px-6">
+                      <div className="space-y-2 px-6 pb-4">
                         {supportFundItems.map((item) => (
                           <div key={`sf-${item.product_id}`} className="flex items-center justify-between bg-green-50 p-2 rounded">
                             <div className="flex-1 min-w-0 pr-2">
