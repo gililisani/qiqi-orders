@@ -744,7 +744,7 @@ export default function EditOrderPage() {
                                         <img
                                           src={product.picture_url}
                                           alt={product.item_name}
-                                          className="h-8 w-8 sm:h-10 sm:w-10 object-cover cursor-pointer transition-transform duration-200 hover:scale-150 hover:z-50 hover:relative"
+                                          className="h-8 w-8 sm:h-10 sm:w-10 object-cover cursor-pointer transition-transform duration-200 hover:scale-[3] hover:z-50 hover:relative"
                                           onError={(e) => {
                                             console.error('Image failed to load:', product.picture_url);
                                             e.currentTarget.style.display = 'none';
