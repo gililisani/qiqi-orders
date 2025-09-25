@@ -672,7 +672,7 @@ export default function EditOrderPage() {
             {/* Products Table */}
             <Card>
               <div className="overflow-x-auto">
-                <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
+                <table className="min-w-full border border-[#e5e5e5] rounded-lg">
                   <thead>
                     <tr className="border-b border-[#e5e5e5]">
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Product</th>
@@ -737,7 +737,7 @@ export default function EditOrderPage() {
                             
                             return (
                               <tr key={product.id} className={`hover:bg-gray-50 border-b border-[#e5e5e5] ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                                <td className="px-4 py-3 max-w-0" style={{maxWidth: '200px'}}>
+                                <td className="px-4 py-3 max-w-0 relative" style={{maxWidth: '200px'}}>
                                   <div className="flex items-center min-w-0 w-full">
                                     <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-hidden relative group">
                                       {product.picture_url ? (
@@ -754,7 +754,7 @@ export default function EditOrderPage() {
                                             }}
                                           />
                                           {/* Hover image overlay */}
-                                          <div className="absolute top-0 left-0 w-48 h-48 bg-white border border-gray-300 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                                          <div className="absolute top-full left-0 mt-1 w-48 h-48 bg-white border border-gray-300 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[9999]">
                                             <img
                                               src={product.picture_url}
                                               alt={product.item_name}
