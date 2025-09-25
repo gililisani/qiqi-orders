@@ -148,7 +148,11 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         .from('orders')
         .select(`
           *,
-          company:companies(*)
+          company:companies(
+            *,
+            support_fund:support_fund_levels(percent),
+            class:classes(name)
+          )
         `)
         .eq('id', orderId)
         .single();
@@ -234,7 +238,11 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           .from('clients')
           .select(`
             *,
-            company:companies(*)
+            company:companies(
+              *,
+              support_fund:support_fund_levels(percent),
+              class:classes(name)
+            )
           `)
           .eq('id', user.id)
           .single();
@@ -265,7 +273,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         .from('companies')
         .select(`
           *,
-          class:classes(*)
+          class:classes(name),
+          support_fund:support_fund_levels(percent)
         `)
         .order('company_name');
 
