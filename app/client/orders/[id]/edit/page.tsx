@@ -753,8 +753,8 @@ export default function EditOrderPage() {
                                               if (noImageDiv) noImageDiv.style.display = 'flex';
                                             }}
                                           />
-                                          {/* CSS-only hover overlay */}
-                                          <div className="absolute top-0 left-0 w-48 h-48 bg-white border border-gray-300 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[100] transform -translate-x-20 -translate-y-20">
+                                          {/* CSS-only hover overlay with fixed positioning */}
+                                          <div className="fixed top-1/2 left-1/2 w-48 h-48 bg-white border border-gray-300 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[9999] transform -translate-x-1/2 -translate-y-1/2">
                                             <img
                                               src={product.picture_url}
                                               alt={product.item_name}
