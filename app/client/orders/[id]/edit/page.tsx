@@ -739,51 +739,19 @@ export default function EditOrderPage() {
                               <tr key={product.id} className={`hover:bg-gray-50 border-b border-[#e5e5e5] ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
                                 <td className="px-4 py-3 max-w-0 relative" style={{maxWidth: '200px'}}>
                                   <div className="flex items-center min-w-0 w-full">
-                                    <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-hidden relative">
+                                    <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-hidden">
                                       {product.picture_url ? (
-                                        <>
-                                          <img
-                                            src={product.picture_url}
-                                            alt={product.item_name}
-                                            className="h-8 w-8 sm:h-10 sm:w-10 object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                                            onMouseEnter={(e) => {
-                                              const overlay = e.currentTarget.nextElementSibling as HTMLElement;
-                                              if (overlay) overlay.style.display = 'block';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                              const overlay = e.currentTarget.nextElementSibling as HTMLElement;
-                                              if (overlay) overlay.style.display = 'none';
-                                            }}
-                                            onError={(e) => {
-                                              console.error('Image failed to load:', product.picture_url);
-                                              e.currentTarget.style.display = 'none';
-                                              const noImageDiv = e.currentTarget.nextElementSibling?.nextElementSibling as HTMLElement;
-                                              if (noImageDiv) noImageDiv.style.display = 'flex';
-                                            }}
-                                          />
-                                          {/* Hover image overlay */}
-                                          <div 
-                                            className="fixed w-48 h-48 bg-white border-2 border-gray-400 rounded-lg shadow-xl pointer-events-none z-[9999]"
-                                            style={{
-                                              display: 'none',
-                                              top: '50%',
-                                              left: '50%',
-                                              transform: 'translate(-50%, -50%)'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                              e.currentTarget.style.display = 'block';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                              e.currentTarget.style.display = 'none';
-                                            }}
-                                          >
-                                            <img
-                                              src={product.picture_url}
-                                              alt={product.item_name}
-                                              className="w-full h-full object-contain rounded-lg p-2"
-                                            />
-                                          </div>
-                                        </>
+                                        <img
+                                          src={product.picture_url}
+                                          alt={product.item_name}
+                                          className="h-8 w-8 sm:h-10 sm:w-10 object-cover cursor-pointer transition-transform duration-200 hover:scale-[1.5] hover:z-50 hover:relative"
+                                          onError={(e) => {
+                                            console.error('Image failed to load:', product.picture_url);
+                                            e.currentTarget.style.display = 'none';
+                                            const noImageDiv = e.currentTarget.nextElementSibling as HTMLElement;
+                                            if (noImageDiv) noImageDiv.style.display = 'flex';
+                                          }}
+                                        />
                                       ) : null}
                                       <div 
                                         className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center text-gray-400 text-xs"
