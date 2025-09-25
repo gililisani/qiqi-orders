@@ -674,15 +674,15 @@ export default function EditOrderPage() {
               <div className="overflow-x-auto">
                 <table className="min-w-full">
                   <thead>
-                    <tr className="border-b border-[#e5e5e5]">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Product</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider hidden sm:table-cell">SKU</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Size</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Pack</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '70px'}}>Price</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">Qty</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Units</th>
-                      <th className="px-4 py-3 pr-4 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '90px'}}>Total</th>
+                    <tr className="border-b border-gray-200">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider">Product</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider hidden sm:table-cell">SKU</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Size</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Pack</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '70px'}}>Price</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap">Qty</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Units</th>
+                      <th className="px-4 py-3 pr-4 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '90px'}}>Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -702,7 +702,7 @@ export default function EditOrderPage() {
                         <React.Fragment key={categoryGroup.category?.id || 'no-category'}>
                           {/* Category Header Row */}
                           {(
-                            <tr className="border-t-2 border-[#e5e5e5]">
+                            <tr className="border-t-2 border-gray-200">
                               <td colSpan={8} className="px-4 py-4">
                                 <div className="flex items-center">
                                   {categoryGroup.category?.image_url ? (
@@ -736,7 +736,7 @@ export default function EditOrderPage() {
                             const unitPrice = getProductPrice(product);
                             
                             return (
-                              <tr key={product.id} className={`hover:bg-gray-50 border-b border-[#e5e5e5] ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
+                              <tr key={product.id} className={`hover:bg-gray-50 border-b border-gray-200 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
                                 <td className="px-4 py-3 max-w-0 relative overflow-visible" style={{maxWidth: '200px'}}>
                                   <div className="flex items-center min-w-0 w-full">
                                     <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-visible">
