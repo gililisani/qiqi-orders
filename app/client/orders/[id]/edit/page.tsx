@@ -982,7 +982,7 @@ export default function EditOrderPage() {
                       <div className="flex justify-between text-sm font-medium pt-2 px-6">
                         <span>Credit Used:</span>
                         <span className="text-green-600">
-                          {formatCurrency(supportFundItems.reduce((sum, item) => sum + item.total_price, 0))}
+                          {formatCurrency(Math.min(supportFundItems.reduce((sum, item) => sum + item.total_price, 0), totals.supportFundEarned))}
                         </span>
                       </div>
                     )}
