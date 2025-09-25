@@ -398,7 +398,7 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
 
         {/* Pagination */}
         {totalOrders > ordersPerPage && (
-          <div className="mt-4 flex items-center justify-between">
+          <div className="mt-4 flex items-center justify-between px-4">
             <p className="text-sm text-gray-600">Page {currentPage} of {Math.ceil(totalOrders / ordersPerPage)}</p>
             <nav className="inline-flex items-center gap-1" aria-label="Pagination">
               <button
