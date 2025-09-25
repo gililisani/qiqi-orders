@@ -678,7 +678,13 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
               <div>
                 <label className="block text-sm font-medium text-gray-700">Support Fund</label>
                 <div className="text-sm text-gray-900">
-                  {company.support_fund?.[0]?.percent || 0}%
+                  {(() => {
+                    const rawSf = company.support_fund as any;
+                    const supportFundPercent = Array.isArray(rawSf)
+                      ? (rawSf[0]?.percent || 0)
+                      : (rawSf?.percent || 0);
+                    return `${supportFundPercent}%`;
+                  })()}
                 </div>
               </div>
             </div>
@@ -818,14 +824,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                                   <div className="text-xs sm:text-sm font-medium text-gray-900 truncate w-full">
                                     {product.item_name}
                                   </div>
-                                  {!showSupportFundRedemption && !product.qualifies_for_credit_earning && (
+                                  {!product.qualifies_for_credit_earning && (
                                     <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
                                       Not Eligible for Credit
-                                    </span>
-                                  )}
-                                  {showSupportFundRedemption && (
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-1">
-                                      Support Fund Product
                                     </span>
                                   )}
                                 </div>
@@ -927,6 +928,18 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                     <div className="flex justify-between text-base font-bold text-gray-900">
                       <span>Subtotal:</span>
                       <span>{formatCurrency(orderItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Credit Earned */}
+              {orderItems.length > 0 && totals.supportFundEarned > 0 && (
+                <div className="px-6">
+                  <div className="pt-2">
+                    <div className="flex justify-between text-sm font-medium text-green-600">
+                      <span>Credit Earned:</span>
+                      <span>{formatCurrency(totals.supportFundEarned)}</span>
                     </div>
                   </div>
                 </div>
