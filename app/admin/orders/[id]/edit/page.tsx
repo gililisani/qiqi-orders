@@ -54,6 +54,8 @@ export default function AdminEditOrderPage() {
   const [company, setCompany] = useState<Company | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [orderItems, setOrderItems] = useState<OrderItemRow[]>([]);
+  const [supportFundItems, setSupportFundItems] = useState<OrderItemRow[]>([]);
+  const [showSupportFundRedemption, setShowSupportFundRedemption] = useState(false);
   const [poNumber, setPoNumber] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -124,7 +126,7 @@ export default function AdminEditOrderPage() {
         .order('id', { ascending: true });
       if (itemsError) throw itemsError;
 
-      const rows: OrderItemRow[] = (items || []).filter(i => i.product).map(i => {
+      const rows: OrderItemRow[] = (items || []).filter(i => i.product && !i.is_support_fund_item).map(i => {
         const product = i.product as Product;
         const unitPrice = getProductPrice(product);
         const caseQty = Math.ceil((i.quantity || 0) / (product.case_pack || 1));
@@ -140,6 +142,23 @@ export default function AdminEditOrderPage() {
         };
       });
       setOrderItems(rows);
+
+      const sfRows: OrderItemRow[] = (items || []).filter(i => i.product && i.is_support_fund_item).map(i => {
+        const product = i.product as Product;
+        const unitPrice = getProductPrice(product);
+        const caseQty = Math.ceil((i.quantity || 0) / (product.case_pack || 1));
+        const totalUnits = caseQty * (product.case_pack || 1);
+        const totalPrice = unitPrice * totalUnits;
+        return {
+          product_id: product.id,
+          product,
+          case_qty: caseQty,
+          total_units: totalUnits,
+          unit_price: unitPrice,
+          total_price: totalPrice,
+        };
+      });
+      setSupportFundItems(sfRows);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -198,15 +217,22 @@ export default function AdminEditOrderPage() {
     const subtotal = orderItems.reduce((s, r) => s + r.total_price, 0);
     const rawSf = company?.support_fund as any;
     const supportFundPercent = Array.isArray(rawSf) ? (rawSf[0]?.percent || 0) : (rawSf?.percent || 0);
-    const creditEarningItems = orderItems.filter(r => r.product.qualifies_for_credit_earning);
+    const creditEarningItems = [...orderItems, ...supportFundItems].filter(r => r.product.qualifies_for_credit_earning);
     const creditEarningSubtotal = creditEarningItems.reduce((s, r) => s + r.total_price, 0);
     const supportFundEarned = creditEarningSubtotal * (supportFundPercent / 100);
     return { subtotal, supportFundPercent, supportFundEarned };
   })();
 
+  const supportFundTotals = (() => {
+    const subtotal = supportFundItems.reduce((s, r) => s + r.total_price, 0);
+    const remainingCredit = totals.supportFundEarned - subtotal;
+    const finalTotalAddOn = remainingCredit < 0 ? Math.abs(remainingCredit) : 0;
+    return { subtotal, remainingCredit, finalTotalAddOn };
+  })();
+
   const handleSave = async () => {
     if (!order) return;
-    if (orderItems.length === 0) {
+    if (orderItems.length === 0 && supportFundItems.length === 0) {
       setError('Please add at least one product.');
       return;
     }
@@ -214,15 +240,18 @@ export default function AdminEditOrderPage() {
       setSubmitting(true);
       setError('');
 
-      const supportFundUsed = Math.min(totals.supportFundEarned, orderItems.reduce((s, r) => s + r.total_price, 0));
-      const additionalCost = Math.max(0, supportFundUsed - totals.supportFundEarned);
-      const finalTotal = totals.subtotal + additionalCost;
+      const orderSubtotal = orderItems.reduce((s, r) => s + r.total_price, 0);
+      const sfSubtotal = supportFundItems.reduce((s, r) => s + r.total_price, 0);
+      const supportFundUsed = Math.min(totals.supportFundEarned, sfSubtotal);
+      const additionalCost = Math.max(0, sfSubtotal - totals.supportFundEarned);
+      const finalTotal = orderSubtotal + additionalCost + orderSubtotal; // order subtotal counts once; additionalCost covers SF overage
+      const finalOrderTotal = orderSubtotal + (supportFundTotals.finalTotalAddOn || 0);
 
       const { error: updateOrderError } = await supabase
         .from('orders')
         .update({
           po_number: poNumber,
-          total_value: finalTotal,
+          total_value: finalOrderTotal,
           support_fund_used: supportFundUsed,
           credit_earned: totals.supportFundEarned,
         })
@@ -244,10 +273,21 @@ export default function AdminEditOrderPage() {
         is_support_fund_item: false,
         sort_order: idx,
       }));
-      if (itemsPayload.length > 0) {
+      const sfPayload = supportFundItems.map((r, idx) => ({
+        order_id: orderId,
+        product_id: r.product_id,
+        quantity: r.total_units,
+        unit_price: r.unit_price,
+        total_price: r.total_price,
+        is_support_fund_item: true,
+        sort_order: itemsPayload.length + idx,
+      }));
+
+      const allPayload = [...itemsPayload, ...sfPayload];
+      if (allPayload.length > 0) {
         const { error: insertErr } = await supabase
           .from('order_items')
-          .insert(itemsPayload);
+          .insert(allPayload);
         if (insertErr) throw insertErr;
       }
 
@@ -297,7 +337,7 @@ export default function AdminEditOrderPage() {
           <div className="flex items-center space-x-4">
             <button
               onClick={handleSave}
-              disabled={submitting || orderItems.length === 0}
+              disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
               className="bg-green-600 text-white px-6 py-2 hover:bg-green-700 transition disabled:opacity-50"
             >
               {submitting ? 'Updating...' : 'Update Order'}
@@ -318,6 +358,35 @@ export default function AdminEditOrderPage() {
           </div>
         </Card>
 
+        {totals.supportFundPercent > 0 && (
+          <Card>
+            <div>
+              <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                <button
+                  onClick={() => setShowSupportFundRedemption(false)}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    !showSupportFundRedemption
+                      ? 'border-black text-black'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Order Form
+                </button>
+                <button
+                  onClick={() => setShowSupportFundRedemption(true)}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    showSupportFundRedemption
+                      ? 'border-green-600 text-green-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Distributor Support Funds
+                </button>
+              </nav>
+            </div>
+          </Card>
+        )}
+
         <Card header={<h3 className="font-semibold">Products</h3>}>
           <div className="overflow-x-auto">
             <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
@@ -332,8 +401,12 @@ export default function AdminEditOrderPage() {
                 </tr>
               </thead>
               <tbody>
-                {products.map(p => {
-                  const row = orderItems.find(r => r.product_id === p.id);
+                {products
+                  .filter(p => !showSupportFundRedemption || p.qualifies_for_credit_earning)
+                  .map(p => {
+                  const row = showSupportFundRedemption
+                    ? supportFundItems.find(r => r.product_id === p.id)
+                    : orderItems.find(r => r.product_id === p.id);
                   const unitPrice = getProductPrice(p);
                   const total = row ? row.total_price : 0;
                   return (
@@ -344,7 +417,10 @@ export default function AdminEditOrderPage() {
                       <td className="px-4 py-3 text-sm text-gray-900 text-center">{formatCurrency(unitPrice)}</td>
                       <td className="px-4 py-3 text-center">
                         <div className="inline-flex items-center border border-gray-300 rounded select-none justify-center">
-                          <button type="button" onClick={() => handleCaseQtyChange(p, Math.max(0, (row?.case_qty || 0) - 1))} className="px-2 py-1 text-gray-700 hover:bg-gray-100">−</button>
+                          <button type="button" onClick={() => (showSupportFundRedemption
+                            ? (setSupportFundItems(prev => { const current = prev.find(r => r.product_id === p.id)?.case_qty || 0; handleSupportFundItemChange(p, Math.max(0, current - 1)); return prev;}))
+                            : handleCaseQtyChange(p, Math.max(0, (row?.case_qty || 0) - 1))
+                          )} className="px-2 py-1 text-gray-700 hover:bg-gray-100">−</button>
                           <input
                             type="text"
                             inputMode="numeric"
@@ -352,11 +428,18 @@ export default function AdminEditOrderPage() {
                             onChange={(e) => {
                               const val = e.currentTarget.value.replace(/[^0-9]/g, '');
                               const parsed = val === '' ? 0 : Math.max(0, Math.min(99, Number(val)));
-                              handleCaseQtyChange(p, parsed);
+                              if (showSupportFundRedemption) {
+                                handleSupportFundItemChange(p, parsed);
+                              } else {
+                                handleCaseQtyChange(p, parsed);
+                              }
                             }}
                             className="w-10 px-1 py-1 text-center text-sm focus:outline-none"
                           />
-                          <button type="button" onClick={() => handleCaseQtyChange(p, (row?.case_qty || 0) + 1)} className="px-2 py-1 text-gray-700 hover:bg-gray-100">+</button>
+                          <button type="button" onClick={() => (showSupportFundRedemption
+                            ? handleSupportFundItemChange(p, (row?.case_qty || 0) + 1)
+                            : handleCaseQtyChange(p, (row?.case_qty || 0) + 1)
+                          )} className="px-2 py-1 text-gray-700 hover:bg-gray-100">+</button>
                         </div>
                       </td>
                       <td className="px-4 py-3 pr-4 text-sm font-medium text-gray-900 text-center">{formatCurrency(total)}</td>
@@ -365,6 +448,30 @@ export default function AdminEditOrderPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        </Card>
+
+        {/* Summary */}
+        <Card header={<h3 className="font-semibold">Order Summary</h3>}>
+          <div className="space-y-2 px-6">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Items (units):</span>
+              <span className="font-medium">{orderItems.reduce((s, r) => s + r.total_units, 0) + supportFundItems.reduce((s, r) => s + r.total_units, 0)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Cases:</span>
+              <span className="font-medium">{orderItems.reduce((s, r) => s + r.case_qty, 0) + supportFundItems.reduce((s, r) => s + r.case_qty, 0)}</span>
+            </div>
+            {totals.supportFundPercent > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span>Support Fund ({totals.supportFundPercent}%):</span>
+                <span className="font-medium">{formatCurrency(Math.max(0, totals.supportFundEarned - supportFundItems.reduce((s, r) => s + r.total_price, 0)))}</span>
+              </div>
+            )}
+            <div className="flex justify-between pt-2 border-t">
+              <span className="text-lg font-semibold">Total Order:</span>
+              <span className="text-lg font-semibold">{formatCurrency(orderItems.reduce((s, r) => s + r.total_price, 0) + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0))}</span>
+            </div>
           </div>
         </Card>
       </div>
