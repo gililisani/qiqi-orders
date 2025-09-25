@@ -110,7 +110,40 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     try {
       setLoading(true);
       
-      // Fetch order
+      // For clients, first verify they can access this order
+      if (role === 'client') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('No user found');
+
+        // Check if this order belongs to the client
+        const { data: orderCheck, error: orderCheckError } = await supabase
+          .from('orders')
+          .select(`
+            id,
+            status,
+            user_id,
+            company:companies(
+              id,
+              clients!inner(id)
+            )
+          `)
+          .eq('id', orderId)
+          .eq('user_id', user.id)
+          .single();
+
+        if (orderCheckError || !orderCheck) {
+          throw new Error('Order not found or access denied');
+        }
+
+        // Check if user can edit this order (only Open status)
+        if (orderCheck.status !== 'Open') {
+          setError('You can only edit orders with "Open" status');
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // Fetch order with company details
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select(`
@@ -121,13 +154,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         .single();
 
       if (orderError) throw orderError;
-      
-      // Check if user can edit this order
-      if (role === 'client' && orderData.status !== 'Open') {
-        setError('You can only edit orders with "Open" status');
-        setLoading(false);
-        return;
-      }
       
       setOrder(orderData);
 
@@ -174,31 +200,26 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
     } catch (error) {
       console.error('Error fetching order:', error);
-      setError('Failed to load order');
+      setError(error instanceof Error ? error.message : 'Failed to load order');
     } finally {
       setLoading(false);
     }
   };
 
   const fetchProductsForCompany = async (companyData: Company) => {
-    try {
-      const classFilter = companyData.class?.name === 'Americas' ? 'americas' : 'international';
-      
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select(`
-          *,
-          category:categories(*)
-        `)
-        .eq(`visible_to_${classFilter}`, true)
-        .order('item_name');
+    const classFilter = companyData.class?.name === 'Americas' ? 'americas' : 'international';
+    
+    const { data: productsData, error: productsError } = await supabase
+      .from('products')
+      .select(`
+        *,
+        category:categories(*)
+      `)
+      .eq(`visible_to_${classFilter}`, true)
+      .order('item_name');
 
-      if (productsError) throw productsError;
-      setProducts(productsData || []);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      setError('Failed to load products');
-    }
+    if (productsError) throw productsError;
+    setProducts(productsData || []);
   };
 
   const fetchProducts = async () => {
@@ -222,12 +243,16 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         if (clientData.company) {
           setCompany(clientData.company);
           await fetchProductsForCompany(clientData.company);
+        } else {
+          setError('No company found for client');
         }
+      } else {
+        // For admin, we don't fetch products until a company is selected
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
       setError('Failed to load products');
-    } finally {
       setLoading(false);
     }
   };
@@ -255,10 +280,18 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     const selectedCompany = companies.find(c => c.id === companyId);
     if (selectedCompany) {
       setCompany(selectedCompany);
-      await fetchProductsForCompany(selectedCompany);
-      // Clear existing items when company changes
-      setOrderItems([]);
-      setSupportFundItems([]);
+      setLoading(true);
+      try {
+        await fetchProductsForCompany(selectedCompany);
+        // Clear existing items when company changes
+        setOrderItems([]);
+        setSupportFundItems([]);
+      } catch (error) {
+        console.error('Error fetching products for company:', error);
+        setError('Failed to load products for selected company');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
