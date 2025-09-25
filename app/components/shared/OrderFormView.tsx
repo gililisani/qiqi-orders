@@ -316,6 +316,11 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     
     // First, get all visible categories for this client
     const isInternational = company?.class?.name?.includes('International') || false;
+    console.log('getProductsByCategory - company class:', company?.class?.name);
+    console.log('getProductsByCategory - isInternational:', isInternational);
+    console.log('getProductsByCategory - products count:', products.length);
+    console.log('getProductsByCategory - sample product categories:', products.slice(0, 3).map(p => ({ name: p.item_name, category: p.category?.name, visible_to_americas: p.category?.visible_to_americas, visible_to_international: p.category?.visible_to_international })));
+    
     const visibleCategories = new Set<number>();
     
     // Group products by their categories
