@@ -104,15 +104,18 @@ export default function ClientPackingSlipViewPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not found');
 
-      const [orderResult, itemsResult, packingSlipResult] = await Promise.all([
-        // Fetch order
-        supabase
-          .from('orders')
-          .select('*')
-          .eq('id', orderId)
-          .eq('user_id', user.id)
-          .single(),
-        
+      // Fetch order first
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Fetch related data separately
+      const [itemsResult, packingSlipResult, companyResult] = await Promise.all([
         // Fetch order items
         supabase
           .from('order_items')
@@ -130,14 +133,36 @@ export default function ClientPackingSlipViewPage() {
           .from('packing_slips')
           .select('*')
           .eq('order_id', orderId)
-          .single()
+          .single(),
+
+        // Fetch company data
+        orderData.company_id ? supabase
+          .from('companies')
+          .select(`
+            company_name,
+            netsuite_number,
+            ship_to,
+            support_fund:support_fund_levels(percent),
+            subsidiary:subsidiaries(name, ship_from_address, company_address, phone, email),
+            class:classes(name),
+            location:Locations(location_name),
+            incoterm:incoterms(name),
+            payment_term:payment_terms(name)
+          `)
+          .eq('id', orderData.company_id)
+          .single() : { data: null, error: null }
       ]);
 
-      if (orderResult.error) throw orderResult.error;
       if (itemsResult.error) throw itemsResult.error;
       if (packingSlipResult.error) throw packingSlipResult.error;
 
-      setOrder(orderResult.data);
+      // Combine data
+      const combinedOrder = {
+        ...orderData,
+        company: companyResult.data
+      };
+
+      setOrder(combinedOrder);
       setOrderItems(itemsResult.data || []);
       setPackingSlip(packingSlipResult.data);
       
