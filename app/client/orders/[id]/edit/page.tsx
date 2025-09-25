@@ -1032,37 +1032,6 @@ export default function EditOrderPage() {
                 )}
               </Card>
 
-              {/* Support Fund Summary */}
-              {showSupportFundRedemption && supportFundItems.length > 0 && (
-                <Card header={<h3 className="text-lg font-semibold text-green-800 mb-4">Support Fund Summary</h3>}>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Support Fund Items:</span>
-                      <span className="font-medium">{formatCurrency(supportFundTotals.subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Available Credit:</span>
-                      <span className="font-medium">{formatCurrency(supportFundTotals.supportFundEarned)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm font-medium pt-2">
-                      <span>Remaining Credit:</span>
-                      <span className={(() => {
-                        const creditEarned = totals.supportFundEarned;
-                        const supportFundTotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
-                        const remaining = creditEarned - supportFundTotal;
-                        return remaining < 0 ? 'text-red-600' : 'text-green-600';
-                      })()}>
-                        {(() => {
-                          const creditEarned = totals.supportFundEarned;
-                          const supportFundTotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
-                          const remaining = creditEarned - supportFundTotal;
-                          return remaining < 0 ? `(${formatCurrency(Math.abs(remaining))})` : formatCurrency(remaining);
-                        })()}
-                      </span>
-                    </div>
-                  </div>
-                </Card>
-              )}
             </div>
           </div>
         </div>
