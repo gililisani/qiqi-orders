@@ -945,7 +945,7 @@ export default function EditOrderPage() {
 
                     {/* Support Fund Products Title */}
                     {supportFundItems.length > 0 && (
-                      <div className="text-sm font-bold text-gray-700 uppercase tracking-wide mt-4 px-6 pb-2 border-b border-gray-200">Support Fund Products</div>
+                      <div className="text-sm font-bold text-gray-700 uppercase tracking-wide mt-4 px-6 pb-2 border-b border-gray-200 mb-4">Support Fund Products</div>
                     )}
 
                     {/* Support Fund Products */}
@@ -954,12 +954,12 @@ export default function EditOrderPage() {
                         {supportFundItems.map((item) => (
                           <div key={`sf-${item.product_id}`} className="flex items-center justify-between bg-green-50 p-2 rounded">
                             <div className="flex-1 min-w-0 pr-2">
-                              <div className="text-sm font-medium text-green-800 truncate leading-tight">{item.product.item_name}</div>
+                              <div className="text-xs font-medium text-green-800 truncate leading-tight">{item.product.item_name}</div>
                               <div className="text-xs text-green-600 leading-tight">
                                 {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''} (Support Fund)
                               </div>
                             </div>
-                            <div className="text-sm font-medium text-green-800">{formatCurrency(item.total_price)}</div>
+                            <div className="text-xs font-medium text-green-800">{formatCurrency(item.total_price)}</div>
                           </div>
                         ))}
                       </div>
@@ -974,6 +974,16 @@ export default function EditOrderPage() {
                             <span>{formatCurrency(supportFundItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
                           </div>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Credit Used */}
+                    {supportFundItems.length > 0 && (
+                      <div className="flex justify-between text-sm font-medium pt-2 px-6">
+                        <span>Credit Used:</span>
+                        <span className="text-green-600">
+                          {formatCurrency(supportFundItems.reduce((sum, item) => sum + item.total_price, 0))}
+                        </span>
                       </div>
                     )}
 
@@ -999,10 +1009,12 @@ export default function EditOrderPage() {
 
                     {/* Support Fund Disclaimer */}
                     {supportFundItems.length > 0 && (
-                      <div className="text-xs text-gray-500 italic pt-2 space-y-1 px-6">
-                        <div>* Credit cannot be accumulated and must be redeemed in full per order</div>
-                        <div>* Any unused Support Fund credit will be forfeited</div>
-                        <div>* Negative remaining credit will be added to the grand total</div>
+                      <div className="px-6 pb-4">
+                        <div className="text-xs text-gray-500 italic pt-2 space-y-1">
+                          <div>* Credit cannot be accumulated and must be redeemed in full per order</div>
+                          <div>* Any unused Support Fund credit will be forfeited</div>
+                          <div>* Negative remaining credit will be added to the grand total</div>
+                        </div>
                       </div>
                     )}
 
