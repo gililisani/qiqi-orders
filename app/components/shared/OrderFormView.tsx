@@ -321,6 +321,15 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     console.log('getProductsByCategory - products count:', products.length);
     console.log('getProductsByCategory - sample product categories:', products.slice(0, 3).map(p => ({ name: p.item_name, category: p.category?.name, visible_to_americas: p.category?.visible_to_americas, visible_to_international: p.category?.visible_to_international })));
     
+    // Check for KITS products specifically
+    const kitsProducts = products.filter(p => p.category?.name?.toLowerCase().includes('kit'));
+    console.log('getProductsByCategory - KITS products found:', kitsProducts.length);
+    console.log('getProductsByCategory - KITS products details:', kitsProducts.map(p => ({ name: p.item_name, category: p.category?.name, visible_to_americas: p.category?.visible_to_americas, visible_to_international: p.category?.visible_to_international })));
+    
+    // Check all unique categories
+    const allCategories = [...new Set(products.map(p => p.category?.name).filter(Boolean))];
+    console.log('getProductsByCategory - all categories:', allCategories);
+    
     const visibleCategories = new Set<number>();
     
     // Group products by their categories
