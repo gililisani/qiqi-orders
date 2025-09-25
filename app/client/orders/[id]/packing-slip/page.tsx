@@ -162,6 +162,10 @@ export default function ClientPackingSlipViewPage() {
         company: companyResult.data
       };
 
+      console.log('Client Packing Slip - Order Data:', combinedOrder);
+      console.log('Client Packing Slip - Company Data:', companyResult.data);
+      console.log('Client Packing Slip - Subsidiary Data:', companyResult.data?.subsidiary);
+
       setOrder(combinedOrder);
       setOrderItems(itemsResult.data || []);
       setPackingSlip(packingSlipResult.data);
