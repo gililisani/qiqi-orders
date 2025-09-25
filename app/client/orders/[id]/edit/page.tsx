@@ -672,7 +672,7 @@ export default function EditOrderPage() {
             {/* Products Table */}
             <Card>
               <div className="overflow-x-auto">
-                <table className="min-w-full border border-[#e5e5e5] rounded-lg">
+                <table className="min-w-full">
                   <thead>
                     <tr className="border-b border-[#e5e5e5]">
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Product</th>
