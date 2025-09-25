@@ -616,7 +616,7 @@ export default function EditOrderPage() {
 
             {/* PO Number */}
             <Card header={<h3 className="font-semibold">Order Details</h3>}>
-              <div className="max-w-md">
+              <div className="max-w-md px-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   PO/Cheque Number (Optional)
                 </label>
@@ -857,7 +857,7 @@ export default function EditOrderPage() {
             <Card header={<h2 className="font-semibold">Order Summary</h2>}>
               {orderItems.length > 0 ? (
                 <>
-                  <div className="space-y-2">
+                  <div className="space-y-2 px-6">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Items:</span>
                       <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.total_units, 0) + supportFundItems.reduce((sum, item) => sum + item.total_units, 0)}</span>
@@ -877,7 +877,7 @@ export default function EditOrderPage() {
                       <span className="text-lg font-semibold">{formatCurrency(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0))}</span>
                     </div>
                   </div>
-                  <div className="flex flex-col space-y-2">
+                  <div className="flex flex-col space-y-2 px-6 pb-6">
                     <button
                       onClick={handleSave}
                       disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
@@ -909,7 +909,7 @@ export default function EditOrderPage() {
                 {orderItems.length > 0 ? (
                   <>
                     {/* Order Form Products */}
-                    <div className="space-y-2">
+                    <div className="space-y-2 px-6">
                       {orderItems.map((item) => (
                         <div key={item.product_id} className="flex items-center justify-between">
                           <div className="flex-1 min-w-0 pr-2">
@@ -925,7 +925,7 @@ export default function EditOrderPage() {
 
                     {/* Order Form Subtotal */}
                     {orderItems.length > 0 && (
-                      <div className="flex justify-between text-sm font-medium text-gray-900 pt-2 border-t">
+                      <div className="flex justify-between text-sm font-medium text-gray-900 pt-2 border-t px-6">
                         <span>Subtotal:</span>
                         <span>{formatCurrency(orderItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
                       </div>
@@ -933,7 +933,7 @@ export default function EditOrderPage() {
 
                     {/* Credit Earned */}
                     {totals.supportFundPercent > 0 && (
-                      <div className="flex justify-between text-sm text-green-600 pt-2">
+                      <div className="flex justify-between text-sm text-green-600 pt-2 px-6">
                         <span>Credit Earned ({totals.supportFundPercent}%):</span>
                         <span className="font-medium">{formatCurrency(totals.supportFundEarned)}</span>
                       </div>
@@ -941,12 +941,12 @@ export default function EditOrderPage() {
 
                     {/* Support Fund Products Title */}
                     {supportFundItems.length > 0 && (
-                      <div className="text-sm font-medium text-gray-700 uppercase tracking-wide mt-4">Support Fund Products</div>
+                      <div className="text-sm font-medium text-gray-700 uppercase tracking-wide mt-4 px-6">Support Fund Products</div>
                     )}
 
                     {/* Support Fund Products */}
                     {supportFundItems.length > 0 && (
-                      <div className="space-y-2">
+                      <div className="space-y-2 px-6">
                         {supportFundItems.map((item) => (
                           <div key={`sf-${item.product_id}`} className="flex items-center justify-between bg-green-50 p-2 rounded">
                             <div className="flex-1 min-w-0 pr-2">
@@ -963,7 +963,7 @@ export default function EditOrderPage() {
 
                     {/* Support Fund Subtotal */}
                     {supportFundItems.length > 0 && (
-                      <div className="flex justify-between text-sm font-medium text-green-800 pt-2 border-t border-green-200">
+                      <div className="flex justify-between text-sm font-medium text-green-800 pt-2 border-t border-green-200 px-6">
                         <span>Subtotal:</span>
                         <span>{formatCurrency(supportFundItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
                       </div>
@@ -971,7 +971,7 @@ export default function EditOrderPage() {
 
                     {/* Remaining Credit */}
                     {supportFundItems.length > 0 && (
-                      <div className="flex justify-between text-sm font-medium pt-2">
+                      <div className="flex justify-between text-sm font-medium pt-2 px-6">
                         <span>Remaining Credit:</span>
                         <span className={(() => {
                           const creditEarned = totals.supportFundEarned;
@@ -991,7 +991,7 @@ export default function EditOrderPage() {
 
                     {/* Support Fund Disclaimer */}
                     {supportFundItems.length > 0 && (
-                      <div className="text-xs text-gray-500 italic pt-2 space-y-1">
+                      <div className="text-xs text-gray-500 italic pt-2 space-y-1 px-6">
                         <div>* Credit cannot be accumulated and must be redeemed in full per order</div>
                         <div>* Any unused Support Fund credit will be forfeited</div>
                         <div>* Negative remaining credit will be added to the grand total</div>
@@ -999,7 +999,7 @@ export default function EditOrderPage() {
                     )}
 
                     {/* Totals */}
-                    <div className="space-y-2 pt-2 border-t">
+                    <div className="space-y-2 pt-2 border-t px-6">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Items:</span>
                         <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.total_units, 0) + supportFundItems.reduce((sum, item) => sum + item.total_units, 0)}</span>
@@ -1015,7 +1015,7 @@ export default function EditOrderPage() {
                     </div>
 
                     {/* Action buttons */}
-                    <div className="mt-4 space-y-2">
+                    <div className="mt-4 space-y-2 px-6 pb-6">
                       <button
                         onClick={handleSave}
                         disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
