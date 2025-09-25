@@ -213,6 +213,38 @@ export default function AdminEditOrderPage() {
     });
   };
 
+  const handleSupportFundItemChange = (product: Product, caseQty: number) => {
+    const unitPrice = getProductPrice(product);
+    const totalUnits = Math.max(0, caseQty) * (product.case_pack || 1);
+    const totalPrice = unitPrice * totalUnits;
+
+    setSupportFundItems(prev => {
+      const existingIndex = prev.findIndex(r => r.product_id === product.id);
+      if (caseQty <= 0) {
+        if (existingIndex >= 0) {
+          const clone = [...prev];
+          clone.splice(existingIndex, 1);
+          return clone;
+        }
+        return prev;
+      }
+      const newRow: OrderItemRow = {
+        product_id: product.id,
+        product,
+        case_qty: caseQty,
+        total_units: totalUnits,
+        unit_price: unitPrice,
+        total_price: totalPrice,
+      };
+      if (existingIndex >= 0) {
+        const clone = [...prev];
+        clone[existingIndex] = newRow;
+        return clone;
+      }
+      return [...prev, newRow];
+    });
+  };
+
   const totals = (() => {
     const subtotal = orderItems.reduce((s, r) => s + r.total_price, 0);
     const rawSf = company?.support_fund as any;
