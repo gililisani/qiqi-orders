@@ -427,7 +427,7 @@ export default function PackingSlipViewPage() {
 
         {/* Packing Slip Content */}
         <Card header="">
-          <div id="packing-slip-content" className="space-y-6">
+          <div id="packing-slip-content" className="px-6 py-5 space-y-6">
             {/* Top Section: Logo, Subsidiary Info, and Ship To */}
             <div className="flex justify-between items-start">
               {/* Left: Logo and Subsidiary Info */}
@@ -435,10 +435,10 @@ export default function PackingSlipViewPage() {
                 <img src="/QIQI-Logo.svg" alt="Qiqi Logo" className="h-16 w-auto" />
                 <div>
                   <h2 className="text-lg font-bold text-gray-900 mb-1">
-                    {order.company?.subsidiary?.name || 'Qiqi Partners'}
+                    {order.company?.subsidiary?.name || 'Subsidiary Name'}
                   </h2>
                   <div className="text-sm text-gray-600 whitespace-pre-line">
-                    {order.company?.subsidiary?.ship_from_address || 'Address not configured'}
+                    {order.company?.subsidiary?.company_address || 'Subsidiary Address'}
                   </div>
                 </div>
               </div>
@@ -447,24 +447,24 @@ export default function PackingSlipViewPage() {
               <div className="text-right">
                 <h3 className="font-bold text-gray-900 mb-2">Ship To</h3>
                 <div className="text-sm text-gray-600">
-                  <div className="font-medium">{order.company?.company_name || 'N/A'}</div>
+                  <div className="font-medium">{order.company?.company_name || 'Company Name'}</div>
                   <div className="whitespace-pre-line">
-                    {order.company?.ship_to || 'Ship To Address not configured'}
+                    {order.company?.ship_to || 'Company Address'}
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Packing Slip Title and Number */}
-            <div className="flex justify-end">
-              <div className="text-right">
+            <div className="flex justify-start">
+              <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Packing Slip</h2>
                 <div className="text-sm text-gray-600">#{packingSlip.invoice_number}</div>
               </div>
             </div>
 
             {/* Items Table */}
-            <div className="mb-8">
+            <div className="py-4">
               <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
                 <thead>
                   <tr className="border-b border-[#e5e5e5]">
@@ -510,6 +510,16 @@ export default function PackingSlipViewPage() {
                   <span className="font-bold text-gray-900 ml-8">
                     {orderItems.reduce((sum, item) => sum + item.quantity, 0)}
                   </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes Section */}
+            <div className="py-4">
+              <div className="border-t border-[#e5e5e5] pt-4">
+                <h3 className="text-sm font-medium text-gray-900 mb-2">Notes:</h3>
+                <div className="min-h-[60px] text-sm text-gray-600">
+                  {packingSlip.notes || 'No notes'}
                 </div>
               </div>
             </div>
