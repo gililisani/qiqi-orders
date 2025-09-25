@@ -641,6 +641,35 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         </div>
       )}
 
+      {/* Company Info - First block */}
+      {company && (
+        <Card>
+          <div className="px-6 py-4 border-b border-[#e5e5e5]">
+            <h3 className="text-lg font-semibold text-gray-900">Company Information</h3>
+          </div>
+          <div className="px-6 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Company Name</label>
+                <div className="text-sm text-gray-900">{company.company_name}</div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Support Fund</label>
+                <div className="text-sm text-gray-900">
+                  {(() => {
+                    const rawSf = company.support_fund as any;
+                    const supportFundPercent = Array.isArray(rawSf)
+                      ? (rawSf[0]?.percent || 0)
+                      : (rawSf?.percent || 0);
+                    return `${supportFundPercent}%`;
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Company Selection (Admin only, New orders only) */}
       {role === 'admin' && isNewMode && (
         <Card>
@@ -670,88 +699,54 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         </Card>
       )}
 
-      {/* PO Number (Client only, New orders only) */}
-      {role === 'client' && isNewMode && (
-        <Card>
-          <div className="px-6 py-4 border-b border-[#e5e5e5]">
-            <h3 className="text-lg font-semibold text-gray-900">Order Information</h3>
-          </div>
-          <div className="px-6 py-4">
-            <div className="max-w-md">
-              <label htmlFor="po-number" className="block text-sm font-medium text-gray-700 mb-2">
-                PO Number (Optional)
-              </label>
-              <input
-                type="text"
-                id="po-number"
-                value={(order && order.po_number) || ''}
-                onChange={(e) => setOrder(prev => prev ? { ...prev, po_number: e.target.value } : { id: '', po_number: e.target.value, status: 'Open', company_id: '' })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter PO number..."
-              />
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Company Info */}
-      {company && (
-        <Card>
-          <div className="px-6 py-4 border-b border-[#e5e5e5]">
-            <h3 className="text-lg font-semibold text-gray-900">Company Information</h3>
-          </div>
-          <div className="px-6 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Company Name</label>
-                <div className="text-sm text-gray-900">{company.company_name}</div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Support Fund</label>
-                <div className="text-sm text-gray-900">
-                  {(() => {
-                    const rawSf = company.support_fund as any;
-                    const supportFundPercent = Array.isArray(rawSf)
-                      ? (rawSf[0]?.percent || 0)
-                      : (rawSf?.percent || 0);
-                    return `${supportFundPercent}%`;
-                  })()}
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
       {/* Tab Navigation */}
       {company && (
         <Card>
           <div className="px-6 py-4">
-            <nav className="flex space-x-8">
-              <button
-                onClick={() => setShowSupportFundRedemption(false)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  !showSupportFundRedemption
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Order Form
-              </button>
-              <button
-                onClick={() => setShowSupportFundRedemption(true)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  showSupportFundRedemption
-                    ? 'border-green-600 text-green-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Distributor Support Funds
-                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  {formatCurrency(totals.supportFundEarned)} available
-                </span>
-              </button>
-            </nav>
+            <div className="flex items-center justify-between">
+              <nav className="flex space-x-8">
+                <button
+                  onClick={() => setShowSupportFundRedemption(false)}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    !showSupportFundRedemption
+                      ? 'border-gray-900 text-gray-900'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Order Form
+                </button>
+                <button
+                  onClick={() => setShowSupportFundRedemption(true)}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    showSupportFundRedemption
+                      ? 'border-green-600 text-green-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Distributor Support Funds
+                  <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    {formatCurrency(totals.supportFundEarned)} available
+                  </span>
+                </button>
+              </nav>
+              
+              {/* PO Number input for New Orders */}
+              {isNewMode && (
+                <div className="flex items-center space-x-3">
+                  <label htmlFor="po-number" className="text-sm font-medium text-gray-700">
+                    PO Number:
+                  </label>
+                  <input
+                    type="text"
+                    id="po-number"
+                    value={(order && order.po_number) || ''}
+                    onChange={(e) => setOrder(prev => prev ? { ...prev, po_number: e.target.value } : { id: '', po_number: e.target.value, status: 'Open', company_id: '' })}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Optional"
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </Card>
       )}
@@ -891,9 +886,20 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                                 >
                                   -
                                 </button>
-                                <span className="text-sm font-medium text-gray-900 min-w-[2rem] text-center">
-                                  {orderItem?.case_qty || 0}
-                                </span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={orderItem?.case_qty || 0}
+                                  onChange={(e) => {
+                                    const newQty = Math.max(0, parseInt(e.target.value) || 0);
+                                    if (showSupportFundRedemption) {
+                                      handleSupportFundItemChange(product.id, newQty);
+                                    } else {
+                                      handleCaseQtyChange(product.id, newQty);
+                                    }
+                                  }}
+                                  className="w-12 h-6 text-center text-sm font-medium text-gray-900 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                />
                                 <button
                                   onClick={() => {
                                     const currentQty = orderItem?.case_qty || 0;
@@ -929,7 +935,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           </div>
 
           {/* Order Summary - Takes up 3 columns on xl, full width on smaller screens */}
-          <div className="xl:col-span-3">
+          <div className="xl:col-span-3 xl:sticky xl:top-24">
           <Card>
             <div className="px-6 py-4 border-b border-[#e5e5e5]">
               <h3 className="text-lg font-semibold text-gray-900">Order Summary</h3>
@@ -1055,9 +1061,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                   <button
                     onClick={handleSave}
                     disabled={saving || !company}
-                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {saving ? 'Saving...' : (isNewMode ? 'Create Order' : 'Save Changes')}
+                    {saving ? 'Saving...' : (isNewMode ? 'Send Order' : 'Save Changes')}
                   </button>
                   <Link
                     href={backUrl}
