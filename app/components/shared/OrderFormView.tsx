@@ -766,7 +766,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Size</th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Pack</th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '70px'}}>Price</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap">Qty</th>
+                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '80px'}}>Qty</th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Units</th>
                       <th className="px-4 py-3 pr-4 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '90px'}}>Total</th>
                     </tr>
@@ -870,8 +870,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                             <td className="px-4 py-3 text-center text-xs font-medium text-gray-900">
                               {formatCurrency(unitPrice)}
                             </td>
-                            <td className="px-4 py-3 text-center">
-                              <div className="flex items-center justify-center space-x-2">
+                            <td className="px-2 py-3 text-center">
+                              <div className="flex items-center justify-center space-x-1">
                                 <button
                                   onClick={() => {
                                     const currentQty = orderItem?.case_qty || 0;
@@ -882,13 +882,12 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                                       handleCaseQtyChange(product.id, newQty);
                                     }
                                   }}
-                                  className="w-6 h-6 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800"
+                                  className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800 text-xs"
                                 >
                                   -
                                 </button>
                                 <input
-                                  type="number"
-                                  min="0"
+                                  type="text"
                                   value={orderItem?.case_qty || 0}
                                   onChange={(e) => {
                                     const newQty = Math.max(0, parseInt(e.target.value) || 0);
@@ -898,7 +897,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                                       handleCaseQtyChange(product.id, newQty);
                                     }
                                   }}
-                                  className="w-12 h-6 text-center text-sm font-medium text-gray-900 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  className="w-10 h-5 text-center text-xs font-medium text-gray-900 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 />
                                 <button
                                   onClick={() => {
@@ -910,7 +909,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                                       handleCaseQtyChange(product.id, newQty);
                                     }
                                   }}
-                                  className="w-6 h-6 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800"
+                                  className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800 text-xs"
                                 >
                                   +
                                 </button>
@@ -935,7 +934,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           </div>
 
           {/* Order Summary - Takes up 3 columns on xl, full width on smaller screens */}
-          <div className="xl:col-span-3 xl:sticky xl:top-24">
+          <div className="xl:col-span-3 xl:sticky xl:top-32 xl:self-start">
           <Card>
             <div className="px-6 py-4 border-b border-[#e5e5e5]">
               <h3 className="text-lg font-semibold text-gray-900">Order Summary</h3>
