@@ -853,56 +853,10 @@ export default function EditOrderPage() {
               </div>
             </Card>
 
-            {/* Mobile/Tablet Order Summary (visible below xl) */}
-            <Card header={<h2 className="font-semibold">Order Summary</h2>}>
-              {orderItems.length > 0 ? (
-                <>
-                  <div className="space-y-2 px-6">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Items:</span>
-                      <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.total_units, 0) + supportFundItems.reduce((sum, item) => sum + item.total_units, 0)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Cases:</span>
-                      <span className="font-medium">{orderItems.reduce((sum, item) => sum + item.case_qty, 0) + supportFundItems.reduce((sum, item) => sum + item.case_qty, 0)}</span>
-                    </div>
-                    {totals.supportFundEarned > 0 && (
-                      <div className="flex justify-between text-sm text-green-600">
-                        <span>Support Fund ({totals.supportFundPercent}%):</span>
-                        <span className="font-medium">{formatCurrency(totals.supportFundEarned - supportFundTotals.subtotal)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between pt-2 border-t">
-                      <span className="text-lg font-semibold">Total Order:</span>
-                      <span className="text-lg font-semibold">{formatCurrency(totals.total + (supportFundTotals.remainingCredit < 0 ? Math.abs(supportFundTotals.remainingCredit) : 0))}</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col space-y-2 px-6 pb-6">
-                    <button
-                      onClick={handleSave}
-                      disabled={submitting || (orderItems.length === 0 && supportFundItems.length === 0)}
-                      className="w-full bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
-                    >
-                      {submitting ? 'Updating...' : 'Update Order'}
-                    </button>
-                    <Link
-                      href={`/client/orders/${orderId}`}
-                      className="w-full bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition text-center"
-                    >
-                      Cancel
-                    </Link>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Please add items to your order</p>
-                </div>
-              )}
-            </Card>
           </div>
 
-          {/* Desktop Sidebar (visible on xl+) */}
-          <div className="hidden xl:block xl:col-span-4">
+          {/* Responsive Sidebar */}
+          <div className="xl:col-span-4">
             <div className="sticky top-8 space-y-6">
               {/* Order Summary */}
               <Card header={<h2 className="font-semibold">Order Summary</h2>}>
@@ -1043,6 +997,12 @@ export default function EditOrderPage() {
                       >
                         {submitting ? 'Updating...' : 'Update Order'}
                       </button>
+                      <Link
+                        href={`/client/orders/${orderId}`}
+                        className="w-full bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition text-center block"
+                      >
+                        Cancel
+                      </Link>
                     </div>
                   </>
                 ) : (
