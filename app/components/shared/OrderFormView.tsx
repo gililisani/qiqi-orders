@@ -394,25 +394,39 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
   const getOrderTotals = () => {
     const subtotal = orderItems.reduce((sum, item) => sum + item.total_price, 0);
-    const supportFundEarned = company?.support_fund?.[0]?.percent 
-      ? (subtotal * company.support_fund[0].percent / 100) 
-      : 0;
+    
+    // Only include products that qualify for credit earning
+    const creditEarningItems = orderItems.filter(item => item.product.qualifies_for_credit_earning);
+    const creditEarningSubtotal = creditEarningItems.reduce((sum, item) => sum + item.total_price, 0);
+    
+    // Support fund percent can arrive as array or single
+    const rawSf = company?.support_fund as any;
+    const supportFundPercent = Array.isArray(rawSf)
+      ? (rawSf[0]?.percent || 0)
+      : (rawSf?.percent || 0);
+    const supportFundEarned = creditEarningSubtotal * (supportFundPercent / 100);
     
     return {
       subtotal,
+      supportFundPercent,
       supportFundEarned,
       total: subtotal
     };
   };
 
   const getSupportFundTotals = () => {
-    const supportFundSubtotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
-    const creditUsed = Math.min(supportFundSubtotal, getOrderTotals().supportFundEarned);
+    const subtotal = supportFundItems.reduce((sum, item) => sum + item.total_price, 0);
+    const originalOrderTotals = getOrderTotals();
+    const supportFundEarned = originalOrderTotals.supportFundEarned;
+    const remainingCredit = supportFundEarned - subtotal;
+    const finalTotal = remainingCredit < 0 ? Math.abs(remainingCredit) : 0;
     
     return {
-      supportFundSubtotal,
-      creditUsed,
-      remainingCredit: getOrderTotals().supportFundEarned - creditUsed
+      subtotal,
+      supportFundEarned,
+      remainingCredit,
+      finalTotal,
+      itemCount: supportFundItems.length
     };
   };
 
@@ -481,10 +495,20 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         router.push(`/${role}/orders/${newOrder.id}`);
       } else {
         // Update existing order
+        const originalTotals = getOrderTotals();
+        const supportTotals = getSupportFundTotals();
+        
+        const supportFundUsed = Math.min(supportTotals.subtotal, originalTotals.supportFundEarned);
+        const additionalCost = Math.max(0, supportTotals.subtotal - originalTotals.supportFundEarned);
+        const finalTotal = originalTotals.total + additionalCost;
+
         const { error: updateError } = await supabase
           .from('orders')
           .update({
-            po_number: (order && order.po_number) || null
+            po_number: (order && order.po_number) || null,
+            total_value: finalTotal,
+            support_fund_used: supportFundUsed,
+            credit_earned: originalTotals.supportFundEarned
           })
           .eq('id', orderId);
 
@@ -934,7 +958,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                 <div className="flex justify-between text-sm font-medium pt-2 px-6">
                   <span>Credit Used:</span>
                   <span className="text-green-600">
-                    {formatCurrency(Math.min(supportFundItems.reduce((sum, item) => sum + item.total_price, 0), totals.supportFundEarned))}
+                    {formatCurrency(Math.min(supportFundTotals.subtotal, totals.supportFundEarned))}
                   </span>
                 </div>
               )}
@@ -946,7 +970,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                     <div className="flex justify-between text-sm font-medium text-gray-900">
                       <span>Remaining Credit:</span>
                       <span className="text-green-600">
-                        {formatCurrency(totals.supportFundEarned - supportFundTotals.creditUsed)}
+                        {formatCurrency(supportFundTotals.remainingCredit)}
                       </span>
                     </div>
                   </div>
@@ -967,7 +991,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                 <div className="pt-2 border-t">
                   <div className="flex justify-between text-lg font-semibold text-gray-900">
                     <span>Grand Total:</span>
-                    <span>{formatCurrency(totals.subtotal)}</span>
+                    <span>{formatCurrency(totals.subtotal + supportFundTotals.finalTotal)}</span>
                   </div>
                 </div>
               </div>
