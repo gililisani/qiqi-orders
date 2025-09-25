@@ -939,14 +939,14 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
             <div className="px-6 py-4 border-b border-[#e5e5e5]">
               <h3 className="text-lg font-semibold text-gray-900">Order Summary</h3>
             </div>
-            <div className="px-6 py-4">
+            <div className="px-3 py-3">
               {/* Order Form Products */}
               {orderItems.length > 0 && (
-                <div className="space-y-2 px-6">
+                <div className="space-y-1">
                   {orderItems.map((item) => (
-                    <div key={`order-${item.product_id}`} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                      <div className="flex-1 min-w-0 pr-2">
-                        <div className="text-xs font-medium text-gray-900 truncate leading-tight">{item.product.item_name}</div>
+                    <div key={`order-${item.product_id}`} className="flex items-center justify-between bg-gray-50 p-1 rounded">
+                      <div className="flex-1 min-w-0 pr-1">
+                        <div className="text-xs font-medium text-gray-900 truncate leading-tight">{item.product.sku}</div>
                         <div className="text-xs text-gray-600 leading-tight">
                           {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''}
                         </div>
@@ -959,36 +959,32 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
               {/* Order Form Subtotal */}
               {orderItems.length > 0 && (
-                <div className="px-6">
-                  <div className="pt-2 border-t">
-                    <div className="flex justify-between text-base font-bold text-gray-900">
-                      <span>Subtotal:</span>
-                      <span>{formatCurrency(orderItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
-                    </div>
+                <div className="pt-1 border-t">
+                  <div className="flex justify-between text-sm font-bold text-gray-900">
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(orderItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
                   </div>
                 </div>
               )}
 
               {/* Credit Earned */}
               {orderItems.length > 0 && totals.supportFundEarned > 0 && (
-                <div className="px-6">
-                  <div className="pt-2">
-                    <div className="flex justify-between text-sm font-medium text-green-600">
-                      <span>Credit Earned:</span>
-                      <span>{formatCurrency(totals.supportFundEarned)}</span>
-                    </div>
+                <div className="pt-1">
+                  <div className="flex justify-between text-xs font-medium text-green-600">
+                    <span>Credit Earned:</span>
+                    <span>{formatCurrency(totals.supportFundEarned)}</span>
                   </div>
                 </div>
               )}
 
               {/* Support Fund Products */}
               {supportFundItems.length > 0 && (
-                <div className="space-y-2 px-6 pb-4">
-                  <div className="text-sm font-bold text-gray-700 uppercase tracking-wide mt-4 px-6 pb-2 border-b border-gray-200 mb-4">Support Fund Products</div>
+                <div className="space-y-1 pb-2">
+                  <div className="text-xs font-bold text-gray-700 uppercase tracking-wide mt-2 pb-1 border-b border-gray-200 mb-2">Support Fund Products</div>
                   {supportFundItems.map((item) => (
-                    <div key={`sf-${item.product_id}`} className="flex items-center justify-between bg-green-50 p-2 rounded">
-                      <div className="flex-1 min-w-0 pr-2">
-                        <div className="text-xs font-medium text-green-800 truncate leading-tight">{item.product.item_name}</div>
+                    <div key={`sf-${item.product_id}`} className="flex items-center justify-between bg-green-50 p-1 rounded">
+                      <div className="flex-1 min-w-0 pr-1">
+                        <div className="text-xs font-medium text-green-800 truncate leading-tight">{item.product.sku}</div>
                         <div className="text-xs text-green-600 leading-tight">
                           {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''} (Support Fund)
                         </div>
@@ -1001,19 +997,17 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
               {/* Support Fund Subtotal */}
               {supportFundItems.length > 0 && (
-                <div className="px-6">
-                  <div className="pt-2 border-t border-green-200">
-                    <div className="flex justify-between text-sm font-medium text-green-800">
-                      <span>Subtotal:</span>
-                      <span>{formatCurrency(supportFundItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
-                    </div>
+                <div className="pt-1 border-t border-green-200">
+                  <div className="flex justify-between text-xs font-medium text-green-800">
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(supportFundItems.reduce((sum, item) => sum + item.total_price, 0))}</span>
                   </div>
                 </div>
               )}
 
               {/* Credit Used */}
               {supportFundItems.length > 0 && (
-                <div className="flex justify-between text-sm font-medium pt-2 px-6">
+                <div className="flex justify-between text-xs font-medium pt-1">
                   <span>Credit Used:</span>
                   <span className="text-green-600">
                     {formatCurrency(Math.min(supportFundTotals.subtotal, totals.supportFundEarned))}
@@ -1023,9 +1017,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
               {/* Remaining Credit */}
               {supportFundItems.length > 0 && (
-                <div className="px-6 pb-4">
-                  <div className="pt-2 border-t">
-                    <div className="flex justify-between text-sm font-medium text-gray-900">
+                <div className="pb-2">
+                  <div className="pt-1 border-t">
+                    <div className="flex justify-between text-xs font-medium text-gray-900">
                       <span>Remaining Credit:</span>
                       <span className="text-green-600">
                         {formatCurrency(supportFundTotals.remainingCredit)}
@@ -1037,25 +1031,23 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
               {/* Disclaimer */}
               {supportFundItems.length > 0 && (
-                <div className="px-6 pb-4">
-                  <div className="text-xs text-gray-500 italic pt-2 space-y-1">
+                <div className="pb-2">
+                  <div className="text-xs text-gray-500 italic pt-1">
                     <div>* Negative remaining credit will be added to the grand total</div>
                   </div>
                 </div>
               )}
 
               {/* Grand Total */}
-              <div className="px-6">
-                <div className="pt-2 border-t">
-                  <div className="flex justify-between text-lg font-semibold text-gray-900">
-                    <span>Grand Total:</span>
-                    <span>{formatCurrency(totals.subtotal + supportFundTotals.finalTotal)}</span>
-                  </div>
+              <div className="pt-2 border-t">
+                <div className="flex justify-between text-sm font-semibold text-gray-900">
+                  <span>Grand Total:</span>
+                  <span>{formatCurrency(totals.subtotal + supportFundTotals.finalTotal)}</span>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="px-6 pb-6 pt-4">
+              <div className="pb-3 pt-3">
                 <div className="flex space-x-3">
                   <button
                     onClick={handleSave}
