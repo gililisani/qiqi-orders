@@ -104,7 +104,16 @@ export default function AdminEditOrderPage() {
           .eq('id', orderData.company_id)
           .single();
         if (companyError) throw companyError;
-        setCompany(companyData as Company);
+        // Normalize payload: sometimes relational selects return arrays
+        const normalizedCompany: Company = {
+          id: (companyData as any).id,
+          company_name: (companyData as any).company_name,
+          support_fund: (companyData as any).support_fund,
+          class: Array.isArray((companyData as any).class)
+            ? ((companyData as any).class[0] || null)
+            : ((companyData as any).class || null),
+        };
+        setCompany(normalizedCompany);
       }
 
       const { data: items, error: itemsError } = await supabase
