@@ -758,7 +758,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           <div className="xl:col-span-6">
             <Card>
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full" style={{tableLayout: 'fixed', width: '100%', maxWidth: '100%'}}>
                   <thead>
                     <tr className="border-b border-gray-200">
                       <th className="px-2 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider" style={{width: '40%'}}>Product</th>
@@ -823,9 +823,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                         
                         return (
                           <tr key={product.id} className={`hover:bg-gray-50 border-b border-gray-200 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                            <td className="px-2 py-3 relative overflow-visible" style={{width: '40%'}}>
+                            <td className="px-2 py-3 relative" style={{width: '40%'}}>
                               <div className="flex items-center min-w-0 w-full">
-                                <div className="flex-shrink-0 h-6 w-6 sm:h-8 sm:w-8 rounded overflow-visible">
+                                <div className="flex-shrink-0 h-6 w-6 sm:h-8 sm:w-8 rounded">
                                   {product.picture_url ? (
                                     <img
                                       src={product.picture_url}
@@ -846,8 +846,17 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                                     No Image
                                   </div>
                                 </div>
-                                <div className="flex-1 min-w-0 overflow-hidden ml-2">
-                                  <div className="text-xs sm:text-sm font-medium text-gray-900 truncate w-full">
+                                <div className="flex-1 min-w-0 ml-2" style={{overflow: 'hidden'}}>
+                                  <div 
+                                    className="text-xs sm:text-sm font-medium text-gray-900"
+                                    style={{
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      maxWidth: '100%'
+                                    }}
+                                    title={product.item_name}
+                                  >
                                     {product.item_name}
                                   </div>
                                   {!product.qualifies_for_credit_earning && (
