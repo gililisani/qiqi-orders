@@ -1004,7 +1004,10 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                 <div className="flex items-center justify-between">
                   <nav className="flex space-x-8">
                     <button
-                      onClick={() => setShowSupportFundRedemption(false)}
+                      onClick={() => {
+                        setShowSupportFundRedemption(false);
+                        setExpandedCategories(new Set());
+                      }}
                       className={`py-2 px-1 border-b-2 font-medium text-sm ${
                         !showSupportFundRedemption
                           ? 'border-gray-900 text-gray-900'
@@ -1014,7 +1017,10 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                       Order Form
                     </button>
                     <button
-                      onClick={() => setShowSupportFundRedemption(true)}
+                      onClick={() => {
+                        setShowSupportFundRedemption(true);
+                        setExpandedCategories(new Set());
+                      }}
                       className={`py-2 px-1 border-b-2 font-medium text-sm ${
                         showSupportFundRedemption
                           ? 'border-green-600 text-green-600'
