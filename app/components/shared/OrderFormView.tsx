@@ -7,6 +7,240 @@ import Card from '../ui/Card';
 import Link from 'next/link';
 import Image from 'next/image';
 
+// CategoryAccordion Component
+interface CategoryAccordionProps {
+  categoryGroup: any;
+  categoryId: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+  showSupportFundRedemption: boolean;
+  supportFundItems: any[];
+  orderItems: any[];
+  getProductPrice: (product: any) => number;
+  handleSupportFundItemChange: (productId: number, qty: number) => void;
+  handleCaseQtyChange: (productId: number, qty: number) => void;
+  formatCurrency: (amount: number) => string;
+}
+
+const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
+  categoryGroup,
+  categoryId,
+  isExpanded,
+  onToggle,
+  showSupportFundRedemption,
+  supportFundItems,
+  orderItems,
+  getProductPrice,
+  handleSupportFundItemChange,
+  handleCaseQtyChange,
+  formatCurrency
+}) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  // Handle height animation when expanded state changes
+  useEffect(() => {
+    if (contentRef.current) {
+      if (isExpanded) {
+        contentRef.current.style.maxHeight = contentRef.current.scrollHeight + 'px';
+      } else {
+        contentRef.current.style.maxHeight = '0px';
+      }
+    }
+  }, [isExpanded]);
+  
+  return (
+    <div className="border-b border-slate-200">
+      {/* Category Accordion Header */}
+      <button
+        onClick={onToggle}
+        className="w-full flex justify-between items-center py-5 text-slate-800 hover:bg-gray-50 transition-colors duration-200"
+      >
+        <div className="flex items-center">
+          {categoryGroup.category?.image_url ? (
+            <img
+              src={categoryGroup.category.image_url}
+              alt={categoryGroup.category.name}
+              className="object-contain bg-white mr-3"
+              style={{ 
+                height: '32px',
+                width: 'auto'
+              }}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          ) : null}
+          <span className="text-sm font-semibold">
+            {categoryGroup.category?.name || 'Products without Category'}
+          </span>
+          <span className="ml-2 text-xs text-slate-500">
+            ({categoryGroup.products.length} products)
+          </span>
+        </div>
+        <span className="text-slate-800 transition-transform duration-300">
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            viewBox="0 0 16 16" 
+            fill="currentColor" 
+            className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
+          >
+            <path 
+              fillRule="evenodd" 
+              d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" 
+              clipRule="evenodd" 
+            />
+          </svg>
+        </span>
+      </button>
+      
+      {/* Category Products - Collapsible Content with smooth animation */}
+      <div 
+        ref={contentRef}
+        className="max-h-0 overflow-hidden transition-all duration-300 ease-in-out"
+      >
+        <div className="pb-5">
+          <div className="overflow-x-auto">
+            <table className="w-full" style={{tableLayout: 'fixed', width: '100%', maxWidth: '100%'}}>
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider" style={{width: '50%'}}>Product</th>
+                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider hidden sm:table-cell" style={{width: '12.5%'}}>SKU</th>
+                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '8.3%'}}>Size</th>
+                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '8.3%'}}>Pack</th>
+                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '20%'}}>Price</th>
+                  <th className="px-1 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '15%'}}>Qty</th>
+                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell" style={{width: '8.3%'}}>Units</th>
+                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '15%'}}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {categoryGroup.products.map((product: any) => {
+                  const orderItem = showSupportFundRedemption 
+                    ? supportFundItems.find(item => item.product_id === product.id)
+                    : orderItems.find(item => item.product_id === product.id);
+                  const unitPrice = getProductPrice(product);
+                  
+                  return (
+                    <tr key={product.id} className={`hover:bg-gray-50 border-b border-gray-200 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
+                      <td className="px-2 py-3 relative" style={{width: '50%'}}>
+                        <div className="flex items-center min-w-0 w-full">
+                          <div className="flex-shrink-0 h-6 w-6 sm:h-8 sm:w-8 rounded">
+                            {product.picture_url ? (
+                              <img
+                                src={product.picture_url}
+                                alt={product.item_name}
+                                className="h-6 w-6 sm:h-8 sm:w-8 object-cover cursor-pointer transition-transform duration-200 hover:scale-[3] hover:z-50 hover:relative"
+                                onError={(e) => {
+                                  console.error('Image failed to load:', product.picture_url);
+                                  e.currentTarget.style.display = 'none';
+                                  const noImageDiv = e.currentTarget.nextElementSibling as HTMLElement;
+                                  if (noImageDiv) noImageDiv.style.display = 'flex';
+                                }}
+                              />
+                            ) : null}
+                            <div 
+                              className="h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center text-gray-400 text-xs"
+                              style={{display: product.picture_url ? 'none' : 'flex'}}
+                            >
+                              No Image
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0 ml-2" style={{overflow: 'hidden'}}>
+                            <div 
+                              className="text-xs sm:text-sm font-medium text-gray-900"
+                              style={{
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                maxWidth: '100%'
+                              }}
+                              title={product.item_name}
+                            >
+                              {product.item_name}
+                            </div>
+                            {!product.qualifies_for_credit_earning && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
+                                Not Eligible for Credit
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-2 py-3 text-center text-xs text-gray-600 break-all hidden sm:table-cell" style={{width: '12.5%'}}>
+                        {product.sku}
+                      </td>
+                      <td className="px-2 py-3 text-center text-xs text-gray-600 hidden xl:table-cell" style={{width: '8.3%'}}>
+                        {product.size}
+                      </td>
+                      <td className="px-2 py-3 text-center text-xs text-gray-600 hidden xl:table-cell" style={{width: '8.3%'}}>
+                        {product.case_pack}
+                      </td>
+                      <td className="px-2 py-3 text-center text-xs font-medium text-gray-900" style={{width: '20%'}}>
+                        {formatCurrency(unitPrice)}
+                      </td>
+                      <td className="px-1 py-3 text-center" style={{width: '15%'}}>
+                        <div className="flex items-center justify-center space-x-1">
+                          <button
+                            onClick={() => {
+                              const currentQty = orderItem?.case_qty || 0;
+                              const newQty = Math.max(0, currentQty - 1);
+                              if (showSupportFundRedemption) {
+                                handleSupportFundItemChange(product.id, newQty);
+                              } else {
+                                handleCaseQtyChange(product.id, newQty);
+                              }
+                            }}
+                            className="w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800 text-xs"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="text"
+                            value={orderItem?.case_qty || 0}
+                            onChange={(e) => {
+                              const newQty = Math.max(0, parseInt(e.target.value) || 0);
+                              if (showSupportFundRedemption) {
+                                handleSupportFundItemChange(product.id, newQty);
+                              } else {
+                                handleCaseQtyChange(product.id, newQty);
+                              }
+                            }}
+                            className="w-8 h-4 text-center text-xs font-medium text-gray-900 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                          <button
+                            onClick={() => {
+                              const currentQty = orderItem?.case_qty || 0;
+                              const newQty = currentQty + 1;
+                              if (showSupportFundRedemption) {
+                                handleSupportFundItemChange(product.id, newQty);
+                              } else {
+                                handleCaseQtyChange(product.id, newQty);
+                              }
+                            }}
+                            className="w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800 text-xs"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-2 py-3 text-center text-xs text-gray-600 hidden sm:table-cell" style={{width: '8.3%'}}>
+                        {orderItem ? orderItem.total_units : 0}
+                      </td>
+                      <td className="px-2 py-3 text-center text-xs font-medium text-gray-900" style={{width: '15%'}}>
+                        {orderItem ? formatCurrency(orderItem.total_price) : '$0.00'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface Category {
   id: number;
   name: string;
@@ -781,209 +1015,22 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                   return categorizedProducts.map((categoryGroup, categoryIndex) => {
                     const categoryId = categoryGroup.category?.id || 0;
                     const isExpanded = expandedCategories.has(categoryId);
-                    const contentRef = useRef<HTMLDivElement>(null);
-                    
-                    // Handle height animation when expanded state changes
-                    useEffect(() => {
-                      if (contentRef.current) {
-                        if (isExpanded) {
-                          contentRef.current.style.maxHeight = contentRef.current.scrollHeight + 'px';
-                        } else {
-                          contentRef.current.style.maxHeight = '0px';
-                        }
-                      }
-                    }, [isExpanded]);
                     
                     return (
-                      <div key={categoryGroup.category?.id || 'no-category'} className="border-b border-slate-200">
-                        {/* Category Accordion Header */}
-                        <button
-                          onClick={() => toggleCategory(categoryId)}
-                          className="w-full flex justify-between items-center py-5 text-slate-800 hover:bg-gray-50 transition-colors duration-200"
-                        >
-                          <div className="flex items-center">
-                            {categoryGroup.category?.image_url ? (
-                              <img
-                                src={categoryGroup.category.image_url}
-                                alt={categoryGroup.category.name}
-                                className="object-contain bg-white mr-3"
-                                style={{ 
-                                  height: '32px',
-                                  width: 'auto'
-                                }}
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                }}
-                              />
-                            ) : null}
-                            <span className="text-sm font-semibold">
-                              {categoryGroup.category?.name || 'Products without Category'}
-                            </span>
-                            <span className="ml-2 text-xs text-slate-500">
-                              ({categoryGroup.products.length} products)
-                            </span>
-                          </div>
-                          <span className="text-slate-800 transition-transform duration-300">
-                            <svg 
-                              xmlns="http://www.w3.org/2000/svg" 
-                              viewBox="0 0 16 16" 
-                              fill="currentColor" 
-                              className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
-                            >
-                              <path 
-                                fillRule="evenodd" 
-                                d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" 
-                                clipRule="evenodd" 
-                              />
-                            </svg>
-                          </span>
-                        </button>
-                        
-                        {/* Category Products - Collapsible Content with smooth animation */}
-                        <div 
-                          ref={contentRef}
-                          className="max-h-0 overflow-hidden transition-all duration-300 ease-in-out"
-                        >
-                          <div className="pb-5">
-                            <div className="overflow-x-auto">
-                              <table className="w-full" style={{tableLayout: 'fixed', width: '100%', maxWidth: '100%'}}>
-                                <thead>
-                                  <tr className="border-b border-gray-200 bg-gray-50">
-                                    <th className="px-2 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider" style={{width: '50%'}}>Product</th>
-                                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider hidden sm:table-cell" style={{width: '12.5%'}}>SKU</th>
-                                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '8.3%'}}>Size</th>
-                                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '8.3%'}}>Pack</th>
-                                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '20%'}}>Price</th>
-                                    <th className="px-1 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '15%'}}>Qty</th>
-                                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell" style={{width: '8.3%'}}>Units</th>
-                                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '15%'}}>Total</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {categoryGroup.products.map((product) => {
-                                    const orderItem = showSupportFundRedemption 
-                                      ? supportFundItems.find(item => item.product_id === product.id)
-                                      : orderItems.find(item => item.product_id === product.id);
-                                    const unitPrice = getProductPrice(product);
-                                    
-                                    return (
-                                      <tr key={product.id} className={`hover:bg-gray-50 border-b border-gray-200 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                                        <td className="px-2 py-3 relative" style={{width: '50%'}}>
-                                          <div className="flex items-center min-w-0 w-full">
-                                            <div className="flex-shrink-0 h-6 w-6 sm:h-8 sm:w-8 rounded">
-                                              {product.picture_url ? (
-                                                <img
-                                                  src={product.picture_url}
-                                                  alt={product.item_name}
-                                                  className="h-6 w-6 sm:h-8 sm:w-8 object-cover cursor-pointer transition-transform duration-200 hover:scale-[3] hover:z-50 hover:relative"
-                                                  onError={(e) => {
-                                                    console.error('Image failed to load:', product.picture_url);
-                                                    e.currentTarget.style.display = 'none';
-                                                    const noImageDiv = e.currentTarget.nextElementSibling as HTMLElement;
-                                                    if (noImageDiv) noImageDiv.style.display = 'flex';
-                                                  }}
-                                                />
-                                              ) : null}
-                                              <div 
-                                                className="h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center text-gray-400 text-xs"
-                                                style={{display: product.picture_url ? 'none' : 'flex'}}
-                                              >
-                                                No Image
-                                              </div>
-                                            </div>
-                                            <div className="flex-1 min-w-0 ml-2" style={{overflow: 'hidden'}}>
-                                              <div 
-                                                className="text-xs sm:text-sm font-medium text-gray-900"
-                                                style={{
-                                                  whiteSpace: 'nowrap',
-                                                  overflow: 'hidden',
-                                                  textOverflow: 'ellipsis',
-                                                  maxWidth: '100%'
-                                                }}
-                                                title={product.item_name}
-                                              >
-                                                {product.item_name}
-                                              </div>
-                                              {!product.qualifies_for_credit_earning && (
-                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
-                                                  Not Eligible for Credit
-                                                </span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </td>
-                                        <td className="px-2 py-3 text-center text-xs text-gray-600 break-all hidden sm:table-cell" style={{width: '12.5%'}}>
-                                          {product.sku}
-                                        </td>
-                                        <td className="px-2 py-3 text-center text-xs text-gray-600 hidden xl:table-cell" style={{width: '8.3%'}}>
-                                          {product.size}
-                                        </td>
-                                        <td className="px-2 py-3 text-center text-xs text-gray-600 hidden xl:table-cell" style={{width: '8.3%'}}>
-                                          {product.case_pack}
-                                        </td>
-                                        <td className="px-2 py-3 text-center text-xs font-medium text-gray-900" style={{width: '20%'}}>
-                                          {formatCurrency(unitPrice)}
-                                        </td>
-                                        <td className="px-1 py-3 text-center" style={{width: '15%'}}>
-                                          <div className="flex items-center justify-center space-x-1">
-                                            <button
-                                              onClick={() => {
-                                                const currentQty = orderItem?.case_qty || 0;
-                                                const newQty = Math.max(0, currentQty - 1);
-                                                if (showSupportFundRedemption) {
-                                                  handleSupportFundItemChange(product.id, newQty);
-                                                } else {
-                                                  handleCaseQtyChange(product.id, newQty);
-                                                }
-                                              }}
-                                              className="w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800 text-xs"
-                                            >
-                                              -
-                                            </button>
-                                            <input
-                                              type="text"
-                                              value={orderItem?.case_qty || 0}
-                                              onChange={(e) => {
-                                                const newQty = Math.max(0, parseInt(e.target.value) || 0);
-                                                if (showSupportFundRedemption) {
-                                                  handleSupportFundItemChange(product.id, newQty);
-                                                } else {
-                                                  handleCaseQtyChange(product.id, newQty);
-                                                }
-                                              }}
-                                              className="w-8 h-4 text-center text-xs font-medium text-gray-900 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                            />
-                                            <button
-                                              onClick={() => {
-                                                const currentQty = orderItem?.case_qty || 0;
-                                                const newQty = currentQty + 1;
-                                                if (showSupportFundRedemption) {
-                                                  handleSupportFundItemChange(product.id, newQty);
-                                                } else {
-                                                  handleCaseQtyChange(product.id, newQty);
-                                                }
-                                              }}
-                                              className="w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800 text-xs"
-                                            >
-                                              +
-                                            </button>
-                                          </div>
-                                        </td>
-                                        <td className="px-2 py-3 text-center text-xs text-gray-600 hidden sm:table-cell" style={{width: '8.3%'}}>
-                                          {orderItem ? orderItem.total_units : 0}
-                                        </td>
-                                        <td className="px-2 py-3 text-center text-xs font-medium text-gray-900" style={{width: '15%'}}>
-                                          {orderItem ? formatCurrency(orderItem.total_price) : '$0.00'}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      <CategoryAccordion
+                        key={categoryGroup.category?.id || 'no-category'}
+                        categoryGroup={categoryGroup}
+                        categoryId={categoryId}
+                        isExpanded={isExpanded}
+                        onToggle={() => toggleCategory(categoryId)}
+                        showSupportFundRedemption={showSupportFundRedemption}
+                        supportFundItems={supportFundItems}
+                        orderItems={orderItems}
+                        getProductPrice={getProductPrice}
+                        handleSupportFundItemChange={handleSupportFundItemChange}
+                        handleCaseQtyChange={handleCaseQtyChange}
+                        formatCurrency={formatCurrency}
+                      />
                     );
                   });
                 })()}
