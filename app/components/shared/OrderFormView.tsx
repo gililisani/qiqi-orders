@@ -752,7 +752,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                   )}
                 </div>
               </div>
-              <div className={`overflow-x-auto ${showSupportFundRedemption ? 'bg-green-50' : 'bg-blue-50'}`}>
+              <div className="overflow-x-auto">
                 <table className="w-full" style={{tableLayout: 'fixed', width: '100%', maxWidth: '100%'}}>
                   <thead>
                     <tr className="border-b border-gray-200">
