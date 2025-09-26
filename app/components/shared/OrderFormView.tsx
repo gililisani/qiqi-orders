@@ -761,14 +761,14 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                 <table className="w-full" style={{tableLayout: 'fixed', width: '100%', maxWidth: '100%'}}>
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="px-2 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider" style={{width: '40%'}}>Product</th>
+                      <th className="px-2 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider" style={{width: '50%'}}>Product</th>
                       <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider hidden sm:table-cell" style={{width: '12.5%'}}>SKU</th>
                       <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '8.3%'}}>Size</th>
                       <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '8.3%'}}>Pack</th>
-                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '12.5%'}}>Price</th>
-                      <th className="px-1 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '8.3%'}}>Qty</th>
+                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '20%'}}>Price</th>
+                      <th className="px-1 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '15%'}}>Qty</th>
                       <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell" style={{width: '8.3%'}}>Units</th>
-                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '12.5%'}}>Total</th>
+                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '15%'}}>Total</th>
                     </tr>
                   </thead>
               <tbody>
@@ -823,7 +823,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                         
                         return (
                           <tr key={product.id} className={`hover:bg-gray-50 border-b border-gray-200 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                            <td className="px-2 py-3 relative" style={{width: '40%'}}>
+                            <td className="px-2 py-3 relative" style={{width: '50%'}}>
                               <div className="flex items-center min-w-0 w-full">
                                 <div className="flex-shrink-0 h-6 w-6 sm:h-8 sm:w-8 rounded">
                                   {product.picture_url ? (
@@ -876,10 +876,10 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                             <td className="px-2 py-3 text-center text-xs text-gray-600 hidden xl:table-cell" style={{width: '8.3%'}}>
                               {product.case_pack}
                             </td>
-                            <td className="px-2 py-3 text-center text-xs font-medium text-gray-900" style={{width: '12.5%'}}>
+                            <td className="px-2 py-3 text-center text-xs font-medium text-gray-900" style={{width: '20%'}}>
                               {formatCurrency(unitPrice)}
                             </td>
-                            <td className="px-1 py-3 text-center" style={{width: '8.3%'}}>
+                            <td className="px-1 py-3 text-center" style={{width: '15%'}}>
                               <div className="flex items-center justify-center space-x-1">
                                 <button
                                   onClick={() => {
@@ -927,7 +927,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                             <td className="px-2 py-3 text-center text-xs text-gray-600 hidden sm:table-cell" style={{width: '8.3%'}}>
                               {orderItem ? orderItem.total_units : 0}
                             </td>
-                            <td className="px-2 py-3 text-center text-xs font-medium text-gray-900" style={{width: '12.5%'}}>
+                            <td className="px-2 py-3 text-center text-xs font-medium text-gray-900" style={{width: '15%'}}>
                               {orderItem ? formatCurrency(orderItem.total_price) : '$0.00'}
                             </td>
                           </tr>
