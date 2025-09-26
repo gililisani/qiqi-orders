@@ -499,6 +499,19 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       } : null
     })));
     
+    // Debug: Log unique categories with their image URLs
+    const uniqueCategories = new Map();
+    productsData?.forEach(p => {
+      if (p.category && !uniqueCategories.has(p.category.id)) {
+        uniqueCategories.set(p.category.id, {
+          id: p.category.id,
+          name: p.category.name,
+          image_url: p.category.image_url
+        });
+      }
+    });
+    console.log('Unique categories found:', Array.from(uniqueCategories.values()));
+    
     setProducts(productsData || []);
     setLoading(false);
   };
@@ -658,6 +671,13 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       } : null,
       productCount: r.products.length
     })));
+    
+    // Debug: Log each category's image URL specifically
+    result.forEach((r, index) => {
+      if (r.category) {
+        console.log(`Category ${index + 1}: ${r.category.name} - Image URL: "${r.category.image_url}"`);
+      }
+    });
     
     return result;
   };
