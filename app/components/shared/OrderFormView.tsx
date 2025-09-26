@@ -999,7 +999,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                   )}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div>
                 {(() => {
                   const productsToShow = showSupportFundRedemption 
                     ? products.filter(p => p.list_in_support_funds)
