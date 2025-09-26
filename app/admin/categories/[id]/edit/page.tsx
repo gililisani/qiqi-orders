@@ -66,17 +66,21 @@ export default function EditCategoryPage() {
     setError('');
 
     try {
+      console.log('Form data before submit:', formData);
+      const updateData = {
+        name: formData.name,
+        description: formData.description || null,
+        sort_order: formData.sort_order ? parseInt(formData.sort_order) : 0,
+        visible_to_americas: formData.visible_to_americas,
+        visible_to_international: formData.visible_to_international,
+        image_url: formData.image_url || null,
+        updated_at: new Date().toISOString()
+      };
+      console.log('Update data:', updateData);
+      
       const { error } = await supabase
         .from('categories')
-        .update({
-          name: formData.name,
-          description: formData.description || null,
-          sort_order: formData.sort_order ? parseInt(formData.sort_order) : 0,
-          visible_to_americas: formData.visible_to_americas,
-          visible_to_international: formData.visible_to_international,
-          image_url: formData.image_url || null,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', params.id);
 
       if (error) throw error;
@@ -182,7 +186,14 @@ export default function EditCategoryPage() {
 
             <div>
               <CategoryImageUpload
-                onImageUploaded={(url) => setFormData(prev => ({ ...prev, image_url: url }))}
+                onImageUploaded={(url) => {
+                  console.log('Image uploaded/removed, new URL:', url);
+                  setFormData(prev => {
+                    const newData = { ...prev, image_url: url };
+                    console.log('Updated form data:', newData);
+                    return newData;
+                  });
+                }}
                 currentImageUrl={formData.image_url}
               />
             </div>
