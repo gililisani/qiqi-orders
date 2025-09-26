@@ -343,19 +343,19 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     });
   };
 
-  const scrollToProduct = (productId: string) => {
+  const scrollToProduct = (productId: string, isSupportFundProduct: boolean = false) => {
+    // Switch to the correct tab first
+    if (isSupportFundProduct && !showSupportFundRedemption) {
+      setShowSupportFundRedemption(true);
+    } else if (!isSupportFundProduct && showSupportFundRedemption) {
+      setShowSupportFundRedemption(false);
+    }
+    
     // Find the category that contains this product
     const categoryGroups = getProductsByCategory();
     for (const categoryGroup of categoryGroups) {
       const product = categoryGroup.products.find(p => p.id === parseInt(productId));
       if (product) {
-        // Switch to the correct tab if needed
-        if (product.list_in_support_funds && !showSupportFundRedemption) {
-          setShowSupportFundRedemption(true);
-        } else if (!product.list_in_support_funds && showSupportFundRedemption) {
-          setShowSupportFundRedemption(false);
-        }
-        
         // Open the accordion and scroll to it
         const categoryId = categoryGroup.category?.id || 0;
         setExpandedCategories(new Set([categoryId]));
@@ -1120,7 +1120,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                       <div className="flex-1 min-w-0 pr-1">
                         <div 
                           className="text-xs font-medium text-gray-900 truncate leading-tight cursor-pointer hover:text-blue-600 hover:underline"
-                          onClick={() => scrollToProduct(item.product_id.toString())}
+                          onClick={() => scrollToProduct(item.product_id.toString(), false)}
                           title="Click to locate this product"
                         >
                           {item.product.sku}
@@ -1164,7 +1164,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                       <div className="flex-1 min-w-0 pr-1">
                         <div 
                           className="text-xs font-medium text-green-800 truncate leading-tight cursor-pointer hover:text-blue-600 hover:underline"
-                          onClick={() => scrollToProduct(item.product_id.toString())}
+                          onClick={() => scrollToProduct(item.product_id.toString(), true)}
                           title="Click to locate this product"
                         >
                           {item.product.sku}
