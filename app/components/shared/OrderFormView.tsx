@@ -60,7 +60,7 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
             <img
               src={`${categoryGroup.category.image_url}?t=${Date.now()}`}
               alt={categoryGroup.category.name}
-              className="object-contain bg-white mr-3"
+              className="object-contain mr-3"
               style={{ 
                 height: '32px',
                 width: 'auto'
