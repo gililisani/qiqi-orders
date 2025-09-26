@@ -77,6 +77,7 @@ export default function EditCategoryPage() {
         updated_at: new Date().toISOString()
       };
       console.log('Update data being sent to database:', updateData);
+      console.log('Updating category with ID:', params.id);
       
       const { error } = await supabase
         .from('categories')
@@ -86,6 +87,20 @@ export default function EditCategoryPage() {
       if (error) throw error;
 
       console.log('Database update successful');
+      
+      // Verify the update by fetching the category again
+      const { data: updatedCategory, error: fetchError } = await supabase
+        .from('categories')
+        .select('id, name, image_url')
+        .eq('id', params.id)
+        .single();
+      
+      if (fetchError) {
+        console.error('Error fetching updated category:', fetchError);
+      } else {
+        console.log('Updated category data:', updatedCategory);
+      }
+      
       router.push('/admin/categories');
     } catch (err: any) {
       console.error('Database update error:', err);
