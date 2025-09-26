@@ -783,11 +783,11 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                     const isExpanded = expandedCategories.has(categoryId);
                     
                     return (
-                      <div key={categoryGroup.category?.id || 'no-category'} className="border border-gray-200 rounded-lg">
+                      <div key={categoryGroup.category?.id || 'no-category'} className="border-b border-slate-200">
                         {/* Category Accordion Header */}
                         <button
                           onClick={() => toggleCategory(categoryId)}
-                          className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors duration-200"
+                          className="w-full flex justify-between items-center py-5 text-slate-800 hover:bg-gray-50 transition-colors duration-200"
                         >
                           <div className="flex items-center">
                             {categoryGroup.category?.image_url ? (
@@ -804,30 +804,39 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                                 }}
                               />
                             ) : null}
-                            <h3 className="text-sm font-semibold text-gray-900">
+                            <span className="text-sm font-semibold">
                               {categoryGroup.category?.name || 'Products without Category'}
-                            </h3>
-                            <span className="ml-2 text-xs text-gray-500">
+                            </span>
+                            <span className="ml-2 text-xs text-slate-500">
                               ({categoryGroup.products.length} products)
                             </span>
                           </div>
-                          <div className="flex items-center">
-                            <svg
-                              className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
-                                isExpanded ? 'rotate-180' : ''
-                              }`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                          <span className="text-slate-800 transition-transform duration-300">
+                            <svg 
+                              xmlns="http://www.w3.org/2000/svg" 
+                              viewBox="0 0 16 16" 
+                              fill="currentColor" 
+                              className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
                             >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              <path 
+                                fillRule="evenodd" 
+                                d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" 
+                                clipRule="evenodd" 
+                              />
                             </svg>
-                          </div>
+                          </span>
                         </button>
                         
-                        {/* Category Products - Collapsible Content */}
-                        {isExpanded && (
-                          <div className="border-t border-gray-200">
+                        {/* Category Products - Collapsible Content with smooth animation */}
+                        <div 
+                          className={`max-h-0 overflow-hidden transition-all duration-300 ease-in-out ${
+                            isExpanded ? 'max-h-[2000px]' : ''
+                          }`}
+                          style={{
+                            maxHeight: isExpanded ? 'none' : '0px'
+                          }}
+                        >
+                          <div className="pb-5">
                             <div className="overflow-x-auto">
                               <table className="w-full" style={{tableLayout: 'fixed', width: '100%', maxWidth: '100%'}}>
                                 <thead>
@@ -965,7 +974,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                               </table>
                             </div>
                           </div>
-                        )}
+                        </div>
                       </div>
                     );
                   });
