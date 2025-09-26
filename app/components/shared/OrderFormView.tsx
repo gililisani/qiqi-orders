@@ -49,7 +49,7 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
   }, [isExpanded]);
   
   return (
-    <div>
+    <div id={`accordion-${categoryId}`}>
       {/* Category Accordion Header */}
       <button
         onClick={onToggle}
@@ -341,6 +341,35 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       }
       return newSet;
     });
+  };
+
+  const scrollToProduct = (productId: string) => {
+    // Find the category that contains this product
+    const categoryGroups = getProductsByCategory();
+    for (const categoryGroup of categoryGroups) {
+      const product = categoryGroup.products.find(p => p.id === productId);
+      if (product) {
+        // Switch to the correct tab if needed
+        if (product.list_in_support_funds && !showSupportFundRedemption) {
+          setShowSupportFundRedemption(true);
+        } else if (!product.list_in_support_funds && showSupportFundRedemption) {
+          setShowSupportFundRedemption(false);
+        }
+        
+        // Open the accordion and scroll to it
+        const categoryId = categoryGroup.category?.id || 0;
+        setExpandedCategories(new Set([categoryId]));
+        
+        // Scroll to the accordion after a short delay to ensure it's rendered
+        setTimeout(() => {
+          const accordionElement = document.getElementById(`accordion-${categoryId}`);
+          if (accordionElement) {
+            accordionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
+        break;
+      }
+    }
   };
 
   useEffect(() => {
@@ -1089,7 +1118,13 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                   {orderItems.map((item) => (
                     <div key={`order-${item.product_id}`} className="flex items-center justify-between bg-gray-50 p-1 rounded">
                       <div className="flex-1 min-w-0 pr-1">
-                        <div className="text-xs font-medium text-gray-900 truncate leading-tight">{item.product.sku}</div>
+                        <div 
+                          className="text-xs font-medium text-gray-900 truncate leading-tight cursor-pointer hover:text-blue-600 hover:underline"
+                          onClick={() => scrollToProduct(item.product_id)}
+                          title="Click to locate this product"
+                        >
+                          {item.product.sku}
+                        </div>
                         <div className="text-xs text-gray-600 leading-tight">
                           {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''}
                         </div>
@@ -1127,7 +1162,13 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                   {supportFundItems.map((item) => (
                     <div key={`sf-${item.product_id}`} className="flex items-center justify-between bg-green-50 p-1 rounded">
                       <div className="flex-1 min-w-0 pr-1">
-                        <div className="text-xs font-medium text-green-800 truncate leading-tight">{item.product.sku}</div>
+                        <div 
+                          className="text-xs font-medium text-green-800 truncate leading-tight cursor-pointer hover:text-blue-600 hover:underline"
+                          onClick={() => scrollToProduct(item.product_id)}
+                          title="Click to locate this product"
+                        >
+                          {item.product.sku}
+                        </div>
                         <div className="text-xs text-green-600 leading-tight">
                           {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''} (Support Fund)
                         </div>
