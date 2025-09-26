@@ -116,11 +116,17 @@ export default function CategoriesPage() {
                   <tr key={category.id} className="hover:bg-gray-50 border-b border-[#e5e5e5]">
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{category.sort_order}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <img
-                        src={category.image_url || '/logo.png'}
-                        alt={category.name}
-                        className="h-12 w-12 rounded object-cover border border-[#e5e5e5]"
-                      />
+                      {category.image_url ? (
+                        <img
+                          src={category.image_url}
+                          alt={category.name}
+                          className="h-12 w-12 rounded object-cover border border-[#e5e5e5]"
+                        />
+                      ) : (
+                        <div className="h-12 w-12 rounded border border-[#e5e5e5] flex items-center justify-center text-gray-400 text-xs">
+                          No Image
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex flex-col">
