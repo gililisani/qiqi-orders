@@ -58,7 +58,7 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
         <div className="flex items-center">
           {categoryGroup.category?.image_url ? (
             <img
-              src={categoryGroup.category.image_url}
+              src={`${categoryGroup.category.image_url}?t=${Date.now()}`}
               alt={categoryGroup.category.name}
               className="object-contain bg-white mr-3"
               style={{ 
@@ -352,6 +352,24 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       }
     }
   }, [orderId, role]);
+
+  // Force refresh category data when component mounts to get latest images
+  useEffect(() => {
+    const refreshCategoryData = async () => {
+      if (products.length > 0) {
+        // Re-fetch products to get latest category data
+        if (role === 'client' && company) {
+          await fetchProductsForCompany(company);
+        } else if (role === 'admin' && company) {
+          await fetchProductsForCompany(company);
+        }
+      }
+    };
+
+    // Small delay to ensure initial data is loaded
+    const timer = setTimeout(refreshCategoryData, 1000);
+    return () => clearTimeout(timer);
+  }, [products.length, role, company]);
 
   const fetchOrder = async () => {
     try {
