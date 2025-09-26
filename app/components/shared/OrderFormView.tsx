@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import Card from '../ui/Card';
@@ -781,6 +781,18 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                   return categorizedProducts.map((categoryGroup, categoryIndex) => {
                     const categoryId = categoryGroup.category?.id || 0;
                     const isExpanded = expandedCategories.has(categoryId);
+                    const contentRef = useRef<HTMLDivElement>(null);
+                    
+                    // Handle height animation when expanded state changes
+                    useEffect(() => {
+                      if (contentRef.current) {
+                        if (isExpanded) {
+                          contentRef.current.style.maxHeight = contentRef.current.scrollHeight + 'px';
+                        } else {
+                          contentRef.current.style.maxHeight = '0px';
+                        }
+                      }
+                    }, [isExpanded]);
                     
                     return (
                       <div key={categoryGroup.category?.id || 'no-category'} className="border-b border-slate-200">
@@ -829,12 +841,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                         
                         {/* Category Products - Collapsible Content with smooth animation */}
                         <div 
-                          className={`max-h-0 overflow-hidden transition-all duration-300 ease-in-out ${
-                            isExpanded ? 'max-h-[2000px]' : ''
-                          }`}
-                          style={{
-                            maxHeight: isExpanded ? 'none' : '0px'
-                          }}
+                          ref={contentRef}
+                          className="max-h-0 overflow-hidden transition-all duration-300 ease-in-out"
                         >
                           <div className="pb-5">
                             <div className="overflow-x-auto">
