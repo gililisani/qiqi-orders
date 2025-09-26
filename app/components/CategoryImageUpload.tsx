@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
 interface CategoryImageUploadProps {
@@ -13,6 +13,11 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Update preview URL when currentImageUrl prop changes
+  useEffect(() => {
+    setPreviewUrl(currentImageUrl || null);
+  }, [currentImageUrl]);
 
   const resizeImage = (file: File): Promise<File> => {
     return new Promise((resolve) => {
@@ -151,6 +156,8 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
   };
 
   const handleRemoveImage = async () => {
+    console.log('handleRemoveImage called, previewUrl:', previewUrl);
+    
     if (previewUrl && previewUrl.includes('category-images')) {
       // Extract file path from URL to delete from storage
       try {
@@ -158,14 +165,17 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
         const fileName = urlParts[urlParts.length - 1];
         const filePath = fileName;
         
+        console.log('Deleting file from storage:', filePath);
         await supabase.storage
           .from('category-images')
           .remove([filePath]);
+        console.log('File deleted successfully');
       } catch (error) {
         console.error('Error deleting old image:', error);
       }
     }
     
+    console.log('Setting previewUrl to null and calling onImageUploaded with empty string');
     setPreviewUrl(null);
     onImageUploaded('');
     if (fileInputRef.current) {
