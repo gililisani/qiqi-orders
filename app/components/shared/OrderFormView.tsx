@@ -56,7 +56,7 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
         className="w-full flex justify-between items-center py-5 px-6 text-slate-800 hover:bg-gray-50 transition-colors duration-200 border-b border-slate-200"
       >
         <div className="flex items-center">
-          {categoryGroup.category?.image_url ? (
+          {categoryGroup.category?.image_url && categoryGroup.category.image_url !== 'null' ? (
             <img
               src={`${categoryGroup.category.image_url}?t=${Date.now()}`}
               alt={categoryGroup.category.name}
@@ -66,6 +66,7 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
                 width: 'auto'
               }}
               onError={(e) => {
+                console.error('Image failed to load:', categoryGroup.category.image_url);
                 e.currentTarget.style.display = 'none';
               }}
             />
@@ -489,28 +490,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
     if (productsError) throw productsError;
     
-    // Debug: Log category data
-    console.log('Products with categories:', productsData?.map(p => ({
-      name: p.item_name,
-      category: p.category ? {
-        id: p.category.id,
-        name: p.category.name,
-        image_url: p.category.image_url
-      } : null
-    })));
-    
-    // Debug: Log unique categories with their image URLs
-    const uniqueCategories = new Map();
-    productsData?.forEach(p => {
-      if (p.category && !uniqueCategories.has(p.category.id)) {
-        uniqueCategories.set(p.category.id, {
-          id: p.category.id,
-          name: p.category.name,
-          image_url: p.category.image_url
-        });
-      }
-    });
-    console.log('Unique categories found:', Array.from(uniqueCategories.values()));
     
     setProducts(productsData || []);
     setLoading(false);
@@ -604,15 +583,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const getProductsByCategory = () => {
     const categorized: { [key: string]: { category: Category | null, products: Product[] } } = {};
     
-    // Debug: Log products and their categories
-    console.log('getProductsByCategory - products:', products.map(p => ({
-      name: p.item_name,
-      category: p.category ? {
-        id: p.category.id,
-        name: p.category.name,
-        image_url: p.category.image_url
-      } : null
-    })));
     
     // First, get all visible categories for this client
     const isInternational = company?.class?.name?.includes('International') || false;
@@ -662,22 +632,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       })
       .map(([, data]) => data);
     
-    // Debug: Log final categorized result
-    console.log('getProductsByCategory - result:', result.map(r => ({
-      category: r.category ? {
-        id: r.category.id,
-        name: r.category.name,
-        image_url: r.category.image_url
-      } : null,
-      productCount: r.products.length
-    })));
-    
-    // Debug: Log each category's image URL specifically
-    result.forEach((r, index) => {
-      if (r.category) {
-        console.log(`Category ${index + 1}: ${r.category.name} - Image URL: "${r.category.image_url}"`);
-      }
-    });
     
     return result;
   };
