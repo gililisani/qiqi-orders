@@ -699,64 +699,59 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         </Card>
       )}
 
-      {/* Tab Navigation */}
-      {company && (
-        <Card>
-          <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
-              <nav className="flex space-x-8">
-                <button
-                  onClick={() => setShowSupportFundRedemption(false)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    !showSupportFundRedemption
-                      ? 'border-gray-900 text-gray-900'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  Order Form
-                </button>
-                <button
-                  onClick={() => setShowSupportFundRedemption(true)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    showSupportFundRedemption
-                      ? 'border-green-600 text-green-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  Distributor Support Funds
-                  <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    {formatCurrency(totals.supportFundEarned)} available
-                  </span>
-                </button>
-              </nav>
-              
-              {/* PO Number input for New Orders */}
-              {isNewMode && (
-                <div className="flex items-center space-x-3">
-                  <label htmlFor="po-number" className="text-sm font-medium text-gray-700">
-                    PO Number:
-                  </label>
-                  <input
-                    type="text"
-                    id="po-number"
-                    value={(order && order.po_number) || ''}
-                    onChange={(e) => setOrder(prev => prev ? { ...prev, po_number: e.target.value } : { id: '', po_number: e.target.value, status: 'Open', company_id: '' })}
-                    className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Optional"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        </Card>
-      )}
-
       {/* Products Table and Order Summary Layout */}
       {company && products.length > 0 && (
         <div className="grid grid-cols-1 xl:grid-cols-8 gap-6">
           {/* Products Table - Takes up 6 columns on xl, full width on smaller screens */}
           <div className="xl:col-span-6">
             <Card>
+              {/* Tab Navigation - Now integrated with the table */}
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <nav className="flex space-x-8">
+                    <button
+                      onClick={() => setShowSupportFundRedemption(false)}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        !showSupportFundRedemption
+                          ? 'border-gray-900 text-gray-900'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Order Form
+                    </button>
+                    <button
+                      onClick={() => setShowSupportFundRedemption(true)}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        showSupportFundRedemption
+                          ? 'border-green-600 text-green-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Distributor Support Funds
+                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {formatCurrency(totals.supportFundEarned)} available
+                      </span>
+                    </button>
+                  </nav>
+                  
+                  {/* PO Number input for New Orders */}
+                  {isNewMode && (
+                    <div className="flex items-center space-x-3">
+                      <label htmlFor="po-number" className="text-sm font-medium text-gray-700">
+                        PO Number:
+                      </label>
+                      <input
+                        type="text"
+                        id="po-number"
+                        value={(order && order.po_number) || ''}
+                        onChange={(e) => setOrder(prev => prev ? { ...prev, po_number: e.target.value } : { id: '', po_number: e.target.value, status: 'Open', company_id: '' })}
+                        className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Optional"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full" style={{tableLayout: 'fixed', width: '100%', maxWidth: '100%'}}>
                   <thead>
