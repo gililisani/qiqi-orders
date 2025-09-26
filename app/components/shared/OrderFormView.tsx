@@ -71,9 +71,6 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
               }}
             />
           ) : null}
-          <span className="text-sm font-semibold">
-            {categoryGroup.category?.name || 'Products without Category'}
-          </span>
           <span className="ml-2 text-xs text-slate-500">
             ({categoryGroup.products.length} products)
           </span>
@@ -971,6 +968,27 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         </Card>
       )}
 
+      {/* PO Number input for New Orders */}
+      {isNewMode && (
+        <Card>
+          <div className="px-6 py-4">
+            <div className="max-w-md">
+              <label htmlFor="po-number" className="block text-sm font-medium text-gray-700 mb-2">
+                PO Number
+              </label>
+              <input
+                type="text"
+                id="po-number"
+                value={(order && order.po_number) || ''}
+                onChange={(e) => setOrder(prev => prev ? { ...prev, po_number: e.target.value } : { id: '', po_number: e.target.value, status: 'Open', company_id: '' })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Optional"
+              />
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Products Table and Order Summary Layout */}
       {company && products.length > 0 && (
         <div className="grid grid-cols-1 xl:grid-cols-8 gap-6">
@@ -1006,22 +1024,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                     </button>
                   </nav>
                   
-                  {/* PO Number input for New Orders */}
-                  {isNewMode && (
-                    <div className="flex items-center space-x-3">
-                      <label htmlFor="po-number" className="text-sm font-medium text-gray-700">
-                        PO Number:
-                      </label>
-                      <input
-                        type="text"
-                        id="po-number"
-                        value={(order && order.po_number) || ''}
-                        onChange={(e) => setOrder(prev => prev ? { ...prev, po_number: e.target.value } : { id: '', po_number: e.target.value, status: 'Open', company_id: '' })}
-                        className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Optional"
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
               <div>
