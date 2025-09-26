@@ -79,16 +79,27 @@ export default function EditCategoryPage() {
       console.log('Update data being sent to database:', updateData);
       console.log('Updating category with ID:', params.id);
       
+      // Check current user and permissions
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('Current user:', user?.id, user?.email);
+      
       const { data: updateResult, error } = await supabase
         .from('categories')
         .update(updateData)
         .eq('id', params.id)
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
+      }
 
       console.log('Database update successful');
       console.log('Update result from database:', updateResult);
+      
+      if (updateResult.length === 0) {
+        console.warn('No rows were updated - this suggests RLS is blocking the update');
+      }
       
       // Verify the update by fetching the category again
       const { data: updatedCategory, error: fetchError } = await supabase
