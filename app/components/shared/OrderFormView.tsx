@@ -705,26 +705,26 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           {/* Products Table - Takes up 6 columns on xl, full width on smaller screens */}
           <div className="xl:col-span-6">
             <Card>
-              {/* Tab Navigation - Card-style tabs with active/inactive states */}
+              {/* Tab Navigation - Simple tabs with color differentiation */}
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <nav className="flex space-x-2">
+                  <nav className="flex space-x-8">
                     <button
                       onClick={() => setShowSupportFundRedemption(false)}
-                      className={`px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm ${
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
                         !showSupportFundRedemption
-                          ? 'bg-white text-gray-900 shadow-md border-2 border-gray-200'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 border-2 border-transparent'
+                          ? 'border-gray-900 text-gray-900'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                       }`}
                     >
                       Order Form
                     </button>
                     <button
                       onClick={() => setShowSupportFundRedemption(true)}
-                      className={`px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm ${
+                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
                         showSupportFundRedemption
-                          ? 'bg-white text-green-700 shadow-md border-2 border-green-200'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 border-2 border-transparent'
+                          ? 'border-green-600 text-green-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                       }`}
                     >
                       Distributor Support Funds
@@ -752,7 +752,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                   )}
                 </div>
               </div>
-              <div className="overflow-x-auto">
+              <div className={`overflow-x-auto ${showSupportFundRedemption ? 'bg-green-50' : 'bg-blue-50'}`}>
                 <table className="w-full" style={{tableLayout: 'fixed', width: '100%', maxWidth: '100%'}}>
                   <thead>
                     <tr className="border-b border-gray-200">
