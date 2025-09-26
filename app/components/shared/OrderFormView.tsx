@@ -488,6 +488,17 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       .order('item_name');
 
     if (productsError) throw productsError;
+    
+    // Debug: Log category data
+    console.log('Products with categories:', productsData?.map(p => ({
+      name: p.item_name,
+      category: p.category ? {
+        id: p.category.id,
+        name: p.category.name,
+        image_url: p.category.image_url
+      } : null
+    })));
+    
     setProducts(productsData || []);
     setLoading(false);
   };
@@ -580,6 +591,16 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const getProductsByCategory = () => {
     const categorized: { [key: string]: { category: Category | null, products: Product[] } } = {};
     
+    // Debug: Log products and their categories
+    console.log('getProductsByCategory - products:', products.map(p => ({
+      name: p.item_name,
+      category: p.category ? {
+        id: p.category.id,
+        name: p.category.name,
+        image_url: p.category.image_url
+      } : null
+    })));
+    
     // First, get all visible categories for this client
     const isInternational = company?.class?.name?.includes('International') || false;
     const visibleCategories = new Set<number>();
@@ -620,13 +641,25 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     }
     
     // Sort categories by sort_order (999 for "No Category" will be last)
-    return Object.entries(categorized)
+    const result = Object.entries(categorized)
       .sort(([keyA], [keyB]) => {
         const orderA = parseInt(keyA.split('-')[0]);
         const orderB = parseInt(keyB.split('-')[0]);
         return orderA - orderB;
       })
       .map(([, data]) => data);
+    
+    // Debug: Log final categorized result
+    console.log('getProductsByCategory - result:', result.map(r => ({
+      category: r.category ? {
+        id: r.category.id,
+        name: r.category.name,
+        image_url: r.category.image_url
+      } : null,
+      productCount: r.products.length
+    })));
+    
+    return result;
   };
 
   const handleCaseQtyChange = (productId: number, newQty: number) => {
