@@ -88,9 +88,22 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const [error, setError] = useState<string | null>(null);
   const [showSupportFundRedemption, setShowSupportFundRedemption] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
+  const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
 
   const isEditMode = !!orderId;
   const isNewMode = !orderId;
+
+  const toggleCategory = (categoryId: number) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     if (isEditMode && orderId) {
@@ -752,21 +765,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                   )}
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full" style={{tableLayout: 'fixed', width: '100%', maxWidth: '100%'}}>
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="px-2 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider" style={{width: '50%'}}>Product</th>
-                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider hidden sm:table-cell" style={{width: '12.5%'}}>SKU</th>
-                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '8.3%'}}>Size</th>
-                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '8.3%'}}>Pack</th>
-                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '20%'}}>Price</th>
-                      <th className="px-1 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '15%'}}>Qty</th>
-                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell" style={{width: '8.3%'}}>Units</th>
-                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '15%'}}>Total</th>
-                    </tr>
-                  </thead>
-              <tbody>
+              <div className="space-y-2">
                 {(() => {
                   const productsToShow = showSupportFundRedemption 
                     ? products.filter(p => p.list_in_support_funds)
@@ -779,161 +778,199 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                       })).filter(categoryGroup => categoryGroup.products.length > 0)
                     : getProductsByCategory();
                   
-                  return categorizedProducts.map((categoryGroup, categoryIndex) => (
-                    <React.Fragment key={categoryGroup.category?.id || 'no-category'}>
-                      {/* Category Header Row */}
-                      {(
-                        <tr className="border-t-2 border-gray-200">
-                          <td colSpan={8} className="px-2 py-4">
-                            <div className="flex items-center">
-                              {categoryGroup.category?.image_url ? (
-                                <img
-                                  src={categoryGroup.category.image_url}
-                                  alt={categoryGroup.category.name}
-                                  className="object-contain bg-white"
-                                  style={{ 
-                                    height: '45px',
-                                    width: 'auto'
-                                  }}
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                  }}
-                                />
-                              ) : (
-                                <h3 className="text-sm sm:text-base font-semibold text-gray-900">
-                                  {categoryGroup.category?.name || 'Products without Category'}
-                                </h3>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                      
-                      {/* Products in this category */}
-                      {categoryGroup.products.map((product) => {
-                        const orderItem = showSupportFundRedemption 
-                          ? supportFundItems.find(item => item.product_id === product.id)
-                          : orderItems.find(item => item.product_id === product.id);
-                        const unitPrice = getProductPrice(product);
+                  return categorizedProducts.map((categoryGroup, categoryIndex) => {
+                    const categoryId = categoryGroup.category?.id || 0;
+                    const isExpanded = expandedCategories.has(categoryId);
+                    
+                    return (
+                      <div key={categoryGroup.category?.id || 'no-category'} className="border border-gray-200 rounded-lg">
+                        {/* Category Accordion Header */}
+                        <button
+                          onClick={() => toggleCategory(categoryId)}
+                          className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors duration-200"
+                        >
+                          <div className="flex items-center">
+                            {categoryGroup.category?.image_url ? (
+                              <img
+                                src={categoryGroup.category.image_url}
+                                alt={categoryGroup.category.name}
+                                className="object-contain bg-white mr-3"
+                                style={{ 
+                                  height: '32px',
+                                  width: 'auto'
+                                }}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : null}
+                            <h3 className="text-sm font-semibold text-gray-900">
+                              {categoryGroup.category?.name || 'Products without Category'}
+                            </h3>
+                            <span className="ml-2 text-xs text-gray-500">
+                              ({categoryGroup.products.length} products)
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <svg
+                              className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                                isExpanded ? 'rotate-180' : ''
+                              }`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </button>
                         
-                        return (
-                          <tr key={product.id} className={`hover:bg-gray-50 border-b border-gray-200 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                            <td className="px-2 py-3 relative" style={{width: '50%'}}>
-                              <div className="flex items-center min-w-0 w-full">
-                                <div className="flex-shrink-0 h-6 w-6 sm:h-8 sm:w-8 rounded">
-                                  {product.picture_url ? (
-                                    <img
-                                      src={product.picture_url}
-                                      alt={product.item_name}
-                                      className="h-6 w-6 sm:h-8 sm:w-8 object-cover cursor-pointer transition-transform duration-200 hover:scale-[3] hover:z-50 hover:relative"
-                                      onError={(e) => {
-                                        console.error('Image failed to load:', product.picture_url);
-                                        e.currentTarget.style.display = 'none';
-                                        const noImageDiv = e.currentTarget.nextElementSibling as HTMLElement;
-                                        if (noImageDiv) noImageDiv.style.display = 'flex';
-                                      }}
-                                    />
-                                  ) : null}
-                                  <div 
-                                    className="h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center text-gray-400 text-xs"
-                                    style={{display: product.picture_url ? 'none' : 'flex'}}
-                                  >
-                                    No Image
-                                  </div>
-                                </div>
-                                <div className="flex-1 min-w-0 ml-2" style={{overflow: 'hidden'}}>
-                                  <div 
-                                    className="text-xs sm:text-sm font-medium text-gray-900"
-                                    style={{
-                                      whiteSpace: 'nowrap',
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      maxWidth: '100%'
-                                    }}
-                                    title={product.item_name}
-                                  >
-                                    {product.item_name}
-                                  </div>
-                                  {!product.qualifies_for_credit_earning && (
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
-                                      Not Eligible for Credit
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-2 py-3 text-center text-xs text-gray-600 break-all hidden sm:table-cell" style={{width: '12.5%'}}>
-                              {product.sku}
-                            </td>
-                            <td className="px-2 py-3 text-center text-xs text-gray-600 hidden xl:table-cell" style={{width: '8.3%'}}>
-                              {product.size}
-                            </td>
-                            <td className="px-2 py-3 text-center text-xs text-gray-600 hidden xl:table-cell" style={{width: '8.3%'}}>
-                              {product.case_pack}
-                            </td>
-                            <td className="px-2 py-3 text-center text-xs font-medium text-gray-900" style={{width: '20%'}}>
-                              {formatCurrency(unitPrice)}
-                            </td>
-                            <td className="px-1 py-3 text-center" style={{width: '15%'}}>
-                              <div className="flex items-center justify-center space-x-1">
-                                <button
-                                  onClick={() => {
-                                    const currentQty = orderItem?.case_qty || 0;
-                                    const newQty = Math.max(0, currentQty - 1);
-                                    if (showSupportFundRedemption) {
-                                      handleSupportFundItemChange(product.id, newQty);
-                                    } else {
-                                      handleCaseQtyChange(product.id, newQty);
-                                    }
-                                  }}
-                                  className="w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800 text-xs"
-                                >
-                                  -
-                                </button>
-                                <input
-                                  type="text"
-                                  value={orderItem?.case_qty || 0}
-                                  onChange={(e) => {
-                                    const newQty = Math.max(0, parseInt(e.target.value) || 0);
-                                    if (showSupportFundRedemption) {
-                                      handleSupportFundItemChange(product.id, newQty);
-                                    } else {
-                                      handleCaseQtyChange(product.id, newQty);
-                                    }
-                                  }}
-                                  className="w-8 h-4 text-center text-xs font-medium text-gray-900 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                                <button
-                                  onClick={() => {
-                                    const currentQty = orderItem?.case_qty || 0;
-                                    const newQty = currentQty + 1;
-                                    if (showSupportFundRedemption) {
-                                      handleSupportFundItemChange(product.id, newQty);
-                                    } else {
-                                      handleCaseQtyChange(product.id, newQty);
-                                    }
-                                  }}
-                                  className="w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800 text-xs"
-                                >
-                                  +
-                                </button>
-                              </div>
-                            </td>
-                            <td className="px-2 py-3 text-center text-xs text-gray-600 hidden sm:table-cell" style={{width: '8.3%'}}>
-                              {orderItem ? orderItem.total_units : 0}
-                            </td>
-                            <td className="px-2 py-3 text-center text-xs font-medium text-gray-900" style={{width: '15%'}}>
-                              {orderItem ? formatCurrency(orderItem.total_price) : '$0.00'}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </React.Fragment>
-                  ));
+                        {/* Category Products - Collapsible Content */}
+                        {isExpanded && (
+                          <div className="border-t border-gray-200">
+                            <div className="overflow-x-auto">
+                              <table className="w-full" style={{tableLayout: 'fixed', width: '100%', maxWidth: '100%'}}>
+                                <thead>
+                                  <tr className="border-b border-gray-200 bg-gray-50">
+                                    <th className="px-2 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider" style={{width: '50%'}}>Product</th>
+                                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider hidden sm:table-cell" style={{width: '12.5%'}}>SKU</th>
+                                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '8.3%'}}>Size</th>
+                                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell" style={{width: '8.3%'}}>Pack</th>
+                                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '20%'}}>Price</th>
+                                    <th className="px-1 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '15%'}}>Qty</th>
+                                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell" style={{width: '8.3%'}}>Units</th>
+                                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{width: '15%'}}>Total</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {categoryGroup.products.map((product) => {
+                                    const orderItem = showSupportFundRedemption 
+                                      ? supportFundItems.find(item => item.product_id === product.id)
+                                      : orderItems.find(item => item.product_id === product.id);
+                                    const unitPrice = getProductPrice(product);
+                                    
+                                    return (
+                                      <tr key={product.id} className={`hover:bg-gray-50 border-b border-gray-200 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
+                                        <td className="px-2 py-3 relative" style={{width: '50%'}}>
+                                          <div className="flex items-center min-w-0 w-full">
+                                            <div className="flex-shrink-0 h-6 w-6 sm:h-8 sm:w-8 rounded">
+                                              {product.picture_url ? (
+                                                <img
+                                                  src={product.picture_url}
+                                                  alt={product.item_name}
+                                                  className="h-6 w-6 sm:h-8 sm:w-8 object-cover cursor-pointer transition-transform duration-200 hover:scale-[3] hover:z-50 hover:relative"
+                                                  onError={(e) => {
+                                                    console.error('Image failed to load:', product.picture_url);
+                                                    e.currentTarget.style.display = 'none';
+                                                    const noImageDiv = e.currentTarget.nextElementSibling as HTMLElement;
+                                                    if (noImageDiv) noImageDiv.style.display = 'flex';
+                                                  }}
+                                                />
+                                              ) : null}
+                                              <div 
+                                                className="h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center text-gray-400 text-xs"
+                                                style={{display: product.picture_url ? 'none' : 'flex'}}
+                                              >
+                                                No Image
+                                              </div>
+                                            </div>
+                                            <div className="flex-1 min-w-0 ml-2" style={{overflow: 'hidden'}}>
+                                              <div 
+                                                className="text-xs sm:text-sm font-medium text-gray-900"
+                                                style={{
+                                                  whiteSpace: 'nowrap',
+                                                  overflow: 'hidden',
+                                                  textOverflow: 'ellipsis',
+                                                  maxWidth: '100%'
+                                                }}
+                                                title={product.item_name}
+                                              >
+                                                {product.item_name}
+                                              </div>
+                                              {!product.qualifies_for_credit_earning && (
+                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
+                                                  Not Eligible for Credit
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </td>
+                                        <td className="px-2 py-3 text-center text-xs text-gray-600 break-all hidden sm:table-cell" style={{width: '12.5%'}}>
+                                          {product.sku}
+                                        </td>
+                                        <td className="px-2 py-3 text-center text-xs text-gray-600 hidden xl:table-cell" style={{width: '8.3%'}}>
+                                          {product.size}
+                                        </td>
+                                        <td className="px-2 py-3 text-center text-xs text-gray-600 hidden xl:table-cell" style={{width: '8.3%'}}>
+                                          {product.case_pack}
+                                        </td>
+                                        <td className="px-2 py-3 text-center text-xs font-medium text-gray-900" style={{width: '20%'}}>
+                                          {formatCurrency(unitPrice)}
+                                        </td>
+                                        <td className="px-1 py-3 text-center" style={{width: '15%'}}>
+                                          <div className="flex items-center justify-center space-x-1">
+                                            <button
+                                              onClick={() => {
+                                                const currentQty = orderItem?.case_qty || 0;
+                                                const newQty = Math.max(0, currentQty - 1);
+                                                if (showSupportFundRedemption) {
+                                                  handleSupportFundItemChange(product.id, newQty);
+                                                } else {
+                                                  handleCaseQtyChange(product.id, newQty);
+                                                }
+                                              }}
+                                              className="w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800 text-xs"
+                                            >
+                                              -
+                                            </button>
+                                            <input
+                                              type="text"
+                                              value={orderItem?.case_qty || 0}
+                                              onChange={(e) => {
+                                                const newQty = Math.max(0, parseInt(e.target.value) || 0);
+                                                if (showSupportFundRedemption) {
+                                                  handleSupportFundItemChange(product.id, newQty);
+                                                } else {
+                                                  handleCaseQtyChange(product.id, newQty);
+                                                }
+                                              }}
+                                              className="w-8 h-4 text-center text-xs font-medium text-gray-900 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                            <button
+                                              onClick={() => {
+                                                const currentQty = orderItem?.case_qty || 0;
+                                                const newQty = currentQty + 1;
+                                                if (showSupportFundRedemption) {
+                                                  handleSupportFundItemChange(product.id, newQty);
+                                                } else {
+                                                  handleCaseQtyChange(product.id, newQty);
+                                                }
+                                              }}
+                                              className="w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800 text-xs"
+                                            >
+                                              +
+                                            </button>
+                                          </div>
+                                        </td>
+                                        <td className="px-2 py-3 text-center text-xs text-gray-600 hidden sm:table-cell" style={{width: '8.3%'}}>
+                                          {orderItem ? orderItem.total_units : 0}
+                                        </td>
+                                        <td className="px-2 py-3 text-center text-xs font-medium text-gray-900" style={{width: '15%'}}>
+                                          {orderItem ? formatCurrency(orderItem.total_price) : '$0.00'}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
                 })()}
-              </tbody>
-            </table>
-          </div>
+              </div>
         </Card>
           </div>
 
