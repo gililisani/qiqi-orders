@@ -916,89 +916,88 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         </div>
       )}
 
-      {/* Company Info - First block */}
-      {company && (
-        <Card>
-          <div className="px-6 py-4">
-            <h3 className="text-lg font-semibold text-gray-900">Company Information</h3>
-          </div>
-          <div className="px-6 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-700">Company Name</label>
-                <div className="text-sm text-gray-900">{company.company_name}</div>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700">Support Fund</label>
-                <div className="text-sm text-gray-900">
-                  {(() => {
-                    const rawSf = company.support_fund as any;
-                    const supportFundPercent = Array.isArray(rawSf)
-                      ? (rawSf[0]?.percent || 0)
-                      : (rawSf?.percent || 0);
-                    return `${supportFundPercent}%`;
-                  })()}
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Company Selection (Admin only, New orders only) */}
-      {role === 'admin' && isNewMode && (
-        <Card>
-          <div className="px-6 py-4 border-b border-[#e5e5e5]">
-            <h3 className="text-lg font-semibold text-gray-900">Select Customer</h3>
-          </div>
-          <div className="px-6 py-4">
-            <div className="max-w-md">
-              <label htmlFor="company-select" className="block text-sm font-medium text-gray-700 mb-2">
-                Company
-              </label>
-              <select
-                id="company-select"
-                value={selectedCompanyId}
-                onChange={(e) => handleCompanyChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Select a company...</option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.company_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </Card>
-      )}
-
-
-      {/* PO Number input for New Orders */}
-      {isNewMode && (
-        <div className="mb-4">
-          <div className="flex items-center space-x-3">
-            <label htmlFor="po-number" className="text-sm font-medium text-gray-700">
-              PO Number:
-            </label>
-            <input
-              type="text"
-              id="po-number"
-              value={(order && order.po_number) || ''}
-              onChange={(e) => setOrder(prev => prev ? { ...prev, po_number: e.target.value } : { id: '', po_number: e.target.value, status: 'Open', company_id: '' })}
-              className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Optional"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Products Table and Order Summary Layout */}
+      {/* Main Layout - Company Info, Products, and Order Summary */}
       {company && products.length > 0 && (
         <div className="grid grid-cols-1 xl:grid-cols-8 gap-6">
-          {/* Products Table - Takes up 6 columns on xl, full width on smaller screens */}
-          <div className="xl:col-span-6">
+          {/* Left Column - Company Info and Products */}
+          <div className="xl:col-span-6 space-y-6">
+            {/* Company Info */}
+            <Card>
+              <div className="px-6 py-4">
+                <h3 className="text-lg font-semibold text-gray-900">Company Information</h3>
+              </div>
+              <div className="px-6 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700">Company Name</label>
+                    <div className="text-sm text-gray-900">{company.company_name}</div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700">Support Fund</label>
+                    <div className="text-sm text-gray-900">
+                      {(() => {
+                        const rawSf = company.support_fund as any;
+                        const supportFundPercent = Array.isArray(rawSf)
+                          ? (rawSf[0]?.percent || 0)
+                          : (rawSf?.percent || 0);
+                        return `${supportFundPercent}%`;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Company Selection (Admin only, New orders only) */}
+            {role === 'admin' && isNewMode && (
+              <Card>
+                <div className="px-6 py-4 border-b border-[#e5e5e5]">
+                  <h3 className="text-lg font-semibold text-gray-900">Select Customer</h3>
+                </div>
+                <div className="px-6 py-4">
+                  <div className="max-w-md">
+                    <label htmlFor="company-select" className="block text-sm font-medium text-gray-700 mb-2">
+                      Company
+                    </label>
+                    <select
+                      id="company-select"
+                      value={selectedCompanyId}
+                      onChange={(e) => handleCompanyChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select a company...</option>
+                      {companies.map((company) => (
+                        <option key={company.id} value={company.id}>
+                          {company.company_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* PO Number input for New Orders */}
+            {isNewMode && (
+              <div className="mb-4">
+                <div className="flex items-center space-x-3">
+                  <label htmlFor="po-number" className="text-sm font-medium text-gray-700">
+                    PO Number:
+                  </label>
+                  <input
+                    type="text"
+                    id="po-number"
+                    value={(order && order.po_number) || ''}
+                    onChange={(e) => setOrder(prev => prev ? { ...prev, po_number: e.target.value } : { id: '', po_number: e.target.value, status: 'Open', company_id: '' })}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Optional"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Products Table */}
+            <div>
             <Card>
               {/* Tab Navigation - Simple tabs with color differentiation */}
               <div className="px-6 py-4 border-b border-gray-200">
@@ -1067,7 +1066,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                   });
                 })()}
               </div>
-        </Card>
+            </Card>
+            </div>
           </div>
 
           {/* Order Summary - Takes up 2 columns on xl, full width on smaller screens */}
