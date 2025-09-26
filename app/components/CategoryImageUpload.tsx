@@ -106,7 +106,7 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
       
       // Create unique filename
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `category-images/${fileName}`;
+      const filePath = fileName;
       
       console.log('Uploading to path:', filePath, 'File size:', fileToUpload.size);
 
@@ -156,7 +156,7 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
       try {
         const urlParts = previewUrl.split('/');
         const fileName = urlParts[urlParts.length - 1];
-        const filePath = `category-images/${fileName}`;
+        const filePath = fileName;
         
         await supabase.storage
           .from('category-images')
