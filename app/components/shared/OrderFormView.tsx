@@ -758,17 +758,17 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           <div className="xl:col-span-6">
             <Card>
               <div className="overflow-x-auto">
-                <table className="min-w-full">
+                <table className="w-full table-fixed">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider">Product</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider hidden sm:table-cell">SKU</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Size</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Pack</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '70px'}}>Price</th>
-                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '80px'}}>Qty</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Units</th>
-                      <th className="px-4 py-3 pr-4 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap" style={{minWidth: '90px'}}>Total</th>
+                      <th className="w-2/5 px-2 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider">Product</th>
+                      <th className="w-1/8 px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider hidden sm:table-cell">SKU</th>
+                      <th className="w-1/12 px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Size</th>
+                      <th className="w-1/12 px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">Pack</th>
+                      <th className="w-1/8 px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap">Price</th>
+                      <th className="w-1/12 px-1 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap">Qty</th>
+                      <th className="w-1/12 px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Units</th>
+                      <th className="w-1/8 px-2 py-3 text-center text-xs font-medium text-gray-900 uppercase tracking-wider whitespace-nowrap">Total</th>
                     </tr>
                   </thead>
               <tbody>
@@ -789,7 +789,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                       {/* Category Header Row */}
                       {(
                         <tr className="border-t-2 border-gray-200">
-                          <td colSpan={8} className="px-4 py-4">
+                          <td colSpan={8} className="px-2 py-4">
                             <div className="flex items-center">
                               {categoryGroup.category?.image_url ? (
                                 <img
@@ -823,14 +823,14 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                         
                         return (
                           <tr key={product.id} className={`hover:bg-gray-50 border-b border-gray-200 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
-                            <td className="px-4 py-3 max-w-0 relative overflow-visible" style={{maxWidth: '200px'}}>
+                            <td className="w-2/5 px-2 py-3 relative overflow-visible">
                               <div className="flex items-center min-w-0 w-full">
-                                <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded overflow-visible">
+                                <div className="flex-shrink-0 h-6 w-6 sm:h-8 sm:w-8 rounded overflow-visible">
                                   {product.picture_url ? (
                                     <img
                                       src={product.picture_url}
                                       alt={product.item_name}
-                                      className="h-8 w-8 sm:h-10 sm:w-10 object-cover cursor-pointer transition-transform duration-200 hover:scale-[3] hover:z-50 hover:relative"
+                                      className="h-6 w-6 sm:h-8 sm:w-8 object-cover cursor-pointer transition-transform duration-200 hover:scale-[3] hover:z-50 hover:relative"
                                       onError={(e) => {
                                         console.error('Image failed to load:', product.picture_url);
                                         e.currentTarget.style.display = 'none';
@@ -840,13 +840,13 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                                     />
                                   ) : null}
                                   <div 
-                                    className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center text-gray-400 text-xs"
+                                    className="h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center text-gray-400 text-xs"
                                     style={{display: product.picture_url ? 'none' : 'flex'}}
                                   >
                                     No Image
                                   </div>
                                 </div>
-                                <div className="flex-1 min-w-0 overflow-hidden">
+                                <div className="flex-1 min-w-0 overflow-hidden ml-2">
                                   <div className="text-xs sm:text-sm font-medium text-gray-900 truncate w-full">
                                     {product.item_name}
                                   </div>
@@ -858,19 +858,19 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-center text-xs text-gray-600 break-all max-w-[120px]">
+                            <td className="w-1/8 px-2 py-3 text-center text-xs text-gray-600 break-all hidden sm:table-cell">
                               {product.sku}
                             </td>
-                            <td className="px-4 py-3 text-center text-xs text-gray-600 hidden xl:table-cell">
+                            <td className="w-1/12 px-2 py-3 text-center text-xs text-gray-600 hidden xl:table-cell">
                               {product.size}
                             </td>
-                            <td className="px-4 py-3 text-center text-xs text-gray-600 hidden xl:table-cell">
+                            <td className="w-1/12 px-2 py-3 text-center text-xs text-gray-600 hidden xl:table-cell">
                               {product.case_pack}
                             </td>
-                            <td className="px-4 py-3 text-center text-xs font-medium text-gray-900">
+                            <td className="w-1/8 px-2 py-3 text-center text-xs font-medium text-gray-900">
                               {formatCurrency(unitPrice)}
                             </td>
-                            <td className="px-2 py-3 text-center">
+                            <td className="w-1/12 px-1 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
                                 <button
                                   onClick={() => {
@@ -882,7 +882,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                                       handleCaseQtyChange(product.id, newQty);
                                     }
                                   }}
-                                  className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800 text-xs"
+                                  className="w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800 text-xs"
                                 >
                                   -
                                 </button>
@@ -897,7 +897,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                                       handleCaseQtyChange(product.id, newQty);
                                     }
                                   }}
-                                  className="w-10 h-5 text-center text-xs font-medium text-gray-900 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  className="w-8 h-4 text-center text-xs font-medium text-gray-900 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 />
                                 <button
                                   onClick={() => {
@@ -909,16 +909,16 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                                       handleCaseQtyChange(product.id, newQty);
                                     }
                                   }}
-                                  className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800 text-xs"
+                                  className="w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-50 text-gray-600 hover:text-gray-800 text-xs"
                                 >
                                   +
                                 </button>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-center text-xs text-gray-600 hidden sm:table-cell">
+                            <td className="w-1/12 px-2 py-3 text-center text-xs text-gray-600 hidden sm:table-cell">
                               {orderItem ? orderItem.total_units : 0}
                             </td>
-                            <td className="px-4 py-3 pr-4 text-center text-xs font-medium text-gray-900">
+                            <td className="w-1/8 px-2 py-3 text-center text-xs font-medium text-gray-900">
                               {orderItem ? formatCurrency(orderItem.total_price) : '$0.00'}
                             </td>
                           </tr>
