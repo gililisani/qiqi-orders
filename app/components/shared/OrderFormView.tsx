@@ -347,7 +347,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     // Find the category that contains this product
     const categoryGroups = getProductsByCategory();
     for (const categoryGroup of categoryGroups) {
-      const product = categoryGroup.products.find(p => p.id === productId);
+      const product = categoryGroup.products.find(p => p.id === parseInt(productId));
       if (product) {
         // Switch to the correct tab if needed
         if (product.list_in_support_funds && !showSupportFundRedemption) {
