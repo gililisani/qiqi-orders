@@ -76,43 +76,12 @@ export default function EditCategoryPage() {
         image_url: formData.image_url || null,
         updated_at: new Date().toISOString()
       };
-      console.log('Update data being sent to database:', updateData);
-      console.log('Updating category with ID:', params.id);
-      
-      // Check current user and permissions
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('Current user:', user?.id, user?.email);
-      
-      const { data: updateResult, error } = await supabase
+      const { error } = await supabase
         .from('categories')
         .update(updateData)
-        .eq('id', params.id)
-        .select();
+        .eq('id', params.id);
 
-      if (error) {
-        console.error('Database update error:', error);
-        throw error;
-      }
-
-      console.log('Database update successful');
-      console.log('Update result from database:', updateResult);
-      
-      if (updateResult.length === 0) {
-        console.warn('No rows were updated - this suggests RLS is blocking the update');
-      }
-      
-      // Verify the update by fetching the category again
-      const { data: updatedCategory, error: fetchError } = await supabase
-        .from('categories')
-        .select('id, name, image_url')
-        .eq('id', params.id)
-        .single();
-      
-      if (fetchError) {
-        console.error('Error fetching updated category:', fetchError);
-      } else {
-        console.log('Updated category data:', updatedCategory);
-      }
+      if (error) throw error;
       
       router.push('/admin/categories');
     } catch (err: any) {
@@ -216,14 +185,7 @@ export default function EditCategoryPage() {
 
             <div>
               <CategoryImageUpload
-                onImageUploaded={(url) => {
-                  console.log('CategoryImageUpload callback - new URL:', url);
-                  setFormData(prev => {
-                    const newData = { ...prev, image_url: url };
-                    console.log('Updated form data:', newData);
-                    return newData;
-                  });
-                }}
+                onImageUploaded={(url) => setFormData(prev => ({ ...prev, image_url: url }))}
                 currentImageUrl={formData.image_url}
               />
             </div>
