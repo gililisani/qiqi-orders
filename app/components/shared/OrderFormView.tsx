@@ -20,6 +20,7 @@ interface CategoryAccordionProps {
   handleSupportFundItemChange: (productId: number, qty: number) => void;
   handleCaseQtyChange: (productId: number, qty: number) => void;
   formatCurrency: (amount: number) => string;
+  highlightedProductId: string | null;
 }
 
 const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
@@ -33,7 +34,8 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
   getProductPrice,
   handleSupportFundItemChange,
   handleCaseQtyChange,
-  formatCurrency
+  formatCurrency,
+  highlightedProductId
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   
@@ -125,7 +127,7 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
                   const unitPrice = getProductPrice(product);
                   
                   return (
-                    <tr key={product.id} className={`hover:bg-gray-50 border-b border-gray-200 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''}`}>
+                    <tr key={product.id} className={`hover:bg-gray-50 border-b border-gray-200 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''} ${highlightedProductId === product.id.toString() ? 'bg-yellow-200 animate-pulse' : ''}`}>
                       <td className="px-2 py-3 relative" style={{width: '50%'}}>
                         <div className="flex items-center min-w-0 w-full">
                           <div className="flex-shrink-0 h-6 w-6 sm:h-8 sm:w-8 rounded">
@@ -327,6 +329,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const [showSupportFundRedemption, setShowSupportFundRedemption] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
+  const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
 
   const isEditMode = !!orderId;
   const isNewMode = !orderId;
@@ -351,6 +354,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       setShowSupportFundRedemption(false);
     }
     
+    // Set highlighted product
+    setHighlightedProductId(productId);
+    
     // Find the category that contains this product
     const categoryGroups = getProductsByCategory();
     for (const categoryGroup of categoryGroups) {
@@ -367,6 +373,11 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
             accordionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
         }, 100);
+        
+        // Remove highlight after 3 seconds
+        setTimeout(() => {
+          setHighlightedProductId(null);
+        }, 3000);
         break;
       }
     }
@@ -1096,6 +1107,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                         handleSupportFundItemChange={handleSupportFundItemChange}
                         handleCaseQtyChange={handleCaseQtyChange}
                         formatCurrency={formatCurrency}
+                        highlightedProductId={highlightedProductId}
                       />
                     );
                   });
