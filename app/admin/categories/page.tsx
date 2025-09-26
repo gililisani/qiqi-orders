@@ -37,6 +37,11 @@ export default function CategoriesPage() {
 
       // Debug log to help diagnose empty results / RLS issues
       console.log('[Categories] fetched rows:', data?.length || 0, { error });
+      console.log('[Categories] fetched data:', data?.map(cat => ({
+        id: cat.id,
+        name: cat.name,
+        image_url: cat.image_url
+      })));
 
       setCategories(data || []);
     } catch (err: any) {
