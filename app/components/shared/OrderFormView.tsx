@@ -1120,7 +1120,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                       <div className="flex-1 min-w-0 pr-1">
                         <div 
                           className="text-xs font-medium text-gray-900 truncate leading-tight cursor-pointer hover:text-blue-600 hover:underline"
-                          onClick={() => scrollToProduct(item.product_id)}
+                          onClick={() => scrollToProduct(item.product_id.toString())}
                           title="Click to locate this product"
                         >
                           {item.product.sku}
@@ -1164,7 +1164,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                       <div className="flex-1 min-w-0 pr-1">
                         <div 
                           className="text-xs font-medium text-green-800 truncate leading-tight cursor-pointer hover:text-blue-600 hover:underline"
-                          onClick={() => scrollToProduct(item.product_id)}
+                          onClick={() => scrollToProduct(item.product_id.toString())}
                           title="Click to locate this product"
                         >
                           {item.product.sku}
