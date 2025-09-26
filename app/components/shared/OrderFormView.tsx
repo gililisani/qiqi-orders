@@ -72,7 +72,13 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
             />
           ) : null}
           <span className="ml-2 text-xs text-slate-500">
-            ({categoryGroup.products.length} products)
+            {showSupportFundRedemption ? (
+              <span className="text-green-600">
+                ({categoryGroup.products.length} products to redeem)
+              </span>
+            ) : (
+              `(${categoryGroup.products.length} products)`
+            )}
           </span>
         </div>
         <span className="text-slate-800 transition-transform duration-300 pr-2">
@@ -913,17 +919,17 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       {/* Company Info - First block */}
       {company && (
         <Card>
-          <div className="px-6 py-4 border-b border-[#e5e5e5]">
+          <div className="px-6 py-4">
             <h3 className="text-lg font-semibold text-gray-900">Company Information</h3>
           </div>
           <div className="px-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Company Name</label>
+                <label className="block text-sm font-bold text-gray-700">Company Name</label>
                 <div className="text-sm text-gray-900">{company.company_name}</div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Support Fund</label>
+                <label className="block text-sm font-bold text-gray-700">Support Fund</label>
                 <div className="text-sm text-gray-900">
                   {(() => {
                     const rawSf = company.support_fund as any;
@@ -968,25 +974,24 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         </Card>
       )}
 
+
       {/* PO Number input for New Orders */}
       {isNewMode && (
-        <Card>
-          <div className="px-6 py-4">
-            <div className="max-w-md">
-              <label htmlFor="po-number" className="block text-sm font-medium text-gray-700 mb-2">
-                PO Number
-              </label>
-              <input
-                type="text"
-                id="po-number"
-                value={(order && order.po_number) || ''}
-                onChange={(e) => setOrder(prev => prev ? { ...prev, po_number: e.target.value } : { id: '', po_number: e.target.value, status: 'Open', company_id: '' })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Optional"
-              />
-            </div>
+        <div className="mb-4">
+          <div className="flex items-center space-x-3">
+            <label htmlFor="po-number" className="text-sm font-medium text-gray-700">
+              PO Number:
+            </label>
+            <input
+              type="text"
+              id="po-number"
+              value={(order && order.po_number) || ''}
+              onChange={(e) => setOrder(prev => prev ? { ...prev, po_number: e.target.value } : { id: '', po_number: e.target.value, status: 'Open', company_id: '' })}
+              className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Optional"
+            />
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Products Table and Order Summary Layout */}
@@ -1068,7 +1073,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           {/* Order Summary - Takes up 2 columns on xl, full width on smaller screens */}
           <div className="xl:col-span-2 xl:sticky xl:top-32 xl:self-start">
           <Card>
-            <div className="px-6 py-4 border-b border-[#e5e5e5]">
+            <div className="px-6 py-4">
               <h3 className="text-lg font-semibold text-gray-900">Order Summary</h3>
             </div>
             <div className="px-3 py-3">
@@ -1186,7 +1191,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                     disabled={saving || !company}
                     className="flex-1 bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {saving ? 'Saving...' : (isNewMode ? 'Send Order' : 'Save Changes')}
+                    {saving ? 'Saving...' : (isNewMode ? 'Create Order' : 'Save Changes')}
                   </button>
                   <Link
                     href={backUrl}
