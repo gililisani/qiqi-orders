@@ -492,7 +492,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       const transformedOrderItems = (orderItemsData || []).map(item => ({
         ...item,
         total_units: item.quantity || 0,
-        case_qty: item.case_qty || 0
+        case_qty: item.case_qty || Math.floor((item.quantity || 0) / (item.product?.units_per_case || 1))
       }));
       
       setOrderItems(transformedOrderItems);
@@ -513,7 +513,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       const transformedSupportFundItems = (supportFundItemsData || []).map(item => ({
         ...item,
         total_units: item.quantity || 0,
-        case_qty: item.case_qty || 0
+        case_qty: item.case_qty || Math.floor((item.quantity || 0) / (item.product?.units_per_case || 1))
       }));
       
       setSupportFundItems(transformedSupportFundItems);
