@@ -886,6 +886,25 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           if (insertError) throw insertError;
         }
 
+        // Calculate and update order totals
+        const originalTotals = getOrderTotals();
+        const supportTotals = getSupportFundTotals();
+        
+        const supportFundUsed = Math.min(supportTotals.subtotal, originalTotals.supportFundEarned);
+        const additionalCost = Math.max(0, supportTotals.subtotal - originalTotals.supportFundEarned);
+        const finalTotal = originalTotals.total + additionalCost;
+
+        const { error: updateTotalsError } = await supabase
+          .from('orders')
+          .update({
+            total_value: finalTotal,
+            support_fund_used: supportFundUsed,
+            credit_earned: originalTotals.supportFundEarned
+          })
+          .eq('id', newOrder.id);
+
+        if (updateTotalsError) throw updateTotalsError;
+
         // Redirect to order view
         router.push(`/${role}/orders/${newOrder.id}`);
       } else {
