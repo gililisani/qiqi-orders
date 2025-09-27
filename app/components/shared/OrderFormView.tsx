@@ -840,6 +840,11 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         throw new Error('No company selected');
       }
 
+      // Check if order has at least one product
+      if (orderItems.length === 0 && supportFundItems.length === 0) {
+        throw new Error('Order must contain at least one product');
+      }
+
       if (isNewMode) {
         // Generate PO number if not provided
         let poNumber = (order && order.po_number) || null;
@@ -1206,12 +1211,27 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           {/* Order Summary - Takes up 2 columns on xl, full width on smaller screens */}
           <div className="xl:col-span-2 xl:sticky xl:top-32 xl:self-start">
           <Card>
-            <div className="px-6 py-4">
+            <div className="px-6 py-4 flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-900">Order Summary</h3>
+              <button
+                onClick={() => {
+                  setOrderItems([]);
+                  setSupportFundItems([]);
+                }}
+                className="text-sm text-red-600 hover:text-red-800 font-medium"
+              >
+                Reset
+              </button>
             </div>
             <div className="px-3 py-3">
-              {/* Order Form Products */}
-              {orderItems.length > 0 && (
+              {orderItems.length === 0 && supportFundItems.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Add products to your {isNewMode ? 'new' : ''} order</p>
+                </div>
+              ) : (
+                <>
+                  {/* Order Form Products */}
+                  {orderItems.length > 0 && (
                 <div className="space-y-1">
                   {orderItems.map((item) => (
                     <div key={`order-${item.product_id}`} className="flex items-center justify-between bg-gray-50 p-1 rounded">
@@ -1360,6 +1380,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                   </Link>
                 </div>
               </div>
+                </>
+              )}
             </div>
           </Card>
           </div>
