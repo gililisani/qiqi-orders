@@ -127,7 +127,7 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
                   const unitPrice = getProductPrice(product);
                   
                   return (
-                    <tr key={product.id} className={`hover:bg-gray-50 border-b border-gray-200 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''} ${highlightedProductId === product.id.toString() ? 'bg-sky-200 animate-pulse' : ''}`}>
+                    <tr key={product.id} className={`hover:bg-gray-50 border-b border-gray-200 ${(orderItem?.case_qty || 0) > 0 ? 'bg-gray-100' : ''} ${highlightedProductId === product.id.toString() ? 'bg-cyan-50 animate-pulse' : ''}`}>
                       <td className="px-2 py-3 relative" style={{width: '50%'}}>
                         <div className="flex items-center min-w-0 w-full">
                           <div className="flex-shrink-0 h-6 w-6 sm:h-8 sm:w-8 rounded">
