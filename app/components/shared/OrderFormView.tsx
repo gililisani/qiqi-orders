@@ -487,7 +487,15 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         .eq('is_support_fund_item', false);
 
       if (orderItemsError) throw orderItemsError;
-      setOrderItems(orderItemsData || []);
+      
+      // Transform order items to include calculated fields for compatibility
+      const transformedOrderItems = (orderItemsData || []).map(item => ({
+        ...item,
+        total_units: item.quantity || 0,
+        case_qty: item.case_qty || 0
+      }));
+      
+      setOrderItems(transformedOrderItems);
 
       // Fetch support fund items
       const { data: supportFundItemsData, error: supportFundItemsError } = await supabase
@@ -500,7 +508,15 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         .eq('is_support_fund_item', true);
 
       if (supportFundItemsError) throw supportFundItemsError;
-      setSupportFundItems(supportFundItemsData || []);
+      
+      // Transform support fund items to include calculated fields for compatibility
+      const transformedSupportFundItems = (supportFundItemsData || []).map(item => ({
+        ...item,
+        total_units: item.quantity || 0,
+        case_qty: item.case_qty || 0
+      }));
+      
+      setSupportFundItems(transformedSupportFundItems);
 
       // Fetch products for the company
       if (orderData.company) {
@@ -1248,7 +1264,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
               <div className="pt-2 border-t">
                 <div className="flex justify-between text-xs text-gray-600 mb-1">
                   <span>Total Items:</span>
-                  <span>{orderItems.reduce((sum, item) => sum + ((item as any).quantity || item.total_units || 0), 0) + supportFundItems.reduce((sum, item) => sum + ((item as any).quantity || item.total_units || 0), 0)}</span>
+                  <span>{orderItems.reduce((sum, item) => sum + (item.total_units || 0), 0) + supportFundItems.reduce((sum, item) => sum + (item.total_units || 0), 0)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-gray-600">
                   <span>Total Cases:</span>
