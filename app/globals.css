@@ -101,10 +101,10 @@ th {
 /* Custom fast pulse animation for product highlighting */
 @keyframes fast-pulse {
   0%, 100% {
-    background-color: rgb(30 58 138); /* bg-blue-900 */
+    background-color: rgb(172 203 252);
   }
   50% {
-    background-color: rgb(59 130 246); /* bg-blue-500 */
+    background-color: rgb(172 203 252);
   }
 }
 
