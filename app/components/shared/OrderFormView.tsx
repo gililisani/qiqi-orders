@@ -490,7 +490,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       
       // Transform order items to include calculated fields for compatibility
       const transformedOrderItems = (orderItemsData || []).map(item => {
-        const unitsPerCase = item.product?.units_per_case || item.product?.pack || 12; // Use pack if units_per_case not available
+        const unitsPerCase = item.product?.case_pack || 12; // Use case_pack field
         const totalUnits = item.quantity || 0; // This is total units from database
         const caseQty = Math.floor(totalUnits / unitsPerCase); // Calculate cases from units
         
@@ -525,7 +525,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       
       // Transform support fund items to include calculated fields for compatibility
       const transformedSupportFundItems = (supportFundItemsData || []).map(item => {
-        const unitsPerCase = item.product?.units_per_case || item.product?.pack || 12;
+        const unitsPerCase = item.product?.case_pack || 12; // Use case_pack field
         const totalUnits = item.quantity || 0; // This is total units from database
         const caseQty = Math.floor(totalUnits / unitsPerCase); // Calculate cases from units
         return {
