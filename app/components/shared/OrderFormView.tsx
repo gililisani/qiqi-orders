@@ -832,6 +832,10 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       setSaving(true);
       setError(null);
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
       if (!company) {
         throw new Error('No company selected');
       }
