@@ -841,13 +841,25 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       }
 
       if (isNewMode) {
+        // Generate PO number if not provided
+        let poNumber = (order && order.po_number) || null;
+        if (!poNumber || poNumber.trim() === '') {
+          // Generate 6-character alphanumeric PO number
+          const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+          let generatedPO = '';
+          for (let i = 0; i < 6; i++) {
+            generatedPO += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+          poNumber = generatedPO;
+        }
+
         // Create new order
         const { data: newOrder, error: orderError } = await supabase
           .from('orders')
           .insert({
             company_id: company.id,
             user_id: user.id,
-            po_number: (order && order.po_number) || null,
+            po_number: poNumber,
             status: 'Open'
           })
           .select()
