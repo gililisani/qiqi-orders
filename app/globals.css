@@ -97,3 +97,31 @@ th {
 .fc-prev-button.fc-button.fc-button-primary {
   @apply !mr-1;
 }
+
+/* Custom product highlight animation */
+@keyframes highlight-pulse {
+  0% {
+    background-color: #fef3c7; /* yellow-100 */
+    transform: scale(1);
+  }
+  25% {
+    background-color: #fde68a; /* yellow-200 */
+    transform: scale(1.02);
+  }
+  50% {
+    background-color: #fcd34d; /* yellow-300 */
+    transform: scale(1.05);
+  }
+  75% {
+    background-color: #fde68a; /* yellow-200 */
+    transform: scale(1.02);
+  }
+  100% {
+    background-color: #fef3c7; /* yellow-100 */
+    transform: scale(1);
+  }
+}
+
+.product-highlight {
+  animation: highlight-pulse 1s ease-in-out;
+}
