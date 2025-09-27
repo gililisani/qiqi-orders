@@ -49,6 +49,7 @@ interface OrderItem {
   order_id: string;
   product_id: string;
   quantity: number;
+  case_qty?: number;
   unit_price: number;
   total_price: number;
   is_support_fund_item?: boolean;
