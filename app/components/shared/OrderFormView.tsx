@@ -490,16 +490,16 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       
       // Transform order items to include calculated fields for compatibility
       const transformedOrderItems = (orderItemsData || []).map(item => {
-        const totalUnits = item.quantity || 0;
-        const unitsPerCase = item.product?.units_per_case || 12; // Default to 12 if not set
-        const caseQty = Math.floor(totalUnits / unitsPerCase);
+        const unitsPerCase = item.product?.units_per_case || item.product?.pack || 12; // Use pack if units_per_case not available
+        const totalUnits = item.quantity || 0; // This is total units from database
+        const caseQty = Math.floor(totalUnits / unitsPerCase); // Calculate cases from units
         
         console.log('Order item debug:', {
           product: item.product?.item_name,
-          quantity: item.quantity,
+          database_quantity: item.quantity,
           units_per_case: unitsPerCase,
-          calculated_total_units: totalUnits,
-          calculated_case_qty: caseQty
+          calculated_case_qty: caseQty,
+          calculated_total_units: totalUnits
         });
         
         return {
@@ -525,8 +525,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       
       // Transform support fund items to include calculated fields for compatibility
       const transformedSupportFundItems = (supportFundItemsData || []).map(item => {
-        const totalUnits = item.quantity || 0;
-        const caseQty = Math.floor(totalUnits / (item.product?.units_per_case || 1));
+        const unitsPerCase = item.product?.units_per_case || item.product?.pack || 12;
+        const totalUnits = item.quantity || 0; // This is total units from database
+        const caseQty = Math.floor(totalUnits / unitsPerCase); // Calculate cases from units
         return {
           ...item,
           total_units: totalUnits,
