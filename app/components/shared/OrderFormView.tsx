@@ -842,6 +842,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           .from('orders')
           .insert({
             company_id: company.id,
+            user_id: user.id,
             po_number: (order && order.po_number) || null,
             status: 'Open'
           })
