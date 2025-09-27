@@ -245,7 +245,15 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     // Helper function to add text
     const addText = (text: string, x: number, y: number, options: any = {}) => {
       pdf.setFontSize(options.fontSize || 10);
-      pdf.setTextColor(options.color || 0, 0, 0);
+      if (options.color) {
+        if (Array.isArray(options.color)) {
+          pdf.setTextColor(options.color[0], options.color[1], options.color[2]);
+        } else {
+          pdf.setTextColor(options.color);
+        }
+      } else {
+        pdf.setTextColor(0, 0, 0);
+      }
       pdf.text(text, x, y);
     };
 
@@ -264,7 +272,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       pdf.rect(15, startY - 5, 180, 10, 'F');
       
       headers.forEach((header, index) => {
-        addText(header, xPos, startY, { fontSize: 9, color: [60, 60, 60] });
+        addText(header, xPos, startY, { fontSize: 9, color: 60 });
         xPos += colWidths[index];
       });
       
@@ -296,7 +304,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     };
 
     // Header
-    addText('PACKING SLIP', pageWidth / 2, yPosition, { fontSize: 18, color: [0, 0, 0] });
+    addText('PACKING SLIP', pageWidth / 2, yPosition, { fontSize: 18 });
     yPosition += 10;
     
     // Invoice details
@@ -309,13 +317,13 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     yPosition += 25;
 
     // Company information
-    addText('SHIP FROM:', 15, yPosition, { fontSize: 12, color: [60, 60, 60] });
+    addText('SHIP FROM:', 15, yPosition, { fontSize: 12, color: 60 });
     yPosition += 7;
     addText(order.company?.subsidiary?.name || 'N/A', 15, yPosition);
     addText(order.company?.subsidiary?.ship_from_address || 'N/A', 15, yPosition + 5);
     yPosition += 15;
 
-    addText('SHIP TO:', 15, yPosition, { fontSize: 12, color: [60, 60, 60] });
+    addText('SHIP TO:', 15, yPosition, { fontSize: 12, color: 60 });
     yPosition += 7;
     addText(order.company?.company_name || 'N/A', 15, yPosition);
     addText(order.company?.ship_to || 'N/A', 15, yPosition + 5);
@@ -360,7 +368,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         yPosition = 20;
       }
       
-      addText('NOTES:', 15, yPosition, { fontSize: 12, color: [60, 60, 60] });
+      addText('NOTES:', 15, yPosition, { fontSize: 12, color: 60 });
       yPosition += 7;
       
       const noteLines = pdf.splitTextToSize(packingSlip.notes, 180);
@@ -372,7 +380,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
     // Footer
     const finalY = pageHeight - 20;
-    addText(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, finalY, { fontSize: 8, color: [100, 100, 100] });
+    addText(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, finalY, { fontSize: 8, color: 100 });
 
     pdf.save(`packing-slip-${packingSlip.invoice_number || 'invoice'}.pdf`);
   };
