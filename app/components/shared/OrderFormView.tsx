@@ -1217,7 +1217,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                   <div className="pt-1 border-t">
                     <div className="flex justify-between text-xs font-medium text-gray-900">
                       <span>Remaining Credit:</span>
-                      <span className="text-green-600">
+                      <span className={supportFundTotals.remainingCredit >= 0 ? 'text-green-600' : 'text-red-600'}>
                         {formatCurrency(supportFundTotals.remainingCredit)}
                       </span>
                     </div>
