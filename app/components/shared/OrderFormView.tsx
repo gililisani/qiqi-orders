@@ -491,7 +491,17 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       // Transform order items to include calculated fields for compatibility
       const transformedOrderItems = (orderItemsData || []).map(item => {
         const totalUnits = item.quantity || 0;
-        const caseQty = Math.floor(totalUnits / (item.product?.units_per_case || 1));
+        const unitsPerCase = item.product?.units_per_case || 12; // Default to 12 if not set
+        const caseQty = Math.floor(totalUnits / unitsPerCase);
+        
+        console.log('Order item debug:', {
+          product: item.product?.item_name,
+          quantity: item.quantity,
+          units_per_case: unitsPerCase,
+          calculated_total_units: totalUnits,
+          calculated_case_qty: caseQty
+        });
+        
         return {
           ...item,
           total_units: totalUnits,
