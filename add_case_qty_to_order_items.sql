@@ -14,7 +14,7 @@ SET case_qty = CASE
     ELSE 
         FLOOR(order_items.quantity / 12) -- Default to 12 if pack is not set
 END
-FROM Products p 
+FROM products p 
 WHERE order_items.product_id = p.id;
 
 -- Step 3: Rename quantity column to total_items for clarity
