@@ -97,3 +97,17 @@ th {
 .fc-prev-button.fc-button.fc-button-primary {
   @apply !mr-1;
 }
+
+/* Custom fast pulse animation for product highlighting */
+@keyframes fast-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-fast-pulse {
+  animation: fast-pulse 0.75s ease-in-out infinite;
+}
