@@ -132,7 +132,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         .from('orders')
         .select(`
           *,
-          client:clients(name, email),
           company:companies(
             *,
             support_fund:support_fund_levels(percent),
@@ -147,6 +146,22 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         .single();
 
       if (orderError) throw orderError;
+
+      // Fetch client information separately (for admin users)
+      let clientData = null;
+      if (role === 'admin') {
+        const { data: clientResult, error: clientError } = await supabase
+          .from('clients')
+          .select('name, email')
+          .eq('id', orderData.user_id)
+          .single();
+        
+        if (clientError && clientError.code !== 'PGRST116') {
+          console.warn('Could not fetch client data:', clientError);
+        } else {
+          clientData = clientResult;
+        }
+      }
 
       // Fetch order items
       const { data: itemsData, error: itemsError } = await supabase
@@ -186,6 +201,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
       const combinedOrder = {
         ...orderData,
+        client: clientData,
         company: {
           ...orderData.company,
           ...companyData
