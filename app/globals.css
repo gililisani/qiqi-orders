@@ -97,3 +97,17 @@ th {
 .fc-prev-button.fc-button.fc-button-primary {
   @apply !mr-1;
 }
+
+/* Single blink animation for product highlighting */
+@keyframes single-blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.animate-single-blink {
+  animation: single-blink 0.6s ease-in-out;
+}
