@@ -1229,8 +1229,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
               {supportFundItems.length > 0 && (
                 <div className="pb-2">
                   <div className="text-xs text-gray-500 italic pt-1">
-                    <div>* Negative remaining credit will be added to the grand total</div>
-                    <div>* Negative remaining credit will be added to the grand total</div>
+                    <div>* Credit must be redeemed in full with each order</div>
+                    <div>* Any unused Support Fund credit will be forfeited</div>
                     <div>* Negative remaining credit will be added to the grand total</div>
                   </div>
                 </div>
