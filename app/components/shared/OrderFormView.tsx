@@ -1029,6 +1029,35 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         </div>
       )}
 
+      {/* Company Selection (Admin only, New orders only) */}
+      {role === 'admin' && isNewMode && !company && (
+        <Card>
+          <div className="px-6 py-4 border-b border-[#e5e5e5]">
+            <h3 className="text-lg font-semibold text-gray-900">Select Customer</h3>
+          </div>
+          <div className="px-6 py-4">
+            <div className="max-w-md">
+              <label htmlFor="company-select" className="block text-sm font-medium text-gray-700 mb-2">
+                Company
+              </label>
+              <select
+                id="company-select"
+                value={selectedCompanyId}
+                onChange={(e) => handleCompanyChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select a company...</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.company_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Main Layout - Company Info, Products, and Order Summary */}
       {company && products.length > 0 && (
         <div className="grid grid-cols-1 xl:grid-cols-8 gap-6">
@@ -1061,34 +1090,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
               </div>
             </Card>
 
-            {/* Company Selection (Admin only, New orders only) */}
-            {role === 'admin' && isNewMode && (
-              <Card>
-                <div className="px-6 py-4 border-b border-[#e5e5e5]">
-                  <h3 className="text-lg font-semibold text-gray-900">Select Customer</h3>
-                </div>
-                <div className="px-6 py-4">
-                  <div className="max-w-md">
-                    <label htmlFor="company-select" className="block text-sm font-medium text-gray-700 mb-2">
-                      Company
-                    </label>
-                    <select
-                      id="company-select"
-                      value={selectedCompanyId}
-                      onChange={(e) => handleCompanyChange(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Select a company...</option>
-                      {companies.map((company) => (
-                        <option key={company.id} value={company.id}>
-                          {company.company_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </Card>
-            )}
 
             {/* PO Number input for New Orders */}
             {isNewMode && (
