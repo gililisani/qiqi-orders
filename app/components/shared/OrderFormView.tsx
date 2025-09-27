@@ -1074,18 +1074,22 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                     <label className="block text-sm font-bold text-gray-700">Company Name</label>
                     <div className="text-sm text-gray-900">{company.company_name}</div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700">Support Fund</label>
-                    <div className="text-sm text-gray-900">
-                      {(() => {
-                        const rawSf = company.support_fund as any;
-                        const supportFundPercent = Array.isArray(rawSf)
-                          ? (rawSf[0]?.percent || 0)
-                          : (rawSf?.percent || 0);
-                        return `${supportFundPercent}%`;
-                      })()}
-                    </div>
-                  </div>
+                  {(() => {
+                    const rawSf = company.support_fund as any;
+                    const supportFundPercent = Array.isArray(rawSf)
+                      ? (rawSf[0]?.percent || 0)
+                      : (rawSf?.percent || 0);
+                    return supportFundPercent > 0 ? (
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700">Support Fund</label>
+                        <div className="text-sm text-gray-900">
+                          <span className="text-green-600 font-medium">
+                            {supportFundPercent}% Credit
+                          </span>
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
               </div>
             </Card>
@@ -1130,22 +1134,30 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                     >
                       Order Form
                     </button>
-                    <button
-                      onClick={() => {
-                        setShowSupportFundRedemption(true);
-                        setExpandedCategories(new Set());
-                      }}
-                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                        showSupportFundRedemption
-                          ? 'border-green-600 text-green-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      Distributor Support Funds
-                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {formatCurrency(totals.supportFundEarned)} available
-                      </span>
-                    </button>
+                    {(() => {
+                      const rawSf = company.support_fund as any;
+                      const supportFundPercent = Array.isArray(rawSf)
+                        ? (rawSf[0]?.percent || 0)
+                        : (rawSf?.percent || 0);
+                      return supportFundPercent > 0 ? (
+                        <button
+                          onClick={() => {
+                            setShowSupportFundRedemption(true);
+                            setExpandedCategories(new Set());
+                          }}
+                          className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                            showSupportFundRedemption
+                              ? 'border-green-600 text-green-600'
+                              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          }`}
+                        >
+                          Distributor Support Funds
+                          <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {formatCurrency(totals.supportFundEarned)} available
+                          </span>
+                        </button>
+                      ) : null;
+                    })()}
                   </nav>
                   
                 </div>
