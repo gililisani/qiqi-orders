@@ -7,6 +7,19 @@ ADD COLUMN case_qty INTEGER;
 
 -- Step 2: Calculate and populate case_qty for existing records
 -- This calculates cases based on total_items divided by pack size
+-- First, let's check what tables exist and what the Products table structure looks like
+-- Run these queries separately to debug:
+
+-- Check if Products table exists:
+-- SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name LIKE '%product%';
+
+-- Check Products table structure:
+-- SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'Products' AND table_schema = 'public';
+
+-- Check if order_items table has data:
+-- SELECT COUNT(*) FROM order_items;
+
+-- Once you confirm the table names and structure, run this UPDATE:
 UPDATE order_items 
 SET case_qty = CASE 
     WHEN p.pack IS NOT NULL AND p.pack > 0 THEN 
@@ -14,7 +27,7 @@ SET case_qty = CASE
     ELSE 
         FLOOR(order_items.quantity / 12) -- Default to 12 if pack is not set
 END
-FROM products p 
+FROM Products p 
 WHERE order_items.product_id = p.id;
 
 -- Step 3: Rename quantity column to total_items for clarity
