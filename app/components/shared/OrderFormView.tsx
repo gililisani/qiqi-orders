@@ -1230,6 +1230,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                 <div className="pb-2">
                   <div className="text-xs text-gray-500 italic pt-1">
                     <div>* Negative remaining credit will be added to the grand total</div>
+                    <div>* Negative remaining credit will be added to the grand total</div>
+                    <div>* Negative remaining credit will be added to the grand total</div>
                   </div>
                 </div>
               )}
