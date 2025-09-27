@@ -564,7 +564,7 @@ export default function OrderDetailsView({
           )}
           
           {/* Packing Slip functionality (both roles) */}
-          {order?.status !== 'Open' && order?.status !== 'Cancelled' && (
+          {(['In Process', 'Ready', 'Done'].includes(order?.status || '')) && (
             order?.packing_slip_generated ? (
               <Link
                 href={packingSlipUrl}
