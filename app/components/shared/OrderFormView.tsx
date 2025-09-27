@@ -489,11 +489,15 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       if (orderItemsError) throw orderItemsError;
       
       // Transform order items to include calculated fields for compatibility
-      const transformedOrderItems = (orderItemsData || []).map(item => ({
-        ...item,
-        total_units: item.quantity || 0,
-        case_qty: item.case_qty || Math.floor((item.quantity || 0) / (item.product?.units_per_case || 1))
-      }));
+      const transformedOrderItems = (orderItemsData || []).map(item => {
+        const totalUnits = item.quantity || 0;
+        const caseQty = Math.floor(totalUnits / (item.product?.units_per_case || 1));
+        return {
+          ...item,
+          total_units: totalUnits,
+          case_qty: caseQty
+        };
+      });
       
       setOrderItems(transformedOrderItems);
 
@@ -510,11 +514,15 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       if (supportFundItemsError) throw supportFundItemsError;
       
       // Transform support fund items to include calculated fields for compatibility
-      const transformedSupportFundItems = (supportFundItemsData || []).map(item => ({
-        ...item,
-        total_units: item.quantity || 0,
-        case_qty: item.case_qty || Math.floor((item.quantity || 0) / (item.product?.units_per_case || 1))
-      }));
+      const transformedSupportFundItems = (supportFundItemsData || []).map(item => {
+        const totalUnits = item.quantity || 0;
+        const caseQty = Math.floor(totalUnits / (item.product?.units_per_case || 1));
+        return {
+          ...item,
+          total_units: totalUnits,
+          case_qty: caseQty
+        };
+      });
       
       setSupportFundItems(transformedSupportFundItems);
 
