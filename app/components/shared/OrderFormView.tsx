@@ -1248,11 +1248,11 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
               <div className="pt-2 border-t">
                 <div className="flex justify-between text-xs text-gray-600 mb-1">
                   <span>Total Items:</span>
-                  <span>{orderItems.reduce((sum, item) => sum + item.total_units, 0) + supportFundItems.reduce((sum, item) => sum + item.total_units, 0)}</span>
+                  <span>{orderItems.reduce((sum, item) => sum + (item.total_units || 0), 0) + supportFundItems.reduce((sum, item) => sum + (item.total_units || 0), 0)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-gray-600">
                   <span>Total Cases:</span>
-                  <span>{orderItems.reduce((sum, item) => sum + item.case_qty, 0) + supportFundItems.reduce((sum, item) => sum + item.case_qty, 0)}</span>
+                  <span>{orderItems.reduce((sum, item) => sum + (item.case_qty || 0), 0) + supportFundItems.reduce((sum, item) => sum + (item.case_qty || 0), 0)}</span>
                 </div>
               </div>
 
