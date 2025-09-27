@@ -235,36 +235,146 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
   };
 
   const generatePDF = async () => {
-    const element = document.getElementById('packing-slip-content');
-    if (!element) return;
+    if (!order || !orderItems || !packingSlip) return;
 
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true
-    });
-
-    const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = 210;
+    const pageHeight = 297;
+    let yPosition = 20;
+
+    // Helper function to add text
+    const addText = (text: string, x: number, y: number, options: any = {}) => {
+      pdf.setFontSize(options.fontSize || 10);
+      pdf.setTextColor(options.color || 0, 0, 0);
+      pdf.text(text, x, y);
+    };
+
+    // Helper function to add line
+    const addLine = (x1: number, y1: number, x2: number, y2: number) => {
+      pdf.line(x1, y1, x2, y2);
+    };
+
+    // Helper function to add table header
+    const addTableHeader = (headers: string[], startY: number) => {
+      const colWidths = [60, 25, 20, 20, 20, 25, 20]; // Adjust widths for A4
+      let xPos = 15;
+      
+      // Header background
+      pdf.setFillColor(240, 240, 240);
+      pdf.rect(15, startY - 5, 180, 10, 'F');
+      
+      headers.forEach((header, index) => {
+        addText(header, xPos, startY, { fontSize: 9, color: [60, 60, 60] });
+        xPos += colWidths[index];
+      });
+      
+      // Header line
+      addLine(15, startY + 2, 195, startY + 2);
+      return startY + 8;
+    };
+
+    // Helper function to add table row
+    const addTableRow = (data: string[], startY: number) => {
+      const colWidths = [60, 25, 20, 20, 20, 25, 20];
+      let xPos = 15;
+      
+      data.forEach((cell, index) => {
+        // Word wrap for long text
+        const maxWidth = colWidths[index] - 2;
+        const lines = pdf.splitTextToSize(cell, maxWidth);
+        
+        lines.forEach((line: string, lineIndex: number) => {
+          addText(line, xPos, startY + (lineIndex * 4), { fontSize: 8 });
+        });
+        
+        xPos += colWidths[index];
+      });
+      
+      // Row line
+      addLine(15, startY + 8, 195, startY + 8);
+      return startY + 12;
+    };
+
+    // Header
+    addText('PACKING SLIP', pageWidth / 2, yPosition, { fontSize: 18, color: [0, 0, 0] });
+    yPosition += 10;
     
-    const imgWidth = 210;
-    const pageHeight = 295;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
+    // Invoice details
+    addText(`Invoice: ${packingSlip.invoice_number}`, 15, yPosition, { fontSize: 12 });
+    addText(`Date: ${new Date().toLocaleDateString()}`, 15, yPosition + 5);
+    addText(`Method: ${packingSlip.shipping_method}`, 15, yPosition + 10);
+    if (packingSlip.netsuite_reference) {
+      addText(`Reference: ${packingSlip.netsuite_reference}`, 15, yPosition + 15);
+    }
+    yPosition += 25;
 
-    let position = 0;
+    // Company information
+    addText('SHIP FROM:', 15, yPosition, { fontSize: 12, color: [60, 60, 60] });
+    yPosition += 7;
+    addText(order.company?.subsidiary?.name || 'N/A', 15, yPosition);
+    addText(order.company?.subsidiary?.ship_from_address || 'N/A', 15, yPosition + 5);
+    yPosition += 15;
 
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+    addText('SHIP TO:', 15, yPosition, { fontSize: 12, color: [60, 60, 60] });
+    yPosition += 7;
+    addText(order.company?.company_name || 'N/A', 15, yPosition);
+    addText(order.company?.ship_to || 'N/A', 15, yPosition + 5);
+    yPosition += 20;
 
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
+    // Check if we need a new page for the table
+    if (yPosition > 200) {
       pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      yPosition = 20;
     }
 
-    pdf.save(`packing-slip-${packingSlip?.invoice_number || 'invoice'}.pdf`);
+    // Items table
+    const headers = ['Product', 'SKU', 'Qty', 'Pack', 'Weight', 'HS Code', 'Made In'];
+    yPosition = addTableHeader(headers, yPosition);
+
+    // Add items
+    orderItems.forEach((item) => {
+      // Check if we need a new page
+      if (yPosition > 250) {
+        pdf.addPage();
+        yPosition = addTableHeader(headers, 20);
+      }
+
+      const rowData = [
+        item.product?.item_name || 'N/A',
+        item.product?.sku || 'N/A',
+        item.quantity.toString(),
+        item.product?.case_pack?.toString() || 'N/A',
+        item.product?.case_weight ? `${item.product.case_weight} lbs` : 'N/A',
+        item.product?.hs_code || 'N/A',
+        item.product?.made_in || 'N/A'
+      ];
+
+      yPosition = addTableRow(rowData, yPosition);
+    });
+
+    // Notes section
+    if (packingSlip.notes) {
+      yPosition += 10;
+      if (yPosition > 250) {
+        pdf.addPage();
+        yPosition = 20;
+      }
+      
+      addText('NOTES:', 15, yPosition, { fontSize: 12, color: [60, 60, 60] });
+      yPosition += 7;
+      
+      const noteLines = pdf.splitTextToSize(packingSlip.notes, 180);
+      noteLines.forEach((line: string) => {
+        addText(line, 15, yPosition, { fontSize: 9 });
+        yPosition += 5;
+      });
+    }
+
+    // Footer
+    const finalY = pageHeight - 20;
+    addText(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, finalY, { fontSize: 8, color: [100, 100, 100] });
+
+    pdf.save(`packing-slip-${packingSlip.invoice_number || 'invoice'}.pdf`);
   };
 
   const handleSave = async () => {
@@ -295,99 +405,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     }
   };
 
-  const generatePackingSlipHTML = (order: Order, items: OrderItem[], packingSlip: PackingSlip): string => {
-    const currentDate = new Date().toLocaleDateString();
-    const itemsHTML = items.map(item => `
-      <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.product?.item_name || 'N/A'}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.product?.sku || 'N/A'}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.product?.case_pack || 'N/A'}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.product?.case_weight || 'N/A'} lbs</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.product?.hs_code || 'N/A'}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.product?.made_in || 'N/A'}</td>
-      </tr>
-    `).join('');
-
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Packing Slip - ${packingSlip.invoice_number}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .invoice-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-            .company-info { display: flex; justify-content: space-between; margin-bottom: 30px; }
-            .company-section { width: 45%; }
-            .section-title { font-weight: bold; margin-bottom: 10px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-            th { background-color: #f5f5f5; padding: 10px; text-align: left; border: 1px solid #ddd; }
-            td { padding: 8px; border: 1px solid #ddd; }
-            .notes { margin-top: 30px; }
-            .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="invoice-title">PACKING SLIP</div>
-            <p>Date: ${currentDate}</p>
-            <p>
-              <strong>Invoice:</strong> ${packingSlip.invoice_number}<br>
-              <strong>Method:</strong> ${packingSlip.shipping_method}<br>
-              <strong>Reference:</strong> ${packingSlip.netsuite_reference || 'N/A'}
-            </p>
-          </div>
-
-          <div class="company-info">
-            <div class="company-section">
-              <div class="section-title">Ship From:</div>
-              <p>
-                ${order.company?.subsidiary?.name || 'N/A'}<br>
-                ${order.company?.subsidiary?.ship_from_address || 'N/A'}
-              </p>
-            </div>
-            <div class="company-section">
-              <div class="section-title">Ship To:</div>
-              <p>
-                ${order.company?.company_name || 'N/A'}<br>
-                ${order.company?.ship_to || 'N/A'}
-              </p>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>SKU</th>
-                <th>Quantity</th>
-                <th>Case Pack</th>
-                <th>Weight</th>
-                <th>HS Code</th>
-                <th>Made In</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsHTML}
-            </tbody>
-          </table>
-
-          ${packingSlip.notes ? `
-          <div class="notes">
-            <div class="section-title">Notes:</div>
-            <p>${packingSlip.notes}</p>
-          </div>
-          ` : ''}
-
-          <div class="footer">
-            <p>Generated on ${currentDate}</p>
-          </div>
-        </body>
-      </html>
-    `;
-  };
 
   useEffect(() => {
     if (orderId) {
