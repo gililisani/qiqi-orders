@@ -769,18 +769,31 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
           <div id="packing-slip-content" className="px-6 py-8 space-y-8">
             {/* Header Section */}
             <div className="border-b border-[#e5e5e5] pb-8">
-              {/* Logo and SHIP TO Row */}
-              <div className="flex justify-between items-start mb-6">
-                {/* Logo */}
+              {/* Two Column Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                {/* Left Column */}
                 <div>
-                  <img 
-                    src="/QIQI-Logo.svg" 
-                    alt="QIQI Logo" 
-                    className="h-12 w-auto"
-                  />
+                  {/* Logo */}
+                  <div className="mb-4">
+                    <img 
+                      src="/QIQI-Logo.svg" 
+                      alt="QIQI Logo" 
+                      className="h-12 w-auto"
+                    />
+                  </div>
+                  
+                  {/* Subsidiary Info */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2 font-sans text-lg">
+                      {order.company?.subsidiary?.name || 'N/A'}
+                    </h3>
+                    <p className="text-gray-600 font-sans text-sm leading-relaxed">
+                      {order.company?.subsidiary?.ship_from_address || 'N/A'}
+                    </p>
+                  </div>
                 </div>
 
-                {/* SHIP TO - Top Right Corner */}
+                {/* Right Column */}
                 <div className="text-left">
                   <h4 className="font-bold text-gray-900 mb-2 font-sans text-lg">SHIP TO:</h4>
                   <h3 className="font-normal text-gray-900 mb-2 font-sans text-lg">
@@ -812,16 +825,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                     </p>
                   )}
                 </div>
-              </div>
-
-              {/* Subsidiary Info */}
-              <div className="mb-8">
-                <h3 className="font-semibold text-gray-900 mb-2 font-sans text-lg">
-                  {order.company?.subsidiary?.name || 'N/A'}
-                </h3>
-                <p className="text-gray-600 font-sans text-sm leading-relaxed">
-                  {order.company?.subsidiary?.ship_from_address || 'N/A'}
-                </p>
               </div>
 
               {/* Title and Date Row */}
