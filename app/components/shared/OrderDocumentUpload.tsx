@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import { Card } from '@/app/components/ui/Card';
+import { supabase } from '../../../lib/supabaseClient';
+import Card from '../ui/Card';
 
 interface OrderDocumentUploadProps {
   orderId: string;
