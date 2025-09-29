@@ -31,7 +31,12 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
   ];
 
   const handleFileSelect = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+    console.log('File select triggered, files:', files);
+    
+    if (!files || files.length === 0) {
+      console.log('No files selected');
+      return;
+    }
 
     const newUploadingFiles: UploadingFile[] = Array.from(files).map(file => ({
       file,
@@ -39,8 +44,10 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
       status: 'uploading' as const
     }));
 
+    console.log('Created uploading files:', newUploadingFiles);
     setUploadingFiles(prev => [...prev, ...newUploadingFiles]);
     setShowUpload(true);
+    console.log('Show upload set to true');
   };
 
   const uploadFile = async (uploadingFile: UploadingFile, documentType: string, description: string) => {
@@ -186,11 +193,17 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
     handleFileSelect(e.dataTransfer.files);
   };
 
+  // Debug state
+  console.log('OrderDocumentUpload render - showUpload:', showUpload, 'uploadingFiles:', uploadingFiles.length);
+
   return (
     <>
       {/* Upload Button */}
       <button
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => {
+          console.log('Upload button clicked');
+          fileInputRef.current?.click();
+        }}
         className="px-4 py-2 bg-blue-600 text-white rounded transition hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 font-sans text-sm"
       >
         Upload Documents
