@@ -669,7 +669,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{casePack}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{caseQty}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.quantity}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{totalWeight.toFixed(1)} lbs</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{totalWeight.toFixed(1)} kg</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.hs_code || 'N/A'}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.made_in || 'N/A'}</td>
                         </tr>
