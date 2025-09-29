@@ -221,9 +221,6 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
     handleFileSelect(e.dataTransfer.files);
   };
 
-  // Debug logging
-  console.log('OrderDocumentUpload render - showUpload:', showUpload, 'uploadingFiles:', uploadingFiles.length);
-
   return (
     <>
       {/* Upload Button */}
@@ -264,7 +261,6 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
             justifyContent: 'center'
           }}
         >
-          {console.log('Modal is rendering!')}
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-lg shadow-lg border-4 border-red-500">
             <div className="px-6 py-6">
               <div className="flex justify-between items-center mb-6">
