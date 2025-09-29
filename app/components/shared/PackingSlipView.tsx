@@ -514,6 +514,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
                 {/* Right Side - Company Info */}
                 <div className="text-right flex-1">
+                  <h4 className="font-medium text-gray-700 mb-2 font-sans text-sm uppercase tracking-wider">Ship To:</h4>
                   <h3 className="font-semibold text-gray-900 mb-2 font-sans text-lg">
                     {order.company?.company_name || 'N/A'}
                   </h3>
@@ -550,7 +551,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 <div className="text-lg font-semibold text-gray-900 font-sans">{packingSlip.shipping_method}</div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">NetSuite Reference</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">QIQI Sales Order</label>
                 <div className="text-lg font-semibold text-gray-900 font-sans">{packingSlip.netsuite_reference || 'N/A'}</div>
               </div>
             </div>
@@ -562,28 +563,61 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
                   <thead>
                     <tr className="border-b border-[#e5e5e5]">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">Product</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">Item</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">SKU</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">Quantity</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">Case Pack</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">Case Qty</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">Total Units</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">Weight</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">HS Code</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">Made In</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {orderItems.map((item) => (
-                      <tr key={item.id} className="hover:bg-gray-50 border-b border-[#e5e5e5]">
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.item_name || 'N/A'}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-sans">{item.product?.sku || 'N/A'}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.quantity}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.case_pack || 'N/A'}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.case_weight || 'N/A'} lbs</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.hs_code || 'N/A'}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.made_in || 'N/A'}</td>
-                      </tr>
-                    ))}
+                    {orderItems.map((item) => {
+                      const casePack = item.product?.case_pack || 1;
+                      const caseQty = Math.ceil(item.quantity / casePack);
+                      const totalWeight = (item.product?.case_weight || 0) * caseQty;
+                      
+                      return (
+                        <tr key={item.id} className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.item_name || 'N/A'}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-sans">{item.product?.sku || 'N/A'}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{casePack}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{caseQty}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.quantity}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{totalWeight.toFixed(1)} lbs</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.hs_code || 'N/A'}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.made_in || 'N/A'}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
+                  {/* Summary Row */}
+                  <tfoot>
+                    <tr className="bg-gray-50 border-t-2 border-gray-300">
+                      <td colSpan={4} className="px-4 py-3 text-right text-sm font-semibold text-gray-900 font-sans">
+                        TOTALS:
+                      </td>
+                      <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-sans">
+                        {orderItems.reduce((sum, item) => sum + item.quantity, 0)}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-sans">
+                        {orderItems.reduce((sum, item) => {
+                          const casePack = item.product?.case_pack || 1;
+                          const caseQty = Math.ceil(item.quantity / casePack);
+                          const totalWeight = (item.product?.case_weight || 0) * caseQty;
+                          return sum + totalWeight;
+                        }, 0).toFixed(1)} lbs
+                      </td>
+                      <td colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-900 font-sans">
+                        {orderItems.reduce((sum, item) => {
+                          const casePack = item.product?.case_pack || 1;
+                          return sum + Math.ceil(item.quantity / casePack);
+                        }, 0)} Cases
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>
@@ -602,73 +636,85 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
         {/* Edit Form Modal */}
         {editMode && canEdit && (
-          <Card className="mt-6">
-            <div className="px-6 py-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6 font-sans">Edit Packing Slip</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Invoice Number</label>
-                  <input
-                    type="text"
-                    value={editData.invoice_number}
-                    onChange={(e) => setEditData(prev => ({ ...prev, invoice_number: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
-                    placeholder="Enter invoice number"
-                  />
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="px-6 py-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900 font-sans">Edit Packing Slip</h2>
+                  <button
+                    onClick={() => setEditMode(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Invoice Number</label>
+                    <input
+                      type="text"
+                      value={editData.invoice_number}
+                      onChange={(e) => setEditData(prev => ({ ...prev, invoice_number: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                      placeholder="Enter invoice number"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Shipping Method</label>
+                    <input
+                      type="text"
+                      value={editData.shipping_method}
+                      onChange={(e) => setEditData(prev => ({ ...prev, shipping_method: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                      placeholder="Enter shipping method"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">QIQI Sales Order</label>
+                    <input
+                      type="text"
+                      value={editData.netsuite_reference}
+                      onChange={(e) => setEditData(prev => ({ ...prev, netsuite_reference: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                      placeholder="Enter QIQI sales order reference"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Notes</label>
+                    <textarea
+                      value={editData.notes}
+                      onChange={(e) => setEditData(prev => ({ ...prev, notes: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                      rows={3}
+                      placeholder="Enter any additional notes for the packing slip"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Shipping Method</label>
-                  <input
-                    type="text"
-                    value={editData.shipping_method}
-                    onChange={(e) => setEditData(prev => ({ ...prev, shipping_method: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
-                    placeholder="Enter shipping method"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">NetSuite Reference</label>
-                  <input
-                    type="text"
-                    value={editData.netsuite_reference}
-                    onChange={(e) => setEditData(prev => ({ ...prev, netsuite_reference: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
-                    placeholder="Enter NetSuite reference"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Notes</label>
-                  <textarea
-                    value={editData.notes}
-                    onChange={(e) => setEditData(prev => ({ ...prev, notes: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
-                    rows={3}
-                    placeholder="Enter any additional notes for the packing slip"
-                  />
+                <div className="flex space-x-3 mt-6">
+                  <button
+                    onClick={() => setEditMode(false)}
+                    className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded transition hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 font-sans text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 bg-black text-white px-4 py-2 rounded transition hover:opacity-90 focus:ring-2 focus:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed font-sans text-sm"
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
                 </div>
               </div>
-
-              <div className="flex space-x-3 mt-6">
-                <button
-                  onClick={() => setEditMode(false)}
-                  className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded transition hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 font-sans text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex-1 bg-black text-white px-4 py-2 rounded transition hover:opacity-90 focus:ring-2 focus:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed font-sans text-sm"
-                >
-                  {saving ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
         )}
       </div>
     </div>
