@@ -593,8 +593,8 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                   </tbody>
                 </table>
                 
-                {/* Totals Section - Below table, aligned with HS Code column */}
-                <div className="flex justify-center mt-4 mr-[200px]">
+                {/* Totals Section - Below table, positioned under HS Code column */}
+                <div className="flex justify-start mt-4 ml-[calc(15px+60px+25px+20px+20px+25px+20px)]">
                   <div className="w-[120px] text-left">
                     <hr className="border-gray-300 mb-2" />
                     <div className="text-sm font-semibold text-gray-900 font-sans mb-1">TOTALS</div>
@@ -608,7 +608,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                       const caseQty = Math.ceil(item.quantity / casePack);
                       const totalWeight = (item.product?.case_weight || 0) * caseQty;
                       return sum + totalWeight;
-                    }, 0).toFixed(1)} lbs</div>
+                    }, 0).toFixed(1)} kg</div>
                   </div>
                 </div>
               </div>
