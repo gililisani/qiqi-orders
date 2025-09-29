@@ -542,8 +542,9 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     );
   }
 
-  // Check if user can edit (Open, In Process, Ready, or Done - not Cancelled)
-  const canEdit = ['Open', 'In Process', 'Ready', 'Done'].includes(order.status);
+  // Check if user can edit packing slip (only when order is locked from editing)
+  // Open orders cannot create/edit packing slips because the order can still be edited
+  const canEdit = ['In Process', 'Ready', 'Done'].includes(order.status);
 
   // Extract country from company address
   const getDestinationCountry = () => {
@@ -822,7 +823,11 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
               ) : (
                 <div className="text-gray-500 font-sans">
                   <p className="mb-2">Cannot create packing slip for orders with status: <span className="font-semibold">{order.status}</span></p>
-                  <p className="text-sm">Packing slips can only be created for orders with status: Open, In Process, Ready, or Done.</p>
+                  {order.status === 'Open' ? (
+                    <p className="text-sm">Open orders cannot have packing slips because they can still be edited. Packing slips are only available for locked orders (In Process, Ready, or Done).</p>
+                  ) : (
+                    <p className="text-sm">Packing slips can only be created for orders with status: In Process, Ready, or Done.</p>
+                  )}
                 </div>
               )}
             </div>
