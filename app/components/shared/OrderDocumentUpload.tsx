@@ -31,10 +31,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
   ];
 
   const handleFileSelect = (files: FileList | null) => {
-    console.log('File select triggered, files:', files);
-    
     if (!files || files.length === 0) {
-      console.log('No files selected');
       return;
     }
 
@@ -44,39 +41,29 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
       status: 'pending' as const
     }));
 
-    console.log('Created uploading files:', newUploadingFiles);
     setUploadingFiles(prev => [...prev, ...newUploadingFiles]);
     setShowUpload(true);
-    console.log('Show upload set to true');
   };
 
   const uploadFile = async (uploadingFile: UploadingFile, documentType: string, description: string) => {
     try {
-      console.log('uploadFile called for:', uploadingFile.file.name);
       const file = uploadingFile.file;
       
       // Validate file type (only PDFs for now)
       if (file.type !== 'application/pdf') {
-        console.log('File type validation failed:', file.type);
         throw new Error('Only PDF files are allowed');
       }
-      console.log('File type validation passed:', file.type);
 
       // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
-        console.log('File size validation failed:', file.size);
         throw new Error('File size must be less than 10MB');
       }
-      console.log('File size validation passed:', file.size);
 
       // Get current user info first
-      console.log('Getting user authentication...');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.log('User authentication failed');
         throw new Error('User not authenticated');
       }
-      console.log('User authenticated:', user.id);
 
       // Generate unique filename
       const timestamp = Date.now();
@@ -85,7 +72,6 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
       const filePath = `order-documents/${orderId}/${fileName}`;
 
       // Upload file to Supabase Storage
-      console.log('Uploading to storage:', filePath);
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('order-documents')
         .upload(filePath, file, {
@@ -94,13 +80,11 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
         });
 
       if (uploadError) {
-        console.log('Storage upload error:', uploadError);
         if (uploadError.message.includes('bucket') || uploadError.message.includes('not found')) {
           throw new Error('Storage bucket not found. Please run the storage setup script in Supabase SQL Editor.');
         }
         throw uploadError;
       }
-      console.log('Storage upload successful:', uploadData);
 
       // Get user profile for name
       const { data: profile } = await supabase
@@ -156,12 +140,8 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
   };
 
   const handleUpload = async (documentType: string, description: string) => {
-    console.log('handleUpload called with:', { documentType, description, filesCount: uploadingFiles.length });
-    
     const results = await Promise.all(
       uploadingFiles.map(async (uploadingFile) => {
-        console.log('Starting upload for file:', uploadingFile.file.name);
-        
         // Set status to uploading when upload starts
         setUploadingFiles(prev => 
           prev.map(f => 
@@ -172,7 +152,6 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
         );
         
         const result = await uploadFile(uploadingFile, documentType, description);
-        console.log('Upload result for', uploadingFile.file.name, ':', result);
         
         // Update the file status with final result
         setUploadingFiles(prev => 
@@ -187,14 +166,10 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
       })
     );
 
-    console.log('All upload results:', results);
-
     // Check if all uploads were successful
     const allSuccessful = results.every(r => r.success);
-    console.log('All uploads successful:', allSuccessful);
     
     if (allSuccessful) {
-      console.log('Closing modal and refreshing documents...');
       // Close upload modal and refresh documents
       setTimeout(() => {
         setShowUpload(false);
@@ -224,26 +199,17 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
     handleFileSelect(e.dataTransfer.files);
   };
 
-  // Debug state
-  console.log('OrderDocumentUpload render - showUpload:', showUpload, 'uploadingFiles:', uploadingFiles.length);
-
-  // Debug form rendering
-  useEffect(() => {
-    if (uploadingFiles.length > 0) {
-      console.log('Rendering upload form with', uploadingFiles.length, 'files');
-    }
-  }, [uploadingFiles.length]);
 
   return (
     <>
       {/* Upload Button */}
       <button
-        onClick={() => {
-          console.log('Upload button clicked');
-          fileInputRef.current?.click();
-        }}
-        className="px-4 py-2 bg-blue-600 text-white rounded transition hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 font-sans text-sm"
+        onClick={() => fileInputRef.current?.click()}
+        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg transition hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 font-sans text-sm font-medium shadow-sm"
       >
+        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
         Upload Documents
       </button>
 
@@ -260,24 +226,12 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
       {/* Upload Modal */}
       {showUpload && (
         <div 
-          className="fixed inset-0 bg-red-500 bg-opacity-80 flex items-center justify-center p-4" 
-          style={{ 
-            zIndex: 999999,
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(255,0,0,0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" 
         >
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-yellow-300 rounded-lg shadow-lg border-8 border-blue-500 p-8">
-            <div className="px-6 py-6">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-lg shadow-xl">
+            <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-semibold text-gray-900 font-sans">
+                <h2 className="text-xl font-semibold text-gray-900 font-sans">
                   Upload Documents
                 </h2>
                 <button
@@ -285,7 +239,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
                     setShowUpload(false);
                     setUploadingFiles([]);
                   }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -296,10 +250,10 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
               {/* Selected Files */}
               {uploadingFiles.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3 font-sans">Selected Files:</h3>
-                  <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-gray-700 mb-4 font-sans">Selected Files</h3>
+                  <div className="space-y-3">
                     {uploadingFiles.map((uploadingFile, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
                         <div className="flex items-center space-x-3">
                         <div className="flex-shrink-0">
                           {uploadingFile.status === 'pending' && (
@@ -350,14 +304,14 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
 
               {/* Upload Form */}
               {uploadingFiles.length > 0 && (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">
-                      Document Type
+                    <label className="block text-sm font-medium text-gray-700 mb-3 font-sans">
+                      Document Type <span className="text-red-500">*</span>
                     </label>
                     <select
                       ref={documentTypeRef}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans text-sm"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-sans text-sm transition-colors"
                     >
                       {documentTypes.map(type => (
                         <option key={type.value} value={type.value}>
@@ -368,38 +322,36 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">
+                    <label className="block text-sm font-medium text-gray-700 mb-3 font-sans">
                       Description (Optional)
                     </label>
                     <textarea
                       ref={descriptionRef}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-20 font-sans text-sm"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-24 font-sans text-sm resize-none transition-colors"
                       placeholder="Add a description for these documents..."
                     />
                   </div>
 
-                  <div className="flex justify-end space-x-3">
+                  <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
                     <button
                       onClick={() => {
                         setShowUpload(false);
                         setUploadingFiles([]);
                       }}
-                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded transition hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 font-sans text-sm"
+                      className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg transition hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 font-sans text-sm font-medium"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={() => {
-                        console.log('Upload Files button clicked!');
                         const documentType = documentTypeRef.current?.value || 'other';
                         const description = descriptionRef.current?.value || '';
-                        console.log('Form values:', { documentType, description });
                         handleUpload(documentType, description);
                       }}
                       disabled={uploadingFiles.some(f => f.status === 'uploading')}
-                      className="px-4 py-2 bg-blue-600 text-white rounded transition hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-sans text-sm"
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg transition hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-sans text-sm font-medium shadow-sm"
                     >
-                      Upload Files
+                      {uploadingFiles.some(f => f.status === 'uploading') ? 'Uploading...' : 'Upload Files'}
                     </button>
                   </div>
                 </div>
