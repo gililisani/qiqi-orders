@@ -812,7 +812,8 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
           {!packingSlip ? (
             <div className="px-6 py-8 text-center">
               <h2 className="text-xl font-semibold text-gray-900 mb-4 font-sans">No Packing Slip Found</h2>
-              <p className="text-gray-600 mb-6 font-sans">This order doesn't have a packing slip yet. Click "Create" to generate one.</p>
+              <p className="text-gray-600 mb-2 font-sans">This order doesn't have a packing slip yet. Click "Create" to generate one.</p>
+              <p className="text-sm text-gray-500 mb-6 font-sans">Current order status: <span className="font-semibold">{order.status}</span></p>
               {canEdit ? (
                 <button
                   onClick={() => setEditMode(true)}
