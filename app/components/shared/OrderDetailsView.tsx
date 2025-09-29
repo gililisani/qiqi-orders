@@ -117,6 +117,7 @@ export default function OrderDetailsView({
   const [error, setError] = useState('');
   const [currentUserName, setCurrentUserName] = useState<string>('');
   const [showPackingSlipForm, setShowPackingSlipForm] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [packingSlipData, setPackingSlipData] = useState({
     invoice_number: '',
     shipping_method: '',
