@@ -327,9 +327,10 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
               )}
 
               {/* Upload Form */}
-              {uploadingFiles.length > 0 && (
+              {uploadingFiles.length > 0 && (() => {
+                console.log('Rendering upload form with', uploadingFiles.length, 'files');
+                return (
                 <div className="space-y-4">
-                  {console.log('Rendering upload form with', uploadingFiles.length, 'files')}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">
                       Document Type
@@ -382,7 +383,8 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
                     </button>
                   </div>
                 </div>
-              )}
+                );
+              })()}
             </div>
           </div>
         </div>
