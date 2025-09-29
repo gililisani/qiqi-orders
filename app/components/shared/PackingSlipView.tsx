@@ -509,12 +509,12 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 </div>
 
                 {/* Right Side - Company Info */}
-                <div className="text-right flex-1">
-                  <h4 className="font-medium text-gray-700 mb-2 font-sans text-sm uppercase tracking-wider">Ship To:</h4>
-                  <h3 className="font-semibold text-gray-900 mb-2 font-sans text-lg">
+                <div className="text-left">
+                  <h4 className="font-bold text-gray-900 mb-2 font-sans text-lg">SHIP TO:</h4>
+                  <h3 className="font-normal text-gray-900 mb-2 font-sans text-lg">
                     {order.company?.company_name || 'N/A'}
                   </h3>
-                  <p className="text-gray-600 font-sans text-sm leading-relaxed">
+                  <p className="font-normal text-gray-600 font-sans text-sm leading-relaxed">
                     {order.company?.ship_to || 'N/A'}
                   </p>
                 </div>
@@ -537,7 +537,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
             </div>
 
             {/* Invoice Details */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-b border-[#e5e5e5] pb-8">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Invoice Number</label>
                 <div className="text-lg font-semibold text-gray-900 font-sans">#{packingSlip.invoice_number}</div>
