@@ -247,7 +247,10 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
   };
 
   const generatePDF = async () => {
-    if (!order || !orderItems || !packingSlip) return;
+    if (!order || !orderItems || !packingSlip) {
+      setError('No packing slip found to generate PDF');
+      return;
+    }
 
     // Landscape orientation with narrow margins
     const pdf = new jsPDF('l', 'mm', 'a4');
@@ -434,25 +437,48 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
   };
 
   const handleSave = async () => {
-    if (!packingSlip) return;
-    
     try {
       setSaving(true);
-      const { error } = await supabase
-        .from('packing_slips')
-        .update({
-          invoice_number: editData.invoice_number,
-          shipping_method: editData.shipping_method,
-          netsuite_reference: editData.netsuite_reference,
-          notes: editData.notes,
-          contact_name: editData.contact_name,
-          contact_email: editData.contact_email,
-          contact_phone: editData.contact_phone,
-          vat_number: editData.vat_number
-        })
-        .eq('id', packingSlip?.id);
+      
+      if (packingSlip) {
+        // Update existing packing slip
+        const { error } = await supabase
+          .from('packing_slips')
+          .update({
+            invoice_number: editData.invoice_number,
+            shipping_method: editData.shipping_method,
+            netsuite_reference: editData.netsuite_reference,
+            notes: editData.notes,
+            contact_name: editData.contact_name,
+            contact_email: editData.contact_email,
+            contact_phone: editData.contact_phone,
+            vat_number: editData.vat_number
+          })
+          .eq('id', packingSlip.id);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        // Create new packing slip
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not found');
+
+        const { error } = await supabase
+          .from('packing_slips')
+          .insert({
+            order_id: orderId,
+            invoice_number: editData.invoice_number,
+            shipping_method: editData.shipping_method,
+            netsuite_reference: editData.netsuite_reference,
+            notes: editData.notes,
+            contact_name: editData.contact_name,
+            contact_email: editData.contact_email,
+            contact_phone: editData.contact_phone,
+            vat_number: editData.vat_number,
+            created_by: user.id
+          });
+
+        if (error) throw error;
+      }
 
       // Refresh data
       await fetchOrderData();
@@ -483,17 +509,17 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     );
   }
 
-  if (error || !order || !packingSlip) {
+  if (error || !order) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="max-w-md mx-auto text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Packing Slip Not Found</h1>
-          <p className="text-gray-600 mb-4">{error || 'The packing slip you are looking for does not exist.'}</p>
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Order Not Found</h1>
+          <p className="text-gray-600 mb-4">{error || 'The order you are looking for does not exist.'}</p>
           <Link
             href={backUrl}
             className="inline-flex items-center px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
           >
-            ← Back to Order
+            ← Back to Orders
           </Link>
         </div>
       </div>
@@ -759,14 +785,28 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
               onClick={() => setEditMode(!editMode)}
               className="bg-gray-100 text-gray-900 px-4 py-2 rounded transition hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 font-sans text-sm"
             >
-              {editMode ? 'Cancel Edit' : 'Edit'}
+              {editMode ? 'Cancel' : (packingSlip ? 'Edit' : 'Create')}
             </button>
           )}
         </div>
 
         {/* Single Block Layout */}
         <Card>
-          <div id="packing-slip-content" className="px-6 py-8 space-y-8">
+          {!packingSlip ? (
+            <div className="px-6 py-8 text-center">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 font-sans">No Packing Slip Found</h2>
+              <p className="text-gray-600 mb-6 font-sans">This order doesn't have a packing slip yet. Click "Create" to generate one.</p>
+              {canEdit && (
+                <button
+                  onClick={() => setEditMode(true)}
+                  className="bg-black text-white px-6 py-3 rounded transition hover:opacity-90 focus:ring-2 focus:ring-gray-900 font-sans"
+                >
+                  Create Packing Slip
+                </button>
+              )}
+            </div>
+          ) : (
+            <div id="packing-slip-content" className="px-6 py-8 space-y-8">
             {/* Header Section */}
             <div className="border-b border-[#e5e5e5] pb-8">
               {/* Two Column Layout */}
@@ -936,6 +976,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
               </div>
             )}
           </div>
+          )}
         </Card>
 
         {/* Edit Form Modal */}
@@ -944,7 +985,9 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
             <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="px-6 py-6">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900 font-sans">Edit Packing Slip</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 font-sans">
+                    {packingSlip ? 'Edit Packing Slip' : 'Create Packing Slip'}
+                  </h2>
                   <button
                     onClick={() => setEditMode(false)}
                     className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -1059,7 +1102,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                     disabled={saving}
                     className="flex-1 bg-black text-white px-4 py-2 rounded transition hover:opacity-90 focus:ring-2 focus:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed font-sans text-sm"
                   >
-                    {saving ? 'Saving...' : 'Save Changes'}
+                    {saving ? 'Saving...' : (packingSlip ? 'Save Changes' : 'Create Packing Slip')}
                   </button>
                 </div>
               </div>
