@@ -21,6 +21,8 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const documentTypeRef = useRef<HTMLSelectElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   const documentTypes = [
     { value: 'invoice', label: 'Invoice (NetSuite)' },
@@ -360,6 +362,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
                       Document Type
                     </label>
                     <select
+                      ref={documentTypeRef}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans text-sm"
                     >
                       {documentTypes.map(type => (
@@ -375,6 +378,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
                       Description (Optional)
                     </label>
                     <textarea
+                      ref={descriptionRef}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-20 font-sans text-sm"
                       placeholder="Add a description for these documents..."
                     />
@@ -392,8 +396,8 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
                     </button>
                     <button
                       onClick={() => {
-                        const documentType = (document.querySelector('select') as HTMLSelectElement)?.value || 'other';
-                        const description = (document.querySelector('textarea') as HTMLTextAreaElement)?.value || '';
+                        const documentType = documentTypeRef.current?.value || 'other';
+                        const description = descriptionRef.current?.value || '';
                         handleUpload(documentType, description);
                       }}
                       disabled={uploadingFiles.some(f => f.status === 'uploading')}
