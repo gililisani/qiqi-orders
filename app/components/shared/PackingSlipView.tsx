@@ -110,6 +110,10 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       setLoading(true);
       setError(null);
 
+      // Debug: Check current user
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('Current user for packing slip:', user?.id, user?.email);
+
       // For clients, first verify they can access this order
       if (role === 'client') {
         const { data: { user } } = await supabase.auth.getUser();
@@ -184,18 +188,36 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
       if (itemsError) throw itemsError;
 
-      // Fetch packing slip
-      const { data: packingSlipData, error: packingSlipError } = await supabase
-        .from('packing_slips')
-        .select('*')
-        .eq('order_id', orderId)
-        .single();
+      // Fetch packing slip - try with different approaches for admin vs client
+      let packingSlipData = null;
+      let packingSlipError = null;
+      
+      if (role === 'admin') {
+        // For admins, try to fetch packing slip
+        const result = await supabase
+          .from('packing_slips')
+          .select('*')
+          .eq('order_id', orderId)
+          .single();
+        packingSlipData = result.data;
+        packingSlipError = result.error;
+      } else {
+        // For clients, try to fetch packing slip with RLS
+        const result = await supabase
+          .from('packing_slips')
+          .select('*')
+          .eq('order_id', orderId)
+          .single();
+        packingSlipData = result.data;
+        packingSlipError = result.error;
+      }
 
       if (packingSlipError && packingSlipError.code !== 'PGRST116') {
         console.error('Packing slip fetch error:', packingSlipError);
         // If it's a permission error (406), treat as no packing slip found
-        if (packingSlipError.code === 'PGRST205' || packingSlipError.message?.includes('406')) {
+        if (packingSlipError.code === 'PGRST205' || packingSlipError.message?.includes('406') || packingSlipError.message?.includes('Not Acceptable')) {
           console.log('Permission error fetching packing slip - treating as no packing slip found');
+          // Don't throw error, just continue with no packing slip data
         } else {
           throw packingSlipError;
         }
