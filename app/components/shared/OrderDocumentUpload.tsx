@@ -55,25 +55,46 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
         throw new Error('File size must be less than 10MB');
       }
 
+      // Get current user info first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       // Generate unique filename
       const timestamp = Date.now();
       const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const fileName = `${timestamp}_${sanitizedFileName}`;
       const filePath = `order-documents/${orderId}/${fileName}`;
 
-      // Upload file to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('order-documents')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+      console.log('Attempting to upload file:', fileName, 'to path:', filePath);
 
-      if (uploadError) throw uploadError;
+      let uploadData;
+      let uploadError;
 
-      // Get current user info
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      try {
+        // Try to upload file to Supabase Storage
+        const uploadResult = await supabase.storage
+          .from('order-documents')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+        
+        uploadData = uploadResult.data;
+        uploadError = uploadResult.error;
+      } catch (storageError) {
+        console.error('Storage error:', storageError);
+        throw new Error('Storage system not available. Please contact admin to set up document storage.');
+      }
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        if (uploadError.message.includes('bucket') || uploadError.message.includes('not found')) {
+          throw new Error('Storage bucket not found. Please run the storage setup script in Supabase SQL Editor.');
+        }
+        throw uploadError;
+      }
+
+      console.log('File uploaded successfully:', uploadData);
 
       // Get user profile for name
       const { data: profile } = await supabase
