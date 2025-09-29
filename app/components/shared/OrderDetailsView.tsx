@@ -116,11 +116,74 @@ export default function OrderDetailsView({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentUserName, setCurrentUserName] = useState<string>('');
+  const [showPackingSlipForm, setShowPackingSlipForm] = useState(false);
+  const [packingSlipData, setPackingSlipData] = useState({
+    invoice_number: '',
+    shipping_method: '',
+    netsuite_reference: '',
+    notes: '',
+    contact_name: '',
+    contact_email: '',
+    contact_phone: '',
+    vat_number: ''
+  });
   
   // Admin-specific states
   const [isReordering, setIsReordering] = useState(false);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [sendingNotification, setSendingNotification] = useState(false);
+
+  const handleCreatePackingSlip = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('packing_slips')
+        .insert({
+          order_id: orderId,
+          invoice_number: packingSlipData.invoice_number,
+          shipping_method: packingSlipData.shipping_method,
+          netsuite_reference: packingSlipData.netsuite_reference,
+          notes: packingSlipData.notes,
+          contact_name: packingSlipData.contact_name,
+          contact_email: packingSlipData.contact_email,
+          contact_phone: packingSlipData.contact_phone,
+          vat_number: packingSlipData.vat_number,
+          created_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update order to mark packing slip as generated
+      await supabase
+        .from('orders')
+        .update({ 
+          packing_slip_generated: true,
+          packing_slip_generated_at: new Date().toISOString(),
+          packing_slip_generated_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .eq('id', orderId);
+
+      // Refresh order data
+      await fetchOrderData();
+      
+      // Close popup and reset form
+      setShowPackingSlipForm(false);
+      setPackingSlipData({
+        invoice_number: '',
+        shipping_method: '',
+        netsuite_reference: '',
+        notes: '',
+        contact_name: '',
+        contact_email: '',
+        contact_phone: '',
+        vat_number: ''
+      });
+    } catch (error: any) {
+      console.error('Error creating packing slip:', error);
+      setError(error.message);
+    }
+  };
   const [adminInvoiceNumber, setAdminInvoiceNumber] = useState<string>('');
   const [adminSoNumber, setAdminSoNumber] = useState<string>('');
   const [savingAdminFields, setSavingAdminFields] = useState<boolean>(false);
@@ -504,12 +567,12 @@ export default function OrderDetailsView({
                 Packing Slip
               </Link>
             ) : (
-              <Link
-                href={packingSlipUrl}
+              <button
+                onClick={() => setShowPackingSlipForm(true)}
                 className="px-4 py-2 transition text-sm bg-purple-600 text-white hover:bg-purple-700"
               >
-                Generate Packing Slip
-              </Link>
+                Create Packing Slip
+              </button>
             )
           )}
           
@@ -854,6 +917,135 @@ export default function OrderDetailsView({
             </div>
           )}
         </Card>
+      )}
+
+      {/* Packing Slip Form Modal */}
+      {showPackingSlipForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-semibold text-gray-900 font-sans">
+                  Create Packing Slip
+                </h2>
+                <button
+                  onClick={() => setShowPackingSlipForm(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Invoice Number</label>
+                  <input
+                    type="text"
+                    value={packingSlipData.invoice_number}
+                    onChange={(e) => setPackingSlipData(prev => ({ ...prev, invoice_number: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                    placeholder="Enter invoice number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Shipping Method</label>
+                  <select
+                    value={packingSlipData.shipping_method}
+                    onChange={(e) => setPackingSlipData(prev => ({ ...prev, shipping_method: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                  >
+                    <option value="">Select shipping method</option>
+                    <option value="Air">Air</option>
+                    <option value="Ocean">Ocean</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">QIQI Sales Order</label>
+                  <input
+                    type="text"
+                    value={packingSlipData.netsuite_reference}
+                    onChange={(e) => setPackingSlipData(prev => ({ ...prev, netsuite_reference: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                    placeholder="Enter QIQI sales order reference"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Contact Name</label>
+                  <input
+                    type="text"
+                    value={packingSlipData.contact_name}
+                    onChange={(e) => setPackingSlipData(prev => ({ ...prev, contact_name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                    placeholder="Enter contact name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Contact Email</label>
+                  <input
+                    type="email"
+                    value={packingSlipData.contact_email}
+                    onChange={(e) => setPackingSlipData(prev => ({ ...prev, contact_email: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                    placeholder="Enter contact email"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Contact Phone Number</label>
+                  <input
+                    type="text"
+                    value={packingSlipData.contact_phone}
+                    onChange={(e) => setPackingSlipData(prev => ({ ...prev, contact_phone: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                    placeholder="Enter contact phone number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">VAT #</label>
+                  <input
+                    type="text"
+                    value={packingSlipData.vat_number}
+                    onChange={(e) => setPackingSlipData(prev => ({ ...prev, vat_number: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                    placeholder="Enter VAT number"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Notes</label>
+                  <textarea
+                    value={packingSlipData.notes}
+                    onChange={(e) => setPackingSlipData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black h-24 font-sans text-sm"
+                    placeholder="Enter any additional notes for the packing slip"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowPackingSlipForm(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded transition hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 font-sans text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreatePackingSlip}
+                  className="flex-1 bg-black text-white px-4 py-2 rounded transition hover:opacity-90 focus:ring-2 focus:ring-gray-900 font-sans text-sm"
+                >
+                  Create Packing Slip
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
