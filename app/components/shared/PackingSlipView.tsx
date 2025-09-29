@@ -590,23 +590,20 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                       );
                     })}
                     
-                    {/* Totals Row */}
-                    <tr className="bg-gray-50 border-t-2 border-gray-300">
-                      <td colSpan={6} className="px-4 py-3 text-sm font-semibold text-gray-900 font-sans">
-                        TOTALS
-                      </td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-sans">
-                        Cases: {orderItems.reduce((sum, item) => {
-                          const casePack = item.product?.case_pack || 1;
-                          return sum + Math.ceil(item.quantity / casePack);
-                        }, 0)}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-sans">
-                        Units: {orderItems.reduce((sum, item) => sum + item.quantity, 0)}
-                      </td>
-                    </tr>
                   </tbody>
                 </table>
+                
+                {/* Totals Section - Below table, aligned right */}
+                <div className="flex justify-end mt-4">
+                  <div className="text-right">
+                    <div className="text-sm font-semibold text-gray-900 font-sans mb-1">TOTALS</div>
+                    <div className="text-sm text-gray-900 font-sans">Cases: {orderItems.reduce((sum, item) => {
+                      const casePack = item.product?.case_pack || 1;
+                      return sum + Math.ceil(item.quantity / casePack);
+                    }, 0)}</div>
+                    <div className="text-sm text-gray-900 font-sans">Units: {orderItems.reduce((sum, item) => sum + item.quantity, 0)}</div>
+                  </div>
+                </div>
               </div>
             </div>
 
