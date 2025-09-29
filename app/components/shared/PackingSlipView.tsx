@@ -826,15 +826,13 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
           {canEdit && (
             <button
               type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
+              onClick={() => {
                 console.log('Top Create/Edit button clicked, current editMode:', editMode);
-                setEditMode(!editMode);
+                setEditMode(true);
               }}
               className="bg-gray-100 text-gray-900 px-4 py-2 rounded transition hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 font-sans text-sm"
             >
-              {editMode ? 'Cancel' : (packingSlip ? 'Edit' : 'Create')}
+              {packingSlip ? 'Edit' : 'Create'}
             </button>
           )}
         </div>
