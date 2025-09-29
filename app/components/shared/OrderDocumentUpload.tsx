@@ -222,21 +222,21 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
       {/* Upload Modal */}
       {showUpload && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" 
+          className="fixed inset-0 bg-red-500 bg-opacity-80 flex items-center justify-center p-4" 
           style={{ 
-            zIndex: 9999,
+            zIndex: 999999,
             position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
+            backgroundColor: 'rgba(255,0,0,0.8)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
           }}
         >
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-lg shadow-lg border-4 border-red-500">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-yellow-300 rounded-lg shadow-lg border-8 border-blue-500 p-8">
             <div className="px-6 py-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-semibold text-gray-900 font-sans">
