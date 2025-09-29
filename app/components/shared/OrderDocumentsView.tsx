@@ -84,12 +84,12 @@ export default function OrderDocumentsView({ orderId, role, onUploadComplete }: 
     }
   };
 
-  const handleDownloadDocument = async (document: OrderDocument) => {
+  const handleDownloadDocument = async (doc: OrderDocument) => {
     try {
-      const url = await getDocumentUrl(document);
+      const url = await getDocumentUrl(doc);
       const link = document.createElement('a');
       link.href = url;
-      link.download = document.filename;
+      link.download = doc.filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -175,9 +175,9 @@ export default function OrderDocumentsView({ orderId, role, onUploadComplete }: 
             </div>
           ) : (
             <div className="space-y-4">
-              {documents.map((document) => (
+              {documents.map((doc) => (
                 <div
-                  key={document.id}
+                  key={doc.id}
                   className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center space-x-4">
@@ -189,33 +189,33 @@ export default function OrderDocumentsView({ orderId, role, onUploadComplete }: 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
                         <p className="text-sm font-medium text-gray-900 truncate font-sans">
-                          {document.filename}
+                          {doc.filename}
                         </p>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${documentTypeColors[document.document_type]}`}>
-                          {documentTypeLabels[document.document_type]}
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${documentTypeColors[doc.document_type]}`}>
+                          {documentTypeLabels[doc.document_type]}
                         </span>
                       </div>
                       <div className="flex items-center space-x-4 text-xs text-gray-500">
-                        <span>{formatFileSize(document.file_size)}</span>
+                        <span>{formatFileSize(doc.file_size)}</span>
                         <span>•</span>
-                        <span>Uploaded by {document.uploaded_by_name}</span>
+                        <span>Uploaded by {doc.uploaded_by_name}</span>
                         <span>•</span>
-                        <span>{formatDate(document.created_at)}</span>
+                        <span>{formatDate(doc.created_at)}</span>
                       </div>
-                      {document.description && (
-                        <p className="text-xs text-gray-600 mt-1 font-sans">{document.description}</p>
+                      {doc.description && (
+                        <p className="text-xs text-gray-600 mt-1 font-sans">{doc.description}</p>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => handleViewDocument(document)}
+                      onClick={() => handleViewDocument(doc)}
                       className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors font-sans"
                     >
                       View
                     </button>
                     <button
-                      onClick={() => handleDownloadDocument(document)}
+                      onClick={() => handleDownloadDocument(doc)}
                       className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors font-sans"
                     >
                       Download
