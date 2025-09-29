@@ -165,7 +165,7 @@ export default function OrderDetailsView({
         .eq('id', orderId);
 
       // Refresh order data
-      await fetchOrderData();
+      await fetchOrder();
       
       // Close popup and reset form
       setShowPackingSlipForm(false);
