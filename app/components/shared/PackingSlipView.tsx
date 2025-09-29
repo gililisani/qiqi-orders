@@ -594,14 +594,21 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 </table>
                 
                 {/* Totals Section - Below table, aligned with HS Code column */}
-                <div className="flex justify-end mt-4">
+                <div className="flex justify-center mt-4 mr-[200px]">
                   <div className="w-[120px] text-left">
+                    <hr className="border-gray-300 mb-2" />
                     <div className="text-sm font-semibold text-gray-900 font-sans mb-1">TOTALS</div>
                     <div className="text-sm text-gray-900 font-sans">Cases: {orderItems.reduce((sum, item) => {
                       const casePack = item.product?.case_pack || 1;
                       return sum + Math.ceil(item.quantity / casePack);
                     }, 0)}</div>
                     <div className="text-sm text-gray-900 font-sans">Units: {orderItems.reduce((sum, item) => sum + item.quantity, 0)}</div>
+                    <div className="text-sm text-gray-900 font-sans">Weight: {orderItems.reduce((sum, item) => {
+                      const casePack = item.product?.case_pack || 1;
+                      const caseQty = Math.ceil(item.quantity / casePack);
+                      const totalWeight = (item.product?.case_weight || 0) * caseQty;
+                      return sum + totalWeight;
+                    }, 0).toFixed(1)} lbs</div>
                   </div>
                 </div>
               </div>
