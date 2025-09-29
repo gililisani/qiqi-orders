@@ -488,28 +488,25 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
           <div id="packing-slip-content" className="px-6 py-8 space-y-8">
             {/* Header Section */}
             <div className="border-b border-[#e5e5e5] pb-8">
-              {/* Logo and Company Info Row */}
+              {/* Logo */}
+              <div className="mb-6">
+                <img 
+                  src="/QIQI-Logo.svg" 
+                  alt="QIQI Logo" 
+                  className="h-12 w-auto"
+                />
+              </div>
+
+              {/* Company Info Row */}
               <div className="flex justify-between items-start mb-8">
-                {/* Left Side - Logo and Subsidiary */}
+                {/* Left Side - Subsidiary */}
                 <div className="flex-1">
-                  {/* Logo */}
-                  <div className="mb-4">
-                    <img 
-                      src="/QIQI-Logo.svg" 
-                      alt="QIQI Logo" 
-                      className="h-12 w-auto"
-                    />
-                  </div>
-                  
-                  {/* Subsidiary Info */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2 font-sans text-lg">
-                      {order.company?.subsidiary?.name || 'N/A'}
-                    </h3>
-                    <p className="text-gray-600 font-sans text-sm leading-relaxed">
-                      {order.company?.subsidiary?.ship_from_address || 'N/A'}
-                    </p>
-                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2 font-sans text-lg">
+                    {order.company?.subsidiary?.name || 'N/A'}
+                  </h3>
+                  <p className="text-gray-600 font-sans text-sm leading-relaxed">
+                    {order.company?.subsidiary?.ship_from_address || 'N/A'}
+                  </p>
                 </div>
 
                 {/* Right Side - Company Info */}
@@ -592,32 +589,23 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                         </tr>
                       );
                     })}
-                  </tbody>
-                  {/* Summary Row */}
-                  <tfoot>
+                    
+                    {/* Totals Row */}
                     <tr className="bg-gray-50 border-t-2 border-gray-300">
-                      <td colSpan={4} className="px-4 py-3 text-right text-sm font-semibold text-gray-900 font-sans">
-                        TOTALS:
+                      <td colSpan={6} className="px-4 py-3 text-sm font-semibold text-gray-900 font-sans">
+                        TOTALS
                       </td>
                       <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-sans">
-                        {orderItems.reduce((sum, item) => sum + item.quantity, 0)}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-sans">
-                        {orderItems.reduce((sum, item) => {
-                          const casePack = item.product?.case_pack || 1;
-                          const caseQty = Math.ceil(item.quantity / casePack);
-                          const totalWeight = (item.product?.case_weight || 0) * caseQty;
-                          return sum + totalWeight;
-                        }, 0).toFixed(1)} lbs
-                      </td>
-                      <td colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-900 font-sans">
-                        {orderItems.reduce((sum, item) => {
+                        Cases: {orderItems.reduce((sum, item) => {
                           const casePack = item.product?.case_pack || 1;
                           return sum + Math.ceil(item.quantity / casePack);
-                        }, 0)} Cases
+                        }, 0)}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-semibold text-gray-900 font-sans">
+                        Units: {orderItems.reduce((sum, item) => sum + item.quantity, 0)}
                       </td>
                     </tr>
-                  </tfoot>
+                  </tbody>
                 </table>
               </div>
             </div>
