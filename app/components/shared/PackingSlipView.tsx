@@ -593,8 +593,8 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                   </tbody>
                 </table>
                 
-                {/* Totals Section - Below table, positioned under HS Code column */}
-                <div className="flex justify-start mt-4 ml-[calc(15px+60px+25px+20px+20px+25px+20px)]">
+                {/* Totals Section - Below table, to the right of table */}
+                <div className="flex justify-end mt-4">
                   <div className="w-[120px] text-left">
                     <hr className="border-gray-300 mb-2" />
                     <div className="text-sm font-semibold text-gray-900 font-sans mb-1">TOTALS</div>
