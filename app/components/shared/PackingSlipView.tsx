@@ -506,9 +506,230 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
   // Extract country from company address
   const getDestinationCountry = () => {
     const address = order?.company?.ship_to || '';
-    // Simple extraction - take the last part of the address as country
+    if (!address) return '';
+    
+    // Try different extraction methods
     const parts = address.split(',').map(part => part.trim());
-    return parts[parts.length - 1] || '';
+    
+    // If there are multiple parts, take the last one (usually country)
+    if (parts.length > 1) {
+      return parts[parts.length - 1];
+    }
+    
+    // If only one part, try to extract country from common patterns
+    const singlePart = parts[0];
+    
+    // Look for country patterns at the end
+    const countryPatterns = [
+      /\b(USA|United States|US)\b/i,
+      /\b(Canada|CA)\b/i,
+      /\b(United Kingdom|UK|England|Scotland|Wales|Northern Ireland)\b/i,
+      /\b(Germany|DE)\b/i,
+      /\b(France|FR)\b/i,
+      /\b(Spain|ES)\b/i,
+      /\b(Italy|IT)\b/i,
+      /\b(Netherlands|NL|Holland)\b/i,
+      /\b(Belgium|BE)\b/i,
+      /\b(Austria|AT)\b/i,
+      /\b(Switzerland|CH)\b/i,
+      /\b(Sweden|SE)\b/i,
+      /\b(Norway|NO)\b/i,
+      /\b(Denmark|DK)\b/i,
+      /\b(Finland|FI)\b/i,
+      /\b(Australia|AU)\b/i,
+      /\b(New Zealand|NZ)\b/i,
+      /\b(Japan|JP)\b/i,
+      /\b(China|CN)\b/i,
+      /\b(India|IN)\b/i,
+      /\b(Brazil|BR)\b/i,
+      /\b(Mexico|MX)\b/i,
+      /\b(Argentina|AR)\b/i,
+      /\b(Chile|CL)\b/i,
+      /\b(Colombia|CO)\b/i,
+      /\b(Peru|PE)\b/i,
+      /\b(South Korea|KR|Korea)\b/i,
+      /\b(Thailand|TH)\b/i,
+      /\b(Vietnam|VN)\b/i,
+      /\b(Philippines|PH)\b/i,
+      /\b(Indonesia|ID)\b/i,
+      /\b(Malaysia|MY)\b/i,
+      /\b(Singapore|SG)\b/i,
+      /\b(Taiwan|TW)\b/i,
+      /\b(Hong Kong|HK)\b/i,
+      /\b(Israel|IL)\b/i,
+      /\b(Turkey|TR)\b/i,
+      /\b(Russia|RU)\b/i,
+      /\b(Poland|PL)\b/i,
+      /\b(Czech Republic|CZ)\b/i,
+      /\b(Hungary|HU)\b/i,
+      /\b(Romania|RO)\b/i,
+      /\b(Bulgaria|BG)\b/i,
+      /\b(Greece|GR)\b/i,
+      /\b(Portugal|PT)\b/i,
+      /\b(Ireland|IE)\b/i,
+      /\b(Iceland|IS)\b/i,
+      /\b(Luxembourg|LU)\b/i,
+      /\b(Liechtenstein|LI)\b/i,
+      /\b(Monaco|MC)\b/i,
+      /\b(Andorra|AD)\b/i,
+      /\b(San Marino|SM)\b/i,
+      /\b(Vatican|VA)\b/i,
+      /\b(Malta|MT)\b/i,
+      /\b(Cyprus|CY)\b/i,
+      /\b(Estonia|EE)\b/i,
+      /\b(Latvia|LV)\b/i,
+      /\b(Lithuania|LT)\b/i,
+      /\b(Slovakia|SK)\b/i,
+      /\b(Slovenia|SI)\b/i,
+      /\b(Croatia|HR)\b/i,
+      /\b(Serbia|RS)\b/i,
+      /\b(Bosnia|BA)\b/i,
+      /\b(Montenegro|ME)\b/i,
+      /\b(Macedonia|MK)\b/i,
+      /\b(Albania|AL)\b/i,
+      /\b(Kosovo|XK)\b/i,
+      /\b(Moldova|MD)\b/i,
+      /\b(Ukraine|UA)\b/i,
+      /\b(Belarus|BY)\b/i,
+      /\b(Georgia|GE)\b/i,
+      /\b(Armenia|AM)\b/i,
+      /\b(Azerbaijan|AZ)\b/i,
+      /\b(Kazakhstan|KZ)\b/i,
+      /\b(Uzbekistan|UZ)\b/i,
+      /\b(Kyrgyzstan|KG)\b/i,
+      /\b(Tajikistan|TJ)\b/i,
+      /\b(Turkmenistan|TM)\b/i,
+      /\b(Mongolia|MN)\b/i,
+      /\b(Afghanistan|AF)\b/i,
+      /\b(Pakistan|PK)\b/i,
+      /\b(Bangladesh|BD)\b/i,
+      /\b(Sri Lanka|LK)\b/i,
+      /\b(Nepal|NP)\b/i,
+      /\b(Bhutan|BT)\b/i,
+      /\b(Maldives|MV)\b/i,
+      /\b(Myanmar|MM|Burma)\b/i,
+      /\b(Cambodia|KH)\b/i,
+      /\b(Laos|LA)\b/i,
+      /\b(Brunei|BN)\b/i,
+      /\b(East Timor|TL|Timor-Leste)\b/i,
+      /\b(Papua New Guinea|PG)\b/i,
+      /\b(Fiji|FJ)\b/i,
+      /\b(Solomon Islands|SB)\b/i,
+      /\b(Vanuatu|VU)\b/i,
+      /\b(Samoa|WS)\b/i,
+      /\b(Tonga|TO)\b/i,
+      /\b(Kiribati|KI)\b/i,
+      /\b(Tuvalu|TV)\b/i,
+      /\b(Nauru|NR)\b/i,
+      /\b(Palau|PW)\b/i,
+      /\b(Marshall Islands|MH)\b/i,
+      /\b(Micronesia|FM)\b/i,
+      /\b(Niue|NU)\b/i,
+      /\b(Cook Islands|CK)\b/i,
+      /\b(Tokelau|TK)\b/i,
+      /\b(American Samoa|AS)\b/i,
+      /\b(Guam|GU)\b/i,
+      /\b(Northern Mariana Islands|MP)\b/i,
+      /\b(Puerto Rico|PR)\b/i,
+      /\b(Virgin Islands|VI)\b/i,
+      /\b(British Virgin Islands|VG)\b/i,
+      /\b(Anguilla|AI)\b/i,
+      /\b(Montserrat|MS)\b/i,
+      /\b(Guadeloupe|GP)\b/i,
+      /\b(Martinique|MQ)\b/i,
+      /\b(Saint Lucia|LC)\b/i,
+      /\b(Saint Vincent|VC)\b/i,
+      /\b(Grenada|GD)\b/i,
+      /\b(Dominica|DM)\b/i,
+      /\b(Saint Kitts|KN)\b/i,
+      /\b(Antigua|AG)\b/i,
+      /\b(Barbados|BB)\b/i,
+      /\b(Trinidad|TT)\b/i,
+      /\b(Jamaica|JM)\b/i,
+      /\b(Cuba|CU)\b/i,
+      /\b(Haiti|HT)\b/i,
+      /\b(Dominican Republic|DO)\b/i,
+      /\b(Bahamas|BS)\b/i,
+      /\b(Belize|BZ)\b/i,
+      /\b(Costa Rica|CR)\b/i,
+      /\b(El Salvador|SV)\b/i,
+      /\b(Guatemala|GT)\b/i,
+      /\b(Honduras|HN)\b/i,
+      /\b(Nicaragua|NI)\b/i,
+      /\b(Panama|PA)\b/i,
+      /\b(Ecuador|EC)\b/i,
+      /\b(Venezuela|VE)\b/i,
+      /\b(Guyana|GY)\b/i,
+      /\b(Suriname|SR)\b/i,
+      /\b(Uruguay|UY)\b/i,
+      /\b(Paraguay|PY)\b/i,
+      /\b(Bolivia|BO)\b/i,
+      /\b(Egypt|EG)\b/i,
+      /\b(Libya|LY)\b/i,
+      /\b(Tunisia|TN)\b/i,
+      /\b(Algeria|DZ)\b/i,
+      /\b(Morocco|MA)\b/i,
+      /\b(Sudan|SD)\b/i,
+      /\b(South Sudan|SS)\b/i,
+      /\b(Ethiopia|ET)\b/i,
+      /\b(Eritrea|ER)\b/i,
+      /\b(Djibouti|DJ)\b/i,
+      /\b(Somalia|SO)\b/i,
+      /\b(Kenya|KE)\b/i,
+      /\b(Uganda|UG)\b/i,
+      /\b(Tanzania|TZ)\b/i,
+      /\b(Rwanda|RW)\b/i,
+      /\b(Burundi|BI)\b/i,
+      /\b(Central African Republic|CF)\b/i,
+      /\b(Chad|TD)\b/i,
+      /\b(Niger|NE)\b/i,
+      /\b(Mali|ML)\b/i,
+      /\b(Burkina Faso|BF)\b/i,
+      /\b(Ivory Coast|CI)\b/i,
+      /\b(Ghana|GH)\b/i,
+      /\b(Togo|TG)\b/i,
+      /\b(Benin|BJ)\b/i,
+      /\b(Nigeria|NG)\b/i,
+      /\b(Cameroon|CM)\b/i,
+      /\b(Equatorial Guinea|GQ)\b/i,
+      /\b(Gabon|GA)\b/i,
+      /\b(Congo|CG)\b/i,
+      /\b(Democratic Republic of Congo|CD)\b/i,
+      /\b(Angola|AO)\b/i,
+      /\b(Zambia|ZM)\b/i,
+      /\b(Zimbabwe|ZW)\b/i,
+      /\b(Botswana|BW)\b/i,
+      /\b(Namibia|NA)\b/i,
+      /\b(South Africa|ZA)\b/i,
+      /\b(Lesotho|LS)\b/i,
+      /\b(Swaziland|SZ)\b/i,
+      /\b(Madagascar|MG)\b/i,
+      /\b(Mauritius|MU)\b/i,
+      /\b(Seychelles|SC)\b/i,
+      /\b(Comoros|KM)\b/i,
+      /\b(Mauritania|MR)\b/i,
+      /\b(Senegal|SN)\b/i,
+      /\b(Gambia|GM)\b/i,
+      /\b(Guinea-Bissau|GW)\b/i,
+      /\b(Guinea|GN)\b/i,
+      /\b(Sierra Leone|SL)\b/i,
+      /\b(Liberia|LR)\b/i,
+      /\b(Cape Verde|CV)\b/i,
+      /\b(São Tomé|ST)\b/i,
+      /\b(Malawi|MW)\b/i,
+      /\b(Mozambique|MZ)\b/i
+    ];
+    
+    for (const pattern of countryPatterns) {
+      const match = singlePart.match(pattern);
+      if (match) {
+        return match[0];
+      }
+    }
+    
+    // If no country pattern found, return the last word (might be a country)
+    const words = singlePart.split(' ').filter(word => word.length > 0);
+    return words[words.length - 1] || '';
   };
 
 
@@ -557,50 +778,47 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 />
               </div>
 
-              {/* Company Info Row */}
-              <div className="flex justify-between items-start mb-8">
-                {/* Left Side - Subsidiary */}
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 mb-2 font-sans text-lg">
-                    {order.company?.subsidiary?.name || 'N/A'}
-                  </h3>
-                  <p className="text-gray-600 font-sans text-sm leading-relaxed">
-                    {order.company?.subsidiary?.ship_from_address || 'N/A'}
-                  </p>
-                </div>
+              {/* Subsidiary Info */}
+              <div className="mb-8">
+                <h3 className="font-semibold text-gray-900 mb-2 font-sans text-lg">
+                  {order.company?.subsidiary?.name || 'N/A'}
+                </h3>
+                <p className="text-gray-600 font-sans text-sm leading-relaxed">
+                  {order.company?.subsidiary?.ship_from_address || 'N/A'}
+                </p>
+              </div>
 
-                {/* Right Side - SHIP TO - Always displayed */}
-                <div className="text-left">
-                  <h4 className="font-bold text-gray-900 mb-2 font-sans text-lg">SHIP TO:</h4>
-                  <h3 className="font-normal text-gray-900 mb-2 font-sans text-lg">
-                    {order.company?.company_name || 'N/A'}
-                  </h3>
-                  <p className="font-normal text-gray-600 font-sans text-sm leading-relaxed">
-                    {order.company?.ship_to || 'N/A'}
+              {/* SHIP TO - Aligned with logo */}
+              <div className="mb-8">
+                <h4 className="font-bold text-gray-900 mb-2 font-sans text-lg">SHIP TO:</h4>
+                <h3 className="font-normal text-gray-900 mb-2 font-sans text-lg">
+                  {order.company?.company_name || 'N/A'}
+                </h3>
+                <p className="font-normal text-gray-600 font-sans text-sm leading-relaxed">
+                  {order.company?.ship_to || 'N/A'}
+                </p>
+                
+                {/* Contact fields - only display if they exist */}
+                {packingSlip?.contact_name && (
+                  <p className="font-normal text-gray-600 font-sans text-sm mt-1">
+                    Contact: {packingSlip.contact_name}
                   </p>
-                  
-                  {/* Contact fields - only display if they exist */}
-                  {packingSlip?.contact_name && (
-                    <p className="font-normal text-gray-600 font-sans text-sm mt-1">
-                      Contact: {packingSlip.contact_name}
-                    </p>
-                  )}
-                  {packingSlip?.contact_email && (
-                    <p className="font-normal text-gray-600 font-sans text-sm">
-                      Email: {packingSlip.contact_email}
-                    </p>
-                  )}
-                  {packingSlip?.contact_phone && (
-                    <p className="font-normal text-gray-600 font-sans text-sm">
-                      Phone: {packingSlip.contact_phone}
-                    </p>
-                  )}
-                  {packingSlip?.vat_number && (
-                    <p className="font-normal text-gray-600 font-sans text-sm">
-                      VAT #: {packingSlip.vat_number}
-                    </p>
-                  )}
-                </div>
+                )}
+                {packingSlip?.contact_email && (
+                  <p className="font-normal text-gray-600 font-sans text-sm">
+                    Email: {packingSlip.contact_email}
+                  </p>
+                )}
+                {packingSlip?.contact_phone && (
+                  <p className="font-normal text-gray-600 font-sans text-sm">
+                    Phone: {packingSlip.contact_phone}
+                  </p>
+                )}
+                {packingSlip?.vat_number && (
+                  <p className="font-normal text-gray-600 font-sans text-sm">
+                    VAT #: {packingSlip.vat_number}
+                  </p>
+                )}
               </div>
 
               {/* Title and Date Row */}
