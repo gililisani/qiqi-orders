@@ -5,6 +5,9 @@ import { useParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import Card from '../ui/Card';
 import Link from 'next/link';
+import OrderDocumentUpload from './OrderDocumentUpload';
+import OrderDocumentsView from './OrderDocumentsView';
+import OrderHistoryView from './OrderHistoryView';
 
 interface Order {
   id: string;
@@ -133,6 +136,63 @@ export default function OrderDetailsView({
   const [isReordering, setIsReordering] = useState(false);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [sendingNotification, setSendingNotification] = useState(false);
+  const [documentsRefreshKey, setDocumentsRefreshKey] = useState(0);
+
+  const handleDocumentUploadComplete = () => {
+    setDocumentsRefreshKey(prev => prev + 1);
+  };
+
+  // Helper function to add history entries
+  const addHistoryEntry = async (
+    actionType: string,
+    statusFrom?: string,
+    statusTo?: string,
+    notes?: string,
+    metadata?: any
+  ) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get user profile for name
+      let userName = 'Unknown';
+      let userRole = 'system';
+
+      if (role === 'admin') {
+        const { data: adminProfile } = await supabase
+          .from('admins')
+          .select('name')
+          .eq('id', user.id)
+          .single();
+        userName = adminProfile?.name || 'Admin';
+        userRole = 'admin';
+      } else {
+        const { data: clientProfile } = await supabase
+          .from('clients')
+          .select('name')
+          .eq('id', user.id)
+          .single();
+        userName = clientProfile?.name || 'Client';
+        userRole = 'client';
+      }
+
+      await supabase
+        .from('order_history')
+        .insert({
+          order_id: orderId,
+          action_type: actionType,
+          status_from: statusFrom,
+          status_to: statusTo,
+          notes: notes,
+          changed_by_id: user.id,
+          changed_by_name: userName,
+          changed_by_role: userRole,
+          metadata: metadata
+        });
+    } catch (error) {
+      console.error('Error adding history entry:', error);
+    }
+  };
 
   const handleCreatePackingSlip = async () => {
     try {
@@ -170,6 +230,19 @@ export default function OrderDetailsView({
 
       if (updateError) throw updateError;
       console.log('Order updated with packing_slip_generated = true');
+
+      // Add history entry for packing slip creation
+      await addHistoryEntry(
+        'packing_slip_created',
+        undefined,
+        undefined,
+        'Packing slip created and generated',
+        {
+          invoice_number: packingSlipData.invoice_number,
+          shipping_method: packingSlipData.shipping_method,
+          netsuite_reference: packingSlipData.netsuite_reference
+        }
+      );
 
       // Close popup and reset form first
       setShowPackingSlipForm(false);
@@ -442,6 +515,8 @@ export default function OrderDetailsView({
     if (!order) return;
 
     try {
+      const oldStatus = order.status;
+      
       const { error } = await supabase
         .from('orders')
         .update({ status: newStatus })
@@ -449,6 +524,14 @@ export default function OrderDetailsView({
 
       if (error) throw error;
       setOrder(prev => prev ? { ...prev, status: newStatus } : null);
+      
+      // Add history entry for status change
+      await addHistoryEntry(
+        'status_change',
+        oldStatus,
+        newStatus,
+        `Status changed from ${oldStatus} to ${newStatus}`
+      );
       
       // Refresh order history to show the new status change
       if (role === 'admin') {
@@ -1075,6 +1158,29 @@ export default function OrderDetailsView({
           </div>
         </div>
       )}
+
+      {/* Order Documents Section */}
+      <div className="mt-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 font-sans">Documents</h2>
+          {role === 'admin' && (
+            <OrderDocumentUpload 
+              orderId={orderId} 
+              onUploadComplete={handleDocumentUploadComplete}
+            />
+          )}
+        </div>
+        <OrderDocumentsView 
+          key={documentsRefreshKey}
+          orderId={orderId} 
+          role={role}
+        />
+      </div>
+
+      {/* Order History Section */}
+      <div className="mt-8">
+        <OrderHistoryView orderId={orderId} role={role} />
+      </div>
 
     </div>
   );
