@@ -346,8 +346,8 @@ export default function OrderDetailsView({
         if (orderError) throw orderError;
 
         // Fetch related data separately with error handling
-        let clientResult = { data: null, error: null };
-        let companyResult = { data: null, error: null };
+        let clientResult: any = { data: null, error: null };
+        let companyResult: any = { data: null, error: null };
 
         try {
           const { data: clientData, error: clientError } = await supabase
