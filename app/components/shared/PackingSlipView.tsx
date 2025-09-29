@@ -192,7 +192,13 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         .single();
 
       if (packingSlipError && packingSlipError.code !== 'PGRST116') {
-        throw packingSlipError;
+        console.error('Packing slip fetch error:', packingSlipError);
+        // If it's a permission error (406), treat as no packing slip found
+        if (packingSlipError.code === 'PGRST205' || packingSlipError.message?.includes('406')) {
+          console.log('Permission error fetching packing slip - treating as no packing slip found');
+        } else {
+          throw packingSlipError;
+        }
       }
 
       // Fetch company data
