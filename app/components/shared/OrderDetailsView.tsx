@@ -346,32 +346,48 @@ export default function OrderDetailsView({
         if (orderError) throw orderError;
 
         // Fetch related data separately with error handling
-        const [clientResult, companyResult] = await Promise.all([
-          supabase
+        let clientResult = { data: null, error: null };
+        let companyResult = { data: null, error: null };
+
+        try {
+          const { data: clientData, error: clientError } = await supabase
             .from('clients')
             .select('name, email')
             .eq('id', orderData.user_id)
-            .single()
-            .catch((err) => {
-              console.log('Could not fetch client data (RLS restriction):', err);
-              return { data: null, error: err };
-            }),
-          orderData.company_id ? supabase
-            .from('companies')
-            .select(`
-              company_name,
-              netsuite_number,
-              ship_to,
-              support_fund:support_fund_levels(percent),
-              subsidiary:subsidiaries(name, ship_from_address, company_address, phone, email),
-              class:classes(name),
-              location:Locations(location_name),
-              incoterm:incoterms(name),
-              payment_term:payment_terms(name)
-            `)
-            .eq('id', orderData.company_id)
-            .single() : { data: null, error: null }
-        ]);
+            .single();
+          
+          if (clientError) {
+            console.log('Could not fetch client data (RLS restriction):', clientError);
+          } else {
+            clientResult = { data: clientData, error: null };
+          }
+        } catch (err) {
+          console.log('Error fetching client data:', err);
+        }
+
+        if (orderData.company_id) {
+          try {
+            const { data: companyData, error: companyError } = await supabase
+              .from('companies')
+              .select(`
+                company_name,
+                netsuite_number,
+                ship_to,
+                support_fund:support_fund_levels(percent),
+                subsidiary:subsidiaries(name, ship_from_address, company_address, phone, email),
+                class:classes(name),
+                location:Locations(location_name),
+                incoterm:incoterms(name),
+                payment_term:payment_terms(name)
+              `)
+              .eq('id', orderData.company_id)
+              .single();
+            
+            companyResult = { data: companyData, error: companyError };
+          } catch (err) {
+            console.log('Error fetching company data:', err);
+          }
+        }
 
         // Combine data
         const combinedOrder = {
