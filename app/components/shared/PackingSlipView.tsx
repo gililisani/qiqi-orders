@@ -498,6 +498,22 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     }
   }, [orderId]);
 
+  // Populate editData when packingSlip changes
+  useEffect(() => {
+    if (packingSlip) {
+      setEditData({
+        invoice_number: packingSlip.invoice_number || '',
+        shipping_method: packingSlip.shipping_method || '',
+        netsuite_reference: packingSlip.netsuite_reference || '',
+        notes: packingSlip.notes || '',
+        contact_name: packingSlip.contact_name || '',
+        contact_email: packingSlip.contact_email || '',
+        contact_phone: packingSlip.contact_phone || '',
+        vat_number: packingSlip.vat_number || ''
+      });
+    }
+  }, [packingSlip]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
