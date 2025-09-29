@@ -453,206 +453,223 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto py-8 px-4">
+      <div className="max-w-7xl mx-auto py-8 px-4">
+        {/* Navigation */}
         <div className="mb-6">
           <Link
             href={backUrl}
-            className="inline-flex items-center text-gray-600 hover:text-gray-800 mb-4"
+            className="inline-flex items-center text-gray-600 hover:text-gray-800 mb-4 font-sans text-sm"
           >
             ← Back to Order
           </Link>
-          <h1 className="text-2xl font-bold">Packing Slip</h1>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Packing Slip Content */}
-          <div className="lg:col-span-2">
-            <Card>
-              <div id="packing-slip-content" className="px-6 py-5 space-y-6">
-                {/* Header */}
-                <div className="text-center border-b pb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">PACKING SLIP</h2>
-                  <p className="text-gray-600">Date: {new Date().toLocaleDateString()}</p>
-                </div>
+        {/* Action Buttons at Top */}
+        <div className="flex justify-end gap-3 mb-6">
+          <button
+            onClick={generatePDF}
+            className="bg-black text-white px-4 py-2 rounded transition hover:opacity-90 focus:ring-2 focus:ring-gray-900 font-sans text-sm"
+          >
+            Download PDF
+          </button>
 
-                {/* Invoice Details */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Number</label>
-                    <div className="text-lg font-semibold text-gray-900">#{packingSlip.invoice_number}</div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Method</label>
-                    <div className="text-lg font-semibold text-gray-900">{packingSlip.shipping_method}</div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">NetSuite Reference</label>
-                    <div className="text-lg font-semibold text-gray-900">{packingSlip.netsuite_reference || 'N/A'}</div>
-                  </div>
-                </div>
+          {canEdit && (
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className="bg-gray-100 text-gray-900 px-4 py-2 rounded transition hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 font-sans text-sm"
+            >
+              {editMode ? 'Cancel Edit' : 'Edit'}
+            </button>
+          )}
+        </div>
 
-                {/* Company Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Ship From</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="font-medium">{order.company?.subsidiary?.name || 'N/A'}</p>
-                      <p className="text-gray-600">{order.company?.subsidiary?.ship_from_address || 'N/A'}</p>
-                    </div>
+        {/* Single Block Layout */}
+        <Card>
+          <div id="packing-slip-content" className="px-6 py-8 space-y-8">
+            {/* Header Section */}
+            <div className="border-b border-[#e5e5e5] pb-8">
+              {/* Logo and Company Info Row */}
+              <div className="flex justify-between items-start mb-8">
+                {/* Left Side - Logo and Subsidiary */}
+                <div className="flex-1">
+                  {/* Logo */}
+                  <div className="mb-4">
+                    <img 
+                      src="/QIQI-Logo.svg" 
+                      alt="QIQI Logo" 
+                      className="h-12 w-auto"
+                    />
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Ship To</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="font-medium">{order.company?.company_name || 'N/A'}</p>
-                      <p className="text-gray-600">{order.company?.ship_to || 'N/A'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Items Table */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Items</h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Case Pack</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">HS Code</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Made In</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {orderItems.map((item) => (
-                          <tr key={item.id}>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{item.product?.item_name || 'N/A'}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{item.product?.sku || 'N/A'}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{item.product?.case_pack || 'N/A'}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{item.product?.case_weight || 'N/A'} lbs</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{item.product?.hs_code || 'N/A'}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{item.product?.made_in || 'N/A'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Notes */}
-                {packingSlip.notes && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Notes</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-gray-700">{packingSlip.notes}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Card>
-          </div>
-
-          {/* Actions Sidebar */}
-          <div className="lg:col-span-1">
-            <Card>
-              <div className="p-6 space-y-4">
-                <h2 className="text-lg font-semibold text-gray-900">Actions</h2>
-                
-                <button
-                  onClick={generatePDF}
-                  className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Download PDF
-                </button>
-
-                {canEdit && (
-                  <>
-                    <button
-                      onClick={() => setEditMode(!editMode)}
-                      className="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-                    >
-                      {editMode ? 'Cancel Edit' : 'Edit Packing Slip'}
-                    </button>
-                  </>
-                )}
-              </div>
-            </Card>
-
-            {/* Edit Form */}
-            {editMode && canEdit && (
-              <Card>
-                <div className="p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Edit Packing Slip</h2>
                   
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Number</label>
-                      <input
-                        type="text"
-                        value={editData.invoice_number}
-                        onChange={(e) => setEditData(prev => ({ ...prev, invoice_number: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter invoice number"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Method</label>
-                      <input
-                        type="text"
-                        value={editData.shipping_method}
-                        onChange={(e) => setEditData(prev => ({ ...prev, shipping_method: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter shipping method"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">NetSuite Reference</label>
-                      <input
-                        type="text"
-                        value={editData.netsuite_reference}
-                        onChange={(e) => setEditData(prev => ({ ...prev, netsuite_reference: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter NetSuite reference"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                      <textarea
-                        value={editData.notes}
-                        onChange={(e) => setEditData(prev => ({ ...prev, notes: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        rows={3}
-                        placeholder="Enter any additional notes for the packing slip"
-                      />
-                    </div>
-
-                    <div className="flex space-x-3">
-                      <button
-                        onClick={() => setEditMode(false)}
-                        className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {saving ? 'Saving...' : 'Save Changes'}
-                      </button>
-                    </div>
+                  {/* Subsidiary Info */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2 font-sans text-lg">
+                      {order.company?.subsidiary?.name || 'N/A'}
+                    </h3>
+                    <p className="text-gray-600 font-sans text-sm leading-relaxed">
+                      {order.company?.subsidiary?.ship_from_address || 'N/A'}
+                    </p>
                   </div>
                 </div>
-              </Card>
+
+                {/* Right Side - Company Info */}
+                <div className="text-right flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-2 font-sans text-lg">
+                    {order.company?.company_name || 'N/A'}
+                  </h3>
+                  <p className="text-gray-600 font-sans text-sm leading-relaxed">
+                    {order.company?.ship_to || 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Title and Date Row */}
+              <div className="flex justify-between items-center">
+                {/* Centered Title */}
+                <div className="flex-1"></div>
+                <div className="flex-1 text-center">
+                  <h1 className="text-3xl font-bold text-gray-900 font-sans">PACKING SLIP</h1>
+                </div>
+                {/* Right aligned Date */}
+                <div className="flex-1 text-right">
+                  <p className="text-gray-600 font-sans text-sm">
+                    Date: {new Date().toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Invoice Details */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Invoice Number</label>
+                <div className="text-lg font-semibold text-gray-900 font-sans">#{packingSlip.invoice_number}</div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Shipping Method</label>
+                <div className="text-lg font-semibold text-gray-900 font-sans">{packingSlip.shipping_method}</div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">NetSuite Reference</label>
+                <div className="text-lg font-semibold text-gray-900 font-sans">{packingSlip.netsuite_reference || 'N/A'}</div>
+              </div>
+            </div>
+
+            {/* Items Table */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 font-sans">Items</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
+                  <thead>
+                    <tr className="border-b border-[#e5e5e5]">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">Product</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">SKU</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">Quantity</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">Case Pack</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">Weight</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">HS Code</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider font-sans">Made In</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderItems.map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.item_name || 'N/A'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-sans">{item.product?.sku || 'N/A'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.quantity}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.case_pack || 'N/A'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.case_weight || 'N/A'} lbs</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.hs_code || 'N/A'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-sans">{item.product?.made_in || 'N/A'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Notes */}
+            {packingSlip.notes && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 font-sans">Notes</h3>
+                <div className="bg-gray-50 p-4 rounded-lg border border-[#e5e5e5]">
+                  <p className="text-gray-700 font-sans text-sm">{packingSlip.notes}</p>
+                </div>
+              </div>
             )}
           </div>
-        </div>
+        </Card>
+
+        {/* Edit Form Modal */}
+        {editMode && canEdit && (
+          <Card className="mt-6">
+            <div className="px-6 py-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-6 font-sans">Edit Packing Slip</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Invoice Number</label>
+                  <input
+                    type="text"
+                    value={editData.invoice_number}
+                    onChange={(e) => setEditData(prev => ({ ...prev, invoice_number: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                    placeholder="Enter invoice number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Shipping Method</label>
+                  <input
+                    type="text"
+                    value={editData.shipping_method}
+                    onChange={(e) => setEditData(prev => ({ ...prev, shipping_method: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                    placeholder="Enter shipping method"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">NetSuite Reference</label>
+                  <input
+                    type="text"
+                    value={editData.netsuite_reference}
+                    onChange={(e) => setEditData(prev => ({ ...prev, netsuite_reference: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                    placeholder="Enter NetSuite reference"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Notes</label>
+                  <textarea
+                    value={editData.notes}
+                    onChange={(e) => setEditData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                    rows={3}
+                    placeholder="Enter any additional notes for the packing slip"
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={() => setEditMode(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded transition hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 font-sans text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex-1 bg-black text-white px-4 py-2 rounded transition hover:opacity-90 focus:ring-2 focus:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed font-sans text-sm"
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );
