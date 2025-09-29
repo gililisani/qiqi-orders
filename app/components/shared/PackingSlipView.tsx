@@ -823,18 +823,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
             Download PDF
           </button>
 
-          {canEdit && (
-            <button
-              type="button"
-              onClick={() => {
-                console.log('Top Create/Edit button clicked, current editMode:', editMode);
-                setEditMode(true);
-              }}
-              className="bg-gray-100 text-gray-900 px-4 py-2 rounded transition hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 font-sans text-sm"
-            >
-              {packingSlip ? 'Edit' : 'Create'}
-            </button>
-          )}
+          {/* Temporarily removed Create/Edit button to debug redirect issue */}
         </div>
 
         {/* Single Block Layout */}
