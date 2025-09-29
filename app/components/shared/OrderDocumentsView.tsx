@@ -28,6 +28,7 @@ export default function OrderDocumentsView({ orderId, role, onUploadComplete }: 
   const [error, setError] = useState<string | null>(null);
   const [viewingDocument, setViewingDocument] = useState<OrderDocument | null>(null);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
+  const [deletingDocument, setDeletingDocument] = useState<string | null>(null);
 
   const documentTypeLabels: Record<string, string> = {
     invoice: 'Invoice (NetSuite)',
@@ -104,6 +105,75 @@ export default function OrderDocumentsView({ orderId, role, onUploadComplete }: 
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const handleDeleteDocument = async (doc: OrderDocument) => {
+    if (!confirm(`Are you sure you want to delete "${doc.filename}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setDeletingDocument(doc.id);
+
+      // Get current user info
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Get user profile for name
+      const { data: profile } = await supabase
+        .from('admins')
+        .select('name')
+        .eq('id', user.id)
+        .single();
+
+      const userName = profile?.name || user.email || 'Unknown';
+
+      // Delete file from storage
+      const { error: storageError } = await supabase.storage
+        .from('order-documents')
+        .remove([doc.file_path]);
+
+      if (storageError) {
+        console.error('Storage deletion error:', storageError);
+        // Continue with database deletion even if storage fails
+      }
+
+      // Delete document record from database
+      const { error: dbError } = await supabase
+        .from('order_documents')
+        .delete()
+        .eq('id', doc.id);
+
+      if (dbError) throw dbError;
+
+      // Add to order history
+      await supabase
+        .from('order_history')
+        .insert({
+          order_id: orderId,
+          action_type: 'document_deleted',
+          document_type: doc.document_type,
+          document_filename: doc.filename,
+          notes: `Document deleted: ${doc.filename}`,
+          changed_by_id: user.id,
+          changed_by_name: userName,
+          changed_by_role: 'admin',
+          metadata: {
+            file_size: doc.file_size,
+            mime_type: doc.mime_type,
+            description: doc.description
+          }
+        });
+
+      // Refresh documents list
+      await fetchDocuments();
+
+      setError(null);
+    } catch (err: any) {
+      setError(`Failed to delete document: ${err.message}`);
+    } finally {
+      setDeletingDocument(null);
+    }
   };
 
   const formatDate = (dateString: string): string => {
@@ -220,6 +290,15 @@ export default function OrderDocumentsView({ orderId, role, onUploadComplete }: 
                     >
                       Download
                     </button>
+                    {role === 'admin' && (
+                      <button
+                        onClick={() => handleDeleteDocument(doc)}
+                        disabled={deletingDocument === doc.id}
+                        className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors font-sans disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {deletingDocument === doc.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
