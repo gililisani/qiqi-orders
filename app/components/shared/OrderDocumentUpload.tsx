@@ -52,21 +52,31 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
 
   const uploadFile = async (uploadingFile: UploadingFile, documentType: string, description: string) => {
     try {
+      console.log('uploadFile called for:', uploadingFile.file.name);
       const file = uploadingFile.file;
       
       // Validate file type (only PDFs for now)
       if (file.type !== 'application/pdf') {
+        console.log('File type validation failed:', file.type);
         throw new Error('Only PDF files are allowed');
       }
+      console.log('File type validation passed:', file.type);
 
       // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
+        console.log('File size validation failed:', file.size);
         throw new Error('File size must be less than 10MB');
       }
+      console.log('File size validation passed:', file.size);
 
       // Get current user info first
+      console.log('Getting user authentication...');
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {
+        console.log('User authentication failed');
+        throw new Error('User not authenticated');
+      }
+      console.log('User authenticated:', user.id);
 
       // Generate unique filename
       const timestamp = Date.now();
@@ -75,6 +85,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
       const filePath = `order-documents/${orderId}/${fileName}`;
 
       // Upload file to Supabase Storage
+      console.log('Uploading to storage:', filePath);
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('order-documents')
         .upload(filePath, file, {
@@ -83,11 +94,13 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
         });
 
       if (uploadError) {
+        console.log('Storage upload error:', uploadError);
         if (uploadError.message.includes('bucket') || uploadError.message.includes('not found')) {
           throw new Error('Storage bucket not found. Please run the storage setup script in Supabase SQL Editor.');
         }
         throw uploadError;
       }
+      console.log('Storage upload successful:', uploadData);
 
       // Get user profile for name
       const { data: profile } = await supabase
@@ -143,9 +156,13 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
   };
 
   const handleUpload = async (documentType: string, description: string) => {
+    console.log('handleUpload called with:', { documentType, description, filesCount: uploadingFiles.length });
+    
     const results = await Promise.all(
       uploadingFiles.map(async (uploadingFile) => {
+        console.log('Starting upload for file:', uploadingFile.file.name);
         const result = await uploadFile(uploadingFile, documentType, description);
+        console.log('Upload result for', uploadingFile.file.name, ':', result);
         
         // Update the file status
         setUploadingFiles(prev => 
@@ -160,10 +177,14 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
       })
     );
 
+    console.log('All upload results:', results);
+
     // Check if all uploads were successful
     const allSuccessful = results.every(r => r.success);
+    console.log('All uploads successful:', allSuccessful);
     
     if (allSuccessful) {
+      console.log('Closing modal and refreshing documents...');
       // Close upload modal and refresh documents
       setTimeout(() => {
         setShowUpload(false);
