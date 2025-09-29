@@ -209,10 +209,10 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         packingSlipError = err;
       }
 
-      if (packingSlipError && packingSlipError.code !== 'PGRST116') {
+      if (packingSlipError && (packingSlipError as any).code !== 'PGRST116') {
         console.error('Packing slip fetch error:', packingSlipError);
         // If it's a permission error (406), treat as no packing slip found
-        if (packingSlipError.code === 'PGRST205' || packingSlipError.message?.includes('406') || packingSlipError.message?.includes('Not Acceptable')) {
+        if ((packingSlipError as any).code === 'PGRST205' || (packingSlipError as any).message?.includes('406') || (packingSlipError as any).message?.includes('Not Acceptable')) {
           console.log('Permission error fetching packing slip - treating as no packing slip found');
           // Don't throw error, just continue with no packing slip data
           packingSlipData = null; // Ensure it's null so we show the create option
