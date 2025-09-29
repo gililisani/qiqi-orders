@@ -188,12 +188,14 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
       if (itemsError) throw itemsError;
 
-      // Fetch packing slip - try with different approaches for admin vs client
+      // Fetch packing slip - use a more direct approach
+      console.log('Attempting to fetch packing slip for order:', orderId);
+      
+      // Try to fetch packing slip - if it fails, we'll treat it as no packing slip found
       let packingSlipData = null;
       let packingSlipError = null;
       
-      if (role === 'admin') {
-        // For admins, try to fetch packing slip
+      try {
         const result = await supabase
           .from('packing_slips')
           .select('*')
@@ -201,15 +203,10 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
           .single();
         packingSlipData = result.data;
         packingSlipError = result.error;
-      } else {
-        // For clients, try to fetch packing slip with RLS
-        const result = await supabase
-          .from('packing_slips')
-          .select('*')
-          .eq('order_id', orderId)
-          .single();
-        packingSlipData = result.data;
-        packingSlipError = result.error;
+        console.log('Packing slip fetch result:', { data: packingSlipData, error: packingSlipError });
+      } catch (err) {
+        console.error('Packing slip fetch exception:', err);
+        packingSlipError = err;
       }
 
       if (packingSlipError && packingSlipError.code !== 'PGRST116') {
@@ -218,6 +215,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         if (packingSlipError.code === 'PGRST205' || packingSlipError.message?.includes('406') || packingSlipError.message?.includes('Not Acceptable')) {
           console.log('Permission error fetching packing slip - treating as no packing slip found');
           // Don't throw error, just continue with no packing slip data
+          packingSlipData = null; // Ensure it's null so we show the create option
         } else {
           throw packingSlipError;
         }
