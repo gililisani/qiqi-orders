@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import Card from '../ui/Card';
 
@@ -217,6 +217,13 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
   // Debug state
   console.log('OrderDocumentUpload render - showUpload:', showUpload, 'uploadingFiles:', uploadingFiles.length);
 
+  // Debug form rendering
+  useEffect(() => {
+    if (uploadingFiles.length > 0) {
+      console.log('Rendering upload form with', uploadingFiles.length, 'files');
+    }
+  }, [uploadingFiles.length]);
+
   return (
     <>
       {/* Upload Button */}
@@ -327,9 +334,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
               )}
 
               {/* Upload Form */}
-              {uploadingFiles.length > 0 && (() => {
-                console.log('Rendering upload form with', uploadingFiles.length, 'files');
-                return (
+              {uploadingFiles.length > 0 && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">
@@ -383,8 +388,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
                     </button>
                   </div>
                 </div>
-                );
-              })()}
+              )}
             </div>
           </div>
         </div>
