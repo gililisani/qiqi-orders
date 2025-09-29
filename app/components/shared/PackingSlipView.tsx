@@ -511,10 +511,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     return parts[parts.length - 1] || '';
   };
 
-  // Check if any contact fields are filled
-  const hasContactInfo = () => {
-    return packingSlip?.contact_name || packingSlip?.contact_email || packingSlip?.contact_phone || packingSlip?.vat_number;
-  };
 
   return (
     <div>
@@ -573,22 +569,42 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                   </p>
                 </div>
 
-                {/* Right Side - Company Info - Only show if contact info exists */}
-                {hasContactInfo() && (
-                  <div className="text-left">
-                    <h4 className="font-bold text-gray-900 mb-2 font-sans text-lg">SHIP TO:</h4>
-                    <h3 className="font-normal text-gray-900 mb-2 font-sans text-lg">
-                      {order.company?.company_name || 'N/A'}
-                    </h3>
-                    <p className="font-normal text-gray-600 font-sans text-sm leading-relaxed">
-                      {order.company?.ship_to || 'N/A'}
+                {/* Right Side - SHIP TO - Always displayed */}
+                <div className="text-left">
+                  <h4 className="font-bold text-gray-900 mb-2 font-sans text-lg">SHIP TO:</h4>
+                  <h3 className="font-normal text-gray-900 mb-2 font-sans text-lg">
+                    {order.company?.company_name || 'N/A'}
+                  </h3>
+                  <p className="font-normal text-gray-600 font-sans text-sm leading-relaxed">
+                    {order.company?.ship_to || 'N/A'}
+                  </p>
+                  
+                  {/* Contact fields - only display if they exist */}
+                  {packingSlip?.contact_name && (
+                    <p className="font-normal text-gray-600 font-sans text-sm mt-1">
+                      Contact: {packingSlip.contact_name}
                     </p>
-                  </div>
-                )}
+                  )}
+                  {packingSlip?.contact_email && (
+                    <p className="font-normal text-gray-600 font-sans text-sm">
+                      Email: {packingSlip.contact_email}
+                    </p>
+                  )}
+                  {packingSlip?.contact_phone && (
+                    <p className="font-normal text-gray-600 font-sans text-sm">
+                      Phone: {packingSlip.contact_phone}
+                    </p>
+                  )}
+                  {packingSlip?.vat_number && (
+                    <p className="font-normal text-gray-600 font-sans text-sm">
+                      VAT #: {packingSlip.vat_number}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Title and Date Row */}
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-8">
                 {/* Centered Title */}
                 <div className="flex-1"></div>
                 <div className="flex-1 text-center">
@@ -601,17 +617,10 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                   </p>
                 </div>
               </div>
-
-              {/* Destination Country */}
-              <div className="text-center mb-4">
-                <p className="text-gray-600 font-sans text-sm">
-                  Destination Country: {getDestinationCountry()}
-                </p>
-              </div>
             </div>
 
             {/* Invoice Details */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-b border-[#e5e5e5] pb-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 border-b border-[#e5e5e5] pb-8">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Invoice Number</label>
                 <div className="text-lg font-semibold text-gray-900 font-sans">#{packingSlip.invoice_number}</div>
@@ -623,6 +632,10 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">QIQI Sales Order</label>
                 <div className="text-lg font-semibold text-gray-900 font-sans">{packingSlip.netsuite_reference || 'N/A'}</div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Destination Country</label>
+                <div className="text-lg font-semibold text-gray-900 font-sans">{getDestinationCountry()}</div>
               </div>
             </div>
 
