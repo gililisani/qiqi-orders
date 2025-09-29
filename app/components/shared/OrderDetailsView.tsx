@@ -135,6 +135,8 @@ export default function OrderDetailsView({
 
   const handleCreatePackingSlip = async () => {
     try {
+      setSaving(true);
+      
       const { data, error } = await supabase
         .from('packing_slips')
         .insert({
@@ -153,9 +155,10 @@ export default function OrderDetailsView({
         .single();
 
       if (error) throw error;
+      console.log('Packing slip created:', data);
 
       // Update order to mark packing slip as generated
-      await supabase
+      const { error: updateError } = await supabase
         .from('orders')
         .update({ 
           packing_slip_generated: true,
@@ -164,10 +167,10 @@ export default function OrderDetailsView({
         })
         .eq('id', orderId);
 
-      // Refresh order data
-      await fetchOrder();
-      
-      // Close popup and reset form
+      if (updateError) throw updateError;
+      console.log('Order updated with packing_slip_generated = true');
+
+      // Close popup and reset form first
       setShowPackingSlipForm(false);
       setPackingSlipData({
         invoice_number: '',
@@ -179,9 +182,19 @@ export default function OrderDetailsView({
         contact_phone: '',
         vat_number: ''
       });
+
+      // Refresh order data after a short delay to ensure database consistency
+      setTimeout(async () => {
+        console.log('Refreshing order data...');
+        await fetchOrder();
+        console.log('Order data refreshed, packing_slip_generated:', order?.packing_slip_generated);
+      }, 100);
+      
     } catch (error: any) {
       console.error('Error creating packing slip:', error);
       setError(error.message);
+    } finally {
+      setSaving(false);
     }
   };
   const [adminInvoiceNumber, setAdminInvoiceNumber] = useState<string>('');
@@ -1038,9 +1051,10 @@ export default function OrderDetailsView({
                 </button>
                 <button
                   onClick={handleCreatePackingSlip}
-                  className="flex-1 bg-black text-white px-4 py-2 rounded transition hover:opacity-90 focus:ring-2 focus:ring-gray-900 font-sans text-sm"
+                  disabled={saving}
+                  className="flex-1 bg-black text-white px-4 py-2 rounded transition hover:opacity-90 focus:ring-2 focus:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed font-sans text-sm"
                 >
-                  Create Packing Slip
+                  {saving ? 'Creating...' : 'Create Packing Slip'}
                 </button>
               </div>
             </div>
