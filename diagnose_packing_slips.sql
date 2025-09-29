@@ -19,7 +19,7 @@ SELECT COUNT(*) as order_count FROM packing_slips WHERE order_id = '0a1076a3-256
 
 -- Check RLS status
 SELECT 'RLS status:' as info;
-SELECT schemaname, tablename, rowsecurity, forcerowsecurity 
+SELECT schemaname, tablename, rowsecurity 
 FROM pg_tables 
 WHERE tablename = 'packing_slips';
 
