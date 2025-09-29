@@ -272,13 +272,17 @@ export default function OrderDetailsView({
 
         if (orderError) throw orderError;
 
-        // Fetch related data separately
+        // Fetch related data separately with error handling
         const [clientResult, companyResult] = await Promise.all([
           supabase
             .from('clients')
             .select('name, email')
             .eq('id', orderData.user_id)
-            .single(),
+            .single()
+            .catch((err) => {
+              console.log('Could not fetch client data (RLS restriction):', err);
+              return { data: null, error: err };
+            }),
           orderData.company_id ? supabase
             .from('companies')
             .select(`
@@ -342,10 +346,19 @@ export default function OrderDetailsView({
         .eq('order_id', orderId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        // Handle missing table gracefully
+        if (error.code === 'PGRST205') {
+          console.log('Order history table not found, skipping...');
+          setOrderHistory([]);
+          return;
+        }
+        throw error;
+      }
       setOrderHistory(data || []);
     } catch (err: any) {
       console.error('Error fetching order history:', err);
+      setOrderHistory([]); // Set empty array on error
     }
   };
 

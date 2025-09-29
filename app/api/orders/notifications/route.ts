@@ -94,20 +94,24 @@ export async function POST(request: NextRequest) {
     // TODO: Integrate with email service (SendGrid, AWS SES, etc.)
     // For now, we'll log the notification and store it in the database
     
-    // Store notification in order history
-    const { error: historyError } = await supabase
-      .from('order_history')
-      .insert([{
-        order_id: orderId,
-        status_from: null,
-        status_to: order.status,
-        notes: `${type} notification sent to ${toEmail}${customMessage ? ': ' + customMessage : ''}`,
-        changed_by_name: 'System',
-        changed_by_role: 'system'
-      }]);
+    // Store notification in order history (if table exists)
+    try {
+      const { error: historyError } = await supabase
+        .from('order_history')
+        .insert([{
+          order_id: orderId,
+          status_from: null,
+          status_to: order.status,
+          notes: `${type} notification sent to ${toEmail}${customMessage ? ': ' + customMessage : ''}`,
+          changed_by_name: 'System',
+          changed_by_role: 'system'
+        }]);
 
-    if (historyError) {
-      console.error('Error storing notification history:', historyError);
+      if (historyError && historyError.code !== 'PGRST205') {
+        console.error('Error storing notification history:', historyError);
+      }
+    } catch (err) {
+      console.log('Order history table not available, skipping history storage');
     }
 
     // Log for development (replace with actual email service)
@@ -297,18 +301,26 @@ export async function GET(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Get notification history from order_history table
-    const { data: history, error } = await supabase
-      .from('order_history')
-      .select('*')
-      .eq('order_id', orderId)
-      .order('created_at', { ascending: false });
+    // Get notification history from order_history table (if it exists)
+    let history = [];
+    try {
+      const { data: historyData, error } = await supabase
+        .from('order_history')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      return NextResponse.json(
-        { error: 'Failed to fetch notification history' },
-        { status: 500 }
-      );
+      if (error && error.code !== 'PGRST205') {
+        return NextResponse.json(
+          { error: 'Failed to fetch notification history' },
+          { status: 500 }
+        );
+      }
+      
+      history = historyData || [];
+    } catch (err) {
+      console.log('Order history table not available, returning empty history');
+      history = [];
     }
 
     return NextResponse.json({
