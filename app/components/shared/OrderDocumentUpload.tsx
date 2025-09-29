@@ -329,6 +329,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
               {/* Upload Form */}
               {uploadingFiles.length > 0 && (
                 <div className="space-y-4">
+                  {console.log('Rendering upload form with', uploadingFiles.length, 'files')}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">
                       Document Type
@@ -368,8 +369,10 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
                     </button>
                     <button
                       onClick={() => {
+                        console.log('Upload Files button clicked!');
                         const documentType = documentTypeRef.current?.value || 'other';
                         const description = descriptionRef.current?.value || '';
+                        console.log('Form values:', { documentType, description });
                         handleUpload(documentType, description);
                       }}
                       disabled={uploadingFiles.some(f => f.status === 'uploading')}
