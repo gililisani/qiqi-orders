@@ -769,13 +769,49 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
           <div id="packing-slip-content" className="px-6 py-8 space-y-8">
             {/* Header Section */}
             <div className="border-b border-[#e5e5e5] pb-8">
-              {/* Logo */}
-              <div className="mb-6">
-                <img 
-                  src="/QIQI-Logo.svg" 
-                  alt="QIQI Logo" 
-                  className="h-12 w-auto"
-                />
+              {/* Logo and SHIP TO Row */}
+              <div className="flex justify-between items-start mb-6">
+                {/* Logo */}
+                <div>
+                  <img 
+                    src="/QIQI-Logo.svg" 
+                    alt="QIQI Logo" 
+                    className="h-12 w-auto"
+                  />
+                </div>
+
+                {/* SHIP TO - Top Right Corner */}
+                <div className="text-left">
+                  <h4 className="font-bold text-gray-900 mb-2 font-sans text-lg">SHIP TO:</h4>
+                  <h3 className="font-normal text-gray-900 mb-2 font-sans text-lg">
+                    {order.company?.company_name || 'N/A'}
+                  </h3>
+                  <p className="font-normal text-gray-600 font-sans text-sm leading-relaxed">
+                    {order.company?.ship_to || 'N/A'}
+                  </p>
+                  
+                  {/* Contact fields - only display if they exist */}
+                  {packingSlip?.contact_name && (
+                    <p className="font-normal text-gray-600 font-sans text-sm mt-1">
+                      Contact: {packingSlip.contact_name}
+                    </p>
+                  )}
+                  {packingSlip?.contact_email && (
+                    <p className="font-normal text-gray-600 font-sans text-sm">
+                      Email: {packingSlip.contact_email}
+                    </p>
+                  )}
+                  {packingSlip?.contact_phone && (
+                    <p className="font-normal text-gray-600 font-sans text-sm">
+                      Phone: {packingSlip.contact_phone}
+                    </p>
+                  )}
+                  {packingSlip?.vat_number && (
+                    <p className="font-normal text-gray-600 font-sans text-sm">
+                      VAT #: {packingSlip.vat_number}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Subsidiary Info */}
@@ -786,39 +822,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 <p className="text-gray-600 font-sans text-sm leading-relaxed">
                   {order.company?.subsidiary?.ship_from_address || 'N/A'}
                 </p>
-              </div>
-
-              {/* SHIP TO - Aligned with logo */}
-              <div className="mb-8">
-                <h4 className="font-bold text-gray-900 mb-2 font-sans text-lg">SHIP TO:</h4>
-                <h3 className="font-normal text-gray-900 mb-2 font-sans text-lg">
-                  {order.company?.company_name || 'N/A'}
-                </h3>
-                <p className="font-normal text-gray-600 font-sans text-sm leading-relaxed">
-                  {order.company?.ship_to || 'N/A'}
-                </p>
-                
-                {/* Contact fields - only display if they exist */}
-                {packingSlip?.contact_name && (
-                  <p className="font-normal text-gray-600 font-sans text-sm mt-1">
-                    Contact: {packingSlip.contact_name}
-                  </p>
-                )}
-                {packingSlip?.contact_email && (
-                  <p className="font-normal text-gray-600 font-sans text-sm">
-                    Email: {packingSlip.contact_email}
-                  </p>
-                )}
-                {packingSlip?.contact_phone && (
-                  <p className="font-normal text-gray-600 font-sans text-sm">
-                    Phone: {packingSlip.contact_phone}
-                  </p>
-                )}
-                {packingSlip?.vat_number && (
-                  <p className="font-normal text-gray-600 font-sans text-sm">
-                    VAT #: {packingSlip.vat_number}
-                  </p>
-                )}
               </div>
 
               {/* Title and Date Row */}
