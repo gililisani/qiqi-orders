@@ -452,20 +452,19 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
   const canEdit = ['In Process', 'Ready', 'Done'].includes(order.status);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-8 px-4">
-        {/* Navigation */}
-        <div className="mb-6">
-          <Link
-            href={backUrl}
-            className="inline-flex items-center text-gray-600 hover:text-gray-800 mb-4 font-sans text-sm"
-          >
-            ← Back to Order
-          </Link>
-        </div>
+    <div>
+      {/* Navigation */}
+      <div className="mb-6">
+        <Link
+          href={backUrl}
+          className="inline-flex items-center text-gray-600 hover:text-gray-800 mb-4 font-sans text-sm"
+        >
+          ← Back to Order
+        </Link>
+      </div>
 
-        {/* Action Buttons at Top */}
-        <div className="flex justify-end gap-3 mb-6">
+      {/* Action Buttons at Top */}
+      <div className="flex justify-end gap-3 mb-6">
           <button
             onClick={generatePDF}
             className="bg-black text-white px-4 py-2 rounded transition hover:opacity-90 focus:ring-2 focus:ring-gray-900 font-sans text-sm"
@@ -708,7 +707,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
             </Card>
           </div>
         )}
-      </div>
     </div>
   );
 }
