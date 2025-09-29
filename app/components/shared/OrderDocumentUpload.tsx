@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { supabase } from '../../../lib/supabaseClient';
-import Card from '../ui/Card';
+import { supabase } from '@/lib/supabaseClient';
+import { Card } from '@/app/components/ui/Card';
 
 interface OrderDocumentUploadProps {
   orderId: string;
@@ -31,35 +31,16 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
   ];
 
   const handleFileSelect = (files: FileList | null) => {
-    console.log('File select triggered, files:', files);
-    
-    if (!files || files.length === 0) {
-      console.log('No files selected');
-      return;
-    }
+    if (!files || files.length === 0) return;
 
-    console.log('Processing files:', Array.from(files).map(f => ({ name: f.name, size: f.size, type: f.type })));
+    const newUploadingFiles: UploadingFile[] = Array.from(files).map(file => ({
+      file,
+      progress: 0,
+      status: 'uploading' as const
+    }));
 
-    try {
-      const newUploadingFiles: UploadingFile[] = Array.from(files).map(file => ({
-        file,
-        progress: 0,
-        status: 'uploading' as const
-      }));
-
-      console.log('Created uploading files:', newUploadingFiles);
-      
-      setUploadingFiles(prev => {
-        const updated = [...prev, ...newUploadingFiles];
-        console.log('Updated uploading files state:', updated);
-        return updated;
-      });
-      
-      setShowUpload(true);
-      console.log('Show upload set to true');
-    } catch (error) {
-      console.error('Error in handleFileSelect:', error);
-    }
+    setUploadingFiles(prev => [...prev, ...newUploadingFiles]);
+    setShowUpload(true);
   };
 
   const uploadFile = async (uploadingFile: UploadingFile, documentType: string, description: string) => {
@@ -86,36 +67,20 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
       const fileName = `${timestamp}_${sanitizedFileName}`;
       const filePath = `order-documents/${orderId}/${fileName}`;
 
-      console.log('Attempting to upload file:', fileName, 'to path:', filePath);
-
-      let uploadData;
-      let uploadError;
-
-      try {
-        // Try to upload file to Supabase Storage
-        const uploadResult = await supabase.storage
-          .from('order-documents')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-        
-        uploadData = uploadResult.data;
-        uploadError = uploadResult.error;
-      } catch (storageError) {
-        console.error('Storage error:', storageError);
-        throw new Error('Storage system not available. Please contact admin to set up document storage.');
-      }
+      // Upload file to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('order-documents')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
         if (uploadError.message.includes('bucket') || uploadError.message.includes('not found')) {
           throw new Error('Storage bucket not found. Please run the storage setup script in Supabase SQL Editor.');
         }
         throw uploadError;
       }
-
-      console.log('File uploaded successfully:', uploadData);
 
       // Get user profile for name
       const { data: profile } = await supabase
@@ -124,7 +89,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
         .eq('id', user.id)
         .single();
 
-      const userName = profile?.name || 'Admin';
+      const userName = profile?.name || user.email || 'Unknown';
 
       // Save document metadata to database
       const { error: dbError } = await supabase
@@ -225,10 +190,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
     <>
       {/* Upload Button */}
       <button
-        onClick={() => {
-          console.log('Upload button clicked');
-          fileInputRef.current?.click();
-        }}
+        onClick={() => fileInputRef.current?.click()}
         className="px-4 py-2 bg-blue-600 text-white rounded transition hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 font-sans text-sm"
       >
         Upload Documents
@@ -280,73 +242,53 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
                 </button>
               </div>
 
-              {/* Drag & Drop Area */}
-              <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center mb-6 transition-colors ${
-                  dragOver 
-                    ? 'border-blue-500 bg-blue-50' 
-                    : 'border-gray-300 hover:border-gray-400'
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <p className="text-gray-600 mb-2">Drag and drop PDF files here, or</p>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  browse files
-                </button>
-                <p className="text-sm text-gray-500 mt-2">Only PDF files, max 10MB each</p>
-              </div>
-
-              {/* File List */}
+              {/* Selected Files */}
               {uploadingFiles.length > 0 && (
-                <div className="space-y-4 mb-6">
-                  <h3 className="font-medium text-gray-900 font-sans">Files to Upload:</h3>
-                  {uploadingFiles.map((uploadingFile, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0">
-                          {uploadingFile.status === 'uploading' && (
-                            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                          )}
-                          {uploadingFile.status === 'success' && (
-                            <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                          {uploadingFile.status === 'error' && (
-                            <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
-                          )}
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-700 mb-3 font-sans">Selected Files:</h3>
+                  <div className="space-y-2">
+                    {uploadingFiles.map((uploadingFile, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-shrink-0">
+                            {uploadingFile.status === 'uploading' && (
+                              <svg className="w-4 h-4 text-blue-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                            )}
+                            {uploadingFile.status === 'success' && (
+                              <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                            {uploadingFile.status === 'error' && (
+                              <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{uploadingFile.file.name}</p>
+                            <p className="text-xs text-gray-500">
+                              {(uploadingFile.file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                            {uploadingFile.error && (
+                              <p className="text-xs text-red-500">{uploadingFile.error}</p>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{uploadingFile.file.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {(uploadingFile.file.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                          {uploadingFile.error && (
-                            <p className="text-xs text-red-500">{uploadingFile.error}</p>
-                          )}
-                        </div>
+                        <button
+                          onClick={() => removeFile(index)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                          disabled={uploadingFile.status === 'uploading'}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
                       </div>
-                      <button
-                        onClick={() => removeFile(index)}
-                        className="text-gray-400 hover:text-red-500 transition-colors"
-                        disabled={uploadingFile.status === 'uploading'}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -405,7 +347,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
                 </div>
               )}
             </div>
-          </Card>
+          </div>
         </div>
       )}
     </>
