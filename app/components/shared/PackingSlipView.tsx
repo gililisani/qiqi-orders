@@ -794,36 +794,38 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 </div>
 
                 {/* Right Column */}
-                <div className="text-left">
-                  <h4 className="font-bold text-gray-900 mb-2 font-sans text-lg">SHIP TO:</h4>
-                  <h3 className="font-normal text-gray-900 mb-2 font-sans text-lg">
-                    {order.company?.company_name || 'N/A'}
-                  </h3>
-                  <p className="font-normal text-gray-600 font-sans text-sm leading-relaxed">
-                    {order.company?.ship_to || 'N/A'}
-                  </p>
-                  
-                  {/* Contact fields - only display if they exist */}
-                  {packingSlip?.contact_name && (
-                    <p className="font-normal text-gray-600 font-sans text-sm mt-1">
-                      Contact: {packingSlip.contact_name}
+                <div className="text-right">
+                  <div className="text-left inline-block">
+                    <h4 className="font-bold text-gray-900 mb-2 font-sans text-lg">SHIP TO:</h4>
+                    <h3 className="font-normal text-gray-900 mb-2 font-sans text-lg">
+                      {order.company?.company_name || 'N/A'}
+                    </h3>
+                    <p className="font-normal text-gray-600 font-sans text-sm leading-relaxed">
+                      {order.company?.ship_to || 'N/A'}
                     </p>
-                  )}
-                  {packingSlip?.contact_email && (
-                    <p className="font-normal text-gray-600 font-sans text-sm">
-                      Email: {packingSlip.contact_email}
-                    </p>
-                  )}
-                  {packingSlip?.contact_phone && (
-                    <p className="font-normal text-gray-600 font-sans text-sm">
-                      Phone: {packingSlip.contact_phone}
-                    </p>
-                  )}
-                  {packingSlip?.vat_number && (
-                    <p className="font-normal text-gray-600 font-sans text-sm">
-                      VAT #: {packingSlip.vat_number}
-                    </p>
-                  )}
+                    
+                    {/* Contact fields - only display if they exist */}
+                    {packingSlip?.contact_name && (
+                      <p className="font-normal text-gray-600 font-sans text-sm mt-1">
+                        Contact: {packingSlip.contact_name}
+                      </p>
+                    )}
+                    {packingSlip?.contact_email && (
+                      <p className="font-normal text-gray-600 font-sans text-sm">
+                        Email: {packingSlip.contact_email}
+                      </p>
+                    )}
+                    {packingSlip?.contact_phone && (
+                      <p className="font-normal text-gray-600 font-sans text-sm">
+                        Phone: {packingSlip.contact_phone}
+                      </p>
+                    )}
+                    {packingSlip?.vat_number && (
+                      <p className="font-normal text-gray-600 font-sans text-sm">
+                        VAT #: {packingSlip.vat_number}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
