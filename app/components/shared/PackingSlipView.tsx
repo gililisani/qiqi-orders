@@ -70,6 +70,10 @@ interface PackingSlip {
   shipping_method: string;
   netsuite_reference?: string;
   notes?: string;
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  vat_number?: string;
   created_at: string;
   created_by: string;
 }
@@ -94,7 +98,11 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     invoice_number: '',
     shipping_method: '',
     netsuite_reference: '',
-    notes: ''
+    notes: '',
+    contact_name: '',
+    contact_email: '',
+    contact_phone: '',
+    vat_number: ''
   });
 
   const fetchOrderData = async () => {
@@ -222,7 +230,11 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
           invoice_number: packingSlipData.invoice_number,
           shipping_method: packingSlipData.shipping_method,
           netsuite_reference: packingSlipData.netsuite_reference || '',
-          notes: packingSlipData.notes || ''
+          notes: packingSlipData.notes || '',
+          contact_name: packingSlipData.contact_name || '',
+          contact_email: packingSlipData.contact_email || '',
+          contact_phone: packingSlipData.contact_phone || '',
+          vat_number: packingSlipData.vat_number || ''
         });
       }
 
@@ -432,7 +444,11 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
           invoice_number: editData.invoice_number,
           shipping_method: editData.shipping_method,
           netsuite_reference: editData.netsuite_reference,
-          notes: editData.notes
+          notes: editData.notes,
+          contact_name: editData.contact_name,
+          contact_email: editData.contact_email,
+          contact_phone: editData.contact_phone,
+          vat_number: editData.vat_number
         })
         .eq('id', packingSlip?.id);
 
@@ -486,6 +502,19 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
   // Check if user can edit (only if status is In Process, Ready, or Done)
   const canEdit = ['In Process', 'Ready', 'Done'].includes(order.status);
+
+  // Extract country from company address
+  const getDestinationCountry = () => {
+    const address = order?.company?.ship_to || '';
+    // Simple extraction - take the last part of the address as country
+    const parts = address.split(',').map(part => part.trim());
+    return parts[parts.length - 1] || '';
+  };
+
+  // Check if any contact fields are filled
+  const hasContactInfo = () => {
+    return packingSlip?.contact_name || packingSlip?.contact_email || packingSlip?.contact_phone || packingSlip?.vat_number;
+  };
 
   return (
     <div>
@@ -544,20 +573,22 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                   </p>
                 </div>
 
-                {/* Right Side - Company Info */}
-                <div className="text-left">
-                  <h4 className="font-bold text-gray-900 mb-2 font-sans text-lg">SHIP TO:</h4>
-                  <h3 className="font-normal text-gray-900 mb-2 font-sans text-lg">
-                    {order.company?.company_name || 'N/A'}
-                  </h3>
-                  <p className="font-normal text-gray-600 font-sans text-sm leading-relaxed">
-                    {order.company?.ship_to || 'N/A'}
-                  </p>
-                </div>
+                {/* Right Side - Company Info - Only show if contact info exists */}
+                {hasContactInfo() && (
+                  <div className="text-left">
+                    <h4 className="font-bold text-gray-900 mb-2 font-sans text-lg">SHIP TO:</h4>
+                    <h3 className="font-normal text-gray-900 mb-2 font-sans text-lg">
+                      {order.company?.company_name || 'N/A'}
+                    </h3>
+                    <p className="font-normal text-gray-600 font-sans text-sm leading-relaxed">
+                      {order.company?.ship_to || 'N/A'}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Title and Date Row */}
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center mb-4">
                 {/* Centered Title */}
                 <div className="flex-1"></div>
                 <div className="flex-1 text-center">
@@ -569,6 +600,13 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                     Date: {new Date().toLocaleDateString()}
                   </p>
                 </div>
+              </div>
+
+              {/* Destination Country */}
+              <div className="text-center mb-4">
+                <p className="text-gray-600 font-sans text-sm">
+                  Destination Country: {getDestinationCountry()}
+                </p>
               </div>
             </div>
 
@@ -692,13 +730,15 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Shipping Method</label>
-                    <input
-                      type="text"
+                    <select
                       value={editData.shipping_method}
                       onChange={(e) => setEditData(prev => ({ ...prev, shipping_method: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
-                      placeholder="Enter shipping method"
-                    />
+                    >
+                      <option value="">Select shipping method</option>
+                      <option value="Air">Air</option>
+                      <option value="Ocean">Ocean</option>
+                    </select>
                   </div>
 
                   <div>
@@ -709,6 +749,50 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                       onChange={(e) => setEditData(prev => ({ ...prev, netsuite_reference: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
                       placeholder="Enter QIQI sales order reference"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Contact Name</label>
+                    <input
+                      type="text"
+                      value={editData.contact_name}
+                      onChange={(e) => setEditData(prev => ({ ...prev, contact_name: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                      placeholder="Enter contact name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Contact Email</label>
+                    <input
+                      type="email"
+                      value={editData.contact_email}
+                      onChange={(e) => setEditData(prev => ({ ...prev, contact_email: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                      placeholder="Enter contact email"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Contact Phone Number</label>
+                    <input
+                      type="tel"
+                      value={editData.contact_phone}
+                      onChange={(e) => setEditData(prev => ({ ...prev, contact_phone: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                      placeholder="Enter contact phone number"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">VAT #</label>
+                    <input
+                      type="text"
+                      value={editData.vat_number}
+                      onChange={(e) => setEditData(prev => ({ ...prev, vat_number: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
+                      placeholder="Enter VAT number"
                     />
                   </div>
 
