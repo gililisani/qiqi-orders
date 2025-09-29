@@ -542,8 +542,8 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     );
   }
 
-  // Check if user can edit (only if status is In Process, Ready, or Done)
-  const canEdit = ['In Process', 'Ready', 'Done'].includes(order.status);
+  // Check if user can edit (Open, In Process, Ready, or Done - not Cancelled)
+  const canEdit = ['Open', 'In Process', 'Ready', 'Done'].includes(order.status);
 
   // Extract country from company address
   const getDestinationCountry = () => {
@@ -812,13 +812,18 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
             <div className="px-6 py-8 text-center">
               <h2 className="text-xl font-semibold text-gray-900 mb-4 font-sans">No Packing Slip Found</h2>
               <p className="text-gray-600 mb-6 font-sans">This order doesn't have a packing slip yet. Click "Create" to generate one.</p>
-              {canEdit && (
+              {canEdit ? (
                 <button
                   onClick={() => setEditMode(true)}
                   className="bg-black text-white px-6 py-3 rounded transition hover:opacity-90 focus:ring-2 focus:ring-gray-900 font-sans"
                 >
                   Create Packing Slip
                 </button>
+              ) : (
+                <div className="text-gray-500 font-sans">
+                  <p className="mb-2">Cannot create packing slip for orders with status: <span className="font-semibold">{order.status}</span></p>
+                  <p className="text-sm">Packing slips can only be created for orders with status: Open, In Process, Ready, or Done.</p>
+                </div>
               )}
             </div>
           ) : (
