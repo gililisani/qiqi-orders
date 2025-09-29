@@ -18,6 +18,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileOpenSections, setMobileOpenSections] = useState<string[]>([]);
+  const [authReady, setAuthReady] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -32,6 +33,19 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
       }
     }
   }, [user, loading, router]);
+
+  // Add small delay to ensure auth context is fully established
+  useEffect(() => {
+    if (!loading && user && user.role === 'Client') {
+      const timer = setTimeout(() => {
+        setAuthReady(true);
+      }, 100); // 100ms delay to ensure auth context is ready
+      
+      return () => clearTimeout(timer);
+    } else {
+      setAuthReady(false);
+    }
+  }, [loading, user]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -90,7 +104,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     }
   ];
 
-  if (loading) {
+  if (loading || !authReady) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

@@ -18,13 +18,27 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, loading, error, isAdmin, logout } = useAuth('Admin');
   const [isNavigating, setIsNavigating] = React.useState(false);
+  const [authReady, setAuthReady] = React.useState(false);
 
   // Handle navigation loading with pathname changes
   React.useEffect(() => {
     setIsNavigating(false);
   }, []);
 
-  if (loading) {
+  // Add small delay to ensure auth context is fully established
+  React.useEffect(() => {
+    if (!loading && user && isAdmin) {
+      const timer = setTimeout(() => {
+        setAuthReady(true);
+      }, 100); // 100ms delay to ensure auth context is ready
+      
+      return () => clearTimeout(timer);
+    } else {
+      setAuthReady(false);
+    }
+  }, [loading, user, isAdmin]);
+
+  if (loading || !authReady) {
     return (
       <div className="min-h-screen bg-blue-gray-50/50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">

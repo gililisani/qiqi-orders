@@ -324,7 +324,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const [company, setCompany] = useState<Company | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showLoader, setShowLoader] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSupportFundRedemption, setShowSupportFundRedemption] = useState(false);
@@ -397,19 +396,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       }
     }
   }, [orderId, role]);
-
-  // Show loader after a delay to prevent double loading during navigation
-  useEffect(() => {
-    if (loading) {
-      const timer = setTimeout(() => {
-        setShowLoader(true);
-      }, 300); // 300ms delay
-      
-      return () => clearTimeout(timer);
-    } else {
-      setShowLoader(false);
-    }
-  }, [loading]);
 
   // Force refresh category data when component mounts to get latest images
   useEffect(() => {
@@ -1011,8 +997,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     }
   };
 
-  // Show loader only after delay to prevent double loading during navigation
-  if (showLoader) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-lg">Loading...</div>

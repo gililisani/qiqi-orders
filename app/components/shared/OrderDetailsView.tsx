@@ -117,7 +117,6 @@ export default function OrderDetailsView({
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showLoader, setShowLoader] = useState(false);
   const [error, setError] = useState('');
   const [currentUserName, setCurrentUserName] = useState<string>('');
   const [showPackingSlipForm, setShowPackingSlipForm] = useState(false);
@@ -286,19 +285,6 @@ export default function OrderDetailsView({
       }
     }
   }, [orderId, role]);
-
-  // Show loader after a delay to prevent double loading during navigation
-  useEffect(() => {
-    if (loading) {
-      const timer = setTimeout(() => {
-        setShowLoader(true);
-      }, 300); // 300ms delay
-      
-      return () => clearTimeout(timer);
-    } else {
-      setShowLoader(false);
-    }
-  }, [loading]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -620,8 +606,7 @@ export default function OrderDetailsView({
   };
 
 
-  // Show loader only after delay to prevent double loading during navigation
-  if (showLoader) {
+  if (loading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>

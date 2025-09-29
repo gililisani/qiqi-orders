@@ -91,7 +91,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [packingSlip, setPackingSlip] = useState<PackingSlip | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showLoader, setShowLoader] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -525,19 +524,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     }
   }, [orderId]);
 
-  // Show loader after a delay to prevent double loading during navigation
-  useEffect(() => {
-    if (loading) {
-      const timer = setTimeout(() => {
-        setShowLoader(true);
-      }, 300); // 300ms delay
-      
-      return () => clearTimeout(timer);
-    } else {
-      setShowLoader(false);
-    }
-  }, [loading]);
-
   // Populate editData when packingSlip changes
   useEffect(() => {
     if (packingSlip) {
@@ -554,8 +540,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     }
   }, [packingSlip]);
 
-  // Show loader only after delay to prevent double loading during navigation
-  if (showLoader) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
