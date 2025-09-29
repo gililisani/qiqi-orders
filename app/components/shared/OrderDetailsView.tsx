@@ -997,54 +997,6 @@ export default function OrderDetailsView({
         </div>
       </Card>
 
-      {/* Admin-only: Order History */}
-      {role === 'admin' && (
-        <Card header={<h2 className="font-semibold">Order History & Activity</h2>}>
-          {orderHistory.length > 0 ? (
-            <div className="space-y-4">
-              {orderHistory.map((historyItem) => (
-                <div key={historyItem.id} className="flex items-start space-x-3 pb-4 border-b border-[#e5e5e5] last:border-b-0">
-                  <div className="flex-shrink-0 w-2 h-2 bg-blue-500 mt-2"></div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-1">
-                      {historyItem.status_from && historyItem.status_to ? (
-                        <span className="text-sm font-medium text-gray-900">
-                          Status changed from <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-gray-200 text-gray-800">{historyItem.status_from}</span> to <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-800">{historyItem.status_to}</span>
-                        </span>
-                      ) : (
-                        <span className="text-sm font-medium text-gray-900">
-                          {historyItem.notes || `Status set to ${historyItem.status_to}`}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-4 text-xs text-gray-500">
-                      <span>{new Date(historyItem.created_at).toLocaleString()}</span>
-                      {historyItem.changed_by_name && (
-                        <span>by {historyItem.changed_by_name} ({historyItem.changed_by_role})</span>
-                      )}
-                      {historyItem.netsuite_sync_status && (
-                        <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800">
-                          NetSuite: {historyItem.netsuite_sync_status}
-                        </span>
-                      )}
-                    </div>
-                    {historyItem.notes && historyItem.notes !== `Status set to ${historyItem.status_to}` && (
-                      <div className="mt-1 text-sm text-gray-600 italic">
-                        {historyItem.notes}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <p>No history available for this order.</p>
-            </div>
-          )}
-        </Card>
-      )}
-
       {/* Packing Slip Form Modal */}
       {showPackingSlipForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
