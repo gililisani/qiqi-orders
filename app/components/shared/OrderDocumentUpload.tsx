@@ -247,8 +247,23 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
 
       {/* Upload Modal */}
       {showUpload && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" 
+          style={{ 
+            zIndex: 9999,
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          {console.log('Modal is rendering!')}
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-lg shadow-lg border-4 border-red-500">
             <div className="px-6 py-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-semibold text-gray-900 font-sans">
