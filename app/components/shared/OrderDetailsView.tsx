@@ -89,6 +89,7 @@ interface OrderDetailsViewProps {
   backUrl: string;
   editUrl: string;
   packingSlipUrl: string;
+  parentLoading?: boolean;
 }
 
 const statusOptions = [
@@ -111,7 +112,8 @@ export default function OrderDetailsView({
   orderId, 
   backUrl, 
   editUrl, 
-  packingSlipUrl 
+  packingSlipUrl,
+  parentLoading = false
 }: OrderDetailsViewProps) {
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -606,13 +608,19 @@ export default function OrderDetailsView({
   };
 
 
-  if (loading) {
+  // Don't show loader if parent is already loading
+  if (loading && !parentLoading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
         <p className="text-gray-600">Loading order...</p>
       </div>
     );
+  }
+
+  // If parent is loading, show minimal loading state or nothing
+  if (parentLoading) {
+    return null;
   }
 
   if (error || !order) {

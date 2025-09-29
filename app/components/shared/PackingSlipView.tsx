@@ -81,9 +81,10 @@ interface PackingSlip {
 interface PackingSlipViewProps {
   role: 'admin' | 'client';
   backUrl: string;
+  parentLoading?: boolean;
 }
 
-export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps) {
+export default function PackingSlipView({ role, backUrl, parentLoading = false }: PackingSlipViewProps) {
   const params = useParams();
   const orderId = params.id as string;
 
@@ -540,7 +541,8 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     }
   }, [packingSlip]);
 
-  if (loading) {
+  // Don't show loader if parent is already loading
+  if (loading && !parentLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -549,6 +551,11 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         </div>
       </div>
     );
+  }
+
+  // If parent is loading, show minimal loading state or nothing
+  if (parentLoading) {
+    return null;
   }
 
   if (error || !order) {

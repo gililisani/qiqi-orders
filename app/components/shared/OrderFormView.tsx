@@ -312,9 +312,10 @@ interface OrderFormViewProps {
   role: 'admin' | 'client';
   orderId?: string | null;
   backUrl: string;
+  parentLoading?: boolean;
 }
 
-export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewProps) {
+export default function OrderFormView({ role, orderId, backUrl, parentLoading = false }: OrderFormViewProps) {
   const params = useParams();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
@@ -997,12 +998,18 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     }
   };
 
-  if (loading) {
+  // Don't show loader if parent is already loading
+  if (loading && !parentLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-lg">Loading...</div>
       </div>
     );
+  }
+
+  // If parent is loading, show minimal loading state or nothing
+  if (parentLoading) {
+    return null;
   }
 
   const totals = getOrderTotals();
