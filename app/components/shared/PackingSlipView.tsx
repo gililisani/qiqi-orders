@@ -81,10 +81,9 @@ interface PackingSlip {
 interface PackingSlipViewProps {
   role: 'admin' | 'client';
   backUrl: string;
-  parentLoading?: boolean;
 }
 
-export default function PackingSlipView({ role, backUrl, parentLoading = false }: PackingSlipViewProps) {
+export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps) {
   const params = useParams();
   const orderId = params.id as string;
 
@@ -92,6 +91,7 @@ export default function PackingSlipView({ role, backUrl, parentLoading = false }
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [packingSlip, setPackingSlip] = useState<PackingSlip | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -525,6 +525,19 @@ export default function PackingSlipView({ role, backUrl, parentLoading = false }
     }
   }, [orderId]);
 
+  // Show loader after a delay to prevent double loading during navigation
+  useEffect(() => {
+    if (loading) {
+      const timer = setTimeout(() => {
+        setShowLoader(true);
+      }, 300); // 300ms delay
+      
+      return () => clearTimeout(timer);
+    } else {
+      setShowLoader(false);
+    }
+  }, [loading]);
+
   // Populate editData when packingSlip changes
   useEffect(() => {
     if (packingSlip) {
@@ -541,8 +554,8 @@ export default function PackingSlipView({ role, backUrl, parentLoading = false }
     }
   }, [packingSlip]);
 
-  // Don't show loader if parent is already loading
-  if (loading && !parentLoading) {
+  // Show loader only after delay to prevent double loading during navigation
+  if (showLoader) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -551,11 +564,6 @@ export default function PackingSlipView({ role, backUrl, parentLoading = false }
         </div>
       </div>
     );
-  }
-
-  // If parent is loading, show minimal loading state or nothing
-  if (parentLoading) {
-    return null;
   }
 
   if (error || !order) {

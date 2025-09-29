@@ -312,10 +312,9 @@ interface OrderFormViewProps {
   role: 'admin' | 'client';
   orderId?: string | null;
   backUrl: string;
-  parentLoading?: boolean;
 }
 
-export default function OrderFormView({ role, orderId, backUrl, parentLoading = false }: OrderFormViewProps) {
+export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewProps) {
   const params = useParams();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
@@ -325,6 +324,7 @@ export default function OrderFormView({ role, orderId, backUrl, parentLoading = 
   const [company, setCompany] = useState<Company | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSupportFundRedemption, setShowSupportFundRedemption] = useState(false);
@@ -397,6 +397,19 @@ export default function OrderFormView({ role, orderId, backUrl, parentLoading = 
       }
     }
   }, [orderId, role]);
+
+  // Show loader after a delay to prevent double loading during navigation
+  useEffect(() => {
+    if (loading) {
+      const timer = setTimeout(() => {
+        setShowLoader(true);
+      }, 300); // 300ms delay
+      
+      return () => clearTimeout(timer);
+    } else {
+      setShowLoader(false);
+    }
+  }, [loading]);
 
   // Force refresh category data when component mounts to get latest images
   useEffect(() => {
@@ -998,18 +1011,13 @@ export default function OrderFormView({ role, orderId, backUrl, parentLoading = 
     }
   };
 
-  // Don't show loader if parent is already loading
-  if (loading && !parentLoading) {
+  // Show loader only after delay to prevent double loading during navigation
+  if (showLoader) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-lg">Loading...</div>
       </div>
     );
-  }
-
-  // If parent is loading, show minimal loading state or nothing
-  if (parentLoading) {
-    return null;
   }
 
   const totals = getOrderTotals();

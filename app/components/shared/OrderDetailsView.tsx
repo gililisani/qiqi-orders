@@ -89,7 +89,6 @@ interface OrderDetailsViewProps {
   backUrl: string;
   editUrl: string;
   packingSlipUrl: string;
-  parentLoading?: boolean;
 }
 
 const statusOptions = [
@@ -112,13 +111,13 @@ export default function OrderDetailsView({
   orderId, 
   backUrl, 
   editUrl, 
-  packingSlipUrl,
-  parentLoading = false
+  packingSlipUrl
 }: OrderDetailsViewProps) {
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showLoader, setShowLoader] = useState(false);
   const [error, setError] = useState('');
   const [currentUserName, setCurrentUserName] = useState<string>('');
   const [showPackingSlipForm, setShowPackingSlipForm] = useState(false);
@@ -287,6 +286,19 @@ export default function OrderDetailsView({
       }
     }
   }, [orderId, role]);
+
+  // Show loader after a delay to prevent double loading during navigation
+  useEffect(() => {
+    if (loading) {
+      const timer = setTimeout(() => {
+        setShowLoader(true);
+      }, 300); // 300ms delay
+      
+      return () => clearTimeout(timer);
+    } else {
+      setShowLoader(false);
+    }
+  }, [loading]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -608,19 +620,14 @@ export default function OrderDetailsView({
   };
 
 
-  // Don't show loader if parent is already loading
-  if (loading && !parentLoading) {
+  // Show loader only after delay to prevent double loading during navigation
+  if (showLoader) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
         <p className="text-gray-600">Loading order...</p>
       </div>
     );
-  }
-
-  // If parent is loading, show minimal loading state or nothing
-  if (parentLoading) {
-    return null;
   }
 
   if (error || !order) {
