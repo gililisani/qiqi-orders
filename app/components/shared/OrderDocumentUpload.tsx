@@ -12,7 +12,7 @@ interface OrderDocumentUploadProps {
 interface UploadingFile {
   file: File;
   progress: number;
-  status: 'uploading' | 'success' | 'error';
+  status: 'pending' | 'uploading' | 'success' | 'error';
   error?: string;
 }
 
@@ -41,7 +41,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
     const newUploadingFiles: UploadingFile[] = Array.from(files).map(file => ({
       file,
       progress: 0,
-      status: 'uploading' as const
+      status: 'pending' as const
     }));
 
     console.log('Created uploading files:', newUploadingFiles);
@@ -161,10 +161,20 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
     const results = await Promise.all(
       uploadingFiles.map(async (uploadingFile) => {
         console.log('Starting upload for file:', uploadingFile.file.name);
+        
+        // Set status to uploading when upload starts
+        setUploadingFiles(prev => 
+          prev.map(f => 
+            f === uploadingFile 
+              ? { ...f, status: 'uploading' as const }
+              : f
+          )
+        );
+        
         const result = await uploadFile(uploadingFile, documentType, description);
         console.log('Upload result for', uploadingFile.file.name, ':', result);
         
-        // Update the file status
+        // Update the file status with final result
         setUploadingFiles(prev => 
           prev.map(f => 
             f === uploadingFile 
@@ -291,23 +301,28 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
                     {uploadingFiles.map((uploadingFile, index) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-3">
-                          <div className="flex-shrink-0">
-                            {uploadingFile.status === 'uploading' && (
-                              <svg className="w-4 h-4 text-blue-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                              </svg>
-                            )}
-                            {uploadingFile.status === 'success' && (
-                              <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            )}
-                            {uploadingFile.status === 'error' && (
-                              <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                              </svg>
-                            )}
-                          </div>
+                        <div className="flex-shrink-0">
+                          {uploadingFile.status === 'pending' && (
+                            <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                          {uploadingFile.status === 'uploading' && (
+                            <svg className="w-4 h-4 text-blue-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          )}
+                          {uploadingFile.status === 'success' && (
+                            <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                          {uploadingFile.status === 'error' && (
+                            <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
                           <div>
                             <p className="text-sm font-medium text-gray-900">{uploadingFile.file.name}</p>
                             <p className="text-xs text-gray-500">
