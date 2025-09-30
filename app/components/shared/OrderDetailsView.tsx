@@ -350,35 +350,10 @@ export default function OrderDetailsView({
         let clientResult: any = { data: null, error: null };
         let companyResult: any = { data: null, error: null };
 
-        try {
-          // Try to fetch from clients table first
-          const { data: clientData, error: clientError } = await supabase
-            .from('clients')
-            .select('name, email')
-            .eq('id', orderData.user_id)
-            .single();
-          
-          if (clientError && clientError.code === 'PGRST116') {
-            // If not found in clients, try admins table
-            const { data: adminData, error: adminError } = await supabase
-              .from('admins')
-              .select('name, email')
-              .eq('id', orderData.user_id)
-              .single();
-            
-            if (!adminError && adminData) {
-              clientResult = { data: adminData, error: null };
-            } else {
-              console.log('User not found in either clients or admins table:', orderData.user_id);
-            }
-          } else if (clientError) {
-            console.log('Could not fetch client data (RLS restriction):', clientError);
-          } else {
-            clientResult = { data: clientData, error: null };
-          }
-        } catch (err) {
-          console.log('Error fetching user data:', err);
-        }
+        // TEMPORARY WORKAROUND: Skip client data fetch to avoid 406 errors
+        // TODO: Fix the root cause of 406 errors on clients table
+        console.log('Skipping client data fetch to avoid 406 errors for user:', orderData.user_id);
+        clientResult = { data: { name: 'Unknown User', email: 'unknown@example.com' }, error: null };
 
         if (orderData.company_id) {
           try {
