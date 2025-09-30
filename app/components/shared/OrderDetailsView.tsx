@@ -621,6 +621,11 @@ export default function OrderDetailsView({
 
   // Let AdminLayout handle loading - no need for separate loading state here
 
+  // Handle loading state - show nothing while data loads (AdminLayout handles main loading)
+  if (!order && !error) {
+    return null;
+  }
+
   if (error || !order) {
     return (
       <div className="text-center py-8">

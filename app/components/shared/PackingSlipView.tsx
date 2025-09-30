@@ -553,6 +553,11 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
   // Let AdminLayout handle loading - no separate loading state needed
 
+  // Handle loading state - show nothing while data loads (AdminLayout handles main loading)
+  if (!order && !error) {
+    return null;
+  }
+
   if (error || !order) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">

@@ -254,6 +254,11 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
 
   // Let AdminLayout handle loading - no separate loading state needed
 
+  // Handle loading state - show nothing while data loads (AdminLayout handles main loading)
+  if (orders.length === 0 && !error) {
+    return null;
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
