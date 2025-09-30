@@ -525,7 +525,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       if (supportFundItemsError) throw supportFundItemsError;
       
       // Transform support fund items to include calculated fields for compatibility
-      const transformedSupportFundItems = (supportFundItemsData || []).map(item => {
+      const transformedSupportFundItems = (supportFundItemsData || []).map((item: SupportFundItem) => {
         const unitsPerCase = item.product?.case_pack || 12; // Use case_pack field
         const totalUnits = item.total_units || 0; // This is total units from database
         const caseQty = Math.floor(totalUnits / unitsPerCase); // Calculate cases from units
