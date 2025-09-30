@@ -92,7 +92,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [packingSlip, setPackingSlip] = useState<PackingSlip | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Loading handled by AdminLayout
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -109,7 +109,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
   const fetchOrderData = async () => {
     try {
-      setLoading(true);
+      // Loading handled by AdminLayout
       setError(null);
 
       // Debug: Check current user
@@ -279,7 +279,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       console.error('Error fetching order data:', err);
       setError(err.message || 'Failed to load order data');
     } finally {
-      setLoading(false);
+      // Loading handled by AdminLayout
     }
   };
 
@@ -551,18 +551,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     }
   }, [packingSlip]);
 
-  if (loading) {
-    return (
-      <div className="text-center py-8">
-        <div className="flex flex-col items-center gap-4">
-          <Spinner className="h-8 w-8" />
-          <Typography variant="small" color="blue-gray">
-            Loading packing slip...
-          </Typography>
-        </div>
-      </div>
-    );
-  }
+  // Let AdminLayout handle loading - no separate loading state needed
 
   if (error || !order) {
     return (

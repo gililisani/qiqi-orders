@@ -55,7 +55,7 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
   const [orders, setOrders] = useState<Order[]>([]);
   const [clientsMap, setClientsMap] = useState<Map<string, ClientLite>>(new Map());
   const [companiesMap, setCompaniesMap] = useState<Map<string, CompanyLite>>(new Map());
-  const [loading, setLoading] = useState(true);
+  // Loading handled by AdminLayout
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -81,7 +81,7 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
 
   const fetchOrders = async () => {
     try {
-      setLoading(true);
+      // Loading handled by AdminLayout
       setError('');
 
       if (role === 'client') {
@@ -150,7 +150,7 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
     } catch (err: any) {
       setError(err.message || 'Failed to load orders');
     } finally {
-      setLoading(false);
+      // Loading handled by AdminLayout
     }
   };
 
@@ -252,18 +252,7 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
     return ['PO Number', 'Status', 'Total Value', 'Support Funds Used', 'Created', 'Actions'];
   }, [role]);
 
-  if (loading) {
-    return (
-      <div className="py-6">
-        <div className="flex flex-col items-center gap-4">
-          <Spinner className="h-8 w-8" />
-          <Typography variant="small" color="blue-gray">
-            Loading orders...
-          </Typography>
-        </div>
-      </div>
-    );
-  }
+  // Let AdminLayout handle loading - no separate loading state needed
 
   return (
     <div className="space-y-8">

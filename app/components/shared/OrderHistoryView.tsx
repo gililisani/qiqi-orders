@@ -27,7 +27,7 @@ interface OrderHistoryViewProps {
 export default function OrderHistoryView({ orderId, role }: OrderHistoryViewProps) {
   const { supabase } = useSupabase();
   const [history, setHistory] = useState<OrderHistoryEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Loading handled by AdminLayout
   const [error, setError] = useState<string | null>(null);
 
   const actionTypeLabels: Record<string, string> = {
@@ -54,7 +54,7 @@ export default function OrderHistoryView({ orderId, role }: OrderHistoryViewProp
 
   const fetchHistory = async () => {
     try {
-      setLoading(true);
+      // Loading handled by AdminLayout
       const { data, error } = await supabase
         .from('order_history')
         .select('*')
@@ -67,7 +67,7 @@ export default function OrderHistoryView({ orderId, role }: OrderHistoryViewProp
       console.error('Error fetching order history:', err);
       setError(err.message);
     } finally {
-      setLoading(false);
+      // Loading handled by AdminLayout
     }
   };
 
@@ -200,20 +200,7 @@ export default function OrderHistoryView({ orderId, role }: OrderHistoryViewProp
     fetchHistory();
   }, [orderId]);
 
-  if (loading) {
-    return (
-      <Card>
-        <div className="px-6 py-8">
-          <div className="flex flex-col items-center gap-4">
-            <Spinner className="h-8 w-8" />
-            <Typography variant="small" color="blue-gray">
-              Loading history...
-            </Typography>
-          </div>
-        </div>
-      </Card>
-    );
-  }
+  // Let AdminLayout handle loading - no separate loading state needed
 
   return (
     <Card>

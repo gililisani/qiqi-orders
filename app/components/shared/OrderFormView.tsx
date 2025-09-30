@@ -325,7 +325,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const [supportFundItems, setSupportFundItems] = useState<SupportFundItem[]>([]);
   const [company, setCompany] = useState<Company | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Loading handled by AdminLayout
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSupportFundRedemption, setShowSupportFundRedemption] = useState(false);
@@ -389,7 +389,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     if (isEditMode && orderId) {
       fetchOrder();
     } else {
-      setLoading(true);
+      // Loading handled by AdminLayout
       // Initialize order for new mode
       setOrder({ id: '', po_number: '', status: 'Open', company_id: '' });
       fetchProducts();
@@ -419,7 +419,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
   const fetchOrder = async () => {
     try {
-      setLoading(true);
+      // Loading handled by AdminLayout
       
       // For clients, first verify they can access this order
       if (role === 'client') {
@@ -449,7 +449,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         // Check if user can edit this order (only Open status)
         if (orderCheck.status !== 'Open') {
           setError('You can only edit orders with "Open" status');
-          setLoading(false);
+          // Loading handled by AdminLayout
           return;
         }
       }
@@ -552,7 +552,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       console.error('Error fetching order:', error);
       setError(error instanceof Error ? error.message : 'Failed to load order');
     } finally {
-      setLoading(false);
+      // Loading handled by AdminLayout
     }
   };
 
@@ -572,7 +572,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     
     
     setProducts(productsData || []);
-    setLoading(false);
+    // Loading handled by AdminLayout
   };
 
   const fetchProducts = async () => {
@@ -602,16 +602,16 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           await fetchProductsForCompany(clientData.company);
         } else {
           setError('No company found for client');
-          setLoading(false);
+          // Loading handled by AdminLayout
         }
       } else {
         // For admin, we don't fetch products until a company is selected
-        setLoading(false);
+        // Loading handled by AdminLayout
       }
     } catch (error) {
       console.error('Error fetching products:', error);
       setError('Failed to load products');
-      setLoading(false);
+      // Loading handled by AdminLayout
     }
   };
 
@@ -639,7 +639,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     const selectedCompany = companies.find(c => c.id === companyId);
     if (selectedCompany) {
       setCompany(selectedCompany);
-      setLoading(true);
+      // Loading handled by AdminLayout
       try {
         await fetchProductsForCompany(selectedCompany);
         // Clear existing items when company changes
@@ -649,7 +649,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         console.error('Error fetching products for company:', error);
         setError('Failed to load products for selected company');
       } finally {
-        setLoading(false);
+        // Loading handled by AdminLayout
       }
     }
   };
@@ -999,18 +999,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="flex flex-col items-center gap-4">
-          <Spinner className="h-8 w-8" />
-          <Typography variant="small" color="blue-gray">
-            Loading...
-          </Typography>
-        </div>
-      </div>
-    );
-  }
+  // Let AdminLayout handle loading - no separate loading state needed
 
   const totals = getOrderTotals();
   const supportFundTotals = getSupportFundTotals();
