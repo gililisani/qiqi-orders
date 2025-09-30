@@ -17,13 +17,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, loading, error, isAdmin, logout } = useAuth('Admin');
-  const [isNavigating, setIsNavigating] = React.useState(false);
   const [authReady, setAuthReady] = React.useState(false);
-
-  // Handle navigation loading with pathname changes
-  React.useEffect(() => {
-    setIsNavigating(false);
-  }, []);
 
   // Add small delay to ensure auth context is fully established
   React.useEffect(() => {
@@ -77,16 +71,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className="mx-auto w-full max-w-[1600px] px-4 lg:px-6 xl:px-10 pt-12 space-y-16">
         {/* Main Content */}
         <div className="relative">
-          {isNavigating && (
-            <div className="absolute inset-0 bg-blue-gray-50/50 flex items-center justify-center z-40">
-              <div className="flex flex-col items-center gap-4">
-                <Spinner className="h-8 w-8" />
-                <Typography variant="small" color="blue-gray">
-                  Loading...
-                </Typography>
-              </div>
-            </div>
-          )}
           {children}
         </div>
       </div>
