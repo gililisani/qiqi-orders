@@ -118,7 +118,6 @@ export default function OrderDetailsView({
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentUserName, setCurrentUserName] = useState<string>('');
   const [showPackingSlipForm, setShowPackingSlipForm] = useState(false);
@@ -417,7 +416,7 @@ export default function OrderDetailsView({
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      // Loading handled by AdminLayout
     }
   };
 
@@ -620,18 +619,7 @@ export default function OrderDetailsView({
   };
 
 
-  if (loading) {
-    return (
-      <div className="text-center py-8">
-        <div className="flex flex-col items-center gap-4">
-          <Spinner className="h-8 w-8" />
-          <Typography variant="small" color="blue-gray">
-            Loading order...
-          </Typography>
-        </div>
-      </div>
-    );
-  }
+  // Let AdminLayout handle loading - no need for separate loading state here
 
   if (error || !order) {
     return (
