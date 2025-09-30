@@ -490,7 +490,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       if (orderItemsError) throw orderItemsError;
       
       // Transform order items to include calculated fields for compatibility
-      const transformedOrderItems = (orderItemsData || []).map(item => {
+      const transformedOrderItems = (orderItemsData || []).map((item: OrderItem) => {
         const unitsPerCase = item.product?.case_pack || 12; // Use case_pack field
         const totalUnits = item.quantity || 0; // This is total units from database
         const caseQty = Math.floor(totalUnits / unitsPerCase); // Calculate cases from units
