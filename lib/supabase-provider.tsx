@@ -2,7 +2,7 @@
 
 import { createBrowserClient } from '@supabase/ssr'
 import { Session } from '@supabase/supabase-js'
-import { ReactNode, createContext, useContext, useState } from 'react'
+import React, { ReactNode, createContext, useContext, useState } from 'react'
 
 interface SupabaseContextType {
   supabase: ReturnType<typeof createBrowserClient>
@@ -23,6 +23,16 @@ export function SupabaseProvider({ children, session }: SupabaseProviderProps) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
   )
+
+  // Set the session on the client so auth.uid() works in RLS policies
+  React.useEffect(() => {
+    if (session) {
+      supabase.auth.setSession({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+      })
+    }
+  }, [session, supabase])
 
   return (
     <SupabaseContext.Provider value={{ supabase, session }}>
