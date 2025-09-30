@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { supabase } from '../../../lib/supabaseClient';
+import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
 
 interface OrderDocumentUploadProps {
@@ -17,6 +17,7 @@ interface UploadingFile {
 }
 
 export default function OrderDocumentUpload({ orderId, onUploadComplete }: OrderDocumentUploadProps) {
+  const { supabase } = useSupabase();
   const [showUpload, setShowUpload] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [dragOver, setDragOver] = useState(false);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { supabase } from '../../../lib/supabaseClient';
+import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
@@ -84,6 +84,7 @@ interface PackingSlipViewProps {
 }
 
 export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps) {
+  const { supabase } = useSupabase();
   const params = useParams();
   const orderId = params.id as string;
 

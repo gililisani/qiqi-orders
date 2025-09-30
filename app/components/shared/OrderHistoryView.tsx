@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../../../lib/supabaseClient';
+import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
 
 interface OrderHistoryEntry {
@@ -24,6 +24,7 @@ interface OrderHistoryViewProps {
 }
 
 export default function OrderHistoryView({ orderId, role }: OrderHistoryViewProps) {
+  const { supabase } = useSupabase();
   const [history, setHistory] = useState<OrderHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

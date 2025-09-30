@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { supabase } from '../../../lib/supabaseClient';
+import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
 import Link from 'next/link';
 import OrderDocumentUpload from './OrderDocumentUpload';
@@ -113,6 +113,7 @@ export default function OrderDetailsView({
   editUrl, 
   packingSlipUrl
 }: OrderDetailsViewProps) {
+  const { supabase } = useSupabase();
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);

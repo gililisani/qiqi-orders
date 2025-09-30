@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '../../../lib/supabaseClient';
+import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -315,6 +315,7 @@ interface OrderFormViewProps {
 }
 
 export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewProps) {
+  const { supabase } = useSupabase();
   const params = useParams();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);

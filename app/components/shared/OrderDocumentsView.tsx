@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../../../lib/supabaseClient';
+import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
 
 interface OrderDocument {
@@ -23,6 +23,7 @@ interface OrderDocumentsViewProps {
 }
 
 export default function OrderDocumentsView({ orderId, role, onUploadComplete }: OrderDocumentsViewProps) {
+  const { supabase } = useSupabase();
   const [documents, setDocuments] = useState<OrderDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

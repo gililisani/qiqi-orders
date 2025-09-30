@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '../../../lib/supabaseClient';
+import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
 
 type Role = 'admin' | 'client';
@@ -50,6 +50,7 @@ const statusBadge = (status: string) => (
 );
 
 export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: OrdersListViewProps) {
+  const { supabase } = useSupabase();
   const [orders, setOrders] = useState<Order[]>([]);
   const [clientsMap, setClientsMap] = useState<Map<string, ClientLite>>(new Map());
   const [companiesMap, setCompaniesMap] = useState<Map<string, CompanyLite>>(new Map());
