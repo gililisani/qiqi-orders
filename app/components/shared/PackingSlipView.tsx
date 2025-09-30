@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
+import { Spinner, Typography } from '../../MaterialTailwind';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -553,8 +554,12 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-4"></div>
-        <p className="text-gray-600 text-sm">Loading packing slip...</p>
+        <div className="flex flex-col items-center gap-4">
+          <Spinner className="h-8 w-8" />
+          <Typography variant="small" color="blue-gray">
+            Loading packing slip...
+          </Typography>
+        </div>
       </div>
     );
   }

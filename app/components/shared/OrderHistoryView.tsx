@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
+import { Spinner, Typography } from '../../MaterialTailwind';
 
 interface OrderHistoryEntry {
   id: string;
@@ -203,9 +204,11 @@ export default function OrderHistoryView({ orderId, role }: OrderHistoryViewProp
     return (
       <Card>
         <div className="px-6 py-8">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-2 text-gray-600 font-sans">Loading history...</span>
+          <div className="flex flex-col items-center gap-4">
+            <Spinner className="h-8 w-8" />
+            <Typography variant="small" color="blue-gray">
+              Loading history...
+            </Typography>
           </div>
         </div>
       </Card>

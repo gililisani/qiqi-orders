@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
+import { Spinner, Typography } from '../../MaterialTailwind';
 
 type Role = 'admin' | 'client';
 
@@ -254,7 +255,12 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
   if (loading) {
     return (
       <div className="py-6">
-        <p>Loading orders...</p>
+        <div className="flex flex-col items-center gap-4">
+          <Spinner className="h-8 w-8" />
+          <Typography variant="small" color="blue-gray">
+            Loading orders...
+          </Typography>
+        </div>
       </div>
     );
   }

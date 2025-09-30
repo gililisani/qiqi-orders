@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
+import { Spinner, Typography } from '../../MaterialTailwind';
 import Link from 'next/link';
 import OrderDocumentUpload from './OrderDocumentUpload';
 import OrderDocumentsView from './OrderDocumentsView';
@@ -622,8 +623,12 @@ export default function OrderDetailsView({
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-4"></div>
-        <p className="text-gray-600 text-sm">Loading order...</p>
+        <div className="flex flex-col items-center gap-4">
+          <Spinner className="h-8 w-8" />
+          <Typography variant="small" color="blue-gray">
+            Loading order...
+          </Typography>
+        </div>
       </div>
     );
   }

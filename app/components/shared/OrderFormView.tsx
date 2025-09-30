@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
+import { Spinner, Typography } from '../../MaterialTailwind';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -1001,7 +1002,12 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-lg">Loading...</div>
+        <div className="flex flex-col items-center gap-4">
+          <Spinner className="h-8 w-8" />
+          <Typography variant="small" color="blue-gray">
+            Loading...
+          </Typography>
+        </div>
       </div>
     );
   }
