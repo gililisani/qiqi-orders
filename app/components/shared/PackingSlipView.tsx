@@ -163,16 +163,34 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       // Fetch client information separately (for admin users)
       let clientData = null;
       if (role === 'admin') {
-        const { data: clientResult, error: clientError } = await supabase
-          .from('clients')
+        // Smart approach: Check if user is admin first, then fetch from appropriate table
+        console.log('Packing slip - fetching user data for:', orderData.user_id);
+        
+        // First, try admins table (since orders can be created by admins)
+        const { data: adminResult, error: adminError } = await supabase
+          .from('admins')
           .select('name, email')
           .eq('id', orderData.user_id)
           .single();
         
-        if (clientError && clientError.code !== 'PGRST116') {
-          console.warn('Could not fetch client data:', clientError);
+        if (!adminError && adminResult) {
+          console.log('Packing slip - User found in admins table:', adminResult.name);
+          clientData = adminResult;
         } else {
-          clientData = clientResult;
+          // If not found in admins, try clients table
+          const { data: clientResult, error: clientError } = await supabase
+            .from('clients')
+            .select('name, email')
+            .eq('id', orderData.user_id)
+            .single();
+          
+          if (!clientError && clientResult) {
+            console.log('Packing slip - User found in clients table:', clientResult.name);
+            clientData = clientResult;
+          } else {
+            console.log('Packing slip - User not found in either table:', orderData.user_id);
+            clientData = { name: 'Unknown User', email: 'unknown@example.com' };
+          }
         }
       }
 

@@ -350,10 +350,40 @@ export default function OrderDetailsView({
         let clientResult: any = { data: null, error: null };
         let companyResult: any = { data: null, error: null };
 
-        // TEMPORARY WORKAROUND: Skip client data fetch to avoid 406 errors
-        // TODO: Fix the root cause of 406 errors on clients table
-        console.log('Skipping client data fetch to avoid 406 errors for user:', orderData.user_id);
-        clientResult = { data: { name: 'Unknown User', email: 'unknown@example.com' }, error: null };
+        try {
+          // Smart approach: Check if user is admin first, then fetch from appropriate table
+          console.log('Fetching user data for:', orderData.user_id);
+          
+          // First, try admins table (since orders can be created by admins)
+          const { data: adminData, error: adminError } = await supabase
+            .from('admins')
+            .select('name, email')
+            .eq('id', orderData.user_id)
+            .single();
+          
+          if (!adminError && adminData) {
+            console.log('User found in admins table:', adminData.name);
+            clientResult = { data: adminData, error: null };
+          } else {
+            // If not found in admins, try clients table
+            const { data: clientData, error: clientError } = await supabase
+              .from('clients')
+              .select('name, email')
+              .eq('id', orderData.user_id)
+              .single();
+            
+            if (!clientError && clientData) {
+              console.log('User found in clients table:', clientData.name);
+              clientResult = { data: clientData, error: null };
+            } else {
+              console.log('User not found in either table:', orderData.user_id);
+              clientResult = { data: { name: 'Unknown User', email: 'unknown@example.com' }, error: null };
+            }
+          }
+        } catch (err) {
+          console.log('Error fetching user data:', err);
+          clientResult = { data: { name: 'Unknown User', email: 'unknown@example.com' }, error: null };
+        }
 
         if (orderData.company_id) {
           try {
