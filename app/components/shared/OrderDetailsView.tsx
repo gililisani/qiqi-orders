@@ -618,11 +618,18 @@ export default function OrderDetailsView({
         .from('orders')
         .select(`
           *,
-          order_items (
-            *,
-            product (
-              *
-            )
+          company:companies(
+            company_name,
+            netsuite_number,
+            class:classes(name),
+            subsidiary:subsidiaries(name),
+            location:Locations(location_name)
+          ),
+          order_items(
+            quantity,
+            unit_price,
+            total_price,
+            product:Products(sku, item_name, netsuite_name)
           )
         `)
         .eq('id', orderId)
@@ -630,7 +637,8 @@ export default function OrderDetailsView({
 
       if (error) throw error;
       if (!orderData) throw new Error('Order not found');
-
+      if (!orderData.company) throw new Error('Company data not found for this order');
+      if (!orderData.order_items?.length) throw new Error('No order items found for this order');
       // Validate that all order items have product SKUs
       for (const item of orderData.order_items) {
         if (!item.product?.sku) throw new Error('Product SKU missing for order item');
