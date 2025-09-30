@@ -124,8 +124,8 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
         setTotalOrders(count || 0);
 
         if (ordersData && ordersData.length > 0) {
-          const userIds = [...new Set(ordersData.map(o => o.user_id).filter(Boolean))] as string[];
-          const companyIds = [...new Set(ordersData.map(o => o.company_id).filter(Boolean))] as string[];
+          const userIds = [...new Set(ordersData.map((o: Order) => o.user_id).filter(Boolean))] as string[];
+          const companyIds = [...new Set(ordersData.map((o: Order) => o.company_id).filter(Boolean))] as string[];
           const [clientsResult, companiesResult] = await Promise.all([
             userIds.length
               ? supabase.from('clients').select('id, name, email').in('id', userIds)
