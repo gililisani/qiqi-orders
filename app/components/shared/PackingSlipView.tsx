@@ -113,7 +113,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
       // Debug: Check current user
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('Current user for packing slip:', user?.id, user?.email);
 
       // For clients, first verify they can access this order
       if (role === 'client') {
@@ -164,8 +163,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       let clientData = null;
       if (role === 'admin') {
         // Smart approach: Check if user is admin first, then fetch from appropriate table
-        console.log('Packing slip - fetching user data for:', orderData.user_id);
-        
         // First, try admins table (since orders can be created by admins)
         const { data: adminResult, error: adminError } = await supabase
           .from('admins')
@@ -174,7 +171,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
           .single();
         
         if (!adminError && adminResult) {
-          console.log('Packing slip - User found in admins table:', adminResult.name);
           clientData = adminResult;
         } else {
           // If not found in admins, try clients table
@@ -185,10 +181,8 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
             .single();
           
           if (!clientError && clientResult) {
-            console.log('Packing slip - User found in clients table:', clientResult.name);
             clientData = clientResult;
           } else {
-            console.log('Packing slip - User not found in either table:', orderData.user_id);
             clientData = { name: 'Unknown User', email: 'unknown@example.com' };
           }
         }
@@ -208,7 +202,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       if (itemsError) throw itemsError;
 
       // Fetch packing slip - use a more direct approach
-      console.log('Attempting to fetch packing slip for order:', orderId);
       
       // Try to fetch packing slip - if it fails, we'll treat it as no packing slip found
       let packingSlipData = null;
@@ -222,7 +215,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
           .single();
         packingSlipData = result.data;
         packingSlipError = result.error;
-        console.log('Packing slip fetch result:', { data: packingSlipData, error: packingSlipError });
       } catch (err) {
         console.error('Packing slip fetch exception:', err);
         packingSlipError = err;
@@ -232,7 +224,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         console.error('Packing slip fetch error:', packingSlipError);
         // If it's a permission error (406), treat as no packing slip found
         if ((packingSlipError as any).code === 'PGRST205' || (packingSlipError as any).message?.includes('406') || (packingSlipError as any).message?.includes('Not Acceptable')) {
-          console.log('Permission error fetching packing slip - treating as no packing slip found');
           // Don't throw error, just continue with no packing slip data
           packingSlipData = null; // Ensure it's null so we show the create option
         } else {

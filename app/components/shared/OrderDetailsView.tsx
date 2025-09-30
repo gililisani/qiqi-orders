@@ -352,8 +352,6 @@ export default function OrderDetailsView({
 
         try {
           // Smart approach: Check if user is admin first, then fetch from appropriate table
-          console.log('Fetching user data for:', orderData.user_id);
-          
           // First, try admins table (since orders can be created by admins)
           const { data: adminData, error: adminError } = await supabase
             .from('admins')
@@ -362,7 +360,6 @@ export default function OrderDetailsView({
             .single();
           
           if (!adminError && adminData) {
-            console.log('User found in admins table:', adminData.name);
             clientResult = { data: adminData, error: null };
           } else {
             // If not found in admins, try clients table
@@ -373,15 +370,12 @@ export default function OrderDetailsView({
               .single();
             
             if (!clientError && clientData) {
-              console.log('User found in clients table:', clientData.name);
               clientResult = { data: clientData, error: null };
             } else {
-              console.log('User not found in either table:', orderData.user_id);
               clientResult = { data: { name: 'Unknown User', email: 'unknown@example.com' }, error: null };
             }
           }
         } catch (err) {
-          console.log('Error fetching user data:', err);
           clientResult = { data: { name: 'Unknown User', email: 'unknown@example.com' }, error: null };
         }
 
@@ -405,7 +399,6 @@ export default function OrderDetailsView({
             
             companyResult = { data: companyData, error: companyError };
           } catch (err) {
-            console.log('Error fetching company data:', err);
           }
         }
 
