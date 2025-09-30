@@ -7,7 +7,7 @@ export default function TopNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [openSub, setOpenSub] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string>('Loading...');
+  const [userName, setUserName] = useState<string>('User');
   const closeTimers = useRef<{ main?: any; sub?: any }>({});
 
   const onEnter = (key: string) => {
