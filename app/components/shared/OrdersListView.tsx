@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
-import { Spinner, Typography } from '../../MaterialTailwind';
+import { Spinner, Typography } from '../MaterialTailwind';
 
 type Role = 'admin' | 'client';
 

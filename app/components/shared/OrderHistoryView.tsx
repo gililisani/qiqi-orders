@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
-import { Spinner, Typography } from '../../MaterialTailwind';
+import { Spinner, Typography } from '../MaterialTailwind';
 
 interface OrderHistoryEntry {
   id: string;

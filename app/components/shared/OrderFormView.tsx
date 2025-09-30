@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
-import { Spinner, Typography } from '../../MaterialTailwind';
+import { Spinner, Typography } from '../MaterialTailwind';
 import Link from 'next/link';
 import Image from 'next/image';
 
