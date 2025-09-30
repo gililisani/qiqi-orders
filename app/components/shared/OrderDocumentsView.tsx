@@ -25,7 +25,7 @@ interface OrderDocumentsViewProps {
 export default function OrderDocumentsView({ orderId, role, onUploadComplete }: OrderDocumentsViewProps) {
   const { supabase } = useSupabase();
   const [documents, setDocuments] = useState<OrderDocument[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Loading handled by AdminLayout
   const [error, setError] = useState<string | null>(null);
   const [viewingDocument, setViewingDocument] = useState<OrderDocument | null>(null);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export default function OrderDocumentsView({ orderId, role, onUploadComplete }: 
 
   const fetchDocuments = async () => {
     try {
-      setLoading(true);
+      // Loading handled by AdminLayout
       const { data, error } = await supabase
         .from('order_documents')
         .select('*')
@@ -58,7 +58,7 @@ export default function OrderDocumentsView({ orderId, role, onUploadComplete }: 
       console.error('Error fetching documents:', err);
       setError(err.message);
     } finally {
-      setLoading(false);
+      // Loading handled by AdminLayout
     }
   };
 
@@ -197,18 +197,7 @@ export default function OrderDocumentsView({ orderId, role, onUploadComplete }: 
     }
   }, [onUploadComplete]);
 
-  if (loading) {
-    return (
-      <Card>
-        <div className="px-6 py-8">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-2 text-gray-600 font-sans">Loading documents...</span>
-          </div>
-        </div>
-      </Card>
-    );
-  }
+  // Let AdminLayout handle loading - no separate loading state needed
 
   return (
     <>
