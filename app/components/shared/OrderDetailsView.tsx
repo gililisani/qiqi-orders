@@ -611,10 +611,39 @@ export default function OrderDetailsView({
 
   const handleDownloadCSV = async () => {
     try {
-      // For now, we'll just show an alert. We'll implement actual CSV generation later
-      alert(`CSV download for order ${orderId} will be implemented in the next step.`);
-    } catch (err: any) {
-      setError(err.message);
+      // admin-only action
+      if (role !== 'admin') return;
+      const { generateNetSuiteCSV, downloadCSV } = await import('../../../lib/csvExport');
+      const { data: orderData, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *,
+            product (
+              *
+            )
+          )
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (error) throw error;
+      if (!orderData) throw new Error('Order not found');
+
+      // Validate that all order items have product SKUs
+      for (const item of orderData.order_items) {
+        if (!item.product?.sku) throw new Error('Product SKU missing for order item');
+      }
+      const csvContent = generateNetSuiteCSV(orderData as any);
+      const orderDate = new Date(orderData.created_at);
+      const dateStr = orderDate.toISOString().split('T')[0];
+      const poNumber = orderData.po_number || orderData.id.substring(0, 6);
+      const filename = `Order_${poNumber}_${dateStr}.csv`;
+      downloadCSV(csvContent, filename);
+    } catch (err) {
+      console.error('CSV error', err);
+      alert('Failed to export CSV.');
     }
   };
 
