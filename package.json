@@ -20,7 +20,8 @@
     "next": "14.2.4",
     "oauth-1.0a": "^2.2.6",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "svg2pdf.js": "^2.6.0"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.1",

@@ -7,6 +7,7 @@ import Card from '../ui/Card';
 import { Spinner, Typography } from '../MaterialTailwind';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
+import { svg2pdf } from 'svg2pdf.js';
 import html2canvas from 'html2canvas';
 
 interface Order {
@@ -327,48 +328,66 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       pdf.line(x1, y1, x2, y2);
     };
 
-    // Helper function to add logo - try to load actual logo
+    // Helper function to add logo - try to load actual logo with svg2pdf
     const addLogo = async (x: number, y: number) => {
       try {
-        // Try multiple logo paths and formats
-        const logoPaths = [
-          '/QIQI-Logo.svg',
-          '/logo.png',
-          'QIQI-Logo.svg',
-          'logo.png'
-        ];
+        // Try SVG first with svg2pdf for vector rendering
+        const svgPaths = ['/QIQI-Logo.svg', 'QIQI-Logo.svg'];
         
-        let logoLoaded = false;
-        
-        for (const logoPath of logoPaths) {
+        for (const svgPath of svgPaths) {
           try {
-            const logoResponse = await fetch(logoPath);
-            if (logoResponse.ok) {
-              const logoBlob = await logoResponse.blob();
-              const logoUrl = URL.createObjectURL(logoBlob);
+            const svgResponse = await fetch(svgPath);
+            if (svgResponse.ok) {
+              const svgText = await svgResponse.text();
               
-              // Determine format from path and maintain aspect ratio
-              const format = logoPath.endsWith('.svg') ? 'SVG' : 'PNG';
+              // Create SVG element for svg2pdf
+              const parser = new DOMParser();
+              const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
+              const svgElement = svgDoc.querySelector('svg');
               
-              // Use narrower dimensions to prevent stretching
-              // Original: 300px × 115px, but make it narrower
-              // Convert to mm: 60mm width, 25mm height (narrower aspect ratio)
-              pdf.addImage(logoUrl, format, x, y, 60, 25);
-              URL.revokeObjectURL(logoUrl);
-              logoLoaded = true;
-              break;
+              if (svgElement) {
+                // Use svg2pdf for vector rendering
+                // Dimensions: 300px × 115px (exact size)
+                await svg2pdf(svgElement, pdf, {
+                  xOffset: x,
+                  yOffset: y,
+                  scale: 1 // Keep original size
+                });
+                return; // Success, exit function
+              }
             }
           } catch (error) {
-            console.log(`Failed to load logo from ${logoPath}:`, error);
+            console.log(`Failed to load SVG from ${svgPath}:`, error);
             continue;
           }
         }
         
-        if (!logoLoaded) {
-          // Fallback to text logo
-          addText('QIQI', x, y, { fontSize: 14, fontStyle: 'bold' });
-          addText('GLOBAL', x, y + 5, { fontSize: 10 });
+        // Fallback to PNG if SVG fails
+        const pngPaths = ['/logo.png', 'logo.png'];
+        
+        for (const pngPath of pngPaths) {
+          try {
+            const pngResponse = await fetch(pngPath);
+            if (pngResponse.ok) {
+              const pngBlob = await pngResponse.blob();
+              const pngUrl = URL.createObjectURL(pngBlob);
+              
+              // Use exact dimensions: 300px × 115px converted to mm
+              // 300px = 79.375mm, 115px = 30.417mm
+              pdf.addImage(pngUrl, 'PNG', x, y, 79.375, 30.417);
+              URL.revokeObjectURL(pngUrl);
+              return; // Success, exit function
+            }
+          } catch (error) {
+            console.log(`Failed to load PNG from ${pngPath}:`, error);
+            continue;
+          }
         }
+        
+        // Final fallback to text logo
+        addText('QIQI', x, y, { fontSize: 14, fontStyle: 'bold' });
+        addText('GLOBAL', x, y + 5, { fontSize: 10 });
+        
       } catch (error) {
         console.log('Logo loading failed:', error);
         // Fallback to text logo
