@@ -355,8 +355,8 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 const originalWidth = svgElement.getAttribute('width') || '1000';
                 const originalHeight = svgElement.getAttribute('height') || '470';
                 
-                // Scale down to a reasonable size (about 90×42px)
-                const scaleFactor = 0.09; // Scale down to 9% of original size
+                // Scale down to a reasonable size (about 60×28px)
+                const scaleFactor = 0.06; // Scale down to 6% of original size
                 svgElement.setAttribute('width', (parseFloat(originalWidth) * scaleFactor).toString());
                 svgElement.setAttribute('height', (parseFloat(originalHeight) * scaleFactor).toString());
                 
@@ -421,26 +421,26 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     const shipToLines = pdf.splitTextToSize(shipToAddress, leftColWidth - 10);
     let shipToY = currentY + 12;
     shipToLines.forEach((line: string, index: number) => {
-      addText(line, pageWidth - margin, shipToY + (index * 4), { fontSize: 9, align: 'right' });
+      addText(line, pageWidth - margin, shipToY + (index * 4), { fontSize: 9, align: 'left' });
     });
 
     // Contact information below Ship To
     let contactY = shipToY + (shipToLines.length * 4) + 8;
     if (packingSlip.contact_name || packingSlip.contact_email || packingSlip.contact_phone) {
       if (packingSlip.contact_name) {
-        addText(`Contact: ${packingSlip.contact_name}`, pageWidth - margin, contactY, { fontSize: 8, align: 'right' });
+        addText(`Contact: ${packingSlip.contact_name}`, pageWidth - margin, contactY, { fontSize: 8, align: 'left' });
         contactY += 4;
       }
       if (packingSlip.contact_email) {
-        addText(`Email: ${packingSlip.contact_email}`, pageWidth - margin, contactY, { fontSize: 8, align: 'right' });
+        addText(`Email: ${packingSlip.contact_email}`, pageWidth - margin, contactY, { fontSize: 8, align: 'left' });
         contactY += 4;
       }
       if (packingSlip.contact_phone) {
-        addText(`Phone: ${packingSlip.contact_phone}`, pageWidth - margin, contactY, { fontSize: 8, align: 'right' });
+        addText(`Phone: ${packingSlip.contact_phone}`, pageWidth - margin, contactY, { fontSize: 8, align: 'left' });
         contactY += 4;
       }
       if (packingSlip.vat_number) {
-        addText(`VAT #: ${packingSlip.vat_number}`, pageWidth - margin, contactY, { fontSize: 8, align: 'right' });
+        addText(`VAT #: ${packingSlip.vat_number}`, pageWidth - margin, contactY, { fontSize: 8, align: 'left' });
       }
     }
 
@@ -502,7 +502,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
     // Items Table (matches web page table)
     const tableHeaders = ['Item', 'SKU', 'Case Pack', 'Case Qty', 'Total Units', 'Weight', 'HS Code', 'Made In'];
-    const colWidths = [90, 25, 20, 20, 25, 25, 30, 25]; // Shrunk columns to fit better
+    const colWidths = [110, 25, 20, 20, 25, 25, 30, 20]; // Narrowed Made In, expanded Item
     
     // Table header
     let xPos = margin;
@@ -588,7 +588,9 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         xPos += colWidths[index];
       });
       
-      addLine(margin, currentY + 8, pageWidth - margin, currentY + 8);
+      // Use consistent thin border for all table rows
+      pdf.setDrawColor(229, 229, 229); // Light gray border
+      pdf.line(margin, currentY + 8, pageWidth - margin, currentY + 8);
       currentY += 10;
     });
 
