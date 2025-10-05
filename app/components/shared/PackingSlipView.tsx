@@ -347,12 +347,14 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
               
               if (svgElement) {
                 // Use svg2pdf for vector rendering
-                // Dimensions: 300px × 115px (exact size)
-                await svg2pdf(svgElement, pdf, {
-                  xOffset: x,
-                  yOffset: y,
-                  scale: 1 // Keep original size
-                });
+                // Position the PDF cursor before rendering
+                pdf.setPage(pdf.getCurrentPageInfo().pageNumber);
+                
+                // Render SVG at current position
+                await svg2pdf(svgElement, pdf);
+                
+                // Move PDF cursor to position (since svg2pdf renders at origin)
+                pdf.setPage(pdf.getCurrentPageInfo().pageNumber);
                 return; // Success, exit function
               }
             }
