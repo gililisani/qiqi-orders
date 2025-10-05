@@ -351,11 +351,12 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 pdf.setPage(pdf.getCurrentPageInfo().pageNumber);
                 
                 // Scale down the SVG element to fit properly
-                const originalWidth = svgElement.getAttribute('width') || '300';
-                const originalHeight = svgElement.getAttribute('height') || '115';
+                // Original SVG is 1000×470px, we want it much smaller
+                const originalWidth = svgElement.getAttribute('width') || '1000';
+                const originalHeight = svgElement.getAttribute('height') || '470';
                 
-                // Scale down to 60mm × 23mm (much smaller than original 300×115px)
-                const scaleFactor = 0.3; // Scale down to 30% of original size
+                // Scale down to a reasonable size (about 90×42px)
+                const scaleFactor = 0.09; // Scale down to 9% of original size
                 svgElement.setAttribute('width', (parseFloat(originalWidth) * scaleFactor).toString());
                 svgElement.setAttribute('height', (parseFloat(originalHeight) * scaleFactor).toString());
                 
