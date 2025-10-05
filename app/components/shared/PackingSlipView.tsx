@@ -376,39 +376,26 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       }
     };
 
-    // Header Section - matches web page layout
-    await addLogo(margin, currentY);
-    currentY += 20;
-
-    // Company Information - Two columns like web page
+    // Grid Layout - Two columns like web page
     const leftColWidth = (contentWidth - 20) / 2;
+    const rightColX = margin + leftColWidth + 20;
     
-    // Left column - Subsidiary info (matches web page)
-    const subsidiaryName = order.company?.subsidiary?.name || 'N/A';
-    const subsidiaryAddress = order.company?.subsidiary?.ship_from_address || 'N/A';
+    // Top row - Logo (left) and Ship To (right)
+    await addLogo(margin, currentY);
     
-    addText(subsidiaryName, margin, currentY, { fontSize: 12, fontStyle: 'bold' });
-    currentY += 6;
-    
-    const addressLines = pdf.splitTextToSize(subsidiaryAddress, leftColWidth - 10);
-    addressLines.forEach((line: string) => {
-      addText(line, margin, currentY, { fontSize: 9 });
-      currentY += 4;
-    });
-    
-    // Right column - Ship To positioned at top right (like web page)
-    const shipToY = margin; // Start at the same Y as logo
-    addText('SHIP TO:', pageWidth - margin, shipToY, { fontSize: 12, fontStyle: 'bold', align: 'right' });
-    addText(order.company?.company_name || 'N/A', pageWidth - margin, shipToY + 6, { fontSize: 12, fontStyle: 'bold', align: 'right' });
+    // Ship To section in top right
+    addText('SHIP TO:', pageWidth - margin, currentY, { fontSize: 12, fontStyle: 'bold', align: 'right' });
+    addText(order.company?.company_name || 'N/A', pageWidth - margin, currentY + 6, { fontSize: 12, fontStyle: 'bold', align: 'right' });
     
     const shipToAddress = order.company?.ship_to || 'N/A';
     const shipToLines = pdf.splitTextToSize(shipToAddress, leftColWidth - 10);
+    let shipToY = currentY + 12;
     shipToLines.forEach((line: string, index: number) => {
-      addText(line, pageWidth - margin, shipToY + 12 + (index * 4), { fontSize: 9, align: 'right' });
+      addText(line, pageWidth - margin, shipToY + (index * 4), { fontSize: 9, align: 'right' });
     });
 
-    // Contact information (if available) - positioned below ship to address
-    let contactY = shipToY + 12 + (shipToLines.length * 4) + 8;
+    // Contact information below Ship To
+    let contactY = shipToY + (shipToLines.length * 4) + 8;
     if (packingSlip.contact_name || packingSlip.contact_email || packingSlip.contact_phone) {
       if (packingSlip.contact_name) {
         addText(`Contact: ${packingSlip.contact_name}`, pageWidth - margin, contactY, { fontSize: 8, align: 'right' });
@@ -427,8 +414,28 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       }
     }
 
-    // Update currentY to be after the left column content
-    currentY += 10;
+    // Calculate the maximum Y position used by the right column
+    const rightColumnEndY = Math.max(
+      contactY + (packingSlip.vat_number ? 4 : 0),
+      currentY + 30 // Logo height
+    );
+
+    // Left column - Subsidiary info below logo
+    currentY += 30; // Move below logo
+    const subsidiaryName = order.company?.subsidiary?.name || 'N/A';
+    const subsidiaryAddress = order.company?.subsidiary?.ship_from_address || 'N/A';
+    
+    addText(subsidiaryName, margin, currentY, { fontSize: 12, fontStyle: 'bold' });
+    currentY += 6;
+    
+    const addressLines = pdf.splitTextToSize(subsidiaryAddress, leftColWidth - 10);
+    addressLines.forEach((line: string) => {
+      addText(line, margin, currentY, { fontSize: 9 });
+      currentY += 4;
+    });
+
+    // Update currentY to be after the tallest column
+    currentY = Math.max(currentY + 10, rightColumnEndY + 10);
 
     currentY += 15;
 
