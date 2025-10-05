@@ -120,6 +120,7 @@ export default function OrderDetailsView({
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
   const [error, setError] = useState('');
+  const [validationError, setValidationError] = useState<string>('');
   const [currentUserName, setCurrentUserName] = useState<string>('');
   const [showPackingSlipForm, setShowPackingSlipForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -562,24 +563,25 @@ export default function OrderDetailsView({
       // Validation rules
       if (oldStatus === 'Open' && newStatus === 'In Process') {
         if (!adminSoNumber || adminSoNumber.trim() === '') {
-          setError('Please enter SO number before changing Status to In Process.');
+          setValidationError('Please enter SO number before changing Status to In Process.');
           return;
         }
       }
       
       if (oldStatus === 'In Process' && newStatus === 'Ready') {
         if (!adminInvoiceNumber || adminInvoiceNumber.trim() === '') {
-          setError('Please enter Invoice number and Number of Pallets before changing status to Ready.');
+          setValidationError('Please enter Invoice number and Number of Pallets before changing status to Ready.');
           return;
         }
         if (!adminNumberOfPallets || adminNumberOfPallets.trim() === '') {
-          setError('Please enter Invoice number and Number of Pallets before changing status to Ready.');
+          setValidationError('Please enter Invoice number and Number of Pallets before changing status to Ready.');
           return;
         }
       }
       
       // Clear any previous errors if validation passes
       setError('');
+      setValidationError('');
       
       const { error } = await supabase
         .from('orders')
@@ -876,6 +878,21 @@ export default function OrderDetailsView({
               </div>
             )}
             
+            {/* Validation Error Display */}
+            {validationError && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-3 mt-2">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-800">{validationError}</p>
+                  </div>
+                </div>
+              </div>
+            )}
             
             <div>
               <label className="text-sm font-medium text-gray-500">Created</label>
