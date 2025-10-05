@@ -350,9 +350,9 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
               // Determine format from path and maintain aspect ratio
               const format = logoPath.endsWith('.svg') ? 'SVG' : 'PNG';
               
-              // Maintain aspect ratio - typical logo is wider than tall
-              // Use 60x20 to maintain proper proportions
-              pdf.addImage(logoUrl, format, x, y, 60, 20);
+              // Use specific dimensions: 300px width by 115px height
+              // Convert to mm: 300px ≈ 79mm, 115px ≈ 30mm
+              pdf.addImage(logoUrl, format, x, y, 79, 30);
               URL.revokeObjectURL(logoUrl);
               logoLoaded = true;
               break;
@@ -382,7 +382,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
     // Company Information - Two columns like web page
     const leftColWidth = (contentWidth - 20) / 2;
-    const rightColX = margin + leftColWidth + 20;
     
     // Left column - Subsidiary info (matches web page)
     const subsidiaryName = order.company?.subsidiary?.name || 'N/A';
@@ -397,10 +396,8 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       currentY += 4;
     });
     
-    currentY += 10;
-
-    // Right column - Ship To (matches web page layout)
-    const shipToY = currentY - (addressLines.length * 4) - 16;
+    // Right column - Ship To positioned at top right (like web page)
+    const shipToY = margin; // Start at the same Y as logo
     addText('SHIP TO:', pageWidth - margin, shipToY, { fontSize: 12, fontStyle: 'bold', align: 'right' });
     addText(order.company?.company_name || 'N/A', pageWidth - margin, shipToY + 6, { fontSize: 12, fontStyle: 'bold', align: 'right' });
     
@@ -410,7 +407,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       addText(line, pageWidth - margin, shipToY + 12 + (index * 4), { fontSize: 9, align: 'right' });
     });
 
-    // Contact information (if available)
+    // Contact information (if available) - positioned below ship to address
     let contactY = shipToY + 12 + (shipToLines.length * 4) + 8;
     if (packingSlip.contact_name || packingSlip.contact_email || packingSlip.contact_phone) {
       if (packingSlip.contact_name) {
@@ -429,6 +426,9 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         addText(`VAT #: ${packingSlip.vat_number}`, pageWidth - margin, contactY, { fontSize: 8, align: 'right' });
       }
     }
+
+    // Update currentY to be after the left column content
+    currentY += 10;
 
     currentY += 15;
 
