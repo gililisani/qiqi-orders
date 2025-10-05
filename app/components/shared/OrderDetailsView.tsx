@@ -278,6 +278,7 @@ export default function OrderDetailsView({
   const [adminSoNumber, setAdminSoNumber] = useState<string>('');
   const [adminNumberOfPallets, setAdminNumberOfPallets] = useState<string>('');
   const [savingAdminFields, setSavingAdminFields] = useState<boolean>(false);
+  const [editOrderInfoMode, setEditOrderInfoMode] = useState<boolean>(false);
 
   useEffect(() => {
     if (orderId) {
@@ -493,6 +494,9 @@ export default function OrderDetailsView({
       // Clear any validation errors since data is now saved
       setValidationError('');
       setError('');
+      
+      // Exit edit mode after successful save
+      setEditOrderInfoMode(false);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -615,6 +619,12 @@ export default function OrderDetailsView({
 
   const handleStatusChange = async (newStatus: string) => {
     if (!order) return;
+    
+    // Only allow status changes when in edit mode
+    if (!editOrderInfoMode) {
+      setValidationError('Please click Edit to change the order status.');
+      return;
+    }
 
     try {
       const oldStatus = order.status;
@@ -876,8 +886,11 @@ export default function OrderDetailsView({
                     <select
                       value={order.status}
                       onChange={(e) => handleStatusChange(e.target.value)}
+                      disabled={!editOrderInfoMode}
                       className={`px-3 py-1 border border-[#e5e5e5] rounded text-sm ${
-                        order.status === 'Open'
+                        !editOrderInfoMode 
+                          ? 'bg-gray-100 text-gray-600 cursor-not-allowed'
+                          : order.status === 'Open'
                           ? 'bg-gray-200 text-gray-800'
                           : order.status === 'In Process'
                           ? 'bg-blue-100 text-blue-800'
@@ -914,7 +927,12 @@ export default function OrderDetailsView({
                     type="text"
                     value={adminInvoiceNumber}
                     onChange={(e) => setAdminInvoiceNumber(e.target.value)}
-                    className="mt-1 w-full px-3 py-2 border border-[#e5e5e5] text-sm"
+                    disabled={!editOrderInfoMode}
+                    className={`mt-1 w-full px-3 py-2 border text-sm ${
+                      !editOrderInfoMode 
+                        ? 'border-gray-200 bg-gray-100 text-gray-600 cursor-not-allowed'
+                        : 'border-[#e5e5e5]'
+                    }`}
                     placeholder="Enter invoice number"
                   />
                 </div>
@@ -924,7 +942,12 @@ export default function OrderDetailsView({
                     type="text"
                     value={adminSoNumber}
                     onChange={(e) => setAdminSoNumber(e.target.value)}
-                    className="mt-1 w-full px-3 py-2 border border-[#e5e5e5] text-sm"
+                    disabled={!editOrderInfoMode}
+                    className={`mt-1 w-full px-3 py-2 border text-sm ${
+                      !editOrderInfoMode 
+                        ? 'border-gray-200 bg-gray-100 text-gray-600 cursor-not-allowed'
+                        : 'border-[#e5e5e5]'
+                    }`}
                     placeholder="Enter SO number"
                   />
                 </div>
@@ -935,22 +958,42 @@ export default function OrderDetailsView({
                     min="1"
                     value={adminNumberOfPallets}
                     onChange={(e) => setAdminNumberOfPallets(e.target.value)}
-                    className="mt-1 w-full px-3 py-2 border border-[#e5e5e5] text-sm"
+                    disabled={!editOrderInfoMode}
+                    className={`mt-1 w-full px-3 py-2 border text-sm ${
+                      !editOrderInfoMode 
+                        ? 'border-gray-200 bg-gray-100 text-gray-600 cursor-not-allowed'
+                        : 'border-[#e5e5e5]'
+                    }`}
                     placeholder="Enter number of pallets"
                   />
                 </div>
               </div>
             )}
             
-            {/* Save Button */}
+            {/* Edit/Save/Cancel Buttons */}
             {role === 'admin' && (
-              <div className="flex justify-end pt-2">
+              <div className="flex justify-end gap-2 pt-2">
+                {editOrderInfoMode && (
+                  <button
+                    onClick={() => {
+                      setEditOrderInfoMode(false);
+                      // Reset form fields to original values
+                      setAdminInvoiceNumber(order?.invoice_number || '');
+                      setAdminSoNumber(order?.so_number || '');
+                      setAdminNumberOfPallets(order?.number_of_pallets?.toString() || '');
+                      setValidationError('');
+                    }}
+                    className="px-3 py-1.5 bg-gray-300 text-gray-700 text-sm hover:bg-gray-400"
+                  >
+                    Cancel
+                  </button>
+                )}
                 <button
-                  onClick={handleSaveAdminOrderRefs}
+                  onClick={editOrderInfoMode ? handleSaveAdminOrderRefs : () => setEditOrderInfoMode(true)}
                   disabled={savingAdminFields}
                   className="px-3 py-1.5 bg-black text-white text-sm hover:opacity-90 disabled:opacity-50"
                 >
-                  {savingAdminFields ? 'Saving…' : 'Save'}
+                  {savingAdminFields ? 'Saving…' : editOrderInfoMode ? 'Save' : 'Edit'}
                 </button>
               </div>
             )}
