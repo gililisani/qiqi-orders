@@ -332,6 +332,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
+  const [showSupportFundReminder, setShowSupportFundReminder] = useState(false);
 
   const isEditMode = !!orderId;
   const isNewMode = !orderId;
@@ -829,11 +830,19 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     }).format(amount);
   };
 
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      setError(null);
+  const proceedWithoutSupportFunds = async () => {
+    setShowSupportFundReminder(false);
+    // Continue with the save process
+    await performSave();
+  };
 
+  const goBackToSupportFunds = () => {
+    setShowSupportFundReminder(false);
+    setSaving(false);
+  };
+
+  const performSave = async () => {
+    try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
@@ -995,6 +1004,31 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       console.error('Error saving order:', error);
       setError(error instanceof Error ? error.message : 'Failed to save order');
     } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+
+      // Check if user has earned credit but hasn't used any support funds
+      const totals = getOrderTotals();
+      const hasEarnedCredit = totals.supportFundEarned > 0;
+      const hasUsedSupportFunds = supportFundItems.length > 0;
+      
+      if (hasEarnedCredit && !hasUsedSupportFunds) {
+        setShowSupportFundReminder(true);
+        setSaving(false);
+        return;
+      }
+
+      // Proceed with save
+      await performSave();
+    } catch (error) {
+      console.error('Error in handleSave:', error);
+      setError(error instanceof Error ? error.message : 'Failed to save order');
       setSaving(false);
     }
   };
@@ -1381,6 +1415,42 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
             </div>
           </Card>
           </div>
+        </div>
+      )}
+
+      {/* Support Fund Reminder Popup */}
+      {showSupportFundReminder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <div className="px-6 py-6">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 font-sans">
+                  Don't forget your Support Funds!
+                </h3>
+                <p className="text-gray-600 mb-6 font-sans">
+                  You've earned {formatCurrency(totals.supportFundEarned)} in Support Funds for this order.
+                  <br />
+                  If you continue, any unused credit will be lost.
+                  <br />
+                  <strong>Proceed without redeeming?</strong>
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={goBackToSupportFunds}
+                    className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded transition hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 font-sans text-sm"
+                  >
+                    Go back
+                  </button>
+                  <button
+                    onClick={proceedWithoutSupportFunds}
+                    className="flex-1 bg-gray-900 text-white px-4 py-2 rounded transition hover:bg-gray-800 focus:ring-2 focus:ring-gray-500 font-sans text-sm"
+                  >
+                    Proceed
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
       )}
 
