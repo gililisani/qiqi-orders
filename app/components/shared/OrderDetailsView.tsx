@@ -554,6 +554,61 @@ export default function OrderDetailsView({
     setDraggedItem(null);
   };
 
+  // Create packing slip automatically when status changes to Ready
+  const createAutomaticPackingSlip = async () => {
+    if (!order) return;
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      // Create packing slip with default values
+      const packingSlipData = {
+        order_id: order.id,
+        invoice_number: order.invoice_number || '',
+        shipping_method: '', // Default empty, admin can fill later
+        netsuite_reference: '',
+        notes: '',
+        contact_name: '',
+        contact_email: '',
+        contact_phone: '',
+        vat_number: '',
+        created_by: user.id
+      };
+
+      const { error } = await supabase
+        .from('packing_slips')
+        .insert(packingSlipData);
+
+      if (error) throw error;
+
+      // Update order to mark packing slip as generated
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ 
+          packing_slip_generated: true,
+          packing_slip_generated_at: new Date().toISOString(),
+          packing_slip_generated_by: user.id
+        })
+        .eq('id', order.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setOrder(prev => prev ? {
+        ...prev,
+        packing_slip_generated: true,
+        packing_slip_generated_at: new Date().toISOString(),
+        packing_slip_generated_by: user.id
+      } : null);
+
+      console.log('Packing slip created automatically');
+    } catch (err: any) {
+      console.error('Error creating automatic packing slip:', err);
+      // Don't throw error - status change should still succeed even if packing slip creation fails
+    }
+  };
+
   const handleStatusChange = async (newStatus: string) => {
     if (!order) return;
 
@@ -598,6 +653,11 @@ export default function OrderDetailsView({
         newStatus,
         `Status changed from ${oldStatus} to ${newStatus}`
       );
+      
+      // Automatically create packing slip when status changes to Ready
+      if (newStatus === 'Ready' && oldStatus === 'In Process') {
+        await createAutomaticPackingSlip();
+      }
       
       // Refresh order history to show the new status change
       if (role === 'admin') {

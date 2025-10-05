@@ -20,6 +20,9 @@ interface Order {
   user_id: string;
   company_id: string;
   po_number: string;
+  invoice_number?: string | null;
+  so_number?: string | null;
+  number_of_pallets?: number | null;
   client?: {
     name: string;
     email: string;
@@ -725,19 +728,19 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
   // Populate editData when packingSlip changes
   useEffect(() => {
-    if (packingSlip) {
+    if (packingSlip || order) {
       setEditData({
-        invoice_number: packingSlip.invoice_number || '',
-        shipping_method: packingSlip.shipping_method || '',
-        netsuite_reference: packingSlip.netsuite_reference || '',
-        notes: packingSlip.notes || '',
-        contact_name: packingSlip.contact_name || '',
-        contact_email: packingSlip.contact_email || '',
-        contact_phone: packingSlip.contact_phone || '',
-        vat_number: packingSlip.vat_number || ''
+        invoice_number: order?.invoice_number || packingSlip?.invoice_number || '',
+        shipping_method: packingSlip?.shipping_method || '',
+        netsuite_reference: order?.so_number || packingSlip?.netsuite_reference || '',
+        notes: packingSlip?.notes || '',
+        contact_name: packingSlip?.contact_name || '',
+        contact_email: packingSlip?.contact_email || '',
+        contact_phone: packingSlip?.contact_phone || '',
+        vat_number: packingSlip?.vat_number || ''
       });
     }
-  }, [packingSlip]);
+  }, [packingSlip, order]);
 
   // Let AdminLayout handle loading - no separate loading state needed
 
@@ -1248,13 +1251,14 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Invoice Number</label>
+                    <label className="block text-sm font-medium text-gray-500 mb-2 font-sans">Invoice Number</label>
                     <input
                       type="text"
                       value={editData.invoice_number}
                       onChange={(e) => setEditData(prev => ({ ...prev, invoice_number: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
-                      placeholder="Enter invoice number"
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed font-sans text-sm"
+                      placeholder="Retrieved from Order Details"
                     />
                   </div>
 
@@ -1272,13 +1276,14 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">QIQI Sales Order</label>
+                    <label className="block text-sm font-medium text-gray-500 mb-2 font-sans">QIQI Sales Order</label>
                     <input
                       type="text"
                       value={editData.netsuite_reference}
                       onChange={(e) => setEditData(prev => ({ ...prev, netsuite_reference: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black font-sans text-sm"
-                      placeholder="Enter QIQI sales order reference"
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed font-sans text-sm"
+                      placeholder="Retrieved from Order Details"
                     />
                   </div>
 
