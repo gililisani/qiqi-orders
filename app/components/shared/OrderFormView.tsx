@@ -231,7 +231,7 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
                         </div>
                       </td>
                       <td className="px-2 py-3 text-center text-xs text-gray-600 hidden sm:table-cell" style={{width: '8.3%'}}>
-                        {orderItem ? orderItem.total_units : 0}
+                        {orderItem ? orderItem.quantity : 0}
                       </td>
                       <td className="px-2 py-3 text-center text-xs font-medium text-gray-900" style={{width: '15%'}}>
                         {orderItem ? formatCurrency(orderItem.total_price) : '$0.00'}
@@ -287,7 +287,7 @@ interface OrderItem {
   product_id: number;
   product: Product;
   case_qty: number;
-  total_units: number;
+  quantity: number;
   unit_price: number;
   total_price: number;
 }
@@ -296,7 +296,7 @@ interface SupportFundItem {
   product_id: number;
   product: Product;
   case_qty: number;
-  total_units: number;
+  quantity: number;
   unit_price: number;
   total_price: number;
 }
@@ -493,20 +493,20 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       // Transform order items to include calculated fields for compatibility
       const transformedOrderItems = (orderItemsData || []).map((item: OrderItem) => {
         const unitsPerCase = item.product?.case_pack || 12; // Use case_pack field
-        const totalUnits = item.total_units || 0; // This is total units from database
-        const caseQty = Math.floor(totalUnits / unitsPerCase); // Calculate cases from units
+        const quantity = item.quantity || 0; // This is quantity from database
+        const caseQty = Math.floor(quantity / unitsPerCase); // Calculate cases from quantity
         
         console.log('Order item debug:', {
           product: item.product?.item_name,
-          database_quantity: item.total_units,
+          database_quantity: item.quantity,
           units_per_case: unitsPerCase,
           calculated_case_qty: caseQty,
-          calculated_total_units: totalUnits
+          calculated_quantity: quantity
         });
         
         return {
           ...item,
-          total_units: totalUnits,
+          quantity: quantity,
           case_qty: caseQty
         };
       });
@@ -528,11 +528,11 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       // Transform support fund items to include calculated fields for compatibility
       const transformedSupportFundItems = (supportFundItemsData || []).map((item: SupportFundItem) => {
         const unitsPerCase = item.product?.case_pack || 12; // Use case_pack field
-        const totalUnits = item.total_units || 0; // This is total units from database
-        const caseQty = Math.floor(totalUnits / unitsPerCase); // Calculate cases from units
+        const quantity = item.quantity || 0; // This is quantity from database
+        const caseQty = Math.floor(quantity / unitsPerCase); // Calculate cases from quantity
         return {
           ...item,
-          total_units: totalUnits,
+          quantity: quantity,
           case_qty: caseQty
         };
       });
@@ -730,7 +730,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         product_id: productId,
         product,
         case_qty: newQty,
-        total_units: totalUnits,
+        quantity: totalUnits,
         unit_price: unitPrice,
         total_price: totalPrice
       };
@@ -764,7 +764,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         product_id: productId,
         product,
         case_qty: newQty,
-        total_units: totalUnits,
+        quantity: totalUnits,
         unit_price: unitPrice,
         total_price: totalPrice
       };
@@ -878,7 +878,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         const regularItemsData = orderItems.map((item, index) => ({
           order_id: newOrder.id,
           product_id: item.product_id,
-          quantity: item.total_units,
+          quantity: item.quantity,
           unit_price: item.unit_price,
           total_price: item.total_price,
           is_support_fund_item: false,
@@ -888,7 +888,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         const supportFundItemsData = supportFundItems.map((item, index) => ({
           order_id: newOrder.id,
           product_id: item.product_id,
-          quantity: item.total_units,
+          quantity: item.quantity,
           unit_price: item.unit_price,
           total_price: item.total_price,
           is_support_fund_item: true,
@@ -959,7 +959,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         const regularItemsData = orderItems.map((item, index) => ({
           order_id: orderId,
           product_id: item.product_id,
-          quantity: item.total_units,
+          quantity: item.quantity,
           case_qty: item.case_qty,
           unit_price: item.unit_price,
           total_price: item.total_price,
@@ -970,7 +970,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         const supportFundItemsData = supportFundItems.map((item, index) => ({
           order_id: orderId,
           product_id: item.product_id,
-          quantity: item.total_units,
+          quantity: item.quantity,
           case_qty: item.case_qty,
           unit_price: item.unit_price,
           total_price: item.total_price,
@@ -1240,7 +1240,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                           {item.product.sku}
                         </div>
                         <div className="text-xs text-gray-600 leading-tight">
-                          {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''}
+                          {item.quantity} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''}
                         </div>
                       </div>
                       <div className="text-xs font-medium text-gray-900">{formatCurrency(item.total_price)}</div>
@@ -1284,7 +1284,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                           {item.product.sku}
                         </div>
                         <div className="text-xs text-green-600 leading-tight">
-                          {item.total_units} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''} (Support Fund)
+                          {item.quantity} units • {item.case_qty} case{item.case_qty !== 1 ? 's' : ''} (Support Fund)
                         </div>
                       </div>
                       <div className="text-xs font-medium text-green-800">{formatCurrency(item.total_price)}</div>
@@ -1350,7 +1350,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
               <div className="pt-2 border-t">
                 <div className="flex justify-between text-xs text-gray-600 mb-1">
                   <span>Total Items:</span>
-                  <span>{orderItems.reduce((sum, item) => sum + (item.total_units || 0), 0) + supportFundItems.reduce((sum, item) => sum + (item.total_units || 0), 0)}</span>
+                  <span>{orderItems.reduce((sum, item) => sum + (item.quantity || 0), 0) + supportFundItems.reduce((sum, item) => sum + (item.quantity || 0), 0)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-gray-600">
                   <span>Total Cases:</span>
