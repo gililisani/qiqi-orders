@@ -289,16 +289,15 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       return;
     }
 
-    // Portrait A4 with proper margins for printing
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = 210; // A4 width
-    const pageHeight = 297; // A4 height
-    const margin = 20; // Proper margins for printing
+    // Landscape A4 to match web page layout
+    const pdf = new jsPDF('l', 'mm', 'a4');
+    const pageWidth = 297; // A4 landscape width
+    const pageHeight = 210; // A4 landscape height
+    const margin = 15; // Margins for printing
     const contentWidth = pageWidth - (margin * 2);
     let currentY = margin;
-    let currentPage = 1;
 
-    // Helper function to add text with proper positioning
+    // Helper function to add text
     const addText = (text: string, x: number, y: number, options: any = {}) => {
       pdf.setFontSize(options.fontSize || 10);
       pdf.setFont('helvetica', options.fontStyle || 'normal');
@@ -313,7 +312,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         pdf.setTextColor(0, 0, 0);
       }
       
-      // Handle text alignment
       if (options.align === 'center') {
         pdf.text(text, x, y, { align: 'center' });
       } else if (options.align === 'right') {
@@ -324,183 +322,144 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     };
 
     // Helper function to add line
-    const addLine = (x1: number, y1: number, x2: number, y2: number, thickness = 0.5) => {
-      pdf.setLineWidth(thickness);
-      pdf.setDrawColor(0, 0, 0);
+    const addLine = (x1: number, y1: number, x2: number, y2: number) => {
+      pdf.setDrawColor(229, 229, 229);
       pdf.line(x1, y1, x2, y2);
     };
 
-    // Helper function to check if we need a new page
-    const checkPageBreak = (requiredSpace: number) => {
-      if (currentY + requiredSpace > pageHeight - margin) {
-        pdf.addPage();
-        currentPage++;
-        currentY = margin;
-        return true;
-      }
-      return false;
-    };
-
-    // Helper function to add logo (placeholder for now)
-    const addLogo = (x: number, y: number) => {
-      // For now, add text logo - you can replace with actual image later
-      addText('QIQI', x, y, { fontSize: 16, fontStyle: 'bold' });
-      addText('GLOBAL', x, y + 6, { fontSize: 12, fontStyle: 'normal' });
-    };
-
-    // Helper function to add table with proper formatting
-    const addTable = (headers: string[], rows: string[][], startY: number) => {
-      const colWidths = [60, 25, 20, 20, 25, 30, 30]; // Adjusted for portrait
-      const rowHeight = 8;
-      const headerHeight = 10;
-      
-      let yPos = startY;
-      
-      // Check if table fits on current page
-      const tableHeight = headerHeight + (rows.length * rowHeight);
-      if (checkPageBreak(tableHeight + 10)) {
-        yPos = currentY;
-      }
-      
-      // Draw header
-      let xPos = margin;
-      pdf.setFillColor(240, 240, 240);
-      pdf.rect(margin, yPos - 2, contentWidth, headerHeight, 'F');
-      
-      headers.forEach((header, index) => {
-        addText(header, xPos + 2, yPos + 6, { fontSize: 8, fontStyle: 'bold' });
-        xPos += colWidths[index];
-      });
-      
-      addLine(margin, yPos + 7, pageWidth - margin, yPos + 7);
-      yPos += headerHeight;
-      
-      // Draw rows
-      rows.forEach((row) => {
-        if (checkPageBreak(rowHeight + 5)) {
-          yPos = currentY;
-          // Redraw header on new page
-          xPos = margin;
-          pdf.setFillColor(240, 240, 240);
-          pdf.rect(margin, yPos - 2, contentWidth, headerHeight, 'F');
-          headers.forEach((header, index) => {
-            addText(header, xPos + 2, yPos + 6, { fontSize: 8, fontStyle: 'bold' });
-            xPos += colWidths[index];
-          });
-          addLine(margin, yPos + 7, pageWidth - margin, yPos + 7);
-          yPos += headerHeight;
+    // Helper function to add logo - try to load actual logo
+    const addLogo = async (x: number, y: number) => {
+      try {
+        // Try to load the actual logo
+        const logoResponse = await fetch('/QIQI-Logo.svg');
+        if (logoResponse.ok) {
+          const logoBlob = await logoResponse.blob();
+          const logoUrl = URL.createObjectURL(logoBlob);
+          pdf.addImage(logoUrl, 'SVG', x, y, 40, 15);
+          URL.revokeObjectURL(logoUrl);
+        } else {
+          // Fallback to text logo
+          addText('QIQI', x, y, { fontSize: 14, fontStyle: 'bold' });
+          addText('GLOBAL', x, y + 5, { fontSize: 10 });
         }
-        
-        xPos = margin;
-        row.forEach((cell, index) => {
-          const maxWidth = colWidths[index] - 4;
-          const lines = pdf.splitTextToSize(cell, maxWidth);
-          lines.forEach((line: string, lineIndex: number) => {
-            addText(line, xPos + 2, yPos + (lineIndex * 3) + 6, { fontSize: 8 });
-          });
-          xPos += colWidths[index];
-        });
-        
-        addLine(margin, yPos + 5, pageWidth - margin, yPos + 5);
-        yPos += rowHeight;
-      });
-      
-      currentY = yPos + 5;
-      return yPos;
+      } catch (error) {
+        // Fallback to text logo
+        addText('QIQI', x, y, { fontSize: 14, fontStyle: 'bold' });
+        addText('GLOBAL', x, y + 5, { fontSize: 10 });
+      }
     };
 
-    // PAGE 1: Header and Company Information
-    // Logo
-    addLogo(margin, currentY);
-    currentY += 15;
+    // Header Section - matches web page layout
+    await addLogo(margin, currentY);
+    currentY += 20;
 
-    // Company Information - Two columns
-    const leftColX = margin;
-    const rightColX = margin + (contentWidth / 2) + 10;
+    // Company Information - Two columns like web page
+    const leftColWidth = (contentWidth - 20) / 2;
+    const rightColX = margin + leftColWidth + 20;
     
-    // Left column - Ship From
-    addText('SHIP FROM:', leftColX, currentY, { fontSize: 12, fontStyle: 'bold' });
-    currentY += 8;
-    addText(order.company?.subsidiary?.name || 'N/A', leftColX, currentY, { fontSize: 11, fontStyle: 'bold' });
+    // Left column - Subsidiary info (matches web page)
+    const subsidiaryName = order.company?.subsidiary?.name || 'N/A';
+    const subsidiaryAddress = order.company?.subsidiary?.ship_from_address || 'N/A';
+    
+    addText(subsidiaryName, margin, currentY, { fontSize: 12, fontStyle: 'bold' });
     currentY += 6;
     
-    // Format address with line breaks
-    const shipFromAddress = order.company?.subsidiary?.ship_from_address || 'N/A';
-    const addressLines = pdf.splitTextToSize(shipFromAddress, contentWidth / 2 - 10);
+    const addressLines = pdf.splitTextToSize(subsidiaryAddress, leftColWidth - 10);
     addressLines.forEach((line: string) => {
-      addText(line, leftColX, currentY, { fontSize: 10 });
-      currentY += 5;
+      addText(line, margin, currentY, { fontSize: 9 });
+      currentY += 4;
     });
     
     currentY += 10;
 
-    // Right column - Ship To
-    const shipToY = currentY - (addressLines.length * 5) - 14;
+    // Right column - Ship To (matches web page layout)
+    const shipToY = currentY - (addressLines.length * 4) - 16;
     addText('SHIP TO:', rightColX, shipToY, { fontSize: 12, fontStyle: 'bold' });
-    addText(order.company?.company_name || 'N/A', rightColX, shipToY + 8, { fontSize: 11, fontStyle: 'bold' });
+    addText(order.company?.company_name || 'N/A', rightColX, shipToY + 6, { fontSize: 12, fontStyle: 'bold' });
     
     const shipToAddress = order.company?.ship_to || 'N/A';
-    const shipToLines = pdf.splitTextToSize(shipToAddress, contentWidth / 2 - 10);
+    const shipToLines = pdf.splitTextToSize(shipToAddress, leftColWidth - 10);
     shipToLines.forEach((line: string, index: number) => {
-      addText(line, rightColX, shipToY + 14 + (index * 5), { fontSize: 10 });
+      addText(line, rightColX, shipToY + 12 + (index * 4), { fontSize: 9 });
     });
 
     // Contact information (if available)
+    let contactY = shipToY + 12 + (shipToLines.length * 4) + 8;
     if (packingSlip.contact_name || packingSlip.contact_email || packingSlip.contact_phone) {
-      const contactY = shipToY + 14 + (shipToLines.length * 5) + 10;
       if (packingSlip.contact_name) {
-        addText(`Contact: ${packingSlip.contact_name}`, rightColX, contactY, { fontSize: 9 });
+        addText(`Contact: ${packingSlip.contact_name}`, rightColX, contactY, { fontSize: 8 });
+        contactY += 4;
       }
       if (packingSlip.contact_email) {
-        addText(`Email: ${packingSlip.contact_email}`, rightColX, contactY + 5, { fontSize: 9 });
+        addText(`Email: ${packingSlip.contact_email}`, rightColX, contactY, { fontSize: 8 });
+        contactY += 4;
       }
       if (packingSlip.contact_phone) {
-        addText(`Phone: ${packingSlip.contact_phone}`, rightColX, contactY + 10, { fontSize: 9 });
+        addText(`Phone: ${packingSlip.contact_phone}`, rightColX, contactY, { fontSize: 8 });
+        contactY += 4;
       }
       if (packingSlip.vat_number) {
-        addText(`VAT #: ${packingSlip.vat_number}`, rightColX, contactY + 15, { fontSize: 9 });
+        addText(`VAT #: ${packingSlip.vat_number}`, rightColX, contactY, { fontSize: 8 });
       }
     }
 
-    currentY += 20;
-
-    // Title
-    addText('PACKING SLIP', pageWidth / 2, currentY, { fontSize: 20, fontStyle: 'bold', align: 'center' });
     currentY += 15;
 
-    // Date
-    addText(`Date: ${new Date().toLocaleDateString()}`, pageWidth - margin, currentY, { fontSize: 10, align: 'right' });
+    // Title and Date Row (matches web page)
+    addText('PACKING SLIP', pageWidth / 2, currentY, { fontSize: 20, fontStyle: 'bold', align: 'center' });
+    addText(`Date: ${new Date().toLocaleDateString()}`, pageWidth - margin, currentY, { fontSize: 9, align: 'right' });
     currentY += 15;
 
     // Separator line
     addLine(margin, currentY, pageWidth - margin, currentY);
     currentY += 10;
 
-    // Invoice Details
+    // Invoice Details (matches web page grid layout)
     const invoiceY = currentY;
-    addText('Invoice Number', margin, invoiceY, { fontSize: 10, fontStyle: 'bold' });
-    addText(`#${packingSlip.invoice_number}`, margin, invoiceY + 8, { fontSize: 14, fontStyle: 'bold' });
+    const detailColWidth = contentWidth / 4;
     
-    addText('Shipping Method', margin + 70, invoiceY, { fontSize: 10, fontStyle: 'bold' });
-    addText(packingSlip.shipping_method, margin + 70, invoiceY + 8, { fontSize: 14, fontStyle: 'bold' });
+    addText('Invoice Number', margin, invoiceY, { fontSize: 8, fontStyle: 'bold' });
+    addText(`#${packingSlip.invoice_number}`, margin, invoiceY + 5, { fontSize: 11, fontStyle: 'bold' });
     
-    addText('QIQI Sales Order', margin + 140, invoiceY, { fontSize: 10, fontStyle: 'bold' });
-    addText(packingSlip.netsuite_reference || 'N/A', margin + 140, invoiceY + 8, { fontSize: 14, fontStyle: 'bold' });
+    addText('Shipping Method', margin + detailColWidth, invoiceY, { fontSize: 8, fontStyle: 'bold' });
+    addText(packingSlip.shipping_method, margin + detailColWidth, invoiceY + 5, { fontSize: 11, fontStyle: 'bold' });
     
-    currentY += 25;
+    addText('QIQI Sales Order', margin + (detailColWidth * 2), invoiceY, { fontSize: 8, fontStyle: 'bold' });
+    addText(packingSlip.netsuite_reference || 'N/A', margin + (detailColWidth * 2), invoiceY + 5, { fontSize: 11, fontStyle: 'bold' });
+    
+    addText('Destination Country', margin + (detailColWidth * 3), invoiceY, { fontSize: 8, fontStyle: 'bold' });
+    addText(getDestinationCountry(), margin + (detailColWidth * 3), invoiceY + 5, { fontSize: 11, fontStyle: 'bold' });
+    
+    currentY += 20;
 
     // Separator line
     addLine(margin, currentY, pageWidth - margin, currentY);
-    currentY += 15;
+    currentY += 10;
 
-    // Items Table
-    const headers = ['Product', 'SKU', 'Pack', 'Cases', 'Units', 'Weight', 'HS Code', 'Made In'];
-    const tableRows = orderItems.map((item) => {
+    // Items Table (matches web page table)
+    const tableHeaders = ['Item', 'SKU', 'Case Pack', 'Case Qty', 'Total Units', 'Weight', 'HS Code', 'Made In'];
+    const colWidths = [80, 35, 25, 25, 30, 35, 35, 35]; // Adjusted for landscape
+    
+    // Table header
+    let xPos = margin;
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(margin, currentY - 2, contentWidth, 10, 'F');
+    
+    tableHeaders.forEach((header, index) => {
+      addText(header, xPos + 2, currentY + 6, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99] });
+      xPos += colWidths[index];
+    });
+    
+    addLine(margin, currentY + 7, pageWidth - margin, currentY + 7);
+    currentY += 12;
+
+    // Table rows
+    orderItems.forEach((item) => {
       const casePack = item.product?.case_pack || 1;
       const caseQty = Math.ceil(item.quantity / casePack);
       const totalWeight = (item.product?.case_weight || 0) * caseQty;
       
-      return [
+      const rowData = [
         item.product?.item_name || 'N/A',
         item.product?.sku || 'N/A',
         casePack.toString(),
@@ -510,11 +469,30 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         item.product?.hs_code || 'N/A',
         item.product?.made_in || 'N/A'
       ];
+      
+      xPos = margin;
+      rowData.forEach((cell, index) => {
+        const maxWidth = colWidths[index] - 4;
+        const lines = pdf.splitTextToSize(cell, maxWidth);
+        lines.forEach((line: string, lineIndex: number) => {
+          addText(line, xPos + 2, currentY + (lineIndex * 3) + 6, { fontSize: 7 });
+        });
+        xPos += colWidths[index];
+      });
+      
+      addLine(margin, currentY + 8, pageWidth - margin, currentY + 8);
+      currentY += 10;
     });
 
-    addTable(headers, tableRows, currentY);
-
-    // Totals Section
+    // Totals Section (matches web page)
+    currentY += 5;
+    const totalsX = pageWidth - margin - 100;
+    addLine(totalsX, currentY, pageWidth - margin, currentY);
+    currentY += 8;
+    
+    addText('TOTALS', totalsX, currentY, { fontSize: 8, fontStyle: 'bold' });
+    currentY += 6;
+    
     const totalCases = orderItems.reduce((sum, item) => {
       const casePack = item.product?.case_pack || 1;
       return sum + Math.ceil(item.quantity / casePack);
@@ -528,39 +506,25 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       const itemWeight = (item.product?.case_weight || 0) * caseQty;
       return sum + itemWeight;
     }, 0);
-
-    // Check if we need a new page for totals
-    checkPageBreak(30);
     
-    const totalsX = pageWidth - margin - 80;
-    addText('TOTALS', totalsX, currentY, { fontSize: 12, fontStyle: 'bold' });
-    currentY += 8;
-    addText(`Cases: ${totalCases}`, totalsX, currentY, { fontSize: 10 });
-    currentY += 6;
-    addText(`Units: ${totalUnits}`, totalsX, currentY, { fontSize: 10 });
-    currentY += 6;
-    addText(`Weight: ${totalWeight.toFixed(1)} kg`, totalsX, currentY, { fontSize: 10 });
-    currentY += 15;
+    addText(`Cases: ${totalCases}`, totalsX, currentY, { fontSize: 8 });
+    currentY += 4;
+    addText(`Units: ${totalUnits}`, totalsX, currentY, { fontSize: 8 });
+    currentY += 4;
+    addText(`Weight: ${totalWeight.toFixed(1)} kg`, totalsX, currentY, { fontSize: 8 });
 
-    // Notes Section
+    // Notes Section (if available)
     if (packingSlip.notes) {
-      checkPageBreak(20);
-      addText('NOTES', margin, currentY, { fontSize: 12, fontStyle: 'bold' });
-      currentY += 10;
+      currentY += 15;
+      addText('Notes', margin, currentY, { fontSize: 12, fontStyle: 'bold' });
+      currentY += 8;
       
       const noteLines = pdf.splitTextToSize(packingSlip.notes, contentWidth);
       noteLines.forEach((line: string) => {
-        if (checkPageBreak(10)) {
-          // Continue notes on new page
-        }
-        addText(line, margin, currentY, { fontSize: 10 });
+        addText(line, margin, currentY, { fontSize: 9 });
         currentY += 5;
       });
     }
-
-    // Footer
-    const footerY = pageHeight - 15;
-    addText(`Generated on ${new Date().toLocaleDateString()} - Page ${currentPage}`, pageWidth / 2, footerY, { fontSize: 8, align: 'center' });
 
     pdf.save(`packing-slip-${packingSlip.invoice_number || 'invoice'}.pdf`);
   };
