@@ -489,6 +489,10 @@ export default function OrderDetailsView({
         so_number: adminSoNumber || null,
         number_of_pallets: numberOfPallets
       } as Order : prev);
+      
+      // Clear any validation errors since data is now saved
+      setValidationError('');
+      setError('');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -615,21 +619,21 @@ export default function OrderDetailsView({
     try {
       const oldStatus = order.status;
       
-      // Validation rules
+      // Validation rules - check if data is saved in database
       if (oldStatus === 'Open' && newStatus === 'In Process') {
-        if (!adminSoNumber || adminSoNumber.trim() === '') {
-          setValidationError('Please enter SO number before changing Status to In Process.');
+        if (!order.so_number || order.so_number.trim() === '') {
+          setValidationError('Please enter SO number and click Save before changing Status to In Process.');
           return;
         }
       }
       
       if (oldStatus === 'In Process' && newStatus === 'Ready') {
-        if (!adminInvoiceNumber || adminInvoiceNumber.trim() === '') {
-          setValidationError('Please enter Invoice number and Number of Pallets before changing status to Ready.');
+        if (!order.invoice_number || order.invoice_number.trim() === '') {
+          setValidationError('Please enter Invoice number and Number of Pallets and click Save before changing status to Ready.');
           return;
         }
-        if (!adminNumberOfPallets || adminNumberOfPallets.trim() === '') {
-          setValidationError('Please enter Invoice number and Number of Pallets before changing status to Ready.');
+        if (!order.number_of_pallets || order.number_of_pallets <= 0) {
+          setValidationError('Please enter Invoice number and Number of Pallets and click Save before changing status to Ready.');
           return;
         }
       }
@@ -935,6 +939,19 @@ export default function OrderDetailsView({
                     placeholder="Enter number of pallets"
                   />
                 </div>
+              </div>
+            )}
+            
+            {/* Save Button */}
+            {role === 'admin' && (
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={handleSaveAdminOrderRefs}
+                  disabled={savingAdminFields}
+                  className="px-3 py-1.5 bg-black text-white text-sm hover:opacity-90 disabled:opacity-50"
+                >
+                  {savingAdminFields ? 'Saving…' : 'Save'}
+                </button>
               </div>
             )}
             
