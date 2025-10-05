@@ -579,7 +579,7 @@ export default function OrderDetailsView({
       }
       
       // Clear any previous errors if validation passes
-      setError(null);
+      setError('');
       
       const { error } = await supabase
         .from('orders')
