@@ -350,9 +350,10 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
               // Determine format from path and maintain aspect ratio
               const format = logoPath.endsWith('.svg') ? 'SVG' : 'PNG';
               
-              // Use specific dimensions: 300px width by 115px height
-              // Convert to mm: 300px ≈ 79mm, 115px ≈ 30mm
-              pdf.addImage(logoUrl, format, x, y, 79, 30);
+              // Use narrower dimensions to prevent stretching
+              // Original: 300px × 115px, but make it narrower
+              // Convert to mm: 60mm width, 25mm height (narrower aspect ratio)
+              pdf.addImage(logoUrl, format, x, y, 60, 25);
               URL.revokeObjectURL(logoUrl);
               logoLoaded = true;
               break;
@@ -384,7 +385,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     await addLogo(margin, currentY);
     
     // Ship To section in top right
-    addText('SHIP TO:', pageWidth - margin, currentY, { fontSize: 12, fontStyle: 'bold', align: 'right' });
+    addText('SHIP TO:', pageWidth - margin, currentY, { fontSize: 12, align: 'right' });
     addText(order.company?.company_name || 'N/A', pageWidth - margin, currentY + 6, { fontSize: 12, fontStyle: 'bold', align: 'right' });
     
     const shipToAddress = order.company?.ship_to || 'N/A';
@@ -482,11 +483,11 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     tableHeaders.forEach((header, index) => {
       if (index === 0) {
         // Item column - left aligned, vertically centered
-        addText(header, xPos + 2, currentY + 5, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99] });
+        addText(header, xPos + 2, currentY + 5, { fontSize: 9, fontStyle: 'bold', color: [75, 85, 99] });
       } else {
         // All other columns - center aligned, vertically centered
         const centerX = xPos + (colWidths[index] / 2);
-        addText(header, centerX, currentY + 5, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99], align: 'center' });
+        addText(header, centerX, currentY + 5, { fontSize: 9, fontStyle: 'bold', color: [75, 85, 99], align: 'center' });
       }
       xPos += colWidths[index];
     });
@@ -509,11 +510,11 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         tableHeaders.forEach((header, index) => {
           if (index === 0) {
             // Item column - left aligned, vertically centered
-            addText(header, xPos + 2, currentY + 5, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99] });
+            addText(header, xPos + 2, currentY + 5, { fontSize: 9, fontStyle: 'bold', color: [75, 85, 99] });
           } else {
             // All other columns - center aligned, vertically centered
             const centerX = xPos + (colWidths[index] / 2);
-            addText(header, centerX, currentY + 5, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99], align: 'center' });
+            addText(header, centerX, currentY + 5, { fontSize: 9, fontStyle: 'bold', color: [75, 85, 99], align: 'center' });
           }
           xPos += colWidths[index];
         });
@@ -544,7 +545,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
           const maxWidth = colWidths[index] - 4;
           const lines = pdf.splitTextToSize(cell, maxWidth);
           lines.forEach((line: string, lineIndex: number) => {
-            addText(line, xPos + 2, currentY + (lineIndex * 3) + 6, { fontSize: 7 });
+            addText(line, xPos + 2, currentY + (lineIndex * 3) + 6, { fontSize: 9 });
           });
         } else {
           // All other columns - center aligned
@@ -552,7 +553,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
           const maxWidth = colWidths[index] - 4;
           const lines = pdf.splitTextToSize(cell, maxWidth);
           lines.forEach((line: string, lineIndex: number) => {
-            addText(line, centerX, currentY + (lineIndex * 3) + 6, { fontSize: 7, align: 'center' });
+            addText(line, centerX, currentY + (lineIndex * 3) + 6, { fontSize: 9, align: 'center' });
           });
         }
         xPos += colWidths[index];
