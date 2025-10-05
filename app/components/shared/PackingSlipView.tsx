@@ -347,9 +347,12 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
               const logoBlob = await logoResponse.blob();
               const logoUrl = URL.createObjectURL(logoBlob);
               
-              // Determine format from path
+              // Determine format from path and maintain aspect ratio
               const format = logoPath.endsWith('.svg') ? 'SVG' : 'PNG';
-              pdf.addImage(logoUrl, format, x, y, 40, 15);
+              
+              // Maintain aspect ratio - typical logo is wider than tall
+              // Use 60x20 to maintain proper proportions
+              pdf.addImage(logoUrl, format, x, y, 60, 20);
               URL.revokeObjectURL(logoUrl);
               logoLoaded = true;
               break;
@@ -398,32 +401,32 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
     // Right column - Ship To (matches web page layout)
     const shipToY = currentY - (addressLines.length * 4) - 16;
-    addText('SHIP TO:', rightColX, shipToY, { fontSize: 12, fontStyle: 'bold' });
-    addText(order.company?.company_name || 'N/A', rightColX, shipToY + 6, { fontSize: 12, fontStyle: 'bold' });
+    addText('SHIP TO:', pageWidth - margin, shipToY, { fontSize: 12, fontStyle: 'bold', align: 'right' });
+    addText(order.company?.company_name || 'N/A', pageWidth - margin, shipToY + 6, { fontSize: 12, fontStyle: 'bold', align: 'right' });
     
     const shipToAddress = order.company?.ship_to || 'N/A';
     const shipToLines = pdf.splitTextToSize(shipToAddress, leftColWidth - 10);
     shipToLines.forEach((line: string, index: number) => {
-      addText(line, rightColX, shipToY + 12 + (index * 4), { fontSize: 9 });
+      addText(line, pageWidth - margin, shipToY + 12 + (index * 4), { fontSize: 9, align: 'right' });
     });
 
     // Contact information (if available)
     let contactY = shipToY + 12 + (shipToLines.length * 4) + 8;
     if (packingSlip.contact_name || packingSlip.contact_email || packingSlip.contact_phone) {
       if (packingSlip.contact_name) {
-        addText(`Contact: ${packingSlip.contact_name}`, rightColX, contactY, { fontSize: 8 });
+        addText(`Contact: ${packingSlip.contact_name}`, pageWidth - margin, contactY, { fontSize: 8, align: 'right' });
         contactY += 4;
       }
       if (packingSlip.contact_email) {
-        addText(`Email: ${packingSlip.contact_email}`, rightColX, contactY, { fontSize: 8 });
+        addText(`Email: ${packingSlip.contact_email}`, pageWidth - margin, contactY, { fontSize: 8, align: 'right' });
         contactY += 4;
       }
       if (packingSlip.contact_phone) {
-        addText(`Phone: ${packingSlip.contact_phone}`, rightColX, contactY, { fontSize: 8 });
+        addText(`Phone: ${packingSlip.contact_phone}`, pageWidth - margin, contactY, { fontSize: 8, align: 'right' });
         contactY += 4;
       }
       if (packingSlip.vat_number) {
-        addText(`VAT #: ${packingSlip.vat_number}`, rightColX, contactY, { fontSize: 8 });
+        addText(`VAT #: ${packingSlip.vat_number}`, pageWidth - margin, contactY, { fontSize: 8, align: 'right' });
       }
     }
 
@@ -466,17 +469,17 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     
     // Table header
     let xPos = margin;
-    pdf.setFillColor(248, 250, 252);
+    pdf.setFillColor(229, 229, 229); // Light gray #e5e5e5
     pdf.rect(margin, currentY - 2, contentWidth, 10, 'F');
     
     tableHeaders.forEach((header, index) => {
       if (index === 0) {
-        // Item column - left aligned
-        addText(header, xPos + 2, currentY + 6, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99] });
+        // Item column - left aligned, vertically centered
+        addText(header, xPos + 2, currentY + 5, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99] });
       } else {
-        // All other columns - center aligned
+        // All other columns - center aligned, vertically centered
         const centerX = xPos + (colWidths[index] / 2);
-        addText(header, centerX, currentY + 6, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99], align: 'center' });
+        addText(header, centerX, currentY + 5, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99], align: 'center' });
       }
       xPos += colWidths[index];
     });
@@ -493,15 +496,17 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         
         // Redraw header on new page
         xPos = margin;
-        pdf.setFillColor(248, 250, 252);
+        pdf.setFillColor(229, 229, 229); // Light gray #e5e5e5
         pdf.rect(margin, currentY - 2, contentWidth, 10, 'F');
         
         tableHeaders.forEach((header, index) => {
           if (index === 0) {
-            addText(header, xPos + 2, currentY + 6, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99] });
+            // Item column - left aligned, vertically centered
+            addText(header, xPos + 2, currentY + 5, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99] });
           } else {
+            // All other columns - center aligned, vertically centered
             const centerX = xPos + (colWidths[index] / 2);
-            addText(header, centerX, currentY + 6, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99], align: 'center' });
+            addText(header, centerX, currentY + 5, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99], align: 'center' });
           }
           xPos += colWidths[index];
         });
