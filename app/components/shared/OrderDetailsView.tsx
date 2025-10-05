@@ -523,6 +523,11 @@ export default function OrderDetailsView({
       // Clear any errors since data is now saved
       setError('');
       
+      // Create packing slip automatically if status is Ready and no packing slip exists
+      if (order.status === 'Ready' && !order.packing_slip_generated) {
+        await createAutomaticPackingSlip();
+      }
+      
       // Exit edit mode after successful save
       setEditOrderInfoMode(false);
     } catch (err: any) {
@@ -590,35 +595,6 @@ export default function OrderDetailsView({
     setDraggedItem(null);
   };
 
-  // Save current form data to database
-  const saveCurrentFormData = async () => {
-    if (!order) return;
-    
-    try {
-      const numberOfPallets = adminNumberOfPallets ? parseInt(adminNumberOfPallets, 10) : null;
-      const { error } = await supabase
-        .from('orders')
-        .update({ 
-          invoice_number: adminInvoiceNumber || null, 
-          so_number: adminSoNumber || null,
-          number_of_pallets: numberOfPallets
-        })
-        .eq('id', orderId);
-
-      if (error) throw error;
-      
-      // Update local state
-      setOrder(prev => prev ? { 
-        ...prev, 
-        invoice_number: adminInvoiceNumber || null, 
-        so_number: adminSoNumber || null,
-        number_of_pallets: numberOfPallets
-      } as Order : prev);
-    } catch (err: any) {
-      console.error('Error saving form data:', err);
-      // Don't throw error - status change should still succeed
-    }
-  };
 
   // Create packing slip automatically when status changes to Ready
   const createAutomaticPackingSlip = async () => {
@@ -705,13 +681,6 @@ export default function OrderDetailsView({
         `Status changed from ${oldStatus} to ${newStatus}`
       );
       
-      // Automatically create packing slip when status changes to Ready
-      if (newStatus === 'Ready') {
-        // First save the current form data to ensure it's in the database
-        await saveCurrentFormData();
-        // Then create the packing slip
-        await createAutomaticPackingSlip();
-      }
       
       // Refresh order history to show the new status change
       if (role === 'admin') {
