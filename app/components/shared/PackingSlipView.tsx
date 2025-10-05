@@ -289,17 +289,20 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       return;
     }
 
-    // Landscape orientation with narrow margins
-    const pdf = new jsPDF('l', 'mm', 'a4');
-    const pageWidth = 297; // Landscape A4 width
-    const pageHeight = 210; // Landscape A4 height
-    const margin = 10; // Narrow margins
-    let yPosition = margin;
+    // Portrait A4 with proper margins for printing
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = 210; // A4 width
+    const pageHeight = 297; // A4 height
+    const margin = 20; // Proper margins for printing
+    const contentWidth = pageWidth - (margin * 2);
+    let currentY = margin;
+    let currentPage = 1;
 
-    // Helper function to add text
+    // Helper function to add text with proper positioning
     const addText = (text: string, x: number, y: number, options: any = {}) => {
       pdf.setFontSize(options.fontSize || 10);
       pdf.setFont('helvetica', options.fontStyle || 'normal');
+      
       if (options.color) {
         if (Array.isArray(options.color)) {
           pdf.setTextColor(options.color[0], options.color[1], options.color[2]);
@@ -309,108 +312,195 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       } else {
         pdf.setTextColor(0, 0, 0);
       }
-      pdf.text(text, x, y);
+      
+      // Handle text alignment
+      if (options.align === 'center') {
+        pdf.text(text, x, y, { align: 'center' });
+      } else if (options.align === 'right') {
+        pdf.text(text, x, y, { align: 'right' });
+      } else {
+        pdf.text(text, x, y);
+      }
     };
 
     // Helper function to add line
-    const addLine = (x1: number, y1: number, x2: number, y2: number, color = [229, 229, 229]) => {
-      pdf.setDrawColor(color[0], color[1], color[2]);
+    const addLine = (x1: number, y1: number, x2: number, y2: number, thickness = 0.5) => {
+      pdf.setLineWidth(thickness);
+      pdf.setDrawColor(0, 0, 0);
       pdf.line(x1, y1, x2, y2);
     };
 
-    // Helper function to add table header
-    const addTableHeader = (headers: string[], startY: number) => {
-      const colWidths = [80, 35, 25, 25, 30, 35, 35]; // Adjusted for landscape
+    // Helper function to check if we need a new page
+    const checkPageBreak = (requiredSpace: number) => {
+      if (currentY + requiredSpace > pageHeight - margin) {
+        pdf.addPage();
+        currentPage++;
+        currentY = margin;
+        return true;
+      }
+      return false;
+    };
+
+    // Helper function to add logo (placeholder for now)
+    const addLogo = (x: number, y: number) => {
+      // For now, add text logo - you can replace with actual image later
+      addText('QIQI', x, y, { fontSize: 16, fontStyle: 'bold' });
+      addText('GLOBAL', x, y + 6, { fontSize: 12, fontStyle: 'normal' });
+    };
+
+    // Helper function to add table with proper formatting
+    const addTable = (headers: string[], rows: string[][], startY: number) => {
+      const colWidths = [60, 25, 20, 20, 25, 30, 30]; // Adjusted for portrait
+      const rowHeight = 8;
+      const headerHeight = 10;
+      
+      let yPos = startY;
+      
+      // Check if table fits on current page
+      const tableHeight = headerHeight + (rows.length * rowHeight);
+      if (checkPageBreak(tableHeight + 10)) {
+        yPos = currentY;
+      }
+      
+      // Draw header
       let xPos = margin;
+      pdf.setFillColor(240, 240, 240);
+      pdf.rect(margin, yPos - 2, contentWidth, headerHeight, 'F');
       
       headers.forEach((header, index) => {
-        addText(header, xPos, startY, { fontSize: 8, fontStyle: 'bold', color: [75, 85, 99] });
+        addText(header, xPos + 2, yPos + 6, { fontSize: 8, fontStyle: 'bold' });
         xPos += colWidths[index];
       });
       
-      // Header line
-      addLine(margin, startY + 2, pageWidth - margin, startY + 2);
-      return startY + 8;
-    };
-
-    // Helper function to add table row
-    const addTableRow = (data: string[], startY: number) => {
-      const colWidths = [80, 35, 25, 25, 30, 35, 35];
-      let xPos = margin;
+      addLine(margin, yPos + 7, pageWidth - margin, yPos + 7);
+      yPos += headerHeight;
       
-      data.forEach((cell, index) => {
-        const maxWidth = colWidths[index] - 2;
-        const lines = pdf.splitTextToSize(cell, maxWidth);
+      // Draw rows
+      rows.forEach((row) => {
+        if (checkPageBreak(rowHeight + 5)) {
+          yPos = currentY;
+          // Redraw header on new page
+          xPos = margin;
+          pdf.setFillColor(240, 240, 240);
+          pdf.rect(margin, yPos - 2, contentWidth, headerHeight, 'F');
+          headers.forEach((header, index) => {
+            addText(header, xPos + 2, yPos + 6, { fontSize: 8, fontStyle: 'bold' });
+            xPos += colWidths[index];
+          });
+          addLine(margin, yPos + 7, pageWidth - margin, yPos + 7);
+          yPos += headerHeight;
+        }
         
-        lines.forEach((line: string, lineIndex: number) => {
-          addText(line, xPos, startY + (lineIndex * 4), { fontSize: 8 });
+        xPos = margin;
+        row.forEach((cell, index) => {
+          const maxWidth = colWidths[index] - 4;
+          const lines = pdf.splitTextToSize(cell, maxWidth);
+          lines.forEach((line: string, lineIndex: number) => {
+            addText(line, xPos + 2, yPos + (lineIndex * 3) + 6, { fontSize: 8 });
+          });
+          xPos += colWidths[index];
         });
         
-        xPos += colWidths[index];
+        addLine(margin, yPos + 5, pageWidth - margin, yPos + 5);
+        yPos += rowHeight;
       });
       
-      // Row line
-      addLine(margin, startY + 8, pageWidth - margin, startY + 8);
-      return startY + 12;
+      currentY = yPos + 5;
+      return yPos;
     };
 
-    // Logo (placeholder - you can add actual logo if needed)
-    addText('QIQI LOGO', margin, yPosition, { fontSize: 12, fontStyle: 'bold' });
-    yPosition += 15;
+    // PAGE 1: Header and Company Information
+    // Logo
+    addLogo(margin, currentY);
+    currentY += 15;
 
-    // Company Info Row - Left and Right aligned
-    const leftInfo = order.company?.subsidiary?.name || 'N/A';
-    const leftAddress = order.company?.subsidiary?.ship_from_address || 'N/A';
+    // Company Information - Two columns
+    const leftColX = margin;
+    const rightColX = margin + (contentWidth / 2) + 10;
     
-    addText(leftInfo, margin, yPosition, { fontSize: 14, fontStyle: 'bold' });
-    yPosition += 6;
-    addText(leftAddress, margin, yPosition, { fontSize: 10 });
-    yPosition += 15;
-
-    // Right side - SHIP TO
-    const shipToY = yPosition - 21; // Align with left side
-    addText('SHIP TO:', pageWidth - margin - 100, shipToY, { fontSize: 14, fontStyle: 'bold' });
-    addText(order.company?.company_name || 'N/A', pageWidth - margin - 100, shipToY + 6, { fontSize: 14, fontStyle: 'normal' });
-    addText(order.company?.ship_to || 'N/A', pageWidth - margin - 100, shipToY + 15, { fontSize: 10, fontStyle: 'normal' });
-
-    // Title and Date Row
-    yPosition += 10;
-    addText('PACKING SLIP', pageWidth / 2, yPosition, { fontSize: 24, fontStyle: 'bold' });
-    addText(`Date: ${new Date().toLocaleDateString()}`, pageWidth - margin - 50, yPosition, { fontSize: 10 });
-    yPosition += 15;
-
-    // Bottom border for header section
-    addLine(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 10;
-
-    // Invoice Details Row
-    const invoiceDetailsY = yPosition;
-    addText(`Invoice Number`, margin, invoiceDetailsY, { fontSize: 10, fontStyle: 'bold', color: [75, 85, 99] });
-    addText(`#${packingSlip.invoice_number}`, margin, invoiceDetailsY + 6, { fontSize: 14, fontStyle: 'bold' });
+    // Left column - Ship From
+    addText('SHIP FROM:', leftColX, currentY, { fontSize: 12, fontStyle: 'bold' });
+    currentY += 8;
+    addText(order.company?.subsidiary?.name || 'N/A', leftColX, currentY, { fontSize: 11, fontStyle: 'bold' });
+    currentY += 6;
     
-    addText(`Shipping Method`, margin + 80, invoiceDetailsY, { fontSize: 10, fontStyle: 'bold', color: [75, 85, 99] });
-    addText(packingSlip.shipping_method, margin + 80, invoiceDetailsY + 6, { fontSize: 14, fontStyle: 'bold' });
+    // Format address with line breaks
+    const shipFromAddress = order.company?.subsidiary?.ship_from_address || 'N/A';
+    const addressLines = pdf.splitTextToSize(shipFromAddress, contentWidth / 2 - 10);
+    addressLines.forEach((line: string) => {
+      addText(line, leftColX, currentY, { fontSize: 10 });
+      currentY += 5;
+    });
     
-    addText(`QIQI Sales Order`, margin + 160, invoiceDetailsY, { fontSize: 10, fontStyle: 'bold', color: [75, 85, 99] });
-    addText(packingSlip.netsuite_reference || 'N/A', margin + 160, invoiceDetailsY + 6, { fontSize: 14, fontStyle: 'bold' });
+    currentY += 10;
+
+    // Right column - Ship To
+    const shipToY = currentY - (addressLines.length * 5) - 14;
+    addText('SHIP TO:', rightColX, shipToY, { fontSize: 12, fontStyle: 'bold' });
+    addText(order.company?.company_name || 'N/A', rightColX, shipToY + 8, { fontSize: 11, fontStyle: 'bold' });
     
-    yPosition += 25;
+    const shipToAddress = order.company?.ship_to || 'N/A';
+    const shipToLines = pdf.splitTextToSize(shipToAddress, contentWidth / 2 - 10);
+    shipToLines.forEach((line: string, index: number) => {
+      addText(line, rightColX, shipToY + 14 + (index * 5), { fontSize: 10 });
+    });
 
-    // Bottom border for invoice details
-    addLine(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 15;
+    // Contact information (if available)
+    if (packingSlip.contact_name || packingSlip.contact_email || packingSlip.contact_phone) {
+      const contactY = shipToY + 14 + (shipToLines.length * 5) + 10;
+      if (packingSlip.contact_name) {
+        addText(`Contact: ${packingSlip.contact_name}`, rightColX, contactY, { fontSize: 9 });
+      }
+      if (packingSlip.contact_email) {
+        addText(`Email: ${packingSlip.contact_email}`, rightColX, contactY + 5, { fontSize: 9 });
+      }
+      if (packingSlip.contact_phone) {
+        addText(`Phone: ${packingSlip.contact_phone}`, rightColX, contactY + 10, { fontSize: 9 });
+      }
+      if (packingSlip.vat_number) {
+        addText(`VAT #: ${packingSlip.vat_number}`, rightColX, contactY + 15, { fontSize: 9 });
+      }
+    }
 
-    // Items table
-    const headers = ['Item', 'SKU', 'Case Pack', 'Case Qty', 'Total Units', 'Weight', 'HS Code', 'Made In'];
-    yPosition = addTableHeader(headers, yPosition);
+    currentY += 20;
 
-    // Add items
-    orderItems.forEach((item) => {
+    // Title
+    addText('PACKING SLIP', pageWidth / 2, currentY, { fontSize: 20, fontStyle: 'bold', align: 'center' });
+    currentY += 15;
+
+    // Date
+    addText(`Date: ${new Date().toLocaleDateString()}`, pageWidth - margin, currentY, { fontSize: 10, align: 'right' });
+    currentY += 15;
+
+    // Separator line
+    addLine(margin, currentY, pageWidth - margin, currentY);
+    currentY += 10;
+
+    // Invoice Details
+    const invoiceY = currentY;
+    addText('Invoice Number', margin, invoiceY, { fontSize: 10, fontStyle: 'bold' });
+    addText(`#${packingSlip.invoice_number}`, margin, invoiceY + 8, { fontSize: 14, fontStyle: 'bold' });
+    
+    addText('Shipping Method', margin + 70, invoiceY, { fontSize: 10, fontStyle: 'bold' });
+    addText(packingSlip.shipping_method, margin + 70, invoiceY + 8, { fontSize: 14, fontStyle: 'bold' });
+    
+    addText('QIQI Sales Order', margin + 140, invoiceY, { fontSize: 10, fontStyle: 'bold' });
+    addText(packingSlip.netsuite_reference || 'N/A', margin + 140, invoiceY + 8, { fontSize: 14, fontStyle: 'bold' });
+    
+    currentY += 25;
+
+    // Separator line
+    addLine(margin, currentY, pageWidth - margin, currentY);
+    currentY += 15;
+
+    // Items Table
+    const headers = ['Product', 'SKU', 'Pack', 'Cases', 'Units', 'Weight', 'HS Code', 'Made In'];
+    const tableRows = orderItems.map((item) => {
       const casePack = item.product?.case_pack || 1;
       const caseQty = Math.ceil(item.quantity / casePack);
       const totalWeight = (item.product?.case_weight || 0) * caseQty;
-
-      const rowData = [
+      
+      return [
         item.product?.item_name || 'N/A',
         item.product?.sku || 'N/A',
         casePack.toString(),
@@ -420,19 +510,11 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         item.product?.hs_code || 'N/A',
         item.product?.made_in || 'N/A'
       ];
-
-      yPosition = addTableRow(rowData, yPosition);
     });
 
-    // Totals section - positioned to the right
-    const totalsX = pageWidth - margin - 120;
-    const totalsY = yPosition + 5;
-    
-    // Horizontal line above totals
-    addLine(totalsX, totalsY, pageWidth - margin, totalsY);
-    
-    addText('TOTALS', totalsX, totalsY + 8, { fontSize: 10, fontStyle: 'bold' });
-    
+    addTable(headers, tableRows, currentY);
+
+    // Totals Section
     const totalCases = orderItems.reduce((sum, item) => {
       const casePack = item.product?.case_pack || 1;
       return sum + Math.ceil(item.quantity / casePack);
@@ -446,29 +528,39 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       const itemWeight = (item.product?.case_weight || 0) * caseQty;
       return sum + itemWeight;
     }, 0);
+
+    // Check if we need a new page for totals
+    checkPageBreak(30);
     
-    addText(`Cases: ${totalCases}`, totalsX, totalsY + 16, { fontSize: 10 });
-    addText(`Units: ${totalUnits}`, totalsX, totalsY + 24, { fontSize: 10 });
-    addText(`Weight: ${totalWeight.toFixed(1)} kg`, totalsX, totalsY + 32, { fontSize: 10 });
+    const totalsX = pageWidth - margin - 80;
+    addText('TOTALS', totalsX, currentY, { fontSize: 12, fontStyle: 'bold' });
+    currentY += 8;
+    addText(`Cases: ${totalCases}`, totalsX, currentY, { fontSize: 10 });
+    currentY += 6;
+    addText(`Units: ${totalUnits}`, totalsX, currentY, { fontSize: 10 });
+    currentY += 6;
+    addText(`Weight: ${totalWeight.toFixed(1)} kg`, totalsX, currentY, { fontSize: 10 });
+    currentY += 15;
 
-    yPosition += 50;
-
-    // Notes section
+    // Notes Section
     if (packingSlip.notes) {
-      if (yPosition > pageHeight - 30) {
-        pdf.addPage();
-        yPosition = margin;
-      }
+      checkPageBreak(20);
+      addText('NOTES', margin, currentY, { fontSize: 12, fontStyle: 'bold' });
+      currentY += 10;
       
-      addText('Notes', margin, yPosition, { fontSize: 14, fontStyle: 'bold' });
-      yPosition += 8;
-      
-      const noteLines = pdf.splitTextToSize(packingSlip.notes, pageWidth - (margin * 2));
+      const noteLines = pdf.splitTextToSize(packingSlip.notes, contentWidth);
       noteLines.forEach((line: string) => {
-        addText(line, margin, yPosition, { fontSize: 10 });
-        yPosition += 5;
+        if (checkPageBreak(10)) {
+          // Continue notes on new page
+        }
+        addText(line, margin, currentY, { fontSize: 10 });
+        currentY += 5;
       });
     }
+
+    // Footer
+    const footerY = pageHeight - 15;
+    addText(`Generated on ${new Date().toLocaleDateString()} - Page ${currentPage}`, pageWidth / 2, footerY, { fontSize: 8, align: 'center' });
 
     pdf.save(`packing-slip-${packingSlip.invoice_number || 'invoice'}.pdf`);
   };
