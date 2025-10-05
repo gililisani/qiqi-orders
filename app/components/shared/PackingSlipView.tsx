@@ -350,11 +350,18 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 // Position the PDF cursor before rendering
                 pdf.setPage(pdf.getCurrentPageInfo().pageNumber);
                 
+                // Scale down the SVG element to fit properly
+                const originalWidth = svgElement.getAttribute('width') || '300';
+                const originalHeight = svgElement.getAttribute('height') || '115';
+                
+                // Scale down to 60mm × 23mm (much smaller than original 300×115px)
+                const scaleFactor = 0.3; // Scale down to 30% of original size
+                svgElement.setAttribute('width', (parseFloat(originalWidth) * scaleFactor).toString());
+                svgElement.setAttribute('height', (parseFloat(originalHeight) * scaleFactor).toString());
+                
                 // Render SVG at current position
                 await svg2pdf(svgElement, pdf);
                 
-                // Move PDF cursor to position (since svg2pdf renders at origin)
-                pdf.setPage(pdf.getCurrentPageInfo().pageNumber);
                 return; // Success, exit function
               }
             }
