@@ -330,19 +330,43 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     // Helper function to add logo - try to load actual logo
     const addLogo = async (x: number, y: number) => {
       try {
-        // Try to load the actual logo
-        const logoResponse = await fetch('/QIQI-Logo.svg');
-        if (logoResponse.ok) {
-          const logoBlob = await logoResponse.blob();
-          const logoUrl = URL.createObjectURL(logoBlob);
-          pdf.addImage(logoUrl, 'SVG', x, y, 40, 15);
-          URL.revokeObjectURL(logoUrl);
-        } else {
+        // Try multiple logo paths and formats
+        const logoPaths = [
+          '/QIQI-Logo.svg',
+          '/logo.png',
+          'QIQI-Logo.svg',
+          'logo.png'
+        ];
+        
+        let logoLoaded = false;
+        
+        for (const logoPath of logoPaths) {
+          try {
+            const logoResponse = await fetch(logoPath);
+            if (logoResponse.ok) {
+              const logoBlob = await logoResponse.blob();
+              const logoUrl = URL.createObjectURL(logoBlob);
+              
+              // Determine format from path
+              const format = logoPath.endsWith('.svg') ? 'SVG' : 'PNG';
+              pdf.addImage(logoUrl, format, x, y, 40, 15);
+              URL.revokeObjectURL(logoUrl);
+              logoLoaded = true;
+              break;
+            }
+          } catch (error) {
+            console.log(`Failed to load logo from ${logoPath}:`, error);
+            continue;
+          }
+        }
+        
+        if (!logoLoaded) {
           // Fallback to text logo
           addText('QIQI', x, y, { fontSize: 14, fontStyle: 'bold' });
           addText('GLOBAL', x, y + 5, { fontSize: 10 });
         }
       } catch (error) {
+        console.log('Logo loading failed:', error);
         // Fallback to text logo
         addText('QIQI', x, y, { fontSize: 14, fontStyle: 'bold' });
         addText('GLOBAL', x, y + 5, { fontSize: 10 });
@@ -438,7 +462,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
     // Items Table (matches web page table)
     const tableHeaders = ['Item', 'SKU', 'Case Pack', 'Case Qty', 'Total Units', 'Weight', 'HS Code', 'Made In'];
-    const colWidths = [80, 35, 25, 25, 30, 35, 35, 35]; // Adjusted for landscape
+    const colWidths = [90, 25, 20, 20, 25, 25, 30, 25]; // Shrunk columns to fit better
     
     // Table header
     let xPos = margin;
@@ -446,7 +470,14 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     pdf.rect(margin, currentY - 2, contentWidth, 10, 'F');
     
     tableHeaders.forEach((header, index) => {
-      addText(header, xPos + 2, currentY + 6, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99] });
+      if (index === 0) {
+        // Item column - left aligned
+        addText(header, xPos + 2, currentY + 6, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99] });
+      } else {
+        // All other columns - center aligned
+        const centerX = xPos + (colWidths[index] / 2);
+        addText(header, centerX, currentY + 6, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99], align: 'center' });
+      }
       xPos += colWidths[index];
     });
     
@@ -455,6 +486,30 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
     // Table rows
     orderItems.forEach((item) => {
+      // Check if we need a new page
+      if (currentY > pageHeight - 40) {
+        pdf.addPage();
+        currentY = margin;
+        
+        // Redraw header on new page
+        xPos = margin;
+        pdf.setFillColor(248, 250, 252);
+        pdf.rect(margin, currentY - 2, contentWidth, 10, 'F');
+        
+        tableHeaders.forEach((header, index) => {
+          if (index === 0) {
+            addText(header, xPos + 2, currentY + 6, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99] });
+          } else {
+            const centerX = xPos + (colWidths[index] / 2);
+            addText(header, centerX, currentY + 6, { fontSize: 7, fontStyle: 'bold', color: [75, 85, 99], align: 'center' });
+          }
+          xPos += colWidths[index];
+        });
+        
+        addLine(margin, currentY + 7, pageWidth - margin, currentY + 7);
+        currentY += 12;
+      }
+
       const casePack = item.product?.case_pack || 1;
       const caseQty = Math.ceil(item.quantity / casePack);
       const totalWeight = (item.product?.case_weight || 0) * caseQty;
@@ -472,11 +527,22 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       
       xPos = margin;
       rowData.forEach((cell, index) => {
-        const maxWidth = colWidths[index] - 4;
-        const lines = pdf.splitTextToSize(cell, maxWidth);
-        lines.forEach((line: string, lineIndex: number) => {
-          addText(line, xPos + 2, currentY + (lineIndex * 3) + 6, { fontSize: 7 });
-        });
+        if (index === 0) {
+          // Item column - left aligned with word wrap
+          const maxWidth = colWidths[index] - 4;
+          const lines = pdf.splitTextToSize(cell, maxWidth);
+          lines.forEach((line: string, lineIndex: number) => {
+            addText(line, xPos + 2, currentY + (lineIndex * 3) + 6, { fontSize: 7 });
+          });
+        } else {
+          // All other columns - center aligned
+          const centerX = xPos + (colWidths[index] / 2);
+          const maxWidth = colWidths[index] - 4;
+          const lines = pdf.splitTextToSize(cell, maxWidth);
+          lines.forEach((line: string, lineIndex: number) => {
+            addText(line, centerX, currentY + (lineIndex * 3) + 6, { fontSize: 7, align: 'center' });
+          });
+        }
         xPos += colWidths[index];
       });
       
@@ -486,6 +552,13 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
     // Totals Section (matches web page)
     currentY += 5;
+    
+    // Check if we need a new page for totals
+    if (currentY > pageHeight - 50) {
+      pdf.addPage();
+      currentY = margin;
+    }
+    
     const totalsX = pageWidth - margin - 100;
     addLine(totalsX, currentY, pageWidth - margin, currentY);
     currentY += 8;
@@ -516,11 +589,23 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     // Notes Section (if available)
     if (packingSlip.notes) {
       currentY += 15;
+      
+      // Check if we need a new page for notes
+      if (currentY > pageHeight - 50) {
+        pdf.addPage();
+        currentY = margin;
+      }
+      
       addText('Notes', margin, currentY, { fontSize: 12, fontStyle: 'bold' });
       currentY += 8;
       
       const noteLines = pdf.splitTextToSize(packingSlip.notes, contentWidth);
       noteLines.forEach((line: string) => {
+        // Check if we need a new page for each line
+        if (currentY > pageHeight - 20) {
+          pdf.addPage();
+          currentY = margin;
+        }
         addText(line, margin, currentY, { fontSize: 9 });
         currentY += 5;
       });
