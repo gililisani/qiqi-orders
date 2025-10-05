@@ -590,6 +590,36 @@ export default function OrderDetailsView({
     setDraggedItem(null);
   };
 
+  // Save current form data to database
+  const saveCurrentFormData = async () => {
+    if (!order) return;
+    
+    try {
+      const numberOfPallets = adminNumberOfPallets ? parseInt(adminNumberOfPallets, 10) : null;
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          invoice_number: adminInvoiceNumber || null, 
+          so_number: adminSoNumber || null,
+          number_of_pallets: numberOfPallets
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+      
+      // Update local state
+      setOrder(prev => prev ? { 
+        ...prev, 
+        invoice_number: adminInvoiceNumber || null, 
+        so_number: adminSoNumber || null,
+        number_of_pallets: numberOfPallets
+      } as Order : prev);
+    } catch (err: any) {
+      console.error('Error saving form data:', err);
+      // Don't throw error - status change should still succeed
+    }
+  };
+
   // Create packing slip automatically when status changes to Ready
   const createAutomaticPackingSlip = async () => {
     if (!order) return;
@@ -598,12 +628,12 @@ export default function OrderDetailsView({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
-      // Create packing slip with default values
+      // Create packing slip with saved order data
       const packingSlipData = {
         order_id: order.id,
         invoice_number: order.invoice_number || '',
         shipping_method: '', // Default empty, admin can fill later
-        netsuite_reference: '',
+        netsuite_reference: order.so_number || '',
         notes: '',
         contact_name: '',
         contact_email: '',
@@ -676,7 +706,10 @@ export default function OrderDetailsView({
       );
       
       // Automatically create packing slip when status changes to Ready
-      if (newStatus === 'Ready' && oldStatus === 'In Process') {
+      if (newStatus === 'Ready') {
+        // First save the current form data to ensure it's in the database
+        await saveCurrentFormData();
+        // Then create the packing slip
         await createAutomaticPackingSlip();
       }
       
