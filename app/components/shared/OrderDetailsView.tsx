@@ -120,7 +120,6 @@ export default function OrderDetailsView({
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
   const [error, setError] = useState('');
-  const [validationError, setValidationError] = useState<string>('');
   const [currentUserName, setCurrentUserName] = useState<string>('');
   const [showPackingSlipForm, setShowPackingSlipForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -469,9 +468,39 @@ export default function OrderDetailsView({
     }
   };
 
+  // Validation function to check required fields based on status
+  const validateRequiredFields = (status: string) => {
+    const errors = [];
+    
+    if (status === 'In Process' || status === 'Ready' || status === 'Done') {
+      if (!adminSoNumber || adminSoNumber.trim() === '') {
+        errors.push('so_number');
+      }
+    }
+    
+    if (status === 'Ready' || status === 'Done') {
+      if (!adminInvoiceNumber || adminInvoiceNumber.trim() === '') {
+        errors.push('invoice_number');
+      }
+      if (!adminNumberOfPallets || adminNumberOfPallets.trim() === '') {
+        errors.push('number_of_pallets');
+      }
+    }
+    
+    return errors;
+  };
+
   // Admin-specific functions
   const handleSaveAdminOrderRefs = async () => {
     if (!order) return;
+    
+    // Validate required fields before saving
+    const validationErrors = validateRequiredFields(order.status);
+    if (validationErrors.length > 0) {
+      // Don't save if validation fails - the red borders will show the issues
+      return;
+    }
+    
     try {
       setSavingAdminFields(true);
       const numberOfPallets = adminNumberOfPallets ? parseInt(adminNumberOfPallets, 10) : null;
@@ -491,8 +520,7 @@ export default function OrderDetailsView({
         number_of_pallets: numberOfPallets
       } as Order : prev);
       
-      // Clear any validation errors since data is now saved
-      setValidationError('');
+      // Clear any errors since data is now saved
       setError('');
       
       // Exit edit mode after successful save
@@ -622,35 +650,14 @@ export default function OrderDetailsView({
     
     // Only allow status changes when in edit mode
     if (!editOrderInfoMode) {
-      setValidationError('Please click Edit to change the order status.');
       return;
     }
 
     try {
       const oldStatus = order.status;
       
-      // Validation rules - check if data is saved in database
-      if (oldStatus === 'Open' && newStatus === 'In Process') {
-        if (!order.so_number || order.so_number.trim() === '') {
-          setValidationError('Please enter SO number and click Save before changing Status to In Process.');
-          return;
-        }
-      }
-      
-      if (oldStatus === 'In Process' && newStatus === 'Ready') {
-        if (!order.invoice_number || order.invoice_number.trim() === '') {
-          setValidationError('Please enter Invoice number and Number of Pallets and click Save before changing status to Ready.');
-          return;
-        }
-        if (!order.number_of_pallets || order.number_of_pallets <= 0) {
-          setValidationError('Please enter Invoice number and Number of Pallets and click Save before changing status to Ready.');
-          return;
-        }
-      }
-      
-      // Clear any previous errors if validation passes
+      // Clear any previous errors
       setError('');
-      setValidationError('');
       
       const { error } = await supabase
         .from('orders')
@@ -931,6 +938,8 @@ export default function OrderDetailsView({
                     className={`mt-1 w-full px-3 py-2 border text-sm ${
                       !editOrderInfoMode 
                         ? 'border-gray-200 bg-gray-100 text-gray-600 cursor-not-allowed'
+                        : validateRequiredFields(order?.status || '').includes('invoice_number')
+                        ? 'border-red-500 bg-red-50'
                         : 'border-[#e5e5e5]'
                     }`}
                     placeholder="Enter invoice number"
@@ -946,6 +955,8 @@ export default function OrderDetailsView({
                     className={`mt-1 w-full px-3 py-2 border text-sm ${
                       !editOrderInfoMode 
                         ? 'border-gray-200 bg-gray-100 text-gray-600 cursor-not-allowed'
+                        : validateRequiredFields(order?.status || '').includes('so_number')
+                        ? 'border-red-500 bg-red-50'
                         : 'border-[#e5e5e5]'
                     }`}
                     placeholder="Enter SO number"
@@ -962,6 +973,8 @@ export default function OrderDetailsView({
                     className={`mt-1 w-full px-3 py-2 border text-sm ${
                       !editOrderInfoMode 
                         ? 'border-gray-200 bg-gray-100 text-gray-600 cursor-not-allowed'
+                        : validateRequiredFields(order?.status || '').includes('number_of_pallets')
+                        ? 'border-red-500 bg-red-50'
                         : 'border-[#e5e5e5]'
                     }`}
                     placeholder="Enter number of pallets"
@@ -981,7 +994,6 @@ export default function OrderDetailsView({
                       setAdminInvoiceNumber(order?.invoice_number || '');
                       setAdminSoNumber(order?.so_number || '');
                       setAdminNumberOfPallets(order?.number_of_pallets?.toString() || '');
-                      setValidationError('');
                     }}
                     className="px-3 py-1.5 bg-gray-300 text-gray-700 text-sm hover:bg-gray-400"
                   >
@@ -998,21 +1010,6 @@ export default function OrderDetailsView({
               </div>
             )}
             
-            {/* Validation Error Display */}
-            {validationError && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-3 mt-2">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-red-800">{validationError}</p>
-                  </div>
-                </div>
-              </div>
-            )}
             
             <div>
               <label className="text-sm font-medium text-gray-500">Created</label>
