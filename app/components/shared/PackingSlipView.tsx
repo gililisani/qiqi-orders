@@ -967,17 +967,24 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         </Link>
       </div>
 
-      {/* Action Buttons at Top */}
-      <div className="flex justify-end gap-3 mb-6">
-          <button
-            onClick={generatePDF}
-            className="bg-black text-white px-4 py-2 rounded transition hover:opacity-90 focus:ring-2 focus:ring-gray-900 font-sans text-sm"
-          >
-            Download PDF
-          </button>
+       {/* Action Buttons at Top */}
+       <div className="flex justify-end gap-3 mb-6">
+           <button
+             onClick={generatePDF}
+             className="bg-black text-white px-4 py-2 rounded transition hover:opacity-90 focus:ring-2 focus:ring-gray-900 font-sans text-sm"
+           >
+             Download PDF
+           </button>
 
-          {/* Temporarily removed Create/Edit button to debug redirect issue */}
-        </div>
+           {canEdit && (
+             <button
+               onClick={() => setEditMode(true)}
+               className="bg-gray-600 text-white px-4 py-2 rounded transition hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 font-sans text-sm"
+             >
+               {packingSlip ? 'Edit Packing Slip' : 'Create Packing Slip'}
+             </button>
+           )}
+         </div>
 
         {/* Single Block Layout */}
         <Card>
