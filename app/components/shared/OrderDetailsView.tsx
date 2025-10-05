@@ -22,6 +22,7 @@ interface Order {
   po_number: string;
   invoice_number?: string | null;
   so_number?: string | null;
+  number_of_pallets?: number | null;
   packing_slip_generated?: boolean;
   packing_slip_generated_at?: string;
   packing_slip_generated_by?: string;
@@ -274,6 +275,7 @@ export default function OrderDetailsView({
   };
   const [adminInvoiceNumber, setAdminInvoiceNumber] = useState<string>('');
   const [adminSoNumber, setAdminSoNumber] = useState<string>('');
+  const [adminNumberOfPallets, setAdminNumberOfPallets] = useState<string>('');
   const [savingAdminFields, setSavingAdminFields] = useState<boolean>(false);
 
   useEffect(() => {
@@ -412,6 +414,7 @@ export default function OrderDetailsView({
         setOrder(combinedOrder);
         setAdminInvoiceNumber(orderData.invoice_number || '');
         setAdminSoNumber(orderData.so_number || '');
+        setAdminNumberOfPallets(orderData.number_of_pallets?.toString() || '');
       }
     } catch (err: any) {
       setError(err.message);
@@ -469,12 +472,22 @@ export default function OrderDetailsView({
     if (!order) return;
     try {
       setSavingAdminFields(true);
+      const numberOfPallets = adminNumberOfPallets ? parseInt(adminNumberOfPallets, 10) : null;
       const { error } = await supabase
         .from('orders')
-        .update({ invoice_number: adminInvoiceNumber || null, so_number: adminSoNumber || null })
+        .update({ 
+          invoice_number: adminInvoiceNumber || null, 
+          so_number: adminSoNumber || null,
+          number_of_pallets: numberOfPallets
+        })
         .eq('id', orderId);
       if (error) throw error;
-      setOrder(prev => prev ? { ...prev, invoice_number: adminInvoiceNumber || null, so_number: adminSoNumber || null } as Order : prev);
+      setOrder(prev => prev ? { 
+        ...prev, 
+        invoice_number: adminInvoiceNumber || null, 
+        so_number: adminSoNumber || null,
+        number_of_pallets: numberOfPallets
+      } as Order : prev);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -545,6 +558,28 @@ export default function OrderDetailsView({
 
     try {
       const oldStatus = order.status;
+      
+      // Validation rules
+      if (oldStatus === 'Open' && newStatus === 'In Process') {
+        if (!adminSoNumber || adminSoNumber.trim() === '') {
+          setError('Please enter SO number before changing Status to In Process.');
+          return;
+        }
+      }
+      
+      if (oldStatus === 'In Process' && newStatus === 'Ready') {
+        if (!adminInvoiceNumber || adminInvoiceNumber.trim() === '') {
+          setError('Please enter Invoice number and Number of Pallets before changing status to Ready.');
+          return;
+        }
+        if (!adminNumberOfPallets || adminNumberOfPallets.trim() === '') {
+          setError('Please enter Invoice number and Number of Pallets before changing status to Ready.');
+          return;
+        }
+      }
+      
+      // Clear any previous errors if validation passes
+      setError(null);
       
       const { error } = await supabase
         .from('orders')
@@ -732,7 +767,7 @@ export default function OrderDetailsView({
           )}
           
           {/* Packing Slip functionality (both roles) */}
-          {(['In Process', 'Ready', 'Done'].includes(order?.status || '')) && (
+          {(['Ready', 'Done'].includes(order?.status || '')) && (
             order?.packing_slip_generated ? (
               <Link
                 href={packingSlipUrl}
@@ -827,20 +862,20 @@ export default function OrderDetailsView({
                     placeholder="Enter SO number"
                   />
                 </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Number of Pallets</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={adminNumberOfPallets}
+                    onChange={(e) => setAdminNumberOfPallets(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 border border-[#e5e5e5] text-sm"
+                    placeholder="Enter number of pallets"
+                  />
+                </div>
               </div>
             )}
             
-            {role === 'admin' && (
-              <div className="flex justify-end pt-2">
-                <button
-                  onClick={handleSaveAdminOrderRefs}
-                  disabled={savingAdminFields}
-                  className="px-3 py-1.5 bg-black text-white text-sm hover:opacity-90 disabled:opacity-50"
-                >
-                  {savingAdminFields ? 'Saving…' : 'Save'}
-                </button>
-              </div>
-            )}
             
             <div>
               <label className="text-sm font-medium text-gray-500">Created</label>
