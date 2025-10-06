@@ -328,6 +328,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     // Helper function to add line
     const addLine = (x1: number, y1: number, x2: number, y2: number) => {
       pdf.setDrawColor(229, 229, 229);
+      pdf.setLineWidth(0.1); // Ensure thin lines
       pdf.line(x1, y1, x2, y2);
     };
 
@@ -554,6 +555,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         
         // Use consistent thin border for new page header
         pdf.setDrawColor(229, 229, 229); // Light gray border
+        pdf.setLineWidth(0.1); // Ensure thin lines
         pdf.line(margin, currentY + 7, pageWidth - margin, currentY + 7);
         currentY += 12;
       }
@@ -596,6 +598,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       
       // Use consistent thin border for all table rows
       pdf.setDrawColor(229, 229, 229); // Light gray border
+      pdf.setLineWidth(0.1); // Ensure thin lines
       pdf.line(margin, currentY + 8, pageWidth - margin, currentY + 8);
       currentY += 10;
     });
