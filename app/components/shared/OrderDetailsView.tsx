@@ -506,9 +506,11 @@ export default function OrderDetailsView({
     try {
       setSavingAdminFields(true);
       const numberOfPallets = adminNumberOfPallets ? parseInt(adminNumberOfPallets, 10) : null;
+      const oldStatus = originalStatus;
       const { error } = await supabase
         .from('orders')
         .update({ 
+          status: order.status,
           invoice_number: adminInvoiceNumber || null, 
           so_number: adminSoNumber || null,
           number_of_pallets: numberOfPallets
@@ -524,6 +526,26 @@ export default function OrderDetailsView({
       
       // Update original status to reflect the saved status
       setOriginalStatus(order.status);
+      
+      // Add history entry for status change if status changed
+      if (oldStatus !== order.status) {
+        await addHistoryEntry(
+          'status_change',
+          oldStatus,
+          order.status,
+          `Status changed from ${oldStatus} to ${order.status}`
+        );
+        
+        // Send notification if status changed to certain states
+        if (['In Process', 'Done'].includes(order.status)) {
+          await sendNotification('status_change');
+        }
+        
+        // Refresh order history to show the new status change
+        if (role === 'admin') {
+          fetchOrderHistory();
+        }
+      }
       
       // Clear any errors since data is now saved
       setError('');
@@ -656,7 +678,7 @@ export default function OrderDetailsView({
     }
   };
 
-  const handleStatusChange = async (newStatus: string) => {
+  const handleStatusChange = (newStatus: string) => {
     if (!order) return;
     
     // Only allow status changes when in edit mode
@@ -664,41 +686,8 @@ export default function OrderDetailsView({
       return;
     }
 
-    try {
-      const oldStatus = order.status;
-      
-      // Clear any previous errors
-      setError('');
-      
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: newStatus })
-        .eq('id', orderId);
-
-      if (error) throw error;
-      setOrder(prev => prev ? { ...prev, status: newStatus } : null);
-      
-      // Add history entry for status change
-      await addHistoryEntry(
-        'status_change',
-        oldStatus,
-        newStatus,
-        `Status changed from ${oldStatus} to ${newStatus}`
-      );
-      
-      
-      // Refresh order history to show the new status change
-      if (role === 'admin') {
-        fetchOrderHistory();
-      }
-      
-      // Send notification if status changed to certain states
-      if (['In Process', 'Done'].includes(newStatus)) {
-        await sendNotification('status_change');
-      }
-    } catch (err: any) {
-      setError(err.message);
-    }
+    // Only update local state - don't save to database until Save button is clicked
+    setOrder(prev => prev ? { ...prev, status: newStatus } : null);
   };
 
   const sendNotification = async (type: string, customMessage?: string) => {
