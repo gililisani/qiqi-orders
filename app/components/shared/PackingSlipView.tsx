@@ -361,10 +361,16 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 
                 // Scale down to a reasonable size (about 60×28px)
                 const scaleFactor = 0.06; // Scale down to 6% of original size
-                svgElement.setAttribute('width', (parseFloat(originalWidth) * scaleFactor).toString());
-                svgElement.setAttribute('height', (parseFloat(originalHeight) * scaleFactor).toString());
+                const scaledWidth = parseFloat(originalWidth) * scaleFactor;
+                const scaledHeight = parseFloat(originalHeight) * scaleFactor;
                 
-                // Render SVG at current position
+                svgElement.setAttribute('width', scaledWidth.toString());
+                svgElement.setAttribute('height', scaledHeight.toString());
+                
+                // Position the logo at the specified coordinates
+                pdf.setPage(pdf.getCurrentPageInfo().pageNumber);
+                
+                // Render SVG at current position with proper positioning
                 await svg2pdf(svgElement, pdf);
                 
                 return; // Success, exit function
@@ -415,6 +421,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     const rightColX = margin + leftColWidth + 20;
     
     // Top row - Logo (left) and Ship To (right)
+    // Ensure logo is properly aligned with document margins
     await addLogo(margin, currentY);
     
     // Ship To section in top right - positioned left enough so text doesn't get cut
@@ -638,20 +645,22 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     addText(`Units: ${totalUnits}`, totalsX, currentY, { fontSize: 8 });
     currentY += 4;
     addText(`Weight: ${totalWeight.toFixed(1)} kg`, totalsX, currentY, { fontSize: 8 });
+    currentY += 4;
+    addText(`Pallets: ${order.number_of_pallets || 'N/A'}`, totalsX, currentY, { fontSize: 8 });
 
-    // Notes Section (if available)
+    // Notes Section (always show, even if empty)
+    currentY += 15;
+    
+    // Check if we need a new page for notes
+    if (currentY > pageHeight - 50) {
+      pdf.addPage();
+      currentY = margin;
+    }
+    
+    addText('Notes', margin, currentY, { fontSize: 12, fontStyle: 'bold' });
+    currentY += 8;
+    
     if (packingSlip.notes) {
-      currentY += 15;
-      
-      // Check if we need a new page for notes
-      if (currentY > pageHeight - 50) {
-        pdf.addPage();
-        currentY = margin;
-      }
-      
-      addText('Notes', margin, currentY, { fontSize: 12, fontStyle: 'bold' });
-      currentY += 8;
-      
       const noteLines = pdf.splitTextToSize(packingSlip.notes, contentWidth);
       noteLines.forEach((line: string) => {
         // Check if we need a new page for each line
@@ -662,6 +671,10 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         addText(line, margin, currentY, { fontSize: 9 });
         currentY += 5;
       });
+    } else {
+      // Show empty notes box
+      addText('No additional notes', margin, currentY, { fontSize: 9, color: [128, 128, 128] });
+      currentY += 6;
     }
 
     pdf.save(`packing-slip-${packingSlip.invoice_number || 'invoice'}.pdf`);
@@ -1215,20 +1228,23 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                       const totalWeight = (item.product?.case_weight || 0) * caseQty;
                       return sum + totalWeight;
                     }, 0).toFixed(1)} kg</div>
+                    <div className="text-sm text-gray-900 font-sans">Pallets: {order.number_of_pallets || 'N/A'}</div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Notes */}
-            {packingSlip.notes && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 font-sans">Notes</h3>
-                <div className="bg-gray-50 p-4 rounded-lg border border-[#e5e5e5]">
+            {/* Notes - Always show */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3 font-sans">Notes</h3>
+              <div className="bg-gray-50 p-4 rounded-lg border border-[#e5e5e5]">
+                {packingSlip.notes ? (
                   <p className="text-gray-700 font-sans text-sm">{packingSlip.notes}</p>
-                </div>
+                ) : (
+                  <p className="text-gray-500 font-sans text-sm italic">No additional notes</p>
+                )}
               </div>
-            )}
+            </div>
           </div>
           )}
         </Card>
