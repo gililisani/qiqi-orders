@@ -278,6 +278,7 @@ export default function OrderDetailsView({
   const [adminNumberOfPallets, setAdminNumberOfPallets] = useState<string>('');
   const [savingAdminFields, setSavingAdminFields] = useState<boolean>(false);
   const [editOrderInfoMode, setEditOrderInfoMode] = useState<boolean>(false);
+  const [originalStatus, setOriginalStatus] = useState<string>('');
 
   useEffect(() => {
     if (orderId) {
@@ -413,6 +414,7 @@ export default function OrderDetailsView({
         };
 
         setOrder(combinedOrder);
+        setOriginalStatus(orderData.status || '');
         setAdminInvoiceNumber(orderData.invoice_number || '');
         setAdminSoNumber(orderData.so_number || '');
         setAdminNumberOfPallets(orderData.number_of_pallets?.toString() || '');
@@ -519,6 +521,9 @@ export default function OrderDetailsView({
         so_number: adminSoNumber || null,
         number_of_pallets: numberOfPallets
       } as Order : prev);
+      
+      // Update original status to reflect the saved status
+      setOriginalStatus(order.status);
       
       // Clear any errors since data is now saved
       setError('');
@@ -852,7 +857,7 @@ export default function OrderDetailsView({
           )}
           
           {/* Packing Slip functionality (both roles) */}
-          {(['Ready', 'Done'].includes(order?.status || '')) && (
+          {(['Ready', 'Done'].includes(originalStatus || '')) && (
             order?.packing_slip_generated ? (
               <Link
                 href={packingSlipUrl}
@@ -996,6 +1001,8 @@ export default function OrderDetailsView({
                       setAdminInvoiceNumber(order?.invoice_number || '');
                       setAdminSoNumber(order?.so_number || '');
                       setAdminNumberOfPallets(order?.number_of_pallets?.toString() || '');
+                      // Reset status to original value
+                      setOrder(prev => prev ? { ...prev, status: originalStatus } : null);
                     }}
                     className="px-3 py-1.5 bg-gray-300 text-gray-700 text-sm hover:bg-gray-400"
                   >
