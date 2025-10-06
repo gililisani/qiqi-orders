@@ -332,10 +332,39 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       pdf.line(x1, y1, x2, y2);
     };
 
-    // Helper function to add logo - try to load actual logo with svg2pdf
+    // Helper function to add logo - try PNG first, then SVG
     const addLogo = async (x: number, y: number) => {
       try {
-        // Try SVG first with svg2pdf for vector rendering
+        // Try PNG first for better positioning control
+        const pngPaths = ['/logo.png', '/QIQI-Logo.png', 'logo.png'];
+        
+        for (const pngPath of pngPaths) {
+          try {
+            const response = await fetch(pngPath);
+            if (response.ok) {
+              const blob = await response.blob();
+              const arrayBuffer = await blob.arrayBuffer();
+              const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+              
+              // Add image to PDF at exact position with proper sizing
+              pdf.addImage(
+                `data:image/png;base64,${base64}`,
+                'PNG',
+                x, // x position
+                y, // y position
+                60, // width in mm
+                25  // height in mm
+              );
+              
+              return; // Success, exit function
+            }
+          } catch (error) {
+            console.log(`Failed to load PNG from ${pngPath}:`, error);
+            continue;
+          }
+        }
+        
+        // Fallback to SVG if PNG not found
         const svgPaths = ['/QIQI-Logo.svg', 'QIQI-Logo.svg'];
         
         for (const svgPath of svgPaths) {
@@ -350,12 +379,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
               const svgElement = svgDoc.querySelector('svg');
               
               if (svgElement) {
-                // Use svg2pdf for vector rendering
-                // Position the PDF cursor before rendering
-                pdf.setPage(pdf.getCurrentPageInfo().pageNumber);
-                
                 // Scale down the SVG element to fit properly
-                // Original SVG is 1000×470px, we want it much smaller
                 const originalWidth = svgElement.getAttribute('width') || '1000';
                 const originalHeight = svgElement.getAttribute('height') || '470';
                 
@@ -367,10 +391,10 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 svgElement.setAttribute('width', scaledWidth.toString());
                 svgElement.setAttribute('height', scaledHeight.toString());
                 
-                // Position the logo at the specified coordinates
-                pdf.setPage(pdf.getCurrentPageInfo().pageNumber);
+                // Set PDF cursor to the exact position
+                pdf.text('', x, y);
                 
-                // Render SVG at current position with proper positioning
+                // Render SVG at current cursor position
                 await svg2pdf(svgElement, pdf);
                 
                 return; // Success, exit function
@@ -378,28 +402,6 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
             }
           } catch (error) {
             console.log(`Failed to load SVG from ${svgPath}:`, error);
-            continue;
-          }
-        }
-        
-        // Fallback to PNG if SVG fails
-        const pngPaths = ['/logo.png', 'logo.png'];
-        
-        for (const pngPath of pngPaths) {
-          try {
-            const pngResponse = await fetch(pngPath);
-            if (pngResponse.ok) {
-              const pngBlob = await pngResponse.blob();
-              const pngUrl = URL.createObjectURL(pngBlob);
-              
-              // Use exact dimensions: 300px × 115px converted to mm
-              // 300px = 79.375mm, 115px = 30.417mm
-              pdf.addImage(pngUrl, 'PNG', x, y, 79.375, 30.417);
-              URL.revokeObjectURL(pngUrl);
-              return; // Success, exit function
-            }
-          } catch (error) {
-            console.log(`Failed to load PNG from ${pngPath}:`, error);
             continue;
           }
         }
