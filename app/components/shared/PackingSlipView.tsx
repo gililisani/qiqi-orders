@@ -7,7 +7,7 @@ import Card from '../ui/Card';
 import { Spinner, Typography } from '../MaterialTailwind';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
-import { svg2pdf } from 'svg2pdf.js';
+import 'svg2pdf.js'; // This patches jsPDF with .svg() method
 import html2canvas from 'html2canvas';
 
 interface Order {
