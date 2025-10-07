@@ -346,14 +346,19 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
               const arrayBuffer = await blob.arrayBuffer();
               const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
               
-              // Add image to PDF at exact position with proper sizing
+              // Add image to PDF at exact position with proper aspect ratio
+              // Logo aspect ratio is approximately 1000:470 (about 2.13:1)
+              // Use smaller dimensions and maintain aspect ratio
+              const logoWidth = 50; // mm
+              const logoHeight = logoWidth / 2.13; // Maintain aspect ratio (approx 23.5mm)
+              
               pdf.addImage(
                 `data:image/png;base64,${base64}`,
                 'PNG',
                 x, // x position
                 y, // y position
-                60, // width in mm
-                25  // height in mm
+                logoWidth,
+                logoHeight
               );
               
               return; // Success, exit function
@@ -612,21 +617,47 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       currentY += 10;
     });
 
-    // Totals Section (matches web page)
-    currentY += 5;
+    // Bottom Section: Notes (left 75%) and Totals (right 25%)
+    currentY += 10;
     
-    // Check if we need a new page for totals
-    if (currentY > pageHeight - 50) {
+    // Check if we need a new page for bottom section
+    if (currentY > pageHeight - 60) {
       pdf.addPage();
       currentY = margin;
     }
     
-    const totalsX = pageWidth - margin - 100;
-    addLine(totalsX, currentY, pageWidth - margin, currentY);
-    currentY += 8;
+    // Calculate column widths
+    const notesWidth = contentWidth * 0.75; // 75% for notes
+    const totalsWidth = contentWidth * 0.25; // 25% for totals
+    const totalsX = margin + notesWidth + 10; // 10mm gap between columns
     
-    addText('TOTALS', totalsX, currentY, { fontSize: 8, fontStyle: 'bold' });
-    currentY += 6;
+    // Store the starting Y position for both columns
+    const bottomSectionY = currentY;
+    
+    // LEFT COLUMN: Notes Section (always show, even if empty)
+    let notesY = bottomSectionY;
+    addText('Notes', margin, notesY, { fontSize: 12, fontStyle: 'bold' });
+    notesY += 8;
+    
+    if (packingSlip.notes) {
+      const noteLines = pdf.splitTextToSize(packingSlip.notes, notesWidth - 10);
+      noteLines.forEach((line: string) => {
+        addText(line, margin, notesY, { fontSize: 9 });
+        notesY += 5;
+      });
+    } else {
+      // Show empty notes box
+      addText('No additional notes', margin, notesY, { fontSize: 9, color: [128, 128, 128] });
+      notesY += 6;
+    }
+    
+    // RIGHT COLUMN: Totals Section
+    let totalsY = bottomSectionY;
+    addLine(totalsX, totalsY, pageWidth - margin, totalsY);
+    totalsY += 8;
+    
+    addText('TOTALS', totalsX, totalsY, { fontSize: 8, fontStyle: 'bold' });
+    totalsY += 6;
     
     const totalCases = orderItems.reduce((sum, item) => {
       const casePack = item.product?.case_pack || 1;
@@ -642,42 +673,16 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       return sum + itemWeight;
     }, 0);
     
-    addText(`Cases: ${totalCases}`, totalsX, currentY, { fontSize: 8 });
-    currentY += 4;
-    addText(`Units: ${totalUnits}`, totalsX, currentY, { fontSize: 8 });
-    currentY += 4;
-    addText(`Weight: ${totalWeight.toFixed(1)} kg`, totalsX, currentY, { fontSize: 8 });
-    currentY += 4;
-    addText(`Pallets: ${order.number_of_pallets || 'N/A'}`, totalsX, currentY, { fontSize: 8 });
-
-    // Notes Section (always show, even if empty)
-    currentY += 15;
+    addText(`Cases: ${totalCases}`, totalsX, totalsY, { fontSize: 8 });
+    totalsY += 4;
+    addText(`Units: ${totalUnits}`, totalsX, totalsY, { fontSize: 8 });
+    totalsY += 4;
+    addText(`Weight: ${totalWeight.toFixed(1)} kg`, totalsX, totalsY, { fontSize: 8 });
+    totalsY += 4;
+    addText(`Pallets: ${order.number_of_pallets || 'N/A'}`, totalsX, totalsY, { fontSize: 8 });
     
-    // Check if we need a new page for notes
-    if (currentY > pageHeight - 50) {
-      pdf.addPage();
-      currentY = margin;
-    }
-    
-    addText('Notes', margin, currentY, { fontSize: 12, fontStyle: 'bold' });
-    currentY += 8;
-    
-    if (packingSlip.notes) {
-      const noteLines = pdf.splitTextToSize(packingSlip.notes, contentWidth);
-      noteLines.forEach((line: string) => {
-        // Check if we need a new page for each line
-        if (currentY > pageHeight - 20) {
-          pdf.addPage();
-          currentY = margin;
-        }
-        addText(line, margin, currentY, { fontSize: 9 });
-        currentY += 5;
-      });
-    } else {
-      // Show empty notes box
-      addText('No additional notes', margin, currentY, { fontSize: 9, color: [128, 128, 128] });
-      currentY += 6;
-    }
+    // Update currentY to the end of the longer column
+    currentY = Math.max(notesY, totalsY) + 10;
 
     pdf.save(`packing-slip-${packingSlip.invoice_number || 'invoice'}.pdf`);
   };
