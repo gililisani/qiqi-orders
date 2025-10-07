@@ -220,21 +220,21 @@ export default function FormKitPage() {
         {/* NEW DESIGN: Professional Order Status Labels - Option 5 (Modern Glow Effect) */}
         <Card header={<h2 className="font-semibold">NEW DESIGN - Option 5: Modern Glow Effect (Tailwind UI Style) ✅ FINAL</h2>}>
           <div className="space-y-3">
-            <p className="text-sm text-gray-600 mb-3">✅ Using green-400 instead of lime-400 for better visibility</p>
+            <p className="text-sm text-gray-600 mb-3">✅ Green-400 for visibility + nice borders for definition</p>
             <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline !bg-gray-400/20 text-gray-700">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline !bg-gray-400/20 text-gray-700 border border-gray-300">
                 Open
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline !bg-blue-400/20 text-blue-700">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline !bg-blue-400/20 text-blue-700 border border-blue-300">
                 In Process
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline !bg-orange-400/20 text-orange-700">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline !bg-orange-400/20 text-orange-700 border border-orange-300">
                 Ready
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline !bg-green-400/20 text-green-700">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline !bg-green-400/20 text-green-700 border border-green-300">
                 Done
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline !bg-pink-400/15 text-pink-700">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline !bg-pink-400/15 text-pink-700 border border-pink-300">
                 Cancelled
               </span>
             </div>
