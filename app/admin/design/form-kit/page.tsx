@@ -160,23 +160,23 @@ export default function FormKitPage() {
         </Card>
 
         {/* NEW DESIGN: Professional Order Status Labels - Option 5 (Modern Glow Effect) */}
-        <Card header={<h2 className="font-semibold">NEW DESIGN - Option 5: Modern Glow Effect (Inspired by Tailwind UI)</h2>}>
+        <Card header={<h2 className="font-semibold">NEW DESIGN - Option 5: Modern Glow Effect (Tailwind UI Style)</h2>}>
           <div className="space-y-3">
-            <p className="text-sm text-gray-600 mb-3">Subtle opacity backgrounds with vibrant text, modern and sophisticated</p>
+            <p className="text-sm text-gray-600 mb-3">Exact Tailwind UI style - lime green & pink red, perfect opacity levels</p>
             <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-2 py-1 text-xs font-medium bg-slate-400/20 text-slate-700 hover:bg-slate-400/30">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-xs font-medium bg-gray-400/20 text-gray-700 hover:bg-gray-400/30">
                 Open
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-2 py-1 text-xs font-medium bg-blue-400/20 text-blue-700 hover:bg-blue-400/30">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-xs font-medium bg-blue-400/20 text-blue-700 hover:bg-blue-400/30">
                 In Process
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-2 py-1 text-xs font-medium bg-amber-400/20 text-amber-700 hover:bg-amber-400/30">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-xs font-medium bg-orange-400/20 text-orange-700 hover:bg-orange-400/30">
                 Ready
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-2 py-1 text-xs font-medium bg-emerald-400/20 text-emerald-700 hover:bg-emerald-400/30">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-xs font-medium bg-lime-400/20 text-lime-700 hover:bg-lime-400/30">
                 Done
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-2 py-1 text-xs font-medium bg-red-400/20 text-red-700 hover:bg-red-400/30">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-xs font-medium bg-pink-400/15 text-pink-700 hover:bg-pink-400/25">
                 Cancelled
               </span>
             </div>
@@ -184,28 +184,28 @@ export default function FormKitPage() {
         </Card>
 
         {/* NEW DESIGN: Professional Order Status Labels - Option 6 (Glow + Dot) */}
-        <Card header={<h2 className="font-semibold">NEW DESIGN - Option 6: Glow Effect + Status Dot</h2>}>
+        <Card header={<h2 className="font-semibold">NEW DESIGN - Option 6: Tailwind UI Style + Status Dot</h2>}>
           <div className="space-y-3">
-            <p className="text-sm text-gray-600 mb-3">Best of both worlds - modern glow with clear indicator dot</p>
+            <p className="text-sm text-gray-600 mb-3">Tailwind UI glow effect with indicator dot for extra clarity</p>
             <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-2 py-1 text-xs font-medium bg-slate-400/20 text-slate-700 hover:bg-slate-400/30">
-                <svg className="h-1.5 w-1.5 fill-slate-500" viewBox="0 0 6 6" aria-hidden="true"><circle cx="3" cy="3" r="3" /></svg>
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-xs font-medium bg-gray-400/20 text-gray-700 hover:bg-gray-400/30">
+                <svg className="h-1.5 w-1.5 fill-gray-500" viewBox="0 0 6 6" aria-hidden="true"><circle cx="3" cy="3" r="3" /></svg>
                 Open
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-2 py-1 text-xs font-medium bg-blue-400/20 text-blue-700 hover:bg-blue-400/30">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-xs font-medium bg-blue-400/20 text-blue-700 hover:bg-blue-400/30">
                 <svg className="h-1.5 w-1.5 fill-blue-500" viewBox="0 0 6 6" aria-hidden="true"><circle cx="3" cy="3" r="3" /></svg>
                 In Process
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-2 py-1 text-xs font-medium bg-amber-400/20 text-amber-700 hover:bg-amber-400/30">
-                <svg className="h-1.5 w-1.5 fill-amber-500" viewBox="0 0 6 6" aria-hidden="true"><circle cx="3" cy="3" r="3" /></svg>
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-xs font-medium bg-orange-400/20 text-orange-700 hover:bg-orange-400/30">
+                <svg className="h-1.5 w-1.5 fill-orange-500" viewBox="0 0 6 6" aria-hidden="true"><circle cx="3" cy="3" r="3" /></svg>
                 Ready
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-2 py-1 text-xs font-medium bg-emerald-400/20 text-emerald-700 hover:bg-emerald-400/30">
-                <svg className="h-1.5 w-1.5 fill-emerald-500" viewBox="0 0 6 6" aria-hidden="true"><circle cx="3" cy="3" r="3" /></svg>
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-xs font-medium bg-lime-400/20 text-lime-700 hover:bg-lime-400/30">
+                <svg className="h-1.5 w-1.5 fill-lime-500" viewBox="0 0 6 6" aria-hidden="true"><circle cx="3" cy="3" r="3" /></svg>
                 Done
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-2 py-1 text-xs font-medium bg-red-400/20 text-red-700 hover:bg-red-400/30">
-                <svg className="h-1.5 w-1.5 fill-red-500" viewBox="0 0 6 6" aria-hidden="true"><circle cx="3" cy="3" r="3" /></svg>
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-xs font-medium bg-pink-400/15 text-pink-700 hover:bg-pink-400/25">
+                <svg className="h-1.5 w-1.5 fill-pink-500" viewBox="0 0 6 6" aria-hidden="true"><circle cx="3" cy="3" r="3" /></svg>
                 Cancelled
               </span>
             </div>
