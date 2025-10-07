@@ -5,6 +5,13 @@ import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
 import Card from '../../components/ui/Card';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { 
+  CheckCircleIcon, 
+  XCircleIcon, 
+  CurrencyDollarIcon,
+  GiftIcon
+} from '@heroicons/react/24/solid';
 
 interface Category {
   id: number;
@@ -34,6 +41,7 @@ interface Product {
 }
 
 export default function ProductsPage() {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -303,24 +311,27 @@ export default function ProductsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full table-fixed border border-[#e5e5e5] rounded-lg overflow-hidden">
                   <thead>
-                    <tr className="border-b border-[#e5e5e5]">
+                    <tr className="border-b border-[#e5e5e5] bg-gray-50">
                       <th className="w-16 px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Image</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Item</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">SKU</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Americas</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">International</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Assign</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="bg-white">
                     {categoryGroup.products.map((product, index) => (
-                      <tr key={product.id} className={`hover:bg-gray-50 border-b border-[#e5e5e5] ${draggedItem === product.id ? 'opacity-50' : ''}`}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, product.id)}
-                          onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(e, product.id)}
+                      <tr 
+                        key={product.id} 
+                        className={`hover:bg-gray-50 border-b border-[#e5e5e5] cursor-pointer transition-colors ${draggedItem === product.id ? 'opacity-50' : ''}`}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, product.id)}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, product.id)}
+                        onClick={() => router.push(`/admin/products/${product.id}`)}
                       >
                         <td className="px-4 py-3 whitespace-nowrap w-16">
                           {product.picture_url ? (
@@ -330,8 +341,8 @@ export default function ProductsPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className="text-gray-400 font-mono shrink-0 w-8">{product.sort_order || index + 1}</span>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-gray-400 font-mono text-xs shrink-0">{product.sort_order || index + 1}</span>
                             <span className="font-medium truncate max-w-[180px]">{product.item_name || 'Unnamed Product'}</span>
                           </div>
                         </td>
@@ -339,14 +350,24 @@ export default function ProductsPage() {
                         <td className="px-4 py-3 text-sm text-gray-900">${product.price_americas || 0}</td>
                         <td className="px-4 py-3 text-sm text-gray-900">${product.price_international || 0}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex flex-col gap-1">
-                            <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.enable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{product.enable ? 'Enabled' : 'Disabled'}</span>
-                            <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.list_in_support_funds ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{product.list_in_support_funds ? 'Support Funds' : 'No Support Funds'}</span>
-                            <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${product.qualifies_for_credit_earning ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>{product.qualifies_for_credit_earning ? 'Earns Credit' : 'No Credit'}</span>
+                          <div className="flex items-center justify-center gap-2">
+                            <div className={`inline-flex items-center justify-center h-7 w-7 rounded-full ${product.enable ? 'bg-green-100' : 'bg-gray-100'}`} title={product.enable ? 'Enabled' : 'Disabled'}>
+                              {product.enable ? (
+                                <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <XCircleIcon className="h-4 w-4 text-gray-500" />
+                              )}
+                            </div>
+                            <div className={`inline-flex items-center justify-center h-7 w-7 rounded-full ${product.qualifies_for_credit_earning ? 'bg-green-100' : 'bg-gray-100'}`} title={product.qualifies_for_credit_earning ? 'Earns Credit' : 'No Credit'}>
+                              <CurrencyDollarIcon className={`h-4 w-4 ${product.qualifies_for_credit_earning ? 'text-green-600' : 'text-gray-400'}`} />
+                            </div>
+                            <div className={`inline-flex items-center justify-center h-7 w-7 rounded-full ${product.list_in_support_funds ? 'bg-blue-100' : 'bg-gray-100'}`} title={product.list_in_support_funds ? 'Support Funds' : 'No Support Funds'}>
+                              <GiftIcon className={`h-4 w-4 ${product.list_in_support_funds ? 'text-blue-600' : 'text-gray-400'}`} />
+                            </div>
                           </div>
                         </td>
                         {/* Assign Category */}
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-2">
                             <select
                               value={product.category_id || ''}
@@ -360,12 +381,8 @@ export default function ProductsPage() {
                             </select>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-sm">
-                          <div className="flex items-center gap-3">
-                            <Link className="text-blue-600 hover:text-blue-800" href={`/admin/products/${product.id}`}>View</Link>
-                            <Link className="text-green-600 hover:text-green-800" href={`/admin/products/${product.id}/edit`}>Edit</Link>
-                            <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-800">Delete</button>
-                          </div>
+                        <td className="px-4 py-3 text-sm" onClick={(e) => e.stopPropagation()}>
+                          <Link className="text-blue-600 hover:text-blue-800 font-medium" href={`/admin/products/${product.id}/edit`}>Edit</Link>
                         </td>
                       </tr>
                     ))}
