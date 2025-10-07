@@ -164,19 +164,19 @@ export default function FormKitPage() {
           <div className="space-y-3">
             <p className="text-sm text-gray-600 mb-3">Exact Tailwind UI style - lime green & pink red, perfect opacity levels</p>
             <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 bg-gray-400/20 text-gray-700 group-data-hover:bg-gray-400/30">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline bg-gray-400/20 text-gray-700">
                 Open
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 bg-blue-400/20 text-blue-700 group-data-hover:bg-blue-400/30">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline bg-blue-400/20 text-blue-700">
                 In Process
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 bg-orange-400/20 text-orange-700 group-data-hover:bg-orange-400/30">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline bg-orange-400/20 text-orange-700">
                 Ready
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 bg-lime-400/20 text-lime-700 group-data-hover:bg-lime-400/30">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline bg-lime-400/20 text-lime-700">
                 Done
               </span>
-              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 bg-pink-400/15 text-pink-700 group-data-hover:bg-pink-400/25">
+              <span className="inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline bg-pink-400/15 text-pink-700">
                 Cancelled
               </span>
             </div>
