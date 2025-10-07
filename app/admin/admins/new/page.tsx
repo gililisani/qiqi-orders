@@ -31,44 +31,32 @@ export default function NewAdminPage() {
     setError('');
 
     try {
-      // First, create the user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: formData.password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: formData.name
-        }
-      });
-
-      if (authError) {
-        if (authError.message.includes('already registered')) {
-          setError('An admin with this email already exists. Please use a different email.');
-        } else {
-          throw authError;
-        }
-        setLoading(false);
-        return;
+      // Get the current session to send auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('You must be logged in to create admins');
       }
 
-      if (!authData.user) {
-        throw new Error('Failed to create admin account');
-      }
-
-      // Then, create the admin profile in our admins table
-      const { error: profileError } = await supabase
-        .from('admins')
-        .insert([{
-          id: authData.user.id,
+      // Call the server-side API route to create the admin
+      const response = await fetch('/api/admin/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
           name: formData.name,
           email: formData.email,
+          password: formData.password,
           enabled: formData.enabled
-        }]);
+        })
+      });
 
-      if (profileError) {
-        // If profile creation fails, we should clean up the auth user
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        throw profileError;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create admin');
       }
 
       router.push('/admin/admins');
