@@ -617,13 +617,13 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     // LEFT COLUMN: Notes Section (always show, even if empty)
     let notesY = bottomSectionY;
     addText('Notes', margin, notesY, { fontSize: 12, fontStyle: 'bold' });
-    notesY += 8;
+    notesY += 5; // Smaller gap between title and border
     
-    // Track the start of the bordered notes area
-    const notesContentStartY = notesY;
+    // Track the start of the bordered notes area (border starts here)
+    const notesBoxStartY = notesY;
     const notesPadding = 3; // mm padding inside the border (all sides)
     
-    // Add top padding
+    // Add top padding inside the border
     notesY += notesPadding;
     
     if (packingSlip.notes) {
@@ -638,14 +638,14 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       notesY += 6;
     }
     
-    // Add bottom padding
+    // Add bottom padding inside the border
     notesY += notesPadding;
     
-    // Draw border around notes content
-    const notesBoxHeight = notesY - notesContentStartY;
+    // Draw border around notes content (starts right after title)
+    const notesBoxHeight = notesY - notesBoxStartY;
     pdf.setDrawColor(200, 200, 200); // Light gray border
     pdf.setLineWidth(0.2); // Thin border
-    pdf.rect(margin, notesContentStartY, notesWidth - 10, notesBoxHeight);
+    pdf.rect(margin, notesBoxStartY, notesWidth - 10, notesBoxHeight);
     
     // RIGHT COLUMN: Totals Section
     let totalsY = bottomSectionY;
