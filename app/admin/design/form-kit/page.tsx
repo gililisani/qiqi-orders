@@ -348,6 +348,218 @@ export default function FormKitPage() {
           </div>
         </Card>
 
+        {/* LIVE EXAMPLE: Products Table with Option 4 Icons */}
+        <Card header={
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">LIVE EXAMPLE: Products Table with Option 4 (Icon Badges)</h2>
+            <div className="text-xs text-gray-500">Compare with current design</div>
+          </div>
+        }>
+          <div className="overflow-x-auto">
+            <table className="w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
+              <thead>
+                <tr className="border-b border-[#e5e5e5] bg-gray-50">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Image</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Item</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">SKU</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Americas</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">International</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white">
+                {/* Product 1 - Enabled with all features */}
+                <tr className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="h-12 w-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded object-cover border border-[#e5e5e5] flex items-center justify-center text-white text-xs font-bold">IMG</div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 font-mono text-xs">01</span>
+                      <span className="font-medium">Premium Widget Pro</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">SKU-001</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">$49.99</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">$54.99</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-green-100" title="Enabled">
+                        <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-green-100" title="Earns Credit">
+                        <CurrencyDollarIcon className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-blue-100" title="Support Funds">
+                        <GiftIcon className="h-4 w-4 text-blue-600" />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <div className="flex items-center gap-3">
+                      <a className="text-blue-600 hover:text-blue-800" href="#">View</a>
+                      <a className="text-green-600 hover:text-green-800" href="#">Edit</a>
+                      <button className="text-red-600 hover:text-red-800">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+
+                {/* Product 2 - Enabled, Credit only */}
+                <tr className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="h-12 w-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded object-cover border border-[#e5e5e5] flex items-center justify-center text-white text-xs font-bold">IMG</div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 font-mono text-xs">02</span>
+                      <span className="font-medium">Standard Widget</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">SKU-002</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">$29.99</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">$34.99</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-green-100" title="Enabled">
+                        <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-green-100" title="Earns Credit">
+                        <CurrencyDollarIcon className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-gray-100" title="No Support Funds">
+                        <GiftIcon className="h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <div className="flex items-center gap-3">
+                      <a className="text-blue-600 hover:text-blue-800" href="#">View</a>
+                      <a className="text-green-600 hover:text-green-800" href="#">Edit</a>
+                      <button className="text-red-600 hover:text-red-800">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+
+                {/* Product 3 - Disabled */}
+                <tr className="hover:bg-gray-50 border-b border-[#e5e5e5] opacity-60">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="h-12 w-12 bg-gray-300 rounded object-cover border border-[#e5e5e5] flex items-center justify-center text-gray-500 text-xs font-bold">IMG</div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 font-mono text-xs">03</span>
+                      <span className="font-medium">Discontinued Widget</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">SKU-003</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">$19.99</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">$24.99</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-gray-100" title="Disabled">
+                        <XCircleIcon className="h-4 w-4 text-gray-500" />
+                      </div>
+                      <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-gray-100" title="No Credit">
+                        <CurrencyDollarIcon className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-gray-100" title="No Support Funds">
+                        <GiftIcon className="h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <div className="flex items-center gap-3">
+                      <a className="text-blue-600 hover:text-blue-800" href="#">View</a>
+                      <a className="text-green-600 hover:text-green-800" href="#">Edit</a>
+                      <button className="text-red-600 hover:text-red-800">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+
+                {/* Product 4 - Enabled, Support Funds only */}
+                <tr className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="h-12 w-12 bg-gradient-to-br from-green-400 to-green-600 rounded object-cover border border-[#e5e5e5] flex items-center justify-center text-white text-xs font-bold">IMG</div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 font-mono text-xs">04</span>
+                      <span className="font-medium">Promotional Widget</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">SKU-004</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">$9.99</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">$14.99</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-green-100" title="Enabled">
+                        <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-gray-100" title="No Credit">
+                        <CurrencyDollarIcon className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <div className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-blue-100" title="Support Funds">
+                        <GiftIcon className="h-4 w-4 text-blue-600" />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <div className="flex items-center gap-3">
+                      <a className="text-blue-600 hover:text-blue-800" href="#">View</a>
+                      <a className="text-green-600 hover:text-green-800" href="#">Edit</a>
+                      <button className="text-red-600 hover:text-red-800">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Legend */}
+          <div className="mt-4 pt-4 border-t border-[#e5e5e5]">
+            <p className="text-sm font-medium text-gray-700 mb-3">Icon Legend:</p>
+            <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+              <div className="flex items-center gap-2">
+                <div className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-green-100">
+                  <CheckCircleIcon className="h-3.5 w-3.5 text-green-600" />
+                </div>
+                <span>Enabled</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gray-100">
+                  <XCircleIcon className="h-3.5 w-3.5 text-gray-500" />
+                </div>
+                <span>Disabled</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-green-100">
+                  <CurrencyDollarIcon className="h-3.5 w-3.5 text-green-600" />
+                </div>
+                <span>Earns Credit</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gray-100">
+                  <CurrencyDollarIcon className="h-3.5 w-3.5 text-gray-400" />
+                </div>
+                <span>No Credit</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100">
+                  <GiftIcon className="h-3.5 w-3.5 text-blue-600" />
+                </div>
+                <span>Support Funds</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gray-100">
+                  <GiftIcon className="h-3.5 w-3.5 text-gray-400" />
+                </div>
+                <span>No Support Funds</span>
+              </div>
+            </div>
+          </div>
+        </Card>
+
         {/* Table design */}
         <Card header={<h2 className="font-semibold">Table</h2>}>
           <div className="overflow-x-auto">
