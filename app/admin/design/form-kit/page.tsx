@@ -159,6 +159,21 @@ export default function FormKitPage() {
           </div>
         </Card>
 
+        {/* OPACITY TEST */}
+        <Card header={<h2 className="font-semibold">OPACITY TEST - Does /15 and /20 work?</h2>}>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 mb-3">Testing if Tailwind opacity modifiers render correctly</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="bg-blue-400/15 text-blue-700 px-3 py-1 rounded-md">bg-blue-400/15</span>
+              <span className="bg-blue-400/20 text-blue-700 px-3 py-1 rounded-md">bg-blue-400/20</span>
+              <span className="bg-lime-400/20 text-lime-700 px-3 py-1 rounded-md">bg-lime-400/20</span>
+              <span className="bg-pink-400/15 text-pink-700 px-3 py-1 rounded-md">bg-pink-400/15</span>
+              <span className="bg-blue-400/15 !bg-blue-400/15 text-blue-700 px-3 py-1 rounded-md">!bg-blue-400/15 (with !important)</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">If you see different shades of color backgrounds, opacity is working!</p>
+          </div>
+        </Card>
+
         {/* NEW DESIGN: Professional Order Status Labels - Option 5 (Modern Glow Effect) */}
         <Card header={<h2 className="font-semibold">NEW DESIGN - Option 5: Modern Glow Effect (Tailwind UI Style)</h2>}>
           <div className="space-y-3">
