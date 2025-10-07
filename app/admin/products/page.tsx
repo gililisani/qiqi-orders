@@ -64,6 +64,7 @@ export default function ProductsPage() {
           *,
           category:categories(*)
         `)
+        .order('sort_order', { ascending: true, nullsFirst: false })
         .order('item_name', { ascending: true });
 
       if (error) throw error;
