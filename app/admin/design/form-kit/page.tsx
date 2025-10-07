@@ -370,7 +370,7 @@ export default function FormKitPage() {
               </thead>
               <tbody className="bg-white">
                 {/* Product 1 - Enabled with all features */}
-                <tr className="hover:bg-blue-50 border-b border-[#e5e5e5] cursor-pointer transition-colors" onClick={() => window.location.href='#'}>
+                <tr className="hover:bg-gray-50 border-b border-[#e5e5e5] cursor-pointer transition-colors" onClick={() => window.location.href='#'}>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="h-12 w-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded object-cover border border-[#e5e5e5] flex items-center justify-center text-white text-xs font-bold">IMG</div>
                   </td>
@@ -402,7 +402,7 @@ export default function FormKitPage() {
                 </tr>
 
                 {/* Product 2 - Enabled, Credit only */}
-                <tr className="hover:bg-blue-50 border-b border-[#e5e5e5] cursor-pointer transition-colors" onClick={() => window.location.href='#'}>
+                <tr className="hover:bg-gray-50 border-b border-[#e5e5e5] cursor-pointer transition-colors" onClick={() => window.location.href='#'}>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="h-12 w-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded object-cover border border-[#e5e5e5] flex items-center justify-center text-white text-xs font-bold">IMG</div>
                   </td>
@@ -434,7 +434,7 @@ export default function FormKitPage() {
                 </tr>
 
                 {/* Product 3 - Disabled */}
-                <tr className="hover:bg-blue-50 border-b border-[#e5e5e5] opacity-60 cursor-pointer transition-colors" onClick={() => window.location.href='#'}>
+                <tr className="hover:bg-gray-50 border-b border-[#e5e5e5] opacity-60 cursor-pointer transition-colors" onClick={() => window.location.href='#'}>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="h-12 w-12 bg-gray-300 rounded object-cover border border-[#e5e5e5] flex items-center justify-center text-gray-500 text-xs font-bold">IMG</div>
                   </td>
@@ -466,7 +466,7 @@ export default function FormKitPage() {
                 </tr>
 
                 {/* Product 4 - Enabled, Support Funds only */}
-                <tr className="hover:bg-blue-50 border-b border-[#e5e5e5] cursor-pointer transition-colors" onClick={() => window.location.href='#'}>
+                <tr className="hover:bg-gray-50 border-b border-[#e5e5e5] cursor-pointer transition-colors" onClick={() => window.location.href='#'}>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="h-12 w-12 bg-gradient-to-br from-green-400 to-green-600 rounded object-cover border border-[#e5e5e5] flex items-center justify-center text-white text-xs font-bold">IMG</div>
                   </td>
