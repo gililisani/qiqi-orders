@@ -622,9 +622,10 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     // Track the start of the bordered notes area (border starts here)
     const notesBoxStartY = notesY;
     const notesPadding = 3; // mm padding inside the border (all sides)
+    const textHeight = 3.5; // Approximate height of 9pt text
     
-    // Add top padding inside the border
-    notesY += notesPadding;
+    // Add top padding inside the border + text height (since text is positioned by baseline)
+    notesY += notesPadding + textHeight;
     
     if (packingSlip.notes) {
       const noteLines = pdf.splitTextToSize(packingSlip.notes, notesWidth - 10 - (notesPadding * 2));
