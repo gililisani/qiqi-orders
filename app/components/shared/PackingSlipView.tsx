@@ -355,20 +355,27 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 const logoWidth = 50; // mm
                 const logoHeight = logoWidth / 2.13; // Maintain aspect ratio (approx 23.5mm)
                 
+                // Reset viewBox to start at 0,0 for proper positioning
+                // Your viewBox is "80 0 840 470.28029" which has an x-offset of 80
+                // Change it to "0 0 840 470.28029" so pdf.svg() positions it correctly
+                const currentViewBox = svgElement.getAttribute('viewBox') || '80 0 840 470.28029';
+                const viewBoxParts = currentViewBox.split(' ');
+                viewBoxParts[0] = '0'; // Reset x offset to 0
+                svgElement.setAttribute('viewBox', viewBoxParts.join(' '));
+                
                 console.log('SVG Logo Rendering:', {
                   x: x,
                   y: y,
                   width: logoWidth,
                   height: logoHeight,
-                  viewBox: svgElement.getAttribute('viewBox'),
-                  svgWidth: svgElement.getAttribute('width'),
-                  svgHeight: svgElement.getAttribute('height')
+                  originalViewBox: currentViewBox,
+                  fixedViewBox: svgElement.getAttribute('viewBox')
                 });
                 
                 // Render SVG at exact position with proper sizing
                 await pdf.svg(svgElement, {
-                  x: x,           // x position (margin)
-                  y: y,           // y position (currentY)
+                  x: x,
+                  y: y,
                   width: logoWidth,
                   height: logoHeight
                 });
