@@ -355,6 +355,16 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 const logoWidth = 50; // mm
                 const logoHeight = logoWidth / 2.13; // Maintain aspect ratio (approx 23.5mm)
                 
+                console.log('SVG Logo Rendering:', {
+                  x: x,
+                  y: y,
+                  width: logoWidth,
+                  height: logoHeight,
+                  viewBox: svgElement.getAttribute('viewBox'),
+                  svgWidth: svgElement.getAttribute('width'),
+                  svgHeight: svgElement.getAttribute('height')
+                });
+                
                 // Render SVG at exact position with proper sizing
                 await pdf.svg(svgElement, {
                   x: x,           // x position (margin)
