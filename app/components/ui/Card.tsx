@@ -11,8 +11,8 @@ export function Card({ header, footer, className = "", children, ...props }: Car
   const base = "bg-white border border-[#e5e5e5] rounded-xl shadow-none";
   return (
     <div className={[base, className].filter(Boolean).join(" ")} {...props}>
-      {header && <div className="px-6 py-4">{header}</div>}
-      <div className="pb-5">{children}</div>
+      {header && <div className="px-6 py-4 border-b border-[#e5e5e5]">{header}</div>}
+      <div className="px-6 py-5">{children}</div>
       {footer && <div className="px-6 py-4 border-t border-[#e5e5e5]">{footer}</div>}
     </div>
   );
