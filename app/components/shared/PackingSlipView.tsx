@@ -350,34 +350,36 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
               const svgElement = svgDoc.querySelector('svg');
               
               if (svgElement) {
-                // Use pdf.svg() method which supports x,y positioning
                 // Logo dimensions: 50mm width, aspect ratio 2.13:1
-                const logoWidth = 50; // mm
-                const logoHeight = logoWidth / 2.13; // Maintain aspect ratio (approx 23.5mm)
+                const logoWidthMM = 50; // mm
+                const logoHeightMM = logoWidthMM / 2.13; // Maintain aspect ratio (approx 23.5mm)
                 
-                // Reset viewBox to start at 0,0 for proper positioning
-                // Your viewBox is "80 0 840 470.28029" which has an x-offset of 80
-                // Change it to "0 0 840 470.28029" so pdf.svg() positions it correctly
-                const currentViewBox = svgElement.getAttribute('viewBox') || '80 0 840 470.28029';
-                const viewBoxParts = currentViewBox.split(' ');
-                viewBoxParts[0] = '0'; // Reset x offset to 0
-                svgElement.setAttribute('viewBox', viewBoxParts.join(' '));
+                // Parse viewBox to get dimensions and compensate for internal gutters
+                const vb = svgElement.viewBox.baseVal; // { x, y, width, height }
+                
+                // The actual logo content starts at x≈80 within the 1000-unit wide SVG
+                // This creates an internal left gutter we need to compensate for
+                const contentStartsAt = 80; // Logo paths start at x=80 in the SVG
+                const scale = logoWidthMM / vb.width; // 50mm / 1000 = 0.05
+                const xCompensationMM = -contentStartsAt * scale; // -80 * 0.05 = -4mm
+                const yCompensationMM = -vb.y * scale; // Usually 0
                 
                 console.log('SVG Logo Rendering:', {
-                  x: x,
-                  y: y,
-                  width: logoWidth,
-                  height: logoHeight,
-                  originalViewBox: currentViewBox,
-                  fixedViewBox: svgElement.getAttribute('viewBox')
+                  targetX: x,
+                  targetY: y,
+                  compensation: { x: xCompensationMM, y: yCompensationMM },
+                  finalX: x + xCompensationMM,
+                  finalY: y + yCompensationMM,
+                  viewBox: `${vb.x} ${vb.y} ${vb.width} ${vb.height}`,
+                  scale: scale
                 });
                 
-                // Render SVG at exact position with proper sizing
+                // Render SVG with position compensation for internal gutters
                 await pdf.svg(svgElement, {
-                  x: x,
-                  y: y,
-                  width: logoWidth,
-                  height: logoHeight
+                  x: x + xCompensationMM,  // Shift left to compensate for internal gutter
+                  y: y + yCompensationMM,  // Compensate for any y offset
+                  width: logoWidthMM,
+                  height: logoHeightMM
                 });
                 
                 return; // Success, exit function
