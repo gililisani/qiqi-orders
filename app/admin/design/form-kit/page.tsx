@@ -67,16 +67,56 @@ export default function FormKitPage() {
           </div>
         </Card>
 
-        {/* Labels: Enabled / Disabled and Statuses */}
-        <Card header={<h2 className="font-semibold">Labels</h2>}>
+        {/* Labels: Order Statuses */}
+        <Card header={<h2 className="font-semibold">Order Status Labels</h2>}>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-800">Enabled</span>
-            <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-gray-200 text-gray-800">Disabled</span>
             <span className="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-gray-200 text-gray-800">Open</span>
             <span className="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-blue-100 text-blue-800">In Process</span>
             <span className="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-orange-100 text-orange-800">Ready</span>
             <span className="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-green-100 text-green-800">Done</span>
             <span className="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-red-100 text-red-800">Cancelled</span>
+          </div>
+        </Card>
+
+        {/* Labels: Product Status Labels */}
+        <Card header={<h2 className="font-semibold">Product Status Labels</h2>}>
+          <div className="space-y-4">
+            {/* Enable/Disable Status */}
+            <div>
+              <p className="text-sm text-gray-600 mb-2 font-medium">Enable/Disable:</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-800">Enabled</span>
+                <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-red-100 text-red-800">Disabled</span>
+              </div>
+            </div>
+
+            {/* Support Funds Status */}
+            <div>
+              <p className="text-sm text-gray-600 mb-2 font-medium">Support Funds:</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">Support Funds</span>
+                <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800">No Support Funds</span>
+              </div>
+            </div>
+
+            {/* Credit Earning Status */}
+            <div>
+              <p className="text-sm text-gray-600 mb-2 font-medium">Credit Earning:</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-800">Earns Credit</span>
+                <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800">No Credit</span>
+              </div>
+            </div>
+
+            {/* Stacked Status Example (as used in Products table) */}
+            <div>
+              <p className="text-sm text-gray-600 mb-2 font-medium">Stacked Status (Product Table):</p>
+              <div className="flex flex-col gap-1 max-w-fit">
+                <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-800">Enabled</span>
+                <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">Support Funds</span>
+                <span className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-800">Earns Credit</span>
+              </div>
+            </div>
           </div>
         </Card>
 
