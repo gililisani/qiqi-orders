@@ -77,14 +77,85 @@ export default function FormKitPage() {
           </div>
         </Card>
 
-        {/* Labels: Order Statuses */}
-        <Card header={<h2 className="font-semibold">Order Status Labels</h2>}>
+        {/* Labels: Order Statuses - OLD DESIGN */}
+        <Card header={<h2 className="font-semibold">OLD DESIGN: Order Status Labels</h2>}>
           <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-gray-200 text-gray-800">Open</span>
             <span className="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-blue-100 text-blue-800">In Process</span>
             <span className="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-orange-100 text-orange-800">Ready</span>
             <span className="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-green-100 text-green-800">Done</span>
             <span className="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase bg-red-100 text-red-800">Cancelled</span>
+          </div>
+        </Card>
+
+        {/* NEW DESIGN: Professional Order Status Labels - Option 1 (Subtle & Modern) */}
+        <Card header={<h2 className="font-semibold">NEW DESIGN - Option 1: Subtle & Professional</h2>}>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 mb-3">Softer colors, better contrast, more readable</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">Open</span>
+              <span className="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">In Process</span>
+              <span className="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">Ready</span>
+              <span className="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">Done</span>
+              <span className="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium bg-red-50 text-red-700 border border-red-200">Cancelled</span>
+            </div>
+          </div>
+        </Card>
+
+        {/* NEW DESIGN: Professional Order Status Labels - Option 2 (Bold & Clean) */}
+        <Card header={<h2 className="font-semibold">NEW DESIGN - Option 2: Bold & Clean</h2>}>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 mb-3">Stronger colors, clear distinction, modern feel</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold bg-slate-200 text-slate-800">Open</span>
+              <span className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold bg-blue-500 text-white">In Process</span>
+              <span className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold bg-amber-500 text-white">Ready</span>
+              <span className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold bg-emerald-500 text-white">Done</span>
+              <span className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold bg-red-500 text-white">Cancelled</span>
+            </div>
+          </div>
+        </Card>
+
+        {/* NEW DESIGN: Professional Order Status Labels - Option 3 (Minimal & Elegant) */}
+        <Card header={<h2 className="font-semibold">NEW DESIGN - Option 3: Minimal & Elegant</h2>}>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 mb-3">Borderless, clean typography, professional look</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-slate-100 text-slate-700">Open</span>
+              <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-blue-100 text-blue-700">In Process</span>
+              <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-amber-100 text-amber-700">Ready</span>
+              <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-emerald-100 text-emerald-700">Done</span>
+              <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-red-100 text-red-700">Cancelled</span>
+            </div>
+          </div>
+        </Card>
+
+        {/* NEW DESIGN: Professional Order Status Labels - Option 4 (Badge Style) */}
+        <Card header={<h2 className="font-semibold">NEW DESIGN - Option 4: Badge Style with Dot</h2>}>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 mb-3">Status indicator dot + text, very clear</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium bg-slate-50 text-slate-700 border border-slate-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-500"></span>
+                Open
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                In Process
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                Ready
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                Done
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                Cancelled
+              </span>
+            </div>
           </div>
         </Card>
 
