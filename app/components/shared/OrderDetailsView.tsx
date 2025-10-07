@@ -340,6 +340,7 @@ export default function OrderDetailsView({
 
         if (error) throw error;
         setOrder(data);
+        setOriginalStatus(data.status || '');
       } else {
         // Admin: fetch order with all related data
         const { data: orderData, error: orderError } = await supabase
