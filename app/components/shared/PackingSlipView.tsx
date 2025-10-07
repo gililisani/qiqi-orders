@@ -350,23 +350,18 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
               const svgElement = svgDoc.querySelector('svg');
               
               if (svgElement) {
-                // Scale down the SVG element to fit properly
-                const originalWidth = svgElement.getAttribute('width') || '1000';
-                const originalHeight = svgElement.getAttribute('height') || '470';
+                // Use pdf.svg() method which supports x,y positioning
+                // Logo dimensions: 50mm width, aspect ratio 2.13:1
+                const logoWidth = 50; // mm
+                const logoHeight = logoWidth / 2.13; // Maintain aspect ratio (approx 23.5mm)
                 
-                // Scale down to a reasonable size (about 60×28px)
-                const scaleFactor = 0.06; // Scale down to 6% of original size
-                const scaledWidth = parseFloat(originalWidth) * scaleFactor;
-                const scaledHeight = parseFloat(originalHeight) * scaleFactor;
-                
-                svgElement.setAttribute('width', scaledWidth.toString());
-                svgElement.setAttribute('height', scaledHeight.toString());
-                
-                // Set PDF cursor to the exact position
-                pdf.text('', x, y);
-                
-                // Render SVG at current cursor position
-                await svg2pdf(svgElement, pdf);
+                // Render SVG at exact position with proper sizing
+                await pdf.svg(svgElement, {
+                  x: x,           // x position (margin)
+                  y: y,           // y position (currentY)
+                  width: logoWidth,
+                  height: logoHeight
+                });
                 
                 return; // Success, exit function
               }
