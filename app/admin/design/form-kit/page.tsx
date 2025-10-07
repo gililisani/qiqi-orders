@@ -170,7 +170,11 @@ export default function FormKitPage() {
               <span className="bg-pink-400/15 text-pink-700 px-3 py-1 rounded-md">bg-pink-400/15</span>
               <span className="bg-blue-400/15 !bg-blue-400/15 text-blue-700 px-3 py-1 rounded-md">!bg-blue-400/15 (with !important)</span>
             </div>
-            <p className="text-xs text-gray-500 mt-2">If you see different shades of color backgrounds, opacity is working!</p>
+            <p className="text-sm font-semibold text-gray-700 mt-4">Your Exact Code Test:</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="max-sm:hidden inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline bg-lime-400/20 text-lime-700">On Sale</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">If you see different shades of color backgrounds, opacity is working! The "On Sale" badge is your exact code.</p>
           </div>
         </Card>
 
