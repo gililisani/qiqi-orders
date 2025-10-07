@@ -9,6 +9,7 @@ import Link from 'next/link';
 import OrderDocumentUpload from './OrderDocumentUpload';
 import OrderDocumentsView from './OrderDocumentsView';
 import OrderHistoryView from './OrderHistoryView';
+import OrderStatusBadge from '../ui/OrderStatusBadge';
 
 interface Order {
   id: string;
@@ -94,19 +95,12 @@ interface OrderDetailsViewProps {
 }
 
 const statusOptions = [
-  { value: 'Open', label: 'Open', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'In Process', label: 'In Process', color: 'bg-blue-100 text-blue-800' },
-  { value: 'Ready', label: 'Ready', color: 'bg-orange-100 text-orange-800' },
-  { value: 'Done', label: 'Done', color: 'bg-green-100 text-green-800' },
-  { value: 'Cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-800' }
+  { value: 'Open', label: 'Open' },
+  { value: 'In Process', label: 'In Process' },
+  { value: 'Ready', label: 'Ready' },
+  { value: 'Done', label: 'Done' },
+  { value: 'Cancelled', label: 'Cancelled' }
 ];
-
-const statusBadgeClasses = (status: string) =>
-  status === 'Open' ? 'bg-gray-200 text-gray-800' :
-  status === 'In Process' ? 'bg-blue-100 text-blue-800' :
-  status === 'Ready' ? 'bg-orange-100 text-orange-800' :
-  status === 'Done' ? 'bg-green-100 text-green-800' :
-  status === 'Cancelled' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800';
 
 export default function OrderDetailsView({ 
   role, 
@@ -914,9 +908,7 @@ export default function OrderDetailsView({
                       ))}
                     </select>
                   ) : (
-                    <span className={`inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase ${statusBadgeClasses(order.status)}`}>
-                      {order.status}
-                    </span>
+                    <OrderStatusBadge status={order.status} />
                   )}
                 </div>
               </div>

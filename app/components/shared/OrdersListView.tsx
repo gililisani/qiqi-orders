@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
 import { Spinner, Typography } from '../MaterialTailwind';
+import OrderStatusBadge from '../ui/OrderStatusBadge';
 
 type Role = 'admin' | 'client';
 
@@ -30,25 +31,7 @@ interface OrdersListViewProps {
   editOrderUrl?: (orderId: string) => string; // admin-only usage if needed later
 }
 
-const statusBadge = (status: string) => (
-  <span
-    className={`inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase ${
-      status === 'Open'
-        ? 'bg-gray-200 text-gray-800'
-        : status === 'In Process'
-        ? 'bg-blue-100 text-blue-800'
-        : status === 'Ready'
-        ? 'bg-orange-100 text-orange-800'
-        : status === 'Done'
-        ? 'bg-green-100 text-green-800'
-        : status === 'Cancelled'
-        ? 'bg-red-100 text-red-800'
-        : 'bg-gray-100 text-gray-800'
-    }`}
-  >
-    {status}
-  </span>
-);
+const statusBadge = (status: string) => <OrderStatusBadge status={status} />;
 
 export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: OrdersListViewProps) {
   const { supabase } = useSupabase();

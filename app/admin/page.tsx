@@ -21,6 +21,7 @@ import {
   CogIcon, 
   HandRaisedIcon 
 } from '@heroicons/react/24/outline';
+import OrderStatusBadge from '../components/ui/OrderStatusBadge';
 
 interface Order {
   id: string;
@@ -341,20 +342,7 @@ export default function AdminDashboard() {
                           </Typography>
                         </td>
                         <td className={className}>
-                          <Chip
-                            variant="gradient"
-                            color={
-                              order.status === 'Open'
-                                ? 'orange'
-                                : order.status === 'In Process'
-                                ? 'blue'
-                                : order.status === 'Completed'
-                                ? 'green'
-                                : 'blue-gray'
-                            }
-                            value={order.status}
-                            className="py-0.5 px-2 text-[11px] font-medium w-fit"
-                          />
+                          <OrderStatusBadge status={order.status} />
                         </td>
                         <td className={className}>
                           <Typography className="text-xs font-semibold text-blue-gray-600">

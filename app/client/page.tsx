@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabaseClient';
 import ClientLayout from '../components/ClientLayout';
 import Card from '../components/ui/Card';
 import Link from 'next/link';
+import OrderStatusBadge from '../components/ui/OrderStatusBadge';
 
 interface Order {
   id: string;
@@ -20,14 +21,6 @@ interface Company {
   netsuite_number: string;
   support_fund?: { percent: number }[];
 }
-
-const statusColors = {
-  'Open': 'bg-yellow-100 text-yellow-800',
-  'In Process': 'bg-blue-100 text-blue-800',
-  'Ready': 'bg-orange-100 text-orange-800',
-  'Done': 'bg-green-100 text-green-800',
-  'Cancelled': 'bg-red-100 text-red-800'
-};
 
 export default function ClientDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -195,15 +188,7 @@ export default function ClientDashboard() {
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <span className={`inline-flex items-center rounded px-2 py-1 text-[10px] font-bold tracking-wide uppercase ${
-                            order.status === 'Open' ? 'bg-gray-200 text-gray-800' :
-                            order.status === 'In Process' ? 'bg-blue-100 text-blue-800' :
-                            order.status === 'Ready' ? 'bg-orange-100 text-orange-800' :
-                            order.status === 'Done' ? 'bg-green-100 text-green-800' :
-                            order.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {order.status}
-                          </span>
+                          <OrderStatusBadge status={order.status} />
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           ${order.total_value?.toFixed(2) || '0.00'}

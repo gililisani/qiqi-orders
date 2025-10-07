@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
 import { Spinner, Typography } from '../MaterialTailwind';
+import OrderStatusBadge from '../ui/OrderStatusBadge';
 
 interface OrderHistoryEntry {
   id: string;
@@ -36,14 +37,6 @@ export default function OrderHistoryView({ orderId, role }: OrderHistoryViewProp
     document_uploaded: 'Document Uploaded',
     packing_slip_created: 'Packing Slip Created',
     order_updated: 'Order Updated'
-  };
-
-  const statusColors: Record<string, string> = {
-    'Open': 'bg-yellow-100 text-yellow-800',
-    'In Process': 'bg-blue-100 text-blue-800',
-    'Ready': 'bg-orange-100 text-orange-800',
-    'Done': 'bg-green-100 text-green-800',
-    'Cancelled': 'bg-red-100 text-red-800'
   };
 
   const roleColors: Record<string, string> = {
@@ -143,15 +136,11 @@ export default function OrderHistoryView({ orderId, role }: OrderHistoryViewProp
           {/* Status Change Details */}
           {entry.action_type === 'status_change' && entry.status_from && entry.status_to && (
             <div className="flex items-center space-x-2 mb-2">
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusColors[entry.status_from]}`}>
-                {entry.status_from}
-              </span>
+              <OrderStatusBadge status={entry.status_from} />
               <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
               </svg>
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusColors[entry.status_to]}`}>
-                {entry.status_to}
-              </span>
+              <OrderStatusBadge status={entry.status_to} />
             </div>
           )}
 
