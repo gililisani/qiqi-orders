@@ -567,6 +567,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         category:categories(*)
       `)
       .eq(`visible_to_${classFilter}`, true)
+      .order('sort_order', { ascending: true, nullsFirst: false })
       .order('item_name');
 
     if (productsError) throw productsError;
