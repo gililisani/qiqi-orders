@@ -159,22 +159,61 @@ export default function FormKitPage() {
           </div>
         </Card>
 
-        {/* OPACITY TEST */}
-        <Card header={<h2 className="font-semibold">OPACITY TEST - Does /15 and /20 work?</h2>}>
-          <div className="space-y-3">
-            <p className="text-sm text-gray-600 mb-3">Testing if Tailwind opacity modifiers render correctly</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="bg-blue-400/15 text-blue-700 px-3 py-1 rounded-md">bg-blue-400/15</span>
-              <span className="bg-blue-400/20 text-blue-700 px-3 py-1 rounded-md">bg-blue-400/20</span>
-              <span className="bg-lime-400/20 text-lime-700 px-3 py-1 rounded-md">bg-lime-400/20</span>
-              <span className="bg-pink-400/15 text-pink-700 px-3 py-1 rounded-md">bg-pink-400/15</span>
-              <span className="bg-blue-400/15 !bg-blue-400/15 text-blue-700 px-3 py-1 rounded-md">!bg-blue-400/15 (with !important)</span>
+        {/* OPACITY COMPARISON */}
+        <Card header={<h2 className="font-semibold">🎨 OPACITY COMPARISON - Why Lime Looks Pale</h2>}>
+          <div className="space-y-6">
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-3">Lime-400 at different opacity levels:</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium !bg-lime-400 text-white border border-lime-600">
+                  100% (Solid)
+                </span>
+                <span className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium !bg-lime-400/50 text-lime-900 border border-lime-300">
+                  50%
+                </span>
+                <span className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium !bg-lime-400/40 text-lime-900 border border-lime-300">
+                  40%
+                </span>
+                <span className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium !bg-lime-400/30 text-lime-800 border border-lime-200">
+                  30%
+                </span>
+                <span className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium !bg-lime-400/20 text-lime-700 border border-lime-200">
+                  20% ← Current
+                </span>
+                <span className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium !bg-lime-400/15 text-lime-700 border border-lime-200">
+                  15%
+                </span>
+                <span className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium !bg-lime-400/10 text-lime-700 border border-lime-200">
+                  10%
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">The solid lime-400 is vibrant green (like on Tailscan). At 20% opacity, it's 80% transparent!</p>
             </div>
-            <p className="text-sm font-semibold text-gray-700 mt-4">Your Exact Code Test:</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="max-sm:hidden inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline bg-lime-400/20 text-lime-700">On Sale</span>
+            
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-3">Compare: Green vs Emerald vs Lime (all at 20% opacity):</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium !bg-green-400/20 text-green-700 border border-green-200">
+                  Green-400/20
+                </span>
+                <span className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium !bg-emerald-400/20 text-emerald-700 border border-emerald-200">
+                  Emerald-400/20
+                </span>
+                <span className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium !bg-lime-400/20 text-lime-700 border border-lime-200">
+                  Lime-400/20
+                </span>
+              </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">If you see different shades of color backgrounds, opacity is working! The "On Sale" badge is your exact code.</p>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-sm font-semibold text-gray-900 mb-2">💡 Why it looks different:</p>
+              <ul className="text-xs text-gray-700 space-y-1 list-disc list-inside">
+                <li>On <a href="https://tailscan.com/tailwind/backgrounds/bg-lime-400" target="_blank" className="text-blue-600 underline">Tailscan</a>, you see <strong>solid</strong> lime-400 (100% opacity)</li>
+                <li>In the Tailwind UI example, they use <code className="bg-gray-100 px-1 rounded">bg-lime-400/20</code> which is only <strong>20% opacity</strong></li>
+                <li>20% opacity = 80% transparent, making it look very pale and subtle</li>
+                <li>This is intentional for a "glow effect" background, not a bold color</li>
+              </ul>
+            </div>
           </div>
         </Card>
 
