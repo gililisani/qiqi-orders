@@ -370,7 +370,7 @@ export default function FormKitPage() {
               </thead>
               <tbody className="bg-white">
                 {/* Product 1 - Enabled with all features */}
-                <tr className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                <tr className="hover:bg-blue-50 border-b border-[#e5e5e5] cursor-pointer transition-colors" onClick={() => window.location.href='#'}>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="h-12 w-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded object-cover border border-[#e5e5e5] flex items-center justify-center text-white text-xs font-bold">IMG</div>
                   </td>
@@ -396,17 +396,13 @@ export default function FormKitPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm">
-                    <div className="flex items-center gap-3">
-                      <a className="text-blue-600 hover:text-blue-800" href="#">View</a>
-                      <a className="text-green-600 hover:text-green-800" href="#">Edit</a>
-                      <button className="text-red-600 hover:text-red-800">Delete</button>
-                    </div>
+                  <td className="px-4 py-3 text-sm" onClick={(e) => e.stopPropagation()}>
+                    <a className="text-blue-600 hover:text-blue-800 font-medium" href="#">Edit</a>
                   </td>
                 </tr>
 
                 {/* Product 2 - Enabled, Credit only */}
-                <tr className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                <tr className="hover:bg-blue-50 border-b border-[#e5e5e5] cursor-pointer transition-colors" onClick={() => window.location.href='#'}>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="h-12 w-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded object-cover border border-[#e5e5e5] flex items-center justify-center text-white text-xs font-bold">IMG</div>
                   </td>
@@ -432,17 +428,13 @@ export default function FormKitPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm">
-                    <div className="flex items-center gap-3">
-                      <a className="text-blue-600 hover:text-blue-800" href="#">View</a>
-                      <a className="text-green-600 hover:text-green-800" href="#">Edit</a>
-                      <button className="text-red-600 hover:text-red-800">Delete</button>
-                    </div>
+                  <td className="px-4 py-3 text-sm" onClick={(e) => e.stopPropagation()}>
+                    <a className="text-blue-600 hover:text-blue-800 font-medium" href="#">Edit</a>
                   </td>
                 </tr>
 
                 {/* Product 3 - Disabled */}
-                <tr className="hover:bg-gray-50 border-b border-[#e5e5e5] opacity-60">
+                <tr className="hover:bg-blue-50 border-b border-[#e5e5e5] opacity-60 cursor-pointer transition-colors" onClick={() => window.location.href='#'}>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="h-12 w-12 bg-gray-300 rounded object-cover border border-[#e5e5e5] flex items-center justify-center text-gray-500 text-xs font-bold">IMG</div>
                   </td>
@@ -468,17 +460,13 @@ export default function FormKitPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm">
-                    <div className="flex items-center gap-3">
-                      <a className="text-blue-600 hover:text-blue-800" href="#">View</a>
-                      <a className="text-green-600 hover:text-green-800" href="#">Edit</a>
-                      <button className="text-red-600 hover:text-red-800">Delete</button>
-                    </div>
+                  <td className="px-4 py-3 text-sm" onClick={(e) => e.stopPropagation()}>
+                    <a className="text-blue-600 hover:text-blue-800 font-medium" href="#">Edit</a>
                   </td>
                 </tr>
 
                 {/* Product 4 - Enabled, Support Funds only */}
-                <tr className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                <tr className="hover:bg-blue-50 border-b border-[#e5e5e5] cursor-pointer transition-colors" onClick={() => window.location.href='#'}>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="h-12 w-12 bg-gradient-to-br from-green-400 to-green-600 rounded object-cover border border-[#e5e5e5] flex items-center justify-center text-white text-xs font-bold">IMG</div>
                   </td>
@@ -504,12 +492,8 @@ export default function FormKitPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm">
-                    <div className="flex items-center gap-3">
-                      <a className="text-blue-600 hover:text-blue-800" href="#">View</a>
-                      <a className="text-green-600 hover:text-green-800" href="#">Edit</a>
-                      <button className="text-red-600 hover:text-red-800">Delete</button>
-                    </div>
+                  <td className="px-4 py-3 text-sm" onClick={(e) => e.stopPropagation()}>
+                    <a className="text-blue-600 hover:text-blue-800 font-medium" href="#">Edit</a>
                   </td>
                 </tr>
               </tbody>
