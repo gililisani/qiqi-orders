@@ -332,44 +332,10 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       pdf.line(x1, y1, x2, y2);
     };
 
-    // Helper function to add logo - try PNG first, then SVG
+    // Helper function to add logo - use SVG only
     const addLogo = async (x: number, y: number) => {
       try {
-        // Try PNG first for better positioning control
-        const pngPaths = ['/logo.png', '/QIQI-Logo.png', 'logo.png'];
-        
-        for (const pngPath of pngPaths) {
-          try {
-            const response = await fetch(pngPath);
-            if (response.ok) {
-              const blob = await response.blob();
-              const arrayBuffer = await blob.arrayBuffer();
-              const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-              
-              // Add image to PDF at exact position with proper aspect ratio
-              // Logo aspect ratio is approximately 1000:470 (about 2.13:1)
-              // Use smaller dimensions and maintain aspect ratio
-              const logoWidth = 50; // mm
-              const logoHeight = logoWidth / 2.13; // Maintain aspect ratio (approx 23.5mm)
-              
-              pdf.addImage(
-                `data:image/png;base64,${base64}`,
-                'PNG',
-                x, // x position
-                y, // y position
-                logoWidth,
-                logoHeight
-              );
-              
-              return; // Success, exit function
-            }
-          } catch (error) {
-            console.log(`Failed to load PNG from ${pngPath}:`, error);
-            continue;
-          }
-        }
-        
-        // Fallback to SVG if PNG not found
+        // Use SVG logo (only logo file in project)
         const svgPaths = ['/QIQI-Logo.svg', 'QIQI-Logo.svg'];
         
         for (const svgPath of svgPaths) {

@@ -94,7 +94,7 @@ export default function Navbar() {
       <div className="flex items-center justify-between">
         {/* Logo and Brand */}
         <a href="/admin" className="flex items-center space-x-3 hover:opacity-90 transition">
-          <Image src="/logo.png" alt="Qiqi Logo" width={80} height={32} />
+          <Image src="/QIQI-Logo.svg" alt="Qiqi Logo" width={80} height={32} />
           <span className="text-lg font-semibold tracking-wide">Partners Hub</span>
         </a>
 
