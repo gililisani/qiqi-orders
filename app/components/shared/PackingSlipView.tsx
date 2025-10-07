@@ -643,9 +643,21 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     
     // Draw border around notes content (starts right after title)
     const notesBoxHeight = notesY - notesBoxStartY;
+    const notesBoxWidth = notesWidth - 10;
     pdf.setDrawColor(200, 200, 200); // Light gray border
     pdf.setLineWidth(0.2); // Thin border
-    pdf.rect(margin, notesBoxStartY, notesWidth - 10, notesBoxHeight);
+    
+    console.log('Notes Border Debug:', {
+      borderX: margin,
+      borderY: notesBoxStartY,
+      borderWidth: notesBoxWidth,
+      borderHeight: notesBoxHeight,
+      textX: margin + notesPadding,
+      textStartY: notesBoxStartY + notesPadding,
+      padding: notesPadding
+    });
+    
+    pdf.rect(margin, notesBoxStartY, notesBoxWidth, notesBoxHeight);
     
     // RIGHT COLUMN: Totals Section
     let totalsY = bottomSectionY;
