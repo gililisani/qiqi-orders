@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import AdminLayout from '../components/AdminLayout';
 import Link from 'next/link';
@@ -42,6 +43,7 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats>({
     todayOrders: 0,
     todayOrdersValue: 0,
@@ -315,7 +317,11 @@ export default function AdminDashboard() {
                     }`;
                     
                     return (
-                      <tr key={order.id}>
+                      <tr 
+                        key={order.id}
+                        onClick={() => router.push(`/admin/orders/${order.id}`)}
+                        className="hover:bg-gray-50 cursor-pointer"
+                      >
                         <td className={className}>
                           <Typography
                             variant="small"
@@ -354,7 +360,7 @@ export default function AdminDashboard() {
                             {new Date(order.created_at).toLocaleDateString()}
                           </Typography>
                         </td>
-                        <td className={className}>
+                        <td className={className} onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-3">
                             <Link href={`/admin/orders/${order.id}`}>
                               <Typography

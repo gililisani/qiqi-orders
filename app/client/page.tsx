@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import ClientLayout from '../components/ClientLayout';
 import Card from '../components/ui/Card';
@@ -23,6 +24,7 @@ interface Company {
 }
 
 export default function ClientDashboard() {
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
@@ -181,7 +183,11 @@ export default function ClientDashboard() {
                 </thead>
                 <tbody>
                   {orders.slice(0, 5).map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                    <tr 
+                      key={order.id} 
+                      onClick={() => router.push(`/client/orders/${order.id}`)}
+                      className="hover:bg-gray-50 border-b border-[#e5e5e5] cursor-pointer"
+                    >
                       <td className="px-4 py-3 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
                             {order.id.substring(0, 8)}...
@@ -199,7 +205,7 @@ export default function ClientDashboard() {
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                           {new Date(order.created_at).toLocaleDateString()}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                           <Link
                             href={`/client/orders/${order.id}`}
                             className="text-gray-700 hover:text-gray-900"

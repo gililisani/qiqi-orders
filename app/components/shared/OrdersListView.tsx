@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
 import { Spinner, Typography } from '../MaterialTailwind';
@@ -34,6 +35,7 @@ interface OrdersListViewProps {
 const statusBadge = (status: string) => <OrderStatusBadge status={status} />;
 
 export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: OrdersListViewProps) {
+  const router = useRouter();
   const { supabase } = useSupabase();
   const [orders, setOrders] = useState<Order[]>([]);
   const [clientsMap, setClientsMap] = useState<Map<string, ClientLite>>(new Map());
@@ -316,7 +318,11 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
             </thead>
             <tbody>
               {orders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                <tr 
+                  key={order.id} 
+                  onClick={() => router.push(viewOrderUrl(order.id))}
+                  className="hover:bg-gray-50 border-b border-[#e5e5e5] cursor-pointer"
+                >
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">#{order.po_number || order.id.substring(0, 8)}</td>
 
                   {role === 'admin' ? (
@@ -342,7 +348,7 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${order.support_fund_used?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{new Date(order.created_at).toLocaleDateString()}</td>
 
-                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-3">
                       <Link className="text-blue-600 hover:text-blue-800" href={viewOrderUrl(order.id)}>View</Link>
                       {role === 'admin' && (
