@@ -934,6 +934,21 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
         if (updateTotalsError) throw updateTotalsError;
 
+        // Send order created email (fire and forget - don't block redirect)
+        try {
+          await fetch('/api/orders/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orderId: newOrder.id,
+              emailType: 'created',
+            }),
+          });
+        } catch (emailError) {
+          // Log but don't throw - email failure shouldn't block order creation
+          console.error('Failed to send order created email:', emailError);
+        }
+
         // Redirect to order view
         router.push(`/${role}/orders/${newOrder.id}`);
       } else {

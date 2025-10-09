@@ -133,6 +133,8 @@ export default function OrderDetailsView({
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [sendingNotification, setSendingNotification] = useState(false);
   const [documentsRefreshKey, setDocumentsRefreshKey] = useState(0);
+  const [showSendEmailModal, setShowSendEmailModal] = useState(false);
+  const [customEmailMessage, setCustomEmailMessage] = useState('');
 
   const handleDocumentUploadComplete = () => {
     setDocumentsRefreshKey(prev => prev + 1);
@@ -531,6 +533,32 @@ export default function OrderDetailsView({
           `Status changed from ${oldStatus} to ${order.status}`
         );
         
+        // Send automatic email notification for specific status changes
+        try {
+          let emailType = null;
+          if (order.status === 'In Process') {
+            emailType = 'in_process';
+          } else if (order.status === 'Ready') {
+            emailType = 'ready';
+          } else if (order.status === 'Cancelled') {
+            emailType = 'cancelled';
+          }
+
+          if (emailType) {
+            await fetch('/api/orders/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                orderId: order.id,
+                emailType,
+              }),
+            });
+          }
+        } catch (emailError) {
+          // Log but don't throw - email failure shouldn't block status change
+          console.error('Failed to send status change email:', emailError);
+        }
+        
         // Send notification if status changed to certain states
         if (['In Process', 'Done'].includes(order.status)) {
           await sendNotification('status_change');
@@ -718,6 +746,36 @@ export default function OrderDetailsView({
     }
   };
 
+  const handleSendCustomEmail = async () => {
+    if (!order) return;
+    
+    setSendingNotification(true);
+    try {
+      const response = await fetch('/api/orders/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: order.id,
+          emailType: 'custom',
+          customMessage: customEmailMessage,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setShowSendEmailModal(false);
+        setCustomEmailMessage('');
+        alert('Email sent successfully!');
+      } else {
+        alert(`Failed to send email: ${data.error}`);
+      }
+    } catch (err: any) {
+      alert(`Error sending email: ${err.message}`);
+    } finally {
+      setSendingNotification(false);
+    }
+  };
+
   const handleDownloadCSV = async () => {
     try {
       // admin-only action
@@ -822,11 +880,11 @@ export default function OrderDetailsView({
           {/* Admin: Send Update button */}
           {role === 'admin' && (
             <button
-              onClick={() => sendNotification('status_change', 'Order status updated by admin')}
+              onClick={() => setShowSendEmailModal(true)}
               disabled={sendingNotification}
               className="bg-blue-600 text-white px-4 py-2 hover:bg-blue-700 transition disabled:opacity-50 text-sm"
             >
-              {sendingNotification ? 'Sending...' : 'Send Update'}
+              Send Update
             </button>
           )}
           
@@ -1357,6 +1415,68 @@ export default function OrderDetailsView({
       <div className="mt-8">
         <OrderHistoryView orderId={orderId} role={role} />
       </div>
+
+      {/* Send Email Modal */}
+      {showSendEmailModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                Send Order Update Email
+              </h3>
+              
+              <p className="text-sm text-gray-600 mb-4">
+                Send a custom email notification to the customer about this order.
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Custom Message (Optional)
+                </label>
+                <textarea
+                  value={customEmailMessage}
+                  onChange={(e) => setCustomEmailMessage(e.target.value)}
+                  placeholder="Enter a custom message to include in the email..."
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This message will be included in the email along with order details.
+                </p>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Email Preview:</h4>
+                <div className="text-xs text-gray-600 space-y-1">
+                  <p><strong>To:</strong> {order?.client?.email || 'Customer'}</p>
+                  <p><strong>Subject:</strong> Order Update - #{order?.po_number || order?.id.substring(0, 8)}</p>
+                  <p><strong>Order Status:</strong> {order?.status}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowSendEmailModal(false);
+                    setCustomEmailMessage('');
+                  }}
+                  disabled={sendingNotification}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendCustomEmail}
+                  disabled={sendingNotification}
+                  className="flex-1 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  {sendingNotification ? 'Sending...' : 'Send Email'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
