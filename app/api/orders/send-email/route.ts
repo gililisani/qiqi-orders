@@ -3,7 +3,7 @@
  * 
  * POST /api/orders/send-email
  * 
- * Sends automated or custom email notifications for orders.
+ * Sends automated or custom email notifications for orders via Microsoft Graph API.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
