@@ -5,6 +5,7 @@ import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
 import { Spinner, Typography } from '../MaterialTailwind';
 import OrderStatusBadge from '../ui/OrderStatusBadge';
+import { formatNumber } from '../../../lib/formatters';
 
 interface OrderHistoryEntry {
   id: string;
@@ -167,7 +168,7 @@ export default function OrderHistoryView({ orderId, role }: OrderHistoryViewProp
           {entry.metadata && Object.keys(entry.metadata).length > 0 && (
             <div className="text-xs text-gray-500">
               {entry.metadata.file_size && (
-                <span>Size: {(entry.metadata.file_size / 1024 / 1024).toFixed(2)} MB</span>
+                <span>Size: {formatNumber(entry.metadata.file_size / 1024 / 1024, 2)} MB</span>
               )}
               {entry.metadata.description && (
                 <span className="ml-2">Description: {entry.metadata.description}</span>

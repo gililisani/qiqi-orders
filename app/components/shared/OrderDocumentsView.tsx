@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
+import { formatNumber } from '../../../lib/formatters';
 
 interface OrderDocument {
   id: string;
@@ -105,7 +106,7 @@ export default function OrderDocumentsView({ orderId, role, onUploadComplete }: 
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return formatNumber(bytes / Math.pow(k, i), 2) + ' ' + sizes[i];
   };
 
   const handleDeleteDocument = async (doc: OrderDocument) => {

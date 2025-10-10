@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
+import { formatNumber } from '../../../lib/formatters';
 
 interface OrderDocumentUploadProps {
   orderId: string;
@@ -281,7 +282,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
                           <div>
                             <p className="text-sm font-medium text-gray-900">{uploadingFile.file.name}</p>
                             <p className="text-xs text-gray-500">
-                              {(uploadingFile.file.size / 1024 / 1024).toFixed(2)} MB
+                              {formatNumber(uploadingFile.file.size / 1024 / 1024, 2)} MB
                             </p>
                             {uploadingFile.error && (
                               <p className="text-xs text-red-500">{uploadingFile.error}</p>

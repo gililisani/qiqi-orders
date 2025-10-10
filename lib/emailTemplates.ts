@@ -4,6 +4,8 @@
  * This module contains all email templates used for order notifications.
  */
 
+import { formatCurrency, formatQuantity } from './formatters';
+
 interface OrderEmailData {
   orderNumber: string;
   orderId: string;
@@ -70,7 +72,7 @@ export function orderCreatedTemplate(data: OrderEmailData): { subject: string; h
         <tr>
           <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.productName}</td>
           <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.unitPrice.toFixed(2)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         </tr>
       `
     )
@@ -115,7 +117,7 @@ export function orderCreatedTemplate(data: OrderEmailData): { subject: string; h
       <tfoot>
         <tr style="background-color: #f8f9fa;">
           <td colspan="2" style="padding: 12px; text-align: right; color: #374151; font-size: 16px; font-weight: 600;">Total:</td>
-          <td style="padding: 12px; text-align: right; color: #374151; font-size: 16px; font-weight: 600;">$${data.totalAmount.toFixed(2)}</td>
+          <td style="padding: 12px; text-align: right; color: #374151; font-size: 16px; font-weight: 600;">$${data.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         </tr>
       </tfoot>
       `

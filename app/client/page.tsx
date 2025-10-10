@@ -7,6 +7,7 @@ import ClientLayout from '../components/ClientLayout';
 import Card from '../components/ui/Card';
 import Link from 'next/link';
 import OrderStatusBadge from '../components/ui/OrderStatusBadge';
+import { formatCurrency } from '../../lib/formatters';
 
 interface Order {
   id: string;
@@ -197,10 +198,10 @@ export default function ClientDashboard() {
                           <OrderStatusBadge status={order.status} />
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          ${order.total_value?.toFixed(2) || '0.00'}
+                          {formatCurrency(order.total_value)}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          ${order.support_fund_used?.toFixed(2) || '0.00'}
+                          {formatCurrency(order.support_fund_used)}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                           {new Date(order.created_at).toLocaleDateString()}

@@ -1239,23 +1239,23 @@ export default function OrderDetailsView({
               <>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Regular Items:</span>
-                  <span className="text-sm font-medium">${regularSubtotal.toFixed(2)}</span>
+                  <span className="text-sm font-medium">{formatCurrency(regularSubtotal)}</span>
                 </div>
 
                 <div className="flex justify-between text-green-600">
                   <span className="text-sm">Credit Used:</span>
-                  <span className="text-sm font-medium">${creditUsed.toFixed(2)}</span>
+                  <span className="text-sm font-medium">{formatCurrency(creditUsed)}</span>
                 </div>
 
                 <div className="flex justify-between text-orange-600">
                   <span className="text-sm">Balance:</span>
-                  <span className="text-sm font-medium">${balance.toFixed(2)}</span>
+                  <span className="text-sm font-medium">{formatCurrency(balance)}</span>
                 </div>
 
                 <div className="border-t pt-2">
                   <div className="flex justify-between">
                     <span className="text-lg font-semibold">Total Order Value:</span>
-                    <span className="text-lg font-semibold">${totalOrderValue.toFixed(2)}</span>
+                    <span className="text-lg font-semibold">{formatCurrency(totalOrderValue)}</span>
                   </div>
                 </div>
               </>

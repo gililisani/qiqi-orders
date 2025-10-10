@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
 import AdminLayout from '../../../components/AdminLayout';
+import { formatCurrency } from '../../../../lib/formatters';
 
 interface ProductData {
   item_name: string;
@@ -333,10 +334,10 @@ Please check for extra commas, missing fields, or incorrect column order.`);
                           {product.case_pack}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${product.price_international.toFixed(2)}
+                          {formatCurrency(product.price_international)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${product.price_americas.toFixed(2)}
+                          {formatCurrency(product.price_americas)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {product.enable ? 'Yes' : 'No'}
