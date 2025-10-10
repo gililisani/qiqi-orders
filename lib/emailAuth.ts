@@ -1,8 +1,8 @@
 /**
- * Email Authentication - OAuth Token Management for Microsoft 365 SMTP
+ * Email Authentication - OAuth Token Management for Microsoft Graph API
  * 
  * This module handles OAuth token acquisition and caching for sending emails
- * via Microsoft 365 SMTP using client credentials flow.
+ * via Microsoft Graph API using client credentials flow.
  */
 
 interface TokenResponse {
@@ -19,10 +19,10 @@ interface CachedToken {
 let tokenCache: CachedToken | null = null;
 
 /**
- * Get an OAuth access token for SMTP authentication
- * Implements token caching and refresh logic
+ * Get an OAuth access token for Microsoft Graph API
+ * Implements token caching and refresh logic with 60-second buffer
  */
-export async function getSmtpAccessToken(): Promise<string> {
+export async function getGraphAccessToken(): Promise<string> {
   // Check if we have a valid cached token (with 60 second buffer)
   const now = Date.now();
   if (tokenCache && tokenCache.expiresAt > now + 60000) {
@@ -44,7 +44,7 @@ export async function getSmtpAccessToken(): Promise<string> {
     grant_type: 'client_credentials',
     client_id: AZURE_CLIENT_ID,
     client_secret: AZURE_CLIENT_SECRET,
-    scope: 'https://outlook.office365.com/.default',
+    scope: 'https://graph.microsoft.com/.default',
   });
 
   try {
@@ -71,19 +71,6 @@ export async function getSmtpAccessToken(): Promise<string> {
       token: data.access_token,
       expiresAt: now + data.expires_in * 1000,
     };
-
-    // Debug: Decode token to verify claims (don't log in production)
-    try {
-      const payload = JSON.parse(Buffer.from(data.access_token.split('.')[1], 'base64').toString());
-      console.log('Token Claims:', {
-        aud: payload.aud,
-        roles: payload.roles,
-        app_displayname: payload.app_displayname,
-        expires: new Date(payload.exp * 1000).toISOString(),
-      });
-    } catch (e) {
-      console.log('Could not decode token for debugging');
-    }
 
     return data.access_token;
   } catch (error) {

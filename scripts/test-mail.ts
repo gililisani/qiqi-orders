@@ -26,9 +26,9 @@ async function testEmail() {
     process.exit(1);
   }
 
-  console.log('📧 Sending test email...');
+  console.log('📧 Sending test email via Microsoft Graph API...');
   console.log(`   To: ${recipient}`);
-  console.log(`   From: ${process.env.SMTP_FROM || 'orders@qiqiglobal.com'}`);
+  console.log(`   From: orders@qiqiglobal.com`);
   console.log('');
 
   try {
@@ -60,8 +60,8 @@ async function testEmail() {
               <div class="info">
                 <p><strong>Test Details:</strong></p>
                 <ul>
-                  <li>Sent via Microsoft 365 SMTP with OAuth</li>
-                  <li>Sender: ${process.env.SMTP_FROM || 'orders@qiqiglobal.com'}</li>
+                  <li>Sent via Microsoft Graph API with OAuth</li>
+                  <li>Sender: orders@qiqiglobal.com</li>
                   <li>Timestamp: ${new Date().toISOString()}</li>
                 </ul>
               </div>
