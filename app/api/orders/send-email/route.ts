@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         `
         *,
         companies (company_name),
-        clients (email, name),
+        client:clients!user_id (email, name),
         order_items (
           quantity,
           unit_price,
@@ -95,8 +95,8 @@ export async function POST(request: NextRequest) {
       siteUrl,
     };
 
-    // Get recipient email from clients table
-    const recipientEmail = order.clients?.email;
+    // Get recipient email from client relationship
+    const recipientEmail = order.client?.email;
     if (!recipientEmail) {
       return NextResponse.json(
         { error: 'Order user email not found' },
