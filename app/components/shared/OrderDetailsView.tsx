@@ -10,6 +10,7 @@ import OrderDocumentUpload from './OrderDocumentUpload';
 import OrderDocumentsView from './OrderDocumentsView';
 import OrderHistoryView from './OrderHistoryView';
 import OrderStatusBadge from '../ui/OrderStatusBadge';
+import { formatCurrency, formatQuantity } from '../../../lib/formatters';
 
 interface Order {
   id: string;
@@ -1094,12 +1095,12 @@ export default function OrderDetailsView({
           <div className="px-6 space-y-2">
             <div>
               <label className="text-sm font-medium text-gray-500">Total Order</label>
-              <p className="text-lg font-semibold">${order.total_value?.toFixed(2) || '0.00'}</p>
+              <p className="text-lg font-semibold">{formatCurrency(order.total_value)}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-500">Credit Earned</label>
               <p className="text-lg text-green-600 font-semibold">
-                ${order.credit_earned?.toFixed(2) || '0.00'}
+                {formatCurrency(order.credit_earned)}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -1190,10 +1191,10 @@ export default function OrderDetailsView({
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{item.product?.sku || 'N/A'}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{item.case_qty || 0}</td>
-                  <td className={`px-4 py-3 whitespace-nowrap text-sm ${item.is_support_fund_item ? 'text-green-700 font-medium' : 'text-gray-900'}`}>${item.unit_price?.toFixed(2) || '0.00'}</td>
-                  <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${item.is_support_fund_item ? 'text-green-700' : 'text-gray-900'}`}>${item.total_price?.toFixed(2) || '0.00'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{formatQuantity(item.quantity)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{formatQuantity(item.case_qty || 0)}</td>
+                  <td className={`px-4 py-3 whitespace-nowrap text-sm ${item.is_support_fund_item ? 'text-green-700 font-medium' : 'text-gray-900'}`}>{formatCurrency(item.unit_price)}</td>
+                  <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${item.is_support_fund_item ? 'text-green-700' : 'text-gray-900'}`}>{formatCurrency(item.total_price)}</td>
                 </tr>
               ))}
             </tbody>
