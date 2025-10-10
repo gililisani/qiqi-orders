@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Qiqi Orders - Email Templates Preview</title>
+  <title>Qiqi Orders - Email Templates Preview (Updated Design)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -17,7 +17,12 @@
     }
     h1 {
       text-align: center;
-      color: #1e293b;
+      color: #000000;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #6b7280;
       margin-bottom: 40px;
     }
     .email-section {
@@ -28,9 +33,9 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     .email-section h2 {
-      color: #1e293b;
+      color: #000000;
       margin-top: 0;
-      border-bottom: 2px solid #1e293b;
+      border-bottom: 2px solid #000000;
       padding-bottom: 10px;
     }
     .email-frame {
@@ -39,36 +44,43 @@
       overflow: hidden;
       margin-top: 20px;
     }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: #000;
+      color: white;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 10px;
+    }
   </style>
 </head>
 <body>
   <div class="preview-container">
-    <h1>📧 Qiqi Orders Email Templates Preview</h1>
+    <h1>📧 Qiqi Orders Email Templates</h1>
+    <p class="subtitle"><strong>Updated Design:</strong> Logo header • Black buttons • White/Black/Gray palette • No footer</p>
 
     <!-- 1. Order Created -->
     <div class="email-section">
-      <h2>1️⃣ Order Created Email</h2>
-      <p><strong>Trigger:</strong> When a new order is created</p>
+      <h2>1️⃣ Order Confirmation <span class="badge">Trigger: Order Created</span></h2>
       <div class="email-frame">
         <!DOCTYPE html>
         <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px 0;">
             <tr>
               <td align="center">
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                  <!-- Header with Logo -->
                   <tr>
-                    <td style="background-color: #1e293b; padding: 30px; text-align: center;">
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px;">Qiqi Orders</h1>
+                    <td style="background-color: #ffffff; padding: 40px 30px 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                      <img src="https://partners.qiqiglobal.com/QIQI-Logo.svg" alt="Qiqi" style="height: 50px; width: auto;" />
                     </td>
                   </tr>
+                  <!-- Content -->
                   <tr>
                     <td style="padding: 40px 30px;">
-                      <h2 style="margin: 0 0 20px; color: #1e293b; font-size: 22px;">Order Confirmation</h2>
+                      <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px;">Order Confirmation</h2>
                       <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
                         Your order <strong>#ORD-2025-001</strong> has been successfully created and is being processed.
                       </p>
@@ -82,7 +94,7 @@
                           </td>
                         </tr>
                       </table>
-                      <h3 style="margin: 30px 0 15px; color: #1e293b; font-size: 18px;">Order Items</h3>
+                      <h3 style="margin: 30px 0 15px; color: #000000; font-size: 18px;">Order Items</h3>
                       <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
                         <thead>
                           <tr style="background-color: #f8f9fa;">
@@ -112,20 +124,12 @@
                       </table>
                       <div style="margin: 30px 0; text-align: center;">
                         <a href="https://partners.qiqiglobal.com/client/orders/123" 
-                           style="display: inline-block; padding: 14px 32px; background-color: #1e293b; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+                           style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
                           View Order Details
                         </a>
                       </div>
                       <p style="margin: 20px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
                         We will notify you when your order status changes. If you have any questions, please contact our support team.
-                      </p>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-                      <p style="margin: 0; color: #6b7280; font-size: 14px;">
-                        This is an automated message from Qiqi Orders System.<br>
-                        Please do not reply to this email.
                       </p>
                     </td>
                   </tr>
@@ -140,8 +144,7 @@
 
     <!-- 2. Order In Process -->
     <div class="email-section">
-      <h2>2️⃣ Order In Process Email</h2>
-      <p><strong>Trigger:</strong> When order status changes to "In Process"</p>
+      <h2>2️⃣ Order In Process <span class="badge">Trigger: Status → In Process</span></h2>
       <div class="email-frame">
         <!DOCTYPE html>
         <html lang="en">
@@ -151,13 +154,13 @@
               <td align="center">
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                   <tr>
-                    <td style="background-color: #1e293b; padding: 30px; text-align: center;">
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px;">Qiqi Orders</h1>
+                    <td style="background-color: #ffffff; padding: 40px 30px 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                      <img src="https://partners.qiqiglobal.com/QIQI-Logo.svg" alt="Qiqi" style="height: 50px; width: auto;" />
                     </td>
                   </tr>
                   <tr>
                     <td style="padding: 40px 30px;">
-                      <h2 style="margin: 0 0 20px; color: #1e293b; font-size: 22px;">Order In Process</h2>
+                      <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px;">Order In Process</h2>
                       <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
                         Great news! Your order <strong>#ORD-2025-001</strong> is now being processed.
                       </p>
@@ -165,7 +168,7 @@
                         <tr>
                           <td>
                             <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> Acme Corporation</p>
-                            <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #2563eb;">In Process</span></p>
+                            <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #000000;">In Process</span></p>
                             <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> PO-12345</p>
                             <p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> SO-67890</p>
                           </td>
@@ -176,18 +179,10 @@
                       </p>
                       <div style="margin: 30px 0; text-align: center;">
                         <a href="https://partners.qiqiglobal.com/client/orders/123" 
-                           style="display: inline-block; padding: 14px 32px; background-color: #1e293b; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+                           style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
                           Track Order Status
                         </a>
                       </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-                      <p style="margin: 0; color: #6b7280; font-size: 14px;">
-                        This is an automated message from Qiqi Orders System.<br>
-                        Please do not reply to this email.
-                      </p>
                     </td>
                   </tr>
                 </table>
@@ -201,8 +196,7 @@
 
     <!-- 3. Order Ready -->
     <div class="email-section">
-      <h2>3️⃣ Order Ready Email</h2>
-      <p><strong>Trigger:</strong> When order status changes to "Ready"</p>
+      <h2>3️⃣ Order Ready <span class="badge">Trigger: Status → Ready</span></h2>
       <div class="email-frame">
         <!DOCTYPE html>
         <html lang="en">
@@ -212,13 +206,13 @@
               <td align="center">
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                   <tr>
-                    <td style="background-color: #1e293b; padding: 30px; text-align: center;">
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px;">Qiqi Orders</h1>
+                    <td style="background-color: #ffffff; padding: 40px 30px 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                      <img src="https://partners.qiqiglobal.com/QIQI-Logo.svg" alt="Qiqi" style="height: 50px; width: auto;" />
                     </td>
                   </tr>
                   <tr>
                     <td style="padding: 40px 30px;">
-                      <h2 style="margin: 0 0 20px; color: #1e293b; font-size: 22px;">Order Ready!</h2>
+                      <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px;">Order Ready!</h2>
                       <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
                         Excellent news! Your order <strong>#ORD-2025-001</strong> is now ready for pickup/delivery.
                       </p>
@@ -226,7 +220,7 @@
                         <tr>
                           <td>
                             <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> Acme Corporation</p>
-                            <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #f97316;">Ready</span></p>
+                            <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #000000;">Ready</span></p>
                             <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> PO-12345</p>
                             <p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> SO-67890</p>
                           </td>
@@ -237,18 +231,10 @@
                       </p>
                       <div style="margin: 30px 0; text-align: center;">
                         <a href="https://partners.qiqiglobal.com/client/orders/123" 
-                           style="display: inline-block; padding: 14px 32px; background-color: #1e293b; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+                           style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
                           View Order Details
                         </a>
                       </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-                      <p style="margin: 0; color: #6b7280; font-size: 14px;">
-                        This is an automated message from Qiqi Orders System.<br>
-                        Please do not reply to this email.
-                      </p>
                     </td>
                   </tr>
                 </table>
@@ -262,8 +248,7 @@
 
     <!-- 4. Order Cancelled -->
     <div class="email-section">
-      <h2>4️⃣ Order Cancelled Email</h2>
-      <p><strong>Trigger:</strong> When order status changes to "Cancelled"</p>
+      <h2>4️⃣ Order Cancelled <span class="badge">Trigger: Status → Cancelled</span></h2>
       <div class="email-frame">
         <!DOCTYPE html>
         <html lang="en">
@@ -273,21 +258,21 @@
               <td align="center">
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                   <tr>
-                    <td style="background-color: #1e293b; padding: 30px; text-align: center;">
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px;">Qiqi Orders</h1>
+                    <td style="background-color: #ffffff; padding: 40px 30px 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                      <img src="https://partners.qiqiglobal.com/QIQI-Logo.svg" alt="Qiqi" style="height: 50px; width: auto;" />
                     </td>
                   </tr>
                   <tr>
                     <td style="padding: 40px 30px;">
-                      <h2 style="margin: 0 0 20px; color: #1e293b; font-size: 22px;">Order Cancelled</h2>
+                      <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px;">Order Cancelled</h2>
                       <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
                         Your order <strong>#ORD-2025-001</strong> has been cancelled.
                       </p>
-                      <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #fef2f2; border-radius: 6px; padding: 20px;">
+                      <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
                         <tr>
                           <td>
                             <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> Acme Corporation</p>
-                            <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #ec4899;">Cancelled</span></p>
+                            <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #000000;">Cancelled</span></p>
                             <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> PO-12345</p>
                             <p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> SO-67890</p>
                           </td>
@@ -298,18 +283,10 @@
                       </p>
                       <div style="margin: 30px 0; text-align: center;">
                         <a href="https://partners.qiqiglobal.com/client/orders/123" 
-                           style="display: inline-block; padding: 14px 32px; background-color: #1e293b; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+                           style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
                           View Order Details
                         </a>
                       </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-                      <p style="margin: 0; color: #6b7280; font-size: 14px;">
-                        This is an automated message from Qiqi Orders System.<br>
-                        Please do not reply to this email.
-                      </p>
                     </td>
                   </tr>
                 </table>
@@ -323,8 +300,7 @@
 
     <!-- 5. Custom Update -->
     <div class="email-section">
-      <h2>5️⃣ Custom Update Email</h2>
-      <p><strong>Trigger:</strong> When admin clicks "Send Update" button with a custom message</p>
+      <h2>5️⃣ Custom Update <span class="badge">Trigger: Admin "Send Update" Button</span></h2>
       <div class="email-frame">
         <!DOCTYPE html>
         <html lang="en">
@@ -334,13 +310,13 @@
               <td align="center">
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                   <tr>
-                    <td style="background-color: #1e293b; padding: 30px; text-align: center;">
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px;">Qiqi Orders</h1>
+                    <td style="background-color: #ffffff; padding: 40px 30px 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                      <img src="https://partners.qiqiglobal.com/QIQI-Logo.svg" alt="Qiqi" style="height: 50px; width: auto;" />
                     </td>
                   </tr>
                   <tr>
                     <td style="padding: 40px 30px;">
-                      <h2 style="margin: 0 0 20px; color: #1e293b; font-size: 22px;">Order Update</h2>
+                      <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px;">Order Update</h2>
                       <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
                         We have an update regarding your order <strong>#ORD-2025-001</strong>.
                       </p>
@@ -354,27 +330,19 @@
                           </td>
                         </tr>
                       </table>
-                      <div style="margin: 20px 0; padding: 20px; background-color: #eff6ff; border-left: 4px solid #2563eb; border-radius: 6px;">
-                        <p style="margin: 0; color: #1e40af; font-size: 16px; line-height: 1.6;">
+                      <div style="margin: 20px 0; padding: 20px; background-color: #f8f9fa; border-left: 4px solid #000000; border-radius: 6px;">
+                        <p style="margin: 0; color: #374151; font-size: 16px; line-height: 1.6;">
                           We're experiencing a slight delay with one of the components. Your order will be ready by tomorrow afternoon. Thank you for your patience!
                         </p>
                       </div>
                       <div style="margin: 30px 0; text-align: center;">
                         <a href="https://partners.qiqiglobal.com/client/orders/123" 
-                           style="display: inline-block; padding: 14px 32px; background-color: #1e293b; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+                           style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
                           View Order Details
                         </a>
                       </div>
                       <p style="margin: 20px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
                         If you have any questions, please contact our support team.
-                      </p>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-                      <p style="margin: 0; color: #6b7280; font-size: 14px;">
-                        This is an automated message from Qiqi Orders System.<br>
-                        Please do not reply to this email.
                       </p>
                     </td>
                   </tr>
@@ -385,6 +353,13 @@
         </body>
         </html>
       </div>
+    </div>
+
+    <div style="text-align: center; padding: 40px; background: white; border-radius: 8px; margin-top: 40px;">
+      <h3 style="margin: 0 0 20px; color: #000000;">✅ Design Complete</h3>
+      <p style="color: #6b7280; margin: 0;">
+        <strong>Features:</strong> Qiqi Logo • Black Buttons • Minimal Color Palette (White/Black/Gray) • No Footer • Mobile Responsive
+      </p>
     </div>
 
   </div>

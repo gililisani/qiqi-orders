@@ -41,7 +41,7 @@ function emailWrapper(content: string, siteUrl: string): string {
           <!-- Header with Logo -->
           <tr>
             <td style="background-color: #ffffff; padding: 40px 30px 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-              <img src="${siteUrl}/QIQI-Logo.svg" alt="Qiqi" style="height: 50px; width: auto;" />
+              <img src="${siteUrl}/logo.png" alt="Qiqi" style="height: 50px; width: auto; display: block; margin: 0 auto;" />
             </td>
           </tr>
           
