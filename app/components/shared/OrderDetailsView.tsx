@@ -824,19 +824,19 @@ export default function OrderDetailsView({
   };
 
   const handleDeleteOrder = async () => {
-    // Only allow deletion of Cancelled or Draft orders
-    if (order?.status !== 'Cancelled' && order?.status !== 'Draft') {
+    // Use originalStatus (saved status) to check deletion eligibility
+    if (originalStatus !== 'Cancelled' && originalStatus !== 'Draft') {
       alert('Only Cancelled or Draft orders can be deleted.');
       return;
     }
 
     // Only admins can delete Cancelled orders; both can delete Draft
-    if (order?.status === 'Cancelled' && role !== 'admin') {
+    if (originalStatus === 'Cancelled' && role !== 'admin') {
       alert('Only admins can delete cancelled orders.');
       return;
     }
 
-    const confirmMessage = `Are you sure you want to delete this ${order?.status} order? This action cannot be undone.`;
+    const confirmMessage = `Are you sure you want to delete this ${originalStatus} order? This action cannot be undone.`;
     if (!confirm(confirmMessage)) {
       return;
     }
@@ -942,7 +942,8 @@ export default function OrderDetailsView({
           )}
           
           {/* Delete button for Cancelled orders (Admin only) or Draft orders (Both) */}
-          {((role === 'admin' && order?.status === 'Cancelled') || order?.status === 'Draft') && (
+          {/* Use originalStatus (saved status) instead of order.status (UI state) */}
+          {((role === 'admin' && originalStatus === 'Cancelled') || originalStatus === 'Draft') && (
             <button
               onClick={handleDeleteOrder}
               disabled={saving}

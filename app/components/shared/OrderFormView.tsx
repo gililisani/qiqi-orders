@@ -890,6 +890,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           order_id: newOrder.id,
           product_id: item.product_id,
           quantity: item.quantity,
+          case_qty: item.case_qty || 0,
           unit_price: item.unit_price,
           total_price: item.total_price,
           is_support_fund_item: false,
@@ -900,6 +901,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           order_id: newOrder.id,
           product_id: item.product_id,
           quantity: item.quantity,
+          case_qty: item.case_qty || 0,
           unit_price: item.unit_price,
           total_price: item.total_price,
           is_support_fund_item: true,
@@ -1096,7 +1098,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       // Only show warning if there are unsaved changes
       if (hasUnsavedChanges && (orderItems.length > 0 || supportFundItems.length > 0)) {
         e.preventDefault();
-        e.returnValue = 'You have unsaved changes. Do you want to save as draft?';
+        e.returnValue = 'You have unsaved changes. Click "Save as Draft" button before leaving to preserve your work.';
         return e.returnValue;
       }
     };
