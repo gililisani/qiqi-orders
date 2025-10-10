@@ -823,6 +823,48 @@ export default function OrderDetailsView({
     }
   };
 
+  const handleDeleteOrder = async () => {
+    // Only allow deletion of Cancelled or Draft orders
+    if (order?.status !== 'Cancelled' && order?.status !== 'Draft') {
+      alert('Only Cancelled or Draft orders can be deleted.');
+      return;
+    }
+
+    // Only admins can delete Cancelled orders; both can delete Draft
+    if (order?.status === 'Cancelled' && role !== 'admin') {
+      alert('Only admins can delete cancelled orders.');
+      return;
+    }
+
+    const confirmMessage = `Are you sure you want to delete this ${order?.status} order? This action cannot be undone.`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      const response = await fetch(`/api/orders/delete?orderId=${orderId}&userRole=${role}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete order');
+      }
+
+      alert('Order deleted successfully');
+      // Redirect to orders list
+      window.location.href = backUrl;
+    } catch (err: any) {
+      console.error('Error deleting order:', err);
+      alert(err.message || 'Failed to delete order');
+    } finally {
+      setSaving(false);
+    }
+  };
+
 
   // Let AdminLayout handle loading - no need for separate loading state here
 
@@ -896,6 +938,17 @@ export default function OrderDetailsView({
               className="bg-green-600 text-white px-4 py-2 hover:bg-green-700 transition text-sm"
             >
               Download CSV
+            </button>
+          )}
+          
+          {/* Delete button for Cancelled orders (Admin only) or Draft orders (Both) */}
+          {((role === 'admin' && order?.status === 'Cancelled') || order?.status === 'Draft') && (
+            <button
+              onClick={handleDeleteOrder}
+              disabled={saving}
+              className="bg-red-600 text-white px-4 py-2 hover:bg-red-700 transition disabled:opacity-50 text-sm"
+            >
+              {saving ? 'Deleting...' : 'Delete Order'}
             </button>
           )}
           

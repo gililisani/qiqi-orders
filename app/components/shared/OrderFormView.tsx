@@ -333,6 +333,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
   const [showSupportFundReminder, setShowSupportFundReminder] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const isEditMode = !!orderId;
   const isNewMode = !orderId;
@@ -842,7 +843,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     setSaving(false);
   };
 
-  const performSave = async () => {
+  const performSave = async (asDraft: boolean = false) => {
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -877,7 +878,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
             company_id: company.id,
             user_id: user.id,
             po_number: poNumber,
-            status: 'Open'
+            status: asDraft ? 'Draft' : 'Open'
           })
           .select()
           .single();
@@ -935,22 +936,28 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         if (updateTotalsError) throw updateTotalsError;
 
         // Send order created email (fire and forget - don't block redirect)
-        // Use setTimeout to ensure order is fully committed to database
-        setTimeout(async () => {
-          try {
-            await fetch('/api/orders/send-email', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                orderId: newOrder.id,
-                emailType: 'created',
-              }),
-            });
-          } catch (emailError) {
-            // Log but don't throw - email failure shouldn't block order creation
-            console.error('Failed to send order created email:', emailError);
-          }
-        }, 1000); // 1 second delay to ensure DB commit
+        // Only send email for non-draft orders
+        if (!asDraft) {
+          // Use setTimeout to ensure order is fully committed to database
+          setTimeout(async () => {
+            try {
+              await fetch('/api/orders/send-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  orderId: newOrder.id,
+                  emailType: 'created',
+                }),
+              });
+            } catch (emailError) {
+              // Log but don't throw - email failure shouldn't block order creation
+              console.error('Failed to send order created email:', emailError);
+            }
+          }, 1000); // 1 second delay to ensure DB commit
+        }
+
+        // Clear unsaved changes flag
+        setHasUnsavedChanges(false);
 
         // Redirect to order view
         router.push(`/${role}/orders/${newOrder.id}`);
@@ -963,10 +970,14 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         const additionalCost = Math.max(0, supportTotals.subtotal - originalTotals.supportFundEarned);
         const finalTotal = originalTotals.total + additionalCost;
 
+        // Determine status: if current is Draft, allow conversion to Open or Draft
+        const newStatus = asDraft ? 'Draft' : (order?.status === 'Draft' ? 'Open' : order?.status);
+
         const { error: updateError } = await supabase
           .from('orders')
           .update({
             po_number: (order && order.po_number) || null,
+            status: newStatus,
             total_value: finalTotal,
             support_fund_used: supportFundUsed,
             credit_earned: originalTotals.supportFundEarned
@@ -1016,6 +1027,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           if (insertError) throw insertError;
         }
 
+        // Clear unsaved changes flag
+        setHasUnsavedChanges(false);
+
         // Redirect back to order view
         router.push(`/${role}/orders/${orderId}`);
       }
@@ -1044,13 +1058,55 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       }
 
       // Proceed with save
-      await performSave();
+      await performSave(false);
     } catch (error) {
       console.error('Error in handleSave:', error);
       setError(error instanceof Error ? error.message : 'Failed to save order');
       setSaving(false);
     }
   };
+
+  const handleSaveAsDraft = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+
+      // Save as draft (skip support fund reminder check)
+      await performSave(true);
+    } catch (error) {
+      console.error('Error in handleSaveAsDraft:', error);
+      setError(error instanceof Error ? error.message : 'Failed to save draft');
+      setSaving(false);
+    }
+  };
+
+  // Track unsaved changes
+  React.useEffect(() => {
+    // Mark as having unsaved changes when items change (only in new mode)
+    if (isNewMode && (orderItems.length > 0 || supportFundItems.length > 0)) {
+      setHasUnsavedChanges(true);
+    }
+  }, [orderItems, supportFundItems, isNewMode]);
+
+  // Handle page leave warning
+  React.useEffect(() => {
+    if (!hasUnsavedChanges || !isNewMode) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Only show warning if there are unsaved changes
+      if (hasUnsavedChanges && (orderItems.length > 0 || supportFundItems.length > 0)) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Do you want to save as draft?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges, orderItems, supportFundItems, isNewMode]);
 
   // Let AdminLayout handle loading - no separate loading state needed
 
@@ -1413,20 +1469,32 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
               {/* Action Buttons */}
               <div className="pb-3 pt-3">
-                <div className="flex space-x-3">
-                  <button
-                    onClick={handleSave}
-                    disabled={saving || !company}
-                    className="flex-1 bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {saving ? 'Saving...' : (isNewMode ? 'Create Order' : 'Save Changes')}
-                  </button>
-                  <Link
-                    href={backUrl}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </Link>
+                <div className="flex flex-col space-y-2">
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={handleSave}
+                      disabled={saving || !company}
+                      className="flex-1 bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {saving ? 'Saving...' : (isNewMode ? 'Create Order' : (order?.status === 'Draft' ? 'Save as Open' : 'Save Changes'))}
+                    </button>
+                    <Link
+                      href={backUrl}
+                      className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-center"
+                    >
+                      Cancel
+                    </Link>
+                  </div>
+                  {/* Save as Draft Button - only for new orders or draft orders */}
+                  {(isNewMode || order?.status === 'Draft') && (
+                    <button
+                      onClick={handleSaveAsDraft}
+                      disabled={saving || !company}
+                      className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                    >
+                      {saving ? 'Saving...' : 'Save as Draft'}
+                    </button>
+                  )}
                 </div>
               </div>
                 </>
