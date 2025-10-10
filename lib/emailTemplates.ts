@@ -40,7 +40,7 @@ function emailWrapper(content: string, siteUrl: string): string {
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
           <!-- Header with Logo -->
           <tr>
-            <td style="background-color: #ffffff; padding: 40px 30px 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+            <td style="background-color: #ffffff; padding: 40px 30px; text-align: center;">
               <img src="${siteUrl}/logo.png" alt="Qiqi" style="height: 50px; width: auto; display: block; margin: 0 auto;" />
             </td>
           </tr>
@@ -77,7 +77,7 @@ export function orderCreatedTemplate(data: OrderEmailData): { subject: string; h
     .join('');
 
   const content = `
-    <h2 style="margin: 0 0 20px; color: #1e293b; font-size: 22px;">Order Confirmation</h2>
+    <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Confirmation</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
       Your order <strong>#${data.orderNumber}</strong> has been successfully created and is being processed.
@@ -139,7 +139,7 @@ export function orderCreatedTemplate(data: OrderEmailData): { subject: string; h
   `;
 
   return {
-    subject: `Order Confirmation - #${data.orderNumber}`,
+    subject: `New Order received`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -149,7 +149,7 @@ export function orderCreatedTemplate(data: OrderEmailData): { subject: string; h
  */
 export function orderInProcessTemplate(data: OrderEmailData): { subject: string; html: string } {
   const content = `
-    <h2 style="margin: 0 0 20px; color: #1e293b; font-size: 22px;">Order In Process</h2>
+    <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order In Process</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
       Great news! Your order <strong>#${data.orderNumber}</strong> is now being processed.
@@ -179,7 +179,7 @@ export function orderInProcessTemplate(data: OrderEmailData): { subject: string;
   `;
 
   return {
-    subject: `Order In Process - #${data.orderNumber}`,
+    subject: `Your order ${data.soNumber || data.orderNumber} is being processed`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -189,10 +189,10 @@ export function orderInProcessTemplate(data: OrderEmailData): { subject: string;
  */
 export function orderReadyTemplate(data: OrderEmailData): { subject: string; html: string } {
   const content = `
-    <h2 style="margin: 0 0 20px; color: #1e293b; font-size: 22px;">Order Ready!</h2>
+    <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Ready!</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Excellent news! Your order <strong>#${data.orderNumber}</strong> is now ready for pickup/delivery.
+      Excellent news! Your order <strong>${data.soNumber || data.orderNumber}</strong> is now ready for pickup. You may Edit and/or Print your packing slip.
     </p>
     
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
@@ -219,7 +219,7 @@ export function orderReadyTemplate(data: OrderEmailData): { subject: string; htm
   `;
 
   return {
-    subject: `Order Ready - #${data.orderNumber}`,
+    subject: `Order ${data.soNumber || data.orderNumber} is ready for pickup!`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -229,7 +229,7 @@ export function orderReadyTemplate(data: OrderEmailData): { subject: string; htm
  */
 export function orderCancelledTemplate(data: OrderEmailData): { subject: string; html: string } {
   const content = `
-    <h2 style="margin: 0 0 20px; color: #1e293b; font-size: 22px;">Order Cancelled</h2>
+    <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Cancelled</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
       Your order <strong>#${data.orderNumber}</strong> has been cancelled.
@@ -259,7 +259,7 @@ export function orderCancelledTemplate(data: OrderEmailData): { subject: string;
   `;
 
   return {
-    subject: `Order Cancelled - #${data.orderNumber}`,
+    subject: `Order ${data.soNumber || data.orderNumber} has been cancelled`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -269,7 +269,7 @@ export function orderCancelledTemplate(data: OrderEmailData): { subject: string;
  */
 export function customUpdateTemplate(data: OrderEmailData): { subject: string; html: string } {
   const content = `
-    <h2 style="margin: 0 0 20px; color: #1e293b; font-size: 22px;">Order Update</h2>
+    <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Update</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
       We have an update regarding your order <strong>#${data.orderNumber}</strong>.

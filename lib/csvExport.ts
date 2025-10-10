@@ -93,28 +93,57 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
     console.log('CSV Generation - Subsidiary name:', subsidiaryName);
     console.log('CSV Generation - Tax Item result:', taxItem);
 
-    // Generate rows for each product
-    order.order_items.forEach((item, index) => {
-      console.log(`CSV Generation - Processing item ${index + 1}:`, item);
-    const row = [
-      externalId, // External ID (same for all lines)
-      formattedDate, // Date
-      'Sales Order', // Type
-      `${order.company.netsuite_number} ${order.company.company_name}`, // Name
-      '', // Memo (empty for products)
-      item.unit_price.toString(), // Rate (price per item)
-      order.po_number || '', // PO/Cheque Number
-      order.company.class?.name || 'Default Class', // Class
-      formatSubsidiary(order.company.subsidiary?.name), // Subsidiary
-      order.company.location?.location_name || 'Default Location', // Location
-      `${item.product.sku}${item.product.netsuite_name ? ' ' + item.product.netsuite_name : ''}`, // Item
-      item.quantity.toString(), // Quantity
-      'Pending Fulfillment', // Status
-      taxItem // Tax Item
-    ];
-    
-    rows.push(row);
-  });
+    // Combine duplicate SKUs (regular + support fund products)
+    const consolidatedItems = new Map<string, {
+      sku: string;
+      netsuiteName: string;
+      quantity: number;
+      unitPrice: number;
+    }>();
+
+    order.order_items.forEach((item) => {
+      const sku = item.product.sku;
+      const itemKey = `${sku}_${item.unit_price}`; // Group by SKU and unit price
+      
+      if (consolidatedItems.has(itemKey)) {
+        // Add to existing item
+        const existing = consolidatedItems.get(itemKey)!;
+        existing.quantity += item.quantity;
+      } else {
+        // Create new consolidated item
+        consolidatedItems.set(itemKey, {
+          sku: sku,
+          netsuiteName: item.product.netsuite_name || '',
+          quantity: item.quantity,
+          unitPrice: item.unit_price
+        });
+      }
+    });
+
+    console.log('CSV Generation - Consolidated', consolidatedItems.size, 'unique items from', order.order_items.length, 'original items');
+
+    // Generate rows for each consolidated product
+    consolidatedItems.forEach((item, index) => {
+      console.log(`CSV Generation - Processing consolidated item:`, item);
+      const row = [
+        externalId, // External ID (same for all lines)
+        formattedDate, // Date
+        'Sales Order', // Type
+        `${order.company.netsuite_number} ${order.company.company_name}`, // Name
+        '', // Memo (empty for products)
+        item.unitPrice.toString(), // Rate (price per item)
+        order.po_number || '', // PO/Cheque Number
+        order.company.class?.name || 'Default Class', // Class
+        formatSubsidiary(order.company.subsidiary?.name), // Subsidiary
+        order.company.location?.location_name || 'Default Location', // Location
+        `${item.sku}${item.netsuiteName ? ' ' + item.netsuiteName : ''}`, // Item
+        item.quantity.toString(), // Quantity (combined)
+        'Pending Fulfillment', // Status
+        taxItem // Tax Item
+      ];
+      
+      rows.push(row);
+    });
 
   // Add support fund redemption row if applicable
   if (order.support_fund_used > 0) {
