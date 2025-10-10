@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
 import Link from 'next/link';
+import { CreditCardIcon } from '@heroicons/react/24/outline';
 
 interface PaymentTerm {
   id: number;
@@ -13,6 +15,7 @@ interface PaymentTerm {
 }
 
 export default function PaymentTermsPage() {
+  const router = useRouter();
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -34,22 +37,6 @@ export default function PaymentTermsPage() {
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this payment term?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('payment_terms')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      fetchPaymentTerms(); // Refresh the list
-    } catch (err: any) {
-      setError(err.message);
     }
   };
 
@@ -82,12 +69,12 @@ export default function PaymentTermsPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow border overflow-hidden">
+        <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
+                  Payment Term
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Description
@@ -95,42 +82,40 @@ export default function PaymentTermsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Created
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {paymentTerms.map((term) => (
-                <tr key={term.id} className="hover:bg-gray-50">
+                <tr
+                  key={term.id}
+                  onClick={() => router.push(`/admin/payment-terms/${term.id}/edit`)}
+                  className="hover:bg-gray-50 cursor-pointer transition-colors"
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {term.name}
+                    <div className="flex items-center">
+                      <CreditCardIcon className="h-5 w-5 text-gray-400 mr-3" />
+                      <div className="text-sm font-medium text-gray-900">
+                        {term.name}
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">
-                      {term.description || 'No description'}
-                    </div>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    {term.description || 'No description'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(term.created_at).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <Link
-                        href={`/admin/payment-terms/${term.id}/edit`}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(term.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Delete
-                      </button>
-                    </div>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Link
+                      href={`/admin/payment-terms/${term.id}/edit`}
+                      className="text-black hover:opacity-70 transition-opacity"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Edit
+                    </Link>
                   </td>
                 </tr>
               ))}
@@ -141,11 +126,12 @@ export default function PaymentTermsPage() {
         {paymentTerms.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             <p>No payment terms found.</p>
-            <p className="text-sm mt-2">
-              <Link href="/admin/payment-terms/new" className="text-blue-600 hover:text-blue-800">
-                Add the first payment term
-              </Link>
-            </p>
+            <Link
+              href="/admin/payment-terms/new"
+              className="mt-4 inline-block bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
+            >
+              Add First Payment Term
+            </Link>
           </div>
         )}
       </div>

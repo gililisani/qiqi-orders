@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
 import Link from 'next/link';
+import { TruckIcon } from '@heroicons/react/24/outline';
 
 interface Incoterm {
   id: number;
@@ -13,6 +15,7 @@ interface Incoterm {
 }
 
 export default function IncotermsPage() {
+  const router = useRouter();
   const [incoterms, setIncoterms] = useState<Incoterm[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -34,22 +37,6 @@ export default function IncotermsPage() {
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this incoterm?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('incoterms')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      fetchIncoterms(); // Refresh the list
-    } catch (err: any) {
-      setError(err.message);
     }
   };
 
@@ -82,12 +69,12 @@ export default function IncotermsPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow border overflow-hidden">
+        <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
+                  Incoterm
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Description
@@ -95,42 +82,40 @@ export default function IncotermsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Created
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {incoterms.map((incoterm) => (
-                <tr key={incoterm.id} className="hover:bg-gray-50">
+                <tr
+                  key={incoterm.id}
+                  onClick={() => router.push(`/admin/incoterms/${incoterm.id}/edit`)}
+                  className="hover:bg-gray-50 cursor-pointer transition-colors"
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {incoterm.name}
+                    <div className="flex items-center">
+                      <TruckIcon className="h-5 w-5 text-gray-400 mr-3" />
+                      <div className="text-sm font-medium text-gray-900">
+                        {incoterm.name}
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">
-                      {incoterm.description || 'No description'}
-                    </div>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    {incoterm.description || 'No description'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(incoterm.created_at).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <Link
-                        href={`/admin/incoterms/${incoterm.id}/edit`}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(incoterm.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Delete
-                      </button>
-                    </div>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Link
+                      href={`/admin/incoterms/${incoterm.id}/edit`}
+                      className="text-black hover:opacity-70 transition-opacity"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Edit
+                    </Link>
                   </td>
                 </tr>
               ))}
@@ -141,11 +126,12 @@ export default function IncotermsPage() {
         {incoterms.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             <p>No incoterms found.</p>
-            <p className="text-sm mt-2">
-              <Link href="/admin/incoterms/new" className="text-blue-600 hover:text-blue-800">
-                Add the first incoterm
-              </Link>
-            </p>
+            <Link
+              href="/admin/incoterms/new"
+              className="mt-4 inline-block bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
+            >
+              Add First Incoterm
+            </Link>
           </div>
         )}
       </div>

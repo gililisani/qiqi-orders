@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
 import Link from 'next/link';
+import { BanknotesIcon } from '@heroicons/react/24/outline';
 
 interface SupportFund {
   id: string;
@@ -12,6 +14,7 @@ interface SupportFund {
 }
 
 export default function SupportFundsPage() {
+  const router = useRouter();
   const [supportFunds, setSupportFunds] = useState<SupportFund[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,27 +48,6 @@ export default function SupportFundsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this support fund level?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('support_fund_levels')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error deleting support fund:', error);
-        setError('Failed to delete support fund level.');
-      } else {
-        setSupportFunds(supportFunds.filter(fund => fund.id !== id));
-      }
-    } catch (err) {
-      console.error('Unexpected error deleting support fund:', err);
-      setError('An unexpected error occurred.');
-    }
-  };
-
   if (loading) {
     return (
       <AdminLayout>
@@ -91,44 +73,62 @@ export default function SupportFundsPage() {
 
         {error && <p className="text-red-600 mb-4">{error}</p>}
 
-        {supportFunds.length > 0 ? (
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <ul className="divide-y divide-gray-200">
+        <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Support Fund Level
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Created
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
               {supportFunds.map((fund) => (
-                <li key={fund.id} className="px-6 py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-medium text-gray-900">
+                <tr
+                  key={fund.id}
+                  onClick={() => router.push(`/admin/support-funds/${fund.id}/edit`)}
+                  className="hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <BanknotesIcon className="h-5 w-5 text-gray-400 mr-3" />
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-green-100 text-green-800">
                         {fund.percent}%
-                      </h3>
+                      </span>
                     </div>
-                    <div className="flex space-x-2">
-                      <Link
-                        href={`/admin/support-funds/${fund.id}/edit`}
-                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(fund.id)}
-                        className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </li>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(fund.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Link
+                      href={`/admin/support-funds/${fund.id}/edit`}
+                      className="text-black hover:opacity-70 transition-opacity"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Edit
+                    </Link>
+                  </td>
+                </tr>
               ))}
-            </ul>
-          </div>
-        ) : (
-          <div className="text-center p-10 border rounded-lg bg-gray-50">
-            <p className="text-lg text-gray-700 mb-4">No support fund levels found. Start by adding a new level!</p>
+            </tbody>
+          </table>
+        </div>
+
+        {supportFunds.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            <p>No support fund levels found.</p>
             <Link
               href="/admin/support-funds/new"
               className="mt-4 inline-block bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
             >
-              Add Your First Support Fund Level
+              Add First Support Fund Level
             </Link>
           </div>
         )}

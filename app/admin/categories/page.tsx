@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
 import Link from 'next/link';
@@ -18,6 +19,7 @@ interface Category {
 }
 
 export default function CategoriesPage() {
+  const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -113,7 +115,11 @@ export default function CategoriesPage() {
               </thead>
               <tbody>
                 {categories.map((category) => (
-                  <tr key={category.id} className="hover:bg-gray-50 border-b border-[#e5e5e5]">
+                  <tr
+                    key={category.id}
+                    onClick={() => router.push(`/admin/categories/${category.id}/edit`)}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors border-b border-[#e5e5e5]"
+                  >
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{category.sort_order}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {category.image_url ? (
@@ -149,8 +155,13 @@ export default function CategoriesPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
                       <div className="flex items-center gap-3">
-                        <Link className="text-blue-600 hover:text-blue-800" href={`/admin/categories/${category.id}/edit`}>Edit</Link>
-                        <button onClick={() => handleDelete(category.id, category.name)} className="text-red-600 hover:text-red-800">Delete</button>
+                        <Link
+                          className="text-black hover:opacity-70 transition-opacity"
+                          href={`/admin/categories/${category.id}/edit`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Edit
+                        </Link>
                       </div>
                     </td>
                   </tr>

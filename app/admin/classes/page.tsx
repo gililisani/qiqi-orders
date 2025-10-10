@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
 import Link from 'next/link';
+import { TagIcon } from '@heroicons/react/24/outline';
 
 interface Class {
   id: string;
@@ -12,6 +14,7 @@ interface Class {
 }
 
 export default function ClassesPage() {
+  const router = useRouter();
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,27 +42,6 @@ export default function ClassesPage() {
       setError('An unexpected error occurred.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this class?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('classes')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error deleting class:', error);
-        setError('Failed to delete class.');
-      } else {
-        setClasses(classes.filter(cls => cls.id !== id));
-      }
-    } catch (err) {
-      console.error('Unexpected error deleting class:', err);
-      setError('An unexpected error occurred.');
     }
   };
 
@@ -96,50 +78,66 @@ export default function ClassesPage() {
             placeholder="Search classes by name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none"
+            className="w-full max-w-md px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
           />
         </div>
 
         {error && <p className="text-red-600 mb-4">{error}</p>}
 
-        {filteredClasses.length > 0 ? (
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <ul className="divide-y divide-gray-200">
+        <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Class Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Created
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
               {filteredClasses.map((cls) => (
-                <li key={cls.id} className="px-6 py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {cls.name}
-                      </h3>
+                <tr
+                  key={cls.id}
+                  onClick={() => router.push(`/admin/classes/${cls.id}/edit`)}
+                  className="hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <TagIcon className="h-5 w-5 text-gray-400 mr-3" />
+                      <div className="text-sm font-medium text-gray-900">{cls.name}</div>
                     </div>
-                    <div className="flex space-x-2">
-                      <Link
-                        href={`/admin/classes/${cls.id}/edit`}
-                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(cls.id)}
-                        className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </li>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(cls.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Link
+                      href={`/admin/classes/${cls.id}/edit`}
+                      className="text-black hover:opacity-70 transition-opacity"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Edit
+                    </Link>
+                  </td>
+                </tr>
               ))}
-            </ul>
-          </div>
-        ) : (
-          <div className="text-center p-10 border rounded-lg bg-gray-50">
-            <p className="text-lg text-gray-700 mb-4">No classes found. Start by adding a new class!</p>
+            </tbody>
+          </table>
+        </div>
+
+        {filteredClasses.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            <p>No classes found.</p>
             <Link
               href="/admin/classes/new"
               className="mt-4 inline-block bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
             >
-              Add Your First Class
+              Add First Class
             </Link>
           </div>
         )}
