@@ -1,204 +1,148 @@
 /**
  * API Route: Send Order Email
  * 
- * Server-side endpoint for sending order notification emails
- * Includes rate limiting and authentication checks
+ * POST /api/orders/send-email
+ * 
+ * Sends automated or custom email notifications for orders.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase } from '../../../../../lib/supabase-server';
-import { sendMail } from '../../../../../lib/emailService';
+import { createClient } from '@supabase/supabase-js';
+import { sendMail } from '@/lib/emailService';
 import {
-  orderCreatedEmail,
-  orderInProcessEmail,
-  orderReadyEmail,
-  orderCancelledEmail,
-  customUpdateEmail,
-} from '../../../../../lib/emailTemplates';
+  orderCreatedTemplate,
+  orderInProcessTemplate,
+  orderReadyTemplate,
+  orderCancelledTemplate,
+  customUpdateTemplate,
+} from '@/lib/emailTemplates';
 
-// Simple in-memory rate limiter
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_MAX = 10; // 10 emails per minute
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const userLimit = rateLimitMap.get(userId);
-
-  if (!userLimit || now > userLimit.resetAt) {
-    // Create new limit window
-    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-
-  if (userLimit.count >= RATE_LIMIT_MAX) {
-    return false; // Rate limit exceeded
-  }
-
-  // Increment count
-  userLimit.count++;
-  return true;
-}
+// Initialize Supabase client with service role (for server-side operations)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerSupabase();
-
-    // Authenticate user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check rate limit
-    if (!checkRateLimit(user.id)) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded. Maximum 10 emails per minute.' },
-        { status: 429 }
-      );
-    }
-
-    // Parse request body
     const body = await request.json();
     const { orderId, emailType, customMessage } = body;
 
+    // Validate input
     if (!orderId || !emailType) {
       return NextResponse.json(
-        { error: 'Missing required fields: orderId, emailType' },
+        { error: 'Missing required fields: orderId and emailType' },
         { status: 400 }
       );
     }
 
-    // Validate email type
-    const validTypes = ['created', 'in_process', 'ready', 'cancelled', 'custom'];
-    if (!validTypes.includes(emailType)) {
+    // Valid email types
+    const validEmailTypes = ['created', 'in_process', 'ready', 'cancelled', 'custom'];
+    if (!validEmailTypes.includes(emailType)) {
       return NextResponse.json(
-        { error: `Invalid emailType. Must be one of: ${validTypes.join(', ')}` },
+        { error: `Invalid emailType. Must be one of: ${validEmailTypes.join(', ')}` },
         { status: 400 }
       );
     }
 
-    // Fetch order with related data
+    // Fetch order details from database
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(
         `
         *,
-        user:clients(id, name, email),
-        company:companies(id, company_name, netsuite_number),
-        location:Locations(location_name, address_1, address_2, city, state, zip)
+        companies (name, id),
+        users (email, full_name),
+        order_items (
+          quantity,
+          unit_price,
+          products (item_name)
+        )
       `
       )
       .eq('id', orderId)
       .single();
 
     if (orderError || !order) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
-    }
-
-    // Check authorization (user must own the order OR be an admin)
-    const { data: profile } = await supabase
-      .from('clients')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    const isAdmin = profile?.role === 'admin';
-    const isOwner = order.user_id === user.id;
-
-    if (!isAdmin && !isOwner) {
       return NextResponse.json(
-        { error: 'Not authorized to send emails for this order' },
-        { status: 403 }
+        { error: 'Order not found' },
+        { status: 404 }
       );
     }
 
-    // Ensure customer email exists
-    if (!order.user || !order.user[0]?.email) {
+    // Prepare email data
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    
+    const emailData = {
+      orderNumber: order.order_number,
+      orderId: order.id,
+      companyName: order.companies?.name || 'N/A',
+      status: order.status,
+      poNumber: order.po_number,
+      soNumber: order.so_number,
+      totalAmount: order.total_amount,
+      items: order.order_items?.map((item: any) => ({
+        productName: item.products?.item_name || 'Unknown Product',
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+      })),
+      customMessage: customMessage || undefined,
+      siteUrl,
+    };
+
+    // Get recipient email
+    const recipientEmail = order.users?.email;
+    if (!recipientEmail) {
       return NextResponse.json(
-        { error: 'Customer email not found for this order' },
+        { error: 'Order user email not found' },
         { status: 400 }
       );
     }
 
-    const customerEmail = order.user[0].email;
-    const customerName = order.user[0].name || 'Customer';
-    const companyName = order.company?.[0]?.company_name || 'N/A';
+    // Select appropriate email template
+    let emailTemplate: { subject: string; html: string };
 
-    // Format pickup address if location exists
-    let pickupAddress = '';
-    if (order.location && order.location[0]) {
-      const loc = order.location[0];
-      pickupAddress = [
-        loc.location_name,
-        loc.address_1,
-        loc.address_2,
-        `${loc.city}, ${loc.state} ${loc.zip}`,
-      ]
-        .filter(Boolean)
-        .join('\n');
-    }
-
-    // Build order URL
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    const orderUrl = `${baseUrl}/client/orders/${order.id}`;
-
-    // Prepare email data
-    const emailData = {
-      orderId: order.id,
-      poNumber: order.po_number,
-      customerName,
-      companyName,
-      orderDate: new Date(order.created_at).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-      totalValue: order.total_value || 0,
-      status: order.status,
-      orderUrl,
-      netsuiteOrderId: order.netsuite_sales_order_id,
-      pickupAddress,
-      customMessage,
-    };
-
-    // Select template based on email type
-    let emailTemplate;
     switch (emailType) {
       case 'created':
-        emailTemplate = orderCreatedEmail(emailData);
+        emailTemplate = orderCreatedTemplate(emailData);
         break;
       case 'in_process':
-        emailTemplate = orderInProcessEmail(emailData);
+        emailTemplate = orderInProcessTemplate(emailData);
         break;
       case 'ready':
-        emailTemplate = orderReadyEmail(emailData);
+        emailTemplate = orderReadyTemplate(emailData);
         break;
       case 'cancelled':
-        emailTemplate = orderCancelledEmail(emailData);
+        emailTemplate = orderCancelledTemplate(emailData);
         break;
       case 'custom':
-        emailTemplate = customUpdateEmail(emailData);
+        emailTemplate = customUpdateTemplate(emailData);
         break;
       default:
-        return NextResponse.json({ error: 'Invalid email type' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'Invalid email type' },
+          { status: 400 }
+        );
     }
 
     // Send email
     const result = await sendMail({
-      to: customerEmail,
+      to: recipientEmail,
       subject: emailTemplate.subject,
       html: emailTemplate.html,
     });
 
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
+      message: 'Email sent successfully',
       messageId: result.messageId,
-      sentTo: customerEmail,
     });
   } catch (error: any) {
     console.error('Error sending email:', error);
@@ -208,4 +152,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

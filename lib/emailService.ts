@@ -1,154 +1,140 @@
 /**
- * Email Service for SMTP (Microsoft 365)
+ * Email Service - Send emails via Microsoft 365 SMTP with OAuth
  * 
- * Sends emails via smtp.office365.com using OAuth2 authentication
- * All emails are sent as orders@qiqiglobal.com (shared mailbox)
+ * This module provides a secure email sending service using OAuth authentication.
+ * All emails are sent from orders@qiqiglobal.com (locked sender).
  */
 
 import nodemailer from 'nodemailer';
 import { getSmtpAccessToken } from './emailAuth';
 
-// Locked sender configuration
-const SMTP_FROM_EMAIL = 'orders@qiqiglobal.com';
-const SMTP_FROM_NAME = 'Qiqi Orders';
-const SMTP_HOST = 'smtp.office365.com';
-const SMTP_PORT = 587;
-
-interface SendMailOptions {
-  to: string | string[];
+interface EmailOptions {
+  to: string;
   subject: string;
   text?: string;
   html?: string;
 }
 
-interface SendMailResult {
+interface EmailResult {
   success: boolean;
-  messageId: string;
+  messageId?: string;
+  error?: string;
 }
 
+const LOCKED_SENDER_EMAIL = 'orders@qiqiglobal.com';
+const LOCKED_SENDER_NAME = 'Qiqi Orders';
+
 /**
- * Send email via SMTP using OAuth2
+ * Send an email via Microsoft 365 SMTP using OAuth authentication
  * 
- * - Always sends from orders@qiqiglobal.com (sender is locked)
- * - Uses STARTTLS on port 587
- * - OAuth2 authentication with auto-refreshing tokens
- * 
- * @param options Email options (to, subject, text, html)
- * @returns Success object with message ID
- * @throws Error with helpful hints for common SMTP failures
+ * @param options - Email options (to, subject, text, html)
+ * @returns Email result with success status and message ID or error
  */
-export async function sendMail(options: SendMailOptions): Promise<SendMailResult> {
+export async function sendMail(options: EmailOptions): Promise<EmailResult> {
   const { to, subject, text, html } = options;
 
-  // Validate required fields
-  if (!to || !subject) {
-    throw new Error('Email requires "to" and "subject" fields');
+  // Validate required environment variables
+  const { SMTP_HOST, SMTP_PORT, SMTP_FROM } = process.env;
+
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_FROM) {
+    return {
+      success: false,
+      error: 'Missing SMTP configuration. Please set SMTP_HOST, SMTP_PORT, and SMTP_FROM environment variables.',
+    };
   }
 
-  if (!text && !html) {
-    throw new Error('Email requires either "text" or "html" content');
+  // Ensure sender is locked to orders@qiqiglobal.com
+  if (SMTP_FROM !== LOCKED_SENDER_EMAIL) {
+    return {
+      success: false,
+      error: `Sender must be ${LOCKED_SENDER_EMAIL}. Current SMTP_FROM: ${SMTP_FROM}`,
+    };
   }
-
-  // Get fresh access token
-  let accessToken: string;
-  try {
-    accessToken = await getSmtpAccessToken();
-  } catch (error: any) {
-    throw new Error(`Failed to get access token for SMTP: ${error.message}`);
-  }
-
-  // Create transporter with OAuth2
-  const transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: false, // Use STARTTLS
-    auth: {
-      type: 'OAuth2',
-      user: SMTP_FROM_EMAIL, // The mailbox we're acting as
-      accessToken: accessToken,
-    },
-    tls: {
-      ciphers: 'SSLv3',
-    },
-  });
-
-  // Prepare message
-  const message = {
-    from: `"${SMTP_FROM_NAME}" <${SMTP_FROM_EMAIL}>`,
-    to: Array.isArray(to) ? to.join(', ') : to,
-    subject,
-    text,
-    html,
-  };
 
   try {
-    const info = await transporter.sendMail(message);
+    // Get OAuth access token (from client-credentials flow)
+    const accessToken = await getSmtpAccessToken();
+
+    // Create transporter with OAuth2 (client-credentials, no refresh token)
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: parseInt(SMTP_PORT, 10),
+      secure: false, // Use STARTTLS (not SSL)
+      auth: {
+        type: 'OAuth2',
+        user: LOCKED_SENDER_EMAIL, // Act as the shared mailbox orders@qiqiglobal.com
+        accessToken: accessToken,
+        // DO NOT pass clientId, clientSecret, or refreshToken
+        // We're using a pre-fetched accessToken from client-credentials flow
+      },
+      logger: true, // Enable logging to see SMTP capability negotiation
+      debug: true,  // Enable debug mode (tokens will be filtered)
+    });
+
+    // Send email
+    const info = await transporter.sendMail({
+      from: `"${LOCKED_SENDER_NAME}" <${LOCKED_SENDER_EMAIL}>`,
+      to,
+      subject,
+      text,
+      html,
+    });
 
     return {
       success: true,
       messageId: info.messageId,
     };
   } catch (error: any) {
-    // Parse and provide helpful error messages
-    const errorMessage = error.message || '';
-    const errorCode = error.code || '';
+    // Log full error for debugging (but don't log tokens)
+    console.error('SMTP Error Details:', {
+      message: error?.message,
+      code: error?.code,
+      command: error?.command,
+      response: error?.response,
+      responseCode: error?.responseCode,
+    });
 
-    // Common error: Authentication unsuccessful
-    if (errorMessage.includes('535 5.7.3') || errorMessage.includes('Authentication unsuccessful')) {
-      throw new Error(
-        'SMTP Authentication failed (535 5.7.3). ' +
-        'Please verify: 1) Application permission "SMTP.SendAsApp" has admin consent in Azure AD, ' +
-        '2) Authenticated SMTP is enabled in your Microsoft 365 organization, ' +
-        '3) The orders@qiqiglobal.com mailbox allows authenticated SMTP.'
-      );
+    // Parse common SMTP errors and provide helpful hints
+    const errorMessage = error?.message || String(error);
+    const fullError = `${errorMessage}\n\nSMTP Response: ${error?.response || 'N/A'}`;
+
+    if (errorMessage.includes('535 5.7.3')) {
+      return {
+        success: false,
+        error: `SMTP Authentication Failed (535 5.7.3). 
+        
+Full Error: ${fullError}
+
+Troubleshooting:
+1. Verify Application permission 'SMTP.SendAsApp' has admin consent in Azure
+2. Ensure 'Authenticated SMTP' is enabled in Microsoft 365 Admin Center (org-level)
+3. Run: Get-CASMailbox "orders@qiqiglobal.com" | fl SmtpClientAuthenticationDisabled
+   Should be: False (enabled)
+4. If disabled, run: Set-CASMailbox -Identity "orders@qiqiglobal.com" -SmtpClientAuthenticationDisabled $false
+5. Verify token aud claim is https://outlook.office365.com
+6. Confirm AUTH XOAUTH2 is being used (check debug logs above)`,
+      };
     }
 
-    // Common error: Not authorized to send as this sender
-    if (errorMessage.includes('550 5.7.60') || errorMessage.includes('not authorized to send')) {
-      throw new Error(
-        'Not authorized to send as this sender (550 5.7.60). ' +
-        'Ensure both auth.user and from are exactly "orders@qiqiglobal.com". ' +
-        'We can only send as the shared mailbox, not other addresses.'
-      );
+    if (errorMessage.includes('550 5.7.60')) {
+      return {
+        success: false,
+        error: `Sender Not Authorized (550 5.7.60). 
+        
+Full Error: ${fullError}
+
+Troubleshooting:
+1. Ensure both auth.user and from are exactly '${LOCKED_SENDER_EMAIL}'
+2. Current auth.user: ${LOCKED_SENDER_EMAIL}
+3. Current SMTP_FROM: ${SMTP_FROM}
+4. Verify you're not trying to send as a different mailbox`,
+      };
     }
 
-    // Connection/timeout errors
-    if (errorCode === 'ETIMEDOUT' || errorCode === 'ECONNREFUSED') {
-      throw new Error(
-        `SMTP connection failed (${errorCode}). ` +
-        'Please verify network connectivity and that smtp.office365.com:587 is accessible.'
-      );
-    }
-
-    // Generic SMTP error
-    throw new Error(`Failed to send email: ${errorMessage}`);
+    // Generic error with full SMTP response
+    return {
+      success: false,
+      error: `Failed to send email: ${fullError}`,
+    };
   }
 }
-
-/**
- * Verify SMTP configuration by sending a test email
- * 
- * @param testRecipient Email address to send test to
- * @returns Success object with message ID
- */
-export async function sendTestEmail(testRecipient: string): Promise<SendMailResult> {
-  return sendMail({
-    to: testRecipient,
-    subject: '✅ QIQI Orders - SMTP Test Email',
-    text: 'This is a test email from the QIQI Orders system.\n\nIf you receive this, your SMTP configuration is working correctly!',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb;">✅ SMTP Test Email</h2>
-        <p>This is a test email from the <strong>QIQI Orders</strong> system.</p>
-        <p>If you receive this, your SMTP configuration is working correctly!</p>
-        <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 20px 0;">
-        <p style="color: #6b7280; font-size: 12px;">
-          Sent from: ${SMTP_FROM_EMAIL}<br>
-          SMTP Host: ${SMTP_HOST}<br>
-          Port: ${SMTP_PORT} (STARTTLS)
-        </p>
-      </div>
-    `,
-  });
-}
-
