@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import AdminLayout from '../../components/AdminLayout';
 import Link from 'next/link';
@@ -13,6 +14,7 @@ import {
   Chip,
   Breadcrumbs,
 } from '../../components/MaterialTailwind';
+import { BuildingOfficeIcon, UserGroupIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
 
 interface Company {
   id: string;
@@ -33,6 +35,7 @@ interface Company {
 }
 
 export default function CompaniesPage() {
+  const router = useRouter();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -147,53 +150,86 @@ export default function CompaniesPage() {
           />
         </div>
 
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          <ul className="divide-y divide-gray-200">
-            {filteredCompanies.map((company) => (
-              <li key={company.id}>
-                <div className="px-4 py-4 flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
+        <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Company
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  NS Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Support Fund
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Stats
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Location
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredCompanies.map((company) => (
+                <tr
+                  key={company.id}
+                  onClick={() => router.push(`/admin/companies/${company.id}`)}
+                  className="hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <BuildingOfficeIcon className="h-5 w-5 text-gray-400 mr-3" />
                       <div>
-                        <h3 className="text-lg font-medium text-gray-900">
+                        <div className="text-sm font-medium text-gray-900">
                           {company.company_name || 'Unnamed Company'}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          NS Number: {company.netsuite_number || 'N/A'}
-                        </p>
-                        <div className="mt-2 flex space-x-4 text-sm text-gray-500">
-                          <span>Support Fund: {company.support_fund?.percent || 0}%</span>
-                          <span>Users: {company.user_count || 0}</span>
-                          <span>Orders: {company.order_count || 0}</span>
-                          <span>Location: {company.location?.location_name || 'N/A'}</span>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {company.subsidiary?.name || 'No Subsidiary'}
                         </div>
                       </div>
-                      <div className="flex space-x-2">
-                        <Link
-                          href={`/admin/companies/${company.id}`}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        >
-                          View
-                        </Link>
-                        <Link
-                          href={`/admin/companies/${company.id}/edit`}
-                          className="text-green-600 hover:text-green-800 text-sm font-medium"
-                        >
-                          Edit
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(company.id)}
-                          className="text-red-600 hover:text-red-800 text-sm font-medium"
-                        >
-                          Delete
-                        </button>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {company.netsuite_number || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      {company.support_fund?.percent || 0}%
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-3 text-sm text-gray-500">
+                      <div className="flex items-center">
+                        <UserGroupIcon className="h-4 w-4 mr-1 text-gray-400" />
+                        <span>{company.user_count || 0}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <ShoppingCartIcon className="h-4 w-4 mr-1 text-gray-400" />
+                        <span>{company.order_count || 0}</span>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {company.location?.location_name || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Link
+                      href={`/admin/companies/${company.id}/edit`}
+                      className="text-black hover:opacity-70 transition-opacity"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Edit
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {filteredCompanies.length === 0 && (
