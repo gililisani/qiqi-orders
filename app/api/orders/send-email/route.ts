@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
         clients!user_id (email, name),
         order_items (
           quantity,
-          unit_price,
+          total_price,
           Products (item_name)
         )
       `
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       items: order.order_items?.map((item: any) => ({
         productName: item.Products?.item_name || 'Unknown Product',
         quantity: item.quantity,
-        unitPrice: item.unit_price,
+        totalPrice: item.total_price,
       })),
       customMessage: customMessage || undefined,
       siteUrl,

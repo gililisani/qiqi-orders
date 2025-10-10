@@ -16,7 +16,7 @@ interface OrderEmailData {
   items?: Array<{
     productName: string;
     quantity: number;
-    unitPrice: number;
+    totalPrice: number;
   }>;
   customMessage?: string;
   siteUrl: string;
@@ -71,7 +71,7 @@ export function orderCreatedTemplate(data: OrderEmailData): { subject: string; h
         <tr>
           <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.productName}</td>
           <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         </tr>
       `
     )
@@ -104,7 +104,7 @@ export function orderCreatedTemplate(data: OrderEmailData): { subject: string; h
         <tr style="background-color: #f8f9fa;">
           <th style="padding: 12px; text-align: left; color: #374151; font-size: 14px; font-weight: 600;">Product</th>
           <th style="padding: 12px; text-align: center; color: #374151; font-size: 14px; font-weight: 600;">Quantity</th>
-          <th style="padding: 12px; text-align: right; color: #374151; font-size: 14px; font-weight: 600;">Unit Price</th>
+                            <th style="padding: 12px; text-align: right; color: #374151; font-size: 14px; font-weight: 600;">Total</th>
         </tr>
       </thead>
       <tbody>
