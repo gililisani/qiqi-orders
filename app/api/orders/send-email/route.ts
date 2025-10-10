@@ -51,12 +51,12 @@ export async function POST(request: NextRequest) {
       .select(
         `
         *,
-        companies (name, id),
-        users (email, full_name),
+        companies (company_name),
+        clients (email, name),
         order_items (
           quantity,
           unit_price,
-          products (item_name)
+          Products (item_name)
         )
       `
       )
@@ -76,13 +76,13 @@ export async function POST(request: NextRequest) {
     const emailData = {
       orderNumber: order.order_number,
       orderId: order.id,
-      companyName: order.companies?.name || 'N/A',
+      companyName: order.companies?.company_name || 'N/A',
       status: order.status,
       poNumber: order.po_number,
       soNumber: order.so_number,
       totalAmount: order.total_amount,
       items: order.order_items?.map((item: any) => ({
-        productName: item.products?.item_name || 'Unknown Product',
+        productName: item.Products?.item_name || 'Unknown Product',
         quantity: item.quantity,
         unitPrice: item.unit_price,
       })),
@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
       siteUrl,
     };
 
-    // Get recipient email
-    const recipientEmail = order.users?.email;
+    // Get recipient email from clients table
+    const recipientEmail = order.clients?.email;
     if (!recipientEmail) {
       return NextResponse.json(
         { error: 'Order user email not found' },
