@@ -48,13 +48,14 @@ export async function POST(request: NextRequest) {
 
     console.log('[send-email] Fetching order:', orderId);
 
+    // Fetch order with all relationships (now that foreign key exists)
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(
         `
         *,
         companies (company_name),
-        client:clients!user_id (email, name),
+        clients!user_id (email, name),
         order_items (
           quantity,
           unit_price,
@@ -95,8 +96,8 @@ export async function POST(request: NextRequest) {
       siteUrl,
     };
 
-    // Get recipient email from client relationship
-    const recipientEmail = order.client?.email;
+    // Get recipient email from clients relationship
+    const recipientEmail = order.clients?.email;
     if (!recipientEmail) {
       return NextResponse.json(
         { error: 'Order user email not found' },
