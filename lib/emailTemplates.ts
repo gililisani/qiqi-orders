@@ -267,6 +267,61 @@ export function orderCancelledTemplate(data: OrderEmailData): { subject: string;
 }
 
 /**
+ * Welcome Email Template (for new users)
+ */
+export function welcomeUserTemplate(data: {
+  userName: string;
+  userEmail: string;
+  temporaryPassword: string;
+  companyName: string;
+  siteUrl: string;
+}): { subject: string; html: string } {
+  const content = `
+    <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Welcome to Qiqi Partners Portal</h2>
+    
+    <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
+      Hello <strong>${data.userName}</strong>,
+    </p>
+    
+    <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
+      Your account has been created for <strong>${data.companyName}</strong>. You can now access the Qiqi Partners Portal to manage your orders.
+    </p>
+    
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
+      <tr>
+        <td>
+          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Login Email:</strong> ${data.userEmail}</p>
+          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Temporary Password:</strong> <code style="background: #ffffff; padding: 4px 8px; border-radius: 4px; border: 1px solid #e5e7eb;">${data.temporaryPassword}</code></p>
+          <p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>Portal URL:</strong> <a href="${data.siteUrl}" style="color: #000000;">${data.siteUrl}</a></p>
+        </td>
+      </tr>
+    </table>
+    
+    <div style="margin: 20px 0; padding: 15px; background-color: #fff7ed; border-left: 4px solid #f97316; border-radius: 6px;">
+      <p style="margin: 0; color: #9a3412; font-size: 14px; line-height: 1.6;">
+        <strong>⚠️ Important:</strong> You will be required to change your password on your first login for security purposes.
+      </p>
+    </div>
+    
+    <div style="margin: 30px 0; text-align: center;">
+      <a href="${data.siteUrl}" 
+         style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+        Login to Portal
+      </a>
+    </div>
+    
+    <p style="margin: 20px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+      If you have any questions, please contact our support team.
+    </p>
+  `;
+
+  return {
+    subject: `Welcome to Qiqi Partners Portal`,
+    html: emailWrapper(content, data.siteUrl),
+  };
+}
+
+/**
  * Custom Update Email Template
  */
 export function customUpdateTemplate(data: OrderEmailData): { subject: string; html: string } {

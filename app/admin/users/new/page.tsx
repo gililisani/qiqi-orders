@@ -90,13 +90,32 @@ export default function NewUserPage() {
           name: formData.name,
           email: formData.email,
           enabled: formData.enabled,
-          company_id: formData.company_id
+          company_id: formData.company_id,
+          password_changed: false // New users haven't changed password yet
         }]);
 
       if (profileError) {
         // If profile creation fails, we should clean up the auth user
         await supabase.auth.admin.deleteUser(authData.user.id);
         throw profileError;
+      }
+
+      // Send welcome email with temporary password
+      try {
+        const selectedCompany = companies.find(c => c.id === formData.company_id);
+        await fetch('/api/users/send-welcome-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userName: formData.name,
+            userEmail: formData.email,
+            temporaryPassword: formData.password,
+            companyName: selectedCompany?.company_name || 'Your Company',
+          }),
+        });
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+        // Don't fail user creation if email fails
       }
 
       router.push('/admin/users');
