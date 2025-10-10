@@ -7,11 +7,10 @@
 import { formatCurrency, formatQuantity } from './formatters';
 
 interface OrderEmailData {
-  orderNumber: string;
+  poNumber: string; // Use PO number as the main order identifier
   orderId: string;
   companyName: string;
   status: string;
-  poNumber?: string;
   soNumber?: string;
   totalAmount?: number;
   items?: Array<{
@@ -43,7 +42,7 @@ function emailWrapper(content: string, siteUrl: string): string {
           <!-- Header with Logo -->
           <tr>
             <td style="background-color: #ffffff; padding: 40px 30px; text-align: center;">
-              <img src="${siteUrl}/logo.png" alt="Qiqi" style="height: 50px; width: auto; display: block; margin: 0 auto;" />
+              <img src="https://partners.qiqiglobal.com/logo.png" alt="Qiqi" style="height: 50px; width: auto; display: block; margin: 0 auto;" />
             </td>
           </tr>
           
@@ -82,7 +81,7 @@ export function orderCreatedTemplate(data: OrderEmailData): { subject: string; h
     <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Confirmation</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Your order <strong>#${data.orderNumber}</strong> has been successfully created and is being processed.
+      Your order <strong>${data.poNumber}</strong> has been successfully created and is being processed.
     </p>
     
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
@@ -141,7 +140,7 @@ export function orderCreatedTemplate(data: OrderEmailData): { subject: string; h
   `;
 
   return {
-    subject: `New Order received`,
+    subject: `New Order created`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -154,7 +153,7 @@ export function orderInProcessTemplate(data: OrderEmailData): { subject: string;
     <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order In Process</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Great news! Your order <strong>#${data.orderNumber}</strong> is now being processed.
+      Great news! Your order <strong>${data.poNumber}</strong> is now being processed.
     </p>
     
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
@@ -181,7 +180,7 @@ export function orderInProcessTemplate(data: OrderEmailData): { subject: string;
   `;
 
   return {
-    subject: `Your order ${data.soNumber || data.orderNumber} is being processed`,
+    subject: `Your order ${data.soNumber || data.poNumber} is being processed`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -194,7 +193,7 @@ export function orderReadyTemplate(data: OrderEmailData): { subject: string; htm
     <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Ready!</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Excellent news! Your order <strong>${data.soNumber || data.orderNumber}</strong> is now ready for pickup. You may Edit and/or Print your packing slip.
+      Excellent news! Your order <strong>${data.soNumber || data.poNumber}</strong> is now ready for pickup. You may Edit and/or Print your packing slip.
     </p>
     
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
@@ -221,7 +220,7 @@ export function orderReadyTemplate(data: OrderEmailData): { subject: string; htm
   `;
 
   return {
-    subject: `Order ${data.soNumber || data.orderNumber} is ready for pickup!`,
+    subject: `Order ${data.soNumber || data.poNumber} is ready for pickup!`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -234,7 +233,7 @@ export function orderCancelledTemplate(data: OrderEmailData): { subject: string;
     <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Cancelled</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Your order <strong>#${data.orderNumber}</strong> has been cancelled.
+      Your order <strong>${data.poNumber}</strong> has been cancelled.
     </p>
     
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
@@ -261,7 +260,7 @@ export function orderCancelledTemplate(data: OrderEmailData): { subject: string;
   `;
 
   return {
-    subject: `Order ${data.soNumber || data.orderNumber} has been cancelled`,
+    subject: `Order ${data.soNumber || data.poNumber} has been cancelled`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -329,7 +328,7 @@ export function customUpdateTemplate(data: OrderEmailData): { subject: string; h
     <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Update</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      We have an update regarding your order <strong>#${data.orderNumber}</strong>.
+      We have an update regarding your order <strong>${data.poNumber}</strong>.
     </p>
     
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
@@ -368,7 +367,7 @@ export function customUpdateTemplate(data: OrderEmailData): { subject: string; h
   `;
 
   return {
-    subject: `Order Update - #${data.orderNumber}`,
+    subject: `Order Update - ${data.poNumber}`,
     html: emailWrapper(content, data.siteUrl),
   };
 }

@@ -80,11 +80,10 @@ export async function POST(request: NextRequest) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     
     const emailData = {
-      orderNumber: order.order_number,
+      poNumber: order.po_number || `Order-${order.id.substring(0, 8)}`,
       orderId: order.id,
       companyName: order.companies?.company_name || 'N/A',
       status: order.status,
-      poNumber: order.po_number,
       soNumber: order.so_number,
       totalAmount: order.total_amount,
       items: order.order_items?.map((item: any) => ({
