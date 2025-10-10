@@ -7,8 +7,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { sendMail } from '@/lib/emailService';
-import { welcomeUserTemplate } from '@/lib/emailTemplates';
+import { sendMail } from '../../../../lib/emailService';
+import { welcomeUserTemplate } from '../../../../lib/emailTemplates';
 
 export async function POST(request: NextRequest) {
   try {

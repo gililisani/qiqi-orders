@@ -8,14 +8,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendMail } from '@/lib/emailService';
+import { sendMail } from '../../../../lib/emailService';
 import {
   orderCreatedTemplate,
   orderInProcessTemplate,
   orderReadyTemplate,
   orderCancelledTemplate,
   customUpdateTemplate,
-} from '@/lib/emailTemplates';
+} from '../../../../lib/emailTemplates';
 
 // Initialize Supabase client with service role (for server-side operations)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
