@@ -24,7 +24,7 @@ interface OrderEmailData {
 /**
  * Base email template wrapper
  */
-function emailWrapper(content: string): string {
+function emailWrapper(content: string, siteUrl: string): string {
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -38,10 +38,10 @@ function emailWrapper(content: string): string {
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <!-- Header -->
+          <!-- Header with Logo -->
           <tr>
-            <td style="background-color: #1e293b; padding: 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px;">Qiqi Orders</h1>
+            <td style="background-color: #ffffff; padding: 40px 30px 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+              <img src="${siteUrl}/QIQI-Logo.svg" alt="Qiqi" style="height: 50px; width: auto;" />
             </td>
           </tr>
           
@@ -49,16 +49,6 @@ function emailWrapper(content: string): string {
           <tr>
             <td style="padding: 40px 30px;">
               ${content}
-            </td>
-          </tr>
-          
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-              <p style="margin: 0; color: #6b7280; font-size: 14px;">
-                This is an automated message from Qiqi Orders System.<br>
-                Please do not reply to this email.
-              </p>
             </td>
           </tr>
         </table>
@@ -138,7 +128,7 @@ export function orderCreatedTemplate(data: OrderEmailData): { subject: string; h
     
     <div style="margin: 30px 0; text-align: center;">
       <a href="${data.siteUrl}/client/orders/${data.orderId}" 
-         style="display: inline-block; padding: 14px 32px; background-color: #1e293b; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+         style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
         View Order Details
       </a>
     </div>
@@ -150,7 +140,7 @@ export function orderCreatedTemplate(data: OrderEmailData): { subject: string; h
 
   return {
     subject: `Order Confirmation - #${data.orderNumber}`,
-    html: emailWrapper(content),
+    html: emailWrapper(content, data.siteUrl),
   };
 }
 
@@ -169,7 +159,7 @@ export function orderInProcessTemplate(data: OrderEmailData): { subject: string;
       <tr>
         <td>
           <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${data.companyName}</p>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #2563eb;">In Process</span></p>
+            <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #000000;">In Process</span></p>
           ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${data.poNumber}</p>` : ''}
           ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${data.soNumber}</p>` : ''}
         </td>
@@ -182,7 +172,7 @@ export function orderInProcessTemplate(data: OrderEmailData): { subject: string;
     
     <div style="margin: 30px 0; text-align: center;">
       <a href="${data.siteUrl}/client/orders/${data.orderId}" 
-         style="display: inline-block; padding: 14px 32px; background-color: #1e293b; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+         style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
         Track Order Status
       </a>
     </div>
@@ -190,7 +180,7 @@ export function orderInProcessTemplate(data: OrderEmailData): { subject: string;
 
   return {
     subject: `Order In Process - #${data.orderNumber}`,
-    html: emailWrapper(content),
+    html: emailWrapper(content, data.siteUrl),
   };
 }
 
@@ -209,7 +199,7 @@ export function orderReadyTemplate(data: OrderEmailData): { subject: string; htm
       <tr>
         <td>
           <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${data.companyName}</p>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #f97316;">Ready</span></p>
+            <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #000000;">Ready</span></p>
           ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${data.poNumber}</p>` : ''}
           ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${data.soNumber}</p>` : ''}
         </td>
@@ -222,7 +212,7 @@ export function orderReadyTemplate(data: OrderEmailData): { subject: string; htm
     
     <div style="margin: 30px 0; text-align: center;">
       <a href="${data.siteUrl}/client/orders/${data.orderId}" 
-         style="display: inline-block; padding: 14px 32px; background-color: #1e293b; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+         style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
         View Order Details
       </a>
     </div>
@@ -230,7 +220,7 @@ export function orderReadyTemplate(data: OrderEmailData): { subject: string; htm
 
   return {
     subject: `Order Ready - #${data.orderNumber}`,
-    html: emailWrapper(content),
+    html: emailWrapper(content, data.siteUrl),
   };
 }
 
@@ -245,11 +235,11 @@ export function orderCancelledTemplate(data: OrderEmailData): { subject: string;
       Your order <strong>#${data.orderNumber}</strong> has been cancelled.
     </p>
     
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #fef2f2; border-radius: 6px; padding: 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
       <tr>
         <td>
           <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${data.companyName}</p>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #ec4899;">Cancelled</span></p>
+            <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #000000;">Cancelled</span></p>
           ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${data.poNumber}</p>` : ''}
           ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${data.soNumber}</p>` : ''}
         </td>
@@ -262,7 +252,7 @@ export function orderCancelledTemplate(data: OrderEmailData): { subject: string;
     
     <div style="margin: 30px 0; text-align: center;">
       <a href="${data.siteUrl}/client/orders/${data.orderId}" 
-         style="display: inline-block; padding: 14px 32px; background-color: #1e293b; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+         style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
         View Order Details
       </a>
     </div>
@@ -270,7 +260,7 @@ export function orderCancelledTemplate(data: OrderEmailData): { subject: string;
 
   return {
     subject: `Order Cancelled - #${data.orderNumber}`,
-    html: emailWrapper(content),
+    html: emailWrapper(content, data.siteUrl),
   };
 }
 
@@ -299,8 +289,8 @@ export function customUpdateTemplate(data: OrderEmailData): { subject: string; h
     ${
       data.customMessage
         ? `
-    <div style="margin: 20px 0; padding: 20px; background-color: #eff6ff; border-left: 4px solid #2563eb; border-radius: 6px;">
-      <p style="margin: 0; color: #1e40af; font-size: 16px; line-height: 1.6;">
+    <div style="margin: 20px 0; padding: 20px; background-color: #f8f9fa; border-left: 4px solid #000000; border-radius: 6px;">
+      <p style="margin: 0; color: #374151; font-size: 16px; line-height: 1.6;">
         ${data.customMessage}
       </p>
     </div>
@@ -310,7 +300,7 @@ export function customUpdateTemplate(data: OrderEmailData): { subject: string; h
     
     <div style="margin: 30px 0; text-align: center;">
       <a href="${data.siteUrl}/client/orders/${data.orderId}" 
-         style="display: inline-block; padding: 14px 32px; background-color: #1e293b; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+         style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
         View Order Details
       </a>
     </div>
@@ -322,6 +312,6 @@ export function customUpdateTemplate(data: OrderEmailData): { subject: string; h
 
   return {
     subject: `Order Update - #${data.orderNumber}`,
-    html: emailWrapper(content),
+    html: emailWrapper(content, data.siteUrl),
   };
 }
