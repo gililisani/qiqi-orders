@@ -46,6 +46,8 @@ export async function POST(request: NextRequest) {
     // Fetch order details from database
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    console.log('[send-email] Fetching order:', orderId);
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(
@@ -63,9 +65,12 @@ export async function POST(request: NextRequest) {
       .eq('id', orderId)
       .single();
 
+    console.log('[send-email] Query result:', { order: !!order, error: orderError });
+
     if (orderError || !order) {
+      console.error('[send-email] Order fetch failed:', orderError);
       return NextResponse.json(
-        { error: 'Order not found' },
+        { error: 'Order not found', details: orderError?.message },
         { status: 404 }
       );
     }
