@@ -281,12 +281,13 @@ export default function NewCompanyPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Subsidiary
+                Subsidiary *
               </label>
               <select
                 name="subsidiary_id"
                 value={formData.subsidiary_id}
                 onChange={handleChange}
+                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               >
                 <option value="">Select Subsidiary</option>
@@ -300,12 +301,13 @@ export default function NewCompanyPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Class
+                Class *
               </label>
               <select
                 name="class_id"
                 value={formData.class_id}
                 onChange={handleChange}
+                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               >
                 <option value="">Select Class</option>
@@ -319,12 +321,13 @@ export default function NewCompanyPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Location
+                Location *
               </label>
               <select
                 name="location_id"
                 value={formData.location_id}
                 onChange={handleChange}
+                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               >
                 <option value="">Select Location</option>
@@ -338,12 +341,13 @@ export default function NewCompanyPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Incoterm
+                Incoterm *
               </label>
               <select
                 name="incoterm_id"
                 value={formData.incoterm_id}
                 onChange={handleChange}
+                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               >
                 <option value="">Select Incoterm</option>
@@ -357,12 +361,13 @@ export default function NewCompanyPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Payment Terms
+                Payment Terms *
               </label>
               <select
                 name="payment_terms_id"
                 value={formData.payment_terms_id}
                 onChange={handleChange}
+                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               >
                 <option value="">Select Payment Terms</option>

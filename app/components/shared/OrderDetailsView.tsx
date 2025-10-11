@@ -1001,8 +1001,10 @@ export default function OrderDetailsView({
                       className={`px-3 py-1 border border-[#e5e5e5] rounded text-sm ${
                         !editOrderInfoMode 
                           ? 'bg-gray-100 text-gray-600 cursor-not-allowed'
-                          : order.status === 'Open'
+                          : order.status === 'Draft'
                           ? 'bg-gray-200 text-gray-800'
+                          : order.status === 'Open'
+                          ? 'bg-cyan-100 text-cyan-800'
                           : order.status === 'In Process'
                           ? 'bg-blue-100 text-blue-800'
                           : order.status === 'Ready'

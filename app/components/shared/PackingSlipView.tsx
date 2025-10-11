@@ -817,11 +817,16 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     if (!address) return '';
     
     // Try different extraction methods
-    const parts = address.split(',').map(part => part.trim());
+    // First, split by comma and newlines to handle all possible formats
+    const parts = address.split(/[,\n]/).map(part => part.trim()).filter(part => part.length > 0);
     
     // If there are multiple parts, take the last one (usually country)
+    // Then extract only non-numeric text (to exclude zip codes)
     if (parts.length > 1) {
-      return parts[parts.length - 1];
+      const lastPart = parts[parts.length - 1];
+      // Remove any leading zip codes or numbers
+      const countryOnly = lastPart.replace(/^\s*\d+\s*/, '').trim();
+      if (countryOnly) return countryOnly;
     }
     
     // If only one part, try to extract country from common patterns

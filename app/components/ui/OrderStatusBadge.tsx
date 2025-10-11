@@ -17,9 +17,9 @@ export default function OrderStatusBadge({ status, className = '' }: OrderStatus
   const getStatusClasses = (status: string): string => {
     switch (status) {
       case 'Draft':
-        return 'inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 sm:text-xs/5 forced-colors:outline !bg-cyan-400/20 text-cyan-700 border border-cyan-300';
-      case 'Open':
         return 'inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 sm:text-xs/5 forced-colors:outline !bg-gray-400/20 text-gray-700 border border-gray-300';
+      case 'Open':
+        return 'inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 sm:text-xs/5 forced-colors:outline !bg-cyan-400/20 text-cyan-700 border border-cyan-300';
       case 'In Process':
         return 'inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 sm:text-xs/5 forced-colors:outline !bg-blue-400/20 text-blue-700 border border-blue-300';
       case 'Ready':
