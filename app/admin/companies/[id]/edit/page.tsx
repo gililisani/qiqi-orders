@@ -75,7 +75,13 @@ export default function EditCompanyPage() {
     company_tax_number: '',
     ship_to_contact_name: '',
     ship_to_contact_email: '',
-    ship_to_contact_phone: ''
+    ship_to_contact_phone: '',
+    ship_to_street_line_1: '',
+    ship_to_street_line_2: '',
+    ship_to_city: '',
+    ship_to_state: '',
+    ship_to_postal_code: '',
+    ship_to_country: ''
   });
 
   useEffect(() => {
