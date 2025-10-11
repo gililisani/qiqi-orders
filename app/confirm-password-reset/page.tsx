@@ -21,26 +21,61 @@ export default function ConfirmPasswordResetPage() {
   const [isValidating, setIsValidating] = useState(true);
 
   useEffect(() => {
-    // Check if we have a valid session from the magic link
-    const checkSession = async () => {
+    // Handle the hash fragment from the magic link
+    const handleAuthCallback = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Check if we have a hash fragment with tokens
+        const hashFragment = window.location.hash;
         
-        if (error || !session) {
-          setError('Invalid or expired password reset link. Please request a new one.');
+        if (!hashFragment) {
+          setError('Invalid password reset link. Please request a new one.');
           setIsValidating(false);
           return;
         }
 
+        // Parse the hash fragment
+        const params = new URLSearchParams(hashFragment.substring(1)); // Remove the #
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        const type = params.get('type');
+
+        console.log('Password reset callback:', { 
+          hasAccessToken: !!accessToken, 
+          hasRefreshToken: !!refreshToken, 
+          type 
+        });
+
+        // Verify this is a recovery/password reset link
+        if (type !== 'recovery' || !accessToken) {
+          setError('Invalid password reset link. Please request a new one.');
+          setIsValidating(false);
+          return;
+        }
+
+        // Set the session using the tokens from the URL
+        const { data, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || ''
+        });
+
+        if (sessionError || !data.session) {
+          console.error('Session error:', sessionError);
+          setError('Failed to validate password reset link. Please request a new one.');
+          setIsValidating(false);
+          return;
+        }
+
+        console.log('Session established successfully for password reset');
         // Valid session - user can now set password
         setIsValidating(false);
       } catch (err: any) {
+        console.error('Error handling auth callback:', err);
         setError('An error occurred. Please try again.');
         setIsValidating(false);
       }
     };
 
-    checkSession();
+    handleAuthCallback();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
