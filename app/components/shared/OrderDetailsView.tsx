@@ -931,8 +931,8 @@ export default function OrderDetailsView({
             </button>
           )}
           
-          {/* Admin: Download CSV button */}
-          {role === 'admin' && (
+          {/* Admin: Download CSV button (hide for Draft orders) */}
+          {role === 'admin' && order?.status !== 'Draft' && (
             <button
               onClick={handleDownloadCSV}
               className="bg-green-600 text-white px-4 py-2 hover:bg-green-700 transition text-sm"
@@ -993,7 +993,7 @@ export default function OrderDetailsView({
               <div>
                 <label className="text-sm font-medium text-gray-500">Status</label>
                 <div className="mt-1">
-                  {role === 'admin' ? (
+                  {role === 'admin' && order.status !== 'Draft' ? (
                     <select
                       value={order.status}
                       onChange={(e) => handleStatusChange(e.target.value)}
@@ -1087,8 +1087,8 @@ export default function OrderDetailsView({
               </div>
             )}
             
-            {/* Edit/Save/Cancel Buttons */}
-            {role === 'admin' && (
+            {/* Edit/Save/Cancel Buttons (hide for Draft orders) */}
+            {role === 'admin' && order?.status !== 'Draft' && (
               <div className="flex justify-end gap-2 pt-2">
                 {editOrderInfoMode && (
                   <button
