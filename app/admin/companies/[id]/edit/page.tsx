@@ -24,6 +24,12 @@ interface FormData {
   ship_to_contact_name: string;
   ship_to_contact_email: string;
   ship_to_contact_phone: string;
+  ship_to_street_line_1: string;
+  ship_to_street_line_2: string;
+  ship_to_city: string;
+  ship_to_state: string;
+  ship_to_postal_code: string;
+  ship_to_country: string;
 }
 
 interface Option {
@@ -105,7 +111,13 @@ export default function EditCompanyPage() {
         company_tax_number: data.company_tax_number || '',
         ship_to_contact_name: data.ship_to_contact_name || '',
         ship_to_contact_email: data.ship_to_contact_email || '',
-        ship_to_contact_phone: data.ship_to_contact_phone || ''
+        ship_to_contact_phone: data.ship_to_contact_phone || '',
+        ship_to_street_line_1: data.ship_to_street_line_1 || '',
+        ship_to_street_line_2: data.ship_to_street_line_2 || '',
+        ship_to_city: data.ship_to_city || '',
+        ship_to_state: data.ship_to_state || '',
+        ship_to_postal_code: data.ship_to_postal_code || '',
+        ship_to_country: data.ship_to_country || ''
       });
     } catch (err: any) {
       setError(err.message);
@@ -162,7 +174,13 @@ export default function EditCompanyPage() {
           company_tax_number: formData.company_tax_number || null,
           ship_to_contact_name: formData.ship_to_contact_name || null,
           ship_to_contact_email: formData.ship_to_contact_email || null,
-          ship_to_contact_phone: formData.ship_to_contact_phone || null
+          ship_to_contact_phone: formData.ship_to_contact_phone || null,
+          ship_to_street_line_1: formData.ship_to_street_line_1 || null,
+          ship_to_street_line_2: formData.ship_to_street_line_2 || null,
+          ship_to_city: formData.ship_to_city || null,
+          ship_to_state: formData.ship_to_state || null,
+          ship_to_postal_code: formData.ship_to_postal_code || null,
+          ship_to_country: formData.ship_to_country || null
         })
         .eq('id', companyId);
 
@@ -508,6 +526,99 @@ export default function EditCompanyPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                   />
                 </div>
+              </div>
+
+              {/* Structured Address Fields for 3PL Export */}
+              <div className="border-t pt-4 mt-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Structured Address (for 3PL Export)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Street Line 1
+                    </label>
+                    <input
+                      type="text"
+                      name="ship_to_street_line_1"
+                      value={formData.ship_to_street_line_1}
+                      onChange={handleChange}
+                      placeholder="123 Main Street"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Street Line 2
+                    </label>
+                    <input
+                      type="text"
+                      name="ship_to_street_line_2"
+                      value={formData.ship_to_street_line_2}
+                      onChange={handleChange}
+                      placeholder="Suite 100"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      name="ship_to_city"
+                      value={formData.ship_to_city}
+                      onChange={handleChange}
+                      placeholder="New York"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      State/Province
+                    </label>
+                    <input
+                      type="text"
+                      name="ship_to_state"
+                      value={formData.ship_to_state}
+                      onChange={handleChange}
+                      placeholder="NY"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Postal Code
+                    </label>
+                    <input
+                      type="text"
+                      name="ship_to_postal_code"
+                      value={formData.ship_to_postal_code}
+                      onChange={handleChange}
+                      placeholder="10001"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Country
+                    </label>
+                    <input
+                      type="text"
+                      name="ship_to_country"
+                      value={formData.ship_to_country}
+                      onChange={handleChange}
+                      placeholder="United States"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black text-sm"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  These structured fields are used for 3PL system export. Fill them in addition to the Ship To Address above.
+                </p>
               </div>
             </div>
           </div>
