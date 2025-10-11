@@ -24,7 +24,29 @@ export async function DELETE(request: NextRequest) {
       }
     });
 
-    // Delete from clients table first (due to foreign key constraints)
+    // Step 1: Nullify user_id in orders table (keep orders, remove user reference)
+    const { error: ordersError } = await supabaseAdmin
+      .from('orders')
+      .update({ user_id: null })
+      .eq('user_id', userId);
+
+    if (ordersError) {
+      console.error('Failed to nullify user_id in orders:', ordersError);
+      // Don't throw - continue with deletion even if this fails
+    }
+
+    // Step 2: Nullify changed_by_id in order_history (keep history, remove user reference)
+    const { error: historyError } = await supabaseAdmin
+      .from('order_history')
+      .update({ changed_by_id: null })
+      .eq('changed_by_id', userId);
+
+    if (historyError) {
+      console.error('Failed to nullify changed_by_id in order_history:', historyError);
+      // Don't throw - continue with deletion
+    }
+
+    // Step 3: Delete from clients table
     const { error: clientError } = await supabaseAdmin
       .from('clients')
       .delete()
@@ -35,7 +57,7 @@ export async function DELETE(request: NextRequest) {
       throw clientError;
     }
 
-    // Delete from Supabase Auth
+    // Step 4: Delete from Supabase Auth
     const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
     if (authError) {

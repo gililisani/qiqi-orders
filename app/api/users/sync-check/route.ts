@@ -123,7 +123,16 @@ export async function POST(request: NextRequest) {
     // Delete each orphaned auth user
     for (const userId of userIds) {
       try {
-        console.log('[sync-check] Deleting user:', userId);
+        console.log('[sync-check] Deleting orphaned auth user:', userId);
+        
+        // Step 1: Nullify user references in orders and history tables
+        await supabaseAdmin.from('orders').update({ user_id: null }).eq('user_id', userId);
+        await supabaseAdmin.from('order_history').update({ changed_by_id: null }).eq('changed_by_id', userId);
+        
+        // Step 2: Try to delete from clients table (might not exist for orphaned users)
+        await supabaseAdmin.from('clients').delete().eq('id', userId);
+        
+        // Step 3: Delete from Supabase Auth
         const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
         if (error) {
           console.error('[sync-check] Delete failed for user:', userId, error);
