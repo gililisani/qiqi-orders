@@ -7,6 +7,7 @@ import Card from '../ui/Card';
 import { Spinner, Typography } from '../MaterialTailwind';
 import Link from 'next/link';
 import Image from 'next/image';
+import { addOrderHistoryEntry } from '../../../lib/orderHistory';
 
 // CategoryAccordion Component
 interface CategoryAccordionProps {
@@ -954,6 +955,29 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
         if (updateTotalsError) throw updateTotalsError;
 
+        // Add history entry for order creation
+        try {
+          await addOrderHistoryEntry({
+            supabase,
+            orderId: newOrder.id,
+            actionType: 'order_created',
+            statusFrom: undefined,
+            statusTo: asDraft ? 'Draft' : 'Open',
+            notes: `Order created with ${allItemsData.length} items`,
+            metadata: {
+              po_number: poNumber,
+              total_items: allItemsData.length,
+              total_value: finalTotal,
+              support_fund_used: supportFundUsed,
+              credit_earned: originalTotals.supportFundEarned
+            },
+            role
+          });
+        } catch (historyError) {
+          console.error('Failed to create history entry:', historyError);
+          // Don't block order creation if history fails
+        }
+
         // Send order created email (fire and forget - don't block redirect)
         // Only send email for non-draft orders
         if (!asDraft) {
@@ -1044,6 +1068,31 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
             .insert(allItemsData);
 
           if (insertError) throw insertError;
+        }
+
+        // Add history entry for order update
+        try {
+          const oldStatus = order?.status;
+          await addOrderHistoryEntry({
+            supabase,
+            orderId: orderId,
+            actionType: oldStatus !== newStatus ? 'status_change' : 'order_updated',
+            statusFrom: oldStatus !== newStatus ? oldStatus : undefined,
+            statusTo: oldStatus !== newStatus ? newStatus : undefined,
+            notes: oldStatus !== newStatus 
+              ? `Status changed from ${oldStatus} to ${newStatus}` 
+              : `Order updated with ${allItemsData.length} items`,
+            metadata: {
+              total_items: allItemsData.length,
+              total_value: finalTotal,
+              support_fund_used: supportFundUsed,
+              credit_earned: originalTotals.supportFundEarned
+            },
+            role
+          });
+        } catch (historyError) {
+          console.error('Failed to create history entry:', historyError);
+          // Don't block order update if history fails
         }
 
         // Clear unsaved changes flag
