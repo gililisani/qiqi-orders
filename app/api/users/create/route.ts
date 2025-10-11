@@ -71,22 +71,26 @@ export async function POST(request: NextRequest) {
       throw profileError;
     }
 
-    // Send password reset email so user can set their own password
-    const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(
-      email,
-      {
+    // Send invite email by generating a password reset token manually
+    // Note: This uses the same mechanism but for a newly created user
+    const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+      options: {
         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/confirm-password-reset`
       }
-    );
+    });
 
     if (resetError) {
-      console.error('Failed to send password reset email:', resetError);
+      console.error('Failed to generate setup link:', resetError);
       return NextResponse.json({
         success: true,
         userId: authData.user.id,
-        warning: 'User created but failed to send setup email. Admin can resend via Reset Password.'
+        warning: 'User created but failed to generate setup email. Please use Reset Password to send the link manually.'
       });
     }
+
+    console.log('Setup email link generated successfully for:', email);
 
     return NextResponse.json({
       success: true,
