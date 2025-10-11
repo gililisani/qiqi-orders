@@ -106,11 +106,9 @@ export default function ConfirmPasswordResetPage() {
       if (error) {
         setError(error.message);
       } else {
+        // Sign out after password is set (don't auto-login)
+        await supabase.auth.signOut();
         setSuccess(true);
-        // Redirect to login after 2 seconds
-        setTimeout(() => {
-          router.push('/');
-        }, 2000);
       }
     } catch (err: any) {
       setError('An unexpected error occurred. Please try again.');
@@ -162,9 +160,14 @@ export default function ConfirmPasswordResetPage() {
               Password Set Successfully!
             </Typography>
             <Typography variant="small" className="text-gray-600 mb-4">
-              Redirecting to login page...
+              Your password has been updated. You can now log in to your account.
             </Typography>
-            <Spinner className="h-8 w-8 mx-auto" />
+            <Link
+              href="/"
+              className="inline-block bg-black text-white px-8 py-3 rounded-md hover:opacity-90 transition font-medium mt-4"
+            >
+              Go to Login
+            </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">

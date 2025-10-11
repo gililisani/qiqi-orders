@@ -8,8 +8,6 @@ import Card from '../components/ui/Card';
 import Link from 'next/link';
 import OrderStatusBadge from '../components/ui/OrderStatusBadge';
 import { formatCurrency } from '../../lib/formatters';
-import ChangePasswordModal from '../components/ChangePasswordModal';
-
 interface Order {
   id: string;
   po_number: string;
@@ -32,8 +30,6 @@ export default function ClientDashboard() {
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordChanged, setPasswordChanged] = useState(true); // Default true to avoid flash
 
   useEffect(() => {
     fetchData();
@@ -45,12 +41,11 @@ export default function ClientDashboard() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not found');
 
-      // Get user's company info and password status
+      // Get user's company info
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
         .select(`
           company_id,
-          password_changed,
           company:companies(
             company_name,
             netsuite_number,
@@ -62,12 +57,6 @@ export default function ClientDashboard() {
 
       if (clientError) throw clientError;
       setCompany(clientData?.company?.[0] || null);
-
-      // Check if password needs to be changed
-      if (clientData?.password_changed === false) {
-        setPasswordChanged(false);
-        setShowPasswordModal(true);
-      }
 
       // Get user's orders
       const { data: ordersData, error: ordersError } = await supabase
@@ -85,12 +74,6 @@ export default function ClientDashboard() {
     }
   };
 
-  const handlePasswordChanged = () => {
-    setShowPasswordModal(false);
-    setPasswordChanged(true);
-    // Optionally show success message
-    alert('Password changed successfully! Welcome to Qiqi Partners Portal.');
-  };
 
   if (loading) {
     return (
@@ -250,11 +233,6 @@ export default function ClientDashboard() {
           </div>
         </Card>
       </div>
-
-      {/* Password Change Modal - shows on first login */}
-      {showPasswordModal && !passwordChanged && (
-        <ChangePasswordModal onPasswordChanged={handlePasswordChanged} />
-      )}
     </ClientLayout>
   );
 }
