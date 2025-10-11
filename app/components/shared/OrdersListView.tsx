@@ -73,10 +73,21 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not found');
 
+        // Get user's company_id
+        const { data: clientData, error: clientError } = await supabase
+          .from('clients')
+          .select('company_id')
+          .eq('id', user.id)
+          .single();
+
+        if (clientError) throw clientError;
+        if (!clientData?.company_id) throw new Error('User not associated with a company');
+
+        // Get ALL orders for the company (not just user's orders)
         let query = supabase
           .from('orders')
           .select('*', { count: 'exact' })
-          .eq('user_id', user.id);
+          .eq('company_id', clientData.company_id);
 
         if (statusFilter) query = query.eq('status', statusFilter);
         if (searchTerm) query = query.or(`id.ilike.%${searchTerm}%,po_number.ilike.%${searchTerm}%`);

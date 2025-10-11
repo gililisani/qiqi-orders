@@ -58,11 +58,11 @@ export default function ClientDashboard() {
       if (clientError) throw clientError;
       setCompany(clientData?.company?.[0] || null);
 
-      // Get user's orders
+      // Get ALL company orders (not just user's orders)
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('company_id', clientData.company_id)
         .order('created_at', { ascending: false });
 
       if (ordersError) throw ordersError;
