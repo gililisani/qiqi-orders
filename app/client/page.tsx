@@ -12,6 +12,7 @@ import ChangePasswordModal from '../components/ChangePasswordModal';
 
 interface Order {
   id: string;
+  po_number: string;
   created_at: string;
   status: string;
   total_value: number;
@@ -180,7 +181,7 @@ export default function ClientDashboard() {
                 <thead>
                   <tr className="border-b border-[#e5e5e5]">
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                      Order ID
+                      PO Number
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                       Status
@@ -208,7 +209,7 @@ export default function ClientDashboard() {
                     >
                       <td className="px-4 py-3 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
-                            {order.id.substring(0, 8)}...
+                            {order.po_number || order.id.substring(0, 8)}
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
