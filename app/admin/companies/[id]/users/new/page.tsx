@@ -9,7 +9,6 @@ import Link from 'next/link';
 interface FormData {
   name: string;
   email: string;
-  password: string;
   enabled: boolean;
 }
 
@@ -25,7 +24,6 @@ export default function NewUserPage() {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
-    password: '',
     enabled: true
   });
 
@@ -54,10 +52,16 @@ export default function NewUserPage() {
     setError('');
 
     try {
+      // Generate a secure random password that user will never see
+      const randomPassword = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')
+        .slice(0, 32);
+
       // First, create the user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: formData.email,
-        password: formData.password,
+        password: randomPassword,
         email_confirm: true,
         user_metadata: {
           full_name: formData.name
@@ -86,8 +90,7 @@ export default function NewUserPage() {
           name: formData.name,
           email: formData.email,
           enabled: formData.enabled,
-          company_id: companyId,
-          password_changed: false // New users haven't changed password yet
+          company_id: companyId
         }]);
 
       if (profileError) {
@@ -96,21 +99,18 @@ export default function NewUserPage() {
         throw profileError;
       }
 
-      // Send welcome email with temporary password
-      try {
-        await fetch('/api/users/send-welcome-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userName: formData.name,
-            userEmail: formData.email,
-            temporaryPassword: formData.password,
-            companyName: company?.company_name || 'Your Company',
-          }),
-        });
-      } catch (emailError) {
-        console.error('Failed to send welcome email:', emailError);
-        // Don't fail user creation if email fails
+      // Send password reset email so user can set their own password
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        formData.email,
+        {
+          redirectTo: `${window.location.origin}/confirm-password-reset`
+        }
+      );
+
+      if (resetError) {
+        console.error('Failed to send password reset email:', resetError);
+        // Don't fail user creation if email fails - admin can resend
+        setError('User created successfully, but failed to send setup email. Please use "Reset Password" to send the setup link.');
       }
 
       router.push(`/admin/companies/${companyId}`);
@@ -205,23 +205,7 @@ export default function NewUserPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password *
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                minLength={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-              <p className="text-sm text-gray-500 mt-1">Minimum 6 characters</p>
-            </div>
-
-            <div className="flex items-center">
+            <div className="flex items-center pt-6">
               <input
                 type="checkbox"
                 name="enabled"
@@ -235,13 +219,14 @@ export default function NewUserPage() {
             </div>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded p-4">
-            <h3 className="text-sm font-medium text-yellow-800 mb-2">Important Notes:</h3>
-            <ul className="text-sm text-yellow-700 space-y-1">
-              <li>• This user will be created as a "Client" role</li>
-              <li>• They will be able to log in and place orders for this company</li>
-              <li>• The email must be unique across the entire system</li>
-              <li>• You can disable the user later if needed</li>
+          <div className="bg-blue-50 border border-blue-200 rounded p-4">
+            <h3 className="text-sm font-medium text-blue-800 mb-2">📧 What happens next:</h3>
+            <ul className="text-sm text-blue-700 space-y-1">
+              <li>• User will receive an email from Qiqi Partners Hub</li>
+              <li>• Email contains a secure link to set their password</li>
+              <li>• Link expires in 24 hours for security</li>
+              <li>• After setting password, they can log in and place orders</li>
+              <li>• No temporary password needed - more secure!</li>
             </ul>
           </div>
 
