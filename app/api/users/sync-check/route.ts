@@ -30,21 +30,33 @@ export async function GET(request: NextRequest) {
 
     if (clientsError) throw clientsError;
 
-    // Create sets for comparison
+    // Get all admin records
+    const { data: admins, error: adminsError } = await supabaseAdmin
+      .from('admins')
+      .select('id, email, name');
+
+    if (adminsError) throw adminsError;
+
+    // Create sets for comparison (combine clients AND admins)
     const authUserIds = new Set(authUsers.users.map(u => u.id));
     const clientIds = new Set(clients?.map(c => c.id) || []);
+    const adminIds = new Set(admins?.map(a => a.id) || []);
+    const allUserIds = new Set([...clientIds, ...adminIds]);
 
-    // Find orphaned auth users (in auth but not in clients table)
-    const orphanedAuthUsers = authUsers.users.filter(u => !clientIds.has(u.id));
+    // Find orphaned auth users (in auth but not in clients OR admins table)
+    const orphanedAuthUsers = authUsers.users.filter(u => !allUserIds.has(u.id));
 
-    // Find missing auth users (in clients table but not in auth)
-    const missingAuthUsers = clients?.filter(c => !authUserIds.has(c.id)) || [];
+    // Find missing auth users (in clients/admins table but not in auth)
+    const missingAuthClients = clients?.filter(c => !authUserIds.has(c.id)) || [];
+    const missingAuthAdmins = admins?.filter(a => !authUserIds.has(a.id)) || [];
+    const missingAuthUsers = [...missingAuthClients, ...missingAuthAdmins];
 
     return NextResponse.json({
       success: true,
       summary: {
         totalAuthUsers: authUsers.users.length,
         totalClients: clients?.length || 0,
+        totalAdmins: admins?.length || 0,
         orphanedAuthUsers: orphanedAuthUsers.length,
         missingAuthUsers: missingAuthUsers.length
       },
