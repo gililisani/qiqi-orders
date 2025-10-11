@@ -17,6 +17,13 @@ interface FormData {
   ship_to: string;
   incoterm_id: string;
   payment_terms_id: string;
+  company_address: string;
+  company_email: string;
+  company_phone: string;
+  company_tax_number: string;
+  ship_to_contact_name: string;
+  ship_to_contact_email: string;
+  ship_to_contact_phone: string;
 }
 
 interface Option {
@@ -55,7 +62,14 @@ export default function EditCompanyPage() {
     location_id: '',
     ship_to: '',
     incoterm_id: '',
-    payment_terms_id: ''
+    payment_terms_id: '',
+    company_address: '',
+    company_email: '',
+    company_phone: '',
+    company_tax_number: '',
+    ship_to_contact_name: '',
+    ship_to_contact_email: '',
+    ship_to_contact_phone: ''
   });
 
   useEffect(() => {
@@ -84,7 +98,14 @@ export default function EditCompanyPage() {
         location_id: data.location_id || '',
         ship_to: data.ship_to || '',
         incoterm_id: data.incoterm_id || '',
-        payment_terms_id: data.payment_terms_id || ''
+        payment_terms_id: data.payment_terms_id || '',
+        company_address: data.company_address || '',
+        company_email: data.company_email || '',
+        company_phone: data.company_phone || '',
+        company_tax_number: data.company_tax_number || '',
+        ship_to_contact_name: data.ship_to_contact_name || '',
+        ship_to_contact_email: data.ship_to_contact_email || '',
+        ship_to_contact_phone: data.ship_to_contact_phone || ''
       });
     } catch (err: any) {
       setError(err.message);
@@ -134,7 +155,14 @@ export default function EditCompanyPage() {
           location_id: formData.location_id || null,
           ship_to: formData.ship_to || null,
           incoterm_id: formData.incoterm_id || null,
-          payment_terms_id: formData.payment_terms_id || null
+          payment_terms_id: formData.payment_terms_id || null,
+          company_address: formData.company_address || null,
+          company_email: formData.company_email || null,
+          company_phone: formData.company_phone || null,
+          company_tax_number: formData.company_tax_number || null,
+          ship_to_contact_name: formData.ship_to_contact_name || null,
+          ship_to_contact_email: formData.ship_to_contact_email || null,
+          ship_to_contact_phone: formData.ship_to_contact_phone || null
         })
         .eq('id', companyId);
 
@@ -351,18 +379,132 @@ export default function EditCompanyPage() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Ship To Address
-            </label>
-            <textarea
-              name="ship_to"
-              value={formData.ship_to}
-              onChange={handleChange}
-              rows={4}
-              placeholder="Enter shipping address and instructions..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-            />
+          {/* Company Information Section */}
+          <div className="border-t pt-6 mt-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Company Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Company Address
+                </label>
+                <textarea
+                  name="company_address"
+                  value={formData.company_address}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="Company main address..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Company Email
+                  </label>
+                  <input
+                    type="email"
+                    name="company_email"
+                    value={formData.company_email}
+                    onChange={handleChange}
+                    placeholder="info@company.com"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Company Phone
+                  </label>
+                  <input
+                    type="tel"
+                    name="company_phone"
+                    value={formData.company_phone}
+                    onChange={handleChange}
+                    placeholder="+1 (555) 123-4567"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                  />
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Company Tax Number (VAT)
+                </label>
+                <input
+                  type="text"
+                  name="company_tax_number"
+                  value={formData.company_tax_number}
+                  onChange={handleChange}
+                  placeholder="Tax/VAT number"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Ship To Section */}
+          <div className="border-t pt-6 mt-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Ship To Information</h3>
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ship To Address
+                </label>
+                <textarea
+                  name="ship_to"
+                  value={formData.ship_to}
+                  onChange={handleChange}
+                  rows={4}
+                  placeholder="Enter shipping address and instructions..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ship To Contact Name
+                  </label>
+                  <input
+                    type="text"
+                    name="ship_to_contact_name"
+                    value={formData.ship_to_contact_name}
+                    onChange={handleChange}
+                    placeholder="Contact person name"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ship To Contact Email
+                  </label>
+                  <input
+                    type="email"
+                    name="ship_to_contact_email"
+                    value={formData.ship_to_contact_email}
+                    onChange={handleChange}
+                    placeholder="contact@company.com"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ship To Contact Phone
+                  </label>
+                  <input
+                    type="tel"
+                    name="ship_to_contact_phone"
+                    value={formData.ship_to_contact_phone}
+                    onChange={handleChange}
+                    placeholder="+1 (555) 123-4567"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="flex space-x-4">

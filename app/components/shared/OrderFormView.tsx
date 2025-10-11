@@ -1067,21 +1067,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       setSaving(true);
       setError(null);
 
-      // Admin confirmation - show which company the order will be created for
-      if (role === 'admin' && isNewMode && company) {
-        const confirmed = confirm(
-          `Create order for company: "${company.company_name}"?\n\n` +
-          `Company ID: ${company.id}\n` +
-          `Total Items: ${orderItems.length + supportFundItems.length}\n\n` +
-          `Click OK to confirm, or Cancel to review.`
-        );
-        
-        if (!confirmed) {
-          setSaving(false);
-          return;
-        }
-      }
-
       // Check if user has earned credit but hasn't used any support funds
       const totals = getOrderTotals();
       const hasEarnedCredit = totals.supportFundEarned > 0;

@@ -43,6 +43,13 @@ interface Order {
     location?: { location_name: string };
     incoterm?: { name: string };
     payment_term?: { name: string };
+    company_address?: string;
+    company_email?: string;
+    company_phone?: string;
+    company_tax_number?: string;
+    ship_to_contact_name?: string;
+    ship_to_contact_email?: string;
+    ship_to_contact_phone?: string;
   };
 }
 
@@ -266,16 +273,17 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       setPackingSlip(packingSlipData);
 
       // Set edit data if packing slip exists
+      // Pre-populate contact fields from company data if not already set in packing slip
       if (packingSlipData) {
         setEditData({
           invoice_number: packingSlipData.invoice_number,
           shipping_method: packingSlipData.shipping_method,
           netsuite_reference: packingSlipData.netsuite_reference || '',
           notes: packingSlipData.notes || '',
-          contact_name: packingSlipData.contact_name || '',
-          contact_email: packingSlipData.contact_email || '',
-          contact_phone: packingSlipData.contact_phone || '',
-          vat_number: packingSlipData.vat_number || ''
+          contact_name: packingSlipData.contact_name || companyData?.ship_to_contact_name || '',
+          contact_email: packingSlipData.contact_email || companyData?.ship_to_contact_email || '',
+          contact_phone: packingSlipData.contact_phone || companyData?.ship_to_contact_phone || '',
+          vat_number: packingSlipData.vat_number || companyData?.company_tax_number || ''
         });
       }
 
@@ -759,6 +767,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
   }, [orderId]);
 
   // Populate editData when packingSlip changes
+  // Pre-populate contact fields from company data if not in packing slip
   useEffect(() => {
     if (packingSlip || order) {
       setEditData({
@@ -766,10 +775,10 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
         shipping_method: packingSlip?.shipping_method || '',
         netsuite_reference: order?.so_number || packingSlip?.netsuite_reference || '',
         notes: packingSlip?.notes || '',
-        contact_name: packingSlip?.contact_name || '',
-        contact_email: packingSlip?.contact_email || '',
-        contact_phone: packingSlip?.contact_phone || '',
-        vat_number: packingSlip?.vat_number || ''
+        contact_name: packingSlip?.contact_name || order?.company?.ship_to_contact_name || '',
+        contact_email: packingSlip?.contact_email || order?.company?.ship_to_contact_email || '',
+        contact_phone: packingSlip?.contact_phone || order?.company?.ship_to_contact_phone || '',
+        vat_number: packingSlip?.vat_number || order?.company?.company_tax_number || ''
       });
     }
   }, [packingSlip, order]);
