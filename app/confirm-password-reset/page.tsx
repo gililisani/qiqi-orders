@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
-  Input,
   Button,
   Typography,
   Alert,
@@ -137,13 +137,14 @@ export default function ConfirmPasswordResetPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 New Password *
               </label>
-              <Input
+              <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
                 disabled={isSubmitting}
-                className="!border-gray-300"
+                minLength={6}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100"
                 placeholder="Enter your password"
               />
               <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
@@ -153,24 +154,25 @@ export default function ConfirmPasswordResetPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Confirm Password *
               </label>
-              <Input
+              <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 disabled={isSubmitting}
-                className="!border-gray-300"
+                minLength={6}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100"
                 placeholder="Confirm your password"
               />
             </div>
 
-            <Button
+            <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-black"
+              className="w-full bg-black text-white px-6 py-3 rounded-md hover:opacity-90 transition disabled:opacity-50 font-medium"
             >
               {isSubmitting ? 'Setting Password...' : 'Set Password'}
-            </Button>
+            </button>
           </form>
         )}
 
