@@ -18,6 +18,13 @@ interface Company {
   ship_to?: string;
   incoterm_id?: string;
   payment_term_id?: string;
+  company_address?: string;
+  company_email?: string;
+  company_phone?: string;
+  company_tax_number?: string;
+  ship_to_contact_name?: string;
+  ship_to_contact_email?: string;
+  ship_to_contact_phone?: string;
   // Related data
   support_fund?: { percent: number };
   subsidiary?: { name: string };
@@ -173,59 +180,127 @@ export default function CompanyViewPage() {
             </>
           }
         >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Company Details */}
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-4">Company Details</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium text-gray-500">Company Name</label>
-                <p className="text-lg">{company.company_name}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">NetSuite Number</label>
-                <p className="text-lg">{company.netsuite_number}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Support Fund</label>
-                <p className="text-lg">{company.support_fund?.percent || 0}%</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Subsidiary</label>
-                <p className="text-lg">{company.subsidiary?.name || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Class</label>
-                <p className="text-lg">{company.class?.name || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Location</label>
-                <p className="text-lg">{company.location?.location_name || 'N/A'}</p>
-              </div>
-              {company.ship_to && (
+        <div className="space-y-6">
+          {/* Top Row: Two Blocks Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Block: Company Details */}
+            <div className="bg-white p-6 rounded-lg shadow border">
+              <h2 className="text-lg font-semibold mb-4">Company Details</h2>
+              <div className="space-y-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Ship To Address</label>
-                  <div className="text-sm text-gray-700 whitespace-pre-line bg-gray-50 p-3 rounded border">
-                    {company.ship_to}
+                  <label className="text-sm font-medium text-gray-500">Company Name</label>
+                  <p className="text-lg">{company.company_name}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">NetSuite Number</label>
+                  <p className="text-lg">{company.netsuite_number}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Support Fund</label>
+                  <p className="text-lg">{company.support_fund?.percent || 0}%</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Subsidiary</label>
+                  <p className="text-lg">{company.subsidiary?.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Class</label>
+                  <p className="text-lg">{company.class?.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Location</label>
+                  <p className="text-lg">{company.location?.location_name || 'N/A'}</p>
+                </div>
+                {company.incoterm && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Incoterm</label>
+                    <p className="text-lg">{company.incoterm.name}</p>
                   </div>
-                </div>
-              )}
-              {company.incoterm && (
+                )}
+                {company.payment_term && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Payment Terms</label>
+                    <p className="text-lg">{company.payment_term.name}</p>
+                  </div>
+                )}
+                {company.company_tax_number && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Tax Number (VAT)</label>
+                    <p className="text-lg">{company.company_tax_number}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Block: Contact & Shipping Information */}
+            <div className="bg-white p-6 rounded-lg shadow border">
+              <h2 className="text-lg font-semibold mb-4">Contact & Shipping Information</h2>
+              <div className="space-y-4">
+                {/* Company Contact Info */}
+                {(company.company_address || company.company_email || company.company_phone) && (
+                  <div className="border-b pb-4">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Company Contact</h3>
+                    {company.company_address && (
+                      <div className="mb-2">
+                        <label className="text-sm font-medium text-gray-500">Address</label>
+                        <div className="text-sm text-gray-700 whitespace-pre-line bg-gray-50 p-3 rounded border">
+                          {company.company_address}
+                        </div>
+                      </div>
+                    )}
+                    {company.company_email && (
+                      <div className="mb-2">
+                        <label className="text-sm font-medium text-gray-500">Email</label>
+                        <p className="text-sm">{company.company_email}</p>
+                      </div>
+                    )}
+                    {company.company_phone && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Phone</label>
+                        <p className="text-sm">{company.company_phone}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Ship To Information */}
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Incoterm</label>
-                  <p className="text-lg">{company.incoterm.name}</p>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Ship To</h3>
+                  {company.ship_to && (
+                    <div className="mb-2">
+                      <label className="text-sm font-medium text-gray-500">Address</label>
+                      <div className="text-sm text-gray-700 whitespace-pre-line bg-gray-50 p-3 rounded border">
+                        {company.ship_to}
+                      </div>
+                    </div>
+                  )}
+                  {company.ship_to_contact_name && (
+                    <div className="mb-2">
+                      <label className="text-sm font-medium text-gray-500">Contact Name</label>
+                      <p className="text-sm">{company.ship_to_contact_name}</p>
+                    </div>
+                  )}
+                  {company.ship_to_contact_email && (
+                    <div className="mb-2">
+                      <label className="text-sm font-medium text-gray-500">Contact Email</label>
+                      <p className="text-sm">{company.ship_to_contact_email}</p>
+                    </div>
+                  )}
+                  {company.ship_to_contact_phone && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Contact Phone</label>
+                      <p className="text-sm">{company.ship_to_contact_phone}</p>
+                    </div>
+                  )}
+                  {!company.ship_to && !company.ship_to_contact_name && !company.ship_to_contact_email && !company.ship_to_contact_phone && (
+                    <p className="text-sm text-gray-500 italic">No shipping information available</p>
+                  )}
                 </div>
-              )}
-              {company.payment_term && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Payment Terms</label>
-                  <p className="text-lg">{company.payment_term.name}</p>
-                </div>
-              )}
+              </div>
             </div>
           </div>
 
-          {/* Users */}
+          {/* Bottom Row: Users List (Full Width) */}
           <div className="bg-white p-6 rounded-lg shadow border">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Users ({users.length})</h2>
