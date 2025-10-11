@@ -871,6 +871,16 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           poNumber = generatedPO;
         }
 
+        // Log order creation details for debugging
+        console.log('Creating order with details:', {
+          company_id: company.id,
+          company_name: company.company_name,
+          user_id: user.id,
+          po_number: poNumber,
+          status: asDraft ? 'Draft' : 'Open',
+          role: role
+        });
+
         // Create new order
         const { data: newOrder, error: orderError } = await supabase
           .from('orders')
@@ -884,6 +894,11 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           .single();
 
         if (orderError) throw orderError;
+        
+        console.log('Order created successfully:', {
+          order_id: newOrder.id,
+          company_id: newOrder.company_id
+        });
 
         // Insert order items
         const regularItemsData = orderItems.map((item, index) => ({
@@ -1051,6 +1066,21 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     try {
       setSaving(true);
       setError(null);
+
+      // Admin confirmation - show which company the order will be created for
+      if (role === 'admin' && isNewMode && company) {
+        const confirmed = confirm(
+          `Create order for company: "${company.company_name}"?\n\n` +
+          `Company ID: ${company.id}\n` +
+          `Total Items: ${orderItems.length + supportFundItems.length}\n\n` +
+          `Click OK to confirm, or Cancel to review.`
+        );
+        
+        if (!confirmed) {
+          setSaving(false);
+          return;
+        }
+      }
 
       // Check if user has earned credit but hasn't used any support funds
       const totals = getOrderTotals();
