@@ -189,44 +189,44 @@ export default function CompanyViewPage() {
               <div className="space-y-3">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Company Name</label>
-                  <p className="text-lg">{company.company_name}</p>
+                  <p className="text-sm">{company.company_name}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">NetSuite Number</label>
-                  <p className="text-lg">{company.netsuite_number}</p>
+                  <p className="text-sm">{company.netsuite_number}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Support Fund</label>
-                  <p className="text-lg">{company.support_fund?.percent || 0}%</p>
+                  <p className="text-sm">{company.support_fund?.percent || 0}%</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Subsidiary</label>
-                  <p className="text-lg">{company.subsidiary?.name || 'N/A'}</p>
+                  <p className="text-sm">{company.subsidiary?.name || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Class</label>
-                  <p className="text-lg">{company.class?.name || 'N/A'}</p>
+                  <p className="text-sm">{company.class?.name || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Location</label>
-                  <p className="text-lg">{company.location?.location_name || 'N/A'}</p>
+                  <p className="text-sm">{company.location?.location_name || 'N/A'}</p>
                 </div>
                 {company.incoterm && (
                   <div>
                     <label className="text-sm font-medium text-gray-500">Incoterm</label>
-                    <p className="text-lg">{company.incoterm.name}</p>
+                    <p className="text-sm">{company.incoterm.name}</p>
                   </div>
                 )}
                 {company.payment_term && (
                   <div>
                     <label className="text-sm font-medium text-gray-500">Payment Terms</label>
-                    <p className="text-lg">{company.payment_term.name}</p>
+                    <p className="text-sm">{company.payment_term.name}</p>
                   </div>
                 )}
                 {company.company_tax_number && (
                   <div>
                     <label className="text-sm font-medium text-gray-500">Tax Number (VAT)</label>
-                    <p className="text-lg">{company.company_tax_number}</p>
+                    <p className="text-sm">{company.company_tax_number}</p>
                   </div>
                 )}
               </div>
