@@ -48,13 +48,13 @@ export async function POST(request: NextRequest) {
 
     console.log('[send-email] Fetching order:', orderId);
 
-    // Fetch order with all relationships (now that foreign key exists)
+    // Fetch order with all relationships and company contact info
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(
         `
         *,
-        companies (company_name),
+        companies (company_name, company_email, ship_to_contact_email),
         clients!user_id (email, name),
         order_items (
           quantity,
@@ -95,13 +95,22 @@ export async function POST(request: NextRequest) {
       siteUrl,
     };
 
-    // Get recipient email from clients relationship
-    const recipientEmail = order.clients?.email;
+    // Get recipient email - try client first, then company contact emails
+    let recipientEmail = order.clients?.email;
+    
     if (!recipientEmail) {
-      return NextResponse.json(
-        { error: 'Order user email not found' },
-        { status: 400 }
-      );
+      // No client user - try company contact emails
+      recipientEmail = order.companies?.ship_to_contact_email || order.companies?.company_email;
+      
+      if (!recipientEmail) {
+        console.error('[send-email] No recipient email found for order:', orderId);
+        return NextResponse.json(
+          { error: 'No recipient email found. Order has no user and company has no contact email configured.' },
+          { status: 400 }
+        );
+      }
+      
+      console.log('[send-email] No client user, using company email:', recipientEmail);
     }
 
     // Select appropriate email template
