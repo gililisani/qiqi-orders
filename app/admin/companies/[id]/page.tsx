@@ -123,12 +123,19 @@ export default function CompanyViewPage() {
     if (!confirm('Are you sure you want to delete this user?')) return;
 
     try {
-      const { error } = await supabase
-        .from('clients')
-        .delete()
-        .eq('id', userId);
+      // Call the API route to delete user (server-side with admin privileges)
+      const response = await fetch('/api/users/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
 
-      if (error) throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete user');
+      }
+
       fetchUsers(); // Refresh the list
     } catch (err: any) {
       setError(err.message);

@@ -157,20 +157,17 @@ export default function EditUserPage() {
     try {
       setLoading(true);
       
-      // Delete from our clients table first
-      const { error: profileError } = await supabase
-        .from('clients')
-        .delete()
-        .eq('id', userId);
+      // Call the API route to delete user (server-side with admin privileges)
+      const response = await fetch('/api/users/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
 
-      if (profileError) throw profileError;
+      const data = await response.json();
 
-      // Delete from Supabase Auth
-      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-      
-      if (authError) {
-        console.error('Error deleting auth user:', authError);
-        // Don't throw here, profile was deleted successfully
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete user');
       }
 
       router.push('/admin/users');
