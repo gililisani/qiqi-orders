@@ -25,6 +25,12 @@ interface Company {
   ship_to_contact_name?: string;
   ship_to_contact_email?: string;
   ship_to_contact_phone?: string;
+  ship_to_street_line_1?: string;
+  ship_to_street_line_2?: string;
+  ship_to_city?: string;
+  ship_to_state?: string;
+  ship_to_postal_code?: string;
+  ship_to_country?: string;
   // Related data
   support_fund?: { percent: number };
   subsidiary?: { name: string };
@@ -302,6 +308,52 @@ export default function CompanyViewPage() {
                       <p className="text-sm">{company.ship_to_contact_phone}</p>
                     </div>
                   )}
+                  
+                  {/* Structured Address for 3PL */}
+                  {(company.ship_to_street_line_1 || company.ship_to_city || company.ship_to_country) && (
+                    <div className="border-t pt-3 mt-3">
+                      <h4 className="text-xs font-semibold text-gray-600 mb-2">Structured Address (3PL Export)</h4>
+                      {company.ship_to_street_line_1 && (
+                        <div className="mb-1">
+                          <label className="text-xs font-medium text-gray-500">Street 1:</label>
+                          <p className="text-sm">{company.ship_to_street_line_1}</p>
+                        </div>
+                      )}
+                      {company.ship_to_street_line_2 && (
+                        <div className="mb-1">
+                          <label className="text-xs font-medium text-gray-500">Street 2:</label>
+                          <p className="text-sm">{company.ship_to_street_line_2}</p>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-3 gap-2">
+                        {company.ship_to_city && (
+                          <div>
+                            <label className="text-xs font-medium text-gray-500">City:</label>
+                            <p className="text-sm">{company.ship_to_city}</p>
+                          </div>
+                        )}
+                        {company.ship_to_state && (
+                          <div>
+                            <label className="text-xs font-medium text-gray-500">State:</label>
+                            <p className="text-sm">{company.ship_to_state}</p>
+                          </div>
+                        )}
+                        {company.ship_to_postal_code && (
+                          <div>
+                            <label className="text-xs font-medium text-gray-500">Postal:</label>
+                            <p className="text-sm">{company.ship_to_postal_code}</p>
+                          </div>
+                        )}
+                      </div>
+                      {company.ship_to_country && (
+                        <div className="mt-1">
+                          <label className="text-xs font-medium text-gray-500">Country:</label>
+                          <p className="text-sm">{company.ship_to_country}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   {!company.ship_to && !company.ship_to_contact_name && !company.ship_to_contact_email && !company.ship_to_contact_phone && (
                     <p className="text-sm text-gray-500 italic">No shipping information available</p>
                   )}
