@@ -428,20 +428,22 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('No user found');
 
-        // Check if this order belongs to the client
+        // Get user's company_id
+        const { data: clientData, error: clientError } = await supabase
+          .from('clients')
+          .select('company_id')
+          .eq('id', user.id)
+          .single();
+
+        if (clientError) throw clientError;
+        if (!clientData?.company_id) throw new Error('User not associated with a company');
+
+        // Check if this order belongs to the client's company
         const { data: orderCheck, error: orderCheckError } = await supabase
           .from('orders')
-          .select(`
-            id,
-            status,
-            user_id,
-            company:companies(
-              id,
-              clients!inner(id)
-            )
-          `)
+          .select('id, status, company_id')
           .eq('id', orderId)
-          .eq('user_id', user.id)
+          .eq('company_id', clientData.company_id)
           .single();
 
         if (orderCheckError || !orderCheck) {

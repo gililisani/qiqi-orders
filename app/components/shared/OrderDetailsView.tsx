@@ -311,10 +311,21 @@ export default function OrderDetailsView({
   const fetchOrder = async () => {
     try {
       if (role === 'client') {
-        // Client: fetch order with user restriction
+        // Client: fetch order with company restriction (not user restriction)
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not found');
 
+        // Get user's company_id
+        const { data: clientData, error: clientError } = await supabase
+          .from('clients')
+          .select('company_id')
+          .eq('id', user.id)
+          .single();
+
+        if (clientError) throw clientError;
+        if (!clientData?.company_id) throw new Error('User not associated with a company');
+
+        // Fetch order for the company (not filtered by user_id)
         const { data, error } = await supabase
           .from('orders')
           .select(`
@@ -332,7 +343,7 @@ export default function OrderDetailsView({
             )
           `)
           .eq('id', orderId)
-          .eq('user_id', user.id)
+          .eq('company_id', clientData.company_id)
           .single();
 
         if (error) throw error;
