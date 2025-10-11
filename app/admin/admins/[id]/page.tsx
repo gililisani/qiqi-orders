@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
 import AdminLayout from '../../../components/AdminLayout';
+import Card from '../../../components/ui/Card';
 import Link from 'next/link';
 
 interface Admin {
@@ -113,8 +114,7 @@ export default function AdminViewPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Admin Details */}
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-4">Admin Details</h2>
+          <Card header={<h2 className="font-semibold">Admin Details</h2>}>
             <div className="space-y-3">
               <div>
                 <label className="text-sm font-medium text-gray-500">Full Name</label>
@@ -149,11 +149,10 @@ export default function AdminViewPage() {
                 <p className="text-lg">{new Date(admin.created_at).toLocaleDateString()}</p>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Permissions */}
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-4">Admin Permissions</h2>
+          <Card header={<h2 className="font-semibold">Admin Permissions</h2>}>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-700">Manage Products</span>
@@ -185,7 +184,7 @@ export default function AdminViewPage() {
                 <strong>Note:</strong> Admins have complete access to all system features and data.
               </p>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </AdminLayout>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
 import AdminLayout from '../../../components/AdminLayout';
+import Card from '../../../components/ui/Card';
 import Link from 'next/link';
 
 interface Client {
@@ -132,8 +133,7 @@ export default function UserViewPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* User Details */}
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-4">User Details</h2>
+          <Card header={<h2 className="font-semibold">User Details</h2>}>
             <div className="space-y-3">
               <div>
                 <label className="text-sm font-medium text-gray-500">Full Name</label>
@@ -168,11 +168,10 @@ export default function UserViewPage() {
                 <p className="text-lg">{new Date(client.created_at).toLocaleDateString()}</p>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Company Details */}
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h2 className="text-lg font-semibold mb-4">Company Details</h2>
+          <Card header={<h2 className="font-semibold">Company Details</h2>}>
             {client.company ? (
               <div className="space-y-3">
                 <div>
@@ -211,7 +210,7 @@ export default function UserViewPage() {
             ) : (
               <p className="text-gray-500">No company assigned</p>
             )}
-          </div>
+          </Card>
         </div>
       </div>
     </AdminLayout>
