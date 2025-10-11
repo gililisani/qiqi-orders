@@ -1118,6 +1118,46 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     };
   }, [hasUnsavedChanges, orderItems, supportFundItems, isNewMode]);
 
+  // Auto-save draft on blur (when user switches tabs/windows)
+  React.useEffect(() => {
+    if (!isNewMode) return; // Only for new orders
+    if (!hasUnsavedChanges) return; // Only if there are unsaved changes
+    if (orderItems.length === 0 && supportFundItems.length === 0) return; // Must have items
+
+    let autoSaveTimeout: NodeJS.Timeout;
+
+    const handleVisibilityChange = () => {
+      // When tab becomes hidden (user switches away)
+      if (document.hidden && !saving) {
+        // Delay auto-save slightly to avoid saving during quick tab switches
+        autoSaveTimeout = setTimeout(async () => {
+          try {
+            console.log('Auto-saving draft on tab blur...');
+            await performSave(true); // Save as draft
+            console.log('Draft auto-saved successfully');
+          } catch (error) {
+            // Silent failure - don't interrupt user
+            console.error('Auto-save failed (silent):', error);
+          }
+        }, 1000); // 1 second delay
+      } else if (!document.hidden) {
+        // User came back - cancel pending auto-save
+        if (autoSaveTimeout) {
+          clearTimeout(autoSaveTimeout);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+      }
+    };
+  }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, saving]);
+
   // Let AdminLayout handle loading - no separate loading state needed
 
   const totals = getOrderTotals();
