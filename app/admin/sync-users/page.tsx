@@ -17,11 +17,16 @@ interface SyncData {
     email: string;
     createdAt: string;
   }>;
-  missingAuthUsers: Array<{
+  missingAuthClients: Array<{
     id: string;
     email: string;
     name: string;
     company_id: string;
+  }>;
+  missingAuthAdmins: Array<{
+    id: string;
+    email: string;
+    name: string;
   }>;
 }
 
@@ -199,17 +204,40 @@ export default function SyncUsersPage() {
                   </div>
                 )}
 
-                {/* Missing Auth Users */}
-                {data.missingAuthUsers.length > 0 && (
+                {/* Missing Auth Clients */}
+                {data.missingAuthClients && data.missingAuthClients.length > 0 && (
                   <div className="bg-white p-6 rounded-lg shadow border">
                     <h2 className="text-lg font-semibold mb-4 text-yellow-600">
-                      ⚠️ Missing Auth Users ({data.missingAuthUsers.length})
+                      ⚠️ Missing Auth Users - Clients ({data.missingAuthClients.length})
                     </h2>
                     <p className="text-sm text-gray-600 mb-4">
                       These client records exist but have no Supabase Auth user. This is unusual.
                     </p>
                     <div className="space-y-2">
-                      {data.missingAuthUsers.map((user) => (
+                      {data.missingAuthClients.map((user) => (
+                        <div key={user.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded border border-yellow-200">
+                          <div>
+                            <p className="font-medium text-yellow-900">{user.name}</p>
+                            <p className="text-sm text-yellow-700">{user.email}</p>
+                            <p className="text-xs text-gray-500">ID: {user.id} | Company: {user.company_id}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Missing Auth Admins */}
+                {data.missingAuthAdmins && data.missingAuthAdmins.length > 0 && (
+                  <div className="bg-white p-6 rounded-lg shadow border">
+                    <h2 className="text-lg font-semibold mb-4 text-yellow-600">
+                      ⚠️ Missing Auth Users - Admins ({data.missingAuthAdmins.length})
+                    </h2>
+                    <p className="text-sm text-gray-600 mb-4">
+                      These admin records exist but have no Supabase Auth user. This is unusual.
+                    </p>
+                    <div className="space-y-2">
+                      {data.missingAuthAdmins.map((user) => (
                         <div key={user.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded border border-yellow-200">
                           <div>
                             <p className="font-medium text-yellow-900">{user.name}</p>
@@ -223,7 +251,9 @@ export default function SyncUsersPage() {
                 )}
 
                 {/* All Good */}
-                {data.orphanedAuthUsers.length === 0 && data.missingAuthUsers.length === 0 && (
+                {data.orphanedAuthUsers.length === 0 && 
+                 (!data.missingAuthClients || data.missingAuthClients.length === 0) && 
+                 (!data.missingAuthAdmins || data.missingAuthAdmins.length === 0) && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
                     <div className="text-4xl mb-2">✅</div>
                     <h3 className="text-lg font-semibold text-green-900 mb-2">All Synced!</h3>

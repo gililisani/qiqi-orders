@@ -65,11 +65,16 @@ export async function GET(request: NextRequest) {
         email: u.email,
         createdAt: u.created_at
       })),
-      missingAuthUsers: missingAuthUsers.map(c => ({
+      missingAuthClients: missingAuthClients.map(c => ({
         id: c.id,
         email: c.email,
         name: c.name,
         company_id: c.company_id
+      })),
+      missingAuthAdmins: missingAuthAdmins.map(a => ({
+        id: a.id,
+        email: a.email,
+        name: a.name
       }))
     });
 
