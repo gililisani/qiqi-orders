@@ -1035,8 +1035,12 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         // Redirect back to order view
         router.push(`/${role}/orders/${orderId}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving order:', error);
+      // Log more details for debugging
+      if (error.message) console.error('Error message:', error.message);
+      if (error.details) console.error('Error details:', error.details);
+      if (error.hint) console.error('Error hint:', error.hint);
       setError(error instanceof Error ? error.message : 'Failed to save order');
     } finally {
       setSaving(false);
@@ -1075,8 +1079,12 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
       // Save as draft (skip support fund reminder check)
       await performSave(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in handleSaveAsDraft:', error);
+      // Log more details for debugging
+      if (error.message) console.error('Draft error message:', error.message);
+      if (error.details) console.error('Draft error details:', error.details);
+      if (error.hint) console.error('Draft error hint:', error.hint);
       setError(error instanceof Error ? error.message : 'Failed to save draft');
       setSaving(false);
     }
