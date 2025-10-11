@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendMail } from '../../../../lib/emailService';
+import { welcomeEmailTemplate } from '../../../../lib/emailTemplates';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -71,8 +73,7 @@ export async function POST(request: NextRequest) {
       throw profileError;
     }
 
-    // Send invite email by generating a password reset token manually
-    // Note: This uses the same mechanism but for a newly created user
+    // Generate password setup link using Supabase admin API
     const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
       email: email,
@@ -86,11 +87,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         userId: authData.user.id,
-        warning: 'User created but failed to generate setup email. Please use Reset Password to send the link manually.'
+        warning: 'User created but failed to generate setup link. Please use Reset Password to send the link manually.'
       });
     }
 
-    console.log('Setup email link generated successfully for:', email);
+    // Get company name for the welcome email
+    const { data: companyData } = await supabaseAdmin
+      .from('companies')
+      .select('company_name')
+      .eq('id', companyId)
+      .single();
+
+    // Send welcome email via Microsoft Graph API (not Supabase email)
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const emailTemplate = welcomeEmailTemplate({
+      userName: name,
+      userEmail: email,
+      companyName: companyData?.company_name || 'Your Company',
+      setupLink: resetData.properties.action_link, // The magic link from Supabase
+      siteUrl: siteUrl
+    });
+
+    const emailResult = await sendMail({
+      to: email,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html
+    });
+
+    if (!emailResult.success) {
+      console.error('Failed to send welcome email:', emailResult.error);
+      return NextResponse.json({
+        success: true,
+        userId: authData.user.id,
+        warning: 'User created but failed to send welcome email. Please resend manually.'
+      });
+    }
+
+    console.log('Welcome email sent successfully to:', email);
 
     return NextResponse.json({
       success: true,

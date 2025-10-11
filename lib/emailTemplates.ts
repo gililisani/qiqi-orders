@@ -371,3 +371,81 @@ export function customUpdateTemplate(data: OrderEmailData): { subject: string; h
     html: emailWrapper(content, data.siteUrl),
   };
 }
+
+/**
+ * Welcome / Password Setup Email Template
+ */
+export function welcomeEmailTemplate(data: { 
+  userName: string; 
+  userEmail: string;
+  companyName: string;
+  setupLink: string;
+  siteUrl: string;
+}): { subject: string; html: string } {
+  const content = `
+    <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: #111827;">
+      Welcome to Qiqi Partners Hub! 🎉
+    </h1>
+    
+    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
+      Hi <strong>${data.userName}</strong>,
+    </p>
+    
+    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
+      Your account has been created for <strong>${data.companyName}</strong>. You're now ready to start placing orders through our Partners Hub.
+    </p>
+    
+    <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="margin: 0 0 12px; color: #1e40af; font-weight: 600;">
+        📧 Your Login Email:
+      </p>
+      <p style="margin: 0; color: #1e3a8a; font-family: monospace; font-size: 15px;">
+        ${data.userEmail}
+      </p>
+    </div>
+    
+    <h2 style="margin: 24px 0 16px; font-size: 20px; font-weight: 600; color: #111827;">
+      Next Step: Set Your Password
+    </h2>
+    
+    <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
+      Click the button below to create your secure password. This link will expire in <strong>24 hours</strong> for security reasons.
+    </p>
+    
+    <div style="margin: 30px 0; text-align: center;">
+      <a href="${data.setupLink}" 
+         style="display: inline-block; padding: 16px 40px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+        Set My Password →
+      </a>
+    </div>
+    
+    <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px; font-weight: 600;">
+        🔒 Security Note:
+      </p>
+      <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+        No temporary password needed! You'll choose your own secure password. If the link expires, contact your administrator to resend the setup email.
+      </p>
+    </div>
+    
+    <h2 style="margin: 24px 0 16px; font-size: 18px; font-weight: 600; color: #111827;">
+      What's Next?
+    </h2>
+    
+    <ul style="margin: 0 0 24px 20px; color: #374151; font-size: 15px; line-height: 1.8;">
+      <li>Set your password using the link above</li>
+      <li>Log in to the Partners Hub</li>
+      <li>Browse products and place orders</li>
+      <li>Track your order status in real-time</li>
+    </ul>
+    
+    <p style="margin: 24px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+      Questions? Contact our support team or your account administrator.
+    </p>
+  `;
+
+  return {
+    subject: `Welcome to Qiqi Partners Hub - Set Your Password`,
+    html: emailWrapper(content, data.siteUrl),
+  };
+}
