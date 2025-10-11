@@ -87,7 +87,13 @@ export default function SyncUsersPage() {
         throw new Error(result.error || 'Failed to cleanup users');
       }
 
-      setSuccess(result.message || 'Users cleaned up successfully');
+      // Check if any deletions failed
+      if (result.results?.failed && result.results.failed.length > 0) {
+        const failedUsers = result.results.failed.map((f: any) => `${f.userId}: ${f.error}`).join(', ');
+        setError(`Cleanup partially failed. Failed users: ${failedUsers}`);
+      } else {
+        setSuccess(result.message || 'Users cleaned up successfully');
+      }
       
       // Refresh the check
       setTimeout(() => {
