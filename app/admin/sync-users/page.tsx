@@ -81,11 +81,13 @@ export default function SyncUsersPage() {
 
       const result = await response.json();
 
+      console.log('Cleanup response:', { status: response.status, result });
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to cleanup users');
       }
 
-      setSuccess(result.message);
+      setSuccess(result.message || 'Users cleaned up successfully');
       
       // Refresh the check
       setTimeout(() => {

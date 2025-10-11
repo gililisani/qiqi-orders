@@ -95,7 +95,10 @@ export async function POST(request: NextRequest) {
   try {
     const { action, userIds } = await request.json();
 
+    console.log('[sync-check] POST request:', { action, userIds });
+
     if (action !== 'cleanup' || !Array.isArray(userIds)) {
+      console.error('[sync-check] Invalid request:', { action, isArray: Array.isArray(userIds) });
       return NextResponse.json(
         { error: 'Invalid request. Expected action: "cleanup" and userIds array' },
         { status: 400 }
@@ -120,17 +123,25 @@ export async function POST(request: NextRequest) {
     // Delete each orphaned auth user
     for (const userId of userIds) {
       try {
+        console.log('[sync-check] Deleting user:', userId);
         const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
-        if (error) throw error;
+        if (error) {
+          console.error('[sync-check] Delete failed for user:', userId, error);
+          throw error;
+        }
+        console.log('[sync-check] Successfully deleted user:', userId);
         results.success.push(userId);
       } catch (err: any) {
+        console.error('[sync-check] Error deleting user:', userId, err);
         results.failed.push({ userId, error: err.message });
       }
     }
 
+    console.log('[sync-check] Cleanup results:', results);
+
     return NextResponse.json({
       success: true,
-      message: `Cleaned up ${results.success.length} orphaned auth users`,
+      message: `Cleaned up ${results.success.length} orphaned auth user(s)`,
       results
     });
 
