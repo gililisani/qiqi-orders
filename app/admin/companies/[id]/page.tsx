@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
 import AdminLayout from '../../../components/AdminLayout';
 import InnerPageShell from '../../../components/ui/InnerPageShell';
+import Card from '../../../components/ui/Card';
 import Link from 'next/link';
 
 interface Company {
@@ -200,8 +201,7 @@ export default function CompanyViewPage() {
           {/* Top Row: Two Blocks Side by Side */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Block: Company Details */}
-            <div className="bg-white p-6 rounded-lg shadow border">
-              <h2 className="text-lg font-semibold mb-4">Company Details</h2>
+            <Card header={<h2 className="font-semibold">Company Details</h2>}>
               <div className="space-y-3">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Company Name</label>
@@ -246,11 +246,10 @@ export default function CompanyViewPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
 
             {/* Right Block: Contact & Shipping Information */}
-            <div className="bg-white p-6 rounded-lg shadow border">
-              <h2 className="text-lg font-semibold mb-4">Contact & Shipping Information</h2>
+            <Card header={<h2 className="font-semibold">Contact & Shipping Information</h2>}>
               <div className="space-y-4">
                 {/* Company Contact Info */}
                 {(company.company_address || company.company_email || company.company_phone) && (
@@ -359,13 +358,13 @@ export default function CompanyViewPage() {
                   )}
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
 
           {/* Bottom Row: Users List (Full Width) */}
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Users ({users.length})</h2>
+          <Card header={
+            <div className="flex justify-between items-center">
+              <h2 className="font-semibold">Users ({users.length})</h2>
               <Link
                 href={`/admin/companies/${company.id}/users/new`}
                 className="bg-black text-white px-3 py-1 rounded text-sm hover:opacity-90 transition"
@@ -373,7 +372,7 @@ export default function CompanyViewPage() {
                 Add User
               </Link>
             </div>
-
+          }>
             {userError && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                 {userError}
@@ -421,7 +420,7 @@ export default function CompanyViewPage() {
                 </Link>
               </div>
             )}
-          </div>
+          </Card>
         </div>
         </InnerPageShell>
       </div>
