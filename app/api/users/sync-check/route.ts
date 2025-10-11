@@ -92,7 +92,10 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    const results = {
+    const results: {
+      success: string[];
+      failed: Array<{ userId: string; error: string }>;
+    } = {
       success: [],
       failed: []
     };
