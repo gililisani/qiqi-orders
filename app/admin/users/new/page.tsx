@@ -56,68 +56,33 @@ export default function NewUserPage() {
     setError('');
 
     try {
-      // Generate a secure random password that user will never see
-      const randomPassword = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')
-        .slice(0, 32);
-
-      // First, create the user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: randomPassword,
-        email_confirm: true,
-        user_metadata: {
-          full_name: formData.name
-        }
-      });
-
-      if (authError) {
-        if (authError.message.includes('already registered')) {
-          setError('A user with this email already exists. Please use a different email.');
-        } else {
-          throw authError;
-        }
-        setLoading(false);
-        return;
-      }
-
-      if (!authData.user) {
-        throw new Error('Failed to create user account');
-      }
-
-      // Then, create the client profile in our clients table
-      const { error: profileError } = await supabase
-        .from('clients')
-        .insert([{
-          id: authData.user.id,
+      // Call the API route to create user (server-side with admin privileges)
+      const response = await fetch('/api/users/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: formData.name,
           email: formData.email,
-          enabled: formData.enabled,
-          company_id: formData.company_id
-        }]);
+          companyId: formData.company_id,
+          enabled: formData.enabled
+        })
+      });
 
-      if (profileError) {
-        // If profile creation fails, we should clean up the auth user
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        throw profileError;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create user');
       }
 
-      // Send password reset email so user can set their own password
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        formData.email,
-        {
-          redirectTo: `${window.location.origin}/confirm-password-reset`
-        }
-      );
-
-      if (resetError) {
-        console.error('Failed to send password reset email:', resetError);
-        // Don't fail user creation if email fails - admin can resend
-        setError('User created successfully, but failed to send setup email. Please use "Reset Password" to send the setup link.');
+      if (data.warning) {
+        setError(data.warning);
+        // Still redirect after showing warning
+        setTimeout(() => {
+          router.push('/admin/users');
+        }, 3000);
+      } else {
+        router.push('/admin/users');
       }
-
-      router.push('/admin/users');
     } catch (err: any) {
       setError(err.message);
     } finally {
