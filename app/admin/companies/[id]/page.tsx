@@ -50,6 +50,7 @@ export default function CompanyViewPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [userError, setUserError] = useState('');
 
   useEffect(() => {
     if (companyId) {
@@ -123,6 +124,8 @@ export default function CompanyViewPage() {
     if (!confirm('Are you sure you want to delete this user?')) return;
 
     try {
+      setUserError(''); // Clear previous errors
+      
       // Call the API route to delete user (server-side with admin privileges)
       const response = await fetch('/api/users/delete', {
         method: 'DELETE',
@@ -138,7 +141,7 @@ export default function CompanyViewPage() {
 
       fetchUsers(); // Refresh the list
     } catch (err: any) {
-      setError(err.message);
+      setUserError(err.message); // Use userError instead of error
     }
   };
 
@@ -318,6 +321,12 @@ export default function CompanyViewPage() {
                 Add User
               </Link>
             </div>
+
+            {userError && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                {userError}
+              </div>
+            )}
             
             {users.length > 0 ? (
               <div className="space-y-2">
