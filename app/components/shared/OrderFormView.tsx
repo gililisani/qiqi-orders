@@ -984,12 +984,22 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           // Use setTimeout to ensure order is fully committed to database
           setTimeout(async () => {
             try {
+              // Send email to client
               await fetch('/api/orders/send-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   orderId: newOrder.id,
                   emailType: 'created',
+                }),
+              });
+
+              // Send notification email to orders@qiqiglobal.com
+              await fetch('/api/orders/send-notification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  orderId: newOrder.id,
                 }),
               });
             } catch (emailError) {
