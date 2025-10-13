@@ -13,7 +13,7 @@ export default function ClientEditOrderPage() {
       <OrderFormView
         role="client"
         orderId={orderId}
-        backUrl="/client/orders"
+        backUrl={`/client/orders/${orderId}`}
       />
     </ClientLayout>
   );

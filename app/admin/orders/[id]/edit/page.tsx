@@ -13,7 +13,7 @@ export default function AdminEditOrderPage() {
       <OrderFormView
         role="admin"
         orderId={orderId}
-        backUrl="/admin/orders"
+        backUrl={`/admin/orders/${orderId}`}
       />
     </AdminLayout>
   );

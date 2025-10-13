@@ -56,10 +56,10 @@ export default function TopNavbarClient() {
       <div className="bg-white border-b border-[#e5e5e5] px-3 py-2">
         <div className="h-14 flex items-center justify-between">
           {/* Left: Logo / Title */}
-          <div className="flex items-center gap-3">
+          <a href="/client" className="flex items-center gap-3 hover:opacity-90 transition cursor-pointer">
             <img src="/QIQI-Logo.svg" alt="Qiqi Logo" className="h-10 w-auto" />
             <span className="text-sm font-semibold tracking-tight">Qiqi Partners Hub</span>
-          </div>
+          </a>
 
           {/* Center: Nav */}
           <nav className="hidden lg:flex items-center gap-6 text-sm whitespace-nowrap">
