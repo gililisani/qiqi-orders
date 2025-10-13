@@ -125,10 +125,14 @@ export async function POST(request: NextRequest) {
       recipientEmail = company?.ship_to_contact_email || company?.company_email;
       
       if (!recipientEmail) {
-        console.error('[send-email] No recipient email found for order:', orderId);
+        console.log('[send-email] No recipient email found for order:', orderId, '- skipping email (not an error)');
         return NextResponse.json(
-          { error: 'No recipient email found. Order has no user and company has no contact email configured.' },
-          { status: 400 }
+          { 
+            success: true, 
+            skipped: true,
+            message: 'No recipient email configured - email not sent' 
+          },
+          { status: 200 }
         );
       }
       
