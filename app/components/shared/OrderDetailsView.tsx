@@ -834,6 +834,69 @@ export default function OrderDetailsView({
     }
   };
 
+  const handleDownload3PLXLSX = async () => {
+    try {
+      // admin-only action
+      if (role !== 'admin') return;
+      
+      const { generate3PLXLSX, download3PLXLSX } = await import('../../../lib/threePLExport');
+      
+      // Fetch order with company and items
+      const { data: orderData, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .single();
+
+      if (error) throw error;
+      if (!orderData) throw new Error('Order not found');
+      if (!orderData.so_number) throw new Error('SO Number is required for 3PL export');
+
+      // Fetch company
+      const { data: company, error: companyError } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', orderData.company_id)
+        .single();
+
+      if (companyError) throw companyError;
+
+      // Fetch order items
+      const { data: items, error: itemsError } = await supabase
+        .from('order_items')
+        .select(`
+          quantity,
+          unit_price,
+          product:Products(sku)
+        `)
+        .eq('order_id', orderId);
+
+      if (itemsError) throw itemsError;
+      if (!items?.length) throw new Error('No order items found');
+
+      // Build order object for export
+      const orderFor3PL = {
+        id: orderData.id,
+        so_number: orderData.so_number,
+        created_at: orderData.created_at,
+        company: company,
+        order_items: items
+      };
+
+      // Generate XLSX
+      const xlsxBuffer = generate3PLXLSX(orderFor3PL);
+      
+      // Download
+      const soNumber = orderData.so_number || orderData.id.substring(0, 6);
+      const filename = `3PL_Order_${soNumber}.xlsx`;
+      download3PLXLSX(xlsxBuffer, filename);
+      
+    } catch (err: any) {
+      console.error('3PL XLSX error:', err);
+      alert(`Failed to export 3PL XLSX: ${err.message}`);
+    }
+  };
+
   const handleDeleteOrder = async () => {
     // Use originalStatus (saved status) to check deletion eligibility
     if (originalStatus !== 'Cancelled' && originalStatus !== 'Draft') {
@@ -949,6 +1012,16 @@ export default function OrderDetailsView({
               className="bg-green-600 text-white px-4 py-2 hover:bg-green-700 transition text-sm"
             >
               Download CSV
+            </button>
+          )}
+
+          {/* Admin: Download 3PL XLSX button (only show when status is In Process+ and SO number exists) */}
+          {role === 'admin' && order?.so_number && ['In Process', 'Ready', 'Done'].includes(order?.status || '') && (
+            <button
+              onClick={handleDownload3PLXLSX}
+              className="bg-purple-600 text-white px-4 py-2 hover:bg-purple-700 transition text-sm"
+            >
+              Download 3PL XLSX
             </button>
           )}
           
