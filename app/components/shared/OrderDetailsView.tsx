@@ -36,6 +36,8 @@ interface Order {
     company_name: string;
     netsuite_number: string;
     ship_to?: string;
+    company_email?: string;
+    ship_to_contact_email?: string;
     support_fund?: { percent: number };
     subsidiary?: { 
       name: string;
