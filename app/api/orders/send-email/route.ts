@@ -48,25 +48,12 @@ export async function POST(request: NextRequest) {
 
     console.log('[send-email] Fetching order:', orderId);
 
-    // Fetch order with all relationships and company contact info
+    // Fetch order details
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select(
-        `
-        *,
-        companies (company_name, company_email, ship_to_contact_email),
-        clients!user_id (email, name),
-        order_items (
-          quantity,
-          total_price,
-          Products (item_name)
-        )
-      `
-      )
+      .select('*')
       .eq('id', orderId)
       .single();
-
-    console.log('[send-email] Query result:', { order: !!order, error: orderError });
 
     if (orderError || !order) {
       console.error('[send-email] Order fetch failed:', orderError);
@@ -76,18 +63,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Fetch company separately
+    const { data: company } = await supabase
+      .from('companies')
+      .select('company_name, company_email, ship_to_contact_email')
+      .eq('id', order.company_id)
+      .single();
+
+    // Fetch client (if user_id exists)
+    let client = null;
+    if (order.user_id) {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('email, name')
+        .eq('id', order.user_id)
+        .single();
+      client = clientData;
+    }
+
+    // Fetch order items
+    const { data: orderItems } = await supabase
+      .from('order_items')
+      .select(`
+        quantity,
+        total_price,
+        product:Products (item_name)
+      `)
+      .eq('order_id', orderId);
+
+    console.log('[send-email] Fetched data:', { 
+      order: !!order, 
+      company: !!company, 
+      client: !!client,
+      itemsCount: orderItems?.length 
+    });
+
     // Prepare email data
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     
     const emailData = {
       poNumber: order.po_number || `Order-${order.id.substring(0, 8)}`,
       orderId: order.id,
-      companyName: order.companies?.company_name || 'N/A',
+      companyName: company?.company_name || 'N/A',
       status: order.status,
       soNumber: order.so_number,
-      totalAmount: order.total_amount,
-      items: order.order_items?.map((item: any) => ({
-        productName: item.Products?.item_name || 'Unknown Product',
+      totalAmount: order.total_value,
+      items: orderItems?.map((item: any) => ({
+        productName: item.product?.item_name || 'Unknown Product',
         quantity: item.quantity,
         totalPrice: item.total_price,
       })),
@@ -96,11 +118,11 @@ export async function POST(request: NextRequest) {
     };
 
     // Get recipient email - try client first, then company contact emails
-    let recipientEmail = order.clients?.email;
+    let recipientEmail = client?.email;
     
     if (!recipientEmail) {
       // No client user - try company contact emails
-      recipientEmail = order.companies?.ship_to_contact_email || order.companies?.company_email;
+      recipientEmail = company?.ship_to_contact_email || company?.company_email;
       
       if (!recipientEmail) {
         console.error('[send-email] No recipient email found for order:', orderId);

@@ -30,39 +30,59 @@ export async function POST(request: NextRequest) {
     // Fetch order details
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select(`
-        *,
-        companies (company_name, netsuite_number),
-        clients!user_id (email, name),
-        order_items (
-          quantity,
-          total_price,
-          Products (item_name, sku)
-        )
-      `)
+      .select('*')
       .eq('id', orderId)
       .single();
 
     if (orderError || !order) {
+      console.error('[send-notification] Order fetch failed:', orderError);
       return NextResponse.json(
-        { error: 'Order not found' },
+        { error: 'Order not found', details: orderError?.message },
         { status: 404 }
       );
     }
 
+    // Fetch company separately
+    const { data: company } = await supabase
+      .from('companies')
+      .select('company_name, netsuite_number')
+      .eq('id', order.company_id)
+      .single();
+
+    // Fetch client (if user_id exists)
+    let client = null;
+    if (order.user_id) {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('email, name')
+        .eq('id', order.user_id)
+        .single();
+      client = clientData;
+    }
+
+    // Fetch order items
+    const { data: orderItems } = await supabase
+      .from('order_items')
+      .select(`
+        quantity,
+        total_price,
+        product:Products (item_name, sku)
+      `)
+      .eq('order_id', orderId);
+
     // Build email content
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     const poNumber = order.po_number || `Order-${order.id.substring(0, 8)}`;
-    const companyName = order.companies?.company_name || 'N/A';
-    const clientName = order.clients?.name || 'Admin Created';
-    const clientEmail = order.clients?.email || 'N/A';
+    const companyName = company?.company_name || 'N/A';
+    const clientName = client?.name || 'Admin Created';
+    const clientEmail = client?.email || 'N/A';
     const totalValue = order.total_value || 0;
-    const itemCount = order.order_items?.length || 0;
+    const itemCount = orderItems?.length || 0;
 
-    const itemsList = order.order_items?.map((item: any) => 
+    const itemsList = orderItems?.map((item: any) => 
       `<tr>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.Products?.item_name || 'Unknown'}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.Products?.sku || 'N/A'}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.product?.item_name || 'Unknown'}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.product?.sku || 'N/A'}</td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.total_price.toFixed(2)}</td>
       </tr>`
