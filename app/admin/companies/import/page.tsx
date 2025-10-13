@@ -73,7 +73,7 @@ export default function ImportCompaniesPage() {
     for (let i = 1; i < lines.length; i++) {
       if (!lines[i].trim()) continue;
       
-      const values = [];
+      const values: string[] = [];
       let current = '';
       let inQuotes = false;
 
