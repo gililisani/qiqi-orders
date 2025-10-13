@@ -126,12 +126,20 @@ export default function CompaniesPage() {
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Companies Management</h1>
-          <Link
-            href="/admin/companies/new"
-            className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
-          >
-            Add New Company
-          </Link>
+          <div className="flex gap-3">
+            <Link
+              href="/admin/companies/import"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+            >
+              Import CSV
+            </Link>
+            <Link
+              href="/admin/companies/new"
+              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
+            >
+              Add New Company
+            </Link>
+          </div>
         </div>
 
         {error && (
