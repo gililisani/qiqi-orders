@@ -400,6 +400,8 @@ export default function OrderDetailsView({
                 company_name,
                 netsuite_number,
                 ship_to,
+                company_email,
+                ship_to_contact_email,
                 support_fund:support_fund_levels(percent),
                 subsidiary:subsidiaries(name, ship_from_address, company_address, phone, email),
                 class:classes(name),
@@ -1589,7 +1591,12 @@ export default function OrderDetailsView({
               <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Email Preview:</h4>
                 <div className="text-xs text-gray-600 space-y-1">
-                  <p><strong>To:</strong> {order?.client?.email || 'Customer'}</p>
+                  <p><strong>To:</strong> {
+                    order?.client?.email || 
+                    order?.company?.ship_to_contact_email || 
+                    order?.company?.company_email || 
+                    'No email configured (email will be skipped)'
+                  }</p>
                   <p><strong>Subject:</strong> Order Update - #{order?.po_number || order?.id.substring(0, 8)}</p>
                   <p><strong>Order Status:</strong> {order?.status}</p>
                 </div>
