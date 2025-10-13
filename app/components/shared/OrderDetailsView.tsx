@@ -138,6 +138,24 @@ export default function OrderDetailsView({
   const [documentsRefreshKey, setDocumentsRefreshKey] = useState(0);
   const [showSendEmailModal, setShowSendEmailModal] = useState(false);
   const [customEmailMessage, setCustomEmailMessage] = useState('');
+  
+  // Calculate actual recipient email (matches API logic)
+  const getActualRecipientEmail = (): string => {
+    if (!order) return 'No email configured';
+    
+    // Check if user_id is a client (not admin)
+    // If user_id exists and client.email is NOT an admin email, use it
+    const isAdminCreated = order.client?.email?.endsWith('@qiqiglobal.com') || false;
+    
+    if (order.client?.email && !isAdminCreated) {
+      return order.client.email;
+    }
+    
+    // Otherwise use company fallback emails
+    return order.company?.ship_to_contact_email || 
+           order.company?.company_email || 
+           'No email configured (email will be skipped)';
+  };
 
   const handleDocumentUploadComplete = () => {
     setDocumentsRefreshKey(prev => prev + 1);
@@ -1593,12 +1611,7 @@ export default function OrderDetailsView({
               <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Email Preview:</h4>
                 <div className="text-xs text-gray-600 space-y-1">
-                  <p><strong>To:</strong> {
-                    order?.client?.email || 
-                    order?.company?.ship_to_contact_email || 
-                    order?.company?.company_email || 
-                    'No email configured (email will be skipped)'
-                  }</p>
+                  <p><strong>To:</strong> {getActualRecipientEmail()}</p>
                   <p><strong>Subject:</strong> Order Update - #{order?.po_number || order?.id.substring(0, 8)}</p>
                   <p><strong>Order Status:</strong> {order?.status}</p>
                 </div>
