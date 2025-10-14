@@ -7,6 +7,8 @@ import { supabase } from '../../lib/supabaseClient';
 import Image from 'next/image';
 import Link from 'next/link';
 import TopNavbarClient from './ui/TopNavbarClient';
+import { useSupabase } from '../../lib/supabase-provider';
+import { enforceSessionTimeout } from '../../lib/sessionManager';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -20,6 +22,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
   const [mobileOpenSections, setMobileOpenSections] = useState<string[]>([]);
   const [authReady, setAuthReady] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { supabase: supabaseClient } = useSupabase();
 
   useEffect(() => {
     if (!loading) {
@@ -33,6 +36,13 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
       }
     }
   }, [user, loading, router]);
+
+  // Check session timeout for clients
+  useEffect(() => {
+    if (user && user.role === 'Client') {
+      enforceSessionTimeout(supabaseClient, 'client');
+    }
+  }, [user, supabaseClient]);
 
   // Add small delay to ensure auth context is fully established
   useEffect(() => {

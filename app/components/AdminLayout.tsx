@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -10,6 +10,8 @@ import {
   Alert,
 } from '../components/MaterialTailwind';
 import TopNavbar from './ui/TopNavbar';
+import { useSupabase } from '../../lib/supabase-provider';
+import { enforceSessionTimeout } from '../../lib/sessionManager';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -17,6 +19,14 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, loading, error, isAdmin, logout } = useAuth('Admin');
+  const { supabase } = useSupabase();
+
+  // Check session timeout on component mount
+  useEffect(() => {
+    if (user && isAdmin) {
+      enforceSessionTimeout(supabase, 'admin');
+    }
+  }, [user, isAdmin, supabase]);
 
   if (loading) {
     return (
