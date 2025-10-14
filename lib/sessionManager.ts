@@ -26,8 +26,9 @@ export async function checkSessionTimeout(
       return { shouldLogout: false }; // No session, nothing to check
     }
 
-    // Get session start time (when the access token was issued)
-    const sessionStartTime = new Date(session.user.created_at).getTime();
+    // Get session start time (calculate from expiry time - token lifetime)
+    const tokenLifetime = 60 * 60 * 1000; // 1 hour in milliseconds (default Supabase JWT lifetime)
+    const sessionStartTime = new Date(session.expires_at).getTime() - tokenLifetime;
     const currentTime = Date.now();
     const sessionAge = currentTime - sessionStartTime;
 
