@@ -21,12 +21,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, loading, error, isAdmin, logout } = useAuth('Admin');
   const { supabase } = useSupabase();
 
-  // Check session timeout on component mount
-  useEffect(() => {
-    if (user && isAdmin) {
-      enforceSessionTimeout(supabase, 'admin');
-    }
-  }, [user, isAdmin, supabase]);
+  // Check session timeout on component mount - DISABLED
+  // useEffect(() => {
+  //   if (user && isAdmin) {
+  //     enforceSessionTimeout(supabase, 'admin');
+  //   }
+  // }, [user, isAdmin, supabase]);
 
   if (loading) {
     return (

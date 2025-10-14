@@ -37,12 +37,12 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     }
   }, [user, loading, router]);
 
-  // Check session timeout for clients
-  useEffect(() => {
-    if (user && user.role === 'Client') {
-      enforceSessionTimeout(supabaseClient, 'client');
-    }
-  }, [user, supabaseClient]);
+  // Check session timeout for clients - DISABLED
+  // useEffect(() => {
+  //   if (user && user.role === 'Client') {
+  //     enforceSessionTimeout(supabaseClient, 'client');
+  //   }
+  // }, [user, supabaseClient]);
 
   // Add small delay to ensure auth context is fully established
   useEffect(() => {
