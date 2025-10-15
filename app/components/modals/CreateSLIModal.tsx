@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useSupabase } from '../../../lib/supabase-provider';
 
 interface CreateSLIModalProps {
   orderId: string;
@@ -20,7 +20,7 @@ export default function CreateSLIModal({
   existingSLI,
   isEditMode = false
 }: CreateSLIModalProps) {
-  const supabase = createClientComponentClient();
+  const { supabase } = useSupabase();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
