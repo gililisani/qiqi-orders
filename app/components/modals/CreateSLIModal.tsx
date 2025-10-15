@@ -23,10 +23,6 @@ export default function CreateSLIModal({
   const { supabase } = useSupabase();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [signatureFile, setSignatureFile] = useState<File | null>(null);
-  const [signaturePreview, setSignaturePreview] = useState<string | null>(
-    existingSLI?.signature_image_url || null
-  );
 
   const [formData, setFormData] = useState({
     forwarding_agent_line1: existingSLI?.forwarding_agent_line1 || '',
@@ -76,45 +72,12 @@ export default function CreateSLIModal({
     });
   };
 
-  const handleSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSignatureFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSignaturePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
-      let signatureUrl = existingSLI?.signature_image_url || null;
-
-      // Upload signature if new file selected
-      if (signatureFile) {
-        const fileExt = signatureFile.name.split('.').pop();
-        const fileName = `${orderId}-signature-${Date.now()}.${fileExt}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('sli-signatures')
-          .upload(fileName, signatureFile);
-
-        if (uploadError) {
-          throw new Error(`Failed to upload signature: ${uploadError.message}`);
-        }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('sli-signatures')
-          .getPublicUrl(fileName);
-
-        signatureUrl = publicUrl;
-      }
-
       // Get session for auth token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -136,7 +99,6 @@ export default function CreateSLIModal({
         body: JSON.stringify({
           ...formData,
           checkbox_states: checkboxes,
-          signature_image_url: signatureUrl,
         }),
       });
 
@@ -263,28 +225,6 @@ export default function CreateSLIModal({
                 rows={4}
                 className="w-full px-3 py-2 border rounded"
               />
-            </div>
-
-            {/* Signature Upload */}
-            <div>
-              <label className="block font-semibold mb-2">
-                Signature (Box 45)
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleSignatureChange}
-                className="w-full px-3 py-2 border rounded"
-              />
-              {signaturePreview && (
-                <div className="mt-2">
-                  <img
-                    src={signaturePreview}
-                    alt="Signature preview"
-                    className="h-20 border rounded"
-                  />
-                </div>
-              )}
             </div>
 
             {/* Checkboxes Section */}

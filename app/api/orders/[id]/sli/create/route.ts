@@ -18,8 +18,7 @@ export async function POST(
       date_of_export,
       in_bond_code,
       instructions_to_forwarder,
-      checkbox_states,
-      signature_image_url
+      checkbox_states
     } = await request.json();
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
@@ -98,9 +97,7 @@ export async function POST(
         date_of_export,
         in_bond_code,
         instructions_to_forwarder,
-        checkbox_states: checkbox_states || {},
-        signature_image_url,
-        signature_date: new Date().toISOString().split('T')[0]
+        checkbox_states: checkbox_states || {}
       })
       .select()
       .single();
