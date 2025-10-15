@@ -919,6 +919,41 @@ export default function OrderDetailsView({
     }
   };
 
+  const handleDownloadSLI = async () => {
+    try {
+      // admin-only action
+      if (role !== 'admin') return;
+      
+      // Call the SLI API endpoint
+      const response = await fetch(`/api/orders/sli?orderId=${orderId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      // Get the filename from the response headers
+      const contentDisposition = response.headers.get('Content-Disposition');
+      const filename = contentDisposition 
+        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
+        : `SLI-${orderId}.xlsx`;
+      
+      // Download the file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+    } catch (err: any) {
+      console.error('SLI download error:', err);
+      alert(`Failed to download SLI: ${err.message}`);
+    }
+  };
+
   const handleDeleteOrder = async () => {
     // Use originalStatus (saved status) to check deletion eligibility
     if (originalStatus !== 'Cancelled' && originalStatus !== 'Draft') {
@@ -1044,6 +1079,16 @@ export default function OrderDetailsView({
               className="bg-purple-600 text-white px-4 py-2 hover:bg-purple-700 transition text-sm"
             >
               Download 3PL XLSX
+            </button>
+          )}
+
+          {/* Admin: Download SLI button (show for all non-draft orders) */}
+          {role === 'admin' && order?.status !== 'Draft' && (
+            <button
+              onClick={handleDownloadSLI}
+              className="bg-blue-600 text-white px-4 py-2 hover:bg-blue-700 transition text-sm"
+            >
+              Download SLI
             </button>
           )}
           
