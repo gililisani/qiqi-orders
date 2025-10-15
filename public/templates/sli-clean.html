@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shipper's Letter of Instructions</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 8pt;
+      line-height: 1.2;
+      color: #231F20;
+      background: white;
+    }
+
+    .page {
+      width: 210mm;
+      height: 297mm;
+      padding: 10mm;
+      background: white;
+      margin: 0 auto;
+    }
+
+    .header {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-weight: bold;
+      font-size: 13pt;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #231F20;
+    }
+
+    td {
+      border: 1px solid #231F20;
+      padding: 3px;
+      vertical-align: top;
+    }
+
+    .field-label {
+      font-size: 6pt;
+      font-weight: normal;
+      color: #231F20;
+    }
+
+    .field-value {
+      font-size: 8pt;
+      min-height: 15px;
+      padding-top: 2px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 6pt;
+    }
+
+    .checkbox {
+      width: 10px;
+      height: 10px;
+      border: 1px solid #231F20;
+      display: inline-block;
+    }
+
+    .checkbox.checked::after {
+      content: '✓';
+      font-size: 10pt;
+      font-family: Wingdings;
+      line-height: 10px;
+    }
+
+    .logo-container {
+      width: 145px;
+      height: 55px;
+      border: 1px solid #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 6pt;
+      color: #999;
+    }
+
+    .red-text {
+      color: #F00;
+    }
+
+    .bold-text {
+      font-weight: bold;
+    }
+
+    .small-text {
+      font-size: 5.5pt;
+    }
+
+    .tiny-text {
+      font-size: 5pt;
+    }
+
+    .black-bg {
+      background-color: #231F20;
+      color: white;
+      text-align: center;
+      padding: 5px;
+      font-weight: bold;
+    }
+
+    .underline {
+      text-decoration: underline;
+    }
+
+    .footer {
+      margin-top: 5px;
+      font-size: 5.5pt;
+    }
+
+    .footer-red {
+      color: #F00;
+      font-size: 5.5pt;
+    }
+
+    .marginal-words {
+      color: #E92C25;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-weight: bold;
+      font-size: 10pt;
+      margin-top: 3px;
+    }
+
+    @media print {
+      body {
+        width: 210mm;
+        height: 297mm;
+      }
+      .page {
+        margin: 0;
+        padding: 10mm;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Header -->
+    <div class="header">
+      <span>SHIPPER'S LETTER OF INSTRUCTIONS</span>
+      <span style="font-size: 10pt;">Date: <span class="field-value" style="display: inline; min-height: auto; border-bottom: 1px solid #231F20; padding: 0 30px;"></span> Quote# <span class="field-value" style="display: inline; min-height: auto; border-bottom: 1px solid #231F20; padding: 0 30px;"></span></span>
+    </div>
+
+    <table>
+      <!-- Row 1: USPPI and Logo -->
+      <tr>
+        <td colspan="4" style="height: 54pt;">
+          <div class="field-label">1. U.S. PRINCIPLE PARTY IN INTEREST (Name and address including zip code)</div>
+          <div class="field-value"></div>
+          <div style="text-align: right; font-size: 6pt; margin-top: 5px;">ZIP CODE</div>
+        </td>
+        <td rowspan="4" style="text-align: center; vertical-align: middle;">
+          <div class="logo-container">
+            <img src="/logo.png" alt="CEVA Logistics" style="max-width: 100%; max-height: 100%;" />
+          </div>
+          <div style="font-size: 7pt; margin-top: 5px;">15350 Vickery Drive</div>
+          <div style="font-size: 7pt;">Houston, TX 77032 USA</div>
+          <div class="tiny-text">FMC NO. 021430F</div>
+        </td>
+      </tr>
+
+      <!-- Row 2: EIN and Parties to Transaction -->
+      <tr>
+        <td colspan="2">
+          <div class="field-label">2. USPPI EIN (IRS) NO. OR ID NO.</div>
+          <div class="field-value"></div>
+        </td>
+        <td colspan="2">
+          <div class="field-label">3. PARTIES TO TRANSACTION</div>
+          <div class="checkbox-group" style="margin-top: 3px;">
+            <span class="checkbox"></span> <span>RELATED</span>
+            <span class="checkbox" style="margin-left: 15px;"></span> <span>NON-RELATED</span>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Row 3: Intermediate Consignee -->
+      <tr>
+        <td colspan="4">
+          <div class="field-label">4. INTERMEDIATE CONSIGNEE (Complete name and address)</div>
+          <div class="field-value"></div>
+        </td>
+      </tr>
+
+      <!-- Row 4: Insurance and Declared Value -->
+      <tr>
+        <td colspan="4" rowspan="3">
+          <!-- This will span multiple rows for Ultimate Consignee -->
+        </td>
+        <td>
+          <div class="field-label">13. INSURANCE</div>
+          <div class="field-value"></div>
+        </td>
+        <td>
+          <div class="field-label">14. DECLARED VALUE</div>
+          <div class="field-label">FOR CARRIAGE $</div>
+          <div class="field-value"></div>
+        </td>
+      </tr>
+
+      <!-- Row 5: Consignee Type and International Service -->
+      <tr>
+        <td colspan="2">
+          <div class="field-label bold-text">15. SHIPPER MUST CHECK INTERNATIONAL SERVICE REQUESTED:</div>
+          <div style="text-align: center; margin-top: 5px;">
+            <span class="bold-text">AIR</span> <span class="checkbox" style="margin: 0 20px;"></span> <span class="bold-text">OCEAN</span> <span class="checkbox"></span>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Row 6: Consignee Type Options -->
+      <tr>
+        <td colspan="2" rowspan="2">
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px;">
+            <div class="checkbox-group"><span class="checkbox"></span> NOW</div>
+            <div class="checkbox-group"><span class="checkbox"></span> VALUE</div>
+            <div class="checkbox-group"><span class="checkbox"></span> PREMIUM</div>
+            <div class="checkbox-group"><span class="checkbox"></span> DIRECT IATA</div>
+          </div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px;">
+            <div class="checkbox-group"><span class="checkbox"></span> FCL</div>
+            <div class="checkbox-group"><span class="checkbox"></span> PYRAMID LINES</div>
+            <div class="checkbox-group"><span class="checkbox"></span> LCL</div>
+          </div>
+          <div class="tiny-text" style="margin-top: 3px;">SHIPPER/CARRIER CONTRACT # <span class="underline" style="padding: 0 20px;"></span></div>
+        </td>
+      </tr>
+
+      <!-- Row 7: Consignee Type checkboxes -->
+      <tr>
+        <td colspan="2">
+          <div class="field-label">5. CONSIGNEE TYPE</div>
+          <div class="checkbox-group" style="margin-top: 3px;">
+            <span class="checkbox"></span> DIRECT CONSUMER
+          </div>
+          <div class="checkbox-group" style="margin-top: 3px;">
+            <span class="checkbox"></span> RESELLER
+          </div>
+        </td>
+        <td colspan="2">
+          <div class="checkbox-group" style="margin-top: 3px;">
+            <span class="checkbox"></span> GOVERNMENT ENTITY
+          </div>
+          <div class="checkbox-group" style="margin-top: 3px;">
+            <span class="checkbox"></span> OTHER/UNKNOWN
+          </div>
+        </td>
+      </tr>
+
+      <!-- Row 8: Ultimate Consignee -->
+      <tr>
+        <td colspan="4" style="height: 50pt;">
+          <div class="field-label">6. ULTIMATE CONSIGNEE (Complete name and address)</div>
+          <div class="field-value"></div>
+        </td>
+        <td colspan="2">
+          <div class="field-label bold-text">16. TERMS OF FREIGHT PAYMENT AT LOCATION</div>
+          <div class="field-value">GBL <span class="underline" style="padding: 0 30px;"></span></div>
+          <div style="font-size: 8pt; margin-top: 5px;">INCOTERMS® 2020 Rules for Any Mode or Modes of Transport:</div>
+          <div class="checkbox-group" style="margin-top: 3px;">
+            <span class="checkbox"></span> EXW (Ex Works)
+            <span class="checkbox" style="margin-left: 15px;"></span> DAP (Delivered at Place)
+          </div>
+          <div class="checkbox-group">
+            <span class="checkbox"></span> FCA (Free Carrier)
+            <span class="checkbox" style="margin-left: 15px;"></span> DPU (Delivered at Place Unloaded)
+          </div>
+          <div class="checkbox-group">
+            <span class="checkbox"></span> CPT (Carriage Paid To)
+            <span class="checkbox" style="margin-left: 15px;"></span> DDP (Delivered Duty Paid)
+          </div>
+          <div class="checkbox-group">
+            <span class="checkbox"></span> CIP (Carriage and Insurance Paid To)
+          </div>
+          <div style="font-size: 8pt; margin-top: 5px;">INCOTERMS® 2020 Rules for Sea and Inland Waterway Transport:</div>
+          <div class="checkbox-group">
+            <span class="checkbox"></span> FAS (Free Alongside Ship)
+            <span class="checkbox" style="margin-left: 15px;"></span> CFR (Cost and Freight)
+          </div>
+          <div class="checkbox-group">
+            <span class="checkbox"></span> FOB (Free on Board)
+            <span class="checkbox" style="margin-left: 15px;"></span> CIF (Cost Insurance and Freight)
+          </div>
+        </td>
+      </tr>
+
+      <!-- Row 9: Shipper Ref and Consignee PO -->
+      <tr>
+        <td colspan="2">
+          <div class="field-label">7. SHIPPER REF. #</div>
+          <div class="field-value"></div>
+        </td>
+        <td colspan="2">
+          <div class="field-label">8. CONSIGNEE PO#</div>
+          <div class="field-value"></div>
+        </td>
+        <td colspan="2" rowspan="2">
+          <div class="footer-red">If shipper has requested insurance, the shipment will be insured in the amount indicated (recovery is limited to actual loss). If no value is indicated, the shipment will not be insured.</div>
+        </td>
+      </tr>
+
+      <!-- Row 10: Point of Origin and Country of Destination -->
+      <tr>
+        <td colspan="2">
+          <div class="field-label">9. POINT (STATE) OF ORIGIN OR FTZ. NO.</div>
+          <div class="field-value"></div>
+        </td>
+        <td colspan="2">
+          <div class="field-label">10. COUNTRY OF ULTIMATE DESTINATION</div>
+          <div class="field-value"></div>
+        </td>
+      </tr>
+
+      <!-- Row 11: In Bond Number and Routed Export -->
+      <tr>
+        <td colspan="2">
+          <div class="field-label">11. IN BOND NUMBER</div>
+          <div class="field-value"></div>
+        </td>
+        <td colspan="2">
+          <div class="field-label">12. ROUTED EXPORT TRANSACTION</div>
+          <div class="checkbox-group" style="margin-top: 3px;">
+            <span class="checkbox"></span> YES
+            <span class="checkbox" style="margin-left: 15px;"></span> NO
+          </div>
+        </td>
+        <td colspan="2">
+          <div class="footer-red">These commodities, technology or software were exported from the United States in accordance with the Export Administration Regulations. Diversion contrary to U.S. law is prohibited.</div>
+        </td>
+      </tr>
+
+      <!-- Row 12: Special Instructions -->
+      <tr>
+        <td colspan="6" style="height: 40pt;">
+          <div class="field-label">17. SPECIAL INSTRUCTIONS</div>
+          <div class="field-value"></div>
+        </td>
+      </tr>
+
+      <!-- Row 13: D/F, Schedule B, Quantity, Weight, Value Headers -->
+      <tr>
+        <td style="width: 5%;">
+          <div class="field-label">18. D/F</div>
+        </td>
+        <td style="width: 50%;">
+          <div class="field-label" style="text-align: center;">19. SCHEDULE B NUMBER</div>
+          <div class="field-label" style="text-align: center;">(Description)</div>
+        </td>
+        <td style="width: 15%;">
+          <div class="field-label">20. QUANTITY - SCHEDULE B UNIT (S)</div>
+        </td>
+        <td style="width: 15%;">
+          <div class="field-label">21. SHIPPING WEIGHT</div>
+          <div class="field-label">(kilograms)</div>
+        </td>
+        <td style="width: 15%;">
+          <div class="field-label">22. VALUE</div>
+          <div class="field-label">(U.S. dollar, omit cents)</div>
+        </td>
+      </tr>
+
+      <!-- Row 14: Product Data (repeatable) -->
+      <tr style="height: 100pt;">
+        <td><div class="field-value"></div></td>
+        <td><div class="field-value"></div></td>
+        <td><div class="field-value"></div></td>
+        <td><div class="field-value"></div></td>
+        <td><div class="field-value"></div></td>
+      </tr>
+
+      <!-- Row 15: Pieces & Dimensions, Documents -->
+      <tr>
+        <td colspan="3" rowspan="8" style="height: 80pt;">
+          <div class="field-label">23. PIECES & DIMENSIONS (L x W x H in inches)</div>
+          <div class="field-value"></div>
+        </td>
+        <td>
+          <div class="field-label bold-text">24. DOCUMENTS ATTACHED</div>
+        </td>
+        <td>
+          <div class="field-label bold-text">25. TO BE PREPARED</div>
+        </td>
+      </tr>
+      <tr>
+        <td><div class="checkbox-group"><span class="checkbox"></span> COMMERCIAL INVOICE</div></td>
+        <td><div class="checkbox-group"><span class="checkbox"></span> PROFORMA INVOICE</div></td>
+      </tr>
+      <tr>
+        <td><div class="checkbox-group"><span class="checkbox"></span> CERTIFICATE OF ORIGIN</div></td>
+        <td><div class="checkbox-group"><span class="checkbox"></span> CERTIFICATE OF ORIGIN</div></td>
+      </tr>
+      <tr>
+        <td><div class="checkbox-group"><span class="checkbox"></span> EXPORT LICENSE</div></td>
+        <td><div class="checkbox-group"><span class="checkbox"></span> EXPORT LICENSE</div></td>
+      </tr>
+      <tr>
+        <td><div class="checkbox-group"><span class="checkbox"></span> LETTER OF CREDIT</div></td>
+        <td><div class="checkbox-group"><span class="checkbox"></span> INSURANCE CERTIFICATE</div></td>
+      </tr>
+      <tr>
+        <td><div class="checkbox-group"><span class="checkbox"></span> DG DECLARATION</div></td>
+        <td><div class="checkbox-group"><span class="checkbox"></span> SIGHT DRAFT</div></td>
+      </tr>
+      <tr>
+        <td><div class="checkbox-group"><span class="checkbox"></span> GBL <span class="underline" style="padding: 0 20px;"></span></div></td>
+        <td><div class="checkbox-group"><span class="checkbox"></span> OTHER <span class="underline" style="padding: 0 20px;"></span></div></td>
+      </tr>
+      <tr>
+        <td><div class="checkbox-group"><span class="checkbox"></span> OTHER <span class="underline" style="padding: 0 20px;"></span></div></td>
+        <td><div class="checkbox-group"><span class="checkbox"></span> OTHER <span class="underline" style="padding: 0 20px;"></span></div></td>
+      </tr>
+
+      <!-- Row 16: License/ECCN -->
+      <tr>
+        <td colspan="3">
+          <div class="field-label">26. LICENSE NO./LICENSE EXCEPTION SYMBOL/AUTHORIZATION</div>
+          <div class="field-value"></div>
+        </td>
+        <td colspan="1">
+          <div class="field-label">27. ECCN <span style="font-style: italic; font-size: 5.5pt;">(When required)</span></div>
+          <div class="field-value"></div>
+        </td>
+        <td colspan="2" class="black-bg">
+          PLEASE SIGN THE FIRST EXPORT DECLARATION IN BOX 29 WITH PEN AND INK
+        </td>
+      </tr>
+
+      <!-- Row 17: Authorized Officer -->
+      <tr>
+        <td colspan="2">
+          <div class="field-label">28. DULY AUTHORIZED OFFICER OR EMPLOYEE</div>
+          <div class="field-value"></div>
+        </td>
+        <td colspan="2" class="small-text red-text">
+          The USPPI authorizes CEVA Logistics to act as forwarding agent for export control and customs purposes.
+        </td>
+        <td colspan="2" rowspan="2">
+          <div class="field-label">34. <span style="font-size: 6pt; font-weight: normal;">I certify that this shipment does not contain any unauthorized explosive or destructive devices.</span></div>
+          <div class="field-label">I am aware that this shipment is subject to appropriate aviation security controls and other relevant governmental regulations. I am aware that this endorsement and original signature, along with other shipping documents, will be retained on file until the shipment is delivered.</div>
+          <div class="field-label underline" style="margin-top: 5px;">FOR SHIPMENTS REQUIRING PERSONAL IDENTIFICATION (Unknown Shipper)</div>
+          <div class="field-label">Two pieces of personal I.D. REQUIRED – one must be officially issued with photo.</div>
+        </td>
+      </tr>
+
+      <!-- Row 18: Certification Statement -->
+      <tr>
+        <td colspan="4" rowspan="3" style="height: 40pt;">
+          <div class="red-text bold-text field-label">29. I certify that all statements made and all information contained herein are true and correct.</div>
+          <div class="red-text bold-text field-label" style="margin-top: 3px;">I understand that civil and criminal penalties, including forfeiture and sale, may be imposed for making false or fraudulent statements herein, failing to provide the requested information or for violation of U.S. laws on exportation (13 U.S.C. Sec. 401; 18 U.S.C. Sec 1001; 50 U.S.C. App 2410).</div>
+        </td>
+      </tr>
+
+      <!-- Row 19: Personal ID -->
+      <tr>
+        <td colspan="2" style="vertical-align: top;">
+          <div style="display: flex; gap: 5px; align-items: center; font-size: 7pt;">
+            <span>1. #</span>
+            <span style="flex: 1; border-bottom: 1px solid #231F20; min-width: 30px;"></span>
+            <span>Type</span>
+            <span style="flex: 1; border-bottom: 1px solid #231F20; min-width: 30px;"></span>
+            <span>Photo</span>
+            <span class="checkbox"></span>
+          </div>
+          <div style="display: flex; gap: 5px; align-items: center; font-size: 7pt; margin-top: 3px;">
+            <span>2. #</span>
+            <span style="flex: 1; border-bottom: 1px solid #231F20; min-width: 30px;"></span>
+            <span>Type</span>
+            <span style="flex: 1; border-bottom: 1px solid #231F20; min-width: 30px;"></span>
+            <span>Photo</span>
+            <span class="checkbox"></span>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Row 20: Signature and Title -->
+      <tr>
+        <td colspan="2">
+          <div class="field-label">30. SIGNATURE</div>
+          <div class="field-value" style="height: 30px;"></div>
+        </td>
+      </tr>
+
+      <!-- Row 21: Title and Authentication -->
+      <tr>
+        <td colspan="2">
+          <div class="field-label">31. TITLE</div>
+          <div class="field-value"></div>
+        </td>
+        <td colspan="2" class="small-text">
+          CONFIDENTIAL – For use solely for official purposes authorized by the Secretary of Commerce (13 U.S.C. 301 (g)).
+        </td>
+        <td colspan="2" rowspan="2">
+          <div class="field-label">35. GOODS RECEIVED IN APPARENT GOOD ORDER AT:</div>
+          <div class="checkbox-group" style="justify-content: flex-end; margin-top: 3px;">
+            <span class="checkbox"></span> SHIPPER DOOR
+            <span class="checkbox" style="margin-left: 10px;"></span> CEVA DOOR
+            <span class="checkbox" style="margin-left: 10px;"></span> OTHER CARRIER DOOR
+          </div>
+          <div style="text-align: right; font-size: 6pt; margin-top: 3px;">
+            TRK LINE CARRIER PRO # <span class="underline" style="padding: 0 20px;"></span>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Row 22: Date and Authentication -->
+      <tr>
+        <td colspan="2">
+          <div class="field-label">32. DATE</div>
+          <div class="field-value"></div>
+        </td>
+        <td colspan="2" class="small-text">
+          AUTHENTICATION <span style="font-style: italic; font-size: 5pt;">(When required)</span>
+        </td>
+      </tr>
+
+      <!-- Row 23: Dangerous Goods and Driver Info -->
+      <tr>
+        <td colspan="2">
+          <div class="red-text small-text bold-text">33. INITIAL APPLICABLE BOX BELOW</div>
+          <div class="red-text small-text" style="margin-top: 5px;">
+            <div class="checkbox-group"><span class="checkbox"></span> THIS SHIPMENT DOES NOT CONTAIN DANGEROUS GOODS</div>
+          </div>
+        </td>
+        <td colspan="2">
+          <div class="red-text small-text" style="margin-top: 12px;">
+            <div class="checkbox-group"><span class="checkbox"></span> THIS SHIPMENT DOES CONTAIN DANGEROUS GOODS AS PER ATTACHED SHIPPER'S DECLARATION</div>
+          </div>
+        </td>
+        <td colspan="2">
+          <div class="field-label">DRIVER AGENT/VEHICLE #</div>
+          <div class="field-value"></div>
+        </td>
+      </tr>
+
+      <!-- Row 24: Sign For By -->
+      <tr>
+        <td colspan="6">
+          <div class="field-label">SIGN FOR BY <span style="padding: 0 50px; border-bottom: 1px solid #231F20;"></span> TIME <span style="padding: 0 30px; border-bottom: 1px solid #231F20;"></span> DATE <span style="padding: 0 50px; border-bottom: 1px solid #231F20;"></span></div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Footer -->
+    <div class="footer footer-red">
+      The above named Shipper upon execution of this Shipper's Letter of Instruction accepts the governing CEVA Logistics Terms and Conditions. The CL Terms and Conditions can be obtained at www.cevalogistics.com or your local CEVA office.
+    </div>
+
+    <div class="footer tiny-text" style="margin-top: 5px;">
+      11201-C3 REV. 5/14
+    </div>
+
+    <div class="marginal-words">
+      MARGINAL WORDS
+    </div>
+  </div>
+</body>
+</html>
+
