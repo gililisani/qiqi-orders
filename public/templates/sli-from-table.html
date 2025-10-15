@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shipper's Letter of Instructions</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10pt;
+      line-height: 1.2;
+      color: #000;
+      background: white;
+    }
+
+    .page {
+      width: 210mm;
+      height: 297mm;
+      padding: 10mm;
+      background: white;
+      margin: 0 auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #000;
+    }
+
+    td, th {
+      border: 1px solid #000;
+      padding: 3px;
+      vertical-align: top;
+    }
+
+    .field-label {
+      font-size: 8pt;
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+
+    .field-value {
+      min-height: 15px;
+      border-bottom: 1px solid #000;
+      margin-top: 2px;
+    }
+
+    .checkbox {
+      width: 10px;
+      height: 10px;
+      border: 1px solid #000;
+      display: inline-block;
+      margin-right: 3px;
+    }
+
+    .checkbox.checked::after {
+      content: '✓';
+      position: absolute;
+      font-size: 8pt;
+      line-height: 10px;
+    }
+
+    .signature-block {
+      height: 40px;
+      border: 1px solid #000;
+      background: #f9f9f9;
+    }
+
+    @media print {
+      body {
+        width: 210mm;
+        height: 297mm;
+      }
+      .page {
+        margin: 0;
+        padding: 10mm;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <table>
+      <thead>
+        <tr>
+          <th colspan="13">Title Shipper's Letter of Instruction (SLI)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td colspan="4">1. USPPI Name:</td>
+          <td colspan="5">3. Freight Location Co Name: (if not box 2):</td>
+          <td colspan="4">5. Forwarding Agent:</td>
+        </tr>
+        <tr>
+          <td colspan="4">Qiqi INC</td>
+          <td colspan="5">PACKABLE / Webb Enterprises</td>
+          <td colspan="4">[MANUALLY]</td>
+        </tr>
+        <tr>
+          <td colspan="4">2. USPPI Address Including Zip Code:</td>
+          <td colspan="5">4. Freight Location Address (if not box 2):</td>
+          <td colspan="4">[MANUALLY]</td>
+        </tr>
+        <tr>
+          <td colspan="4">4625 West Nevso Drive, Suite 2</td>
+          <td colspan="5">1516 Motor Parkway</td>
+          <td colspan="4">[MANUALLY]</td>
+        </tr>
+        <tr>
+          <td colspan="4">Las Vegas, NV 89103</td>
+          <td colspan="5">Islandia. New York. 11749.</td>
+          <td colspan="4">[MANUALLY]</td>
+        </tr>
+        <tr>
+          <td colspan="4">United States</td>
+          <td colspan="5">United States</td>
+          <td colspan="2">6. Date of Export:</td>
+          <td colspan="2">[TO BE FILLED MANUALLY]</td>
+        </tr>
+        <tr>
+          <td colspan="2">7.  USPPI EIN (IRS) No:</td>
+          <td colspan="2">86-2244756</td>
+          <td colspan="5">8. Related Party Indicator:</td>
+          <td colspan="2">[CHECKBOX] Related</td>
+          <td colspan="2">[CHECKBOX] Non-Related</td>
+        </tr>
+        <tr>
+          <td colspan="2">9.  USPPI Reference #:</td>
+          <td colspan="2">[MANUALLY]</td>
+          <td colspan="5">10. Routed Export Transaction:</td>
+          <td colspan="2">[CHECKBOX] Yes</td>
+          <td colspan="2">[CHECKBOX] No</td>
+        </tr>
+        <tr>
+          <td colspan="4">11. Ultimate Consignee Name &amp; Address:</td>
+          <td colspan="5">12. Ultimate Consignee Type:</td>
+          <td colspan="4">13. Intermediate Consignee Name &amp; Address:</td>
+        </tr>
+        <tr>
+          <td colspan="4">{name of company from the system}</td>
+          <td colspan="5">[CHECKBOX] Government Entity</td>
+          <td colspan="4">{leave blank}</td>
+        </tr>
+        <tr>
+          <td colspan="4">{address 1 from the system}</td>
+          <td colspan="5">[CHECKBOX] Direct Consumer</td>
+          <td colspan="4">{leave blank}</td>
+        </tr>
+        <tr>
+          <td colspan="4">{address 2 from the system}</td>
+          <td colspan="5">[CHECKBOX] Other/Unknown</td>
+          <td colspan="4">{leave blank}</td>
+        </tr>
+        <tr>
+          <td colspan="4">{city, state, country, zip code from the system}</td>
+          <td colspan="5">[CHECKBOX] Re-Seller</td>
+          <td colspan="4">{leave blank}</td>
+        </tr>
+        <tr>
+          <td colspan="3">14. State of Origin:</td>
+          <td colspan="3">NY</td>
+          <td colspan="3">17. In-Bond Code:</td>
+          <td colspan="2">[MANUALLY]</td>
+          <td colspan="2">20. TIB / Carnet?</td>
+        </tr>
+        <tr>
+          <td colspan="3">15. Country of Ultimate Destination:</td>
+          <td colspan="3">{Country from the system}</td>
+          <td colspan="3">18. Entry Number:</td>
+          <td colspan="2">{leave blank}</td>
+          <td colspan="2">[CHECKBOX] Yes [CHECKBOX] No</td>
+        </tr>
+        <tr>
+          <td colspan="3">16. Hazardous Material:</td>
+          <td colspan="3">[CHECKBOX] Yes [CHECKBOX] No</td>
+          <td colspan="3">19. FTZ Identifier:</td>
+          <td colspan="2">{leave blank}</td>
+          <td colspan="2">{leave blank}</td>
+        </tr>
+        <tr>
+          <td colspan="13">{leave blank}</td>
+        </tr>
+        <tr>
+          <td colspan="3">21. Shipper Requests Insurance:</td>
+          <td colspan="3">[CHECKBOX] Yes [CHECKBOX] No</td>
+          <td colspan="7" rowspan="2">25. SHIPPER'S INSTRUCTION in case of inability to deliver consignment as consigned.</td>
+        </tr>
+        <tr>
+          <td colspan="3">22. Declared Value for Cartage:</td>
+          <td colspan="3">{leave blank}</td>
+        </tr>
+        <tr>
+          <td colspan="3">23. Shipper Must Check:</td>
+          <td colspan="3">[CHECKBOX] Prepaid [CHECKBOX] Collect</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td colspan="3">24. C.O.D Amount:</td>
+          <td colspan="3">$</td>
+          <td colspan="3">[CHECKBOX] Deliver To:</td>
+          <td colspan="4">{leave blank}</td>
+        </tr>
+        <tr>
+          <td colspan="13">Cargo items tendered or directed to be tendered by your firm for air transportation are subject to Aviation Security controls for air carriers and when appropriate Other Government Regulations. Copies of all relevant shipping documents showing the cargo's consigee, consignor, descritption, and other relevant data will be retained on file until the cargo completes its air transportation.</td>
+        </tr>
+        <tr>
+          <td colspan="13">I understand that all cargo tendered for transport by air to the nominated is subject to TSA Regulations that may require inspection or screening. I give the nominated freight forwarder my permission to inspect or screen all cargo tendered on behalf of company. My consent will remain in effect until revoked in writing.</td>
+        </tr>
+        <tr>
+          <td colspan="13">{leave blank}</td>
+        </tr>
+        <tr>
+          <td colspan="13">26. Instructions to Forwarder:</td>
+        </tr>
+        <tr>
+          <td>27. D/F</td>
+          <td colspan="2">28. Schedule B / HTS  Commercial Commodity Desc</td>
+          <td>28. SchB/HTS  QTY  / UOM (if applicable)</td>
+          <td>30. DDTC Quantity and DDTC Unit of Measure</td>
+          <td>31. Shipping Weight (in Kilos)</td>
+          <td>32. ECCN EAR99 or USML Category #</td>
+          <td>33.     S         M        E         (Y/N)</td>
+          <td colspan="2">34. NLR, Export License No, License Exception Symbol, DDTC Exemption No, DDTC ACM No.,</td>
+          <td colspan="2">35. Value at the Port of Export (US Dollars)</td>
+          <td>36. License Value by item (if applicable) (US Dollars)</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td colspan="4">37. DDTC Applicant Registration Number:</td>
+          <td colspan="2">{leave blank}</td>
+          <td colspan="5">38. Eligible Party Certification:</td>
+          <td colspan="2">[CHECKBOX] Yes [CHECKBOX] No</td>
+        </tr>
+        <tr>
+          <td>39 [CHECKBOX]</td>
+          <td colspan="12">Check here if there are any remaining non-licensable Schedule B / HTS Numbers that are valued $2500.00 or less and that do not otherwise require AES filing.</td>
+        </tr>
+        <tr>
+          <td>40 [CHECKBOX]</td>
+          <td colspan="12">Check here if the USPPI authorizes the above named forwarder to Act as authorized agent for export control, U.S. Census Bureau (Census Bureau) reporting, and U.S. Customs and Border Protection (CBP) purposes.  Also, to prepare and transmit any Electronic Export Information (EEI) or other documents or records required to be filed by the Census Bureau, CBP, the Bureau of Industry and Security, or any other U.S. Government agency, and perform any other act that may be required by law or regulation in connection with the exportation or transportation of any goods shipped or consigned by or to the USPPI, and to receive or ship any goods on behalf of the USPPI.</td>
+        </tr>
+        <tr>
+          <td colspan="13">41.  I certify that the statements made and all information contained herein are true and correct. I understand that civil and criminal penalties, including forfeiture and sale, may be imposed for making false and fraudulent statements herein, failing to provide the requested information or for violation of U.S. laws on exportation (13 U.S.C. Sec . 305:  22 U.S.C. Sec. 401, 18 U.S.C. Sec 1001, 50 U.S.C. app. 2410).</td>
+        </tr>
+        <tr>
+          <td colspan="3">42. USPPI E-mail Address:</td>
+          <td colspan="3">aaron@qiqiglobal.com</td>
+          <td colspan="4">43. USPPI Telephone No.:</td>
+          <td colspan="3">00972-54-6248884</td>
+        </tr>
+        <tr>
+          <td colspan="6">44.  Printed Name of Duly authorized officer or employee:</td>
+          <td colspan="7">Aaron Lisani</td>
+        </tr>
+        <tr>
+          <td colspan="2">45.  Signature:</td>
+          <td colspan="4">[SIGNATURE BLOCK]</td>
+          <td colspan="2">46. Title:</td>
+          <td colspan="2">CPO</td>
+          <td>47. Date:</td>
+          <td colspan="2">[DATE OF THE DOCUMENT]</td>
+        </tr>
+        <tr>
+          <td colspan="13">48. [CHECKBOX] Check here to validate Electronic Signature.  Electronic signatures must be typed in all capital letters in Box 38 in order to be valid.</td>
+        </tr>
+        <tr>
+          <td colspan="13">{leave blank}</td>
+        </tr>
+        <tr>
+          <td colspan="13">Important: The shipment herein described is accepted in apparent good order (except as noted) subject to all terms and conditions of this contract on this letter of instruction. Liability for this shipment covered by this letter of instruction does not extend beyond its actual air movement and the territorial extent of the terminal area defined in our tariffs.</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
