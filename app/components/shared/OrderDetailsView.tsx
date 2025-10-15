@@ -11,6 +11,7 @@ import OrderDocumentsView from './OrderDocumentsView';
 import OrderHistoryView from './OrderHistoryView';
 import OrderStatusBadge from '../ui/OrderStatusBadge';
 import { formatCurrency, formatQuantity } from '../../../lib/formatters';
+import CreateSLIModal from '../modals/CreateSLIModal';
 
 interface Order {
   id: string;
@@ -138,6 +139,9 @@ export default function OrderDetailsView({
   const [documentsRefreshKey, setDocumentsRefreshKey] = useState(0);
   const [showSendEmailModal, setShowSendEmailModal] = useState(false);
   const [customEmailMessage, setCustomEmailMessage] = useState('');
+  const [showSLIModal, setShowSLIModal] = useState(false);
+  const [sliData, setSliData] = useState<any>(null);
+  const [sliLoading, setSliLoading] = useState(false);
   
   // Calculate actual recipient email (matches API logic)
   const getActualRecipientEmail = (): string => {
@@ -304,6 +308,7 @@ export default function OrderDetailsView({
       fetchOrderItems();
       if (role === 'admin') {
         fetchOrderHistory();
+        fetchSLI();
       }
     }
   }, [orderId, role]);
@@ -498,6 +503,31 @@ export default function OrderDetailsView({
     } catch (err: any) {
       console.error('Error fetching order history:', err);
       setOrderHistory([]); // Set empty array on error
+    }
+  };
+
+  const fetchSLI = async () => {
+    if (role !== 'admin') return; // Only admins need SLI data in UI
+    
+    setSliLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch(`/api/orders/${orderId}/sli`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        const { sli } = await response.json();
+        setSliData(sli);
+      }
+    } catch (err: any) {
+      console.error('Error fetching SLI:', err);
+    } finally {
+      setSliLoading(false);
     }
   };
 
@@ -1045,6 +1075,36 @@ export default function OrderDetailsView({
             >
               Download 3PL XLSX
             </button>
+          )}
+
+          {/* Admin: SLI Buttons (only show when status is In Process) */}
+          {role === 'admin' && order?.status === 'In Process' && (
+            <>
+              {!sliData ? (
+                <button
+                  onClick={() => setShowSLIModal(true)}
+                  className="bg-indigo-600 text-white px-4 py-2 hover:bg-indigo-700 transition text-sm"
+                  disabled={sliLoading}
+                >
+                  {sliLoading ? 'Loading...' : 'Create SLI'}
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setShowSLIModal(true)}
+                    className="bg-indigo-600 text-white px-4 py-2 hover:bg-indigo-700 transition text-sm"
+                  >
+                    Edit SLI
+                  </button>
+                  <button
+                    onClick={() => window.open(`/api/orders/${orderId}/sli/download`, '_blank')}
+                    className="bg-teal-600 text-white px-4 py-2 hover:bg-teal-700 transition text-sm"
+                  >
+                    Download SLI PDF
+                  </button>
+                </>
+              )}
+            </>
           )}
           
           {/* Delete button for Cancelled orders (Admin only) or Draft orders (Both) */}
@@ -1640,6 +1700,18 @@ export default function OrderDetailsView({
           </div>
         </div>
       )}
+
+      {/* SLI Modal */}
+      <CreateSLIModal
+        orderId={orderId}
+        isOpen={showSLIModal}
+        onClose={() => setShowSLIModal(false)}
+        onSuccess={() => {
+          fetchSLI(); // Refresh SLI data after creation/update
+        }}
+        existingSLI={sliData}
+        isEditMode={!!sliData}
+      />
 
     </div>
   );
