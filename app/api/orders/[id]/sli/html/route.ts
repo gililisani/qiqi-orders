@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { generateSLIHTML } from '../../../../../../lib/sliGenerator';
-import chrome from 'chrome-aws-lambda';
+import { generateSLIHTML } from '../../../../../../../lib/sliGenerator';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -20,21 +19,13 @@ export async function GET(
       }
     });
 
-    // Get current user (admin only for download)
-    const url = new URL(request.url);
-    let token = url.searchParams.get('token');
-    
-    if (!token) {
-      const authHeader = request.headers.get('authorization');
-      if (authHeader) {
-        token = authHeader.replace('Bearer ', '');
-      }
-    }
-    
-    if (!token) {
+    // Get current user (admin only)
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
 
     if (userError || !user) {
@@ -102,7 +93,7 @@ export async function GET(
 
     if (itemsError) {
       console.error('Error fetching order items:', itemsError);
-      return NextResponse.json({ error: 'Failed to fetch order items', details: itemsError.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch order items' }, { status: 500 });
     }
 
     // Fetch products
@@ -114,7 +105,7 @@ export async function GET(
 
     if (productsError) {
       console.error('Error fetching products:', productsError);
-      return NextResponse.json({ error: 'Failed to fetch products', details: productsError.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
     }
 
     // Map products to items
@@ -153,41 +144,11 @@ export async function GET(
     // Generate HTML
     const html = generateSLIHTML(sliData);
 
-    // Generate PDF using chrome-aws-lambda (Vercel/Lambda optimized)
-    const browser = await chrome.puppeteer.launch({
-      args: chrome.args,
-      defaultViewport: chrome.defaultViewport,
-      executablePath: await chrome.executablePath,
-      headless: chrome.headless,
-    });
-
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'domcontentloaded' });
-
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '5mm',
-        right: '5mm',
-        bottom: '5mm',
-        left: '5mm',
-      },
-    });
-
-    await browser.close();
-
-    // Return PDF as download
-    return new NextResponse(pdfBuffer, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="SLI-${order.invoice_number || orderId}.pdf"`,
-      },
-    });
+    return NextResponse.json({ html }, { status: 200 });
 
   } catch (error: any) {
-    console.error('Error generating SLI PDF:', error);
+    console.error('Error generating SLI HTML:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
