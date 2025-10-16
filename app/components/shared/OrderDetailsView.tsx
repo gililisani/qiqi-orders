@@ -1097,7 +1097,12 @@ export default function OrderDetailsView({
                     Edit SLI
                   </button>
                   <button
-                    onClick={() => window.open(`/api/orders/${orderId}/sli/download`, '_blank')}
+                    onClick={async () => {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (session) {
+                        window.open(`/api/orders/${orderId}/sli/download?token=${session.access_token}`, '_blank');
+                      }
+                    }}
                     className="bg-teal-600 text-white px-4 py-2 hover:bg-teal-700 transition text-sm"
                   >
                     Download SLI PDF
