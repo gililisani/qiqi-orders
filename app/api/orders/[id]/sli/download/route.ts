@@ -109,7 +109,7 @@ export async function GET(
     // Fetch products separately
     const productIds = (orderItems || []).map((item: any) => item.product_id);
     const { data: products, error: productsError } = await supabaseAdmin
-      .from('products')
+      .from('Products')
       .select('id, hs_code, case_weight, item_name')
       .in('id', productIds);
 
