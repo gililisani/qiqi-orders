@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateSLIHTML } from '../../../../../../lib/sliGenerator';
 import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
+const chromium = require('@sparticuz/chromium');
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -156,9 +156,9 @@ export async function GET(
 
     // Generate PDF using Puppeteer with Chromium (serverless-optimized)
     const browser = await puppeteer.launch({
-      args: chromium.args,
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'],
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
+      executablePath: await chromium.executablePath('/tmp'),
       headless: chromium.headless,
     });
 
