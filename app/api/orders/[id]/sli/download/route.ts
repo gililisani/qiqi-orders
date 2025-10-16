@@ -96,19 +96,34 @@ export async function GET(
         quantity,
         case_qty,
         total_price,
-        products (
-          hs_code,
-          case_weight,
-          item_name
-        )
+        product_id
       `)
       .eq('order_id', orderId)
-      .order('sort_order', { ascending: true });
+      .order('sort_order', { ascending: true, nullsFirst: false });
 
     if (itemsError) {
       console.error('Error fetching order items:', itemsError);
-      return NextResponse.json({ error: 'Failed to fetch order items' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch order items', details: itemsError.message }, { status: 500 });
     }
+
+    // Fetch products separately
+    const productIds = (orderItems || []).map((item: any) => item.product_id);
+    const { data: products, error: productsError } = await supabaseAdmin
+      .from('products')
+      .select('id, hs_code, case_weight, item_name')
+      .in('id', productIds);
+
+    if (productsError) {
+      console.error('Error fetching products:', productsError);
+      return NextResponse.json({ error: 'Failed to fetch products', details: productsError.message }, { status: 500 });
+    }
+
+    // Map products to items
+    const productsMap = new Map(products?.map((p: any) => [p.id, p]) || []);
+    const itemsWithProducts = (orderItems || []).map((item: any) => ({
+      ...item,
+      product: productsMap.get(item.product_id)
+    }));
 
     // Create PDF document
     const pdfDoc = await PDFDocument.create();
@@ -254,11 +269,11 @@ export async function GET(
     yPosition -= 12;
 
     // Product rows
-    (orderItems || []).forEach((item: any) => {
-      const totalWeight = ((item.case_qty || 0) * (item.products?.case_weight || 0)).toFixed(2);
+    (itemsWithProducts || []).forEach((item: any) => {
+      const totalWeight = ((item.case_qty || 0) * (item.product?.case_weight || 0)).toFixed(2);
       const values = [
         'D',
-        item.products?.hs_code || '',
+        item.product?.hs_code || '',
         String(item.quantity || 0),
         'Each',
         totalWeight,
