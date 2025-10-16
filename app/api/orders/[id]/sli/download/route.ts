@@ -208,7 +208,7 @@ export async function GET(
     
     // Box 8: Related Party Indicator
     drawBox(200, yPosition - 15, 150, 20);
-    drawText('8. Related Party: ☐ Related ☑ Non-Related', 205, yPosition - 10, 7);
+    drawText('8. Related Party: [ ] Related [X] Non-Related', 205, yPosition - 10, 7);
     
     yPosition -= 30;
 
@@ -224,9 +224,9 @@ export async function GET(
     // Box 12: Consignee Type
     drawBox(300, yPosition - 40, 150, 50);
     drawText('12. Consignee Type:', 305, yPosition - 10, 7);
-    drawText('☐ Government', 305, yPosition - 18, 7);
-    drawText('☐ Direct Consumer', 305, yPosition - 26, 7);
-    drawText('☑ Re-Seller', 305, yPosition - 34, 7);
+    drawText('[ ] Government', 305, yPosition - 18, 7);
+    drawText('[ ] Direct Consumer', 305, yPosition - 26, 7);
+    drawText('[X] Re-Seller', 305, yPosition - 34, 7);
     
     yPosition -= 60;
 
@@ -237,7 +237,7 @@ export async function GET(
     
     // Box 16: Hazardous Material
     drawBox(200, yPosition - 15, 150, 20);
-    drawText('16. Hazardous Material: ☐ Yes ☑ No', 205, yPosition - 10, 7);
+    drawText('16. Hazardous Material: [ ] Yes [X] No', 205, yPosition - 10, 7);
     
     // Box 17: In-Bond Code
     drawBox(360, yPosition - 15, 150, 20);
@@ -297,7 +297,7 @@ export async function GET(
 
     // Box 40: Authorization
     drawBox(40, yPosition - 20, 470, 25);
-    drawText('40. ☑ USPPI authorizes forwarder to act as authorized agent', 45, yPosition - 12, 7);
+    drawText('40. [X] USPPI authorizes forwarder to act as authorized agent', 45, yPosition - 12, 7);
     
     yPosition -= 30;
 
@@ -327,7 +327,7 @@ export async function GET(
 
     // Box 48: Electronic Signature
     drawBox(40, yPosition - 15, 470, 20);
-    drawText('48. ☑ Validate Electronic Signature', 45, yPosition - 10, 7);
+    drawText('48. [X] Validate Electronic Signature', 45, yPosition - 10, 7);
 
     // Serialize PDF
     const pdfBytes = await pdfDoc.save();
