@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateSLIHTML } from '../../../../../../lib/sliGenerator';
-import puppeteer from 'puppeteer-core';
-const chromium = require('@sparticuz/chromium');
+import chrome from 'chrome-aws-lambda';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -154,20 +153,16 @@ export async function GET(
     // Generate HTML
     const html = generateSLIHTML(sliData);
 
-    // Generate PDF using Puppeteer with Chromium (serverless-optimized)
-    // Set environment for chromium
-    chromium.setGraphicsMode = false;
-    
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-      ignoreHTTPSErrors: true,
+    // Generate PDF using chrome-aws-lambda (Vercel/Lambda optimized)
+    const browser = await chrome.puppeteer.launch({
+      args: chrome.args,
+      defaultViewport: chrome.defaultViewport,
+      executablePath: await chrome.executablePath,
+      headless: chrome.headless,
     });
 
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.setContent(html, { waitUntil: 'domcontentloaded' });
 
     const pdfBuffer = await page.pdf({
       format: 'A4',
