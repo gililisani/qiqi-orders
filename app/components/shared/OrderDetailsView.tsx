@@ -1077,8 +1077,8 @@ export default function OrderDetailsView({
             </button>
           )}
 
-          {/* Admin: SLI Buttons (only show when status is In Process) */}
-          {role === 'admin' && order?.status === 'In Process' && (
+          {/* Admin: SLI Buttons (only show when status is Ready or Done) */}
+          {role === 'admin' && (order?.status === 'Ready' || order?.status === 'Done') && (
             <>
               {!sliData ? (
                 <button

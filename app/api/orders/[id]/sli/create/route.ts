@@ -63,9 +63,9 @@ export async function POST(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    if (order.status !== 'In Process') {
+    if (order.status !== 'Ready' && order.status !== 'Done') {
       return NextResponse.json(
-        { error: 'SLI can only be created for orders with status "In Process"' },
+        { error: 'SLI can only be created for orders with status "Ready" or "Done"' },
         { status: 400 }
       );
     }
