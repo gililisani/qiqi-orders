@@ -35,6 +35,11 @@ interface SLIData {
   creation_date: string;
 }
 
+// Helper to create checkbox HTML
+function checkbox(checked: boolean): string {
+  return `<span class="checkbox">${checked ? 'X' : ''}</span>`;
+}
+
 export function generateSLIHTML(data: SLIData): string {
   // Read the HTML template
   const templatePath = path.join(process.cwd(), 'public', 'templates', 'sli-nested-tables.html');
@@ -47,29 +52,22 @@ export function generateSLIHTML(data: SLIData): string {
     day: '2-digit' 
   });
   
-  // Replace placeholders with actual data
-  
-  // Forwarding Agent (Box 5)
-  html = html.replace('[MANUALLY]', data.forwarding_agent_line1 || '');
-  html = html.replace(/\[MANUALLY\]/g, (match, offset) => {
-    // First occurrence is line 1 (already replaced above)
-    // Second occurrence is line 2
-    // Third occurrence is line 3
-    const occurrences = html.substring(0, offset).match(/\[MANUALLY\]/g) || [];
-    if (occurrences.length === 0) return data.forwarding_agent_line2 || '';
-    if (occurrences.length === 1) return data.forwarding_agent_line3 || '';
-    if (occurrences.length === 2) return data.forwarding_agent_line4 || '';
-    return match;
-  });
+  // Replace Forwarding Agent (Box 5) - all 4 lines
+  html = html.replace('<td class="w-30">[MANUALLY]</td>', 
+    `<td class="w-30">${data.forwarding_agent_line1 || ''}</td>`);
+  html = html.replace('<td class="w-30">[MANUALLY]</td>', 
+    `<td class="w-30">${data.forwarding_agent_line2 || ''}</td>`);
+  html = html.replace('<td class="w-30">[MANUALLY]</td>', 
+    `<td class="w-30">${data.forwarding_agent_line3 || ''}</td>`);
+  html = html.replace('<td class="w-30">[MANUALLY]</td>', 
+    `<td class="w-30">${data.forwarding_agent_line4 || ''}</td>`);
   
   // Date of Export (Box 6)
   html = html.replace('[TO BE FILLED MANUALLY]', today);
   
-  // USPPI Reference # (Box 9)
-  html = html.replace('[MANUALLY]', data.invoice_number || '');
-  
   // In-Bond Code (Box 17)
-  html = html.replace('[MANUALLY]', data.in_bond_code || '');
+  html = html.replace('<td class="w-25">[MANUALLY]</td>', 
+    `<td class="w-25">${data.in_bond_code || ''}</td>`);
   
   // Ultimate Consignee (Box 11)
   html = html.replace('{name of company from the system}', data.company_name);
@@ -84,56 +82,75 @@ export function generateSLIHTML(data: SLIData): string {
   html = html.replace('{Country from the system}', data.ship_to_country);
   
   // Instructions to Forwarder (Box 26)
-  html = html.replace('26. Instructions to Forwarder:', 
-    `26. Instructions to Forwarder:<br>${data.instructions_to_forwarder || ''}`);
+  html = html.replace('<div class="text-only">26. Instructions to Forwarder:</div>', 
+    `<div class="text-only">26. Instructions to Forwarder:<br>${data.instructions_to_forwarder || ''}</div>`);
   
   // Date (Box 47)
   html = html.replace('[DATE OF THE DOCUMENT]', today);
   
-  // Generate product rows
+  // Generate product rows with proper classes
   const productRows = data.products.map(product => {
     const totalWeight = (product.case_qty || 0) * (product.case_weight || 0);
     
-    return `
-      <tr>
-        <td class="w-8">D</td>
-        <td class="w-18">${product.hs_code || ''}</td>
-        <td class="w-10">${product.quantity || 0}</td>
-        <td class="w-12">Each</td>
-        <td class="w-10">${totalWeight.toFixed(2)}</td>
-        <td class="w-10">EAR99</td>
-        <td class="w-8"></td>
-        <td class="w-12">NLR</td>
-        <td class="w-12">$${product.total_price.toFixed(2)}</td>
-        <td class="w-10"></td>
-      </tr>
-    `;
+    return `            <tr>
+              <td class="w-8">D</td>
+              <td class="w-18">${product.hs_code || ''}</td>
+              <td class="w-10">${product.quantity || 0}</td>
+              <td class="w-12">Each</td>
+              <td class="w-10">${totalWeight.toFixed(2)}</td>
+              <td class="w-10">EAR99</td>
+              <td class="w-8"></td>
+              <td class="w-12">NLR</td>
+              <td class="w-12">$${product.total_price.toFixed(2)}</td>
+              <td class="w-10"></td>
+            </tr>`;
   }).join('\n');
   
-  // Replace dummy product rows with actual data
-  // Find the product table section and replace dummy rows
-  const productTableStart = html.indexOf('<!-- Dummy rows 28-33 -->');
-  const productTableEnd = html.indexOf('</table>', productTableStart);
-  
-  if (productTableStart !== -1 && productTableEnd !== -1) {
-    const beforeTable = html.substring(0, productTableStart);
-    const afterTable = html.substring(productTableEnd);
-    html = beforeTable + productRows + afterTable;
+  // Find and replace the product rows section
+  const dummyRowsStart = html.indexOf('<!-- Dummy rows 28-33 -->');
+  if (dummyRowsStart !== -1) {
+    // Find the end of the dummy rows (look for the next comment or closing tag)
+    const nextCommentOrClose = html.indexOf('</table>', dummyRowsStart);
+    if (nextCommentOrClose !== -1) {
+      const before = html.substring(0, dummyRowsStart);
+      const after = html.substring(nextCommentOrClose);
+      html = before + productRows + '\n          ' + after;
+    }
   }
   
   // Replace all {leave blank} placeholders
-  html = html.replace(/{leave blank}/g, '');
+  html = html.replace(/{leave blank}/g, '&nbsp;');
   
-  // Handle checkboxes - mark the fixed ones as checked
-  html = html.replace('[CHECKBOX] Non-Related', '☑ Non-Related');
-  html = html.replace('[CHECKBOX] Re-Seller', '☑ Re-Seller');
-  html = html.replace('[CHECKBOX] Yes [CHECKBOX] No', '☐ Yes ☑ No'); // Hazmat No
-  html = html.replace(/\[CHECKBOX\]/g, '☐');
+  // Format checkboxes with proper styling
+  // Box 8: Related Party Indicator
+  html = html.replace('[CHECKBOX] Related', `${checkbox(false)} Related`);
+  html = html.replace('[CHECKBOX] Non-Related', `${checkbox(true)} Non-Related`);
   
-  // Mark boxes 40 and 48 as checked
-  html = html.replace('40 ☐', '40 ☑');
-  html = html.replace('48. ☐', '48. ☑');
+  // Box 10: Routed Export Transaction - leave both unchecked
+  html = html.replace('[CHECKBOX] Yes', `${checkbox(false)} Yes`);
+  html = html.replace('[CHECKBOX] No', `${checkbox(false)} No`);
+  
+  // Box 12: Ultimate Consignee Type
+  html = html.replace('[CHECKBOX] Government Entity', `${checkbox(false)} Government Entity`);
+  html = html.replace('[CHECKBOX] Direct Consumer', `${checkbox(false)} Direct Consumer`);
+  html = html.replace('[CHECKBOX] Other/Unknown', `${checkbox(false)} Other/Unknown`);
+  html = html.replace('[CHECKBOX] Re-Seller', `${checkbox(true)} Re-Seller`);
+  
+  // Box 16: Hazardous Material
+  html = html.replace(/\[CHECKBOX\] Yes \[CHECKBOX\] No/g, 
+    `${checkbox(false)} Yes ${checkbox(true)} No`);
+  
+  // Box 20: TIB/Carnet - both unchecked
+  // Box 21: Insurance - both unchecked
+  // Box 23: Payment - both unchecked
+  // These will be replaced by the generic [CHECKBOX] replacements below
+  
+  // Replace any remaining [CHECKBOX] with unchecked boxes
+  html = html.replace(/\[CHECKBOX\]/g, `${checkbox(false)}`);
+  
+  // Special cases: Box 40 and 48 should be checked
+  html = html.replace('40 <span class="checkbox"></span>', `40 ${checkbox(true)}`);
+  html = html.replace('48. <span class="checkbox"></span>', `48. ${checkbox(true)}`);
   
   return html;
 }
-
