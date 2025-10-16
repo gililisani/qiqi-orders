@@ -155,11 +155,15 @@ export async function GET(
     const html = generateSLIHTML(sliData);
 
     // Generate PDF using Puppeteer with Chromium (serverless-optimized)
+    // Set environment for chromium
+    chromium.setGraphicsMode = false;
+    
     const browser = await puppeteer.launch({
-      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'],
+      args: chromium.args,
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath('/tmp'),
+      executablePath: await chromium.executablePath(),
       headless: chromium.headless,
+      ignoreHTTPSErrors: true,
     });
 
     const page = await browser.newPage();
