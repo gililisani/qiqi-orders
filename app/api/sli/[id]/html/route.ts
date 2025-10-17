@@ -177,48 +177,8 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
 }
 
 async function generateOrderBasedSLIHTML(html: string, sli: any, supabaseAdmin: any): Promise<string> {
-  // Fetch order data
-  const { data: order, error: orderError } = await supabaseAdmin
-    .from('orders')
-    .select('*, companies(*)')
-    .eq('id', sli.order_id)
-    .single();
-
-  if (orderError || !order) {
-    throw new Error('Order not found for this SLI');
-  }
-
-  // Fetch order items
-  const { data: orderItems, error: itemsError } = await supabaseAdmin
-    .from('order_items')
-    .select('*')
-    .eq('order_id', order.id);
-
-  if (itemsError) {
-    throw new Error('Failed to fetch order items');
-  }
-
-  // Fetch products
-  const productIds = orderItems.map((item: any) => item.product_id);
-  const { data: products, error: productsError } = await supabaseAdmin
-    .from('Products')
-    .select('*')
-    .in('id', productIds);
-
-  if (productsError) {
-    throw new Error('Failed to fetch products');
-  }
-
-  // Map products to order items
-  const itemsWithProducts = orderItems.map((item: any) => {
-    const product = products.find((p: any) => p.id === item.product_id);
-    return { ...item, product };
-  });
-
-  // Use existing sliGenerator logic (simplified here for brevity)
-  const { generateSLIHTML } = require('../../../../../../lib/sliGenerator');
-  html = await generateSLIHTML(sli, order, itemsWithProducts);
-
-  return html;
+  // For order-based SLIs, redirect to the existing order SLI route
+  // This is a fallback - order-based SLIs should use /api/orders/[id]/sli/html
+  throw new Error('Order-based SLIs should use /api/orders/[orderId]/sli/html route');
 }
 
