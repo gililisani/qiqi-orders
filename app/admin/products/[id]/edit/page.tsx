@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import Navbar from '../../../../components/Navbar';
+import AdminLayout from '../../../../components/AdminLayout';
 import Link from 'next/link';
 import ImageUpload from '../../../../components/ImageUpload';
 
@@ -191,18 +191,16 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   if (loading) {
     return (
-      <main className="text-black">
-        <Navbar />
+      <AdminLayout>
         <div className="p-6">
           <p>Loading product...</p>
         </div>
-      </main>
+      </AdminLayout>
     );
   }
 
   return (
-    <main className="text-black">
-      <Navbar />
+    <AdminLayout>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Edit Product</h1>
@@ -498,6 +496,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           </div>
         </form>
       </div>
-    </main>
+    </AdminLayout>
   );
 }

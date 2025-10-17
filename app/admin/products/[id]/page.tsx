@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import Navbar from '../../../components/Navbar';
+import AdminLayout from '../../../components/AdminLayout';
 import Link from 'next/link';
 
 interface Product {
@@ -74,19 +74,17 @@ export default function ProductViewPage({ params }: { params: { id: string } }) 
 
   if (loading) {
     return (
-      <main className="text-black">
-        <Navbar />
+      <AdminLayout>
         <div className="p-6">
           <p>Loading product...</p>
         </div>
-      </main>
+      </AdminLayout>
     );
   }
 
   if (error || !product) {
     return (
-      <main className="text-black">
-        <Navbar />
+      <AdminLayout>
         <div className="p-6">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             {error || 'Product not found'}
@@ -98,13 +96,12 @@ export default function ProductViewPage({ params }: { params: { id: string } }) 
             ← Back to Products
           </Link>
         </div>
-      </main>
+      </AdminLayout>
     );
   }
 
   return (
-    <main className="text-black">
-      <Navbar />
+    <AdminLayout>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Product Details</h1>
@@ -254,6 +251,6 @@ export default function ProductViewPage({ params }: { params: { id: string } }) 
           </div>
         </div>
       </div>
-    </main>
+    </AdminLayout>
   );
 }
