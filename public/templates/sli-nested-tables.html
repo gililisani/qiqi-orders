@@ -191,6 +191,12 @@
         margin: 0;
         padding: 5mm;
       }
+      /* Force print background colors */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
     }
   </style>
 </head>
