@@ -100,7 +100,7 @@ export async function GET(
     const productIds = (orderItems || []).map((item: any) => item.product_id);
     const { data: products, error: productsError } = await supabaseAdmin
       .from('Products')
-      .select('id, hs_code, case_weight, item_name')
+      .select('id, hs_code, case_weight, item_name, made_in')
       .in('id', productIds);
 
     if (productsError) {
@@ -136,6 +136,7 @@ export async function GET(
           case_qty: item.case_qty || 0,
           case_weight: product?.case_weight || 0,
           total_price: item.total_price || 0,
+          made_in: product?.made_in || '',
         };
       }),
       creation_date: new Date().toISOString().split('T')[0],

@@ -163,6 +163,11 @@
       margin-right: 3px;
       vertical-align: middle;
     }
+    
+    /* Ensure text next to checkboxes aligns middle */
+    .nested-table td {
+      line-height: 1.3;
+    }
 
     /* Width controls */
     .w-8 { width: 8%; }
@@ -363,14 +368,7 @@
               <tr>
                 <td class="w-25 label-cell">24. C.O.D Amount:</td>
                 <td class="w-15">$</td>
-                <td colspan="2">
-                  <table class="nested-table">
-                    <tr>
-                      <td class="w-50 label-cell">[CHECKBOX] Deliver To:</td>
-                      <td class="w-50">{leave blank}</td>
-                    </tr>
-                  </table>
-                </td>
+                <td colspan="2">[CHECKBOX] Deliver To: {leave blank}</td>
               </tr>
             </table>
           </td>
@@ -551,7 +549,7 @@
             <table class="nested-table">
               <tr>
                 <td class="w-15 label-cell">45. Signature:</td>
-                <td class="w-30">[SIGNATURE BLOCK]</td>
+                <td class="w-30"><img src="/signatures/Sig.png" alt="Signature" style="height: 30px; display: block;"></td>
                 <td class="w-15 label-cell">46. Title:</td>
                 <td class="w-15">CPO</td>
                 <td class="w-10 label-cell">47. Date:</td>

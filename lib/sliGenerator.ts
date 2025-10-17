@@ -29,6 +29,7 @@ interface SLIData {
     case_qty: number;
     case_weight: number;
     total_price: number;
+    made_in: string;
   }>;
   
   // Current date
@@ -97,12 +98,14 @@ export function generateSLIHTML(data: SLIData): string {
     total_quantity: number;
     total_weight: number;
     total_value: number;
+    made_in: string;
   }> = new Map();
   
   const productsWithoutHS: Array<{
     quantity: number;
     weight: number;
     value: number;
+    made_in: string;
   }> = [];
   
   data.products.forEach(product => {
@@ -117,12 +120,14 @@ export function generateSLIHTML(data: SLIData): string {
         existing.total_quantity += product.quantity;
         existing.total_weight += totalWeight;
         existing.total_value += product.total_price;
+        // Keep the first made_in for the group
       } else {
         groupedProducts.set(hsCode, {
           hs_code: hsCode,
           total_quantity: product.quantity,
           total_weight: totalWeight,
           total_value: product.total_price,
+          made_in: product.made_in || '',
         });
       }
     } else {
@@ -131,6 +136,7 @@ export function generateSLIHTML(data: SLIData): string {
         quantity: product.quantity,
         weight: totalWeight,
         value: product.total_price,
+        made_in: product.made_in || '',
       });
     }
   });
@@ -140,10 +146,19 @@ export function generateSLIHTML(data: SLIData): string {
     return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
+  // Helper function to determine D/F based on made_in
+  const getDorF = (madeIn: string): string => {
+    const country = (madeIn || '').toLowerCase().trim();
+    if (country === 'usa' || country === 'united states' || country === 'us') {
+      return 'D';
+    }
+    return 'F';
+  };
+
   // Generate rows for products WITH HS code
   const rowsWithHS = Array.from(groupedProducts.values()).map(group => {
     return `            <tr>
-              <td class="w-8">D</td>
+              <td class="w-8">${getDorF(group.made_in)}</td>
               <td class="w-18">${group.hs_code}</td>
               <td class="w-10">${group.total_quantity.toLocaleString('en-US')}</td>
               <td class="w-12">Each</td>
@@ -159,7 +174,7 @@ export function generateSLIHTML(data: SLIData): string {
   // Generate rows for products WITHOUT HS code (separate rows)
   const rowsWithoutHS = productsWithoutHS.map(product => {
     return `            <tr>
-              <td class="w-8">D</td>
+              <td class="w-8">${getDorF(product.made_in)}</td>
               <td class="w-18">N/A</td>
               <td class="w-10">${product.quantity.toLocaleString('en-US')}</td>
               <td class="w-12">Each</td>
