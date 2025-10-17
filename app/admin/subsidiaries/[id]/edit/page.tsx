@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
 import AdminLayout from '../../../../components/AdminLayout';
+import InnerPageShell from '../../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 
 interface FormData {
@@ -113,24 +114,19 @@ export default function EditSubsidiaryPage() {
 
   return (
     <AdminLayout>
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Edit Subsidiary</h1>
-          <Link
-            href="/admin/subsidiaries"
-            className="text-gray-600 hover:text-gray-800"
-          >
-            ← Back to Subsidiaries
-          </Link>
-        </div>
+      <InnerPageShell
+        title="Edit Subsidiary"
+        breadcrumbs={[{ label: 'Subsidiaries', href: '/admin/subsidiaries' }, { label: 'Edit' }]}
+        actions={<Link href="/admin/subsidiaries" className="text-gray-600 hover:text-gray-800">← Back to Subsidiaries</Link>}
+      >
+        <div className="max-w-4xl mx-auto">
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Subsidiary Name *
@@ -219,7 +215,8 @@ export default function EditSubsidiaryPage() {
             </Link>
           </div>
         </form>
-      </div>
+        </div>
+      </InnerPageShell>
     </AdminLayout>
   );
 }

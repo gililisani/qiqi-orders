@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../../../components/AdminLayout';
+import InnerPageShell from '../../../components/ui/InnerPageShell';
+import Card from '../../../components/ui/Card';
 import Link from 'next/link';
 
 interface Product {
@@ -21,6 +23,10 @@ interface Product {
   upc?: string;
   size?: string;
   case_pack?: number;
+  case_weight?: number;
+  hs_code?: string;
+  made_in?: string;
+  category_id?: number;
   created_at: string;
 }
 
@@ -50,8 +56,7 @@ export default function ProductViewPage({ params }: { params: { id: string } }) 
       .single();
 
     if (!adminProfile) {
-      router.push('/client');
-      return;
+      router.push('/');
     }
   };
 
@@ -102,155 +107,149 @@ export default function ProductViewPage({ params }: { params: { id: string } }) 
 
   return (
     <AdminLayout>
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Product Details</h1>
+      <InnerPageShell
+        title={product.item_name}
+        breadcrumbs={[{ label: 'Products', href: '/admin/products' }, { label: product.item_name }]}
+        actions={
           <div className="flex space-x-2">
             <Link
               href={`/admin/products/${product.id}/edit`}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:opacity-90 transition"
+              className="bg-green-600 text-white px-4 py-2 rounded hover:opacity-90 transition text-sm"
             >
               Edit Product
             </Link>
             <Link
               href="/admin/products"
-              className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition"
+              className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition text-sm"
             >
               Back to Products
             </Link>
           </div>
-        </div>
-
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <div className="px-4 py-5 sm:px-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
-              {product.item_name}
-            </h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              Product ID: {product.id} • SKU: {product.sku}
-            </p>
-          </div>
-          <div className="border-t border-gray-200">
-            <dl>
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Product Image</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {product.picture_url ? (
-                    <img
-                      src={product.picture_url}
-                      alt={product.item_name}
-                      className="h-32 w-32 object-cover rounded"
-                    />
-                  ) : (
-                    <div className="h-32 w-32 bg-gray-200 rounded flex items-center justify-center">
-                      <span className="text-gray-400">No Image</span>
+        }
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Left Column - Basic Info & Pricing */}
+            <div className="space-y-6">
+              <Card title="Product Information">
+                <div className="space-y-4">
+                  {/* Product Image */}
+                  {product.picture_url && (
+                    <div>
+                      <img
+                        src={product.picture_url}
+                        alt={product.item_name}
+                        className="w-full max-w-xs rounded-lg"
+                      />
                     </div>
                   )}
-                </dd>
-              </div>
-              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Item Name</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {product.item_name}
-                </dd>
-              </div>
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">NetSuite Name</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {product.netsuite_name || 'Not specified'}
-                </dd>
-              </div>
-              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">SKU</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {product.sku}
-                </dd>
-              </div>
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">UPC</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {product.upc || 'Not specified'}
-                </dd>
-              </div>
-              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Size</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {product.size || 'Not specified'}
-                </dd>
-              </div>
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Case Pack</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {product.case_pack || 'Not specified'}
-                </dd>
-              </div>
-              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Americas Price</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  ${product.price_americas}
-                </dd>
-              </div>
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">International Price</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  ${product.price_international}
-                </dd>
-              </div>
-              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Status</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    product.enable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {product.enable ? 'Enabled' : 'Disabled'}
-                  </span>
-                </dd>
-              </div>
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Support Funds Eligible</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    product.list_in_support_funds ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {product.list_in_support_funds ? 'Yes' : 'No'}
-                  </span>
-                </dd>
-              </div>
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Visible to Americas</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    product.visible_to_americas 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {product.visible_to_americas ? 'Yes' : 'No'}
-                  </span>
-                </dd>
-              </div>
-              
-              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Visible to International</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    product.visible_to_international 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {product.visible_to_international ? 'Yes' : 'No'}
-                  </span>
-                </dd>
-              </div>
-              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Created At</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {new Date(product.created_at).toLocaleDateString()} at {new Date(product.created_at).toLocaleTimeString()}
-                </dd>
-              </div>
-            </dl>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Product ID</p>
+                      <p className="font-medium">{product.id}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">SKU</p>
+                      <p className="font-medium">{product.sku}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">NetSuite Name</p>
+                      <p className="font-medium">{product.netsuite_name || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">UPC</p>
+                      <p className="font-medium">{product.upc || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Size</p>
+                      <p className="font-medium">{product.size || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Case Pack</p>
+                      <p className="font-medium">{product.case_pack || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Case Weight</p>
+                      <p className="font-medium">{product.case_weight ? `${product.case_weight} kg` : 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">HS Code</p>
+                      <p className="font-medium">{product.hs_code || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Made In</p>
+                      <p className="font-medium">{product.made_in || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Created</p>
+                      <p className="font-medium text-sm">{new Date(product.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              <Card title="Pricing">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Americas Price</p>
+                    <p className="font-medium text-lg">${product.price_americas.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">International Price</p>
+                    <p className="font-medium text-lg">${product.price_international.toFixed(2)}</p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Right Column - Status & Settings */}
+            <div className="space-y-6">
+              <Card title="Status & Visibility">
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">Product Status</p>
+                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                      product.enable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {product.enable ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">Support Funds Eligible</p>
+                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                      product.list_in_support_funds ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {product.list_in_support_funds ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">Visible to Americas</p>
+                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                      product.visible_to_americas ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {product.visible_to_americas ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">Visible to International</p>
+                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                      product.visible_to_international ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {product.visible_to_international ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
           </div>
         </div>
-      </div>
+      </InnerPageShell>
     </AdminLayout>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../../../../components/AdminLayout';
+import InnerPageShell from '../../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 import ImageUpload from '../../../../components/ImageUpload';
 
@@ -201,22 +202,17 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   return (
     <AdminLayout>
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Edit Product</h1>
-          <Link
-            href={`/admin/products/${params.id}`}
-            className="text-gray-600 hover:text-gray-800"
-          >
-            ← Back to Product
-          </Link>
-        </div>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
+      <InnerPageShell
+        title="Edit Product"
+        breadcrumbs={[{ label: 'Products', href: '/admin/products' }, { label: 'Edit' }]}
+        actions={<Link href={`/admin/products/${params.id}`} className="text-gray-600 hover:text-gray-800">← Back to Product</Link>}
+      >
+        <div className="max-w-4xl mx-auto">
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
 
         <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -495,7 +491,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             </Link>
           </div>
         </form>
-      </div>
+        </div>
+      </InnerPageShell>
     </AdminLayout>
   );
 }
