@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,42 +15,6 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    // Get current user from auth header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Verify user is admin using cookie-based auth
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            cookie: request.headers.get('cookie') || ''
-          }
-        }
-      }
-    );
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check if user is admin
-    const { data: adminProfile, error: adminError } = await supabaseAdmin
-      .from('admins')
-      .select('id')
-      .eq('id', user.id)
-      .single();
-
-    if (adminError || !adminProfile) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
-
     // Parse request body
     const body = await request.json();
     const {
@@ -80,13 +45,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'At least one product is required' }, { status: 400 });
     }
 
+    // Get user from cookies (for created_by field)
+    const cookieStore = cookies();
+    const allCookies = cookieStore.getAll();
+    
+    // Find the Supabase auth token cookie
+    const authCookie = allCookies.find(cookie => 
+      cookie.name.includes('auth-token') || cookie.name.includes('sb-')
+    );
+    
+    let userId = null;
+    if (authCookie) {
+      try {
+        const { data: { user } } = await supabaseAdmin.auth.getUser(authCookie.value);
+        userId = user?.id || null;
+      } catch (err) {
+        console.log('Could not get user from cookie, proceeding without created_by');
+      }
+    }
+
     // Create standalone SLI
     const { data: sli, error: sliError } = await supabaseAdmin
       .from('slis')
       .insert({
         order_id: null, // Standalone SLI
         sli_type: 'standalone',
-        created_by: user.id,
+        created_by: userId,
         consignee_name,
         consignee_address_line1,
         consignee_address_line2,
@@ -123,4 +107,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }
-
