@@ -204,6 +204,12 @@ export function generateSLIHTML(data: SLIData): string {
   html = html.replace(/{leave blank}/g, '&nbsp;');
   
   // Format checkboxes with proper styling and labels
+  
+  // Box 16: Hazardous Material - always "No" checked (DO THIS FIRST!)
+  const hazmatCell = '16\\. Hazardous Material:</td>\\s*<td class="w-25"[^>]*>\\[CHECKBOX\\] Yes \\[CHECKBOX\\] No';
+  html = html.replace(new RegExp(hazmatCell), 
+    `16. Hazardous Material:</td><td class="w-25" style="word-spacing: 15px;">${checkbox(false, 'Yes')} ${checkbox(true, 'No')}`);
+  
   // Box 8: Related Party Indicator
   html = html.replace('[CHECKBOX] Related', checkbox(false, 'Related'));
   html = html.replace('[CHECKBOX] Non-Related', checkbox(true, 'Non-Related'));
@@ -217,12 +223,6 @@ export function generateSLIHTML(data: SLIData): string {
   html = html.replace('[CHECKBOX] Direct Consumer', checkbox(false, 'Direct Consumer'));
   html = html.replace('[CHECKBOX] Other/Unknown', checkbox(false, 'Other/Unknown'));
   html = html.replace('[CHECKBOX] Re-Seller', checkbox(true, 'Re-Seller'));
-  
-  // Box 16: Hazardous Material - always "No" checked
-  // This needs to be done before the generic Yes/No replacements
-  const hazmatCell = '16. Hazardous Material:</td>\\s*<td class="w-25"[^>]*>\\[CHECKBOX\\] Yes \\[CHECKBOX\\] No';
-  html = html.replace(new RegExp(hazmatCell), 
-    `16. Hazardous Material:</td><td class="w-25" style="word-spacing: 15px;">${checkbox(false, 'Yes')} ${checkbox(true, 'No')}`);
   
   // Box 23: Payment
   html = html.replace('[CHECKBOX] Prepaid', checkbox(false, 'Prepaid'));
