@@ -160,7 +160,7 @@ export function generateSLIHTML(data: SLIData): string {
               <td class="w-18">${group.hs_code}</td>
               <td class="w-10">${group.total_quantity.toLocaleString('en-US')}</td>
               <td class="w-12">Each</td>
-              <td class="w-10">${group.total_weight.toFixed(2)}</td>
+              <td class="w-10">${group.total_weight.toFixed(2)} kg</td>
               <td class="w-10">EAR99</td>
               <td class="w-8"></td>
               <td class="w-12">NLR</td>
@@ -176,7 +176,7 @@ export function generateSLIHTML(data: SLIData): string {
               <td class="w-18">N/A</td>
               <td class="w-10">${product.quantity.toLocaleString('en-US')}</td>
               <td class="w-12">Each</td>
-              <td class="w-10">${product.weight.toFixed(2)}</td>
+              <td class="w-10">${product.weight.toFixed(2)} kg</td>
               <td class="w-10">EAR99</td>
               <td class="w-8"></td>
               <td class="w-12">NLR</td>
@@ -218,11 +218,20 @@ export function generateSLIHTML(data: SLIData): string {
   html = html.replace('[CHECKBOX] Other/Unknown', checkbox(false, 'Other/Unknown'));
   html = html.replace('[CHECKBOX] Re-Seller', checkbox(true, 'Re-Seller'));
   
+  // Box 16: Hazardous Material - always "No" checked
+  // This needs to be done before the generic Yes/No replacements
+  const hazmatCell = '16. Hazardous Material:</td>\\s*<td class="w-25"[^>]*>\\[CHECKBOX\\] Yes \\[CHECKBOX\\] No';
+  html = html.replace(new RegExp(hazmatCell), 
+    `16. Hazardous Material:</td><td class="w-25" style="word-spacing: 15px;">${checkbox(false, 'Yes')} ${checkbox(true, 'No')}`);
+  
   // Box 23: Payment
   html = html.replace('[CHECKBOX] Prepaid', checkbox(false, 'Prepaid'));
   html = html.replace('[CHECKBOX] Collect', checkbox(false, 'Collect'));
   html = html.replace('[CHECKBOX] Abandoned', checkbox(false, 'Abandoned'));
   html = html.replace('[CHECKBOX] Return to Shipper', checkbox(false, 'Return to Shipper'));
+  
+  // Box 24: Deliver To
+  html = html.replace('[CHECKBOX] Deliver To:', checkbox(false, 'Deliver To:'));
   
   // Replace any remaining [CHECKBOX] with unchecked boxes (no label)
   html = html.replace(/\[CHECKBOX\]/g, checkbox(false, ''));
