@@ -36,9 +36,9 @@ interface SLIData {
   creation_date: string;
 }
 
-// Helper to create checkbox HTML
-function checkbox(checked: boolean): string {
-  return `<span class="checkbox">${checked ? 'X' : ''}</span>`;
+// Helper to create checkbox HTML with label
+function checkbox(checked: boolean, label: string = ''): string {
+  return `<span class="checkbox-wrapper"><span class="checkbox">${checked ? 'X' : ''}</span><span class="checkbox-label">${label}</span></span>`;
 }
 
 export function generateSLIHTML(data: SLIData): string {
@@ -203,36 +203,33 @@ export function generateSLIHTML(data: SLIData): string {
   // Replace all {leave blank} placeholders
   html = html.replace(/{leave blank}/g, '&nbsp;');
   
-  // Format checkboxes with proper styling
+  // Format checkboxes with proper styling and labels
   // Box 8: Related Party Indicator
-  html = html.replace('[CHECKBOX] Related', `${checkbox(false)} Related`);
-  html = html.replace('[CHECKBOX] Non-Related', `${checkbox(true)} Non-Related`);
+  html = html.replace('[CHECKBOX] Related', checkbox(false, 'Related'));
+  html = html.replace('[CHECKBOX] Non-Related', checkbox(true, 'Non-Related'));
   
   // Box 10: Routed Export Transaction - leave both unchecked
-  html = html.replace('[CHECKBOX] Yes', `${checkbox(false)} Yes`);
-  html = html.replace('[CHECKBOX] No', `${checkbox(false)} No`);
+  html = html.replace(/\[CHECKBOX\] Yes/g, checkbox(false, 'Yes'));
+  html = html.replace(/\[CHECKBOX\] No/g, checkbox(false, 'No'));
   
   // Box 12: Ultimate Consignee Type
-  html = html.replace('[CHECKBOX] Government Entity', `${checkbox(false)} Government Entity`);
-  html = html.replace('[CHECKBOX] Direct Consumer', `${checkbox(false)} Direct Consumer`);
-  html = html.replace('[CHECKBOX] Other/Unknown', `${checkbox(false)} Other/Unknown`);
-  html = html.replace('[CHECKBOX] Re-Seller', `${checkbox(true)} Re-Seller`);
+  html = html.replace('[CHECKBOX] Government Entity', checkbox(false, 'Government Entity'));
+  html = html.replace('[CHECKBOX] Direct Consumer', checkbox(false, 'Direct Consumer'));
+  html = html.replace('[CHECKBOX] Other/Unknown', checkbox(false, 'Other/Unknown'));
+  html = html.replace('[CHECKBOX] Re-Seller', checkbox(true, 'Re-Seller'));
   
-  // Box 16: Hazardous Material
-  html = html.replace(/\[CHECKBOX\] Yes \[CHECKBOX\] No/g, 
-    `${checkbox(false)} Yes ${checkbox(true)} No`);
+  // Box 23: Payment
+  html = html.replace('[CHECKBOX] Prepaid', checkbox(false, 'Prepaid'));
+  html = html.replace('[CHECKBOX] Collect', checkbox(false, 'Collect'));
+  html = html.replace('[CHECKBOX] Abandoned', checkbox(false, 'Abandoned'));
+  html = html.replace('[CHECKBOX] Return to Shipper', checkbox(false, 'Return to Shipper'));
   
-  // Box 20: TIB/Carnet - both unchecked
-  // Box 21: Insurance - both unchecked
-  // Box 23: Payment - both unchecked
-  // These will be replaced by the generic [CHECKBOX] replacements below
-  
-  // Replace any remaining [CHECKBOX] with unchecked boxes
-  html = html.replace(/\[CHECKBOX\]/g, `${checkbox(false)}`);
+  // Replace any remaining [CHECKBOX] with unchecked boxes (no label)
+  html = html.replace(/\[CHECKBOX\]/g, checkbox(false, ''));
   
   // Special cases: Box 40 and 48 should be checked
-  html = html.replace('40 <span class="checkbox"></span>', `40 ${checkbox(true)}`);
-  html = html.replace('48. <span class="checkbox"></span>', `48. ${checkbox(true)}`);
+  html = html.replace(/40 <span class="checkbox-wrapper">.*?<\/span>/g, `40 ${checkbox(true, '')}`);
+  html = html.replace(/48\. <span class="checkbox-wrapper">.*?<\/span>/g, `48. ${checkbox(true, '')}`);
   
   return html;
 }

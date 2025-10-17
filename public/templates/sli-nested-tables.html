@@ -151,6 +151,13 @@
     }
 
     /* Checkbox styling */
+    .checkbox-wrapper {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 12px;
+      vertical-align: middle;
+    }
+    
     .checkbox {
       display: inline-block;
       width: 12px;
@@ -160,8 +167,15 @@
       line-height: 12px;
       font-size: 10px;
       font-weight: bold;
-      margin-right: 3px;
+      margin-right: 4px;
       vertical-align: middle;
+      flex-shrink: 0;
+    }
+    
+    .checkbox-label {
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
     }
     
     /* Ensure text next to checkboxes aligns middle */
@@ -322,22 +336,22 @@
           <td>
             <table class="nested-table">
               <tr>
-                <td class="w-20 label-cell">14. State of Origin:</td>
-                <td class="w-25">NY</td>
+                <td class="w-25 label-cell">14. State of Origin:</td>
+                <td class="w-20">NY</td>
                 <td class="w-15 label-cell">17. In-Bond Code:</td>
                 <td class="w-15"></td>
                 <td class="w-25 label-cell">20. TIB / Carnet?</td>
               </tr>
               <tr>
-                <td class="w-20 label-cell">15. Country of Ultimate Destination:</td>
-                <td class="w-25">{Country from the system}</td>
+                <td class="w-25 label-cell">15. Country of Ultimate Destination:</td>
+                <td class="w-20">{Country from the system}</td>
                 <td class="w-15 label-cell">18. Entry Number:</td>
                 <td class="w-15">{leave blank}</td>
                 <td class="w-25">[CHECKBOX] Yes [CHECKBOX] No</td>
               </tr>
               <tr>
                 <td class="w-20 label-cell">16. Hazardous Material:</td>
-                <td class="w-25">[CHECKBOX] Yes [CHECKBOX] No</td>
+                <td class="w-25" style="word-spacing: 15px;">[CHECKBOX] Yes [CHECKBOX] No</td>
                 <td class="w-15 label-cell">19. FTZ Identifier:</td>
                 <td class="w-15">{leave blank}</td>
                 <td class="w-25">{leave blank}</td>
@@ -352,7 +366,7 @@
             <table class="nested-table">
               <tr>
                 <td class="w-25 label-cell">21. Shipper Requests Insurance:</td>
-                <td class="w-15">[CHECKBOX] Yes [CHECKBOX] No</td>
+                <td class="w-15" style="word-spacing: 15px;">[CHECKBOX] Yes [CHECKBOX] No</td>
                 <td class="w-60 label-cell keep-all-borders" colspan="2" rowspan="2">25. SHIPPER'S INSTRUCTION in case of inability to deliver consignment as consigned.</td>
               </tr>
               <tr>
@@ -497,7 +511,7 @@
                 <td class="w-30 label-cell">37. DDTC Applicant Registration Number:</td>
                 <td class="w-20">{leave blank}</td>
                 <td class="w-25 label-cell">38. Eligible Party Certification:</td>
-                <td class="w-25">[CHECKBOX] Yes [CHECKBOX] No</td>
+                <td class="w-25" style="word-spacing: 15px;">[CHECKBOX] Yes [CHECKBOX] No</td>
               </tr>
             </table>
           </td>
