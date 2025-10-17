@@ -54,21 +54,19 @@ export function generateSLIHTML(data: SLIData): string {
   });
   
   // Replace Forwarding Agent (Box 5) - all 4 lines
-  html = html.replace('<td class="w-30">[MANUALLY]</td>', 
-    `<td class="w-30">${data.forwarding_agent_line1 || ''}</td>`);
-  html = html.replace('<td class="w-30">[MANUALLY]</td>', 
-    `<td class="w-30">${data.forwarding_agent_line2 || ''}</td>`);
-  html = html.replace('<td class="w-30">[MANUALLY]</td>', 
-    `<td class="w-30">${data.forwarding_agent_line3 || ''}</td>`);
-  html = html.replace('<td class="w-30">[MANUALLY]</td>', 
-    `<td class="w-30">${data.forwarding_agent_line4 || ''}</td>`);
+  html = html.replace('<td class="w-40"></td>', `<td class="w-40">${data.forwarding_agent_line1 || ''}</td>`);
+  html = html.replace('<td class="w-40"></td>', `<td class="w-40">${data.forwarding_agent_line2 || ''}</td>`);
+  html = html.replace('<td class="w-40"></td>', `<td class="w-40">${data.forwarding_agent_line3 || ''}</td>`);
+  html = html.replace('<td class="w-40"></td>', `<td class="w-40">${data.forwarding_agent_line4 || ''}</td>`);
   
   // Date of Export (Box 6)
-  html = html.replace('[TO BE FILLED MANUALLY]', today);
+  html = html.replace('<td class="w-50"></td>', `<td class="w-50">${today}</td>`);
+  
+  // USPPI Reference (Box 9) - Invoice Number
+  html = html.replace('<td class="w-20"></td>', `<td class="w-20">${data.invoice_number || ''}</td>`);
   
   // In-Bond Code (Box 17)
-  html = html.replace('<td class="w-25">[MANUALLY]</td>', 
-    `<td class="w-25">${data.in_bond_code || ''}</td>`);
+  html = html.replace('<td class="w-15"></td>', `<td class="w-15">${data.in_bond_code || ''}</td>`);
   
   // Ultimate Consignee (Box 11)
   html = html.replace('{name of company from the system}', data.company_name);
