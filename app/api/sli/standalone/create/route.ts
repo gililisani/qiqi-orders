@@ -93,6 +93,15 @@ export async function POST(request: NextRequest) {
 
     if (sliError) {
       console.error('Error creating standalone SLI:', sliError);
+      
+      // Check if it's a column not found error (migration not run)
+      if (sliError.message?.includes('column') || sliError.message?.includes('does not exist')) {
+        return NextResponse.json({ 
+          error: 'Database migration required', 
+          details: 'Please run update_slis_for_standalone.sql in Supabase SQL Editor. Error: ' + sliError.message 
+        }, { status: 500 });
+      }
+      
       return NextResponse.json({ error: 'Failed to create SLI', details: sliError.message }, { status: 500 });
     }
 

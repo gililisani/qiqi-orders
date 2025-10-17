@@ -135,6 +135,12 @@ export default function CreateStandaloneSLIPage() {
     setError('');
 
     try {
+      console.log('Creating SLI with data:', {
+        ...formData,
+        checkbox_states: checkboxes,
+        manual_products: products,
+      });
+
       const response = await fetch('/api/sli/standalone/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -146,9 +152,11 @@ export default function CreateStandaloneSLIPage() {
       });
 
       const data = await response.json();
+      console.log('API response:', data);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create SLI');
+        const errorMsg = data.details ? `${data.error}: ${data.details}` : data.error;
+        throw new Error(errorMsg || 'Failed to create SLI');
       }
 
       // Open the SLI preview in a new tab
@@ -157,6 +165,7 @@ export default function CreateStandaloneSLIPage() {
       // Optionally redirect back
       router.push('/admin/orders');
     } catch (err: any) {
+      console.error('SLI creation error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
