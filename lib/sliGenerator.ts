@@ -135,18 +135,23 @@ export function generateSLIHTML(data: SLIData): string {
     }
   });
   
+  // Helper function to format currency with thousand separator
+  const formatCurrency = (value: number): string => {
+    return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   // Generate rows for products WITH HS code
   const rowsWithHS = Array.from(groupedProducts.values()).map(group => {
     return `            <tr>
               <td class="w-8">D</td>
               <td class="w-18">${group.hs_code}</td>
-              <td class="w-10">${group.total_quantity}</td>
+              <td class="w-10">${group.total_quantity.toLocaleString('en-US')}</td>
               <td class="w-12">Each</td>
               <td class="w-10">${group.total_weight.toFixed(2)}</td>
               <td class="w-10">EAR99</td>
               <td class="w-8"></td>
               <td class="w-12">NLR</td>
-              <td class="w-12">$${group.total_value.toFixed(2)}</td>
+              <td class="w-12">$${formatCurrency(group.total_value)}</td>
               <td class="w-10"></td>
             </tr>`;
   });
@@ -156,13 +161,13 @@ export function generateSLIHTML(data: SLIData): string {
     return `            <tr>
               <td class="w-8">D</td>
               <td class="w-18">N/A</td>
-              <td class="w-10">${product.quantity}</td>
+              <td class="w-10">${product.quantity.toLocaleString('en-US')}</td>
               <td class="w-12">Each</td>
               <td class="w-10">${product.weight.toFixed(2)}</td>
               <td class="w-10">EAR99</td>
               <td class="w-8"></td>
               <td class="w-12">NLR</td>
-              <td class="w-12">$${product.value.toFixed(2)}</td>
+              <td class="w-12">$${formatCurrency(product.value)}</td>
               <td class="w-10"></td>
             </tr>`;
   });
