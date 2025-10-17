@@ -57,51 +57,53 @@ export async function GET(
 }
 
 async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: any): Promise<string> {
-  // Replace forwarding agent
-  html = html.replace('[FORWARDING_AGENT_LINE1]', sli.forwarding_agent_line1 || '');
-  html = html.replace('[FORWARDING_AGENT_LINE2]', sli.forwarding_agent_line2 || '');
-  html = html.replace('[FORWARDING_AGENT_LINE3]', sli.forwarding_agent_line3 || '');
-  html = html.replace('[FORWARDING_AGENT_LINE4]', sli.forwarding_agent_line4 || '');
-
-  // Replace date of export
+  // Format dates
   const dateOfExport = sli.date_of_export ? new Date(sli.date_of_export).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : '';
-  html = html.replace('[DATE_OF_EXPORT]', dateOfExport);
+  const sliDate = sli.sli_date ? new Date(sli.sli_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
 
-  // Replace in-bond code
-  html = html.replace('[IN_BOND_CODE]', sli.in_bond_code || '');
+  // Replace forwarding agent (using the same pattern as sliGenerator)
+  html = html.replace('<td class="w-40"></td>', `<td class="w-40">${sli.forwarding_agent_line1 || ''}</td>`);
+  html = html.replace('<td class="w-40"></td>', `<td class="w-40">${sli.forwarding_agent_line2 || ''}</td>`);
+  html = html.replace('<td class="w-40"></td>', `<td class="w-40">${sli.forwarding_agent_line3 || ''}</td>`);
+  html = html.replace('<td class="w-40"></td>', `<td class="w-40">${sli.forwarding_agent_line4 || ''}</td>`);
+
+  // Replace date of export (Box 6)
+  html = html.replace('<td class="w-50"></td>', `<td class="w-50">${dateOfExport}</td>`);
+
+  // Replace invoice number (Box 9)
+  html = html.replace('<td class="w-20"></td>', `<td class="w-20">${sli.invoice_number || ''}</td>`);
+
+  // Replace in-bond code (Box 17)
+  html = html.replace('<td class="w-15"></td>', `<td class="w-15">${sli.in_bond_code || ''}</td>`);
 
   // Replace consignee info
-  const consigneeName = sli.consignee_name || '';
-  const consigneeAddress = [
-    sli.consignee_address_line1,
-    sli.consignee_address_line2,
-    sli.consignee_address_line3
-  ].filter(Boolean).join('<br>');
-  
-  html = html.replace('[CONSIGNEE_NAME]', consigneeName);
-  html = html.replace('[CONSIGNEE_ADDRESS]', consigneeAddress);
+  html = html.replace('{name of company from the system}', sli.consignee_name || '');
+  html = html.replace('{address 1 from the system}', sli.consignee_address_line1 || '');
+  html = html.replace('{address 2 from the system}', sli.consignee_address_line2 || '');
+  html = html.replace(
+    /{address 3 from the system}/g,
+    sli.consignee_address_line3 || ''
+  );
 
-  // Replace country
-  html = html.replace('[COUNTRY]', sli.consignee_country || '');
+  // Replace country (Box 15)
+  html = html.replace('{Country from the system}', sli.consignee_country || '');
 
-  // Replace invoice number
-  html = html.replace('[INVOICE_NUMBER]', sli.invoice_number || '');
+  // Replace instructions to forwarder (Box 26)
+  html = html.replace('<div class="text-only">26. Instructions to Forwarder:</div>', 
+    `<div class="text-only">26. Instructions to Forwarder: ${sli.instructions_to_forwarder || ''}</div>`);
 
-  // Replace instructions
-  html = html.replace('[INSTRUCTIONS_TO_FORWARDER]', sli.instructions_to_forwarder || '');
-
-  // Replace SLI date
-  const sliDate = sli.sli_date ? new Date(sli.sli_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-  html = html.replace('[DATE]', sliDate);
+  // Replace document date
+  html = html.replace('[DATE OF THE DOCUMENT]', sliDate);
 
   // Handle products from manual_products
   const products = sli.manual_products || [];
   let productRows = '';
   let totalValue = 0;
 
-  products.forEach((product: any, index: number) => {
+  products.forEach((product: any) => {
     const df = 'F'; // Default to Foreign for standalone (no Made In info)
     const hsCode = product.hs_code || 'N/A';
+    const description = product.description || '';
     const quantity = parseFloat(product.quantity) || 0;
     const weight = parseFloat(product.weight) || 0;
     const value = parseFloat(product.value) || 0;
@@ -112,66 +114,81 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
     const formattedValue = value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     productRows += `
-      <tr>
-        <td style="border: 0.5px solid #000; padding: 4px; text-align: center;">${df}</td>
-        <td style="border: 0.5px solid #000; padding: 4px;">${hsCode}</td>
-        <td style="border: 0.5px solid #000; padding: 4px; text-align: right;">${formattedQuantity}</td>
-        <td style="border: 0.5px solid #000; padding: 4px;">${product.uom || 'Each'}</td>
-        <td style="border: 0.5px solid #000; padding: 4px; text-align: right;">${formattedWeight} kg</td>
-        <td style="border: 0.5px solid #000; padding: 4px;">${product.eccn || 'EAR99'}</td>
-        <td style="border: 0.5px solid #000; padding: 4px;"></td>
-        <td style="border: 0.5px solid #000; padding: 4px;">${product.license_symbol || 'NLR'}</td>
-        <td style="border: 0.5px solid #000; padding: 4px; text-align: right;">$${formattedValue}</td>
-        <td style="border: 0.5px solid #000; padding: 4px;"></td>
-      </tr>
-    `;
+              <tr>
+                <td class="w-8">${df}</td>
+                <td class="w-18">${hsCode}<br>${description}</td>
+                <td class="w-10">${formattedQuantity} ${product.uom || 'Each'}</td>
+                <td class="w-12"></td>
+                <td class="w-10">${formattedWeight} kg</td>
+                <td class="w-10">${product.eccn || 'EAR99'}</td>
+                <td class="w-8"></td>
+                <td class="w-12">${product.license_symbol || 'NLR'}</td>
+                <td class="w-12">$${formattedValue}</td>
+                <td class="w-10"></td>
+              </tr>`;
   });
 
   // Add total row
   const formattedTotal = totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   productRows += `
-    <tr>
-      <td colspan="8" style="border: 0.5px solid #000; padding: 4px; text-align: right; font-weight: bold;">TOTAL:</td>
-      <td style="border: 0.5px solid #000; padding: 4px; text-align: right; font-weight: bold;">$${formattedTotal}</td>
-      <td style="border: 0.5px solid #000; padding: 4px;"></td>
-    </tr>
-  `;
+              <tr>
+                <td colspan="8" class="w-100" style="text-align: right; font-weight: bold;">TOTAL:</td>
+                <td class="w-12" style="font-weight: bold;">$${formattedTotal}</td>
+                <td class="w-10"></td>
+              </tr>`;
 
-  html = html.replace('[PRODUCT_ROWS]', productRows);
+  // Replace the dummy rows section (same pattern as sliGenerator)
+  const dummyRowsStart = html.indexOf('<!-- Dummy rows 28-33 -->');
+  if (dummyRowsStart !== -1) {
+    const nextCommentOrClose = html.indexOf('</table>', dummyRowsStart);
+    if (nextCommentOrClose !== -1) {
+      const before = html.substring(0, dummyRowsStart);
+      const after = html.substring(nextCommentOrClose);
+      html = before + productRows + '\n          ' + after;
+    }
+  }
 
-  // Handle checkboxes
+  // Handle checkboxes using the same pattern as sliGenerator
   const checkboxStates = sli.checkbox_states || {};
   
-  // Box 8: Related Party
-  html = html.replace('[CHECKBOX_RELATED]', checkboxStates.related_party_related ? 'X' : '');
-  html = html.replace('[CHECKBOX_NON_RELATED]', checkboxStates.related_party_non_related ? 'X' : '');
+  const checkbox = (isChecked: boolean, label: string) => {
+    return `<span style="font-family: Arial, sans-serif;">${isChecked ? '☑' : '☐'}</span> ${label}`;
+  };
   
-  // Box 10: Routed Export
-  html = html.replace('[CHECKBOX_ROUTED_YES]', checkboxStates.routed_export_yes ? 'X' : '');
-  html = html.replace('[CHECKBOX_ROUTED_NO]', checkboxStates.routed_export_no ? 'X' : '');
+  // Box 8: Related Party
+  html = html.replace('[CHECKBOX] Related', checkbox(checkboxStates.related_party_related, 'Related'));
+  html = html.replace('[CHECKBOX] Non-Related', checkbox(checkboxStates.related_party_non_related, 'Non-Related'));
+  
+  // Box 10: Routed Export (handle "Yes" and "No" together)
+  const routedExportCell = /\[CHECKBOX\] Yes \[CHECKBOX\] No/g;
+  html = html.replace(routedExportCell, 
+    `${checkbox(checkboxStates.routed_export_yes, 'Yes')} ${checkbox(checkboxStates.routed_export_no, 'No')}`);
   
   // Box 12: Type of Consignee
-  html = html.replace('[CHECKBOX_GOVERNMENT]', checkboxStates.consignee_type_government ? 'X' : '');
-  html = html.replace('[CHECKBOX_DIRECT_CONSUMER]', checkboxStates.consignee_type_direct_consumer ? 'X' : '');
-  html = html.replace('[CHECKBOX_OTHER_UNKNOWN]', checkboxStates.consignee_type_other_unknown ? 'X' : '');
-  html = html.replace('[CHECKBOX_RESELLER]', checkboxStates.consignee_type_reseller ? 'X' : '');
+  html = html.replace('[CHECKBOX] Government Entity', checkbox(checkboxStates.consignee_type_government, 'Government Entity'));
+  html = html.replace('[CHECKBOX] Direct Consumer', checkbox(checkboxStates.consignee_type_direct_consumer, 'Direct Consumer'));
+  html = html.replace('[CHECKBOX] Other/Unknown', checkbox(checkboxStates.consignee_type_other_unknown, 'Other/Unknown'));
+  html = html.replace('[CHECKBOX] Re-Seller', checkbox(checkboxStates.consignee_type_reseller, 'Re-Seller'));
   
-  // Box 16: Hazardous Material
-  html = html.replace('[CHECKBOX_HAZMAT_YES]', checkboxStates.hazardous_material_yes ? 'X' : '');
-  html = html.replace('[CHECKBOX_HAZMAT_NO]', checkboxStates.hazardous_material_no ? 'X' : '');
+  // Box 16: Hazardous Material - always check "No"
+  const hazmatCell = '<td class="w-25" style="word-spacing: 15px;">[CHECKBOX] Yes [CHECKBOX] No</td>';
+  html = html.replace(hazmatCell, 
+    `<td class="w-25" style="word-spacing: 15px;">${checkbox(checkboxStates.hazardous_material_yes, 'Yes')} ${checkbox(checkboxStates.hazardous_material_no, 'No')}</td>`);
   
   // Box 21: TIB/Carnet
-  html = html.replace('[CHECKBOX_TIB_YES]', checkboxStates.tib_carnet_yes ? 'X' : '');
-  html = html.replace('[CHECKBOX_TIB_NO]', checkboxStates.tib_carnet_no ? 'X' : '');
+  const tibCell = '<td class="w-20" style="word-spacing: 15px;">[CHECKBOX] Yes [CHECKBOX] No</td>';
+  html = html.replace(tibCell, 
+    `<td class="w-20" style="word-spacing: 15px;">${checkbox(checkboxStates.tib_carnet_yes, 'Yes')} ${checkbox(checkboxStates.tib_carnet_no, 'No')}</td>`);
   
   // Box 24: Deliver To
-  html = html.replace('[CHECKBOX_DELIVER_TO]', checkboxStates.deliver_to_checkbox ? 'X' : '');
+  html = html.replace('[CHECKBOX] Deliver To:', checkbox(checkboxStates.deliver_to_checkbox, 'Deliver To:'));
   
-  // Box 40: Declaration
-  html = html.replace('[CHECKBOX_DECLARATION]', checkboxStates.declaration_statement_checkbox ? 'X' : '');
+  // Box 39 & 40
+  html = html.replace('39 [CHECKBOX]', `39 ${checkbox(false, '')}`);
+  html = html.replace('40 [CHECKBOX]', `40 ${checkbox(checkboxStates.declaration_statement_checkbox, '')}`);
   
   // Box 48: Signature
-  html = html.replace('[CHECKBOX_SIGNATURE]', checkboxStates.signature_checkbox ? 'X' : '');
+  html = html.replace('48. [CHECKBOX]', `48. ${checkbox(checkboxStates.signature_checkbox, '')}`);
 
   return html;
 }
