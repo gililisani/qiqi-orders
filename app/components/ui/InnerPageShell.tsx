@@ -41,7 +41,7 @@ export default function InnerPageShell({ title, breadcrumbs = [], actions, foote
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 gap-6 pb-12">
         {children}
       </div>
 
