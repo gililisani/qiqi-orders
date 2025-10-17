@@ -88,23 +88,87 @@ export function generateSLIHTML(data: SLIData): string {
   // Date (Box 47)
   html = html.replace('[DATE OF THE DOCUMENT]', today);
   
-  // Generate product rows with proper classes
-  const productRows = data.products.map(product => {
+  // Group products by HS code
+  // Products with HS code: group and sum
+  // Products without HS code: keep separate with N/A
+  
+  const groupedProducts: Map<string, {
+    hs_code: string;
+    total_quantity: number;
+    total_weight: number;
+    total_value: number;
+  }> = new Map();
+  
+  const productsWithoutHS: Array<{
+    quantity: number;
+    weight: number;
+    value: number;
+  }> = [];
+  
+  data.products.forEach(product => {
     const totalWeight = (product.case_qty || 0) * (product.case_weight || 0);
     
+    if (product.hs_code && product.hs_code.trim() !== '') {
+      // Has HS code - group it
+      const hsCode = product.hs_code.trim();
+      
+      if (groupedProducts.has(hsCode)) {
+        const existing = groupedProducts.get(hsCode)!;
+        existing.total_quantity += product.quantity;
+        existing.total_weight += totalWeight;
+        existing.total_value += product.total_price;
+      } else {
+        groupedProducts.set(hsCode, {
+          hs_code: hsCode,
+          total_quantity: product.quantity,
+          total_weight: totalWeight,
+          total_value: product.total_price,
+        });
+      }
+    } else {
+      // No HS code - keep separate with N/A
+      productsWithoutHS.push({
+        quantity: product.quantity,
+        weight: totalWeight,
+        value: product.total_price,
+      });
+    }
+  });
+  
+  // Generate rows for products WITH HS code
+  const rowsWithHS = Array.from(groupedProducts.values()).map(group => {
     return `            <tr>
               <td class="w-8">D</td>
-              <td class="w-18">${product.hs_code || ''}</td>
-              <td class="w-10">${product.quantity || 0}</td>
+              <td class="w-18">${group.hs_code}</td>
+              <td class="w-10">${group.total_quantity}</td>
               <td class="w-12">Each</td>
-              <td class="w-10">${totalWeight.toFixed(2)}</td>
+              <td class="w-10">${group.total_weight.toFixed(2)}</td>
               <td class="w-10">EAR99</td>
               <td class="w-8"></td>
               <td class="w-12">NLR</td>
-              <td class="w-12">$${product.total_price.toFixed(2)}</td>
+              <td class="w-12">$${group.total_value.toFixed(2)}</td>
               <td class="w-10"></td>
             </tr>`;
-  }).join('\n');
+  });
+  
+  // Generate rows for products WITHOUT HS code (separate rows)
+  const rowsWithoutHS = productsWithoutHS.map(product => {
+    return `            <tr>
+              <td class="w-8">D</td>
+              <td class="w-18">N/A</td>
+              <td class="w-10">${product.quantity}</td>
+              <td class="w-12">Each</td>
+              <td class="w-10">${product.weight.toFixed(2)}</td>
+              <td class="w-10">EAR99</td>
+              <td class="w-8"></td>
+              <td class="w-12">NLR</td>
+              <td class="w-12">$${product.value.toFixed(2)}</td>
+              <td class="w-10"></td>
+            </tr>`;
+  });
+  
+  // Combine all rows
+  const productRows = [...rowsWithHS, ...rowsWithoutHS].join('\n');
   
   // Find and replace the product rows section
   const dummyRowsStart = html.indexOf('<!-- Dummy rows 28-33 -->');

@@ -49,7 +49,7 @@
 
     .nested-table td {
       border: 0.5px solid #000;
-      padding: 0;
+      padding: 2px;
       margin: 0;
       vertical-align: top;
     }
@@ -58,6 +58,11 @@
       border: 0.5px solid #000;
       padding: 2px;
       vertical-align: top;
+    }
+
+    /* Label cells with numbers (1., 2., etc.) */
+    .label-cell {
+      background-color: #ededed;
     }
 
     .no-border {
@@ -147,9 +152,9 @@
         <td class="no-border">
           <table class="nested-table">
             <tr>
-              <td class="w-35">1. USPPI Name:</td>
-              <td class="w-35">3. Freight Location Co Name: (if not box 2):</td>
-              <td class="w-30">5. Forwarding Agent:</td>
+              <td class="w-35 label-cell">1. USPPI Name:</td>
+              <td class="w-35 label-cell">3. Freight Location Co Name: (if not box 2):</td>
+              <td class="w-30 label-cell">5. Forwarding Agent:</td>
             </tr>
             <tr>
               <td class="w-35">Qiqi INC</td>
@@ -157,8 +162,8 @@
               <td class="w-30">[MANUALLY]</td>
             </tr>
             <tr>
-              <td class="w-35">2. USPPI Address Including Zip Code:</td>
-              <td class="w-35">4. Freight Location Address (if not box 2):</td>
+              <td class="w-35 label-cell">2. USPPI Address Including Zip Code:</td>
+              <td class="w-35 label-cell">4. Freight Location Address (if not box 2):</td>
               <td class="w-30">[MANUALLY]</td>
             </tr>
             <tr>
@@ -181,7 +186,7 @@
       <tr>
         <td class="w-35">United States</td>
         <td class="w-35">United States</td>
-        <td class="w-15">6. Date of Export:</td>
+        <td class="w-15 label-cell">6. Date of Export:</td>
         <td class="w-15">[TO BE FILLED MANUALLY]</td>
       </tr>
     </table>
@@ -192,16 +197,16 @@
         <td class="no-border">
           <table class="nested-table">
             <tr>
-              <td class="w-20">7. USPPI EIN (IRS) No:</td>
+              <td class="w-20 label-cell">7. USPPI EIN (IRS) No:</td>
               <td class="w-20">86-2244756</td>
-              <td class="w-25">8. Related Party Indicator:</td>
+              <td class="w-25 label-cell">8. Related Party Indicator:</td>
               <td class="w-15">[CHECKBOX] Related</td>
               <td class="w-20">[CHECKBOX] Non-Related</td>
             </tr>
             <tr>
-              <td class="w-20">9. USPPI Reference #:</td>
+              <td class="w-20 label-cell">9. USPPI Reference #:</td>
               <td class="w-20">[MANUALLY]</td>
-              <td class="w-25">10. Routed Export Transaction:</td>
+              <td class="w-25 label-cell">10. Routed Export Transaction:</td>
               <td class="w-15">[CHECKBOX] Yes</td>
               <td class="w-20">[CHECKBOX] No</td>
             </tr>
@@ -216,9 +221,9 @@
         <td class="no-border">
           <table class="nested-table">
             <tr>
-              <td class="w-35">11. Ultimate Consignee Name &amp; Address:</td>
-              <td class="w-35">12. Ultimate Consignee Type:</td>
-              <td class="w-30">13. Intermediate Consignee Name &amp; Address:</td>
+              <td class="w-35 label-cell">11. Ultimate Consignee Name &amp; Address:</td>
+              <td class="w-35 label-cell">12. Ultimate Consignee Type:</td>
+              <td class="w-30 label-cell">13. Intermediate Consignee Name &amp; Address:</td>
             </tr>
             <tr>
               <td class="w-35">{name of company from the system}</td>
@@ -251,21 +256,21 @@
         <td class="no-border">
           <table class="nested-table">
             <tr>
-              <td class="w-25">14. State of Origin:</td>
+              <td class="w-25 label-cell">14. State of Origin:</td>
               <td class="w-25">NY</td>
-              <td class="w-25">17. In-Bond Code:</td>
+              <td class="w-25 label-cell">17. In-Bond Code:</td>
               <td class="w-25">[MANUALLY]</td>
             </tr>
             <tr>
-              <td class="w-25">15. Country of Ultimate Destination:</td>
+              <td class="w-25 label-cell">15. Country of Ultimate Destination:</td>
               <td class="w-25">{Country from the system}</td>
-              <td class="w-25">18. Entry Number:</td>
+              <td class="w-25 label-cell">18. Entry Number:</td>
               <td class="w-25">{leave blank}</td>
             </tr>
             <tr>
-              <td class="w-25">16. Hazardous Material:</td>
+              <td class="w-25 label-cell">16. Hazardous Material:</td>
               <td class="w-25">[CHECKBOX] Yes [CHECKBOX] No</td>
-              <td class="w-25">19. FTZ Identifier:</td>
+              <td class="w-25 label-cell">19. FTZ Identifier:</td>
               <td class="w-25">{leave blank}</td>
             </tr>
           </table>
@@ -279,16 +284,16 @@
     <!-- Row 19: Insurance Request (3 columns, 1 row) -->
     <table class="outer-table">
       <tr>
-        <td class="w-25">21. Shipper Requests Insurance:</td>
+        <td class="w-25 label-cell">21. Shipper Requests Insurance:</td>
         <td class="w-25">[CHECKBOX] Yes [CHECKBOX] No</td>
-        <td class="w-50">25. SHIPPER'S INSTRUCTION in case of inability to deliver consignment as consigned.</td>
+        <td class="w-50 label-cell">25. SHIPPER'S INSTRUCTION in case of inability to deliver consignment as consigned.</td>
       </tr>
     </table>
 
     <!-- Row 20: Declared Value (2 columns, 1 row) -->
     <table class="outer-table">
       <tr>
-        <td class="w-50">22. Declared Value for Cartage:</td>
+        <td class="w-50 label-cell">22. Declared Value for Cartage:</td>
         <td class="w-50">{leave blank}</td>
       </tr>
     </table>
@@ -296,7 +301,7 @@
     <!-- Row 21: Shipper Must Check (3 columns, 1 row) -->
     <table class="outer-table">
       <tr>
-        <td class="w-25">23. Shipper Must Check:</td>
+        <td class="w-25 label-cell">23. Shipper Must Check:</td>
         <td class="w-25">[CHECKBOX] Prepaid [CHECKBOX] Collect</td>
         <td class="w-50">[CHECKBOX] Abandoned [CHECKBOX] Return to Shipper</td>
       </tr>
@@ -305,7 +310,7 @@
     <!-- Row 22: COD Amount (4 columns, 1 row) -->
     <table class="outer-table">
       <tr>
-        <td class="w-25">24. C.O.D Amount:</td>
+        <td class="w-25 label-cell">24. C.O.D Amount:</td>
         <td class="w-25">$</td>
         <td class="w-25">[CHECKBOX] Deliver To:</td>
         <td class="w-25">{leave blank}</td>
@@ -330,16 +335,16 @@
         <td class="no-border">
           <table class="nested-table">
             <tr>
-              <td class="w-8">27. D/F</td>
-              <td class="w-18">28. Schedule B / HTS Commercial Commodity Desc</td>
-              <td class="w-10">28. SchB/HTS QTY / UOM (if applicable)</td>
-              <td class="w-12">30. DDTC Quantity and DDTC Unit of Measure</td>
-              <td class="w-10">31. Shipping Weight (in Kilos)</td>
-              <td class="w-10">32. ECCN EAR99 or USML Category #</td>
-              <td class="w-8">33. S M E (Y/N)</td>
-              <td class="w-12">34. NLR, Export License No, License Exception Symbol, DDTC Exemption No, DDTC ACM No.,</td>
-              <td class="w-12">35. Value at the Port of Export (US Dollars)</td>
-              <td class="w-10">36. License Value by item (if applicable) (US Dollars)</td>
+              <td class="w-8 label-cell">27. D/F</td>
+              <td class="w-18 label-cell">28. Schedule B / HTS Commercial Commodity Desc</td>
+              <td class="w-10 label-cell">28. SchB/HTS QTY / UOM (if applicable)</td>
+              <td class="w-12 label-cell">30. DDTC Quantity and DDTC Unit of Measure</td>
+              <td class="w-10 label-cell">31. Shipping Weight (in Kilos)</td>
+              <td class="w-10 label-cell">32. ECCN EAR99 or USML Category #</td>
+              <td class="w-8 label-cell">33. S M E (Y/N)</td>
+              <td class="w-12 label-cell">34. NLR, Export License No, License Exception Symbol, DDTC Exemption No, DDTC ACM No.,</td>
+              <td class="w-12 label-cell">35. Value at the Port of Export (US Dollars)</td>
+              <td class="w-10 label-cell">36. License Value by item (if applicable) (US Dollars)</td>
             </tr>
             <!-- Dummy rows 28-33 -->
             <tr>
@@ -422,9 +427,9 @@
     <!-- Row 34: DDTC Registration (4 columns, 1 row) -->
     <table class="outer-table">
       <tr>
-        <td class="w-35">37. DDTC Applicant Registration Number:</td>
+        <td class="w-35 label-cell">37. DDTC Applicant Registration Number:</td>
         <td class="w-15">{leave blank}</td>
-        <td class="w-35">38. Eligible Party Certification:</td>
+        <td class="w-35 label-cell">38. Eligible Party Certification:</td>
         <td class="w-15">[CHECKBOX] Yes [CHECKBOX] No</td>
       </tr>
     </table>
@@ -453,9 +458,9 @@
     <!-- Row 38: Email and Phone (4 columns, 1 row) -->
     <table class="outer-table">
       <tr>
-        <td class="w-25">42. USPPI E-mail Address:</td>
+        <td class="w-25 label-cell">42. USPPI E-mail Address:</td>
         <td class="w-25">aaron@qiqiglobal.com</td>
-        <td class="w-30">43. USPPI Telephone No.:</td>
+        <td class="w-30 label-cell">43. USPPI Telephone No.:</td>
         <td class="w-20">00972-54-6248884</td>
       </tr>
     </table>
@@ -463,7 +468,7 @@
     <!-- Row 39: Printed Name (3 columns, 1 row) -->
     <table class="outer-table">
       <tr>
-        <td class="w-50">44. Printed Name of Duly authorized officer or employee:</td>
+        <td class="w-50 label-cell">44. Printed Name of Duly authorized officer or employee:</td>
         <td class="w-50" colspan="2">Aaron Lisani</td>
       </tr>
     </table>
@@ -471,11 +476,11 @@
     <!-- Row 40: Signature (6 columns, 1 row) -->
     <table class="outer-table">
       <tr>
-        <td class="w-15">45. Signature:</td>
+        <td class="w-15 label-cell">45. Signature:</td>
         <td class="w-30">[SIGNATURE BLOCK]</td>
-        <td class="w-15">46. Title:</td>
+        <td class="w-15 label-cell">46. Title:</td>
         <td class="w-15">CPO</td>
-        <td class="w-10">47. Date:</td>
+        <td class="w-10 label-cell">47. Date:</td>
         <td class="w-15">[DATE OF THE DOCUMENT]</td>
       </tr>
     </table>
