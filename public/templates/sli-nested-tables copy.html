@@ -18,7 +18,8 @@
 
     body {
       font-family: Arial, sans-serif;
-      font-size: 8pt;
+      font-weight: lighter;
+      font-size: 7.5pt;
       line-height: 1.1;
       color: #000;
       background: white;
@@ -38,7 +39,8 @@
     }
 
     .outer-table {
-      border: 0.5px solid #000;
+      /*border: 0.5px solid #000;*/
+      border: none !important;
       margin-bottom: 0;
     }
 
@@ -51,18 +53,18 @@
       border: 0.5px solid #000;
       padding: 2px;
       margin: 0;
-      vertical-align: top;
+      vertical-align:middle;
     }
 
     td {
       border: 0.5px solid #000;
       padding: 2px;
-      vertical-align: top;
+      vertical-align: middle;
     }
 
     /* Label cells with numbers (1., 2., etc.) */
     .label-cell {
-      background-color: #ededed;
+      background-color: #def0fd;
     }
 
     .no-border {
@@ -144,53 +146,54 @@
   <div class="page">
     
     <!-- Row 1: Title (no table, just title) -->
-    <div class="title">Title Shipper's Letter of Instruction (SLI)</div>
+    <div class="title">SHIPPER'S LETTER OF INSTRUCTION (SLI)</div>
 
-    <!-- Rows 2-6: USPPI Info Section (1 row with nested table, 3 columns, 5 rows) -->
+    <!-- Rows 2-7: USPPI Info Section (1 row with nested table, 3 columns, 5 rows) -->
     <table class="outer-table">
       <tr>
         <td class="no-border">
           <table class="nested-table">
             <tr>
-              <td class="w-35 label-cell">1. USPPI Name:</td>
-              <td class="w-35 label-cell">3. Freight Location Co Name: (if not box 2):</td>
-              <td class="w-30 label-cell">5. Forwarding Agent:</td>
+              <td class="w-30 label-cell">1. USPPI Name:</td>
+              <td class="w-30 label-cell">3. Freight Location Co Name: (if not box 2):</td>
+              <td class="w-40 label-cell">5. Forwarding Agent:</td>
             </tr>
             <tr>
-              <td class="w-35">Qiqi INC</td>
-              <td class="w-35">PACKABLE / Webb Enterprises</td>
-              <td class="w-30">[MANUALLY]</td>
+              <td class="w-30">Qiqi INC</td>
+              <td class="w-30">PACKABLE / Webb Enterprises</td>
+              <td class="w-40">[MANUALLY]</td>
             </tr>
             <tr>
-              <td class="w-35 label-cell">2. USPPI Address Including Zip Code:</td>
-              <td class="w-35 label-cell">4. Freight Location Address (if not box 2):</td>
-              <td class="w-30">[MANUALLY]</td>
+              <td class="w-30 label-cell">2. USPPI Address Including Zip Code:</td>
+              <td class="w-30 label-cell">4. Freight Location Address (if not box 2):</td>
+              <td class="w-40">[MANUALLY]</td>
             </tr>
             <tr>
-              <td class="w-35">4625 West Nevso Drive, Suite 2</td>
-              <td class="w-35">1516 Motor Parkway</td>
-              <td class="w-30">[MANUALLY]</td>
+              <td class="w-30">4625 West Nevso Drive, Suite 2</td>
+              <td class="w-30">1516 Motor Parkway</td>
+              <td class="w-40">[MANUALLY]</td>
             </tr>
             <tr>
-              <td class="w-35">Las Vegas, NV 89103</td>
-              <td class="w-35">Islandia. New York. 11749.</td>
-              <td class="w-30">[MANUALLY]</td>
+              <td class="w-30">Las Vegas, NV 89103</td>
+              <td class="w-30">Islandia. New York. 11749.</td>
+              <td class="w-40">[MANUALLY]</td>
+            </tr>
+            <tr>
+              <td class="w-30">United States</td>
+              <td class="w-30">United States</td>
+              <td class="no-border" style=" padding: 0px !important;">
+                <table class="nested-table">
+                  <tr>
+                    <td class="w-20 label-cell">6. Date of Export:</td>
+                    <td class="w-20">[TO BE FILLED MANUALLY]</td>
+                  </tr>
+                </table>
+              </td>
             </tr>
           </table>
         </td>
       </tr>
     </table>
-
-    <!-- Row 7: Country and Date (4 columns, 1 row) -->
-    <table class="outer-table">
-      <tr>
-        <td class="w-35">United States</td>
-        <td class="w-35">United States</td>
-        <td class="w-15 label-cell">6. Date of Export:</td>
-        <td class="w-15">[TO BE FILLED MANUALLY]</td>
-      </tr>
-    </table>
-
     <!-- Rows 8-9: EIN and Reference (5 columns, 2 rows) -->
     <table class="outer-table">
       <tr>
@@ -419,10 +422,10 @@
     <!-- Row 34: DDTC Registration (4 columns, 1 row) -->
     <table class="outer-table">
       <tr>
-        <td class="w-35 label-cell">37. DDTC Applicant Registration Number:</td>
-        <td class="w-15">{leave blank}</td>
-        <td class="w-35 label-cell">38. Eligible Party Certification:</td>
-        <td class="w-15">[CHECKBOX] Yes [CHECKBOX] No</td>
+        <td class="w-30 label-cell">37. DDTC Applicant Registration Number:</td>
+        <td class="w-20">{leave blank}</td>
+        <td class="w-25 label-cell">38. Eligible Party Certification:</td>
+        <td class="w-25">[CHECKBOX] Yes [CHECKBOX] No</td>
       </tr>
     </table>
 
@@ -480,10 +483,7 @@
     <!-- Row 41: Electronic Signature (text only) -->
     <div class="text-only">48. [CHECKBOX] Check here to validate Electronic Signature. Electronic signatures must be typed in all capital letters in Box 38 in order to be valid.</div>
 
-    <!-- Row 42: Blank Divider -->
-    <div class="divider"></div>
-
-    <!-- Row 43: Important Notice (text only) -->
+    <!-- Row 42: Important Notice (text only) -->
     <div class="text-only">Important: The shipment herein described is accepted in apparent good order (except as noted) subject to all terms and conditions of this contract on this letter of instruction. Liability for this shipment covered by this letter of instruction does not extend beyond its actual air movement and the territorial extent of the terminal area defined in our tariffs.</div>
 
   </div>
