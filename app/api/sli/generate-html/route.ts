@@ -125,30 +125,24 @@ async function populateTemplate(html: string, sli: any): Promise<string> {
     return `<span class="checkbox-wrapper"><span class="checkbox">${isChecked ? 'X' : ''}</span><span class="checkbox-label">${label}</span></span>`;
   };
   
-  // Box 8: Related Party
-  html = html.replace('[CHECKBOX] Related', checkbox(checkboxStates.related_party_related, 'Related'));
-  html = html.replace('[CHECKBOX] Non-Related', checkbox(checkboxStates.related_party_non_related, 'Non-Related'));
+  // Box 16: Hazardous Material - DO THIS FIRST (before generic Yes/No)
+  const hazmatCell = '16\\. Hazardous Material:</td>\\s*<td class="w-25"[^>]*>\\[CHECKBOX\\] Yes \\[CHECKBOX\\] No';
+  html = html.replace(new RegExp(hazmatCell), 
+    `16. Hazardous Material:</td><td class="w-25" style="word-spacing: 15px;">${checkbox(false, 'Yes')} ${checkbox(true, 'No')}`);
   
-  // Box 10: Routed Export (handle "Yes" and "No" together)
-  const routedExportCell = /\[CHECKBOX\] Yes \[CHECKBOX\] No/g;
-  html = html.replace(routedExportCell, 
-    `${checkbox(checkboxStates.routed_export_yes, 'Yes')} ${checkbox(checkboxStates.routed_export_no, 'No')}`);
+  // Box 8: Related Party
+  html = html.replace('[CHECKBOX] Related', checkbox(checkboxStates.related_party_related || false, 'Related'));
+  html = html.replace('[CHECKBOX] Non-Related', checkbox(checkboxStates.related_party_non_related !== false, 'Non-Related'));
+  
+  // Box 10: Routed Export Transaction - generic Yes/No replacement
+  html = html.replace(/\[CHECKBOX\] Yes/g, checkbox(false, 'Yes'));
+  html = html.replace(/\[CHECKBOX\] No/g, checkbox(false, 'No'));
   
   // Box 12: Type of Consignee
   html = html.replace('[CHECKBOX] Government Entity', checkbox(checkboxStates.consignee_type_government, 'Government Entity'));
   html = html.replace('[CHECKBOX] Direct Consumer', checkbox(checkboxStates.consignee_type_direct_consumer, 'Direct Consumer'));
   html = html.replace('[CHECKBOX] Other/Unknown', checkbox(checkboxStates.consignee_type_other_unknown, 'Other/Unknown'));
   html = html.replace('[CHECKBOX] Re-Seller', checkbox(checkboxStates.consignee_type_reseller, 'Re-Seller'));
-  
-  // Box 16: Hazardous Material - always check "No"
-  const hazmatCell = '<td class="w-25" style="word-spacing: 15px;">[CHECKBOX] Yes [CHECKBOX] No</td>';
-  html = html.replace(hazmatCell, 
-    `<td class="w-25" style="word-spacing: 15px;">${checkbox(checkboxStates.hazardous_material_yes, 'Yes')} ${checkbox(checkboxStates.hazardous_material_no, 'No')}</td>`);
-  
-  // Box 21: TIB/Carnet
-  const tibCell = '<td class="w-20" style="word-spacing: 15px;">[CHECKBOX] Yes [CHECKBOX] No</td>';
-  html = html.replace(tibCell, 
-    `<td class="w-20" style="word-spacing: 15px;">${checkbox(checkboxStates.tib_carnet_yes, 'Yes')} ${checkbox(checkboxStates.tib_carnet_no, 'No')}</td>`);
   
   // Box 23: Shipper Must Check
   html = html.replace('[CHECKBOX] Prepaid [CHECKBOX] Collect', 
