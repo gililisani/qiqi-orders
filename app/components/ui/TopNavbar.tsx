@@ -2,13 +2,16 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { supabase } from "../../../lib/supabaseClient";
+import FeedbackPopup from "./FeedbackPopup";
 
 export default function TopNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [openSub, setOpenSub] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('User');
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const closeTimers = useRef<{ main?: any; sub?: any }>({});
+  const feedbackButtonRef = useRef<HTMLButtonElement>(null);
 
   const onEnter = (key: string) => {
     if (closeTimers.current.main) clearTimeout(closeTimers.current.main);
@@ -154,9 +157,18 @@ export default function TopNavbar() {
 
           {/* Right: user + actions */}
           <div className="flex items-center gap-3">
-            <button className="hidden lg:inline-flex h-8 items-center rounded-full border border-[#e5e5e5] px-3 text-xs text-gray-700 hover:bg-gray-50 whitespace-nowrap">
+            <button 
+              ref={feedbackButtonRef}
+              onClick={() => setFeedbackOpen(!feedbackOpen)}
+              className="hidden lg:inline-flex h-8 items-center rounded-full border border-[#e5e5e5] px-3 text-xs text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+            >
               Feedback
             </button>
+            <FeedbackPopup 
+              isOpen={feedbackOpen} 
+              onClose={() => setFeedbackOpen(false)}
+              buttonRef={feedbackButtonRef}
+            />
             {/* Desktop user info */}
             <div className="hidden lg:flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
               <span>Hi</span>
