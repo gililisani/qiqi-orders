@@ -64,7 +64,8 @@ export async function POST(request: NextRequest) {
                 <p style="margin: 0; color: #374151; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${text}</p>
               </div>
               
-              ${screenshot ? '<p style="margin: 20px 0 0; color: #6b7280; font-size: 14px;"><strong>📎 Screenshot attached</strong></p>' : ''}
+              ${screenshot ? '<p style="margin: 20px 0 10px; color: #6b7280; font-size: 14px;"><strong>📎 Screenshot:</strong></p>' : ''}
+              ${screenshot ? '<div style="margin-top: 10px;"><img src="SCREENSHOT_PLACEHOLDER" style="max-width: 100%; border: 1px solid #e5e7eb; border-radius: 8px;" alt="Screenshot" /></div>' : ''}
             </td>
           </tr>
           
@@ -84,11 +85,20 @@ export async function POST(request: NextRequest) {
 </html>
     `;
 
-    // Note: Screenshot attachments are not yet supported with Microsoft Graph sendMail
-    // TODO: Implement attachment support if needed
+    // Convert screenshot to base64 and embed in email
     if (screenshot && type === 'issue') {
-      console.log('Screenshot uploaded but not attached (Graph API limitation)');
-      htmlBody = htmlBody.replace('📎 Screenshot attached', '📎 Screenshot was uploaded (see server logs for details)');
+      try {
+        const buffer = await screenshot.arrayBuffer();
+        const base64 = Buffer.from(buffer).toString('base64');
+        const mimeType = screenshot.type || 'image/png';
+        const dataUrl = `data:${mimeType};base64,${base64}`;
+        htmlBody = htmlBody.replace('SCREENSHOT_PLACEHOLDER', dataUrl);
+        console.log('Screenshot converted to base64 and embedded in email');
+      } catch (err) {
+        console.error('Error processing screenshot:', err);
+        // Remove screenshot placeholder if conversion fails
+        htmlBody = htmlBody.replace('<div style="margin-top: 10px;"><img src="SCREENSHOT_PLACEHOLDER" style="max-width: 100%; border: 1px solid #e5e7eb; border-radius: 8px;" alt="Screenshot" /></div>', '<p style="color: #ef4444;">Screenshot failed to process</p>');
+      }
     }
 
     console.log('Sending email via Microsoft Graph API...');

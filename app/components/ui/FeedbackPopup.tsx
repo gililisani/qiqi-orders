@@ -74,7 +74,7 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
   };
 
   const handleSend = async () => {
-    if (!text.trim()) return;
+    if (!text.trim() || sending) return;
 
     setSending(true);
     try {
@@ -94,14 +94,15 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send feedback');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send feedback');
       }
 
       setSubmittedType(view as 'issue' | 'idea');
       setView('success');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending feedback:', error);
-      alert('Failed to send feedback. Please try again.');
+      alert(error.message || 'Failed to send feedback. Please try again.');
     } finally {
       setSending(false);
     }
@@ -144,7 +145,7 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
             </button>
             <button
               onClick={() => setView('idea')}
-              className="p-6 border-2 border-gray-200 rounded-lg hover:border-yellow-500 hover:bg-yellow-50 transition-all text-center group"
+              className="p-6 border-2 border-gray-200 rounded-lg hover:border-yellow-500 hover:bg-gray-50 transition-all text-center group"
             >
               <div className="flex justify-center mb-3">
                 <svg className="w-10 h-10 text-gray-400 group-hover:text-yellow-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,23 +224,25 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
       )}
 
       {view === 'success' && (
-        <div className="p-6">
-          <h3 className="text-lg font-semibold mb-3">
+        <div className="p-6 text-center">
+          <h3 className="text-sm font-normal mb-2">
             {submittedType === 'issue' ? 'Your issue has been reported!' : 'Your feedback has been sent. Thanks!'}
           </h3>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-xs text-gray-600 mb-6">
             {submittedType === 'issue' ? (
               'We will be in touch with you soon if your issue requires it.'
             ) : (
               'We do not always respond to feedback, but we are taking it very seriously and appreciate your help!'
             )}
           </p>
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
-          >
-            Close
-          </button>
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="px-4 py-1.5 text-sm bg-black text-white rounded hover:bg-gray-800"
+            >
+              Close
+            </button>
+          </div>
         </div>
       )}
     </div>
