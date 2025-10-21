@@ -3,6 +3,8 @@ import nodemailer from 'nodemailer';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Feedback submission started');
+    
     const formData = await request.formData();
     const type = formData.get('type') as string;
     const text = formData.get('text') as string;
@@ -10,8 +12,30 @@ export async function POST(request: NextRequest) {
     const userEmail = formData.get('userEmail') as string;
     const screenshot = formData.get('screenshot') as File | null;
 
+    console.log('Received data:', { type, userName, userEmail, hasScreenshot: !!screenshot });
+
     if (!text || !type) {
+      console.error('Missing required fields');
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Check if SMTP is configured
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.error('SMTP not configured. Missing SMTP_USER or SMTP_PASS environment variables.');
+      
+      // For now, just log the feedback instead of sending email
+      console.log('=== FEEDBACK RECEIVED (NOT SENT VIA EMAIL) ===');
+      console.log(`Type: ${type}`);
+      console.log(`From: ${userName} (${userEmail})`);
+      console.log(`Message: ${text}`);
+      console.log(`Screenshot: ${screenshot ? screenshot.name : 'None'}`);
+      console.log('===========================================');
+      
+      // Return success anyway so users aren't blocked
+      return NextResponse.json({ 
+        success: true,
+        warning: 'Email not configured - feedback logged to console'
+      });
     }
 
     // Prepare email subject
@@ -30,14 +54,21 @@ export async function POST(request: NextRequest) {
     // Handle screenshot attachment
     const attachments: any[] = [];
     if (screenshot && type === 'issue') {
-      const buffer = await screenshot.arrayBuffer();
-      attachments.push({
-        filename: screenshot.name,
-        content: Buffer.from(buffer),
-      });
-      htmlBody += `<p><em>Screenshot attached</em></p>`;
+      try {
+        const buffer = await screenshot.arrayBuffer();
+        attachments.push({
+          filename: screenshot.name,
+          content: Buffer.from(buffer),
+        });
+        htmlBody += `<p><em>Screenshot attached</em></p>`;
+      } catch (err) {
+        console.error('Error processing screenshot:', err);
+        htmlBody += `<p><em>Screenshot failed to attach</em></p>`;
+      }
     }
 
+    console.log('Creating SMTP transporter...');
+    
     // Create transporter
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -49,6 +80,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    console.log('Sending email...');
+
     // Send email
     await transporter.sendMail({
       from: process.env.SMTP_FROM || 'noreply@qiqiglobal.com',
@@ -58,10 +91,16 @@ export async function POST(request: NextRequest) {
       attachments: attachments.length > 0 ? attachments : undefined,
     });
 
+    console.log('Email sent successfully');
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Error sending feedback:', error);
-    return NextResponse.json({ error: error.message || 'Failed to send feedback' }, { status: 500 });
+    console.error('Error stack:', error.stack);
+    return NextResponse.json({ 
+      error: error.message || 'Failed to send feedback',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: 500 });
   }
 }
 
