@@ -154,11 +154,11 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
     }
   }
 
-  // Handle checkboxes using the same pattern as sliGenerator
+  // Handle checkboxes using the EXACT same pattern as sliGenerator
   const checkboxStates = sli.checkbox_states || {};
   
-  const checkbox = (isChecked: boolean, label: string) => {
-    return `<span style="font-family: Arial, sans-serif; font-size: 20px;">${isChecked ? '☑' : '☐'}</span> ${label}`;
+  const checkbox = (isChecked: boolean, label: string = '') => {
+    return `<span class="checkbox-wrapper"><span class="checkbox">${isChecked ? 'X' : ''}</span><span class="checkbox-label">${label}</span></span>`;
   };
   
   // Box 8: Related Party
