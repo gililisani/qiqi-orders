@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AdminLayout from '../../../components/AdminLayout';
 
-export default function StandaloneSLIPreviewPage() {
+function SLIPreviewContent() {
   const searchParams = useSearchParams();
   const tempId = searchParams.get('temp');
   const [htmlContent, setHtmlContent] = useState<string>('');
@@ -217,6 +217,20 @@ export default function StandaloneSLIPreviewPage() {
         }
       `}</style>
     </AdminLayout>
+  );
+}
+
+export default function StandaloneSLIPreviewPage() {
+  return (
+    <Suspense fallback={
+      <AdminLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-lg">Loading SLI...</div>
+        </div>
+      </AdminLayout>
+    }>
+      <SLIPreviewContent />
+    </Suspense>
   );
 }
 
