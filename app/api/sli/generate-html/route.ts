@@ -1,62 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { readFileSync } from 'fs';
 import path from 'path';
-import fs from 'fs';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest) {
   try {
-    const sliId = params.id;
+    const sliData = await request.json();
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
-
-    // Fetch SLI data (works for both order-based and standalone)
-    const { data: sli, error: sliError } = await supabaseAdmin
-      .from('slis')
-      .select('*')
-      .eq('id', sliId)
-      .single();
-
-    if (sliError || !sli) {
-      return NextResponse.json({ error: 'SLI not found' }, { status: 404 });
-    }
-
-    // Read HTML template
+    // Read the HTML template
     const templatePath = path.join(process.cwd(), 'public', 'templates', 'sli-nested-tables.html');
-    let html = fs.readFileSync(templatePath, 'utf-8');
+    let html = readFileSync(templatePath, 'utf-8');
 
-    // Determine if it's order-based or standalone
-    if (sli.sli_type === 'standalone') {
-      // Handle standalone SLI
-      html = await generateStandaloneSLIHTML(html, sli, supabaseAdmin);
-    } else {
-      // Handle order-based SLI (existing logic)
-      html = await generateOrderBasedSLIHTML(html, sli, supabaseAdmin);
-    }
+    // Generate HTML using the same logic as standalone SLI
+    html = await populateTemplate(html, sliData);
 
-    return new NextResponse(html, {
-      headers: {
-        'Content-Type': 'text/html',
-      },
-    });
-
+    return NextResponse.json({ html });
   } catch (error: any) {
     console.error('Error generating SLI HTML:', error);
     return NextResponse.json({ error: error.message || 'Failed to generate SLI HTML' }, { status: 500 });
   }
 }
 
-async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: any): Promise<string> {
+async function populateTemplate(html: string, sli: any): Promise<string> {
   // Format dates
   const dateOfExport = sli.date_of_export ? new Date(sli.date_of_export).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : '';
   const sliDate = sli.sli_date ? new Date(sli.sli_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
@@ -203,11 +167,5 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
   html = html.replace('48. [CHECKBOX]', `48. ${checkbox(checkboxStates.signature_checkbox, '')}`);
 
   return html;
-}
-
-async function generateOrderBasedSLIHTML(html: string, sli: any, supabaseAdmin: any): Promise<string> {
-  // For order-based SLIs, redirect to the existing order SLI route
-  // This is a fallback - order-based SLIs should use /api/orders/[id]/sli/html
-  throw new Error('Order-based SLIs should use /api/orders/[orderId]/sli/html route');
 }
 

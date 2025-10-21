@@ -38,7 +38,7 @@ interface SLIData {
 
 // Helper to create checkbox HTML with label
 function checkbox(checked: boolean, label: string = ''): string {
-  return `<span class="checkbox-wrapper"><span class="checkbox">${checked ? 'X' : ''}</span><span class="checkbox-label">${label}</span></span>`;
+  return `<span style="font-family: Arial, sans-serif; font-size: 20px;">${checked ? '☑' : '☐'}</span> ${label}`;
 }
 
 export function generateSLIHTML(data: SLIData): string {

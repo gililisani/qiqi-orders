@@ -135,35 +135,21 @@ export default function CreateStandaloneSLIPage() {
     setError('');
 
     try {
-      console.log('Creating SLI with data:', {
+      const sliData = {
         ...formData,
         checkbox_states: checkboxes,
         manual_products: products,
-      });
+      };
 
-      const response = await fetch('/api/sli/standalone/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          checkbox_states: checkboxes,
-          manual_products: products,
-        }),
-      });
+      console.log('Creating SLI with data:', sliData);
 
-      const data = await response.json();
-      console.log('API response:', data);
-
-      if (!response.ok) {
-        const errorMsg = data.details ? `${data.error}: ${data.details}` : data.error;
-        throw new Error(errorMsg || 'Failed to create SLI');
-      }
+      // Store data in localStorage temporarily (not in database)
+      const tempId = `temp_${Date.now()}`;
+      localStorage.setItem(`sli_${tempId}`, JSON.stringify(sliData));
 
       // Open the SLI preview in a new tab
-      window.open(`/admin/sli/${data.sli_id}/preview`, '_blank');
+      window.open(`/admin/sli/preview?temp=${tempId}`, '_blank');
       
-      // Optionally redirect back
-      router.push('/admin/orders');
     } catch (err: any) {
       console.error('SLI creation error:', err);
       setError(err.message);
