@@ -20,6 +20,7 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
   const [userEmail, setUserEmail] = useState('');
   const [submittedType, setSubmittedType] = useState<'issue' | 'idea'>('idea');
   const popupRef = useRef<HTMLDivElement>(null);
+  const submissionInProgress = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -27,6 +28,7 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
       setView('choice');
       setText('');
       setScreenshot(null);
+      submissionInProgress.current = false; // Reset flag when reopening
     }
   }, [isOpen]);
 
@@ -74,9 +76,12 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
   };
 
   const handleSend = async () => {
-    if (!text.trim() || sending) return;
+    if (!text.trim() || sending || submissionInProgress.current) return;
 
+    console.log('🚀 Starting feedback submission...');
+    submissionInProgress.current = true;
     setSending(true);
+    
     try {
       const formData = new FormData();
       formData.append('type', view);
@@ -88,6 +93,7 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
         formData.append('screenshot', screenshot);
       }
 
+      console.log('📤 Sending feedback to API...');
       const response = await fetch('/api/feedback/submit', {
         method: 'POST',
         body: formData,
@@ -98,13 +104,16 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
         throw new Error(errorData.error || 'Failed to send feedback');
       }
 
+      console.log('✅ Feedback sent successfully');
       setSubmittedType(view as 'issue' | 'idea');
       setView('success');
     } catch (error: any) {
-      console.error('Error sending feedback:', error);
+      console.error('❌ Error sending feedback:', error);
       alert(error.message || 'Failed to send feedback. Please try again.');
+      submissionInProgress.current = false; // Reset on error
     } finally {
       setSending(false);
+      // Keep submissionInProgress true to prevent any further submissions
     }
   };
 
