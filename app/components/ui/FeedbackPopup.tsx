@@ -196,7 +196,7 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
           {view === 'issue' && (
             <div className="mt-3 text-sm text-gray-600">
               Have a technical issue?{' '}
-              <a href="mailto:orders@qiqiglobal.com" className="text-green-600 hover:underline">
+              <a href="mailto:orders@qiqiglobal.com" target="_blank" rel="noopener" className="text-green-600 hover:underline">
                 Contact Us
               </a>
             </div>
