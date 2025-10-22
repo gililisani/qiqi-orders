@@ -142,27 +142,27 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => setView('issue')}
-              className="p-6 border border-gray-200 rounded-lg hover:border-red-500 hover:bg-red-50 transition-all text-center group bg-white"
+              className="p-6 border border-gray-200 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all text-center group bg-white"
             >
               <div className="flex justify-center mb-3">
                 <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
-              <div className="font-semibold text-gray-900">Issue</div>
-              <div className="text-sm text-gray-500 mt-1">with the system</div>
+              <div className="text-xs text-gray-900">Issue</div>
+              <div className="text-xs text-gray-500 mt-1">with the system</div>
             </button>
             <button
               onClick={() => setView('idea')}
-              className="p-6 border border-gray-300 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all text-center group bg-gray-50"
+              className="p-6 border border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all text-center group bg-gray-50"
             >
               <div className="flex justify-center mb-3">
                 <svg className="w-10 h-10 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
               </div>
-              <div className="font-semibold text-gray-900">Idea</div>
-              <div className="text-sm text-gray-500 mt-1">To Improve Qiqi</div>
+              <div className="text-xs text-gray-900">Idea</div>
+              <div className="text-xs text-gray-500 mt-1">To Improve Qiqi</div>
             </button>
           </div>
         </div>
@@ -195,35 +195,29 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
 
           {view === 'issue' && (
             <div className="mt-3 text-sm text-gray-600">
-              Have a technical issue? Contact{' '}
+              Have a technical issue?{' '}
               <a href="mailto:orders@qiqiglobal.com" className="text-green-600 hover:underline">
-                support
-              </a>
-              {' '}or see{' '}
-              <a href="#" className="text-green-600 hover:underline">
-                docs
+                Contact Us
               </a>
             </div>
           )}
 
-          <div className="mt-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {view === 'issue' && (
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <div className="w-10 h-10 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                </label>
-              )}
-            </div>
+          <div className="mt-4 flex items-center justify-end gap-3">
+            {view === 'issue' && (
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <div className="w-10 h-10 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                </div>
+              </label>
+            )}
             
             <button
               onClick={handleSend}
