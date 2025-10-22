@@ -154,7 +154,7 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
             </button>
             <button
               onClick={() => setView('idea')}
-              className="p-6 border border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all text-center group bg-gray-50"
+              className="p-6 border border-gray-200 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all text-center group bg-white"
             >
               <div className="flex justify-center mb-3">
                 <svg className="w-10 h-10 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
