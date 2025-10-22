@@ -342,6 +342,17 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const isEditMode = !!orderId;
   const isNewMode = !orderId;
 
+  // Handle back button confirmation
+  const handleBackClick = (e: React.MouseEvent) => {
+    if (isNewMode && hasUnsavedChanges && (orderItems.length > 0 || supportFundItems.length > 0)) {
+      e.preventDefault();
+      const confirmed = window.confirm('Are you sure you want to leave this page? Your unsaved changes will be lost.');
+      if (confirmed) {
+        router.push(backUrl);
+      }
+    }
+  };
+
   const toggleCategory = (categoryId: number) => {
     setExpandedCategories(prev => {
       const newSet = new Set<number>();
@@ -899,6 +910,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           role: role
         });
 
+        // Generate invoice number
+        const invoiceNumber = `INV-${poNumber}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
+
         // Create new order
         const { data: newOrder, error: orderError } = await supabase
           .from('orders')
@@ -906,6 +920,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
             company_id: company.id,
             user_id: user.id,
             po_number: poNumber,
+            invoice_number: invoiceNumber,
             status: asDraft ? 'Draft' : 'Open'
           })
           .select()
@@ -1045,6 +1060,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           .from('orders')
           .update({
             po_number: (order && order.po_number) || null,
+            invoice_number: (order && order.invoice_number) || null,
             status: newStatus,
             total_value: finalTotal,
             support_fund_used: supportFundUsed,
@@ -1119,6 +1135,22 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           console.error('Failed to create history entry:', historyError);
           // Don't block order update if history fails
         }
+
+        // Send order updated email notification (fire and forget)
+        setTimeout(async () => {
+          try {
+            await fetch('/api/orders/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                orderId: orderId,
+                emailType: 'updated',
+              }),
+            });
+          } catch (emailError) {
+            console.error('Failed to send order updated email:', emailError);
+          }
+        }, 1000); // 1 second delay to ensure DB commit
 
         // Clear unsaved changes flag
         setHasUnsavedChanges(false);
@@ -1266,12 +1298,12 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
             {isNewMode ? 'Create a new order' : `Edit order ${order?.po_number || orderId}`}
           </p>
         </div>
-        <Link
-          href={backUrl}
+        <button
+          onClick={handleBackClick}
           className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           Back
-        </Link>
+        </button>
       </div>
 
       {error && (
@@ -1652,12 +1684,12 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
                     >
                       {saving ? 'Saving...' : (isNewMode ? 'Create Order' : (order?.status === 'Draft' ? 'Save as Open' : 'Save Changes'))}
                     </button>
-                    <Link
-                      href={backUrl}
+                    <button
+                      onClick={handleBackClick}
                       className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-center"
                     >
                       Cancel
-                    </Link>
+                    </button>
                   </div>
                   {/* Save as Draft Button - only for new orders or draft orders */}
                   {(isNewMode || order?.status === 'Draft') && (

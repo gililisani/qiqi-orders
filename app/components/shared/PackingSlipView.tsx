@@ -693,11 +693,11 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
       return sum + itemWeight;
     }, 0);
     
-    addText(`Cases: ${totalCases}`, totalsX, totalsY, { fontSize: 8 });
+    addText(`Cases: ${totalCases.toLocaleString()}`, totalsX, totalsY, { fontSize: 8 });
     totalsY += 4;
-    addText(`Units: ${totalUnits}`, totalsX, totalsY, { fontSize: 8 });
+    addText(`Units: ${totalUnits.toLocaleString()}`, totalsX, totalsY, { fontSize: 8 });
     totalsY += 4;
-    addText(`Weight: ${totalWeight.toFixed(1)} kg`, totalsX, totalsY, { fontSize: 8 });
+    addText(`Weight: ${totalWeight.toFixed(1).toLocaleString()} kg`, totalsX, totalsY, { fontSize: 8 });
     totalsY += 4;
     addText(`Pallets: ${order.number_of_pallets || 'N/A'}`, totalsX, totalsY, { fontSize: 8 });
     
@@ -1253,14 +1253,14 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                     <div className="text-sm text-gray-900 font-sans">Cases: {orderItems.reduce((sum, item) => {
                       const casePack = item.product?.case_pack || 1;
                       return sum + Math.ceil(item.quantity / casePack);
-                    }, 0)}</div>
-                    <div className="text-sm text-gray-900 font-sans">Units: {orderItems.reduce((sum, item) => sum + item.quantity, 0)}</div>
+                    }, 0).toLocaleString()}</div>
+                    <div className="text-sm text-gray-900 font-sans">Units: {orderItems.reduce((sum, item) => sum + item.quantity, 0).toLocaleString()}</div>
                     <div className="text-sm text-gray-900 font-sans">Weight: {orderItems.reduce((sum, item) => {
                       const casePack = item.product?.case_pack || 1;
                       const caseQty = Math.ceil(item.quantity / casePack);
                       const totalWeight = (item.product?.case_weight || 0) * caseQty;
                       return sum + totalWeight;
-                    }, 0).toFixed(1)} kg</div>
+                    }, 0).toFixed(1).toLocaleString()} kg</div>
                     <div className="text-sm text-gray-900 font-sans">Pallets: {order.number_of_pallets || 'N/A'}</div>
                   </div>
                 </div>

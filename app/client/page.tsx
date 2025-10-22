@@ -109,7 +109,7 @@ export default function ClientDashboard() {
         {/* Welcome Section */}
         <Card>
           <div className="p-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Qiqi Distributors</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Qiqi Partners Hub</h1>
             <p className="text-gray-600">
               Manage your orders and place new ones for {company?.company_name || 'your company'}.
             </p>

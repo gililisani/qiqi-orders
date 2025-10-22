@@ -449,3 +449,64 @@ export function welcomeEmailTemplate(data: {
     html: emailWrapper(content, data.siteUrl),
   };
 }
+
+/**
+ * Order Updated Email Template
+ */
+export function orderUpdatedTemplate(data: OrderEmailData) {
+  const content = `
+    <h1 style="margin: 0 0 24px; font-size: 24px; font-weight: 700; color: #111827;">
+      Your Order Has Been Updated
+    </h1>
+    
+    <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
+      Your order has been updated. View your updated order.
+    </p>
+    
+    <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 20px; margin: 24px 0; border-radius: 6px;">
+      <h2 style="margin: 0 0 16px; font-size: 18px; font-weight: 600; color: #111827;">
+        Order Details
+      </h2>
+      
+      <div style="margin: 0 0 12px;">
+        <span style="color: #6b7280; font-size: 14px; font-weight: 600;">Order Number:</span>
+        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${data.poNumber}</span>
+      </div>
+      
+      <div style="margin: 0 0 12px;">
+        <span style="color: #6b7280; font-size: 14px; font-weight: 600;">Status:</span>
+        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${data.status}</span>
+      </div>
+      
+      ${data.totalAmount ? `
+      <div style="margin: 0 0 12px;">
+        <span style="color: #6b7280; font-size: 14px; font-weight: 600;">Total Value:</span>
+        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${formatCurrency(data.totalAmount)}</span>
+      </div>
+      ` : ''}
+      
+      ${data.soNumber ? `
+      <div style="margin: 0 0 12px;">
+        <span style="color: #6b7280; font-size: 14px; font-weight: 600;">SO Number:</span>
+        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${data.soNumber}</span>
+      </div>
+      ` : ''}
+    </div>
+    
+    <div style="margin: 30px 0; text-align: center;">
+      <a href="${data.siteUrl}/client/orders/${data.orderId}" 
+         style="display: inline-block; padding: 16px 40px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+        View Updated Order →
+      </a>
+    </div>
+    
+    <p style="margin: 24px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+      Questions? Contact our support team or your account administrator.
+    </p>
+  `;
+
+  return {
+    subject: `Order ${data.poNumber} Updated - Qiqi Partners Hub`,
+    html: emailWrapper(content, data.siteUrl),
+  };
+}

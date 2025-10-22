@@ -15,6 +15,7 @@ import {
   orderReadyTemplate,
   orderCancelledTemplate,
   customUpdateTemplate,
+  orderUpdatedTemplate,
 } from '../../../../lib/emailTemplates';
 
 // Initialize Supabase client with service role (for server-side operations)
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Valid email types
-    const validEmailTypes = ['created', 'in_process', 'ready', 'cancelled', 'custom'];
+    const validEmailTypes = ['created', 'in_process', 'ready', 'cancelled', 'custom', 'updated'];
     if (!validEmailTypes.includes(emailType)) {
       return NextResponse.json(
         { error: `Invalid emailType. Must be one of: ${validEmailTypes.join(', ')}` },
@@ -157,6 +158,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'custom':
         emailTemplate = customUpdateTemplate(emailData);
+        break;
+      case 'updated':
+        emailTemplate = orderUpdatedTemplate(emailData);
         break;
       default:
         return NextResponse.json(
