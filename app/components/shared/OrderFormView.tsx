@@ -910,9 +910,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           role: role
         });
 
-        // Generate invoice number
-        const invoiceNumber = `INV-${poNumber}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
-
         // Create new order
         const { data: newOrder, error: orderError } = await supabase
           .from('orders')
@@ -920,7 +917,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
             company_id: company.id,
             user_id: user.id,
             po_number: poNumber,
-            invoice_number: invoiceNumber,
             status: asDraft ? 'Draft' : 'Open'
           })
           .select()
@@ -1060,7 +1056,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           .from('orders')
           .update({
             po_number: (order && order.po_number) || null,
-            invoice_number: (order && order.invoice_number) || null,
             status: newStatus,
             total_value: finalTotal,
             support_fund_used: supportFundUsed,
