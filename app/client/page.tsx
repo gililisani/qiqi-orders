@@ -109,10 +109,21 @@ export default function ClientDashboard() {
         {/* Welcome Section */}
         <Card>
           <div className="p-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Qiqi Partners Hub</h1>
-            <p className="text-gray-600">
-              Manage your orders and place new ones for {company?.company_name || 'your company'}.
-            </p>
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Qiqi Partners Hub</h1>
+                <p className="text-gray-600">
+                  Manage your orders and place new ones for {company?.company_name || 'your company'}.
+                </p>
+              </div>
+              {company?.company_name && (
+                <div className="ml-6 text-right">
+                  <h2 className="text-xl font-semibold text-gray-900 capitalize">
+                    {company.company_name}
+                  </h2>
+                </div>
+              )}
+            </div>
             {company?.support_fund && company.support_fund.length > 0 && (
               <div className="mt-4 p-3 bg-green-50 border border-green-200">
                 <p className="text-sm text-green-800">
