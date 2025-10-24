@@ -350,6 +350,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       if (confirmed) {
         router.push(backUrl);
       }
+    } else {
+      // For edit mode or when no unsaved changes, just navigate back
+      router.push(backUrl);
     }
   };
 
