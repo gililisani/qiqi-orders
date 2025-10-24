@@ -56,7 +56,9 @@ export default function ClientDashboard() {
         .single();
 
       if (clientError) throw clientError;
-      setCompany(clientData?.company?.[0] || null);
+      console.log('Client data:', clientData);
+      console.log('Company data:', clientData?.company);
+      setCompany(clientData?.company || null);
 
       // Get ALL company orders (not just user's orders)
       const { data: ordersData, error: ordersError } = await supabase
@@ -116,13 +118,11 @@ export default function ClientDashboard() {
                   Manage your orders and place new ones for {company?.company_name || 'your company'}.
                 </p>
               </div>
-              {company?.company_name && (
-                <div className="ml-6 text-right">
-                  <h2 className="text-xl font-semibold text-gray-900 capitalize">
-                    {company.company_name}
-                  </h2>
-                </div>
-              )}
+              <div className="ml-6 text-right">
+                <h2 className="text-xl font-semibold text-gray-900 capitalize">
+                  {company?.company_name || 'Loading...'}
+                </h2>
+              </div>
             </div>
             {company?.support_fund && company.support_fund.length > 0 && (
               <div className="mt-4 p-3 bg-green-50 border border-green-200">
