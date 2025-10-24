@@ -493,7 +493,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     const detailColWidth = contentWidth / 4;
     
     addText('Invoice Number', margin, invoiceY, { fontSize: 8, fontStyle: 'bold' });
-    addText(`#${packingSlip.invoice_number}`, margin, invoiceY + 5, { fontSize: 11, fontStyle: 'bold' });
+    addText(`#${order?.invoice_number || 'N/A'}`, margin, invoiceY + 5, { fontSize: 11, fontStyle: 'bold' });
     
     addText('Shipping Method', margin + detailColWidth, invoiceY, { fontSize: 8, fontStyle: 'bold' });
     addText(packingSlip.shipping_method, margin + detailColWidth, invoiceY + 5, { fontSize: 11, fontStyle: 'bold' });
@@ -704,7 +704,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     // Update currentY to the end of the longer column
     currentY = Math.max(notesY, totalsY) + 10;
 
-    pdf.save(`packing-slip-${packingSlip.invoice_number || 'invoice'}.pdf`);
+    pdf.save(`packing-slip-${order?.invoice_number || 'invoice'}.pdf`);
   };
 
   const handleSave = async () => {
@@ -1189,7 +1189,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 border-b border-[#e5e5e5] pb-8">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Invoice Number</label>
-                <div className="text-lg font-semibold text-gray-900 font-sans">#{packingSlip.invoice_number}</div>
+                <div className="text-lg font-semibold text-gray-900 font-sans">#{order?.invoice_number || 'N/A'}</div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 font-sans">Shipping Method</label>
@@ -1306,7 +1306,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                     <label className="block text-sm font-medium text-gray-500 mb-2 font-sans">Invoice Number</label>
                     <input
                       type="text"
-                      value={editData.invoice_number}
+                      value={order?.invoice_number || ''}
                       onChange={(e) => setEditData(prev => ({ ...prev, invoice_number: e.target.value }))}
                       disabled
                       className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed font-sans text-sm"
