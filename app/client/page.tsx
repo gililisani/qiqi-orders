@@ -58,7 +58,14 @@ export default function ClientDashboard() {
       if (clientError) throw clientError;
       console.log('Client data:', clientData);
       console.log('Company data:', clientData?.company);
-      setCompany(clientData?.company?.[0] || null);
+      console.log('Company type:', typeof clientData?.company);
+      console.log('Is array:', Array.isArray(clientData?.company));
+      
+      // Handle both array and object cases
+      const companyData = Array.isArray(clientData?.company) 
+        ? clientData?.company?.[0] 
+        : clientData?.company;
+      setCompany(companyData || null);
 
       // Get ALL company orders (not just user's orders)
       const { data: ordersData, error: ordersError } = await supabase
