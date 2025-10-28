@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { supabase } from '../../../../../lib/supabaseClient';
+import { supabase } from '../../../lib/supabaseClient';
 import { XMarkIcon, PaperClipIcon, DocumentIcon } from '@heroicons/react/24/outline';
 
 interface NoteFormProps {
