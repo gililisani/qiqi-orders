@@ -99,10 +99,16 @@ export default function ContractInfo({
 
   const calculateContractExpiry = () => {
     if (!contract?.contract_execution_date || !contract?.contract_duration_months) return null;
-    const executionDate = new Date(contract.contract_execution_date);
+    
+    // Parse the date string directly to avoid timezone issues
+    const [year, month, day] = contract.contract_execution_date.split('-').map(Number);
+    const executionDate = new Date(year, month - 1, day); // month is 0-indexed
+    
     const expiryDate = new Date(executionDate);
     expiryDate.setMonth(expiryDate.getMonth() + contract.contract_duration_months);
-    return expiryDate;
+    
+    // Format as YYYY-MM-DD to avoid timezone issues
+    return expiryDate.toISOString().split('T')[0];
   };
 
   const formatCurrency = (amount: number | null) => {
@@ -190,10 +196,7 @@ export default function ContractInfo({
             <div className="flex items-center space-x-2">
               <CalendarIcon className="h-4 w-4 text-gray-400" />
               <span className="text-sm text-gray-900">
-                {contract.contract_execution_date 
-                  ? new Date(contract.contract_execution_date).toLocaleDateString()
-                  : 'Not set'
-                }
+                {contract.contract_execution_date || 'Not set'}
               </span>
             </div>
           </div>
@@ -216,7 +219,7 @@ export default function ContractInfo({
               <div className="flex items-center space-x-2">
                 <CalendarIcon className="h-4 w-4 text-gray-400" />
                 <span className="text-sm text-gray-900">
-                  {contractExpiry.toLocaleDateString()}
+                  {contractExpiry || 'Not calculated'}
                 </span>
               </div>
             </div>

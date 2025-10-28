@@ -422,7 +422,7 @@ export default function CompanyViewPage() {
                 {company.contract_execution_date && (
                   <div>
                     <label className="text-sm font-medium text-gray-500">Contract Execution Date</label>
-                    <p className="text-sm">{new Date(company.contract_execution_date).toLocaleDateString()}</p>
+                    <p className="text-sm">{company.contract_execution_date}</p>
                   </div>
                 )}
                 {company.contract_duration_months && (
@@ -463,7 +463,7 @@ export default function CompanyViewPage() {
                         <div>
                           <h3 className="font-medium text-gray-900">{period.period_name}</h3>
                           <p className="text-sm text-gray-600">
-                            {new Date(period.start_date).toLocaleDateString()} - {new Date(period.end_date).toLocaleDateString()}
+                            {period.start_date} - {period.end_date}
                           </p>
                         </div>
                         <div className="text-right">
