@@ -33,9 +33,9 @@ interface FormData {
   // Contract fields
   contract_execution_date: string;
   contract_duration_months: string;
-  annual_target_amount: string;
   contract_status: string;
-  current_annual_progress: string;
+  // Target periods
+  target_periods: TargetPeriod[];
   // Territories
   territories: string[];
 }
@@ -54,6 +54,14 @@ interface Territory {
   id: string;
   country_code: string;
   country_name: string;
+}
+
+interface TargetPeriod {
+  id?: string;
+  period_name: string;
+  start_date: string;
+  end_date: string;
+  target_amount: string;
 }
 
 export default function EditCompanyPage() {
@@ -134,9 +142,9 @@ export default function EditCompanyPage() {
     // Contract fields
     contract_execution_date: '',
     contract_duration_months: '36',
-    annual_target_amount: '',
     contract_status: 'active',
-    current_annual_progress: '0',
+    // Target periods
+    target_periods: [],
     // Territories
     territories: []
   });
@@ -167,6 +175,15 @@ export default function EditCompanyPage() {
 
       if (territoriesError) throw territoriesError;
 
+      // Fetch target periods
+      const { data: targetPeriodsData, error: targetPeriodsError } = await supabase
+        .from('target_periods')
+        .select('*')
+        .eq('company_id', companyId)
+        .order('start_date', { ascending: true });
+
+      if (targetPeriodsError) throw targetPeriodsError;
+
       setFormData({
         company_name: data.company_name || '',
         netsuite_number: data.netsuite_number || '',
@@ -193,9 +210,15 @@ export default function EditCompanyPage() {
         // Contract fields
         contract_execution_date: data.contract_execution_date || '',
         contract_duration_months: data.contract_duration_months?.toString() || '36',
-        annual_target_amount: data.annual_target_amount?.toString() || '',
         contract_status: data.contract_status || 'active',
-        current_annual_progress: data.current_annual_progress?.toString() || '0',
+        // Target periods
+        target_periods: targetPeriodsData?.map(tp => ({
+          id: tp.id,
+          period_name: tp.period_name,
+          start_date: tp.start_date,
+          end_date: tp.end_date,
+          target_amount: tp.target_amount.toString()
+        })) || [],
         // Territories
         territories: territoriesData?.map(t => t.country_code) || []
       });
@@ -267,9 +290,7 @@ export default function EditCompanyPage() {
           // Contract fields
           contract_execution_date: formData.contract_execution_date || null,
           contract_duration_months: formData.contract_duration_months ? parseInt(formData.contract_duration_months) : null,
-          annual_target_amount: formData.annual_target_amount ? parseFloat(formData.annual_target_amount) : null,
-          contract_status: formData.contract_status || 'active',
-          current_annual_progress: formData.current_annual_progress ? parseFloat(formData.current_annual_progress) : 0
+          contract_status: formData.contract_status || 'active'
         })
         .eq('id', companyId);
 
@@ -309,6 +330,32 @@ export default function EditCompanyPage() {
         if (insertError) throw insertError;
       }
 
+      // Update target periods
+      // First, delete existing target periods
+      const { error: deleteTargetsError } = await supabase
+        .from('target_periods')
+        .delete()
+        .eq('company_id', companyId);
+
+      if (deleteTargetsError) throw deleteTargetsError;
+
+      // Then insert new target periods
+      if (formData.target_periods.length > 0) {
+        const targetPeriodsToInsert = formData.target_periods.map(period => ({
+          company_id: companyId,
+          period_name: period.period_name,
+          start_date: period.start_date,
+          end_date: period.end_date,
+          target_amount: parseFloat(period.target_amount) || 0
+        }));
+
+        const { error: insertTargetsError } = await supabase
+          .from('target_periods')
+          .insert(targetPeriodsToInsert);
+
+        if (insertTargetsError) throw insertTargetsError;
+      }
+
       router.push(`/admin/companies/${companyId}`);
     } catch (err: any) {
       setError(err.message);
@@ -331,6 +378,45 @@ export default function EditCompanyPage() {
       territories: prev.territories.includes(countryCode)
         ? prev.territories.filter(code => code !== countryCode)
         : [...prev.territories, countryCode]
+    }));
+  };
+
+  const addTargetPeriod = () => {
+    const contractDuration = parseInt(formData.contract_duration_months) || 0;
+    const currentPeriods = formData.target_periods.length;
+    
+    // Block adding if contract duration is smaller than number of periods
+    if (contractDuration <= currentPeriods * 12) {
+      alert(`Cannot add more target periods. Contract duration (${contractDuration} months) must be greater than ${currentPeriods * 12} months.`);
+      return;
+    }
+
+    const newPeriod: TargetPeriod = {
+      period_name: `Year ${currentPeriods + 1}`,
+      start_date: '',
+      end_date: '',
+      target_amount: ''
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      target_periods: [...prev.target_periods, newPeriod]
+    }));
+  };
+
+  const removeTargetPeriod = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      target_periods: prev.target_periods.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateTargetPeriod = (index: number, field: keyof TargetPeriod, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      target_periods: prev.target_periods.map((period, i) => 
+        i === index ? { ...period, [field]: value } : period
+      )
     }));
   };
 
@@ -770,33 +856,19 @@ export default function EditCompanyPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Contract Duration (Months)
                 </label>
-                <select
+                <input
+                  type="number"
                   name="contract_duration_months"
                   value={formData.contract_duration_months}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                >
-                  <option value="36">36 months (3 years)</option>
-                  <option value="48">48 months (4 years)</option>
-                  <option value="60">60 months (5 years)</option>
-                  <option value="72">72 months (6 years)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Annual Target Amount ($)
-                </label>
-                <input
-                  type="number"
-                  name="annual_target_amount"
-                  value={formData.annual_target_amount}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
+                  placeholder="36"
+                  min="1"
+                  max="120"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter number of months (e.g., 37, 40, 48)
+                </p>
               </div>
 
               <div>
@@ -815,23 +887,103 @@ export default function EditCompanyPage() {
                   <option value="terminated">Terminated</option>
                 </select>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Current Annual Progress ($)
-                </label>
-                <input
-                  type="number"
-                  name="current_annual_progress"
-                  value={formData.current_annual_progress}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
             </div>
+          </div>
+
+          {/* Target Periods Section */}
+          <div className="border-t pt-6 mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Annual Target Periods</h3>
+              <button
+                type="button"
+                onClick={addTargetPeriod}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition flex items-center space-x-2"
+              >
+                <span>+</span>
+                <span>Add Target Period</span>
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Define target periods for each 12-month cycle. Contract duration must be greater than the number of periods × 12 months.
+            </p>
+            
+            {formData.target_periods.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 rounded-lg">
+                <p className="text-gray-500">No target periods defined yet.</p>
+                <p className="text-sm text-gray-400 mt-1">Click "Add Target Period" to get started.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {formData.target_periods.map((period, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-medium text-gray-900">Target Period {index + 1}</h4>
+                      <button
+                        type="button"
+                        onClick={() => removeTargetPeriod(index)}
+                        className="text-red-600 hover:text-red-800 text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Period Name
+                        </label>
+                        <input
+                          type="text"
+                          value={period.period_name}
+                          onChange={(e) => updateTargetPeriod(index, 'period_name', e.target.value)}
+                          placeholder="Year 1"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Start Date
+                        </label>
+                        <input
+                          type="date"
+                          value={period.start_date}
+                          onChange={(e) => updateTargetPeriod(index, 'start_date', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          End Date
+                        </label>
+                        <input
+                          type="date"
+                          value={period.end_date}
+                          onChange={(e) => updateTargetPeriod(index, 'end_date', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Target Amount ($)
+                        </label>
+                        <input
+                          type="number"
+                          value={period.target_amount}
+                          onChange={(e) => updateTargetPeriod(index, 'target_amount', e.target.value)}
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Territories Section */}

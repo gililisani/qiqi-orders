@@ -32,6 +32,10 @@ interface Company {
   ship_to_state?: string;
   ship_to_postal_code?: string;
   ship_to_country?: string;
+  // Contract fields
+  contract_execution_date?: string;
+  contract_duration_months?: number;
+  contract_status?: string;
   // Related data
   support_fund?: { percent: number };
   subsidiary?: { name: string };
@@ -39,6 +43,23 @@ interface Company {
   location?: { location_name: string };
   incoterm?: { name: string };
   payment_term?: { name: string };
+  territories?: Territory[];
+  target_periods?: TargetPeriod[];
+}
+
+interface Territory {
+  id: string;
+  country_code: string;
+  country_name: string;
+}
+
+interface TargetPeriod {
+  id: string;
+  period_name: string;
+  start_date: string;
+  end_date: string;
+  target_amount: number;
+  current_progress: number;
 }
 
 interface User {
@@ -79,7 +100,9 @@ export default function CompanyViewPage() {
   const fetchCompany = async () => {
     try {
       console.log('Fetching company with ID:', companyId);
-      const { data, error } = await supabase
+      
+      // Fetch company data
+      const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select(`
           *,
@@ -93,13 +116,43 @@ export default function CompanyViewPage() {
         .eq('id', companyId)
         .single();
 
-      console.log('Company query result:', { data, error });
-
-      if (error) {
-        console.error('Error fetching company:', error);
-        throw error;
+      if (companyError) {
+        console.error('Error fetching company:', companyError);
+        throw companyError;
       }
-      setCompany(data);
+
+      // Fetch territories
+      const { data: territoriesData, error: territoriesError } = await supabase
+        .from('company_territories')
+        .select('*')
+        .eq('company_id', companyId);
+
+      if (territoriesError) {
+        console.error('Error fetching territories:', territoriesError);
+        throw territoriesError;
+      }
+
+      // Fetch target periods
+      const { data: targetPeriodsData, error: targetPeriodsError } = await supabase
+        .from('target_periods')
+        .select('*')
+        .eq('company_id', companyId)
+        .order('start_date', { ascending: true });
+
+      if (targetPeriodsError) {
+        console.error('Error fetching target periods:', targetPeriodsError);
+        throw targetPeriodsError;
+      }
+
+      // Combine all data
+      const combinedData = {
+        ...companyData,
+        territories: territoriesData || [],
+        target_periods: targetPeriodsData || []
+      };
+
+      console.log('Company query result:', { data: combinedData });
+      setCompany(combinedData);
     } catch (err: any) {
       console.error('Company fetch error:', err);
       setError(err.message);
@@ -361,6 +414,101 @@ export default function CompanyViewPage() {
               </div>
             </Card>
           </div>
+
+          {/* Contract Information Section */}
+          {(company.contract_execution_date || company.contract_duration_months || company.contract_status) && (
+            <Card header={<h2 className="font-semibold">Contract Information</h2>}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {company.contract_execution_date && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Contract Execution Date</label>
+                    <p className="text-sm">{new Date(company.contract_execution_date).toLocaleDateString()}</p>
+                  </div>
+                )}
+                {company.contract_duration_months && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Contract Duration</label>
+                    <p className="text-sm">{company.contract_duration_months} months ({Math.round(company.contract_duration_months / 12)} years)</p>
+                  </div>
+                )}
+                {company.contract_status && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Contract Status</label>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      company.contract_status === 'active' ? 'bg-green-100 text-green-800' :
+                      company.contract_status === 'expired' ? 'bg-red-100 text-red-800' :
+                      company.contract_status === 'suspended' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {company.contract_status.charAt(0).toUpperCase() + company.contract_status.slice(1)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* Target Periods Section */}
+          {company.target_periods && company.target_periods.length > 0 && (
+            <Card header={<h2 className="font-semibold">Annual Targets & Progress</h2>}>
+              <div className="space-y-4">
+                {company.target_periods.map((period) => {
+                  const progressPercentage = period.target_amount > 0 
+                    ? Math.round((period.current_progress / period.target_amount) * 100)
+                    : 0;
+                  
+                  return (
+                    <div key={period.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-medium text-gray-900">{period.period_name}</h3>
+                          <p className="text-sm text-gray-600">
+                            {new Date(period.start_date).toLocaleDateString()} - {new Date(period.end_date).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-gray-900">
+                            ${period.current_progress.toLocaleString()} / ${period.target_amount.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-gray-500">{progressPercentage}%</p>
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
+          {/* Territories Section */}
+          {company.territories && company.territories.length > 0 && (
+            <Card header={<h2 className="font-semibold">Exclusive Territories</h2>}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {company.territories.map((territory) => (
+                  <div
+                    key={territory.id}
+                    className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
+                  >
+                    <span className="text-2xl">🌍</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {territory.country_name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {territory.country_code}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {/* Bottom Row: Users List (Full Width) */}
           <Card header={
