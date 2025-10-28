@@ -97,6 +97,9 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
         noteId = data.id;
       } else {
         // Create new note
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
         const { data, error } = await supabase
           .from('company_notes')
           .insert({
@@ -104,7 +107,8 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
             title: formData.title,
             content: formData.content,
             note_type: formData.note_type,
-            meeting_date: formData.meeting_date || null
+            meeting_date: formData.meeting_date || null,
+            created_by: user.id
           })
           .select('id')
           .single();
