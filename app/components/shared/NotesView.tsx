@@ -50,12 +50,27 @@ export default function NotesView({
   const [error, setError] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (companyId) {
       fetchNotes();
     }
   }, [companyId]);
+
+  const getAttachmentUrl = async (attachment: Attachment): Promise<string> => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('company-notes')
+        .createSignedUrl(attachment.file_path, 3600); // 1 hour expiry
+
+      if (error) throw error;
+      return data.signedUrl;
+    } catch (err: any) {
+      console.error('Error getting attachment URL:', err);
+      throw err;
+    }
+  };
 
   const fetchNotes = async () => {
     try {
@@ -70,6 +85,28 @@ export default function NotesView({
 
       if (notesError) throw notesError;
       setNotes(notesData || []);
+
+      // Generate signed URLs for all attachments
+      const urlPromises: Promise<void>[] = [];
+      const urlMap: Record<string, string> = {};
+
+      notesData?.forEach(note => {
+        note.attachments?.forEach(attachment => {
+          urlPromises.push(
+            getAttachmentUrl(attachment)
+              .then(url => {
+                urlMap[attachment.id] = url;
+              })
+              .catch(err => {
+                console.error(`Failed to get URL for attachment ${attachment.id}:`, err);
+                urlMap[attachment.id] = '#';
+              })
+          );
+        });
+      });
+
+      await Promise.all(urlPromises);
+      setAttachmentUrls(urlMap);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -259,10 +296,22 @@ export default function NotesView({
                     {note.attachments.map((attachment) => (
                       <a
                         key={attachment.id}
-                        href={attachment.file_path}
+                        href={attachmentUrls[attachment.id] || '#'}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm text-gray-700 transition"
+                        onClick={async (e) => {
+                          if (!attachmentUrls[attachment.id]) {
+                            e.preventDefault();
+                            try {
+                              const url = await getAttachmentUrl(attachment);
+                              setAttachmentUrls(prev => ({ ...prev, [attachment.id]: url }));
+                              window.open(url, '_blank');
+                            } catch (err) {
+                              console.error('Failed to get attachment URL:', err);
+                            }
+                          }
+                        }}
                       >
                         <DocumentIcon className="h-4 w-4" />
                         <span>{attachment.file_name}</span>
