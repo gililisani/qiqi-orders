@@ -74,7 +74,7 @@ CREATE POLICY "Admins can manage company territories" ON company_territories
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM admins 
-      WHERE admins.user_id = auth.uid()
+      WHERE admins.id = auth.uid()
     )
   );
 
@@ -94,7 +94,7 @@ CREATE POLICY "Admins can manage company notes" ON company_notes
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM admins 
-      WHERE admins.user_id = auth.uid()
+      WHERE admins.id = auth.uid()
     )
   );
 
@@ -114,7 +114,7 @@ CREATE POLICY "Admins can manage note attachments" ON note_attachments
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM admins 
-      WHERE admins.user_id = auth.uid()
+      WHERE admins.id = auth.uid()
     )
   );
 
@@ -134,7 +134,7 @@ CREATE POLICY "Admins can manage admin notes" ON admin_notes
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM admins 
-      WHERE admins.user_id = auth.uid()
+      WHERE admins.id = auth.uid()
     )
   );
 
