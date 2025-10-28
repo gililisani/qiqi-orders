@@ -91,7 +91,7 @@ export default function NotesView({
       const urlMap: Record<string, string> = {};
 
       notesData?.forEach(note => {
-        note.attachments?.forEach(attachment => {
+        note.attachments?.forEach((attachment: Attachment) => {
           urlPromises.push(
             getAttachmentUrl(attachment)
               .then(url => {
