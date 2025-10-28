@@ -8,6 +8,9 @@ import Card from '../components/ui/Card';
 import Link from 'next/link';
 import OrderStatusBadge from '../components/ui/OrderStatusBadge';
 import { formatCurrency } from '../../lib/formatters';
+import ContractInfo from '../components/shared/ContractInfo';
+import TerritoryList from '../components/shared/TerritoryList';
+import NotesView from '../components/shared/NotesView';
 interface Order {
   id: string;
   po_number: string;
@@ -19,6 +22,7 @@ interface Order {
 }
 
 interface Company {
+  id: string;
   company_name: string;
   netsuite_number: string;
   support_fund?: { percent: number }[];
@@ -47,6 +51,7 @@ export default function ClientDashboard() {
         .select(`
           company_id,
           company:companies(
+            id,
             company_name,
             netsuite_number,
             support_fund:support_fund_levels(percent)
@@ -173,6 +178,44 @@ export default function ClientDashboard() {
             </div>
           </Card>
         </div>
+
+        {/* Contract Information */}
+        {company?.id && (
+          <Card>
+            <ContractInfo
+              companyId={company.id}
+              userRole="client"
+              showActions={false}
+              allowEdit={false}
+            />
+          </Card>
+        )}
+
+        {/* Territories */}
+        {company?.id && (
+          <Card>
+            <TerritoryList
+              companyId={company.id}
+              userRole="client"
+              showActions={false}
+              allowEdit={false}
+            />
+          </Card>
+        )}
+
+        {/* Company Notes */}
+        {company?.id && (
+          <Card>
+            <NotesView
+              companyId={company.id}
+              userRole="client"
+              showActions={false}
+              allowEdit={false}
+              allowDelete={false}
+              allowCreate={false}
+            />
+          </Card>
+        )}
 
         {/* Recent Orders */}
         <Card header={<h2 className="font-semibold">Recent Orders</h2>}>
