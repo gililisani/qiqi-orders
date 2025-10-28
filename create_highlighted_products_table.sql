@@ -1,7 +1,7 @@
 -- Create highlighted_products table
 CREATE TABLE IF NOT EXISTS highlighted_products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  product_id INTEGER NOT NULL REFERENCES "Products"(id) ON DELETE CASCADE,
   is_new BOOLEAN DEFAULT FALSE,
   display_order INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

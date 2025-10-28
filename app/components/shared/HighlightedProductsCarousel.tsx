@@ -6,9 +6,9 @@ import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 
 interface Product {
-  id: string;
-  product_name: string;
-  product_image?: string;
+  id: number;
+  item_name: string;
+  picture_url?: string;
   category?: {
     name: string;
   };
@@ -16,7 +16,7 @@ interface Product {
 
 interface HighlightedProduct {
   id: string;
-  product_id: string;
+  product_id: number;
   is_new: boolean;
   display_order: number;
   product: Product;
@@ -50,10 +50,10 @@ export default function HighlightedProductsCarousel() {
         .from('highlighted_products')
         .select(`
           *,
-          product:products(
+          product:Products(
             id,
-            product_name,
-            product_image,
+            item_name,
+            picture_url,
             category:categories(name)
           )
         `)
@@ -125,11 +125,11 @@ export default function HighlightedProductsCarousel() {
             <div className="w-full flex-shrink-0">
               <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6">
                 <div className="flex items-center space-x-6">
-                  {currentProduct.product.product_image && (
+                  {currentProduct.product.picture_url && (
                     <div className="flex-shrink-0">
                       <img
-                        src={currentProduct.product.product_image}
-                        alt={currentProduct.product.product_name}
+                        src={currentProduct.product.picture_url}
+                        alt={currentProduct.product.item_name}
                         className="w-32 h-32 object-cover rounded-lg shadow-md"
                       />
                     </div>
@@ -138,7 +138,7 @@ export default function HighlightedProductsCarousel() {
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
                       <h3 className="text-xl font-semibold text-gray-900">
-                        {currentProduct.product.product_name}
+                        {currentProduct.product.item_name}
                       </h3>
                       {currentProduct.is_new && (
                         <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">

@@ -6,9 +6,9 @@ import { PlusIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/reac
 import Card from '../ui/Card';
 
 interface Product {
-  id: string;
-  product_name: string;
-  product_image?: string;
+  id: number;
+  item_name: string;
+  picture_url?: string;
   category?: {
     name: string;
   };
@@ -16,7 +16,7 @@ interface Product {
 
 interface HighlightedProduct {
   id: string;
-  product_id: string;
+  product_id: number;
   is_new: boolean;
   display_order: number;
   product: Product;
@@ -55,14 +55,14 @@ export default function HighlightedProductsManager() {
 
       // Fetch all products for selection
       const { data: productsData, error: productsError } = await supabase
-        .from('products')
+        .from('Products')
         .select(`
           id,
-          product_name,
-          product_image,
+          item_name,
+          picture_url,
           category:categories(name)
         `)
-        .order('product_name', { ascending: true });
+        .order('item_name', { ascending: true });
 
       if (productsError) throw productsError;
 
@@ -80,7 +80,7 @@ export default function HighlightedProductsManager() {
     }
   };
 
-  const addHighlightedProduct = async (productId: string) => {
+  const addHighlightedProduct = async (productId: number) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
@@ -219,17 +219,17 @@ export default function HighlightedProductsManager() {
                     </button>
                   </div>
                   
-                  {highlightedProduct.product.product_image && (
+                  {highlightedProduct.product.picture_url && (
                     <img
-                      src={highlightedProduct.product.product_image}
-                      alt={highlightedProduct.product.product_name}
+                      src={highlightedProduct.product.picture_url}
+                      alt={highlightedProduct.product.item_name}
                       className="w-16 h-16 object-cover rounded"
                     />
                   )}
                   
                   <div>
                     <h3 className="font-medium text-gray-900">
-                      {highlightedProduct.product.product_name}
+                      {highlightedProduct.product.item_name}
                     </h3>
                     <p className="text-sm text-gray-500">
                       {highlightedProduct.product.category?.name || 'No category'}
@@ -284,15 +284,15 @@ export default function HighlightedProductsManager() {
                     className="p-4 border border-gray-200 rounded-lg hover:border-black cursor-pointer transition"
                   >
                     <div className="flex items-center space-x-3">
-                      {product.product_image && (
+                      {product.picture_url && (
                         <img
-                          src={product.product_image}
-                          alt={product.product_name}
+                          src={product.picture_url}
+                          alt={product.item_name}
                           className="w-12 h-12 object-cover rounded"
                         />
                       )}
                       <div>
-                        <h4 className="font-medium text-gray-900">{product.product_name}</h4>
+                        <h4 className="font-medium text-gray-900">{product.item_name}</h4>
                         <p className="text-sm text-gray-500">
                           {product.category?.name || 'No category'}
                         </p>
