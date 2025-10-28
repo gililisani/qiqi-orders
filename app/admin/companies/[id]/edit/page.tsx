@@ -82,39 +82,9 @@ export default function EditCompanyPage() {
   });
 
   const [territories, setTerritories] = useState<Territory[]>([]);
-  const [availableCountries] = useState([
-    { code: 'US', name: 'United States' },
-    { code: 'CA', name: 'Canada' },
-    { code: 'MX', name: 'Mexico' },
-    { code: 'GB', name: 'United Kingdom' },
-    { code: 'DE', name: 'Germany' },
-    { code: 'FR', name: 'France' },
-    { code: 'IT', name: 'Italy' },
-    { code: 'ES', name: 'Spain' },
-    { code: 'AU', name: 'Australia' },
-    { code: 'JP', name: 'Japan' },
-    { code: 'CN', name: 'China' },
-    { code: 'IN', name: 'India' },
-    { code: 'BR', name: 'Brazil' },
-    { code: 'AR', name: 'Argentina' },
-    { code: 'CL', name: 'Chile' },
-    { code: 'CO', name: 'Colombia' },
-    { code: 'PE', name: 'Peru' },
-    { code: 'ZA', name: 'South Africa' },
-    { code: 'NG', name: 'Nigeria' },
-    { code: 'EG', name: 'Egypt' },
-    { code: 'AE', name: 'United Arab Emirates' },
-    { code: 'SA', name: 'Saudi Arabia' },
-    { code: 'TR', name: 'Turkey' },
-    { code: 'RU', name: 'Russia' },
-    { code: 'KR', name: 'South Korea' },
-    { code: 'SG', name: 'Singapore' },
-    { code: 'MY', name: 'Malaysia' },
-    { code: 'TH', name: 'Thailand' },
-    { code: 'ID', name: 'Indonesia' },
-    { code: 'PH', name: 'Philippines' },
-    { code: 'VN', name: 'Vietnam' }
-  ]);
+  const [territoryInput, setTerritoryInput] = useState('');
+  const [territorySuggestions, setTerritorySuggestions] = useState<{code: string, name: string}[]>([]);
+  const [allCountries, setAllCountries] = useState<{code: string, name: string}[]>([]);
 
   const [formData, setFormData] = useState<FormData>({
     company_name: '',
@@ -153,6 +123,7 @@ export default function EditCompanyPage() {
     if (companyId) {
       fetchCompany();
       fetchOptions();
+      fetchCountries();
     }
   }, [companyId]);
 
@@ -315,7 +286,7 @@ export default function EditCompanyPage() {
       // Then insert new territories
       if (formData.territories.length > 0) {
         const territoriesToInsert = formData.territories.map(countryCode => {
-          const country = availableCountries.find(c => c.code === countryCode);
+          const country = allCountries.find(c => c.code === countryCode);
           return {
             company_id: companyId,
             country_code: countryCode,
@@ -372,12 +343,65 @@ export default function EditCompanyPage() {
     }));
   };
 
-  const handleTerritoryToggle = (countryCode: string) => {
+  // Territory autocomplete functions
+  const fetchCountries = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_countries_list');
+      if (error) throw error;
+      setAllCountries(data || []);
+    } catch (error) {
+      console.error('Error fetching countries:', error);
+    }
+  };
+
+  const handleTerritoryInputChange = (value: string) => {
+    setTerritoryInput(value);
+    if (value.trim().length > 0) {
+      const filtered = allCountries.filter(country =>
+        country.name.toLowerCase().includes(value.toLowerCase()) &&
+        !formData.territories.includes(country.code)
+      ).slice(0, 10); // Limit to 10 suggestions
+      setTerritorySuggestions(filtered);
+    } else {
+      setTerritorySuggestions([]);
+    }
+  };
+
+  const selectTerritorySuggestion = (country: {code: string, name: string}) => {
     setFormData(prev => ({
       ...prev,
-      territories: prev.territories.includes(countryCode)
-        ? prev.territories.filter(code => code !== countryCode)
-        : [...prev.territories, countryCode]
+      territories: [...prev.territories, country.code]
+    }));
+    setTerritoryInput('');
+    setTerritorySuggestions([]);
+  };
+
+  const addTerritory = () => {
+    if (!territoryInput.trim()) return;
+    
+    // Try to find exact match first
+    const exactMatch = allCountries.find(country =>
+      country.name.toLowerCase() === territoryInput.toLowerCase()
+    );
+    
+    if (exactMatch && !formData.territories.includes(exactMatch.code)) {
+      setFormData(prev => ({
+        ...prev,
+        territories: [...prev.territories, exactMatch.code]
+      }));
+    } else if (territorySuggestions.length > 0) {
+      // Use first suggestion if available
+      selectTerritorySuggestion(territorySuggestions[0]);
+    }
+    
+    setTerritoryInput('');
+    setTerritorySuggestions([]);
+  };
+
+  const removeTerritory = (countryCode: string) => {
+    setFormData(prev => ({
+      ...prev,
+      territories: prev.territories.filter(code => code !== countryCode)
     }));
   };
 
@@ -990,30 +1014,75 @@ export default function EditCompanyPage() {
           <div className="border-t pt-6 mt-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Exclusive Territories</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Select the countries where this company has exclusive distribution rights.
+              Add countries where this company has exclusive distribution rights.
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {availableCountries.map((country) => (
-                <label key={country.code} className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.territories.includes(country.code)}
-                    onChange={() => handleTerritoryToggle(country.code)}
-                    className="rounded border-gray-300 text-black focus:ring-black"
-                  />
-                  <span className="text-sm text-gray-700">
-                    {country.name}
-                  </span>
-                </label>
-              ))}
+            
+            {/* Add Territory Input */}
+            <div className="flex gap-2 mb-4">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  placeholder="Type country name..."
+                  value={territoryInput}
+                  onChange={(e) => handleTerritoryInputChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addTerritory();
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+                {territorySuggestions.length > 0 && (
+                  <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {territorySuggestions.map((country) => (
+                      <div
+                        key={country.code}
+                        onClick={() => selectTerritorySuggestion(country)}
+                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                      >
+                        {country.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={addTerritory}
+                disabled={!territoryInput.trim()}
+                className="px-4 py-2 bg-black text-white rounded-md hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add
+              </button>
             </div>
+
+            {/* Selected Territories */}
             {formData.territories.length > 0 && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <p className="text-sm text-blue-800">
-                  <strong>Selected Territories:</strong> {formData.territories.map(code => 
-                    availableCountries.find(c => c.code === code)?.name
-                  ).join(', ')}
-                </p>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700">Selected Territories:</p>
+                <div className="flex flex-wrap gap-2">
+                  {formData.territories.map((territoryCode) => {
+                    const territory = territories.find(t => t.country_code === territoryCode);
+                    return (
+                      <div
+                        key={territoryCode}
+                        className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-md px-3 py-1"
+                      >
+                        <span className="text-sm text-blue-800">
+                          {territory?.country_name || territoryCode}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeTerritory(territoryCode)}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

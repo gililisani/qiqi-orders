@@ -1,5 +1,5 @@
--- Phase 1 Improvements: Multiple Target Periods and Enhanced Contract System
--- Updates the contract system to support multiple annual target periods
+-- Phase 1 Minimal Addition: Only NEW features not in the original script
+-- This adds ONLY the target_periods table and related functions
 
 -- 1. Create target_periods table for multiple annual targets
 CREATE TABLE IF NOT EXISTS target_periods (
@@ -100,34 +100,7 @@ CREATE TRIGGER update_target_progress_on_order_change
   AFTER INSERT OR UPDATE OR DELETE ON orders
   FOR EACH ROW EXECUTE FUNCTION update_all_target_periods_progress();
 
--- 10. Create view for enhanced contract summary with target periods
-CREATE OR REPLACE VIEW enhanced_contract_summary AS
-SELECT 
-  c.id,
-  c.company_name,
-  c.contract_execution_date,
-  c.contract_duration_months,
-  c.contract_execution_date + INTERVAL '1 month' * c.contract_duration_months AS contract_expiry_date,
-  c.contract_status,
-  COUNT(ct.id) AS territory_count,
-  STRING_AGG(ct.country_name, ', ') AS territories,
-  COUNT(tp.id) AS target_period_count,
-  COALESCE(SUM(tp.target_amount), 0) AS total_target_amount,
-  COALESCE(SUM(tp.current_progress), 0) AS total_current_progress,
-  CASE 
-    WHEN SUM(tp.target_amount) > 0 THEN 
-      ROUND((SUM(tp.current_progress) / SUM(tp.target_amount)) * 100, 2)
-    ELSE 0 
-  END AS overall_progress_percentage
-FROM companies c
-LEFT JOIN company_territories ct ON c.id = ct.company_id
-LEFT JOIN target_periods tp ON c.id = tp.company_id
-GROUP BY c.id, c.company_name, c.contract_execution_date, c.contract_duration_months, c.contract_status;
-
--- Grant permissions on the view
-GRANT SELECT ON enhanced_contract_summary TO authenticated;
-
--- 11. Create function to get countries list for autocomplete
+-- 10. Create function to get countries list for autocomplete
 CREATE OR REPLACE FUNCTION get_countries_list()
 RETURNS TABLE(country_code VARCHAR(2), country_name VARCHAR(100)) AS $$
 BEGIN
