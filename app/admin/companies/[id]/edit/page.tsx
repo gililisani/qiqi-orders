@@ -360,12 +360,13 @@ export default function EditCompanyPage() {
 
   // Territory autocomplete functions
   const fetchCountries = async () => {
+    console.log('Fetching countries...');
     try {
       const { data, error } = await supabase.rpc('get_countries_list');
       if (error) {
         console.warn('get_countries_list function not found, using fallback list:', error);
         // Fallback to a basic list if the function doesn't exist
-        setAllCountries([
+        const fallbackCountries = [
           { code: 'US', name: 'United States' },
           { code: 'CA', name: 'Canada' },
           { code: 'MX', name: 'Mexico' },
@@ -463,10 +464,13 @@ export default function EditCompanyPage() {
           { code: 'GU', name: 'Guam' },
           { code: 'MP', name: 'Northern Mariana Islands' },
           { code: 'UM', name: 'United States Minor Outlying Islands' }
-        ]);
+        ];
+        setAllCountries(fallbackCountries);
+        console.log('Using fallback countries:', fallbackCountries.length);
         return;
       }
       setAllCountries(data || []);
+      console.log('Countries loaded from database:', data?.length || 0);
     } catch (error) {
       console.error('Error fetching countries:', error);
       // Set empty array as fallback
@@ -475,6 +479,8 @@ export default function EditCompanyPage() {
   };
 
   const handleTerritoryInputChange = (value: string) => {
+    console.log('Input changed:', value);
+    console.log('All countries:', allCountries?.length || 0);
     setTerritoryInput(value);
     if (value.trim().length > 0 && allCountries && allCountries.length > 0) {
       const searchTerm = value.toLowerCase().trim();
@@ -495,8 +501,10 @@ export default function EditCompanyPage() {
         return a.name.localeCompare(b.name);
       })
       .slice(0, 8); // Limit to 8 suggestions for better UX
+      console.log('Filtered suggestions:', filtered);
       setTerritorySuggestions(filtered);
     } else {
+      console.log('No suggestions - countries not loaded or empty input');
       setTerritorySuggestions([]);
     }
   };
