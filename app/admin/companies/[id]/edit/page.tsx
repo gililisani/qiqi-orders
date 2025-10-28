@@ -467,7 +467,6 @@ export default function EditCompanyPage() {
         return;
       }
       setAllCountries(data || []);
-      console.log('Countries loaded:', data?.length || 0);
     } catch (error) {
       console.error('Error fetching countries:', error);
       // Set empty array as fallback
@@ -476,8 +475,6 @@ export default function EditCompanyPage() {
   };
 
   const handleTerritoryInputChange = (value: string) => {
-    console.log('Territory input changed:', value);
-    console.log('All countries loaded:', allCountries?.length || 0);
     setTerritoryInput(value);
     if (value.trim().length > 0 && allCountries && allCountries.length > 0) {
       const searchTerm = value.toLowerCase().trim();
@@ -498,7 +495,6 @@ export default function EditCompanyPage() {
         return a.name.localeCompare(b.name);
       })
       .slice(0, 8); // Limit to 8 suggestions for better UX
-      console.log('Filtered suggestions:', filtered);
       setTerritorySuggestions(filtered);
     } else {
       setTerritorySuggestions([]);
