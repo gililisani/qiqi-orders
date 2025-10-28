@@ -127,6 +127,21 @@ export default function EditCompanyPage() {
     }
   }, [companyId]);
 
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.territory-input-container')) {
+        setTerritorySuggestions([]);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const fetchCompany = async () => {
     try {
       // Fetch company data
@@ -357,10 +372,23 @@ export default function EditCompanyPage() {
   const handleTerritoryInputChange = (value: string) => {
     setTerritoryInput(value);
     if (value.trim().length > 0) {
-      const filtered = allCountries.filter(country =>
-        country.name.toLowerCase().includes(value.toLowerCase()) &&
-        !formData.territories.includes(country.code)
-      ).slice(0, 10); // Limit to 10 suggestions
+      const searchTerm = value.toLowerCase().trim();
+      const filtered = allCountries.filter(country => {
+        const countryName = country.name.toLowerCase();
+        // Check if the search term matches the beginning of the country name
+        // or if it's contained within the country name
+        return (countryName.startsWith(searchTerm) || countryName.includes(searchTerm)) &&
+               !formData.territories.includes(country.code);
+      })
+      .sort((a, b) => {
+        // Prioritize exact matches at the beginning
+        const aStarts = a.name.toLowerCase().startsWith(searchTerm);
+        const bStarts = b.name.toLowerCase().startsWith(searchTerm);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, 8); // Limit to 8 suggestions for better UX
       setTerritorySuggestions(filtered);
     } else {
       setTerritorySuggestions([]);
@@ -379,9 +407,11 @@ export default function EditCompanyPage() {
   const addTerritory = () => {
     if (!territoryInput.trim()) return;
     
+    const searchTerm = territoryInput.toLowerCase().trim();
+    
     // Try to find exact match first
     const exactMatch = allCountries.find(country =>
-      country.name.toLowerCase() === territoryInput.toLowerCase()
+      country.name.toLowerCase() === searchTerm
     );
     
     if (exactMatch && !formData.territories.includes(exactMatch.code)) {
@@ -389,13 +419,32 @@ export default function EditCompanyPage() {
         ...prev,
         territories: [...prev.territories, exactMatch.code]
       }));
-    } else if (territorySuggestions.length > 0) {
-      // Use first suggestion if available
-      selectTerritorySuggestion(territorySuggestions[0]);
+      setTerritoryInput('');
+      setTerritorySuggestions([]);
+      return;
     }
     
-    setTerritoryInput('');
-    setTerritorySuggestions([]);
+    // If no exact match, try to find the best partial match
+    const bestMatch = allCountries.find(country => {
+      const countryName = country.name.toLowerCase();
+      return countryName.startsWith(searchTerm) && 
+             !formData.territories.includes(country.code);
+    });
+    
+    if (bestMatch) {
+      setFormData(prev => ({
+        ...prev,
+        territories: [...prev.territories, bestMatch.code]
+      }));
+      setTerritoryInput('');
+      setTerritorySuggestions([]);
+      return;
+    }
+    
+    // If still no match, use first suggestion if available
+    if (territorySuggestions.length > 0) {
+      selectTerritorySuggestion(territorySuggestions[0]);
+    }
   };
 
   const removeTerritory = (countryCode: string) => {
@@ -1018,8 +1067,8 @@ export default function EditCompanyPage() {
             </p>
             
             {/* Add Territory Input */}
-            <div className="flex gap-2 mb-4">
-              <div className="flex-1">
+            <div className="flex gap-2 mb-4 relative territory-input-container">
+              <div className="flex-1 relative">
                 <input
                   type="text"
                   placeholder="Type country name..."
@@ -1034,12 +1083,12 @@ export default function EditCompanyPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                 />
                 {territorySuggestions.length > 0 && (
-                  <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto mt-1">
                     {territorySuggestions.map((country) => (
                       <div
                         key={country.code}
                         onClick={() => selectTerritorySuggestion(country)}
-                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
                       >
                         {country.name}
                       </div>
