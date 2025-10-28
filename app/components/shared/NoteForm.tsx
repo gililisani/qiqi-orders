@@ -64,10 +64,10 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
 
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-    const filePath = `note-attachments/${fileName}`;
+    const filePath = `note-attachments/${companyId}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('order-documents')
+      .from('company-notes')
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false
@@ -75,7 +75,7 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
 
     if (uploadError) {
       if (uploadError.message.includes('bucket') || uploadError.message.includes('not found')) {
-        throw new Error('Storage bucket not found. Please contact support.');
+        throw new Error('Storage bucket not found. Please run the company notes storage setup script in Supabase SQL Editor.');
       }
       throw uploadError;
     }
@@ -106,7 +106,7 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
             for (const uploaded of uploadedAttachments) {
               try {
                 await supabase.storage
-                  .from('order-documents')
+                  .from('company-notes')
                   .remove([uploaded.filePath]);
               } catch (cleanupError) {
                 console.warn('Failed to cleanup uploaded file:', cleanupError);
@@ -180,7 +180,7 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
           for (const uploaded of uploadedAttachments) {
             try {
               await supabase.storage
-                .from('order-documents')
+                .from('company-notes')
                 .remove([uploaded.filePath]);
             } catch (cleanupError) {
               console.warn('Failed to cleanup uploaded file:', cleanupError);
