@@ -301,11 +301,11 @@ export default function EditCompanyPage() {
       // Then insert new territories
       if (formData.territories.length > 0) {
         const territoriesToInsert = formData.territories.map(countryCode => {
-          const country = allCountries.find(c => c.code === countryCode);
+          const country = allCountries.find(c => c.country_code === countryCode);
           return {
             company_id: companyId,
             country_code: countryCode,
-            country_name: country?.name || countryCode
+            country_name: country?.country_name || countryCode
           };
         });
 
@@ -479,41 +479,36 @@ export default function EditCompanyPage() {
   };
 
   const handleTerritoryInputChange = (value: string) => {
-    console.log('Input changed:', value);
-    console.log('All countries:', allCountries?.length || 0);
-    console.log('Sample country:', allCountries?.[0]);
     setTerritoryInput(value);
     if (value.trim().length > 0 && allCountries && allCountries.length > 0) {
       const searchTerm = value.toLowerCase().trim();
       const filtered = allCountries.filter(country => {
-        if (!country || !country.name) return false;
-        const countryName = country.name.toLowerCase();
+        if (!country || !country.country_name) return false;
+        const countryName = country.country_name.toLowerCase();
         // Check if the search term matches the beginning of the country name
         // or if it's contained within the country name
         return (countryName.startsWith(searchTerm) || countryName.includes(searchTerm)) &&
-               !formData.territories.includes(country.code);
+               !formData.territories.includes(country.country_code);
       })
       .sort((a, b) => {
         // Prioritize exact matches at the beginning
-        const aStarts = a.name.toLowerCase().startsWith(searchTerm);
-        const bStarts = b.name.toLowerCase().startsWith(searchTerm);
+        const aStarts = a.country_name.toLowerCase().startsWith(searchTerm);
+        const bStarts = b.country_name.toLowerCase().startsWith(searchTerm);
         if (aStarts && !bStarts) return -1;
         if (!aStarts && bStarts) return 1;
-        return a.name.localeCompare(b.name);
+        return a.country_name.localeCompare(b.country_name);
       })
       .slice(0, 8); // Limit to 8 suggestions for better UX
-      console.log('Filtered suggestions:', filtered);
       setTerritorySuggestions(filtered);
     } else {
-      console.log('No suggestions - countries not loaded or empty input');
       setTerritorySuggestions([]);
     }
   };
 
-  const selectTerritorySuggestion = (country: {code: string, name: string}) => {
+  const selectTerritorySuggestion = (country: {country_code: string, country_name: string}) => {
     setFormData(prev => ({
       ...prev,
-      territories: [...prev.territories, country.code]
+      territories: [...prev.territories, country.country_code]
     }));
     setTerritoryInput('');
     setTerritorySuggestions([]);
@@ -526,13 +521,13 @@ export default function EditCompanyPage() {
     
     // Try to find exact match first
     const exactMatch = allCountries.find(country =>
-      country && country.name && country.name.toLowerCase() === searchTerm
+      country && country.country_name && country.country_name.toLowerCase() === searchTerm
     );
     
-    if (exactMatch && !formData.territories.includes(exactMatch.code)) {
+    if (exactMatch && !formData.territories.includes(exactMatch.country_code)) {
       setFormData(prev => ({
         ...prev,
-        territories: [...prev.territories, exactMatch.code]
+        territories: [...prev.territories, exactMatch.country_code]
       }));
       setTerritoryInput('');
       setTerritorySuggestions([]);
@@ -541,16 +536,16 @@ export default function EditCompanyPage() {
     
     // If no exact match, try to find the best partial match
     const bestMatch = allCountries.find(country => {
-      if (!country || !country.name) return false;
-      const countryName = country.name.toLowerCase();
+      if (!country || !country.country_name) return false;
+      const countryName = country.country_name.toLowerCase();
       return countryName.startsWith(searchTerm) && 
-             !formData.territories.includes(country.code);
+             !formData.territories.includes(country.country_code);
     });
     
     if (bestMatch) {
       setFormData(prev => ({
         ...prev,
-        territories: [...prev.territories, bestMatch.code]
+        territories: [...prev.territories, bestMatch.country_code]
       }));
       setTerritoryInput('');
       setTerritorySuggestions([]);
@@ -1202,11 +1197,11 @@ export default function EditCompanyPage() {
                   <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto mt-1">
                     {territorySuggestions.map((country) => (
                       <div
-                        key={country.code}
+                        key={country.country_code}
                         onClick={() => selectTerritorySuggestion(country)}
                         className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
                       >
-                        {country.name}
+                        {country.country_name}
                       </div>
                     ))}
                   </div>
@@ -1228,7 +1223,7 @@ export default function EditCompanyPage() {
                 <p className="text-sm font-medium text-gray-700">Selected Territories:</p>
                 <div className="flex flex-wrap gap-2">
                   {formData.territories.map((territoryCode) => {
-                    const territory = territories.find(t => t.country_code === territoryCode);
+                    const territory = allCountries.find(t => t.country_code === territoryCode);
                     return (
                       <div
                         key={territoryCode}
