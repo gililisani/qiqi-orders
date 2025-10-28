@@ -481,6 +481,7 @@ export default function EditCompanyPage() {
   const handleTerritoryInputChange = (value: string) => {
     console.log('Input changed:', value);
     console.log('All countries:', allCountries?.length || 0);
+    console.log('Sample country:', allCountries?.[0]);
     setTerritoryInput(value);
     if (value.trim().length > 0 && allCountries && allCountries.length > 0) {
       const searchTerm = value.toLowerCase().trim();
