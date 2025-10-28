@@ -30,6 +30,14 @@ interface FormData {
   ship_to_state: string;
   ship_to_postal_code: string;
   ship_to_country: string;
+  // Contract fields
+  contract_execution_date: string;
+  contract_duration_months: string;
+  annual_target_amount: string;
+  contract_status: string;
+  current_annual_progress: string;
+  // Territories
+  territories: string[];
 }
 
 interface Option {
@@ -40,6 +48,12 @@ interface Option {
 interface SupportFundOption {
   id: string;
   percent: number;
+}
+
+interface Territory {
+  id: string;
+  country_code: string;
+  country_name: string;
 }
 
 export default function EditCompanyPage() {
@@ -58,6 +72,41 @@ export default function EditCompanyPage() {
     incoterms: [] as Option[],
     paymentTerms: [] as Option[]
   });
+
+  const [territories, setTerritories] = useState<Territory[]>([]);
+  const [availableCountries] = useState([
+    { code: 'US', name: 'United States' },
+    { code: 'CA', name: 'Canada' },
+    { code: 'MX', name: 'Mexico' },
+    { code: 'GB', name: 'United Kingdom' },
+    { code: 'DE', name: 'Germany' },
+    { code: 'FR', name: 'France' },
+    { code: 'IT', name: 'Italy' },
+    { code: 'ES', name: 'Spain' },
+    { code: 'AU', name: 'Australia' },
+    { code: 'JP', name: 'Japan' },
+    { code: 'CN', name: 'China' },
+    { code: 'IN', name: 'India' },
+    { code: 'BR', name: 'Brazil' },
+    { code: 'AR', name: 'Argentina' },
+    { code: 'CL', name: 'Chile' },
+    { code: 'CO', name: 'Colombia' },
+    { code: 'PE', name: 'Peru' },
+    { code: 'ZA', name: 'South Africa' },
+    { code: 'NG', name: 'Nigeria' },
+    { code: 'EG', name: 'Egypt' },
+    { code: 'AE', name: 'United Arab Emirates' },
+    { code: 'SA', name: 'Saudi Arabia' },
+    { code: 'TR', name: 'Turkey' },
+    { code: 'RU', name: 'Russia' },
+    { code: 'KR', name: 'South Korea' },
+    { code: 'SG', name: 'Singapore' },
+    { code: 'MY', name: 'Malaysia' },
+    { code: 'TH', name: 'Thailand' },
+    { code: 'ID', name: 'Indonesia' },
+    { code: 'PH', name: 'Philippines' },
+    { code: 'VN', name: 'Vietnam' }
+  ]);
 
   const [formData, setFormData] = useState<FormData>({
     company_name: '',
@@ -81,7 +130,15 @@ export default function EditCompanyPage() {
     ship_to_city: '',
     ship_to_state: '',
     ship_to_postal_code: '',
-    ship_to_country: ''
+    ship_to_country: '',
+    // Contract fields
+    contract_execution_date: '',
+    contract_duration_months: '36',
+    annual_target_amount: '',
+    contract_status: 'active',
+    current_annual_progress: '0',
+    // Territories
+    territories: []
   });
 
   useEffect(() => {
@@ -93,6 +150,7 @@ export default function EditCompanyPage() {
 
   const fetchCompany = async () => {
     try {
+      // Fetch company data
       const { data, error } = await supabase
         .from('companies')
         .select('*')
@@ -100,6 +158,14 @@ export default function EditCompanyPage() {
         .single();
 
       if (error) throw error;
+
+      // Fetch territories
+      const { data: territoriesData, error: territoriesError } = await supabase
+        .from('company_territories')
+        .select('*')
+        .eq('company_id', companyId);
+
+      if (territoriesError) throw territoriesError;
 
       setFormData({
         company_name: data.company_name || '',
@@ -123,8 +189,18 @@ export default function EditCompanyPage() {
         ship_to_city: data.ship_to_city || '',
         ship_to_state: data.ship_to_state || '',
         ship_to_postal_code: data.ship_to_postal_code || '',
-        ship_to_country: data.ship_to_country || ''
+        ship_to_country: data.ship_to_country || '',
+        // Contract fields
+        contract_execution_date: data.contract_execution_date || '',
+        contract_duration_months: data.contract_duration_months?.toString() || '36',
+        annual_target_amount: data.annual_target_amount?.toString() || '',
+        contract_status: data.contract_status || 'active',
+        current_annual_progress: data.current_annual_progress?.toString() || '0',
+        // Territories
+        territories: territoriesData?.map(t => t.country_code) || []
       });
+
+      setTerritories(territoriesData || []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -162,6 +238,7 @@ export default function EditCompanyPage() {
     setError('');
 
     try {
+      // Update company data
       const { error } = await supabase
         .from('companies')
         .update({
@@ -186,7 +263,13 @@ export default function EditCompanyPage() {
           ship_to_city: formData.ship_to_city || null,
           ship_to_state: formData.ship_to_state || null,
           ship_to_postal_code: formData.ship_to_postal_code || null,
-          ship_to_country: formData.ship_to_country || null
+          ship_to_country: formData.ship_to_country || null,
+          // Contract fields
+          contract_execution_date: formData.contract_execution_date || null,
+          contract_duration_months: formData.contract_duration_months ? parseInt(formData.contract_duration_months) : null,
+          annual_target_amount: formData.annual_target_amount ? parseFloat(formData.annual_target_amount) : null,
+          contract_status: formData.contract_status || 'active',
+          current_annual_progress: formData.current_annual_progress ? parseFloat(formData.current_annual_progress) : 0
         })
         .eq('id', companyId);
 
@@ -196,9 +279,37 @@ export default function EditCompanyPage() {
         } else {
           throw error;
         }
-      } else {
-        router.push(`/admin/companies/${companyId}`);
+        return;
       }
+
+      // Update territories
+      // First, delete existing territories
+      const { error: deleteError } = await supabase
+        .from('company_territories')
+        .delete()
+        .eq('company_id', companyId);
+
+      if (deleteError) throw deleteError;
+
+      // Then insert new territories
+      if (formData.territories.length > 0) {
+        const territoriesToInsert = formData.territories.map(countryCode => {
+          const country = availableCountries.find(c => c.code === countryCode);
+          return {
+            company_id: companyId,
+            country_code: countryCode,
+            country_name: country?.name || countryCode
+          };
+        });
+
+        const { error: insertError } = await supabase
+          .from('company_territories')
+          .insert(territoriesToInsert);
+
+        if (insertError) throw insertError;
+      }
+
+      router.push(`/admin/companies/${companyId}`);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -211,6 +322,15 @@ export default function EditCompanyPage() {
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleTerritoryToggle = (countryCode: string) => {
+    setFormData(prev => ({
+      ...prev,
+      territories: prev.territories.includes(countryCode)
+        ? prev.territories.filter(code => code !== countryCode)
+        : [...prev.territories, countryCode]
     }));
   };
 
@@ -627,6 +747,123 @@ export default function EditCompanyPage() {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Contract Information Section */}
+          <div className="border-t pt-6 mt-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Contract Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contract Execution Date
+                </label>
+                <input
+                  type="date"
+                  name="contract_execution_date"
+                  value={formData.contract_execution_date}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contract Duration (Months)
+                </label>
+                <select
+                  name="contract_duration_months"
+                  value={formData.contract_duration_months}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                >
+                  <option value="36">36 months (3 years)</option>
+                  <option value="48">48 months (4 years)</option>
+                  <option value="60">60 months (5 years)</option>
+                  <option value="72">72 months (6 years)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Annual Target Amount ($)
+                </label>
+                <input
+                  type="number"
+                  name="annual_target_amount"
+                  value={formData.annual_target_amount}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contract Status
+                </label>
+                <select
+                  name="contract_status"
+                  value={formData.contract_status}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                >
+                  <option value="active">Active</option>
+                  <option value="expired">Expired</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="terminated">Terminated</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Current Annual Progress ($)
+                </label>
+                <input
+                  type="number"
+                  name="current_annual_progress"
+                  value={formData.current_annual_progress}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Territories Section */}
+          <div className="border-t pt-6 mt-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Exclusive Territories</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Select the countries where this company has exclusive distribution rights.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {availableCountries.map((country) => (
+                <label key={country.code} className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.territories.includes(country.code)}
+                    onChange={() => handleTerritoryToggle(country.code)}
+                    className="rounded border-gray-300 text-black focus:ring-black"
+                  />
+                  <span className="text-sm text-gray-700">
+                    {country.name}
+                  </span>
+                </label>
+              ))}
+            </div>
+            {formData.territories.length > 0 && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-800">
+                  <strong>Selected Territories:</strong> {formData.territories.map(code => 
+                    availableCountries.find(c => c.code === code)?.name
+                  ).join(', ')}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex space-x-4">
