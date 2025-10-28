@@ -11,6 +11,7 @@ import { formatCurrency } from '../../lib/formatters';
 import ContractInfo from '../components/shared/ContractInfo';
 import TerritoryList from '../components/shared/TerritoryList';
 import NotesView from '../components/shared/NotesView';
+import HighlightedProductsCarousel from '../components/shared/HighlightedProductsCarousel';
 interface Order {
   id: string;
   po_number: string;
@@ -145,6 +146,9 @@ export default function ClientDashboard() {
             )}
           </div>
         </Card>
+
+        {/* Highlighted Products */}
+        <HighlightedProductsCarousel />
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

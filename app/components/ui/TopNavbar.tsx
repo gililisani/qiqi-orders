@@ -119,6 +119,7 @@ export default function TopNavbar() {
                 >
                   <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
                     <a href="/admin/products" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Products</a>
+                    <a href="/admin/highlighted-products" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Highlighted Products</a>
                     <a href="/admin/categories" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Categories</a>
                   </div>
                 </div>
@@ -209,6 +210,7 @@ export default function TopNavbar() {
                 <summary className="px-2 py-2 rounded hover:bg-gray-50 cursor-pointer">Products</summary>
                 <div className="pl-4 py-1 grid">
                   <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/products">All Products</a>
+                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/highlighted-products">Highlighted Products</a>
                   <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/categories">Categories</a>
                 </div>
               </details>
