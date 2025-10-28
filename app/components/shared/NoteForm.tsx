@@ -57,15 +57,28 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
   };
 
   const uploadFile = async (file: File): Promise<string> => {
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error('File size must be less than 10MB');
+    }
+
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
     const filePath = `note-attachments/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('documents')
-      .upload(filePath, file);
+      .from('order-documents')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      if (uploadError.message.includes('bucket') || uploadError.message.includes('not found')) {
+        throw new Error('Storage bucket not found. Please contact support.');
+      }
+      throw uploadError;
+    }
 
     return filePath;
   };
@@ -76,7 +89,35 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
     setError('');
 
     try {
-      // Create or update the note
+      // First, upload all attachments before creating the note
+      let uploadedAttachments: { file: File; filePath: string }[] = [];
+      
+      if (attachments.length > 0) {
+        // Upload all files first
+        for (const attachment of attachments) {
+          try {
+            const filePath = await uploadFile(attachment.file);
+            uploadedAttachments.push({
+              file: attachment.file,
+              filePath: filePath
+            });
+          } catch (uploadError: any) {
+            // If any attachment fails, clean up already uploaded files
+            for (const uploaded of uploadedAttachments) {
+              try {
+                await supabase.storage
+                  .from('order-documents')
+                  .remove([uploaded.filePath]);
+              } catch (cleanupError) {
+                console.warn('Failed to cleanup uploaded file:', cleanupError);
+              }
+            }
+            throw new Error(`Failed to upload ${attachment.file.name}: ${uploadError.message}`);
+          }
+        }
+      }
+
+      // Create or update the note only after all attachments are uploaded
       let noteId: string;
       
       if (editNote) {
@@ -117,17 +158,15 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
         noteId = data.id;
       }
 
-      // Upload attachments
-      if (attachments.length > 0) {
-        const attachmentPromises = attachments.map(async (attachment) => {
-          const filePath = await uploadFile(attachment.file);
-          
+      // Save attachment metadata to database
+      if (uploadedAttachments.length > 0) {
+        const attachmentPromises = uploadedAttachments.map(async (attachment) => {
           return supabase
             .from('note_attachments')
             .insert({
               note_id: noteId,
               file_name: attachment.file.name,
-              file_path: filePath,
+              file_path: attachment.filePath,
               file_size: attachment.file.size,
               file_type: attachment.file.type
             });
@@ -137,7 +176,17 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
         const errors = results.filter(result => result.error);
         
         if (errors.length > 0) {
-          console.warn('Some attachments failed to upload:', errors);
+          // If database insert fails, clean up uploaded files
+          for (const uploaded of uploadedAttachments) {
+            try {
+              await supabase.storage
+                .from('order-documents')
+                .remove([uploaded.filePath]);
+            } catch (cleanupError) {
+              console.warn('Failed to cleanup uploaded file:', cleanupError);
+            }
+          }
+          throw new Error('Failed to save attachment metadata to database');
         }
       }
 
