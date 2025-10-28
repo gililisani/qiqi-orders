@@ -362,18 +362,127 @@ export default function EditCompanyPage() {
   const fetchCountries = async () => {
     try {
       const { data, error } = await supabase.rpc('get_countries_list');
-      if (error) throw error;
+      if (error) {
+        console.warn('get_countries_list function not found, using fallback list:', error);
+        // Fallback to a basic list if the function doesn't exist
+        setAllCountries([
+          { code: 'US', name: 'United States' },
+          { code: 'CA', name: 'Canada' },
+          { code: 'MX', name: 'Mexico' },
+          { code: 'GB', name: 'United Kingdom' },
+          { code: 'DE', name: 'Germany' },
+          { code: 'FR', name: 'France' },
+          { code: 'IT', name: 'Italy' },
+          { code: 'ES', name: 'Spain' },
+          { code: 'AU', name: 'Australia' },
+          { code: 'JP', name: 'Japan' },
+          { code: 'CN', name: 'China' },
+          { code: 'IN', name: 'India' },
+          { code: 'BR', name: 'Brazil' },
+          { code: 'AR', name: 'Argentina' },
+          { code: 'CL', name: 'Chile' },
+          { code: 'CO', name: 'Colombia' },
+          { code: 'PE', name: 'Peru' },
+          { code: 'ZA', name: 'South Africa' },
+          { code: 'NG', name: 'Nigeria' },
+          { code: 'EG', name: 'Egypt' },
+          { code: 'AE', name: 'United Arab Emirates' },
+          { code: 'SA', name: 'Saudi Arabia' },
+          { code: 'TR', name: 'Turkey' },
+          { code: 'RU', name: 'Russia' },
+          { code: 'KR', name: 'South Korea' },
+          { code: 'SG', name: 'Singapore' },
+          { code: 'MY', name: 'Malaysia' },
+          { code: 'TH', name: 'Thailand' },
+          { code: 'ID', name: 'Indonesia' },
+          { code: 'PH', name: 'Philippines' },
+          { code: 'VN', name: 'Vietnam' },
+          { code: 'NL', name: 'Netherlands' },
+          { code: 'BE', name: 'Belgium' },
+          { code: 'CH', name: 'Switzerland' },
+          { code: 'AT', name: 'Austria' },
+          { code: 'SE', name: 'Sweden' },
+          { code: 'NO', name: 'Norway' },
+          { code: 'DK', name: 'Denmark' },
+          { code: 'FI', name: 'Finland' },
+          { code: 'PL', name: 'Poland' },
+          { code: 'CZ', name: 'Czech Republic' },
+          { code: 'HU', name: 'Hungary' },
+          { code: 'RO', name: 'Romania' },
+          { code: 'BG', name: 'Bulgaria' },
+          { code: 'GR', name: 'Greece' },
+          { code: 'PT', name: 'Portugal' },
+          { code: 'IE', name: 'Ireland' },
+          { code: 'NZ', name: 'New Zealand' },
+          { code: 'IL', name: 'Israel' },
+          { code: 'JO', name: 'Jordan' },
+          { code: 'LB', name: 'Lebanon' },
+          { code: 'KW', name: 'Kuwait' },
+          { code: 'QA', name: 'Qatar' },
+          { code: 'BH', name: 'Bahrain' },
+          { code: 'OM', name: 'Oman' },
+          { code: 'YE', name: 'Yemen' },
+          { code: 'IQ', name: 'Iraq' },
+          { code: 'IR', name: 'Iran' },
+          { code: 'AF', name: 'Afghanistan' },
+          { code: 'PK', name: 'Pakistan' },
+          { code: 'BD', name: 'Bangladesh' },
+          { code: 'LK', name: 'Sri Lanka' },
+          { code: 'MV', name: 'Maldives' },
+          { code: 'NP', name: 'Nepal' },
+          { code: 'BT', name: 'Bhutan' },
+          { code: 'MM', name: 'Myanmar' },
+          { code: 'LA', name: 'Laos' },
+          { code: 'KH', name: 'Cambodia' },
+          { code: 'MN', name: 'Mongolia' },
+          { code: 'KP', name: 'North Korea' },
+          { code: 'TW', name: 'Taiwan' },
+          { code: 'HK', name: 'Hong Kong' },
+          { code: 'MO', name: 'Macao' },
+          { code: 'BN', name: 'Brunei' },
+          { code: 'TL', name: 'Timor-Leste' },
+          { code: 'FJ', name: 'Fiji' },
+          { code: 'PG', name: 'Papua New Guinea' },
+          { code: 'SB', name: 'Solomon Islands' },
+          { code: 'VU', name: 'Vanuatu' },
+          { code: 'NC', name: 'New Caledonia' },
+          { code: 'PF', name: 'French Polynesia' },
+          { code: 'WS', name: 'Samoa' },
+          { code: 'TO', name: 'Tonga' },
+          { code: 'KI', name: 'Kiribati' },
+          { code: 'TV', name: 'Tuvalu' },
+          { code: 'NR', name: 'Nauru' },
+          { code: 'PW', name: 'Palau' },
+          { code: 'FM', name: 'Micronesia' },
+          { code: 'MH', name: 'Marshall Islands' },
+          { code: 'CK', name: 'Cook Islands' },
+          { code: 'NU', name: 'Niue' },
+          { code: 'TK', name: 'Tokelau' },
+          { code: 'WF', name: 'Wallis and Futuna' },
+          { code: 'AS', name: 'American Samoa' },
+          { code: 'GU', name: 'Guam' },
+          { code: 'MP', name: 'Northern Mariana Islands' },
+          { code: 'UM', name: 'United States Minor Outlying Islands' }
+        ]);
+        return;
+      }
       setAllCountries(data || []);
+      console.log('Countries loaded:', data?.length || 0);
     } catch (error) {
       console.error('Error fetching countries:', error);
+      // Set empty array as fallback
+      setAllCountries([]);
     }
   };
 
   const handleTerritoryInputChange = (value: string) => {
+    console.log('Territory input changed:', value);
+    console.log('All countries loaded:', allCountries?.length || 0);
     setTerritoryInput(value);
-    if (value.trim().length > 0) {
+    if (value.trim().length > 0 && allCountries && allCountries.length > 0) {
       const searchTerm = value.toLowerCase().trim();
       const filtered = allCountries.filter(country => {
+        if (!country || !country.name) return false;
         const countryName = country.name.toLowerCase();
         // Check if the search term matches the beginning of the country name
         // or if it's contained within the country name
@@ -389,6 +498,7 @@ export default function EditCompanyPage() {
         return a.name.localeCompare(b.name);
       })
       .slice(0, 8); // Limit to 8 suggestions for better UX
+      console.log('Filtered suggestions:', filtered);
       setTerritorySuggestions(filtered);
     } else {
       setTerritorySuggestions([]);
@@ -405,13 +515,13 @@ export default function EditCompanyPage() {
   };
 
   const addTerritory = () => {
-    if (!territoryInput.trim()) return;
+    if (!territoryInput.trim() || !allCountries || allCountries.length === 0) return;
     
     const searchTerm = territoryInput.toLowerCase().trim();
     
     // Try to find exact match first
     const exactMatch = allCountries.find(country =>
-      country.name.toLowerCase() === searchTerm
+      country && country.name && country.name.toLowerCase() === searchTerm
     );
     
     if (exactMatch && !formData.territories.includes(exactMatch.code)) {
@@ -426,6 +536,7 @@ export default function EditCompanyPage() {
     
     // If no exact match, try to find the best partial match
     const bestMatch = allCountries.find(country => {
+      if (!country || !country.name) return false;
       const countryName = country.name.toLowerCase();
       return countryName.startsWith(searchTerm) && 
              !formData.territories.includes(country.code);
