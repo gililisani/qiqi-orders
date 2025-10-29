@@ -68,9 +68,14 @@ export default function HighlightedProductsManager() {
 
       setHighlightedProducts(highlightedData || []);
       
-      // Filter out already highlighted products
+      // Filter out already highlighted products and transform data
       const highlightedProductIds = (highlightedData || []).map(hp => hp.product_id);
-      const availableProducts = (productsData || []).filter(p => !highlightedProductIds.includes(p.id));
+      const availableProducts = (productsData || [])
+        .filter(p => !highlightedProductIds.includes(p.id))
+        .map(p => ({
+          ...p,
+          category: Array.isArray(p.category) ? p.category[0] : p.category
+        }));
       setAvailableProducts(availableProducts);
       
     } catch (err: any) {
