@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 
 interface Product {
@@ -85,7 +84,7 @@ export default function HighlightedProductsCarousel() {
       <div className="bg-white rounded-lg p-6">
         <div className="animate-pulse">
           <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-48 bg-gray-200 rounded"></div>
+          <div className="h-96 bg-gray-200 rounded"></div>
         </div>
       </div>
     );
@@ -95,65 +94,59 @@ export default function HighlightedProductsCarousel() {
     return null; // Don't show anything if no highlighted products
   }
 
-  const currentProduct = highlightedProducts[currentIndex];
-
   return (
     <div className="bg-white rounded-lg p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">Featured Products</h2>
-        {highlightedProducts.length > 1 && (
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={goToPrevious}
-              className="p-2 text-gray-400 hover:text-gray-600 transition"
-            >
-              <ChevronLeftIcon className="h-5 w-5" />
-            </button>
-            <button
-              onClick={goToNext}
-              className="p-2 text-gray-400 hover:text-gray-600 transition"
-            >
-              <ChevronRightIcon className="h-5 w-5" />
-            </button>
-          </div>
-        )}
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-semibold text-gray-900">Featured Products</h2>
       </div>
 
-      <div className="relative">
-        <div className="overflow-hidden rounded-lg">
-          <div className="flex transition-transform duration-500 ease-in-out">
-            <div className="w-full flex-shrink-0">
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6">
-                <div className="flex items-center space-x-6">
-                  {currentProduct.product?.picture_url && (
-                    <div className="flex-shrink-0">
-                      <img
-                        src={currentProduct.product.picture_url}
-                        alt={currentProduct.product?.item_name || 'Product'}
-                        className="w-32 h-32 object-cover rounded-lg shadow-md"
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-xl font-semibold text-gray-900">
-                        {currentProduct.product?.item_name || 'Unknown Product'}
+      <div id="default-carousel" className="relative w-full" data-carousel="slide">
+        {/* Carousel wrapper */}
+        <div className="relative h-56 overflow-hidden rounded-lg md:h-96">
+          {highlightedProducts.map((highlightedProduct, index) => (
+            <div 
+              key={highlightedProduct.id}
+              className={`absolute block w-full -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 duration-700 ease-in-out ${
+                index === currentIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+              data-carousel-item
+            >
+              <div className="relative h-full w-full">
+                {/* Background Image */}
+                {highlightedProduct.product?.picture_url ? (
+                  <img 
+                    src={highlightedProduct.product.picture_url} 
+                    className="absolute inset-0 w-full h-full object-cover" 
+                    alt={highlightedProduct.product?.item_name || 'Product'}
+                  />
+                ) : (
+                  <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-gray-100 to-gray-200"></div>
+                )}
+                
+                {/* Overlay */}
+                <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+                
+                {/* Content */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center text-white px-8">
+                    <div className="flex items-center justify-center space-x-3 mb-4">
+                      <h3 className="text-3xl md:text-4xl font-bold">
+                        {highlightedProduct.product?.item_name || 'Featured Product'}
                       </h3>
-                      {currentProduct.is_new && (
-                        <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      {highlightedProduct.is_new && (
+                        <span className="bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full">
                           NEW
                         </span>
                       )}
                     </div>
                     
-                    <p className="text-gray-600 mb-4">
-                      {currentProduct.product?.category?.name || 'Featured Product'}
+                    <p className="text-lg md:text-xl mb-6 opacity-90">
+                      {highlightedProduct.product?.category?.name || 'Premium Quality'}
                     </p>
                     
                     <Link
                       href="/client/orders/new"
-                      className="inline-flex items-center px-4 py-2 bg-black text-white rounded-md hover:opacity-90 transition"
+                      className="inline-flex items-center px-6 py-3 bg-white text-black rounded-lg hover:bg-gray-100 transition font-semibold text-lg"
                     >
                       Order Now
                     </Link>
@@ -161,22 +154,57 @@ export default function HighlightedProductsCarousel() {
                 </div>
               </div>
             </div>
-          </div>
+          ))}
         </div>
-
-        {/* Dots indicator */}
+        
+        {/* Slider indicators */}
         {highlightedProducts.length > 1 && (
-          <div className="flex justify-center mt-4 space-x-2">
+          <div className="absolute z-30 flex -translate-x-1/2 bottom-5 left-1/2 space-x-3 rtl:space-x-reverse">
             {highlightedProducts.map((_, index) => (
-              <button
+              <button 
                 key={index}
-                onClick={() => goToSlide(index)}
-                className={`w-2 h-2 rounded-full transition ${
-                  index === currentIndex ? 'bg-black' : 'bg-gray-300'
+                type="button" 
+                className={`w-3 h-3 rounded-full transition ${
+                  index === currentIndex 
+                    ? 'bg-white' 
+                    : 'bg-white/50 hover:bg-white/75'
                 }`}
+                aria-current={index === currentIndex ? "true" : "false"}
+                aria-label={`Slide ${index + 1}`}
+                onClick={() => goToSlide(index)}
               />
             ))}
           </div>
+        )}
+        
+        {/* Slider controls */}
+        {highlightedProducts.length > 1 && (
+          <>
+            <button 
+              type="button" 
+              className="absolute top-0 start-0 z-30 flex items-center justify-center h-full px-4 cursor-pointer group focus:outline-none" 
+              onClick={goToPrevious}
+            >
+              <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover:bg-white/50 group-focus:ring-4 group-focus:ring-white group-focus:outline-none">
+                <svg className="w-4 h-4 text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                  <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 1 1 5l4 4"/>
+                </svg>
+                <span className="sr-only">Previous</span>
+              </span>
+            </button>
+            <button 
+              type="button" 
+              className="absolute top-0 end-0 z-30 flex items-center justify-center h-full px-4 cursor-pointer group focus:outline-none" 
+              onClick={goToNext}
+            >
+              <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover:bg-white/50 group-focus:ring-4 group-focus:ring-white group-focus:outline-none">
+                <svg className="w-4 h-4 text-white rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                  <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 9 4-4-4-4"/>
+                </svg>
+                <span className="sr-only">Next</span>
+              </span>
+            </button>
+          </>
         )}
       </div>
     </div>
