@@ -80,6 +80,9 @@ export default function HighlightedProductsCarousel() {
         autoplay={highlightedProducts.length > 1}
         loop={true}
         autoplayDelay={5000}
+        placeholder={undefined}
+        onPointerEnterCapture={undefined}
+        onPointerLeaveCapture={undefined}
       >
         {highlightedProducts.map((highlightedProduct) => (
           <div 
