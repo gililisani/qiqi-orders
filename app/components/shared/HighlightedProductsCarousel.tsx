@@ -67,7 +67,7 @@ export default function HighlightedProductsCarousel() {
   if (slides.length === 0) return null;
 
   return (
-    <Carousel className="rounded-xl">
+    <Carousel className="rounded-xl" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
       {slides.map((hp) => (
         <img
           key={hp.id}
