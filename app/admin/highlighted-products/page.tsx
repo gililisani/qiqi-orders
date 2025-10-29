@@ -42,10 +42,10 @@ export default function HighlightedProductsManager() {
         .from('highlighted_products')
         .select(`
           *,
-          product:products(
+          product:"Products"(
             id,
-            product_name,
-            product_image,
+            item_name,
+            picture_url,
             category:categories(name)
           )
         `)
@@ -224,7 +224,7 @@ export default function HighlightedProductsManager() {
                     </button>
                   </div>
                   
-                  {highlightedProduct.product.picture_url && (
+                  {highlightedProduct.product?.picture_url && (
                     <img
                       src={highlightedProduct.product.picture_url}
                       alt={highlightedProduct.product.item_name}
@@ -234,10 +234,10 @@ export default function HighlightedProductsManager() {
                   
                   <div>
                     <h3 className="font-medium text-gray-900">
-                      {highlightedProduct.product.item_name}
+                      {highlightedProduct.product?.item_name || 'Unknown Product'}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      {highlightedProduct.product.category?.name || 'No category'}
+                      {highlightedProduct.product?.category?.name || 'No category'}
                     </p>
                   </div>
                 </div>
