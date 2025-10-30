@@ -1,9 +1,42 @@
+"use client";
+
 import React from "react";
 
-export const MaterialTailwind = React.createContext<any>(null);
+interface State {
+  openSidenav: boolean;
+  sidenavColor: string;
+  sidenavType: string;
+  transparentNavbar: boolean;
+  fixedNavbar: boolean;
+  openConfigurator: boolean;
+}
+
+type Action =
+  | { type: "OPEN_SIDENAV"; value: boolean }
+  | { type: "SIDENAV_TYPE"; value: string }
+  | { type: "SIDENAV_COLOR"; value: string }
+  | { type: "TRANSPARENT_NAVBAR"; value: boolean }
+  | { type: "FIXED_NAVBAR"; value: boolean }
+  | { type: "OPEN_CONFIGURATOR"; value: boolean };
+
+type ContextType = [State, React.Dispatch<Action>];
+
+const initialState: State = {
+  openSidenav: false,
+  sidenavColor: "dark",
+  sidenavType: "white",
+  transparentNavbar: true,
+  fixedNavbar: false,
+  openConfigurator: false,
+};
+
+export const MaterialTailwind = React.createContext<ContextType>([
+  initialState,
+  () => {},
+]);
 MaterialTailwind.displayName = "MaterialTailwindContext";
 
-export function reducer(state: any, action: any) {
+export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "OPEN_SIDENAV": {
       return { ...state, openSidenav: action.value };
@@ -24,23 +57,19 @@ export function reducer(state: any, action: any) {
       return { ...state, openConfigurator: action.value };
     }
     default: {
-      throw new Error(`Unhandled action type: ${action.type}`);
+      throw new Error("Unhandled action type");
     }
   }
 }
 
-export function MaterialTailwindControllerProvider({ children }: { children: React.ReactNode }) {
-  const initialState = {
-    openSidenav: false,
-    sidenavColor: "dark",
-    sidenavType: "white",
-    transparentNavbar: true,
-    fixedNavbar: false,
-    openConfigurator: false,
-  };
-
+export function MaterialTailwindControllerProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [controller, dispatch] = React.useReducer(reducer, initialState);
-  const value = React.useMemo(
+
+  const value: ContextType = React.useMemo(
     () => [controller, dispatch],
     [controller, dispatch]
   );
@@ -66,15 +95,27 @@ export function useMaterialTailwindController() {
 
 MaterialTailwindControllerProvider.displayName = "/src/context/index.jsx";
 
-export const setOpenSidenav = (dispatch: any, value: boolean) =>
-  dispatch({ type: "OPEN_SIDENAV", value });
-export const setSidenavType = (dispatch: any, value: string) =>
-  dispatch({ type: "SIDENAV_TYPE", value });
-export const setSidenavColor = (dispatch: any, value: string) =>
-  dispatch({ type: "SIDENAV_COLOR", value });
-export const setTransparentNavbar = (dispatch: any, value: boolean) =>
-  dispatch({ type: "TRANSPARENT_NAVBAR", value });
-export const setFixedNavbar = (dispatch: any, value: boolean) =>
-  dispatch({ type: "FIXED_NAVBAR", value });
-export const setOpenConfigurator = (dispatch: any, value: boolean) =>
-  dispatch({ type: "OPEN_CONFIGURATOR", value });
+export const setOpenSidenav = (
+  dispatch: React.Dispatch<Action>,
+  value: boolean
+) => dispatch({ type: "OPEN_SIDENAV", value });
+export const setSidenavType = (
+  dispatch: React.Dispatch<Action>,
+  value: string
+) => dispatch({ type: "SIDENAV_TYPE", value });
+export const setSidenavColor = (
+  dispatch: React.Dispatch<Action>,
+  value: string
+) => dispatch({ type: "SIDENAV_COLOR", value });
+export const setTransparentNavbar = (
+  dispatch: React.Dispatch<Action>,
+  value: boolean
+) => dispatch({ type: "TRANSPARENT_NAVBAR", value });
+export const setFixedNavbar = (
+  dispatch: React.Dispatch<Action>,
+  value: boolean
+) => dispatch({ type: "FIXED_NAVBAR", value });
+export const setOpenConfigurator = (
+  dispatch: React.Dispatch<Action>,
+  value: boolean
+) => dispatch({ type: "OPEN_CONFIGURATOR", value });
