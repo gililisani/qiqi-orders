@@ -299,6 +299,9 @@ export default function AdminDashboard() {
                         <Typography
                           variant="small"
                           className="text-[11px] font-bold uppercase text-blue-gray-400"
+                          placeholder={undefined}
+                          onPointerEnterCapture={undefined}
+                          onPointerLeaveCapture={undefined}
                         >
                           {el}
                         </Typography>
@@ -325,6 +328,9 @@ export default function AdminDashboard() {
                             variant="small"
                             color="blue-gray"
                             className="font-semibold"
+                            placeholder={undefined}
+                            onPointerEnterCapture={undefined}
+                            onPointerLeaveCapture={undefined}
                           >
                             {order.po_number || 'N/A'}
                           </Typography>
@@ -334,6 +340,9 @@ export default function AdminDashboard() {
                             variant="small"
                             color="blue-gray"
                             className="font-semibold"
+                            placeholder={undefined}
+                            onPointerEnterCapture={undefined}
+                            onPointerLeaveCapture={undefined}
                           >
                             {(() => {
                               const companies = order.companies;
@@ -349,12 +358,12 @@ export default function AdminDashboard() {
                           <OrderStatusBadge status={order.status} />
                         </td>
                         <td className={className}>
-                          <Typography className="text-xs font-semibold text-blue-gray-600">
+                          <Typography className="text-xs font-semibold text-blue-gray-600" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                             {formatCurrency(order.total_value || 0)}
                           </Typography>
                         </td>
                         <td className={className}>
-                          <Typography className="text-xs font-semibold text-blue-gray-600">
+                          <Typography className="text-xs font-semibold text-blue-gray-600" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                             {new Date(order.created_at).toLocaleDateString()}
                           </Typography>
                         </td>
@@ -364,6 +373,9 @@ export default function AdminDashboard() {
                               <Typography
                                 as="a"
                                 className="text-xs font-semibold text-blue-gray-600 cursor-pointer hover:text-blue-500"
+                                placeholder={undefined}
+                                onPointerEnterCapture={undefined}
+                                onPointerLeaveCapture={undefined}
                               >
                                 View
                               </Typography>
@@ -372,6 +384,9 @@ export default function AdminDashboard() {
                               as="button"
                               onClick={() => handleDownloadCSV(order.id)}
                               className="text-xs font-semibold text-blue-gray-600 cursor-pointer hover:text-blue-500"
+                              placeholder={undefined}
+                              onPointerEnterCapture={undefined}
+                              onPointerLeaveCapture={undefined}
                             >
                               CSV
                             </Typography>
@@ -384,10 +399,10 @@ export default function AdminDashboard() {
               </table>
             ) : (
               <div className="py-12 text-center">
-                <Typography variant="h6" color="blue-gray" className="mb-2">
+                <Typography variant="h6" color="blue-gray" className="mb-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                   No orders found
                 </Typography>
-                <Typography variant="small" color="gray">
+                <Typography variant="small" color="gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                   Orders will appear here once they are created.
                 </Typography>
               </div>
