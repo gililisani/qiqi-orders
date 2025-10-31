@@ -194,7 +194,7 @@ export default function Sidenav({
                       onPointerEnterCapture={undefined}
                       onPointerLeaveCapture={undefined}
                     >
-                      <ListItemPrefix>{icon}</ListItemPrefix>
+                      <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{icon}</ListItemPrefix>
                       <Typography
                         color="inherit"
                         className="tw-mr-auto tw-font-normal tw-capitalize"
@@ -247,7 +247,7 @@ export default function Sidenav({
                                 onPointerEnterCapture={undefined}
                                 onPointerLeaveCapture={undefined}
                               >
-                                <ListItemPrefix>{page.icon}</ListItemPrefix>
+                                <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{page.icon}</ListItemPrefix>
                                 <Typography
                                   color="inherit"
                                   className="tw-mr-auto tw-font-normal tw-capitalize"
@@ -275,7 +275,7 @@ export default function Sidenav({
                                         onPointerEnterCapture={undefined}
                                         onPointerLeaveCapture={undefined}
                                       >
-                                        <ListItemPrefix>
+                                        <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                           {subPage.icon}
                                         </ListItemPrefix>
                                         {subPage.name}
@@ -293,7 +293,7 @@ export default function Sidenav({
                                         onPointerEnterCapture={undefined}
                                         onPointerLeaveCapture={undefined}
                                       >
-                                        <ListItemPrefix>
+                                        <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                           {subPage.icon}
                                         </ListItemPrefix>
                                         {subPage.name}
@@ -339,7 +339,7 @@ export default function Sidenav({
                 {external ? (
                   <a key={key} href={path} target="_blank">
                     <ListItem className="tw-capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                      <ListItemPrefix>{icon}</ListItemPrefix>
+                      <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{icon}</ListItemPrefix>
                       {name}
                     </ListItem>
                   </a>
@@ -355,7 +355,7 @@ export default function Sidenav({
                       onPointerEnterCapture={undefined}
                       onPointerLeaveCapture={undefined}
                     >
-                      <ListItemPrefix>{icon}</ListItemPrefix>
+                      <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{icon}</ListItemPrefix>
                       {name}
                     </ListItem>
                   </Link>
