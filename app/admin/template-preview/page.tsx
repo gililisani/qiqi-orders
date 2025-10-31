@@ -109,7 +109,7 @@ export default function TemplatePreviewPage() {
       <AdminLayoutWrapper routes={adminRoutes}>
         <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center gap-4">
-            <Spinner className="h-12 w-12" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
+            <Spinner className="h-12 w-12" />
             <Typography variant="h6" color="blue-gray" {...defaultProps}>
               Loading dashboard...
             </Typography>
