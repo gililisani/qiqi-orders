@@ -134,8 +134,8 @@ export function DashboardNavbar() {
           >
             <Cog6ToothIcon className="tw-h-5 tw-w-5 tw-text-gray-900" />
           </IconButton>
-          <Menu placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-            <MenuHandler placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+          <Menu>
+            <MenuHandler>
               <span>
                 <Badge placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                   <IconButton variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
@@ -144,20 +144,20 @@ export function DashboardNavbar() {
                 </Badge>
               </span>
             </MenuHandler>
-            <MenuList className="!tw-w-max tw-border tw-border-blue-gray-100" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-              <MenuItem className="tw-flex tw-items-center tw-gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+            <MenuList className="!tw-w-max tw-border tw-border-blue-gray-100">
+              <MenuItem className="tw-flex tw-items-center tw-gap-2">
                 <EnvelopeIcon className="tw-h-5 tw-w-5 tw-text-gray-900" />
                 <Typography variant="small" className="!tw-font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                   Check new messages
                 </Typography>
               </MenuItem>
-              <MenuItem className="tw-flex tw-items-center tw-gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <MenuItem className="tw-flex tw-items-center tw-gap-2">
                 <MicrophoneIcon className="tw-h-5 tw-w-5 tw-text-gray-900" />
                 <Typography variant="small" className="!tw-font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                   Manage Podcast sessions
                 </Typography>
               </MenuItem>
-              <MenuItem className="tw-flex tw-items-center tw-gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <MenuItem className="tw-flex tw-items-center tw-gap-2">
                 <ShoppingCartIcon className="tw-h-5 tw-w-5 tw-text-gray-900" />
                 <Typography variant="small" className="!tw-font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                   Payment successfully completed
