@@ -11,11 +11,7 @@ import {
 } from "@heroicons/react/24/solid";
 
 const text = {
-  color: "inherit",
   className: "tw-w-5 tw-grid place-items-center !tw-font-medium",
-  placeholder: undefined,
-  onPointerEnterCapture: undefined,
-  onPointerLeaveCapture: undefined,
 };
 
 const icon = {
@@ -33,17 +29,17 @@ export const adminRoutes = [
     icon: <ShoppingCartIcon {...icon} />,
     pages: [
       {
-        icon: <Typography {...text}>A</Typography>,
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>A</Typography>,
         name: "All Orders",
         path: "/admin/orders",
       },
       {
-        icon: <Typography {...text}>N</Typography>,
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>N</Typography>,
         name: "New Order (Admin)",
         path: "/admin/orders/new",
       },
       {
-        icon: <Typography {...text}>S</Typography>,
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>S</Typography>,
         name: "Create Standalone SLI",
         path: "/admin/sli/create",
       },
@@ -54,17 +50,17 @@ export const adminRoutes = [
     icon: <CubeTransparentIcon {...icon} />,
     pages: [
       {
-        icon: <Typography {...text}>A</Typography>,
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>A</Typography>,
         name: "All Products",
         path: "/admin/products",
       },
       {
-        icon: <Typography {...text}>H</Typography>,
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>H</Typography>,
         name: "Highlighted Products",
         path: "/admin/highlighted-products",
       },
       {
-        icon: <Typography {...text}>C</Typography>,
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>C</Typography>,
         name: "Categories",
         path: "/admin/categories",
       },
@@ -86,7 +82,7 @@ export const adminRoutes = [
         path: "/admin/users",
       },
       {
-        icon: <Typography {...text}>A</Typography>,
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>A</Typography>,
         name: "Admins",
         path: "/admin/admins",
       },
@@ -106,22 +102,22 @@ export const adminRoutes = [
         path: "/admin/locations",
       },
       {
-        icon: <Typography {...text}>C</Typography>,
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>C</Typography>,
         name: "Classes",
         path: "/admin/classes",
       },
       {
-        icon: <Typography {...text}>I</Typography>,
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>I</Typography>,
         name: "Incoterms",
         path: "/admin/incoterms",
       },
       {
-        icon: <Typography {...text}>P</Typography>,
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>P</Typography>,
         name: "Payment Terms",
         path: "/admin/payment-terms",
       },
       {
-        icon: <Typography {...text}>N</Typography>,
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>N</Typography>,
         name: "NetSuite",
         path: "/admin/netsuite",
       },
