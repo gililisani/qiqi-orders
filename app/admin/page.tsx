@@ -16,6 +16,7 @@ import {
   Spinner,
 } from '@material-tailwind/react';
 import OrderStatusBadge from '../components/ui/OrderStatusBadge';
+import SimpleStatisticsCard from '../components/ui/SimpleStatisticsCard';
 
 const defaultProps = {
   placeholder: undefined,
@@ -198,76 +199,25 @@ export default function AdminDashboard() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6">
           {/* Today's Orders */}
-          <Card className="border border-blue-gray-100 shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-            <CardHeader
-              floated={false}
-              shadow={false}
-              className="m-0 mb-2 rounded-b-none p-4 h-20 bg-white"
-              placeholder={undefined}
-              onPointerEnterCapture={undefined}
-              onPointerLeaveCapture={undefined}
-            >
-              <Typography variant="h6" color="blue-gray" className="font-medium" {...defaultProps}>
-                Today's Orders
-              </Typography>
-              <Typography variant="h2" color="blue-gray" {...defaultProps}>
-                {stats.todayOrders}
-              </Typography>
-            </CardHeader>
-            <CardBody placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-              <Typography variant="small" color="gray" className="font-medium" {...defaultProps}>
-                {formatCurrency(stats.todayOrdersValue)} total value
-              </Typography>
-            </CardBody>
-          </Card>
+          <SimpleStatisticsCard
+            title="Today's Orders"
+            value={stats.todayOrders}
+            description={formatCurrency(stats.todayOrdersValue) + " total value"}
+          />
 
           {/* Open Orders */}
-          <Card className="border border-blue-gray-100 shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-            <CardHeader
-              floated={false}
-              shadow={false}
-              className="m-0 mb-2 rounded-b-none p-4 h-20 bg-white"
-              placeholder={undefined}
-              onPointerEnterCapture={undefined}
-              onPointerLeaveCapture={undefined}
-            >
-              <Typography variant="h6" color="blue-gray" className="font-medium" {...defaultProps}>
-                Open Orders
-              </Typography>
-              <Typography variant="h2" color="blue-gray" {...defaultProps}>
-                {stats.openOrders}
-              </Typography>
-            </CardHeader>
-            <CardBody placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-              <Typography variant="small" color="gray" className="font-medium" {...defaultProps}>
-                Orders awaiting processing
-              </Typography>
-            </CardBody>
-          </Card>
+          <SimpleStatisticsCard
+            title="Open Orders"
+            value={stats.openOrders}
+            description="Orders awaiting processing"
+          />
 
           {/* In Process Orders */}
-          <Card className="border border-blue-gray-100 shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-            <CardHeader
-              floated={false}
-              shadow={false}
-              className="m-0 mb-2 rounded-b-none p-4 h-20 bg-white"
-              placeholder={undefined}
-              onPointerEnterCapture={undefined}
-              onPointerLeaveCapture={undefined}
-            >
-              <Typography variant="h6" color="blue-gray" className="font-medium" {...defaultProps}>
-                In Process
-              </Typography>
-              <Typography variant="h2" color="blue-gray" {...defaultProps}>
-                {stats.inProcessOrders}
-              </Typography>
-            </CardHeader>
-            <CardBody placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-              <Typography variant="small" color="gray" className="font-medium" {...defaultProps}>
-                Orders being processed
-              </Typography>
-            </CardBody>
-          </Card>
+          <SimpleStatisticsCard
+            title="In Process"
+            value={stats.inProcessOrders}
+            description="Orders being processed"
+          />
         </div>
 
         {/* Recent Orders */}
