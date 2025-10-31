@@ -100,7 +100,7 @@ export function DashboardNavbar() {
         </div>
         <div className="!tw-flex tw-items-center">
           <div className="tw-mr-auto md:tw-mr-4 md:tw-w-56">
-            <Input label="Search" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
+            <Input label="Search" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} crossOrigin={undefined} />
           </div>
           <Link href="/login">
             <IconButton variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
