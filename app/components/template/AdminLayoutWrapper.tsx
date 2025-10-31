@@ -26,8 +26,8 @@ interface AdminLayoutWrapperProps {
 export default function AdminLayoutWrapper({
   children,
   routes = [],
-  brandName = "Qiqi Orders",
-  brandImg = "/logo.png",
+  brandName,
+  brandImg = "/QIQI-Logo.svg",
 }: AdminLayoutWrapperProps) {
   const [controller] = useMaterialTailwindController();
   const { sidenavType } = controller;
@@ -43,11 +43,7 @@ export default function AdminLayoutWrapper({
         <Sidenav
           routes={routes}
           brandName={brandName}
-          brandImg={
-            sidenavType === "dark"
-              ? "/logo.png"
-              : "/logo.png"
-          }
+          brandImg={brandImg}
         />
       )}
       <div className={`${isSimpleLayout ? "m-0" : "p-4 xl:ml-80"}`}>

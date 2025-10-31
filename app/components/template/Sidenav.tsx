@@ -54,8 +54,8 @@ interface SidenavProps {
 }
 
 export default function Sidenav({
-  brandImg = "/logo.png",
-  brandName = "Qiqi Orders",
+  brandImg = "/QIQI-Logo.svg",
+  brandName,
   routes = [],
 }: SidenavProps) {
   const pathname = usePathname();
@@ -123,13 +123,10 @@ export default function Sidenav({
       onPointerLeaveCapture={undefined}
     >
       <Link
-        href="/admin"
-        className="mb-2 flex items-center gap-1 !p-4"
+        href={pathname.startsWith("/client") ? "/client" : "/admin"}
+        className="mb-2 flex items-center justify-center !p-4"
       >
-        <img src={brandImg} className="h-7 w-7" alt="logo" />
-        <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-          {brandName}
-        </Typography>
+        <img src={brandImg} className="h-12 w-auto" alt="logo" />
       </Link>
       <IconButton
         ripple={false}

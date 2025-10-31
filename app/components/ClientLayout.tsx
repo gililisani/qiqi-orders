@@ -2,13 +2,11 @@
 
 import { useAuth } from '../hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import Image from 'next/image';
-import Link from 'next/link';
-import TopNavbarClient from './ui/TopNavbarClient';
-import { useSupabase } from '../../lib/supabase-provider';
-import { enforceSessionTimeout } from '../../lib/sessionManager';
+import AdminLayoutWrapper from './template/AdminLayoutWrapper';
+import { clientRoutes } from '../config/client-routes';
+import { Spinner } from '@material-tailwind/react';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -17,12 +15,7 @@ interface ClientLayoutProps {
 export default function ClientLayout({ children }: ClientLayoutProps) {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [mobileOpenSections, setMobileOpenSections] = useState<string[]>([]);
   const [authReady, setAuthReady] = useState(false);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { supabase: supabaseClient } = useSupabase();
 
   useEffect(() => {
     if (!loading) {
@@ -37,13 +30,6 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     }
   }, [user, loading, router]);
 
-  // Check session timeout for clients - DISABLED
-  // useEffect(() => {
-  //   if (user && user.role === 'Client') {
-  //     enforceSessionTimeout(supabaseClient, 'client');
-  //   }
-  // }, [user, supabaseClient]);
-
   // Add small delay to ensure auth context is fully established
   useEffect(() => {
     if (!loading && user && user.role === 'Client') {
@@ -57,68 +43,11 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     }
   }, [loading, user]);
 
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setOpenDropdown(null);
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
-
-  const handleMouseEnter = (menuName: string) => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    setOpenDropdown(menuName);
-  };
-
-  const handleMouseLeave = () => {
-    hoverTimeoutRef.current = setTimeout(() => {
-      setOpenDropdown(null);
-    }, 100); // Small delay to allow moving to dropdown
-  };
-
-  const toggleMobileSection = (sectionName: string) => {
-    setMobileOpenSections(prev => 
-      prev.includes(sectionName) 
-        ? prev.filter(name => name !== sectionName)
-        : [...prev, sectionName]
-    );
-  };
-
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      window.location.href = '/';
-    } catch (error) {
-      console.error('Error signing out:', error);
-      // Force redirect even if signOut fails
-      window.location.href = '/';
-    }
-  };
-
-  const clientMenuItems = [
-    {
-      name: 'Dashboard',
-      items: [
-        { name: 'Overview', href: '/client' }
-      ]
-    },
-    {
-      name: 'Orders',
-      items: [
-        { name: 'New Order', href: '/client/orders/new' },
-        { name: 'Order History', href: '/client/orders' }
-      ]
-    }
-  ];
-
   if (loading || !authReady) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+          <Spinner className="h-12 w-12 mx-auto mb-4" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -130,15 +59,8 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-blue-gray-50/50">
-      <TopNavbarClient />
-      {/* Global container like Admin */}
-      <div className="mx-auto w-full max-w-[1600px] px-4 lg:px-6 xl:px-10 pt-12 pb-16 space-y-16">
-        {/* Main Content */}
-        <div className="relative">
-          {children}
-        </div>
-      </div>
-    </div>
+    <AdminLayoutWrapper routes={clientRoutes}>
+      {children}
+    </AdminLayoutWrapper>
   );
 }

@@ -68,7 +68,7 @@ export function DashboardNavbar() {
             onPointerEnterCapture={undefined}
             onPointerLeaveCapture={undefined}
           >
-            <Link href="/admin">
+            <Link href={pathname.startsWith("/client") ? "/client" : "/admin"}>
               <IconButton size="sm" variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                 <HomeIcon className="h-4 w-4 text-gray-900" />
               </IconButton>
