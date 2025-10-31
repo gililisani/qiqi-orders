@@ -23,6 +23,7 @@ import {
   HandRaisedIcon 
 } from '@heroicons/react/24/outline';
 import OrderStatusBadge from '../components/ui/OrderStatusBadge';
+import StatisticsCard from '../components/ui/StatisticsCard';
 
 const defaultProps = {
   placeholder: undefined,
@@ -203,59 +204,36 @@ export default function AdminDashboard() {
         </Typography>
         
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Merged Orders Stats - Takes 3 columns */}
-          <Card className="border border-blue-gray-100 shadow-sm lg:col-span-3" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-            <CardBody className="py-8" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-              {/* Stats Content */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
-                {/* Today's Orders */}
-                <div className="text-center flex flex-col justify-center">
-                  <Typography variant="h1" color="blue-gray" className="mb-2 text-6xl font-bold" {...defaultProps}>
-                    {stats.todayOrders}
-                  </Typography>
-                  <Typography variant="small" color="blue-gray" className="font-medium" {...defaultProps}>
-                    New Orders Today
-                  </Typography>
-                  <Typography variant="small" color="gray" className="mt-1" {...defaultProps}>
-                    {formatCurrency(stats.todayOrdersValue)}
-                  </Typography>
-                </div>
-
-                {/* Open Orders */}
-                <div className="text-center flex flex-col justify-center">
-                  <Typography variant="h1" color="blue-gray" className="mb-2 text-6xl font-bold" {...defaultProps}>
-                    {stats.openOrders}
-                  </Typography>
-                  <Typography variant="small" color="blue-gray" className="font-medium" {...defaultProps}>
-                    Open Orders
-                  </Typography>
-                </div>
-
-                {/* In Process Orders */}
-                <div className="text-center flex flex-col justify-center">
-                  <Typography variant="h1" color="blue-gray" className="mb-2 text-6xl font-bold" {...defaultProps}>
-                    {stats.inProcessOrders}
-                  </Typography>
-                  <Typography variant="small" color="blue-gray" className="font-medium" {...defaultProps}>
-                    Orders In Process
-                  </Typography>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Welcome Card - Takes 1 column */}
-          <Card className="border border-blue-gray-100 shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-            <CardBody className="text-center py-6" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-              <Typography variant="h2" color="blue-gray" className="mb-2" {...defaultProps}>
-                HELLO
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {/* Today's Orders */}
+          <StatisticsCard
+            color="blue"
+            icon={<ShoppingCartIcon className="w-6 h-6 text-white" />}
+            title="New Orders Today"
+            value={stats.todayOrders}
+            footer={
+              <Typography className="!font-normal text-blue-gray-600" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <strong className="text-blue-gray-900">{formatCurrency(stats.todayOrdersValue)}</strong>
+                &nbsp;total value
               </Typography>
-              <Typography variant="small" color="blue-gray" className="font-medium" {...defaultProps}>
-                Welcome Admin
-              </Typography>
-            </CardBody>
-          </Card>
+            }
+          />
+
+          {/* Open Orders */}
+          <StatisticsCard
+            color="orange"
+            icon={<ClockIcon className="w-6 h-6 text-white" />}
+            title="Open Orders"
+            value={stats.openOrders}
+          />
+
+          {/* In Process Orders */}
+          <StatisticsCard
+            color="green"
+            icon={<CogIcon className="w-6 h-6 text-white" />}
+            title="Orders In Process"
+            value={stats.inProcessOrders}
+          />
         </div>
 
         {/* Recent Orders */}
