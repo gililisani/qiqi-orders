@@ -11,11 +11,11 @@ import {
 } from "@heroicons/react/24/solid";
 
 const text = {
-  className: "tw-w-5 tw-grid place-items-center !tw-font-medium",
+  className: "w-5 grid place-items-center !font-medium",
 };
 
 const icon = {
-  className: "tw-w-5 tw-h-5 tw-text-inherit",
+  className: "w-5 h-5 text-inherit",
 };
 
 export const adminRoutes = [

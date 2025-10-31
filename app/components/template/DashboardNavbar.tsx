@@ -47,10 +47,10 @@ export function DashboardNavbar() {
   return (
     <Navbar
       color={fixedNavbar ? "white" : "transparent"}
-      className={`tw-rounded-xl !tw-transition-all !tw-max-w-full ${
+      className={`rounded-xl !transition-all !max-w-full ${
         fixedNavbar
-          ? "!tw-sticky tw-top-4 tw-z-40 !tw-py-3 tw-shadow-md tw-shadow-blue-gray-500/5"
-          : "!tw-px-0 !tw-py-1"
+          ? "!sticky top-4 z-40 !py-3 shadow-md shadow-blue-gray-500/5"
+          : "!px-0 !py-1"
       }`}
       fullWidth
       blurred={fixedNavbar}
@@ -58,11 +58,11 @@ export function DashboardNavbar() {
       onPointerEnterCapture={undefined}
       onPointerLeaveCapture={undefined}
     >
-      <div className="!tw-flex tw-flex-col !tw-justify-between tw-gap-2 md:!tw-flex-row md:tw-items-center">
-        <div className="tw-capitalize">
+      <div className="!flex flex-col !justify-between gap-2 md:!flex-row md:items-center">
+        <div className="capitalize">
           <Breadcrumbs
-            className={`tw-bg-transparent !tw-p-0 tw-transition-all ${
-              fixedNavbar ? "tw-mt-1" : ""
+            className={`bg-transparent !p-0 transition-all ${
+              fixedNavbar ? "mt-1" : ""
             }`}
             placeholder={undefined}
             onPointerEnterCapture={undefined}
@@ -70,13 +70,13 @@ export function DashboardNavbar() {
           >
             <Link href="/admin">
               <IconButton size="sm" variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                <HomeIcon className="tw-h-4 tw-w-4 tw-text-gray-900" />
+                <HomeIcon className="h-4 w-4 text-gray-900" />
               </IconButton>
             </Link>
             <Typography
               variant="small"
               color="blue-gray"
-              className="!tw-font-normal tw-opacity-50 tw-transition-all hover:!tw-text-blue-gray-700 hover:tw-opacity-100"
+              className="!font-normal opacity-50 transition-all hover:!text-blue-gray-700 hover:opacity-100"
               placeholder={undefined}
               onPointerEnterCapture={undefined}
               onPointerLeaveCapture={undefined}
@@ -86,7 +86,7 @@ export function DashboardNavbar() {
             <Typography
               variant="small"
               color="blue-gray"
-              className="!tw-font-normal"
+              className="!font-normal"
               placeholder={undefined}
               onPointerEnterCapture={undefined}
               onPointerLeaveCapture={undefined}
@@ -98,31 +98,31 @@ export function DashboardNavbar() {
             {page?.split("-").join(" ")}
           </Typography>
         </div>
-        <div className="!tw-flex tw-items-center">
-          <div className="tw-mr-auto md:tw-mr-4 md:tw-w-56">
+        <div className="!flex items-center">
+          <div className="mr-auto md:mr-4 md:w-56">
             <Input label="Search" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} crossOrigin={undefined} />
           </div>
           <Link href="/login">
             <IconButton variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-              <UserCircleIcon className="tw-h-5 tw-w-5 tw-text-blue-gray-900" />
+              <UserCircleIcon className="h-5 w-5 text-blue-gray-900" />
             </IconButton>
           </Link>
           <IconButton
             variant="text"
             color="blue-gray"
-            className="tw-grid xl:tw-hidden"
+            className="grid xl:hidden"
             onClick={() => setOpenSidenav(dispatch, !openSidenav)}
             placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}
           >
             {openSidenav ? (
               <Bars3Icon
                 strokeWidth={3}
-                className="tw-h-6 tw-w-6 tw-text-gray-900"
+                className="h-6 w-6 text-gray-900"
               />
             ) : (
               <Bars3CenterLeftIcon
                 strokeWidth={3}
-                className="tw-h-6 tw-w-6 tw-text-gray-900"
+                className="h-6 w-6 text-gray-900"
               />
             )}
           </IconButton>
@@ -132,34 +132,34 @@ export function DashboardNavbar() {
             onClick={() => setOpenConfigurator(dispatch, true)}
             placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}
           >
-            <Cog6ToothIcon className="tw-h-5 tw-w-5 tw-text-gray-900" />
+            <Cog6ToothIcon className="h-5 w-5 text-gray-900" />
           </IconButton>
           <Menu>
             <MenuHandler>
               <span>
                 <Badge>
                   <IconButton variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                    <BellIcon className="tw-h-5 tw-w-5 tw-text-gray-900" />
+                    <BellIcon className="h-5 w-5 text-gray-900" />
                   </IconButton>
                 </Badge>
               </span>
             </MenuHandler>
-            <MenuList className="!tw-w-max tw-border tw-border-blue-gray-100" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-              <MenuItem className="tw-flex tw-items-center tw-gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                <EnvelopeIcon className="tw-h-5 tw-w-5 tw-text-gray-900" />
-                <Typography variant="small" className="!tw-font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+            <MenuList className="!w-max border border-blue-gray-100" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <MenuItem className="flex items-center gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <EnvelopeIcon className="h-5 w-5 text-gray-900" />
+                <Typography variant="small" className="!font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                   Check new messages
                 </Typography>
               </MenuItem>
-              <MenuItem className="tw-flex tw-items-center tw-gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                <MicrophoneIcon className="tw-h-5 tw-w-5 tw-text-gray-900" />
-                <Typography variant="small" className="!tw-font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <MenuItem className="flex items-center gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <MicrophoneIcon className="h-5 w-5 text-gray-900" />
+                <Typography variant="small" className="!font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                   Manage Podcast sessions
                 </Typography>
               </MenuItem>
-              <MenuItem className="tw-flex tw-items-center tw-gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                <ShoppingCartIcon className="tw-h-5 tw-w-5 tw-text-gray-900" />
-                <Typography variant="small" className="!tw-font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <MenuItem className="flex items-center gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <ShoppingCartIcon className="h-5 w-5 text-gray-900" />
+                <Typography variant="small" className="!font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                   Payment successfully completed
                 </Typography>
               </MenuItem>

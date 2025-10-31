@@ -25,16 +25,16 @@ import { ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useMaterialTailwindController, setOpenSidenav } from "@/app/context";
 
 const COLORS = {
-  dark: "tw-bg-gray-900 hover:tw-bg-gray-700 focus:tw-bg-gray-900 active:tw-bg-gray-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
-  blue: "tw-bg-blue-500 hover:tw-bg-blue-700 focus:tw-bg-blue-700 active:tw-bg-blue-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
+  dark: "bg-gray-900 hover:bg-gray-700 focus:bg-gray-900 active:bg-gray-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
+  blue: "bg-blue-500 hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
   "blue-gray":
-    "tw-bg-blue-gray-900 hover:tw-bg-blue-gray-900 focus:tw-bg-blue-gray-900 active:tw-bg-blue-gray-900 hover:tw-bg-opacity-80 focus:tw-bg-opacity-80 active:tw-bg-opacity-80",
+    "bg-blue-gray-900 hover:bg-blue-gray-900 focus:bg-blue-gray-900 active:bg-blue-gray-900 hover:bg-opacity-80 focus:bg-opacity-80 active:bg-opacity-80",
   green:
-    "tw-bg-green-500 hover:tw-bg-green-700 focus:tw-bg-green-700 active:tw-bg-green-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
+    "bg-green-500 hover:bg-green-700 focus:bg-green-700 active:bg-green-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
   orange:
-    "tw-bg-orange-500 hover:tw-bg-orange-700 focus:tw-bg-orange-700 active:tw-bg-orange-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
-  red: "tw-bg-red-500 hover:tw-bg-red-700 focus:tw-bg-red-700 active:tw-bg-red-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
-  pink: "tw-bg-pink-500 hover:tw-bg-pink-700 focus:tw-bg-pink-700 active:tw-bg-pink-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
+    "bg-orange-500 hover:bg-orange-700 focus:bg-orange-700 active:bg-orange-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
+  red: "bg-red-500 hover:bg-red-700 focus:bg-red-700 active:bg-red-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
+  pink: "bg-pink-500 hover:bg-pink-700 focus:bg-pink-700 active:bg-pink-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
 } as any;
 
 interface Route {
@@ -95,11 +95,11 @@ export default function Sidenav({
 
   const collapseItemClasses =
     sidenavType === "dark"
-      ? "tw-text-white hover:tw-bg-opacity-25 focus:tw-bg-opacity-100 active:tw-bg-opacity-10 hover:tw-text-white focus:tw-text-white active:tw-text-white"
+      ? "text-white hover:bg-opacity-25 focus:bg-opacity-100 active:bg-opacity-10 hover:text-white focus:text-white active:text-white"
       : "";
   const collapseHeaderClasses =
-    "tw-border-b-0 !tw-p-3 tw-text-inherit hover:tw-text-inherit focus:tw-text-inherit active:tw-text-inherit";
-  const activeRouteClasses = `${collapseItemClasses} ${COLORS[sidenavColor]} tw-text-white active:tw-text-white hover:tw-text-white focus:tw-text-white`;
+    "border-b-0 !p-3 text-inherit hover:text-inherit focus:text-inherit active:text-inherit";
+  const activeRouteClasses = `${collapseItemClasses} ${COLORS[sidenavColor]} text-white active:text-white hover:text-white focus:text-white`;
 
   return (
     <Card
@@ -113,20 +113,20 @@ export default function Sidenav({
       }
       shadow={sidenavType !== "transparent"}
       variant="gradient"
-      className={`!tw-fixed tw-top-4 !tw-z-50 tw-h-[calc(100vh-2rem)] tw-w-full tw-max-w-[18rem] tw-p-4 tw-shadow-blue-gray-900/5 ${
-        openSidenav ? "tw-left-4" : "-tw-left-72"
+      className={`!fixed top-4 !z-50 h-[calc(100vh-2rem)] w-full max-w-[18rem] p-4 shadow-blue-gray-900/5 ${
+        openSidenav ? "left-4" : "-left-72"
       } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
-        sidenavType === "dark" ? "!tw-text-white" : "tw-text-gray-900"
-      }} tw-transition-all tw-duration-300 tw-ease-in-out xl:tw-left-4 tw-overflow-y-scroll`}
+        sidenavType === "dark" ? "!text-white" : "text-gray-900"
+      }} transition-all duration-300 ease-in-out xl:left-4 overflow-y-scroll`}
       placeholder={undefined}
       onPointerEnterCapture={undefined}
       onPointerLeaveCapture={undefined}
     >
       <Link
         href="/admin"
-        className="tw-mb-2 tw-flex tw-items-center tw-gap-1 !tw-p-4"
+        className="mb-2 flex items-center gap-1 !p-4"
       >
-        <img src={brandImg} className="tw-h-7 tw-w-7" alt="logo" />
+        <img src={brandImg} className="h-7 w-7" alt="logo" />
         <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
           {brandName}
         </Typography>
@@ -135,15 +135,15 @@ export default function Sidenav({
         ripple={false}
         size="sm"
         variant="text"
-        className="!tw-absolute tw-top-1 tw-right-1 tw-block xl:tw-hidden"
+        className="!absolute top-1 right-1 block xl:hidden"
         onClick={() => setOpenSidenav(dispatch, false)}
         placeholder={undefined}
         onPointerEnterCapture={undefined}
         onPointerLeaveCapture={undefined}
       >
-        <XMarkIcon className="tw-w-5 tw-h-5" />
+        <XMarkIcon className="w-5 h-5" />
       </IconButton>
-      <List className="tw-text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+      <List className="text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
         {routes.map(
           ({ name, icon, pages, title, divider, external, path }, key) =>
             pages ? (
@@ -152,7 +152,7 @@ export default function Sidenav({
                   <Typography
                     variant="small"
                     color="inherit"
-                    className="tw-ml-2 tw-mt-4 tw-mb-1 tw-text-xs tw-font-bold tw-uppercase"
+                    className="ml-2 mt-4 mb-1 text-xs font-bold uppercase"
                     placeholder={undefined}
                     onPointerEnterCapture={undefined}
                     onPointerLeaveCapture={undefined}
@@ -165,8 +165,8 @@ export default function Sidenav({
                   icon={
                     <ChevronDownIcon
                       strokeWidth={2.5}
-                      className={`tw-mx-auto tw-h-3 tw-w-3 tw-text-inherit tw-transition-transform ${
-                        openCollapse === name ? "tw-rotate-180" : ""
+                      className={`mx-auto h-3 w-3 text-inherit transition-transform ${
+                        openCollapse === name ? "rotate-180" : ""
                       }`}
                     />
                   }
@@ -175,11 +175,11 @@ export default function Sidenav({
                   onPointerLeaveCapture={undefined}
                 >
                   <ListItem
-                    className={`!tw-overflow-hidden !tw-p-0 ${
+                    className={`!overflow-hidden !p-0 ${
                       openCollapse === name
                         ? sidenavType === "dark"
-                          ? "tw-bg-white/10"
-                          : "tw-bg-gray-200"
+                          ? "bg-white/10"
+                          : "bg-gray-200"
                         : ""
                     } ${collapseItemClasses}`}
                     selected={openCollapse === name}
@@ -197,7 +197,7 @@ export default function Sidenav({
                       <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{icon}</ListItemPrefix>
                       <Typography
                         color="inherit"
-                        className="tw-mr-auto tw-font-normal tw-capitalize"
+                        className="mr-auto font-normal capitalize"
                         placeholder={undefined}
                         onPointerEnterCapture={undefined}
                         onPointerLeaveCapture={undefined}
@@ -206,8 +206,8 @@ export default function Sidenav({
                       </Typography>
                     </AccordionHeader>
                   </ListItem>
-                  <AccordionBody className="!tw-py-1 tw-text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                    <List className="!tw-p-0 tw-text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <AccordionBody className="!py-1 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                    <List className="!p-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                       {pages.map((page: Route, key) =>
                         page.pages ? (
                           <Accordion
@@ -216,9 +216,9 @@ export default function Sidenav({
                             icon={
                               <ChevronDownIcon
                                 strokeWidth={2.5}
-                                className={`tw-mx-auto tw-h-3 tw-w-3 tw-text-inherit tw-transition-transform ${
+                                className={`mx-auto h-3 w-3 text-inherit transition-transform ${
                                   openSubCollapse === page.name
-                                    ? "tw-rotate-180"
+                                    ? "rotate-180"
                                     : ""
                                 }`}
                               />
@@ -228,11 +228,11 @@ export default function Sidenav({
                             onPointerLeaveCapture={undefined}
                           >
                             <ListItem
-                              className={`!tw-p-0 ${
+                              className={`!p-0 ${
                                 openSubCollapse === page.name
                                   ? sidenavType === "dark"
-                                    ? "tw-bg-white/10"
-                                    : "tw-bg-gray-200"
+                                    ? "bg-white/10"
+                                    : "bg-gray-200"
                                   : ""
                               } ${collapseItemClasses}`}
                               selected={openSubCollapse === page.name}
@@ -250,7 +250,7 @@ export default function Sidenav({
                                 <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{page.icon}</ListItemPrefix>
                                 <Typography
                                   color="inherit"
-                                  className="tw-mr-auto tw-font-normal tw-capitalize"
+                                  className="mr-auto font-normal capitalize"
                                   placeholder={undefined}
                                   onPointerEnterCapture={undefined}
                                   onPointerLeaveCapture={undefined}
@@ -259,8 +259,8 @@ export default function Sidenav({
                                 </Typography>
                               </AccordionHeader>
                             </ListItem>
-                            <AccordionBody className="!tw-py-1 tw-text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                              <List className="!tw-p-0 tw-ext-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                            <AccordionBody className="!py-1 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                              <List className="!p-0 ext-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                 {page.pages.map((subPage: Route, key: number) =>
                                   subPage.external ? (
                                     <a
@@ -270,7 +270,7 @@ export default function Sidenav({
                                     >
                                       <ListItem
                                         key={key}
-                                        className="tw-capitalize"
+                                        className="capitalize"
                                         placeholder={undefined}
                                         onPointerEnterCapture={undefined}
                                         onPointerLeaveCapture={undefined}
@@ -284,7 +284,7 @@ export default function Sidenav({
                                   ) : (
                                     <Link href={`${subPage.path}`} key={key}>
                                       <ListItem
-                                        className={`tw-capitalize ${
+                                        className={`capitalize ${
                                           pathname === `${subPage.path}`
                                             ? activeRouteClasses
                                             : collapseItemClasses
@@ -306,7 +306,7 @@ export default function Sidenav({
                           </Accordion>
                         ) : page.external ? (
                           <a key={key} href={page.path} target="_blank">
-                            <ListItem className="tw-capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                            <ListItem className="capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                               <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{page.icon}</ListItemPrefix>
                               {page.name}
                             </ListItem>
@@ -314,7 +314,7 @@ export default function Sidenav({
                         ) : (
                           <Link href={page.path!} key={key}>
                             <ListItem
-                              className={`tw-capitalize ${
+                              className={`capitalize ${
                                 pathname === `${page.path}`
                                   ? activeRouteClasses
                                   : collapseItemClasses
@@ -332,13 +332,13 @@ export default function Sidenav({
                     </List>
                   </AccordionBody>
                 </Accordion>
-                {divider && <hr className="tw-my-2 tw-border-blue-gray-50" />}
+                {divider && <hr className="my-2 border-blue-gray-50" />}
               </React.Fragment>
             ) : (
-              <List className="!tw-p-0 tw-text-inherit" key={key} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <List className="!p-0 text-inherit" key={key} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                 {external ? (
                   <a key={key} href={path} target="_blank">
-                    <ListItem className="tw-capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                    <ListItem className="capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                       <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{icon}</ListItemPrefix>
                       {name}
                     </ListItem>
@@ -346,7 +346,7 @@ export default function Sidenav({
                 ) : (
                   <Link href={`${path}`} key={key}>
                     <ListItem
-                      className={`tw-capitalize ${
+                      className={`capitalize ${
                         pathname === `${path}`
                           ? activeRouteClasses
                           : collapseItemClasses

@@ -38,7 +38,7 @@ export default function AdminLayoutWrapper({
   const isSimpleLayout = isAuthPages;
 
   return (
-    <div className="!tw-min-h-screen tw-bg-blue-gray-50/50">
+    <div className="min-h-screen bg-blue-gray-50/50">
       {!isSimpleLayout && (
         <Sidenav
           routes={routes}
@@ -50,7 +50,7 @@ export default function AdminLayoutWrapper({
           }
         />
       )}
-      <div className={`${isSimpleLayout ? "m-0" : "tw-p-4 xl:tw-ml-80"}`}>
+      <div className={`${isSimpleLayout ? "m-0" : "p-4 xl:ml-80"}`}>
         {!isSimpleLayout && (
           <>
             <DashboardNavbar />
