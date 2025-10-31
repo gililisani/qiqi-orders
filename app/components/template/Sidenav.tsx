@@ -307,7 +307,7 @@ export default function Sidenav({
                         ) : page.external ? (
                           <a key={key} href={page.path} target="_blank">
                             <ListItem className="tw-capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                              <ListItemPrefix>{page.icon}</ListItemPrefix>
+                              <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{page.icon}</ListItemPrefix>
                               {page.name}
                             </ListItem>
                           </a>
@@ -323,7 +323,7 @@ export default function Sidenav({
                               onPointerEnterCapture={undefined}
                               onPointerLeaveCapture={undefined}
                             >
-                              <ListItemPrefix>{page.icon}</ListItemPrefix>
+                              <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{page.icon}</ListItemPrefix>
                               {page.name}
                             </ListItem>
                           </Link>
