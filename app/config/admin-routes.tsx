@@ -13,6 +13,9 @@ import {
 const text = {
   color: "inherit",
   className: "tw-w-5 tw-grid place-items-center !tw-font-medium",
+  placeholder: undefined,
+  onPointerEnterCapture: undefined,
+  onPointerLeaveCapture: undefined,
 };
 
 const icon = {
