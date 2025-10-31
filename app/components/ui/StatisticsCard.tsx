@@ -28,7 +28,7 @@ export function StatisticsCard({
   footer = null,
 }: PropTypes) {
   return (
-    <Card className="border border-blue-gray-100 shadow-sm">
+    <Card className="border border-blue-gray-100 shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
       <div className="flex justify-between">
         <CardHeader
           variant="gradient"
