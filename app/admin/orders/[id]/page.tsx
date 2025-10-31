@@ -1,7 +1,8 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import AdminLayout from '../../../components/AdminLayout';
+import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../config/admin-routes';
 import OrderDetailsView from '../../../components/shared/OrderDetailsView';
 
 export default function AdminOrderViewPage() {
@@ -9,7 +10,7 @@ export default function AdminOrderViewPage() {
   const orderId = params.id as string;
 
   return (
-    <AdminLayout>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <div className="space-y-8 pb-16">
         <OrderDetailsView
           role="admin"
@@ -19,6 +20,6 @@ export default function AdminOrderViewPage() {
           packingSlipUrl={`/admin/orders/${orderId}/packing-slip`}
         />
       </div>
-    </AdminLayout>
+    </AdminLayoutWrapper>
   );
 }

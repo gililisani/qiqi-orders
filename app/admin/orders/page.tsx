@@ -1,16 +1,17 @@
 "use client";
 
-import AdminLayout from '../../components/AdminLayout';
+import AdminLayoutWrapper from '../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../config/admin-routes';
 import OrdersListView from '../../components/shared/OrdersListView';
 
 export default function OrdersPage() {
   return (
-    <AdminLayout>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <OrdersListView
         role="admin"
         newOrderUrl="/admin/orders/new"
         viewOrderUrl={(id) => `/admin/orders/${id}`}
       />
-    </AdminLayout>
+    </AdminLayoutWrapper>
   );
 }
