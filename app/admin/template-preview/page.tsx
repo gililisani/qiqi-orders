@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardBody,
   Typography,
-} from "@/components/MaterialTailwind";
+} from "@material-tailwind/react";
 
 export default function TemplatePreviewPage() {
   return (
