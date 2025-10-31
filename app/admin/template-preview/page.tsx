@@ -132,17 +132,16 @@ export default function TemplatePreviewPage() {
           <Card className="border border-blue-gray-100 shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
             <CardHeader
               floated={false}
-              variant="gradient"
-              color="blue"
-              className="m-0 mb-4 rounded-b-none p-6 h-28 bg-gradient-to-r from-blue-600 to-blue-400"
+              shadow={false}
+              className="m-0 mb-4 rounded-b-none p-6 h-28 bg-white"
               placeholder={undefined}
               onPointerEnterCapture={undefined}
               onPointerLeaveCapture={undefined}
             >
-              <Typography variant="h6" color="white" className="font-medium" {...defaultProps}>
+              <Typography variant="h6" color="blue-gray" className="font-medium" {...defaultProps}>
                 Today's Orders
               </Typography>
-              <Typography variant="h2" color="white" {...defaultProps}>
+              <Typography variant="h2" color="blue-gray" {...defaultProps}>
                 {stats.todayOrders}
               </Typography>
             </CardHeader>
@@ -157,17 +156,16 @@ export default function TemplatePreviewPage() {
           <Card className="border border-blue-gray-100 shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
             <CardHeader
               floated={false}
-              variant="gradient"
-              color="green"
-              className="m-0 mb-4 rounded-b-none p-6 h-28 bg-gradient-to-r from-green-600 to-green-400"
+              shadow={false}
+              className="m-0 mb-4 rounded-b-none p-6 h-28 bg-white"
               placeholder={undefined}
               onPointerEnterCapture={undefined}
               onPointerLeaveCapture={undefined}
             >
-              <Typography variant="h6" color="white" className="font-medium" {...defaultProps}>
+              <Typography variant="h6" color="blue-gray" className="font-medium" {...defaultProps}>
                 Open Orders
               </Typography>
-              <Typography variant="h2" color="white" {...defaultProps}>
+              <Typography variant="h2" color="blue-gray" {...defaultProps}>
                 {stats.openOrders}
               </Typography>
             </CardHeader>
@@ -182,17 +180,16 @@ export default function TemplatePreviewPage() {
           <Card className="border border-blue-gray-100 shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
             <CardHeader
               floated={false}
-              variant="gradient"
-              color="orange"
-              className="m-0 mb-4 rounded-b-none p-6 h-28 bg-gradient-to-r from-orange-600 to-orange-400"
+              shadow={false}
+              className="m-0 mb-4 rounded-b-none p-6 h-28 bg-white"
               placeholder={undefined}
               onPointerEnterCapture={undefined}
               onPointerLeaveCapture={undefined}
             >
-              <Typography variant="h6" color="white" className="font-medium" {...defaultProps}>
+              <Typography variant="h6" color="blue-gray" className="font-medium" {...defaultProps}>
                 In Process
               </Typography>
-              <Typography variant="h2" color="white" {...defaultProps}>
+              <Typography variant="h2" color="blue-gray" {...defaultProps}>
                 {stats.inProcessOrders}
               </Typography>
             </CardHeader>
