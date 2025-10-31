@@ -54,6 +54,9 @@ export function DashboardNavbar() {
       }`}
       fullWidth
       blurred={fixedNavbar}
+      placeholder={undefined}
+      onPointerEnterCapture={undefined}
+      onPointerLeaveCapture={undefined}
     >
       <div className="!tw-flex tw-flex-col !tw-justify-between tw-gap-2 md:!tw-flex-row md:tw-items-center">
         <div className="tw-capitalize">
