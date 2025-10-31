@@ -133,7 +133,7 @@ export default function TemplatePreviewPage() {
             <CardHeader
               floated={false}
               shadow={false}
-              className="m-0 mb-4 rounded-b-none p-6 h-28 bg-white"
+              className="m-0 mb-2 rounded-b-none p-4 h-20 bg-white"
               placeholder={undefined}
               onPointerEnterCapture={undefined}
               onPointerLeaveCapture={undefined}
@@ -157,7 +157,7 @@ export default function TemplatePreviewPage() {
             <CardHeader
               floated={false}
               shadow={false}
-              className="m-0 mb-4 rounded-b-none p-6 h-28 bg-white"
+              className="m-0 mb-2 rounded-b-none p-4 h-20 bg-white"
               placeholder={undefined}
               onPointerEnterCapture={undefined}
               onPointerLeaveCapture={undefined}
@@ -181,7 +181,7 @@ export default function TemplatePreviewPage() {
             <CardHeader
               floated={false}
               shadow={false}
-              className="m-0 mb-4 rounded-b-none p-6 h-28 bg-white"
+              className="m-0 mb-2 rounded-b-none p-4 h-20 bg-white"
               placeholder={undefined}
               onPointerEnterCapture={undefined}
               onPointerLeaveCapture={undefined}
