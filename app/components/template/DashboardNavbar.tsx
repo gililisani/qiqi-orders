@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { supabase } from "../../../lib/supabaseClient";
 
 // @material-tailwind/react
 import {
@@ -10,7 +11,6 @@ import {
   Typography,
   IconButton,
   Breadcrumbs,
-  Input,
   Menu,
   MenuHandler,
   MenuList,
@@ -38,11 +38,47 @@ import {
   setOpenSidenav,
 } from "@/app/context";
 
+// Components
+import FeedbackPopup from "../ui/FeedbackPopup";
+
 export function DashboardNavbar() {
   const [controller, dispatch] = useMaterialTailwindController();
   const { fixedNavbar, openSidenav } = controller;
   const pathname = usePathname();
   const [layout, page] = pathname.split("/").filter((el) => el !== "");
+  const [userName, setUserName] = useState<string>('User');
+  const [userEmail, setUserEmail] = useState<string>('');
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const feedbackButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const response = await fetch(`/api/user-profile?userId=${user.id}`);
+          const data = await response.json();
+          if (data.success && data.user?.name) {
+            setUserName(data.user.name);
+          }
+          setUserEmail(user.email || data.user?.email || '');
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
   
   return (
     <Navbar
@@ -98,15 +134,48 @@ export function DashboardNavbar() {
             {page?.split("-").join(" ")}
           </Typography>
         </div>
-        <div className="!flex items-center">
-          <div className="mr-auto md:mr-4 md:w-56">
-            <Input label="Search" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} crossOrigin={undefined} />
-          </div>
-          <Link href="/login">
-            <IconButton variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-              <UserCircleIcon className="h-5 w-5 text-blue-gray-900" />
-            </IconButton>
-          </Link>
+        <div className="!flex items-center gap-2">
+          <button 
+            ref={feedbackButtonRef}
+            onClick={() => setFeedbackOpen(!feedbackOpen)}
+            className="hidden lg:inline-flex h-8 items-center rounded-full border border-[#e5e5e5] px-3 text-xs text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+          >
+            Feedback
+          </button>
+          <FeedbackPopup 
+            isOpen={feedbackOpen} 
+            onClose={() => setFeedbackOpen(false)}
+            buttonRef={feedbackButtonRef}
+          />
+          <Menu>
+            <MenuHandler>
+              <IconButton variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <UserCircleIcon className="h-5 w-5 text-blue-gray-900" />
+              </IconButton>
+            </MenuHandler>
+            <MenuList className="!w-64 border border-blue-gray-100" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <MenuItem className="flex flex-col items-start gap-1 py-3" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <Typography variant="small" className="!font-semibold text-gray-900" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  {userName}
+                </Typography>
+                <Typography variant="small" className="!font-normal text-gray-600" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  {userEmail}
+                </Typography>
+              </MenuItem>
+              <div className="border-t border-blue-gray-100 my-2"></div>
+              <MenuItem 
+                className="flex items-center gap-2 text-red-600 hover:text-red-700" 
+                onClick={handleLogout}
+                placeholder={undefined} 
+                onPointerEnterCapture={undefined} 
+                onPointerLeaveCapture={undefined}
+              >
+                <Typography variant="small" className="!font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  Log Out
+                </Typography>
+              </MenuItem>
+            </MenuList>
+          </Menu>
           <IconButton
             variant="text"
             color="blue-gray"
