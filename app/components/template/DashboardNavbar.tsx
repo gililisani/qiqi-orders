@@ -137,7 +137,7 @@ export function DashboardNavbar() {
           <Menu>
             <MenuHandler>
               <span>
-                <Badge placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <Badge>
                   <IconButton variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                     <BellIcon className="tw-h-5 tw-w-5 tw-text-gray-900" />
                   </IconButton>
