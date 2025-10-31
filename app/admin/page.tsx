@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
-import AdminLayout from '../components/AdminLayout';
+import AdminLayoutWrapper from '../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../config/admin-routes';
 import Link from 'next/link';
 import { generateNetSuiteCSV, downloadCSV, OrderForExport } from '../../lib/csvExport';
 import {
@@ -14,8 +15,7 @@ import {
   Button,
   Chip,
   Spinner,
-  Breadcrumbs,
-} from '../components/MaterialTailwind';
+} from '@material-tailwind/react';
 import { 
   ShoppingCartIcon, 
   ClockIcon, 
@@ -176,31 +176,23 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center gap-4">
-            <Spinner className="h-12 w-12" />
-            <Typography variant="h6" color="blue-gray">
+            <Spinner className="h-12 w-12" onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
+            <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
               Loading dashboard...
             </Typography>
           </div>
         </div>
-      </AdminLayout>
+      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        {/* Breadcrumbs */}
-        <Breadcrumbs>
-          <Link href="/admin" className="opacity-60">
-            Admin
-          </Link>
-          <span>Dashboard</span>
-        </Breadcrumbs>
-
-        <Typography variant="h4" color="blue-gray" className="font-bold">
+    <AdminLayoutWrapper routes={adminRoutes}>
+      <div className="mt-8 mb-4 space-y-6">
+        <Typography variant="h2" color="blue-gray" className="mb-6" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
           Dashboard Overview
         </Typography>
         
@@ -397,6 +389,6 @@ export default function AdminDashboard() {
           </CardBody>
         </Card>
       </div>
-    </AdminLayout>
+    </AdminLayoutWrapper>
   );
 }
