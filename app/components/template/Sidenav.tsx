@@ -118,13 +118,16 @@ export default function Sidenav({
       } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
         sidenavType === "dark" ? "!tw-text-white" : "tw-text-gray-900"
       }} tw-transition-all tw-duration-300 tw-ease-in-out xl:tw-left-4 tw-overflow-y-scroll`}
+      placeholder={undefined}
+      onPointerEnterCapture={undefined}
+      onPointerLeaveCapture={undefined}
     >
       <Link
         href="/admin"
         className="tw-mb-2 tw-flex tw-items-center tw-gap-1 !tw-p-4"
       >
         <img src={brandImg} className="tw-h-7 tw-w-7" alt="logo" />
-        <Typography variant="h6" color="blue-gray">
+        <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
           {brandName}
         </Typography>
       </Link>
@@ -134,10 +137,13 @@ export default function Sidenav({
         variant="text"
         className="!tw-absolute tw-top-1 tw-right-1 tw-block xl:tw-hidden"
         onClick={() => setOpenSidenav(dispatch, false)}
+        placeholder={undefined}
+        onPointerEnterCapture={undefined}
+        onPointerLeaveCapture={undefined}
       >
         <XMarkIcon className="tw-w-5 tw-h-5" />
       </IconButton>
-      <List className="tw-text-inherit">
+      <List className="tw-text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
         {routes.map(
           ({ name, icon, pages, title, divider, external, path }, key) =>
             pages ? (
@@ -147,6 +153,9 @@ export default function Sidenav({
                     variant="small"
                     color="inherit"
                     className="tw-ml-2 tw-mt-4 tw-mb-1 tw-text-xs tw-font-bold tw-uppercase"
+                    placeholder={undefined}
+                    onPointerEnterCapture={undefined}
+                    onPointerLeaveCapture={undefined}
                   >
                     {title}
                   </Typography>
@@ -161,6 +170,9 @@ export default function Sidenav({
                       }`}
                     />
                   }
+                  placeholder={undefined}
+                  onPointerEnterCapture={undefined}
+                  onPointerLeaveCapture={undefined}
                 >
                   <ListItem
                     className={`!tw-overflow-hidden !tw-p-0 ${
@@ -171,22 +183,31 @@ export default function Sidenav({
                         : ""
                     } ${collapseItemClasses}`}
                     selected={openCollapse === name}
+                    placeholder={undefined}
+                    onPointerEnterCapture={undefined}
+                    onPointerLeaveCapture={undefined}
                   >
                     <AccordionHeader
                       onClick={() => handleOpenCollapse(name)}
                       className={collapseHeaderClasses}
+                      placeholder={undefined}
+                      onPointerEnterCapture={undefined}
+                      onPointerLeaveCapture={undefined}
                     >
                       <ListItemPrefix>{icon}</ListItemPrefix>
                       <Typography
                         color="inherit"
                         className="tw-mr-auto tw-font-normal tw-capitalize"
+                        placeholder={undefined}
+                        onPointerEnterCapture={undefined}
+                        onPointerLeaveCapture={undefined}
                       >
                         {name}
                       </Typography>
                     </AccordionHeader>
                   </ListItem>
-                  <AccordionBody className="!tw-py-1 tw-text-inherit">
-                    <List className="!tw-p-0 tw-text-inherit">
+                  <AccordionBody className="!tw-py-1 tw-text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                    <List className="!tw-p-0 tw-text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                       {pages.map((page: Route, key) =>
                         page.pages ? (
                           <Accordion
@@ -202,6 +223,9 @@ export default function Sidenav({
                                 }`}
                               />
                             }
+                            placeholder={undefined}
+                            onPointerEnterCapture={undefined}
+                            onPointerLeaveCapture={undefined}
                           >
                             <ListItem
                               className={`!tw-p-0 ${
@@ -212,22 +236,31 @@ export default function Sidenav({
                                   : ""
                               } ${collapseItemClasses}`}
                               selected={openSubCollapse === page.name}
+                              placeholder={undefined}
+                              onPointerEnterCapture={undefined}
+                              onPointerLeaveCapture={undefined}
                             >
                               <AccordionHeader
                                 onClick={() => handleOpenSubCollapse(page.name)}
                                 className={collapseHeaderClasses}
+                                placeholder={undefined}
+                                onPointerEnterCapture={undefined}
+                                onPointerLeaveCapture={undefined}
                               >
                                 <ListItemPrefix>{page.icon}</ListItemPrefix>
                                 <Typography
                                   color="inherit"
                                   className="tw-mr-auto tw-font-normal tw-capitalize"
+                                  placeholder={undefined}
+                                  onPointerEnterCapture={undefined}
+                                  onPointerLeaveCapture={undefined}
                                 >
                                   {page.name}
                                 </Typography>
                               </AccordionHeader>
                             </ListItem>
-                            <AccordionBody className="!tw-py-1 tw-text-inherit">
-                              <List className="!tw-p-0 tw-ext-inherit">
+                            <AccordionBody className="!tw-py-1 tw-text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                              <List className="!tw-p-0 tw-ext-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                 {page.pages.map((subPage: Route, key: number) =>
                                   subPage.external ? (
                                     <a
@@ -238,6 +271,9 @@ export default function Sidenav({
                                       <ListItem
                                         key={key}
                                         className="tw-capitalize"
+                                        placeholder={undefined}
+                                        onPointerEnterCapture={undefined}
+                                        onPointerLeaveCapture={undefined}
                                       >
                                         <ListItemPrefix>
                                           {subPage.icon}
@@ -253,6 +289,9 @@ export default function Sidenav({
                                             ? activeRouteClasses
                                             : collapseItemClasses
                                         }`}
+                                        placeholder={undefined}
+                                        onPointerEnterCapture={undefined}
+                                        onPointerLeaveCapture={undefined}
                                       >
                                         <ListItemPrefix>
                                           {subPage.icon}
@@ -267,7 +306,7 @@ export default function Sidenav({
                           </Accordion>
                         ) : page.external ? (
                           <a key={key} href={page.path} target="_blank">
-                            <ListItem className="tw-capitalize">
+                            <ListItem className="tw-capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                               <ListItemPrefix>{page.icon}</ListItemPrefix>
                               {page.name}
                             </ListItem>
@@ -280,6 +319,9 @@ export default function Sidenav({
                                   ? activeRouteClasses
                                   : collapseItemClasses
                               }`}
+                              placeholder={undefined}
+                              onPointerEnterCapture={undefined}
+                              onPointerLeaveCapture={undefined}
                             >
                               <ListItemPrefix>{page.icon}</ListItemPrefix>
                               {page.name}
@@ -293,10 +335,10 @@ export default function Sidenav({
                 {divider && <hr className="tw-my-2 tw-border-blue-gray-50" />}
               </React.Fragment>
             ) : (
-              <List className="!tw-p-0 tw-text-inherit" key={key}>
+              <List className="!tw-p-0 tw-text-inherit" key={key} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                 {external ? (
                   <a key={key} href={path} target="_blank">
-                    <ListItem className="tw-capitalize">
+                    <ListItem className="tw-capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                       <ListItemPrefix>{icon}</ListItemPrefix>
                       {name}
                     </ListItem>
@@ -309,6 +351,9 @@ export default function Sidenav({
                           ? activeRouteClasses
                           : collapseItemClasses
                       }`}
+                      placeholder={undefined}
+                      onPointerEnterCapture={undefined}
+                      onPointerLeaveCapture={undefined}
                     >
                       <ListItemPrefix>{icon}</ListItemPrefix>
                       {name}
