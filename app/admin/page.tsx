@@ -202,7 +202,7 @@ export default function AdminDashboard() {
             <CardHeader
               floated={false}
               shadow={false}
-              className="m-0 mb-2 rounded-b-none p-4 h-20 bg-white"
+              className="m-0 rounded-b-none p-4 h-20 bg-white border-b border-blue-gray-50"
               placeholder={undefined}
               onPointerEnterCapture={undefined}
               onPointerLeaveCapture={undefined}
@@ -226,7 +226,7 @@ export default function AdminDashboard() {
             <CardHeader
               floated={false}
               shadow={false}
-              className="m-0 mb-2 rounded-b-none p-4 h-20 bg-white"
+              className="m-0 rounded-b-none p-4 h-20 bg-white border-b border-blue-gray-50"
               placeholder={undefined}
               onPointerEnterCapture={undefined}
               onPointerLeaveCapture={undefined}
@@ -250,7 +250,7 @@ export default function AdminDashboard() {
             <CardHeader
               floated={false}
               shadow={false}
-              className="m-0 mb-2 rounded-b-none p-4 h-20 bg-white"
+              className="m-0 rounded-b-none p-4 h-20 bg-white border-b border-blue-gray-50"
               placeholder={undefined}
               onPointerEnterCapture={undefined}
               onPointerLeaveCapture={undefined}
