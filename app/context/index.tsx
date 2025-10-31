@@ -21,12 +21,57 @@ type Action =
 
 type ContextType = [State, React.Dispatch<Action>];
 
-const initialState: State = {
+const STORAGE_KEY = "qiqi-dashboard-config";
+
+// Load settings from localStorage
+const loadSettings = (): Partial<State> => {
+  if (typeof window === "undefined") {
+    return {};
+  }
+  
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error("Error loading settings from localStorage:", error);
+  }
+  
+  return {};
+};
+
+// Save settings to localStorage
+const saveSettings = (newSettings: Partial<State>) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  
+  try {
+    // Load existing settings and merge with new ones
+    const existing = loadSettings();
+    const merged = { ...existing, ...newSettings };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+  } catch (error) {
+    console.error("Error saving settings to localStorage:", error);
+  }
+};
+
+const defaultState: State = {
   openSidenav: false,
   sidenavColor: "dark",
   sidenavType: "white",
   transparentNavbar: true,
   fixedNavbar: false,
+  openConfigurator: false,
+};
+
+const loadedSettings = loadSettings();
+const initialState: State = {
+  ...defaultState,
+  ...loadedSettings,
+  // These should not be persisted (UI state only)
+  openSidenav: false,
   openConfigurator: false,
 };
 
@@ -37,29 +82,47 @@ export const MaterialTailwind = React.createContext<ContextType>([
 MaterialTailwind.displayName = "MaterialTailwindContext";
 
 export function reducer(state: State, action: Action): State {
+  let newState: State;
+  
   switch (action.type) {
     case "OPEN_SIDENAV": {
-      return { ...state, openSidenav: action.value };
+      newState = { ...state, openSidenav: action.value };
+      break;
     }
     case "SIDENAV_TYPE": {
-      return { ...state, sidenavType: action.value };
+      newState = { ...state, sidenavType: action.value };
+      // Save to localStorage
+      saveSettings({ sidenavType: action.value });
+      break;
     }
     case "SIDENAV_COLOR": {
-      return { ...state, sidenavColor: action.value };
+      newState = { ...state, sidenavColor: action.value };
+      // Save to localStorage
+      saveSettings({ sidenavColor: action.value });
+      break;
     }
     case "TRANSPARENT_NAVBAR": {
-      return { ...state, transparentNavbar: action.value };
+      newState = { ...state, transparentNavbar: action.value };
+      // Save to localStorage
+      saveSettings({ transparentNavbar: action.value });
+      break;
     }
     case "FIXED_NAVBAR": {
-      return { ...state, fixedNavbar: action.value };
+      newState = { ...state, fixedNavbar: action.value };
+      // Save to localStorage
+      saveSettings({ fixedNavbar: action.value });
+      break;
     }
     case "OPEN_CONFIGURATOR": {
-      return { ...state, openConfigurator: action.value };
+      newState = { ...state, openConfigurator: action.value };
+      break;
     }
     default: {
       throw new Error("Unhandled action type");
     }
   }
+  
+  return newState;
 }
 
 export function MaterialTailwindControllerProvider({
