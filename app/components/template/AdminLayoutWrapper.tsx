@@ -3,6 +3,7 @@
 import React from "react";
 import Sidenav from "./Sidenav";
 import DashboardNavbar from "./DashboardNavbar";
+import Configurator from "./Configurator";
 import { usePathname } from "next/navigation";
 import { useMaterialTailwindController } from "@/app/context";
 
@@ -50,6 +51,7 @@ export default function AdminLayoutWrapper({
         {!isSimpleLayout && (
           <>
             <DashboardNavbar />
+            <Configurator />
           </>
         )}
         {children}
