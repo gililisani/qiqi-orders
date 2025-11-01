@@ -31,7 +31,7 @@ export default function AdminLayoutWrapper({
   brandImg = "/QIQI-Logo.svg",
 }: AdminLayoutWrapperProps) {
   const [controller] = useMaterialTailwindController();
-  const { sidenavType } = controller;
+  const { sidenavType, sidenavCollapsed } = controller;
   const pathname = usePathname();
 
   // Determine if this should show the full layout or not
@@ -47,7 +47,7 @@ export default function AdminLayoutWrapper({
           brandImg={brandImg}
         />
       )}
-      <div className={`${isSimpleLayout ? "m-0" : "p-4 xl:ml-80"}`}>
+      <div className={`${isSimpleLayout ? "m-0" : "p-4"} ${!isSimpleLayout && (sidenavCollapsed ? "xl:ml-[5rem]" : "xl:ml-80")}`}>
         {!isSimpleLayout && (
           <>
             <DashboardNavbar />
