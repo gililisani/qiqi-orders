@@ -11,6 +11,7 @@ import {
   Typography,
   IconButton,
   Breadcrumbs,
+  Input,
   Menu,
   MenuHandler,
   MenuList,
@@ -135,6 +136,16 @@ export function DashboardNavbar() {
           </Typography>
         </div>
         <div className="!flex items-center gap-2">
+          <div className="mr-auto md:mr-4 md:w-56 hidden lg:block">
+            <Input 
+              label="Search" 
+              placeholder="Search orders, companies, users..."
+              onPointerEnterCapture={undefined} 
+              onPointerLeaveCapture={undefined} 
+              crossOrigin={undefined}
+              disabled
+            />
+          </div>
           <button 
             ref={feedbackButtonRef}
             onClick={() => setFeedbackOpen(!feedbackOpen)}
