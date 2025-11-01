@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import AdminLayout from '../../../components/AdminLayout';
+import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../config/admin-routes';
 
 function SLIPreviewContent() {
   const searchParams = useSearchParams();
@@ -101,27 +102,27 @@ function SLIPreviewContent() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="flex items-center justify-center h-screen">
           <div className="text-lg">Generating SLI...</div>
         </div>
-      </AdminLayout>
+      </AdminLayoutWrapper>
     );
   }
 
   if (error) {
     return (
-      <AdminLayout>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="flex items-center justify-center h-screen">
           <div className="text-red-600 text-lg">{error}</div>
         </div>
-      </AdminLayout>
+      </AdminLayoutWrapper>
     );
   }
 
   if (isEditing && sliData) {
     return (
-      <AdminLayout>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="max-w-6xl mx-auto p-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <h1 className="text-2xl font-bold mb-6">Edit SLI</h1>
@@ -173,12 +174,12 @@ function SLIPreviewContent() {
             </div>
           </div>
         </div>
-      </AdminLayout>
+      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <AdminLayout>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <div className="p-6">
         <div className="mb-4 flex gap-4 print:hidden">
           <button
@@ -216,18 +217,18 @@ function SLIPreviewContent() {
           ` : ''}
         }
       `}</style>
-    </AdminLayout>
+    </AdminLayoutWrapper>
   );
 }
 
 export default function StandaloneSLIPreviewPage() {
   return (
     <Suspense fallback={
-      <AdminLayout>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="flex items-center justify-center h-screen">
           <div className="text-lg">Loading SLI...</div>
         </div>
-      </AdminLayout>
+      </AdminLayoutWrapper>
     }>
       <SLIPreviewContent />
     </Suspense>

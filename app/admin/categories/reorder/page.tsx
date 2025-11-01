@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
-import AdminLayout from '../../../components/AdminLayout';
+import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../config/admin-routes';
 import Link from 'next/link';
 
 interface Category {
@@ -133,16 +134,16 @@ export default function ReorderCategoriesPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="flex justify-center items-center min-h-64">
           <div className="text-lg">Loading categories...</div>
         </div>
-      </AdminLayout>
+      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <AdminLayout>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -286,6 +287,6 @@ export default function ReorderCategoriesPage() {
           </ul>
         </div>
       </div>
-    </AdminLayout>
+    </AdminLayoutWrapper>
   );
 }

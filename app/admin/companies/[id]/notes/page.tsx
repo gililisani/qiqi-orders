@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
-import AdminLayout from '../../../../components/AdminLayout';
+import AdminLayoutWrapper from '../../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../../config/admin-routes';
 import InnerPageShell from '../../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 import NotesView from '../../../../components/shared/NotesView';
@@ -47,20 +48,20 @@ export default function CompanyNotesPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="p-6">
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
             <p className="text-gray-600">Loading company...</p>
           </div>
         </div>
-      </AdminLayout>
+      </AdminLayoutWrapper>
     );
   }
 
   if (error) {
     return (
-      <AdminLayout>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
@@ -73,12 +74,12 @@ export default function CompanyNotesPage() {
             </Link>
           </div>
         </div>
-      </AdminLayout>
+      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <AdminLayout>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <div className="p-6">
         <InnerPageShell
           title={`Notes for ${company?.company_name}`}
@@ -107,6 +108,6 @@ export default function CompanyNotesPage() {
           />
         </InnerPageShell>
       </div>
-    </AdminLayout>
+    </AdminLayoutWrapper>
   );
 }

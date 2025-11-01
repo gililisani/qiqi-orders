@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
-import AdminLayout from '../../../components/AdminLayout';
+import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../config/admin-routes';
 import Link from 'next/link';
 import CategoryImageUpload from '../../../components/CategoryImageUpload';
 
@@ -56,7 +57,7 @@ export default function NewCategoryPage() {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -185,6 +186,6 @@ export default function NewCategoryPage() {
           </form>
         </div>
       </div>
-    </AdminLayout>
+    </AdminLayoutWrapper>
   );
 }

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import AdminLayout from '../../../components/AdminLayout';
+import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../config/admin-routes';
 import InnerPageShell from '../../../components/ui/InnerPageShell';
 import Card from '../../../components/ui/Card';
 import Link from 'next/link';
@@ -159,7 +160,7 @@ export default function CreateStandaloneSLIPage() {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <InnerPageShell
         title="Create Standalone SLI"
         breadcrumbs={[
@@ -701,7 +702,7 @@ export default function CreateStandaloneSLIPage() {
           </form>
         </div>
       </InnerPageShell>
-    </AdminLayout>
+    </AdminLayoutWrapper>
   );
 }
 

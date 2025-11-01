@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
-import AdminLayout from '../../../../components/AdminLayout';
+import AdminLayoutWrapper from '../../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../../config/admin-routes';
 import InnerPageShell from '../../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 
@@ -606,17 +607,17 @@ export default function EditCompanyPage() {
 
   if (initialLoading) {
     return (
-      <AdminLayout>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="p-6">
           <p>Loading company...</p>
         </div>
-      </AdminLayout>
+      </AdminLayoutWrapper>
     );
   }
 
   if (error && !formData.company_name) {
     return (
-      <AdminLayout>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Company Not Found</h1>
@@ -629,12 +630,12 @@ export default function EditCompanyPage() {
             </Link>
           </div>
         </div>
-      </AdminLayout>
+      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <AdminLayout>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <div className="p-6">
         <InnerPageShell
           title="Edit Company"
@@ -1265,6 +1266,6 @@ export default function EditCompanyPage() {
         </form>
         </InnerPageShell>
       </div>
-    </AdminLayout>
+    </AdminLayoutWrapper>
   );
 }

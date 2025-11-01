@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
-import AdminLayout from '../../../components/AdminLayout';
+import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../config/admin-routes';
 import Link from 'next/link';
 
 export default function NewIncotermPage() {
@@ -46,7 +47,7 @@ export default function NewIncotermPage() {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Add New Incoterm</h1>
@@ -111,6 +112,6 @@ export default function NewIncotermPage() {
           </div>
         </form>
       </div>
-    </AdminLayout>
+    </AdminLayoutWrapper>
   );
 }

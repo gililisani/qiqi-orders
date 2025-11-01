@@ -1,6 +1,7 @@
 'use client';
 
-import AdminLayout from '../../../components/AdminLayout';
+import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../config/admin-routes';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import FormField from '../../../components/ui/FormField';
@@ -18,7 +19,7 @@ import {
 
 export default function FormKitPage() {
   return (
-    <AdminLayout>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <TopNavbar />
       <div className="p-6 space-y-8">
         <h1 className="text-2xl font-bold">Form Kit</h1>
@@ -784,6 +785,6 @@ export default function FormKitPage() {
           </div>
         </Card>
       </div>
-    </AdminLayout>
+    </AdminLayoutWrapper>
   );
 }

@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
-import AdminLayout from '../../../components/AdminLayout';
+import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../config/admin-routes';
 import Card from '../../../components/ui/Card';
 import Link from 'next/link';
 
@@ -64,17 +65,17 @@ export default function AdminViewPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="p-6">
           <p>Loading admin...</p>
         </div>
-      </AdminLayout>
+      </AdminLayoutWrapper>
     );
   }
 
   if (error || !admin) {
     return (
-      <AdminLayout>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Admin Not Found</h1>
@@ -87,12 +88,12 @@ export default function AdminViewPage() {
             </Link>
           </div>
         </div>
-      </AdminLayout>
+      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <AdminLayout>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">{admin.name}</h1>
@@ -187,6 +188,6 @@ export default function AdminViewPage() {
           </Card>
         </div>
       </div>
-    </AdminLayout>
+    </AdminLayoutWrapper>
   );
 }

@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import AdminLayout from '../../../../components/AdminLayout';
+import AdminLayoutWrapper from '../../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../../config/admin-routes';
 import InnerPageShell from '../../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 import ImageUpload from '../../../../components/ImageUpload';
@@ -192,16 +193,16 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   if (loading) {
     return (
-      <AdminLayout>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="p-6">
           <p>Loading product...</p>
         </div>
-      </AdminLayout>
+      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <AdminLayout>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <InnerPageShell
         title="Edit Product"
         breadcrumbs={[{ label: 'Products', href: '/admin/products' }, { label: 'Edit' }]}
@@ -493,6 +494,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         </form>
         </div>
       </InnerPageShell>
-    </AdminLayout>
+    </AdminLayoutWrapper>
   );
 }
