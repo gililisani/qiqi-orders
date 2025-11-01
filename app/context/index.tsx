@@ -9,6 +9,7 @@ interface State {
   transparentNavbar: boolean;
   fixedNavbar: boolean;
   openConfigurator: boolean;
+  sidenavCollapsed: boolean;
 }
 
 type Action =
@@ -17,7 +18,8 @@ type Action =
   | { type: "SIDENAV_COLOR"; value: string }
   | { type: "TRANSPARENT_NAVBAR"; value: boolean }
   | { type: "FIXED_NAVBAR"; value: boolean }
-  | { type: "OPEN_CONFIGURATOR"; value: boolean };
+  | { type: "OPEN_CONFIGURATOR"; value: boolean }
+  | { type: "SIDENAV_COLLAPSED"; value: boolean };
 
 type ContextType = [State, React.Dispatch<Action>];
 
@@ -64,6 +66,7 @@ const defaultState: State = {
   transparentNavbar: true,
   fixedNavbar: false,
   openConfigurator: false,
+  sidenavCollapsed: false,
 };
 
 const loadedSettings = loadSettings();
@@ -115,6 +118,12 @@ export function reducer(state: State, action: Action): State {
     }
     case "OPEN_CONFIGURATOR": {
       newState = { ...state, openConfigurator: action.value };
+      break;
+    }
+    case "SIDENAV_COLLAPSED": {
+      newState = { ...state, sidenavCollapsed: action.value };
+      // Save to localStorage
+      saveSettings({ sidenavCollapsed: action.value });
       break;
     }
     default: {
@@ -182,3 +191,7 @@ export const setOpenConfigurator = (
   dispatch: React.Dispatch<Action>,
   value: boolean
 ) => dispatch({ type: "OPEN_CONFIGURATOR", value });
+export const setSidenavCollapsed = (
+  dispatch: React.Dispatch<Action>,
+  value: boolean
+) => dispatch({ type: "SIDENAV_COLLAPSED", value });

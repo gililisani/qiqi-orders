@@ -19,10 +19,10 @@ import {
 } from "@material-tailwind/react";
 
 // @heroicons/react
-import { ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 
 // Context
-import { useMaterialTailwindController, setOpenSidenav } from "@/app/context";
+import { useMaterialTailwindController, setOpenSidenav, setSidenavCollapsed } from "@/app/context";
 
 const COLORS = {
   dark: "bg-gray-900 hover:bg-gray-700 focus:bg-gray-900 active:bg-gray-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
@@ -61,7 +61,7 @@ export default function Sidenav({
   const pathname = usePathname();
   const [controller, dispatch] = useMaterialTailwindController();
 
-  const { sidenavType, sidenavColor, openSidenav }: any = controller;
+  const { sidenavType, sidenavColor, openSidenav, sidenavCollapsed }: any = controller;
 
   const [openCollapse, setOpenCollapse] = React.useState<string | null>(null);
   const [openSubCollapse, setOpenSubCollapse] = React.useState<string | null>(null);
@@ -113,7 +113,9 @@ export default function Sidenav({
       }
       shadow={sidenavType !== "transparent"}
       variant="gradient"
-      className={`!fixed top-4 !z-50 h-[calc(100vh-2rem)] w-full max-w-[18rem] p-4 shadow-blue-gray-900/5 ${
+      className={`!fixed top-4 !z-50 h-[calc(100vh-2rem)] ${
+        sidenavCollapsed ? "w-[5rem] max-w-[5rem]" : "w-full max-w-[18rem]"
+      } p-4 shadow-blue-gray-900/5 ${
         openSidenav ? "left-4" : "-left-72"
       } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
         sidenavType === "dark" ? "!text-white" : "text-gray-900"
@@ -140,12 +142,28 @@ export default function Sidenav({
       >
         <XMarkIcon className="w-5 h-5" />
       </IconButton>
+      <IconButton
+        ripple={false}
+        size="sm"
+        variant="text"
+        className="!absolute top-12 right-1 hidden xl:block"
+        onClick={() => setSidenavCollapsed(dispatch, !sidenavCollapsed)}
+        placeholder={undefined}
+        onPointerEnterCapture={undefined}
+        onPointerLeaveCapture={undefined}
+      >
+        {sidenavCollapsed ? (
+          <ChevronRightIcon className="w-5 h-5" />
+        ) : (
+          <ChevronLeftIcon className="w-5 h-5" />
+        )}
+      </IconButton>
       <List className="text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
         {routes.map(
           ({ name, icon, pages, title, divider, external, path }, key) =>
             pages ? (
               <React.Fragment key={key}>
-                {title && (
+                {title && !sidenavCollapsed && (
                   <Typography
                     variant="small"
                     color="inherit"
@@ -192,15 +210,17 @@ export default function Sidenav({
                       onPointerLeaveCapture={undefined}
                     >
                       <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{icon}</ListItemPrefix>
-                      <Typography
-                        color="inherit"
-                        className="mr-auto font-normal capitalize"
-                        placeholder={undefined}
-                        onPointerEnterCapture={undefined}
-                        onPointerLeaveCapture={undefined}
-                      >
-                        {name}
-                      </Typography>
+                      {!sidenavCollapsed && (
+                        <Typography
+                          color="inherit"
+                          className="mr-auto font-normal capitalize"
+                          placeholder={undefined}
+                          onPointerEnterCapture={undefined}
+                          onPointerLeaveCapture={undefined}
+                        >
+                          {name}
+                        </Typography>
+                      )}
                     </AccordionHeader>
                   </ListItem>
                   <AccordionBody className="!py-1 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
@@ -245,15 +265,17 @@ export default function Sidenav({
                                 onPointerLeaveCapture={undefined}
                               >
                                 <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{page.icon}</ListItemPrefix>
-                                <Typography
-                                  color="inherit"
-                                  className="mr-auto font-normal capitalize"
-                                  placeholder={undefined}
-                                  onPointerEnterCapture={undefined}
-                                  onPointerLeaveCapture={undefined}
-                                >
-                                  {page.name}
-                                </Typography>
+                                {!sidenavCollapsed && (
+                                  <Typography
+                                    color="inherit"
+                                    className="mr-auto font-normal capitalize"
+                                    placeholder={undefined}
+                                    onPointerEnterCapture={undefined}
+                                    onPointerLeaveCapture={undefined}
+                                  >
+                                    {page.name}
+                                  </Typography>
+                                )}
                               </AccordionHeader>
                             </ListItem>
                             <AccordionBody className="!py-1 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
@@ -275,7 +297,7 @@ export default function Sidenav({
                                         <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                           {subPage.icon}
                                         </ListItemPrefix>
-                                        {subPage.name}
+                                        {!sidenavCollapsed && subPage.name}
                                       </ListItem>
                                     </a>
                                   ) : (
@@ -293,7 +315,7 @@ export default function Sidenav({
                                         <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                           {subPage.icon}
                                         </ListItemPrefix>
-                                        {subPage.name}
+                                        {!sidenavCollapsed && subPage.name}
                                       </ListItem>
                                     </Link>
                                   )
@@ -305,7 +327,7 @@ export default function Sidenav({
                           <a key={key} href={page.path} target="_blank">
                             <ListItem className="capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                               <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{page.icon}</ListItemPrefix>
-                              {page.name}
+                              {!sidenavCollapsed && page.name}
                             </ListItem>
                           </a>
                         ) : (
@@ -321,7 +343,7 @@ export default function Sidenav({
                               onPointerLeaveCapture={undefined}
                             >
                               <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{page.icon}</ListItemPrefix>
-                              {page.name}
+                              {!sidenavCollapsed && page.name}
                             </ListItem>
                           </Link>
                         )
@@ -337,7 +359,7 @@ export default function Sidenav({
                   <a key={key} href={path} target="_blank">
                     <ListItem className="capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                       <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{icon}</ListItemPrefix>
-                      {name}
+                      {!sidenavCollapsed && name}
                     </ListItem>
                   </a>
                 ) : (
@@ -353,7 +375,7 @@ export default function Sidenav({
                       onPointerLeaveCapture={undefined}
                     >
                       <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{icon}</ListItemPrefix>
-                      {name}
+                      {!sidenavCollapsed && name}
                     </ListItem>
                   </Link>
                 )}

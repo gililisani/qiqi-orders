@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
-import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../../config/admin-routes';
+import AdminLayoutWrapper from '../../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../../config/admin-routes';
 import Card from '../../../components/ui/Card';
 import Link from 'next/link';
 
