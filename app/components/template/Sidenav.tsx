@@ -181,7 +181,7 @@ export default function Sidenav({
     >
       <Link
         href={pathname.startsWith("/client") ? "/client" : "/admin"}
-        className={`mb-2 flex items-center justify-center ${sidenavCollapsed && !isHovering ? "!p-2" : "!p-4"}`}
+        className={`flex items-center justify-center ${sidenavCollapsed && !isHovering ? "h-12 !p-2" : "h-20 !p-4"}`}
       >
         <img src={brandImg} className={`${sidenavCollapsed && !isHovering ? "h-8" : "h-12"} w-auto`} alt="logo" />
       </Link>
@@ -201,7 +201,7 @@ export default function Sidenav({
         ripple={false}
         size="sm"
         variant="text"
-        className="!absolute top-12 right-1 hidden xl:block"
+        className="!absolute top-3 right-1 hidden xl:block"
         onClick={handleToggleCollapse}
         placeholder={undefined}
         onPointerEnterCapture={undefined}
@@ -247,7 +247,7 @@ export default function Sidenav({
                   onPointerLeaveCapture={undefined}
                 >
                   <ListItem
-                    className={`!overflow-hidden !p-0 ${
+                    className={`!p-0 ${
                       openCollapse === name
                         ? sidenavType === "dark"
                           ? "bg-white/10"
