@@ -9,12 +9,6 @@ import { usePathname } from "next/navigation";
 import {
   Card,
   Typography,
-  List,
-  ListItem,
-  ListItemPrefix,
-  Accordion,
-  AccordionHeader,
-  AccordionBody,
   IconButton,
 } from "@material-tailwind/react";
 
@@ -97,7 +91,6 @@ export default function Sidenav({
   React.useEffect(() => {
     routes.forEach((route) => {
       if (route.pages) {
-        // Check if any sub-page matches current pathname
         const hasActiveSubPage = route.pages.some((page) => {
           if (page.path) {
             return pathname === page.path || pathname.startsWith(page.path + '/');
@@ -108,7 +101,6 @@ export default function Sidenav({
           setOpenCollapse(route.name);
         }
         
-        // Check nested pages
         route.pages.forEach((page) => {
           if (page.pages) {
             const hasActiveNestedPage = page.pages.some((subPage) => {
@@ -127,7 +119,6 @@ export default function Sidenav({
     });
   }, [pathname, routes]);
 
-  // Simple click outside handler
   React.useEffect(() => {
     const handleClick = (event: MouseEvent) => {
       if (sidenavRef.current && !sidenavRef.current.contains(event.target as Node)) {
@@ -140,13 +131,9 @@ export default function Sidenav({
     }
   }, [openSidenav]);
 
-  const collapseItemClasses =
-    sidenavType === "dark"
-      ? "text-white hover:bg-opacity-25 focus:bg-opacity-100 active:bg-opacity-10 hover:text-white focus:text-white active:text-white"
-      : "";
-  const collapseHeaderClasses =
-    "border-b-0 !min-h-[2.5rem] text-inherit hover:text-inherit focus:text-inherit active:text-inherit";
-  const activeRouteClasses = `${collapseItemClasses} ${COLORS[sidenavColor]} text-white active:text-white hover:text-white focus:text-white`;
+  const isCollapsed = sidenavCollapsed && !isHovering;
+  const baseItemClasses = "cursor-pointer transition-all";
+  const activeRouteClasses = `${COLORS[sidenavColor]} text-white`;
 
   return (
     <Card
@@ -161,8 +148,8 @@ export default function Sidenav({
       shadow={sidenavType !== "transparent"}
       variant="gradient"
       className={`!fixed top-4 !z-50 h-[calc(100vh-2rem)] ${
-        sidenavCollapsed && !isHovering ? "w-[5rem] max-w-[5rem]" : "w-full max-w-[18rem]"
-      } ${sidenavCollapsed && !isHovering ? "p-2" : "p-4"} shadow-blue-gray-900/5 ${
+        isCollapsed ? "w-[5rem] max-w-[5rem]" : "w-full max-w-[18rem]"
+      } ${isCollapsed ? "p-2" : "p-4"} shadow-blue-gray-900/5 ${
         openSidenav ? "left-4" : "-left-72"
       } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
         sidenavType === "dark" ? "!text-white" : "text-gray-900"
@@ -175,9 +162,9 @@ export default function Sidenav({
     >
       <Link
         href={pathname.startsWith("/client") ? "/client" : "/admin"}
-        className={`flex items-center justify-center ${sidenavCollapsed && !isHovering ? "h-12 !p-2" : "h-20 !p-4"}`}
+        className={`flex items-center justify-center ${isCollapsed ? "h-12 !p-2" : "h-20 !p-4"}`}
       >
-        <img src={brandImg} className={`${sidenavCollapsed && !isHovering ? "h-8" : "h-12"} w-auto`} alt="logo" />
+        <img src={brandImg} className={`${isCollapsed ? "h-8" : "h-12"} w-auto`} alt="logo" />
       </Link>
       <IconButton
         ripple={false}
@@ -191,237 +178,174 @@ export default function Sidenav({
       >
         <XMarkIcon className="w-5 h-5" />
       </IconButton>
-      <List className="text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-        {routes.map(
-          ({ name, icon, pages, title, divider, external, path }, key) =>
-            pages ? (
-              <React.Fragment key={key}>
-                {title && !(sidenavCollapsed && !isHovering) && (
-                  <Typography
-                    variant="small"
-                    color="inherit"
-                    className="ml-2 mt-4 mb-1 text-xs font-bold uppercase"
-                    placeholder={undefined}
-                    onPointerEnterCapture={undefined}
-                    onPointerLeaveCapture={undefined}
-                  >
-                    {title}
-                  </Typography>
-                )}
-                <Accordion
-                  open={openCollapse === name}
-                  icon={
-                    sidenavCollapsed && !isHovering ? null : (
-                      <ChevronDownIcon
-                        strokeWidth={2.5}
-                        className={`mx-auto h-3 w-3 text-inherit transition-transform ${
-                          openCollapse === name ? "rotate-180" : ""
-                        }`}
-                      />
-                    )
-                  }
+
+      <div className="text-inherit">
+        {routes.map(({ name, icon, pages, title, divider, external, path }, key) =>
+          pages ? (
+            <React.Fragment key={key}>
+              {title && !isCollapsed && (
+                <Typography
+                  variant="small"
+                  color="inherit"
+                  className="ml-2 mt-4 mb-1 text-xs font-bold uppercase"
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
                 >
-                  <ListItem
-                    className={`${!(sidenavCollapsed && !isHovering) ? "!overflow-hidden" : ""} !p-0 ${
-                      openCollapse === name
-                        ? sidenavType === "dark"
-                          ? "bg-white/10"
-                          : "bg-gray-200"
-                        : ""
-                    } ${collapseItemClasses}`}
-                    selected={openCollapse === name}
-                    placeholder={undefined}
-                    onPointerEnterCapture={undefined}
-                    onPointerLeaveCapture={undefined}
-                  >
-                    <AccordionHeader
-                      onClick={() => handleOpenCollapse(name)}
-                      className={`${collapseHeaderClasses} ${sidenavCollapsed && !isHovering ? "!py-2 !px-0" : "!p-3"}`}
+                  {title}
+                </Typography>
+              )}
+              
+              {/* Accordion Wrapper */}
+              <div className={openCollapse === name && sidenavType === "dark" ? "bg-white/10" : openCollapse === name ? "bg-gray-200" : ""}>
+                {/* Accordion Header */}
+                <div 
+                  onClick={() => handleOpenCollapse(name)}
+                  className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
+                >
+                  <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                    {icon}
+                  </div>
+                  {!isCollapsed && (
+                    <Typography
+                      color="inherit"
+                      className="flex-1 font-normal capitalize"
                       placeholder={undefined}
                       onPointerEnterCapture={undefined}
                       onPointerLeaveCapture={undefined}
                     >
-                      <ListItemPrefix className={sidenavCollapsed && !isHovering ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{icon}</ListItemPrefix>
-                      {!(sidenavCollapsed && !isHovering) && (
-                        <Typography
-                          color="inherit"
-                          className="mr-auto font-normal capitalize"
-                          placeholder={undefined}
-                          onPointerEnterCapture={undefined}
-                          onPointerLeaveCapture={undefined}
-                        >
-                          {name}
-                        </Typography>
-                      )}
-                    </AccordionHeader>
-                  </ListItem>
-                  <AccordionBody className={`!py-1 ${sidenavCollapsed && !isHovering ? "!pl-0" : ""} text-inherit`} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                    <List className="!p-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                      {pages.map((page: Route, key) =>
-                        page.pages ? (
-                          <Accordion
-                            key={key}
-                            open={openSubCollapse === page.name}
-                            icon={
-                              sidenavCollapsed && !isHovering ? null : (
-                                <ChevronDownIcon
-                                  strokeWidth={2.5}
-                                  className={`mx-auto h-3 w-3 text-inherit transition-transform ${
-                                    openSubCollapse === page.name
-                                      ? "rotate-180"
-                                      : ""
-                                  }`}
-                                />
-                              )
-                            }
-                            className={sidenavCollapsed && !isHovering ? "!pl-0" : ""}
-                            placeholder={undefined}
-                            onPointerEnterCapture={undefined}
-                            onPointerLeaveCapture={undefined}
+                      {name}
+                    </Typography>
+                  )}
+                  {!isCollapsed && (
+                    <ChevronDownIcon
+                      strokeWidth={2.5}
+                      className={`h-3 w-3 transition-transform ${
+                        openCollapse === name ? "rotate-180" : ""
+                      }`}
+                    />
+                  )}
+                </div>
+
+                {/* Accordion Body */}
+                {openCollapse === name && (
+                  <div className={`${isCollapsed ? "" : "pl-0"}`}>
+                    {pages.map((page: Route, key) =>
+                      page.pages ? (
+                        // Nested Accordion
+                        <div key={key}>
+                          <div 
+                            onClick={() => handleOpenSubCollapse(page.name)}
+                            className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${
+                              openSubCollapse === page.name && sidenavType === "dark" ? "bg-white/10" : openSubCollapse === page.name ? "bg-gray-200" : ""
+                            } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
                           >
-                            <ListItem
-                              className={`!p-0 ${
-                                openSubCollapse === page.name
-                                  ? sidenavType === "dark"
-                                    ? "bg-white/10"
-                                    : "bg-gray-200"
-                                  : ""
-                              } ${collapseItemClasses}`}
-                              selected={openSubCollapse === page.name}
-                              placeholder={undefined}
-                              onPointerEnterCapture={undefined}
-                              onPointerLeaveCapture={undefined}
-                            >
-                              <AccordionHeader
-                                onClick={() => handleOpenSubCollapse(page.name)}
-                                className={`${collapseHeaderClasses} ${sidenavCollapsed && !isHovering ? "!py-2 !px-0" : "!p-3"}`}
+                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                              {page.icon}
+                            </div>
+                            {!isCollapsed && (
+                              <Typography
+                                color="inherit"
+                                className="flex-1 font-normal capitalize"
                                 placeholder={undefined}
                                 onPointerEnterCapture={undefined}
                                 onPointerLeaveCapture={undefined}
                               >
-                                <ListItemPrefix className={sidenavCollapsed && !isHovering ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{page.icon}</ListItemPrefix>
-                                {!(sidenavCollapsed && !isHovering) && (
-                                  <Typography
-                                    color="inherit"
-                                    className="mr-auto font-normal capitalize"
-                                    placeholder={undefined}
-                                    onPointerEnterCapture={undefined}
-                                    onPointerLeaveCapture={undefined}
-                                  >
-                                    {page.name}
-                                  </Typography>
-                                )}
-                              </AccordionHeader>
-                            </ListItem>
-                            <AccordionBody className={`!py-1 ${sidenavCollapsed && !isHovering ? "!pl-0" : ""} text-inherit`} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                              <List className="!p-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                                {page.pages.map((subPage: Route, key: number) =>
-                                  subPage.external ? (
-                                    <a
-                                      href={subPage.path}
-                                      target="_blank"
-                                      key={key}
-                                    >
-                                      <ListItem
-                                        key={key}
-                                        className={`capitalize ${sidenavCollapsed && !isHovering ? "!pl-0" : ""}`}
-                                        placeholder={undefined}
-                                        onPointerEnterCapture={undefined}
-                                        onPointerLeaveCapture={undefined}
-                                      >
-                                        <ListItemPrefix className={sidenavCollapsed && !isHovering ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                                          {subPage.icon}
-                                        </ListItemPrefix>
-                                        {!(sidenavCollapsed && !isHovering) && subPage.name}
-                                      </ListItem>
-                                    </a>
-                                  ) : (
-                                    <Link href={`${subPage.path}`} key={key}>
-                                      <ListItem
-                                        className={`capitalize ${sidenavCollapsed && !isHovering ? "!pl-0" : ""} ${
-                                          pathname === `${subPage.path}`
-                                            ? activeRouteClasses
-                                            : collapseItemClasses
-                                        }`}
-                                        placeholder={undefined}
-                                        onPointerEnterCapture={undefined}
-                                        onPointerLeaveCapture={undefined}
-                                      >
-                                        <ListItemPrefix className={sidenavCollapsed && !isHovering ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                                          {subPage.icon}
-                                        </ListItemPrefix>
-                                        {!(sidenavCollapsed && !isHovering) && subPage.name}
-                                      </ListItem>
-                                    </Link>
-                                  )
-                                )}
-                              </List>
-                            </AccordionBody>
-                          </Accordion>
-                        ) : page.external ? (
-                          <a key={key} href={page.path} target="_blank">
-                            <ListItem className={`capitalize ${sidenavCollapsed && !isHovering ? "!pl-0" : ""}`} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                              <ListItemPrefix className={sidenavCollapsed && !isHovering ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{page.icon}</ListItemPrefix>
-                              {!(sidenavCollapsed && !isHovering) && page.name}
-                            </ListItem>
-                          </a>
-                        ) : (
-                          <Link href={page.path!} key={key}>
-                            <ListItem
-                              className={`capitalize ${sidenavCollapsed && !isHovering ? "!pl-0" : ""} ${
-                                pathname === `${page.path}`
-                                  ? activeRouteClasses
-                                  : collapseItemClasses
-                              }`}
-                              placeholder={undefined}
-                              onPointerEnterCapture={undefined}
-                              onPointerLeaveCapture={undefined}
-                            >
-                              <ListItemPrefix className={sidenavCollapsed && !isHovering ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{page.icon}</ListItemPrefix>
-                              {!(sidenavCollapsed && !isHovering) && page.name}
-                            </ListItem>
-                          </Link>
-                        )
-                      )}
-                    </List>
-                  </AccordionBody>
-                </Accordion>
-                {divider && <hr className="my-2 border-blue-gray-50" />}
-              </React.Fragment>
-            ) : (
-              <List className="!p-0 text-inherit" key={key} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                {external ? (
-                  <a key={key} href={path} target="_blank">
-                    <ListItem className="capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                      <ListItemPrefix className={sidenavCollapsed && !isHovering ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{icon}</ListItemPrefix>
-                      {!(sidenavCollapsed && !isHovering) && name}
-                    </ListItem>
-                  </a>
-                ) : (
-                  <Link href={`${path}`} key={key}>
-                    <ListItem
-                      className={`capitalize ${
-                        pathname === `${path}`
-                          ? activeRouteClasses
-                          : collapseItemClasses
-                      }`}
-                      placeholder={undefined}
-                      onPointerEnterCapture={undefined}
-                      onPointerLeaveCapture={undefined}
-                    >
-                      <ListItemPrefix className={sidenavCollapsed && !isHovering ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{icon}</ListItemPrefix>
-                      {!(sidenavCollapsed && !isHovering) && name}
-                    </ListItem>
-                  </Link>
+                                {page.name}
+                              </Typography>
+                            )}
+                            {!isCollapsed && (
+                              <ChevronDownIcon
+                                strokeWidth={2.5}
+                                className={`h-3 w-3 transition-transform ${
+                                  openSubCollapse === page.name ? "rotate-180" : ""
+                                }`}
+                              />
+                            )}
+                          </div>
+                          {openSubCollapse === page.name && (
+                            <div>
+                              {page.pages.map((subPage: Route, key: number) =>
+                                subPage.external ? (
+                                  <a href={subPage.path} target="_blank" key={key}>
+                                    <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
+                                      <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                                        {subPage.icon}
+                                      </div>
+                                      {!isCollapsed && subPage.name}
+                                    </div>
+                                  </a>
+                                ) : (
+                                  <Link href={subPage.path!} key={key}>
+                                    <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${
+                                      pathname === subPage.path ? activeRouteClasses : ""
+                                    } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
+                                      <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                                        {subPage.icon}
+                                      </div>
+                                      {!isCollapsed && subPage.name}
+                                    </div>
+                                  </Link>
+                                )
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : page.external ? (
+                        <a key={key} href={page.path} target="_blank">
+                          <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
+                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                              {page.icon}
+                            </div>
+                            {!isCollapsed && page.name}
+                          </div>
+                        </a>
+                      ) : (
+                        <Link key={key} href={page.path!}>
+                          <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${
+                            pathname === page.path ? activeRouteClasses : ""
+                          } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
+                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                              {page.icon}
+                            </div>
+                            {!isCollapsed && page.name}
+                          </div>
+                        </Link>
+                      )
+                    )}
+                  </div>
                 )}
-              </List>
-            )
+              </div>
+              
+              {divider && <hr className="my-2 border-blue-gray-50" />}
+            </React.Fragment>
+          ) : (
+            <div key={key}>
+              {external ? (
+                <a href={path} target="_blank">
+                  <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
+                    <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                      {icon}
+                    </div>
+                    {!isCollapsed && name}
+                  </div>
+                </a>
+              ) : (
+                <Link href={path!}>
+                  <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${
+                    pathname === path ? activeRouteClasses : ""
+                  } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
+                    <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                      {icon}
+                    </div>
+                    {!isCollapsed && name}
+                  </div>
+                </Link>
+              )}
+            </div>
+          )
         )}
-      </List>
+      </div>
     </Card>
   );
 }
-
