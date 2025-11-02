@@ -1,77 +1,106 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+// @material-tailwind/react
 import {
   Card,
   Typography,
-  List,
-  ListItem,
-  ListItemPrefix,
-  Accordion,
-  AccordionHeader,
-  AccordionBody,
   IconButton,
 } from "@material-tailwind/react";
 
-import routes from "@/routes";
+// @heroicons/react
 import { ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useOnClickOutside } from "usehooks-ts";
-import { useMaterialTailwindController, setOpenSidenav } from "@/context";
+
+// Context
+import { useMaterialTailwindController, setOpenSidenav } from "@/app/context";
 
 const COLORS = {
-  dark: "tw-bg-gray-900 hover:tw-bg-gray-700 focus:tw-bg-gray-900 active:tw-bg-gray-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
-  blue: "tw-bg-blue-500 hover:tw-bg-blue-700 focus:tw-bg-blue-700 active:tw-bg-blue-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
+  dark: "bg-gray-900 hover:bg-gray-700 focus:bg-gray-900 active:bg-gray-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
+  blue: "bg-blue-500 hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
   "blue-gray":
-    "tw-bg-blue-gray-900 hover:tw-bg-blue-gray-900 focus:tw-bg-blue-gray-900 active:tw-bg-blue-gray-900 hover:tw-bg-opacity-80 focus:tw-bg-opacity-80 active:tw-bg-opacity-80",
+    "bg-blue-gray-900 hover:bg-blue-gray-900 focus:bg-blue-gray-900 active:bg-blue-gray-900 hover:bg-opacity-80 focus:bg-opacity-80 active:bg-opacity-80",
   green:
-    "tw-bg-green-500 hover:tw-bg-green-700 focus:tw-bg-green-700 active:tw-bg-green-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
+    "bg-green-500 hover:bg-green-700 focus:bg-green-700 active:bg-green-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
   orange:
-    "tw-bg-orange-500 hover:tw-bg-orange-700 focus:tw-bg-orange-700 active:tw-bg-orange-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
-  red: "tw-bg-red-500 hover:tw-bg-red-700 focus:tw-bg-red-700 active:tw-bg-red-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
-  pink: "tw-bg-pink-500 hover:tw-bg-pink-700 focus:tw-bg-pink-700 active:tw-bg-pink-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
-} as const;
+    "bg-orange-500 hover:bg-orange-700 focus:bg-orange-700 active:bg-orange-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
+  red: "bg-red-500 hover:bg-red-700 focus:bg-red-700 active:bg-red-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
+  pink: "bg-pink-500 hover:bg-pink-700 focus:bg-pink-700 active:bg-pink-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
+} as any;
 
-export default function Sidenav({
-  brandImg = "/img/logo-ct.png",
-  brandName = "Material Tailwind PRO",
-}: {
+interface Route {
+  name: string;
+  icon?: React.ReactNode;
+  pages?: Route[];
+  title?: string;
+  divider?: boolean;
+  external?: boolean;
+  path?: string;
+}
+
+interface SidenavProps {
   brandImg?: string;
   brandName?: string;
-}) {
+  routes?: Route[];
+}
+
+export default function Sidenav({
+  brandImg = "/QIQI-Logo.svg",
+  brandName,
+  routes = [],
+}: SidenavProps) {
   const pathname = usePathname();
   const [controller, dispatch] = useMaterialTailwindController();
-  const { sidenavType, sidenavColor, openSidenav }: any = controller;
 
-  // NEW: collapse state for whole sidebar + hover-to-peek
-  const [collapsed, setCollapsed] = React.useState(false);
-  const [hovering, setHovering] = React.useState(false);
-  const isRail = collapsed && !hovering;
+  const { sidenavType, sidenavColor, openSidenav, sidenavCollapsed }: any = controller;
 
-  // Existing accordions
   const [openCollapse, setOpenCollapse] = React.useState<string | null>(null);
   const [openSubCollapse, setOpenSubCollapse] = React.useState<string | null>(null);
+  const [isHovering, setIsHovering] = React.useState(false);
 
-  const handleOpenCollapse = (value: string) =>
+  const handleOpenCollapse = (value: string) => {
     setOpenCollapse((cur) => (cur === value ? null : value));
-  const handleOpenSubCollapse = (value: string) =>
+  };
+
+  const handleOpenSubCollapse = (value: string) => {
     setOpenSubCollapse((cur) => (cur === value ? null : value));
+  };
 
-  const sidenavRef = React.useRef<HTMLDivElement | null>(null);
-  const handleClickOutside = () => setOpenSidenav(dispatch, false);
-  useOnClickOutside(sidenavRef, handleClickOutside);
+  const sidenavRef = React.useRef<HTMLDivElement>(null);
 
-  const collapseItemClasses =
-    sidenavType === "dark"
-      ? "tw-text-white hover:tw-bg-opacity-25 focus:tw-bg-opacity-100 active:tw-bg-opacity-10 hover:tw-text-white focus:tw-text-white active:tw-text-white"
-      : "";
-  const collapseHeaderClasses =
-    "tw-border-b-0 !tw-p-3 tw-text-inherit hover:tw-text-inherit focus:tw-text-inherit active:tw-text-inherit";
-  const activeRouteClasses = `${collapseItemClasses} ${COLORS[sidenavColor as keyof typeof COLORS]} tw-text-white active:tw-text-white hover:tw-text-white focus:tw-text-white`;
+  const handleClickOutside = () => {
+    setOpenSidenav(dispatch, false);
+  };
+
+  const handleMouseEnter = () => {
+    if (sidenavCollapsed) {
+      setIsHovering(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (sidenavCollapsed) {
+      setIsHovering(false);
+    }
+  };
+
+  React.useEffect(() => {
+    const handleClick = (event: MouseEvent) => {
+      if (sidenavRef.current && !sidenavRef.current.contains(event.target as Node)) {
+        handleClickOutside();
+      }
+    };
+    if (openSidenav) {
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }
+  }, [openSidenav]);
+
+  const isCollapsed = sidenavCollapsed && !isHovering;
+  const activeRouteClasses = `${COLORS[sidenavColor]} text-white`;
 
   return (
     <Card
@@ -85,247 +114,256 @@ export default function Sidenav({
       }
       shadow={sidenavType !== "transparent"}
       variant="gradient"
-      className={[
-        "!tw-fixed tw-top-4 !tw-z-50 tw-h-[calc(100vh-2rem)]",
-        isRail ? "tw-w-[5rem] tw-max-w-[5rem] tw-p-2" : "tw-w-full tw-max-w-[18rem] tw-p-4",
-        "tw-shadow-blue-gray-900/5",
-        openSidenav ? "tw-left-4" : "-tw-left-72",
-        sidenavType === "transparent" ? "shadow-none" : "shadow-xl",
-        sidenavType === "dark" ? "!tw-text-white" : "tw-text-gray-900",
-        "tw-transition-all tw-duration-300 tw-ease-in-out xl:tw-left-4 tw-overflow-y-scroll",
-      ].join(" ")}
-      onMouseEnter={() => collapsed && setHovering(true)}
-      onMouseLeave={() => collapsed && setHovering(false)}
+      className={`!fixed top-4 !z-50 h-[calc(100vh-2rem)] transition-all duration-300 ease-in-out ${
+        isCollapsed ? "w-[5rem] max-w-[5rem]" : "w-full max-w-[18rem]"
+      } ${isCollapsed ? "p-2" : "p-4"} shadow-blue-gray-900/5 ${
+        openSidenav ? "left-4" : "-left-72"
+      } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
+        sidenavType === "dark" ? "!text-white" : "text-gray-900"
+      } xl:left-4 overflow-y-scroll`}
+      placeholder={undefined}
+      onPointerEnterCapture={undefined}
+      onPointerLeaveCapture={undefined}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
-      {/* Brand + toggles */}
-      <div className={["tw-flex tw-items-center", isRail ? "tw-justify-center tw-h-12 !tw-p-2" : "tw-justify-between tw-h-20 !tw-p-4"].join(" ")}>
-        <Link href="/" className="tw-flex tw-items-center tw-gap-2">
-          <img src={brandImg} className={isRail ? "tw-h-8 tw-w-auto" : "tw-h-7 tw-w-7"} alt="logo" />
-          {!isRail && (
-            <Typography variant="h6" color="blue-gray">
-              {brandName}
-            </Typography>
-          )}
-        </Link>
+      {/* Logo */}
+      <Link
+        href={pathname.startsWith("/client") ? "/client" : "/admin"}
+        className={`flex items-center justify-center ${isCollapsed ? "h-12 !p-2" : "h-20 !p-4"}`}
+      >
+        <img src={brandImg} className={`${isCollapsed ? "h-8" : "h-12"} w-auto`} alt="logo" />
+        {!isCollapsed && (
+          <Typography variant="h6" color="blue-gray" className="ml-3" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+            {brandName}
+          </Typography>
+        )}
+      </Link>
 
-        {/* Collapse toggle (desktop) */}
-        <button
-          type="button"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          onClick={() => setCollapsed((v) => !v)}
-          className="tw-hidden xl:tw-inline-flex tw-items-center tw-justify-center tw-rounded-md tw-p-2 tw-transition-opacity hover:tw-bg-gray-100/50"
-          title={collapsed ? "Expand" : "Collapse"}
-        >
-          {/* Icon toggles: hamburger when collapsed, arrow when expanded */}
-          <svg xmlns="http://www.w3.org/2000/svg" className="tw-h-5 tw-w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            {collapsed ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6h18M3 12h10M3 18h18" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H8m0 0l4-4m-4 4l4 4" />
-            )}
-          </svg>
-        </button>
+      {/* Close button */}
+      <IconButton
+        ripple={false}
+        size="sm"
+        variant="text"
+        className="!absolute top-1 right-1 block xl:hidden"
+        onClick={() => setOpenSidenav(dispatch, false)}
+        placeholder={undefined}
+        onPointerEnterCapture={undefined}
+        onPointerLeaveCapture={undefined}
+      >
+        <XMarkIcon className="w-5 h-5" />
+      </IconButton>
 
-        {/* Mobile close button */}
-        <IconButton
-          ripple={false}
-          size="sm"
-          variant="text"
-          className="!tw-absolute tw-top-1 tw-right-1 tw-block xl:tw-hidden"
-          onClick={() => setOpenSidenav(dispatch, false)}
-        >
-          <XMarkIcon className="tw-w-5 tw-h-5" />
-        </IconButton>
-      </div>
-
-      {/* NAV */}
-      <List className="tw-text-inherit">
-        {routes.map(({ name, icon, pages, title, divider, external, path }: any, key: number) =>
+      {/* Menu Items */}
+      <div>
+        {routes.map(({ name, icon, pages, title, divider, external, path }, key) =>
           pages ? (
-            <React.Fragment key={`${name}-${key}`}>
-              {!isRail && title && (
+            <div key={key} className="mb-1">
+              {title && !isCollapsed && (
                 <Typography
                   variant="small"
                   color="inherit"
-                  className="tw-ml-2 tw-mt-4 tw-mb-1 tw-text-xs tw-font-bold tw-uppercase"
+                  className="ml-2 mt-4 mb-1 text-xs font-bold uppercase"
+                  placeholder={undefined}
+                  onPointerEnterCapture={undefined}
+                  onPointerLeaveCapture={undefined}
                 >
                   {title}
                 </Typography>
               )}
-
-              <Accordion
-                open={openCollapse === name}
-                icon={
-                  !isRail ? (
+              
+              {/* Main Accordion Item */}
+              <div>
+                <button
+                  onClick={() => handleOpenCollapse(name)}
+                  className={`w-full flex items-center rounded-lg transition-colors ${
+                    isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
+                  } ${
+                    openCollapse === name && sidenavColor !== "white" && sidenavColor !== "transparent" && sidenavColor !== "gray"
+                      ? "bg-gray-200"
+                      : openCollapse === name && (sidenavColor === "white" || sidenavColor === "transparent" || sidenavColor === "gray")
+                      ? "bg-white/10"
+                      : ""
+                  } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
+                >
+                  <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                    {icon}
+                  </div>
+                  {!isCollapsed && (
+                    <Typography
+                      color="inherit"
+                      className="flex-1 font-normal capitalize"
+                      placeholder={undefined}
+                      onPointerEnterCapture={undefined}
+                      onPointerLeaveCapture={undefined}
+                    >
+                      {name}
+                    </Typography>
+                  )}
+                  {!isCollapsed && (
                     <ChevronDownIcon
                       strokeWidth={2.5}
-                      className={`tw-mx-auto tw-h-3 tw-w-3 tw-text-inherit tw-transition-transform ${
-                        openCollapse === name ? "tw-rotate-180" : ""
+                      className={`h-3 w-3 transition-transform ${
+                        openCollapse === name ? "rotate-180" : ""
                       }`}
                     />
-                  ) : null
-                }
-              >
-                <ListItem
-                  className={`!tw-overflow-hidden !tw-p-0 ${
-                    openCollapse === name
-                      ? sidenavType === "dark"
-                        ? "tw-bg-white/10"
-                        : "tw-bg-gray-200"
-                      : ""
-                  } ${collapseItemClasses} ${isRail ? "tw-justify-center" : ""}`}
-                  selected={openCollapse === name}
-                >
-                  <AccordionHeader
-                    onClick={() => handleOpenCollapse(name)}
-                    aria-expanded={openCollapse === name}
-                    className={[collapseHeaderClasses, isRail ? "tw-py-2 tw-px-0" : "tw-py-3 tw-px-3"].join(" ")}
-                  >
-                    <ListItemPrefix className={isRail ? "tw-mr-0" : "tw-mr-2"}>{icon}</ListItemPrefix>
-                    {!isRail && (
-                      <Typography color="inherit" className="tw-mr-auto tw-font-normal tw-capitalize">
-                        {name}
-                      </Typography>
-                    )}
-                  </AccordionHeader>
-                </ListItem>
+                  )}
+                </button>
 
-                <AccordionBody className="!tw-py-1 tw-text-inherit">
-                  <List className="!tw-p-0 tw-text-inherit">
-                    {pages.map((page: any, subKey: number) =>
+                {/* Submenu */}
+                {openCollapse === name && (
+                  <div className="transition-all duration-300 ease-in-out overflow-hidden">
+                    {pages.map((page: Route, idx) =>
                       page.pages ? (
-                        <Accordion
-                          key={`${page.name}-${subKey}`}
-                          open={openSubCollapse === page.name}
-                          icon={
-                            !isRail ? (
+                        /* Nested Accordion */
+                        <div key={idx}>
+                          <button
+                            onClick={() => handleOpenSubCollapse(page.name)}
+                            className={`w-full flex items-center rounded-lg transition-colors ${
+                              isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
+                            } ${
+                              openSubCollapse === page.name && sidenavColor !== "white" && sidenavColor !== "transparent" && sidenavColor !== "gray"
+                                ? "bg-gray-200"
+                                : openSubCollapse === page.name && (sidenavColor === "white" || sidenavColor === "transparent" || sidenavColor === "gray")
+                                ? "bg-white/10"
+                                : ""
+                            } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
+                          >
+                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                              {page.icon}
+                            </div>
+                            {!isCollapsed && (
+                              <Typography
+                                color="inherit"
+                                className="flex-1 font-normal capitalize"
+                                placeholder={undefined}
+                                onPointerEnterCapture={undefined}
+                                onPointerLeaveCapture={undefined}
+                              >
+                                {page.name}
+                              </Typography>
+                            )}
+                            {!isCollapsed && (
                               <ChevronDownIcon
                                 strokeWidth={2.5}
-                                className={`tw-mx-auto tw-h-3 tw-w-3 tw-text-inherit tw-transition-transform ${
-                                  openSubCollapse === page.name ? "tw-rotate-180" : ""
+                                className={`h-3 w-3 transition-transform ${
+                                  openSubCollapse === page.name ? "rotate-180" : ""
                                 }`}
                               />
-                            ) : null
-                          }
-                        >
-                          <ListItem
-                            className={`!tw-p-0 ${
-                              openSubCollapse === page.name
-                                ? sidenavType === "dark"
-                                  ? "tw-bg-white/10"
-                                  : "tw-bg-gray-200"
-                                : ""
-                            } ${collapseItemClasses} ${isRail ? "tw-justify-center" : ""}`}
-                            selected={openSubCollapse === page.name}
-                          >
-                            <AccordionHeader
-                              onClick={() => handleOpenSubCollapse(page.name)}
-                              aria-expanded={openSubCollapse === page.name}
-                              className={[collapseHeaderClasses, isRail ? "tw-py-2 tw-px-0" : "tw-py-3 tw-px-3"].join(" ")}
-                            >
-                              <ListItemPrefix className={isRail ? "tw-mr-0" : "tw-mr-2"}>
-                                {page.icon}
-                              </ListItemPrefix>
-                              {!isRail && (
-                                <Typography color="inherit" className="tw-mr-auto tw-font-normal tw-capitalize">
-                                  {page.name}
-                                </Typography>
-                              )}
-                            </AccordionHeader>
-                          </ListItem>
+                            )}
+                          </button>
 
-                          <AccordionBody className="!tw-py-1 tw-text-inherit">
-                            <List className="!tw-p-0 tw-text-inherit">
-                              {page.pages.map((subPage: any, i: number) =>
+                          {openSubCollapse === page.name && (
+                            <div className="transition-all duration-300 ease-in-out overflow-hidden">
+                              {page.pages.map((subPage: Route, subIdx: number) =>
                                 subPage.external ? (
                                   <a
-                                    key={`${subPage.name}-${i}`}
+                                    key={subIdx}
                                     href={subPage.path}
                                     target="_blank"
-                                    rel="noopener noreferrer"
+                                    className={`w-full flex items-center rounded-lg transition-colors ${
+                                      isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
+                                    } ${
+                                      pathname === subPage.path ? activeRouteClasses : ""
+                                    } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
                                   >
-                                    <ListItem
-                                      className={`tw-capitalize ${isRail ? "tw-justify-center tw-py-2 tw-px-0" : ""}`}
-                                    >
-                                      <ListItemPrefix className={isRail ? "tw-mr-0" : "tw-mr-2"}>
-                                        {subPage.icon}
-                                      </ListItemPrefix>
-                                      {!isRail && subPage.name}
-                                    </ListItem>
+                                    <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                                      {subPage.icon}
+                                    </div>
+                                    {!isCollapsed && subPage.name}
                                   </a>
                                 ) : (
-                                  <Link href={`${subPage.path}`} key={`${subPage.name}-${i}`}>
-                                    <ListItem
-                                      className={`tw-capitalize ${
-                                        pathname === `${subPage.path}` ? activeRouteClasses : collapseItemClasses
-                                      } ${isRail ? "tw-justify-center tw-py-2 tw-px-0" : ""}`}
-                                    >
-                                      <ListItemPrefix className={isRail ? "tw-mr-0" : "tw-mr-2"}>
-                                        {subPage.icon}
-                                      </ListItemPrefix>
-                                      {!isRail && subPage.name}
-                                    </ListItem>
+                                  <Link
+                                    key={subIdx}
+                                    href={subPage.path!}
+                                    className={`w-full flex items-center rounded-lg transition-colors ${
+                                      isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
+                                    } ${
+                                      pathname === subPage.path ? activeRouteClasses : ""
+                                    } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
+                                  >
+                                    <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                                      {subPage.icon}
+                                    </div>
+                                    {!isCollapsed && subPage.name}
                                   </Link>
                                 )
                               )}
-                            </List>
-                          </AccordionBody>
-                        </Accordion>
+                            </div>
+                          )}
+                        </div>
                       ) : page.external ? (
-                        <a key={`${page.name}-${subKey}`} href={page.path} target="_blank" rel="noopener noreferrer">
-                          <ListItem className={`tw-capitalize ${isRail ? "tw-justify-center tw-py-2 tw-px-0" : ""}`}>
-                            <ListItemPrefix className={isRail ? "tw-mr-0" : "tw-mr-2"}>
-                              {page.icon}
-                            </ListItemPrefix>
-                            {!isRail && page.name}
-                          </ListItem>
+                        <a
+                          key={idx}
+                          href={page.path}
+                          target="_blank"
+                          className={`w-full flex items-center rounded-lg transition-colors ${
+                            isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
+                          } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
+                        >
+                          <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                            {page.icon}
+                          </div>
+                          {!isCollapsed && page.name}
                         </a>
                       ) : (
-                        <Link href={page.path} key={`${page.name}-${subKey}`}>
-                          <ListItem
-                            className={`tw-capitalize ${
-                              pathname === `${page.path}` ? activeRouteClasses : collapseItemClasses
-                            } ${isRail ? "tw-justify-center tw-py-2 tw-px-0" : ""}`}
-                          >
-                            <ListItemPrefix className={isRail ? "tw-mr-0" : "tw-mr-2"}>
-                              {page.icon}
-                            </ListItemPrefix>
-                            {!isRail && page.name}
-                          </ListItem>
+                        <Link
+                          key={idx}
+                          href={page.path!}
+                          className={`w-full flex items-center rounded-lg transition-colors ${
+                            isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
+                          } ${
+                            pathname === page.path ? activeRouteClasses : ""
+                          } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
+                        >
+                          <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                            {page.icon}
+                          </div>
+                          {!isCollapsed && page.name}
                         </Link>
                       )
                     )}
-                  </List>
-                </AccordionBody>
-              </Accordion>
-
-              {divider && <hr className="tw-my-2 tw-border-blue-gray-50" />}
-            </React.Fragment>
+                  </div>
+                )}
+              </div>
+              {divider && !isCollapsed && <hr className="my-2 border-blue-gray-50" />}
+            </div>
           ) : (
-            <List className="!tw-p-0 tw-text-inherit" key={`${name}-${key}`}>
+            <div key={key} className="mb-1">
               {external ? (
-                <a href={path} target="_blank" rel="noopener noreferrer">
-                  <ListItem className={`tw-capitalize ${isRail ? "tw-justify-center tw-py-2 tw-px-0" : ""}`}>
-                    <ListItemPrefix className={isRail ? "tw-mr-0" : "tw-mr-2"}>{icon}</ListItemPrefix>
-                    {!isRail && name}
-                  </ListItem>
+                <a
+                  href={path}
+                  target="_blank"
+                  className={`w-full flex items-center rounded-lg transition-colors ${
+                    isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
+                  } ${
+                    pathname === path ? activeRouteClasses : ""
+                  } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
+                >
+                  <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                    {icon}
+                  </div>
+                  {!isCollapsed && name}
                 </a>
               ) : (
-                <Link href={`${path}`}>
-                  <ListItem
-                    className={`tw-capitalize ${
-                      pathname === `${path}` ? activeRouteClasses : collapseItemClasses
-                    } ${isRail ? "tw-justify-center tw-py-2 tw-px-0" : ""}`}
-                  >
-                    <ListItemPrefix className={isRail ? "tw-mr-0" : "tw-mr-2"}>{icon}</ListItemPrefix>
-                    {!isRail && name}
-                  </ListItem>
+                <Link
+                  href={path!}
+                  className={`w-full flex items-center rounded-lg transition-colors ${
+                    isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
+                  } ${
+                    pathname === path ? activeRouteClasses : ""
+                  } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
+                >
+                  <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                    {icon}
+                  </div>
+                  {!isCollapsed && name}
                 </Link>
               )}
-            </List>
+            </div>
           )
         )}
-      </List>
+      </div>
     </Card>
   );
 }
