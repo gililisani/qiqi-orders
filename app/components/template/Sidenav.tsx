@@ -207,13 +207,13 @@ export default function Sidenav({
                   onPointerLeaveCapture={undefined}
                 >
                   <ListItem
-                    className={`${sidenavCollapsed && !isHovering ? "" : "!overflow-hidden"} !p-0 ${
+                    className={`!overflow-hidden !p-0 ${
                       openCollapse === name
                         ? sidenavType === "dark"
                           ? "bg-white/10"
                           : "bg-gray-200"
                         : ""
-                    } ${collapseItemClasses} ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`}
+                    } ${collapseItemClasses}`}
                     selected={openCollapse === name}
                     placeholder={undefined}
                     onPointerEnterCapture={undefined}
@@ -221,7 +221,7 @@ export default function Sidenav({
                   >
                     <AccordionHeader
                       onClick={() => handleOpenCollapse(name)}
-                      className={`${collapseHeaderClasses} ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`}
+                      className={collapseHeaderClasses}
                       placeholder={undefined}
                       onPointerEnterCapture={undefined}
                       onPointerLeaveCapture={undefined}
@@ -270,7 +270,7 @@ export default function Sidenav({
                                     ? "bg-white/10"
                                     : "bg-gray-200"
                                   : ""
-                              } ${collapseItemClasses} ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`}
+                              } ${collapseItemClasses}`}
                               selected={openSubCollapse === page.name}
                               placeholder={undefined}
                               onPointerEnterCapture={undefined}
@@ -278,7 +278,7 @@ export default function Sidenav({
                             >
                               <AccordionHeader
                                 onClick={() => handleOpenSubCollapse(page.name)}
-                                className={`${collapseHeaderClasses} ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`}
+                                className={collapseHeaderClasses}
                                 placeholder={undefined}
                                 onPointerEnterCapture={undefined}
                                 onPointerLeaveCapture={undefined}
@@ -308,7 +308,7 @@ export default function Sidenav({
                                     >
                                       <ListItem
                                         key={key}
-                                        className={`capitalize ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`}
+                                        className="capitalize"
                                         placeholder={undefined}
                                         onPointerEnterCapture={undefined}
                                         onPointerLeaveCapture={undefined}
@@ -344,7 +344,7 @@ export default function Sidenav({
                           </Accordion>
                         ) : page.external ? (
                           <a key={key} href={page.path} target="_blank">
-                            <ListItem className={`capitalize ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                            <ListItem className="capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                               <ListItemPrefix className={sidenavCollapsed && !isHovering ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{page.icon}</ListItemPrefix>
                               {!(sidenavCollapsed && !isHovering) && page.name}
                             </ListItem>
@@ -376,7 +376,7 @@ export default function Sidenav({
               <List className="!p-0 text-inherit" key={key} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                 {external ? (
                   <a key={key} href={path} target="_blank">
-                    <ListItem className={`capitalize ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                    <ListItem className="capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                       <ListItemPrefix className={sidenavCollapsed && !isHovering ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{icon}</ListItemPrefix>
                       {!(sidenavCollapsed && !isHovering) && name}
                     </ListItem>
