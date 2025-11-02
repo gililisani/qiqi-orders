@@ -51,7 +51,7 @@ export default function SupportFundsPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading support funds...</p>
         </div>

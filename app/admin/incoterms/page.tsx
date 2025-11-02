@@ -43,7 +43,7 @@ export default function IncotermsPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading incoterms...</p>
         </div>

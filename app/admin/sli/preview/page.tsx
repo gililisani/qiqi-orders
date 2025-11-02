@@ -102,7 +102,7 @@ function SLIPreviewContent() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="flex items-center justify-center h-screen">
           <div className="text-lg">Generating SLI...</div>
         </div>
@@ -112,7 +112,7 @@ function SLIPreviewContent() {
 
   if (error) {
     return (
-      <
+      <>
         <div className="flex items-center justify-center h-screen">
           <div className="text-red-600 text-lg">{error}</div>
         </div>
@@ -122,7 +122,7 @@ function SLIPreviewContent() {
 
   if (isEditing && sliData) {
     return (
-      <
+      <>
         <div className="max-w-6xl mx-auto p-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <h1 className="text-2xl font-bold mb-6">Edit SLI</h1>
@@ -224,7 +224,7 @@ function SLIPreviewContent() {
 export default function StandaloneSLIPreviewPage() {
   return (
     <Suspense fallback={
-      <
+      <>
         <div className="flex items-center justify-center h-screen">
           <div className="text-lg">Loading SLI...</div>
         </div>

@@ -64,7 +64,7 @@ export default function EditLocationPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">Loading...</div>
       </>
     );

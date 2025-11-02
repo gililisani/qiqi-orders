@@ -607,7 +607,7 @@ export default function EditCompanyPage() {
 
   if (initialLoading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading company...</p>
         </div>
@@ -617,7 +617,7 @@ export default function EditCompanyPage() {
 
   if (error && !formData.company_name) {
     return (
-      <
+      <>
         <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Company Not Found</h1>

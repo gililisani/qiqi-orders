@@ -114,7 +114,7 @@ export default function CompaniesPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading companies...</p>
         </div>

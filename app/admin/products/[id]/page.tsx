@@ -80,7 +80,7 @@ export default function ProductViewPage({ params }: { params: { id: string } }) 
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading product...</p>
         </div>
@@ -90,7 +90,7 @@ export default function ProductViewPage({ params }: { params: { id: string } }) 
 
   if (error || !product) {
     return (
-      <
+      <>
         <div className="p-6">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             {error || 'Product not found'}

@@ -54,7 +54,7 @@ export default function LocationsPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading locations...</p>
         </div>

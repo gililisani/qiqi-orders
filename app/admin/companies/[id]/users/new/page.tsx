@@ -97,7 +97,7 @@ export default function NewUserPage() {
 
   if (error && !company) {
     return (
-      <
+      <>
         <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Company Not Found</h1>

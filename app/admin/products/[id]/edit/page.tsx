@@ -193,7 +193,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading product...</p>
         </div>

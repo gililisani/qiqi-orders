@@ -48,7 +48,7 @@ export default function CompanyNotesPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
@@ -61,7 +61,7 @@ export default function CompanyNotesPage() {
 
   if (error) {
     return (
-      <
+      <>
         <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>

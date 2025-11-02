@@ -89,7 +89,7 @@ export default function UsersPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading users...</p>
         </div>

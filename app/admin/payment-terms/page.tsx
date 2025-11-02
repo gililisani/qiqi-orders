@@ -43,7 +43,7 @@ export default function PaymentTermsPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading payment terms...</p>
         </div>

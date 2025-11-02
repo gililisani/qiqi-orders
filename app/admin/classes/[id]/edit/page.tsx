@@ -56,7 +56,7 @@ export default function EditClassPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">Loading...</div>
       </>
     );

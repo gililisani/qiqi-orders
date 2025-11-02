@@ -52,7 +52,7 @@ export default function ClassesPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading classes...</p>
         </div>

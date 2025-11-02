@@ -235,7 +235,7 @@ export default function ProductsPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading products...</p>
         </div>

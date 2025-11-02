@@ -84,7 +84,7 @@ export default function UserViewPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading user...</p>
         </div>
@@ -94,7 +94,7 @@ export default function UserViewPage() {
 
   if (error || !client) {
     return (
-      <
+      <>
         <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">User Not Found</h1>

@@ -157,7 +157,7 @@ export default function EditAdminPage() {
 
   if (initialLoading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading admin...</p>
         </div>
@@ -167,7 +167,7 @@ export default function EditAdminPage() {
 
   if (error && !admin) {
     return (
-      <
+      <>
         <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Admin Not Found</h1>

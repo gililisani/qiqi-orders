@@ -56,7 +56,7 @@ export default function SubsidiariesPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading subsidiaries...</p>
         </div>

@@ -134,7 +134,7 @@ export default function ReorderCategoriesPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="flex justify-center items-center min-h-64">
           <div className="text-lg">Loading categories...</div>
         </div>

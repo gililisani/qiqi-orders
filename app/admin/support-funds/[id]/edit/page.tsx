@@ -58,7 +58,7 @@ export default function EditSupportFundPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">Loading...</div>
       </>
     );

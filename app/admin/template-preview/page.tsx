@@ -106,7 +106,7 @@ export default function TemplatePreviewPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center gap-4">
             <Spinner className="h-12 w-12" onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />

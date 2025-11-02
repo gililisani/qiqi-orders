@@ -80,7 +80,7 @@ export default function AdminsPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading admins...</p>
         </div>

@@ -65,7 +65,7 @@ export default function AdminViewPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">
           <p>Loading admin...</p>
         </div>
@@ -75,7 +75,7 @@ export default function AdminViewPage() {
 
   if (error || !admin) {
     return (
-      <
+      <>
         <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Admin Not Found</h1>

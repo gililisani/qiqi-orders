@@ -62,7 +62,7 @@ export default function EditPaymentTermPage() {
 
   if (loading) {
     return (
-      <
+      <>
         <div className="p-6">Loading...</div>
       </>
     );
