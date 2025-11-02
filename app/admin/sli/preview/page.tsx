@@ -172,24 +172,23 @@ function SLIPreviewContent() {
 
   return (
     <div className="p-6">
-        <div className="mb-4 flex gap-4 print:hidden">
-          <button
-            onClick={handleDownloadPDF}
-            className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
-          >
-            Download as PDF
-          </button>
-          <button
-            onClick={handleEdit}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Edit SLI
-          </button>
-        </div>
-        
-        <div ref={contentRef} dangerouslySetInnerHTML={{ __html: htmlContent }} />
+      <div className="mb-4 flex gap-4 print:hidden">
+        <button
+          onClick={handleDownloadPDF}
+          className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+        >
+          Download as PDF
+        </button>
+        <button
+          onClick={handleEdit}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          Edit SLI
+        </button>
       </div>
-
+      
+      <div ref={contentRef} dangerouslySetInnerHTML={{ __html: htmlContent }} />
+      
       <style jsx global>{`
         @media print {
           body * {
@@ -208,6 +207,7 @@ function SLIPreviewContent() {
           ` : ''}
         }
       `}</style>
+    </div>
   );
 }
 
