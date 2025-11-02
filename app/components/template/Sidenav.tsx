@@ -10,6 +10,8 @@ import {
   Card,
   Typography,
   IconButton,
+  Accordion,
+  AccordionBody,
 } from "@material-tailwind/react";
 
 // @heroicons/react
@@ -134,7 +136,6 @@ export default function Sidenav({
   const isCollapsed = sidenavCollapsed && !isHovering;
   const baseItemClasses = "cursor-pointer transition-all rounded-lg";
   const activeRouteClasses = `${COLORS[sidenavColor]} text-white`;
-  const accordionBodyClasses = "transition-all duration-300 ease-in-out overflow-hidden";
 
   return (
     <Card
@@ -198,7 +199,20 @@ export default function Sidenav({
               )}
               
               {/* Accordion Wrapper */}
-              <div>
+              <Accordion
+                open={openCollapse === name}
+                icon={
+                  !isCollapsed ? (
+                    <ChevronDownIcon
+                      strokeWidth={2.5}
+                      className={`h-3 w-3 transition-transform`}
+                    />
+                  ) : null
+                }
+                placeholder={undefined}
+                onPointerEnterCapture={undefined}
+                onPointerLeaveCapture={undefined}
+              >
                 {/* Accordion Header */}
                 <div 
                   onClick={() => handleOpenCollapse(name)}
@@ -218,23 +232,29 @@ export default function Sidenav({
                       {name}
                     </Typography>
                   )}
-                  {!isCollapsed && (
-                    <ChevronDownIcon
-                      strokeWidth={2.5}
-                      className={`h-3 w-3 transition-transform ${
-                        openCollapse === name ? "rotate-180" : ""
-                      }`}
-                    />
-                  )}
                 </div>
 
                 {/* Accordion Body */}
-                {openCollapse === name && (
-                  <div className={`${accordionBodyClasses} ${isCollapsed ? "" : "pl-0"}`}>
+                <AccordionBody className={`${isCollapsed ? "" : "pl-0"} !py-1`} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <div>
                     {pages.map((page: Route, key) =>
                       page.pages ? (
                         // Nested Accordion
-                        <div key={key}>
+                        <Accordion
+                          key={key}
+                          open={openSubCollapse === page.name}
+                          icon={
+                            !isCollapsed ? (
+                              <ChevronDownIcon
+                                strokeWidth={2.5}
+                                className="h-3 w-3 transition-transform"
+                              />
+                            ) : null
+                          }
+                          placeholder={undefined}
+                          onPointerEnterCapture={undefined}
+                          onPointerLeaveCapture={undefined}
+                        >
                           <div 
                             onClick={() => handleOpenSubCollapse(page.name)}
                             className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${
@@ -255,17 +275,9 @@ export default function Sidenav({
                                 {page.name}
                               </Typography>
                             )}
-                            {!isCollapsed && (
-                              <ChevronDownIcon
-                                strokeWidth={2.5}
-                                className={`h-3 w-3 transition-transform ${
-                                  openSubCollapse === page.name ? "rotate-180" : ""
-                                }`}
-                              />
-                            )}
                           </div>
-                          {openSubCollapse === page.name && (
-                            <div className={accordionBodyClasses}>
+                          <AccordionBody className="!py-1" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                            <div>
                               {page.pages.map((subPage: Route, key: number) =>
                                 subPage.external ? (
                                   <a href={subPage.path} target="_blank" key={key}>
@@ -290,8 +302,8 @@ export default function Sidenav({
                                 )
                               )}
                             </div>
-                          )}
-                        </div>
+                          </AccordionBody>
+                        </Accordion>
                       ) : page.external ? (
                         <a key={key} href={page.path} target="_blank">
                           <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
@@ -315,8 +327,8 @@ export default function Sidenav({
                       )
                     )}
                   </div>
-                )}
-              </div>
+                </AccordionBody>
+              </Accordion>
               
               {divider && <hr className="my-2 border-blue-gray-50" />}
             </React.Fragment>
