@@ -17,7 +17,8 @@ import {
 
 export default function FormKitPage() {
   return (
-    <TopNavbar />
+    <>
+      <TopNavbar />
       <div className="p-6 space-y-8">
         <h1 className="text-2xl font-bold">Form Kit</h1>
 
@@ -782,5 +783,6 @@ export default function FormKitPage() {
           </div>
         </Card>
       </div>
+    </>
   );
 }
