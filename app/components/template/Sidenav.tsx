@@ -348,7 +348,7 @@ export default function Sidenav({
                                     >
                                       <ListItem
                                         key={key}
-                                        className="capitalize"
+                                        className={`capitalize ${sidenavCollapsed && !isHovering ? "!pl-0" : ""}`}
                                         placeholder={undefined}
                                         onPointerEnterCapture={undefined}
                                         onPointerLeaveCapture={undefined}
@@ -362,7 +362,7 @@ export default function Sidenav({
                                   ) : (
                                     <Link href={`${subPage.path}`} key={key}>
                                       <ListItem
-                                        className={`capitalize ${
+                                        className={`capitalize ${sidenavCollapsed && !isHovering ? "!pl-0" : ""} ${
                                           pathname === `${subPage.path}`
                                             ? activeRouteClasses
                                             : collapseItemClasses
@@ -384,7 +384,7 @@ export default function Sidenav({
                           </Accordion>
                         ) : page.external ? (
                           <a key={key} href={page.path} target="_blank">
-                            <ListItem className="capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                            <ListItem className={`capitalize ${sidenavCollapsed && !isHovering ? "!pl-0" : ""}`} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                               <ListItemPrefix className={sidenavCollapsed && !isHovering ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{page.icon}</ListItemPrefix>
                               {!(sidenavCollapsed && !isHovering) && page.name}
                             </ListItem>
@@ -392,7 +392,7 @@ export default function Sidenav({
                         ) : (
                           <Link href={page.path!} key={key}>
                             <ListItem
-                              className={`capitalize ${
+                              className={`capitalize ${sidenavCollapsed && !isHovering ? "!pl-0" : ""} ${
                                 pathname === `${page.path}`
                                   ? activeRouteClasses
                                   : collapseItemClasses
