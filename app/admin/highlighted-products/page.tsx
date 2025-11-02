@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { PlusIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import Card from '../../components/ui/Card';
-
-
+import AdminLayoutWrapper from '../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../config/admin-routes';
 
 interface Product {
   id: number;
@@ -169,17 +169,17 @@ export default function HighlightedProductsManager() {
 
   if (loading) {
     return (
-      <>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
           <p className="text-gray-600">Loading highlighted products...</p>
         </div>
-      </>
+      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <div className="p-6">
         <div className="space-y-6">
           <Card header={<h2 className="font-semibold">Highlighted Products Manager</h2>}>
@@ -324,6 +324,6 @@ export default function HighlightedProductsManager() {
           )}
       </div>
     </div>
-    </>
+    </AdminLayoutWrapper>
   );
 }

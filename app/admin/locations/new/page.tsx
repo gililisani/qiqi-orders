@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
-
-
+import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../config/admin-routes';
 import Link from 'next/link';
 
 interface FormData {
@@ -51,7 +51,7 @@ export default function NewLocationPage() {
   };
 
   return (
-    <>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Add New Location</h1>
@@ -116,6 +116,6 @@ export default function NewLocationPage() {
           </div>
         </form>
       </div>
-    </>
+    </AdminLayoutWrapper>
   );
 }

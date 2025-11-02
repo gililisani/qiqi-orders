@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
-
-
+import AdminLayoutWrapper from '../../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../../config/admin-routes';
 import Link from 'next/link';
 
 export default function EditSupportFundPage() {
@@ -58,14 +58,14 @@ export default function EditSupportFundPage() {
 
   if (loading) {
     return (
-      <>
+      <AdminLayoutWrapper routes={adminRoutes}>
         <div className="p-6">Loading...</div>
-      </>
+      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Edit Support Fund Level</h1>
@@ -103,7 +103,7 @@ export default function EditSupportFundPage() {
           </div>
         </form>
       </div>
-    </>
+    </AdminLayoutWrapper>
   );
 }
 

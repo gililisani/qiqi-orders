@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
-
-
+import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
+import { adminRoutes } from '../../../config/admin-routes';
 import InnerPageShell from '../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 
@@ -243,7 +243,7 @@ export default function ImportCompaniesPage() {
   };
 
   return (
-    <>
+    <AdminLayoutWrapper routes={adminRoutes}>
       <InnerPageShell title="Import Companies">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
@@ -334,7 +334,7 @@ export default function ImportCompaniesPage() {
           )}
         </div>
       </InnerPageShell>
-    </>
+    </AdminLayoutWrapper>
   );
 }
 
