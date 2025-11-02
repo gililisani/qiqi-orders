@@ -204,7 +204,7 @@ export default function Sidenav({
                   >
                     <AccordionHeader
                       onClick={() => handleOpenCollapse(name)}
-                      className={collapseHeaderClasses}
+                      className={`${collapseHeaderClasses} ${sidenavCollapsed ? "!flex !justify-center" : ""}`}
                       placeholder={undefined}
                       onPointerEnterCapture={undefined}
                       onPointerLeaveCapture={undefined}
@@ -259,7 +259,7 @@ export default function Sidenav({
                             >
                               <AccordionHeader
                                 onClick={() => handleOpenSubCollapse(page.name)}
-                                className={collapseHeaderClasses}
+                                className={`${collapseHeaderClasses} ${sidenavCollapsed ? "!flex !justify-center" : ""}`}
                                 placeholder={undefined}
                                 onPointerEnterCapture={undefined}
                                 onPointerLeaveCapture={undefined}
