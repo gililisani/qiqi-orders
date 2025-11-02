@@ -201,7 +201,7 @@ export default function Sidenav({
         ripple={false}
         size="sm"
         variant="text"
-        className={`!absolute ${sidenavCollapsed && !isHovering ? "top-1" : "top-3"} right-1 hidden xl:block`}
+        className="!absolute top-3 right-1 hidden xl:block"
         onClick={handleToggleCollapse}
         placeholder={undefined}
         onPointerEnterCapture={undefined}
@@ -247,7 +247,7 @@ export default function Sidenav({
                   onPointerLeaveCapture={undefined}
                 >
                   <ListItem
-                    className={`!overflow-hidden !p-0 ${
+                    className={`${!(sidenavCollapsed && !isHovering) ? "!overflow-hidden" : ""} !p-0 ${
                       openCollapse === name
                         ? sidenavType === "dark"
                           ? "bg-white/10"
@@ -261,7 +261,7 @@ export default function Sidenav({
                   >
                     <AccordionHeader
                       onClick={() => handleOpenCollapse(name)}
-                      className={`${collapseHeaderClasses} ${sidenavCollapsed && !isHovering ? "!py-2 !px-0 flex justify-center" : "!p-3"}`}
+                      className={`${collapseHeaderClasses} ${sidenavCollapsed && !isHovering ? "!py-2 !px-0" : "!p-3"}`}
                       placeholder={undefined}
                       onPointerEnterCapture={undefined}
                       onPointerLeaveCapture={undefined}
@@ -319,7 +319,7 @@ export default function Sidenav({
                             >
                               <AccordionHeader
                                 onClick={() => handleOpenSubCollapse(page.name)}
-                                className={`${collapseHeaderClasses} ${sidenavCollapsed && !isHovering ? "!py-2 !px-0 flex justify-center" : "!p-3"}`}
+                                className={`${collapseHeaderClasses} ${sidenavCollapsed && !isHovering ? "!py-2 !px-0" : "!p-3"}`}
                                 placeholder={undefined}
                                 onPointerEnterCapture={undefined}
                                 onPointerLeaveCapture={undefined}
@@ -349,7 +349,7 @@ export default function Sidenav({
                                     >
                                       <ListItem
                                         key={key}
-                                        className={`capitalize !overflow-hidden ${sidenavCollapsed && !isHovering ? "!pl-0 flex justify-center" : ""}`}
+                                        className={`capitalize ${sidenavCollapsed && !isHovering ? "!pl-0" : ""}`}
                                         placeholder={undefined}
                                         onPointerEnterCapture={undefined}
                                         onPointerLeaveCapture={undefined}
@@ -363,7 +363,7 @@ export default function Sidenav({
                                   ) : (
                                     <Link href={`${subPage.path}`} key={key}>
                                       <ListItem
-                                        className={`capitalize !overflow-hidden ${sidenavCollapsed && !isHovering ? "!pl-0 flex justify-center" : ""} ${
+                                        className={`capitalize ${sidenavCollapsed && !isHovering ? "!pl-0" : ""} ${
                                           pathname === `${subPage.path}`
                                             ? activeRouteClasses
                                             : collapseItemClasses
@@ -385,7 +385,7 @@ export default function Sidenav({
                           </Accordion>
                         ) : page.external ? (
                           <a key={key} href={page.path} target="_blank">
-                            <ListItem className={`capitalize !overflow-hidden ${sidenavCollapsed && !isHovering ? "!pl-0 flex justify-center" : ""}`} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                            <ListItem className={`capitalize ${sidenavCollapsed && !isHovering ? "!pl-0" : ""}`} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                               <ListItemPrefix className={sidenavCollapsed && !isHovering ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{page.icon}</ListItemPrefix>
                               {!(sidenavCollapsed && !isHovering) && page.name}
                             </ListItem>
@@ -393,7 +393,7 @@ export default function Sidenav({
                         ) : (
                           <Link href={page.path!} key={key}>
                             <ListItem
-                              className={`capitalize !overflow-hidden ${sidenavCollapsed && !isHovering ? "!pl-0 flex justify-center" : ""} ${
+                              className={`capitalize ${sidenavCollapsed && !isHovering ? "!pl-0" : ""} ${
                                 pathname === `${page.path}`
                                   ? activeRouteClasses
                                   : collapseItemClasses
@@ -417,7 +417,7 @@ export default function Sidenav({
               <List className="!p-0 text-inherit" key={key} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                 {external ? (
                   <a key={key} href={path} target="_blank">
-                    <ListItem className={`capitalize ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                    <ListItem className="capitalize" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                       <ListItemPrefix className={sidenavCollapsed && !isHovering ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>{icon}</ListItemPrefix>
                       {!(sidenavCollapsed && !isHovering) && name}
                     </ListItem>
@@ -425,7 +425,7 @@ export default function Sidenav({
                 ) : (
                   <Link href={`${path}`} key={key}>
                     <ListItem
-                      className={`capitalize !overflow-hidden ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""} ${
+                      className={`capitalize ${
                         pathname === `${path}`
                           ? activeRouteClasses
                           : collapseItemClasses
