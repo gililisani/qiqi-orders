@@ -247,7 +247,7 @@ export default function Sidenav({
                   onPointerLeaveCapture={undefined}
                 >
                   <ListItem
-                    className={`!overflow-hidden !p-0 ${
+                    className={`${!(sidenavCollapsed && !isHovering) ? "!overflow-hidden" : ""} !p-0 ${
                       openCollapse === name
                         ? sidenavType === "dark"
                           ? "bg-white/10"
@@ -280,7 +280,7 @@ export default function Sidenav({
                       )}
                     </AccordionHeader>
                   </ListItem>
-                  <AccordionBody className="!py-1 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <AccordionBody className={`!py-1 ${sidenavCollapsed && !isHovering ? "!pl-0" : ""} text-inherit`} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                     <List className="!p-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                       {pages.map((page: Route, key) =>
                         page.pages ? (
@@ -337,7 +337,7 @@ export default function Sidenav({
                                 )}
                               </AccordionHeader>
                             </ListItem>
-                            <AccordionBody className="!py-1 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                            <AccordionBody className={`!py-1 ${sidenavCollapsed && !isHovering ? "!pl-0" : ""} text-inherit`} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                               <List className="!p-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                 {page.pages.map((subPage: Route, key: number) =>
                                   subPage.external ? (
