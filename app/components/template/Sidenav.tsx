@@ -19,10 +19,10 @@ import {
 } from "@material-tailwind/react";
 
 // @heroicons/react
-import { ChevronDownIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 // Context
-import { useMaterialTailwindController, setOpenSidenav, setSidenavCollapsed } from "@/app/context";
+import { useMaterialTailwindController, setOpenSidenav } from "@/app/context";
 
 const COLORS = {
   dark: "bg-gray-900 hover:bg-gray-700 focus:bg-gray-900 active:bg-gray-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
@@ -91,12 +91,6 @@ export default function Sidenav({
     if (sidenavCollapsed) {
       setIsHovering(false);
     }
-  };
-
-  const handleToggleCollapse = () => {
-    setSidenavCollapsed(dispatch, !sidenavCollapsed);
-    // Reset hovering state when manually toggling
-    setIsHovering(false);
   };
 
   // Auto-open accordions for current pathname
@@ -196,22 +190,6 @@ export default function Sidenav({
         onPointerLeaveCapture={undefined}
       >
         <XMarkIcon className="w-5 h-5" />
-      </IconButton>
-      <IconButton
-        ripple={false}
-        size="sm"
-        variant="text"
-        className="!absolute top-3 right-1 hidden xl:block"
-        onClick={handleToggleCollapse}
-        placeholder={undefined}
-        onPointerEnterCapture={undefined}
-        onPointerLeaveCapture={undefined}
-      >
-        {sidenavCollapsed ? (
-          <ChevronRightIcon className="w-5 h-5" />
-        ) : (
-          <ChevronLeftIcon className="w-5 h-5" />
-        )}
       </IconButton>
       <List className="text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
         {routes.map(

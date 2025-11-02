@@ -31,12 +31,14 @@ import {
   MicrophoneIcon,
   ShoppingCartIcon,
 } from "@heroicons/react/24/solid";
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 
 // @context
 import {
   useMaterialTailwindController,
   setOpenConfigurator,
   setOpenSidenav,
+  setSidenavCollapsed,
 } from "@/app/context";
 
 // Components
@@ -44,7 +46,7 @@ import FeedbackPopup from "../ui/FeedbackPopup";
 
 export function DashboardNavbar() {
   const [controller, dispatch] = useMaterialTailwindController();
-  const { fixedNavbar, openSidenav } = controller;
+  const { fixedNavbar, openSidenav, sidenavCollapsed } = controller;
   const pathname = usePathname();
   const [layout, page] = pathname.split("/").filter((el) => el !== "");
   const [userName, setUserName] = useState<string>('User');
@@ -96,7 +98,22 @@ export function DashboardNavbar() {
       onPointerLeaveCapture={undefined}
     >
       <div className="!flex flex-col !justify-between gap-2 md:!flex-row md:items-center">
-        <div className="capitalize">
+        <div className="capitalize flex items-center gap-2">
+          <IconButton
+            variant="text"
+            color="gray"
+            className="hidden xl:grid"
+            onClick={() => setSidenavCollapsed(dispatch, !sidenavCollapsed)}
+            placeholder={undefined}
+            onPointerEnterCapture={undefined}
+            onPointerLeaveCapture={undefined}
+          >
+            {sidenavCollapsed ? (
+              <ChevronRightIcon className="h-5 w-5 text-gray-900" />
+            ) : (
+              <ChevronLeftIcon className="h-5 w-5 text-gray-900" />
+            )}
+          </IconButton>
           <Breadcrumbs
             className={`bg-transparent !p-0 transition-all ${
               fixedNavbar ? "mt-1" : ""
