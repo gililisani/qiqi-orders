@@ -178,12 +178,14 @@ export default function Sidenav({
                 <Accordion
                   open={openCollapse === name}
                   icon={
-                    <ChevronDownIcon
-                      strokeWidth={2.5}
-                      className={`mx-auto h-3 w-3 text-inherit transition-transform ${
-                        openCollapse === name ? "rotate-180" : ""
-                      }`}
-                    />
+                    sidenavCollapsed ? null : (
+                      <ChevronDownIcon
+                        strokeWidth={2.5}
+                        className={`mx-auto h-3 w-3 text-inherit transition-transform ${
+                          openCollapse === name ? "rotate-180" : ""
+                        }`}
+                      />
+                    )
                   }
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
@@ -231,14 +233,16 @@ export default function Sidenav({
                             key={key}
                             open={openSubCollapse === page.name}
                             icon={
-                              <ChevronDownIcon
-                                strokeWidth={2.5}
-                                className={`mx-auto h-3 w-3 text-inherit transition-transform ${
-                                  openSubCollapse === page.name
-                                    ? "rotate-180"
-                                    : ""
-                                }`}
-                              />
+                              sidenavCollapsed ? null : (
+                                <ChevronDownIcon
+                                  strokeWidth={2.5}
+                                  className={`mx-auto h-3 w-3 text-inherit transition-transform ${
+                                    openSubCollapse === page.name
+                                      ? "rotate-180"
+                                      : ""
+                                  }`}
+                                />
+                              )
                             }
                             placeholder={undefined}
                             onPointerEnterCapture={undefined}
