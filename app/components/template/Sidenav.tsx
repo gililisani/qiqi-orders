@@ -241,7 +241,7 @@ export default function Sidenav({
                 </AccordionHeader>
 
                 {/* Accordion Body */}
-                <AccordionBody className={`${isCollapsed ? "" : "pl-0"} !py-1`} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <AccordionBody className="!py-1 pl-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                   <div>
                     {pages.map((page: Route, key) =>
                       page.pages ? (
