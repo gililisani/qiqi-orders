@@ -219,12 +219,12 @@ export default function Sidenav({
                 {/* Accordion Header */}
                 <AccordionHeader
                   onClick={() => handleOpenCollapse(name)}
-                  className={`${baseItemClasses} py-3 px-3 ${openCollapse === name && sidenavType === "dark" ? "bg-white/10" : openCollapse === name ? "bg-gray-200" : ""} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""} !border-0`}
+                  className={`${baseItemClasses} ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${openCollapse === name && sidenavType === "dark" ? "bg-white/10" : openCollapse === name ? "bg-gray-200" : ""} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""} !border-0`}
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
                 >
-                  <div className={`flex items-center ${icon ? "w-5 h-5" : ""} mr-3`}>
+                  <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                     {icon}
                   </div>
                   <Typography
@@ -263,14 +263,14 @@ export default function Sidenav({
                         >
                           <AccordionHeader
                             onClick={() => handleOpenSubCollapse(page.name)}
-                            className={`${baseItemClasses} py-3 px-3 ${
+                            className={`${baseItemClasses} ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${
                               openSubCollapse === page.name && sidenavType === "dark" ? "bg-white/10" : openSubCollapse === page.name ? "bg-gray-200" : ""
                             } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""} !border-0`}
                             placeholder={undefined}
                             onPointerEnterCapture={undefined}
                             onPointerLeaveCapture={undefined}
                           >
-                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} mr-3`}>
+                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                               {page.icon}
                             </div>
                             <Typography
@@ -288,8 +288,8 @@ export default function Sidenav({
                               {page.pages.map((subPage: Route, key: number) =>
                                 subPage.external ? (
                                   <a href={subPage.path} target="_blank" key={key}>
-                                    <div className={`${baseItemClasses} flex items-center py-3 px-3 hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
-                                      <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""} mr-3`}>
+                                    <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
+                                      <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                                         {subPage.icon}
                                       </div>
                                       <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
@@ -299,10 +299,10 @@ export default function Sidenav({
                                   </a>
                                 ) : (
                                   <Link href={subPage.path!} key={key}>
-                                    <div className={`${baseItemClasses} flex items-center py-3 px-3 ${
+                                    <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${
                                       pathname === subPage.path ? activeRouteClasses : ""
                                     } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
-                                      <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""} mr-3`}>
+                                      <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                                         {subPage.icon}
                                       </div>
                                       <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
@@ -317,8 +317,8 @@ export default function Sidenav({
                         </Accordion>
                       ) : page.external ? (
                         <a key={key} href={page.path} target="_blank">
-                          <div className={`${baseItemClasses} flex items-center py-3 px-3 hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
-                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} mr-3`}>
+                          <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
+                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                               {page.icon}
                             </div>
                             <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
@@ -328,10 +328,10 @@ export default function Sidenav({
                         </a>
                       ) : (
                         <Link key={key} href={page.path!}>
-                          <div className={`${baseItemClasses} flex items-center py-3 px-3 ${
+                          <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${
                             pathname === page.path ? activeRouteClasses : ""
                           } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
-                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} mr-3`}>
+                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                               {page.icon}
                             </div>
                             <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
@@ -351,8 +351,8 @@ export default function Sidenav({
             <div key={key}>
               {external ? (
                 <a href={path} target="_blank">
-                  <div className={`${baseItemClasses} flex items-center py-3 px-3 hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
-                    <div className={`flex items-center ${icon ? "w-5 h-5" : ""} mr-3`}>
+                  <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
+                    <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                       {icon}
                     </div>
                     <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
@@ -362,10 +362,10 @@ export default function Sidenav({
                 </a>
               ) : (
                 <Link href={path!}>
-                  <div className={`${baseItemClasses} flex items-center py-3 px-3 ${
+                  <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${
                     pathname === path ? activeRouteClasses : ""
                   } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
-                    <div className={`flex items-center ${icon ? "w-5 h-5" : ""} mr-3`}>
+                    <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                       {icon}
                     </div>
                     <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
