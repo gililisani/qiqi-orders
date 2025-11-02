@@ -63,7 +63,6 @@ export default function Sidenav({
   const [openCollapse, setOpenCollapse] = React.useState<string | null>(null);
   const [openSubCollapse, setOpenSubCollapse] = React.useState<string | null>(null);
   const [isHovering, setIsHovering] = React.useState(false);
-  const hasAutoOpenedRef = React.useRef(false);
 
   const handleOpenCollapse = (value: string) => {
     setOpenCollapse((cur) => (cur === value ? null : value));
@@ -90,42 +89,6 @@ export default function Sidenav({
       setIsHovering(false);
     }
   };
-
-  // Auto-open accordions for current pathname (only on initial mount)
-  React.useEffect(() => {
-    if (hasAutoOpenedRef.current) return;
-    
-    routes.forEach((route) => {
-      if (route.pages) {
-        const hasActiveSubPage = route.pages.some((page) => {
-          if (page.path) {
-            return pathname === page.path || pathname.startsWith(page.path + '/');
-          }
-          return false;
-        });
-        if (hasActiveSubPage) {
-          setOpenCollapse(route.name);
-        }
-        
-        route.pages.forEach((page) => {
-          if (page.pages) {
-            const hasActiveNestedPage = page.pages.some((subPage) => {
-              if (subPage.path) {
-                return pathname === subPage.path || pathname.startsWith(subPage.path + '/');
-              }
-              return false;
-            });
-            if (hasActiveNestedPage) {
-              setOpenSubCollapse(page.name);
-              setOpenCollapse(route.name);
-            }
-          }
-        });
-      }
-    });
-    
-    hasAutoOpenedRef.current = true;
-  }, [pathname, routes]);
 
   React.useEffect(() => {
     const handleClick = (event: MouseEvent) => {
