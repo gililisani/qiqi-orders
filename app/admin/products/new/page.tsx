@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../../config/admin-routes';
 import Link from 'next/link';
 import ImageUpload from '../../../components/ImageUpload';
 import Card from '../../../components/ui/Card';
@@ -109,8 +107,7 @@ export default function NewProductPage() {
   };
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
-      <div className="space-y-8">
+    <div className="space-y-8">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900">Add New Product</h1>
           <Link href="/admin/products" className="text-gray-600 hover:text-gray-900">← Back to Products</Link>
@@ -374,6 +371,5 @@ export default function NewProductPage() {
           </div>
         </form>
       </div>
-    </AdminLayoutWrapper>
   );
 }

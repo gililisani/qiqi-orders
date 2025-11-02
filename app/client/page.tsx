@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
-import ClientLayout from '../components/ClientLayout';
 import Card from '../components/ui/Card';
 import Link from 'next/link';
 import OrderStatusBadge from '../components/ui/OrderStatusBadge';
@@ -89,22 +88,18 @@ export default function ClientDashboard() {
     }
   };
 
-
   if (loading) {
     return (
-      <ClientLayout>
-        <div className="text-center py-8">
+      <div className="text-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
           <p className="text-gray-600">Loading dashboard...</p>
         </div>
-      </ClientLayout>
     );
   }
 
   if (error) {
     return (
-      <ClientLayout>
-        <div className="text-center py-8">
+      <div className="text-center py-8">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
@@ -114,13 +109,11 @@ export default function ClientDashboard() {
             Retry
           </button>
         </div>
-      </ClientLayout>
     );
   }
 
   return (
-    <ClientLayout>
-      <div className="space-y-8">
+    <div className="space-y-8">
         {/* Welcome Section */}
         <Card>
           <div className="p-6">
@@ -298,6 +291,5 @@ export default function ClientDashboard() {
           </div>
         </Card>
       </div>
-    </ClientLayout>
   );
 }

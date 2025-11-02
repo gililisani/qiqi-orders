@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
-import AdminLayoutWrapper from '../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../config/admin-routes';
 import Link from 'next/link';
 import Card from '../../components/ui/Card';
 
@@ -79,17 +77,14 @@ export default function CategoriesPage() {
 
   if (loading) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
-        <div className="flex justify-center items-center min-h-64">
+      <div className="flex justify-center items-center min-h-64">
           <div className="text-lg">Loading categories...</div>
         </div>
-      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
-      <div className="space-y-8">
+    <div className="space-y-8">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-gray-900">Product Categories</h1>
           <div className="flex gap-3">
@@ -180,6 +175,5 @@ export default function CategoriesPage() {
           </div>
         )}
       </div>
-    </AdminLayoutWrapper>
   );
 }

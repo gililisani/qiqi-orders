@@ -1,7 +1,6 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import ClientLayout from '../../../../components/ClientLayout';
 import OrderFormView from '../../../../components/shared/OrderFormView';
 
 export default function ClientEditOrderPage() {
@@ -9,12 +8,10 @@ export default function ClientEditOrderPage() {
   const orderId = params.id as string;
 
   return (
-    <ClientLayout>
-      <OrderFormView
+    <OrderFormView
         role="client"
         orderId={orderId}
         backUrl={`/client/orders/${orderId}`}
       />
-    </ClientLayout>
   );
 }

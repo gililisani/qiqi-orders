@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
-import AdminLayoutWrapper from '../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../config/admin-routes';
 import Link from 'next/link';
 import { BanknotesIcon } from '@heroicons/react/24/outline';
 
@@ -51,17 +49,14 @@ export default function SupportFundsPage() {
 
   if (loading) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
-        <div className="p-6">
+      <div className="p-6">
           <p>Loading support funds...</p>
         </div>
-      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
-      <div className="p-6">
+    <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Support Funds Management</h1>
           <Link
@@ -134,6 +129,5 @@ export default function SupportFundsPage() {
           </div>
         )}
       </div>
-    </AdminLayoutWrapper>
   );
 }

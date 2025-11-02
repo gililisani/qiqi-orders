@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
-import AdminLayoutWrapper from '../../../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../../../config/admin-routes';
 import Link from 'next/link';
 
 interface FormData {
@@ -180,18 +178,15 @@ export default function EditUserPage() {
 
   if (initialLoading) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
-        <div className="p-6">
+      <div className="p-6">
           <p>Loading user...</p>
         </div>
-      </AdminLayoutWrapper>
     );
   }
 
   if (error && !client) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
-        <div className="p-6">
+      <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">User Not Found</h1>
             <p className="text-gray-600 mb-4">{error}</p>
@@ -203,13 +198,11 @@ export default function EditUserPage() {
             </Link>
           </div>
         </div>
-      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
-      <div className="p-6">
+    <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Edit User</h1>
           <Link
@@ -355,6 +348,5 @@ export default function EditUserPage() {
           </div>
         </form>
       </div>
-    </AdminLayoutWrapper>
   );
 }

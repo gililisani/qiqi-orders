@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
-import AdminLayoutWrapper from '../../../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../../../config/admin-routes';
 import InnerPageShell from '../../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 
@@ -99,8 +97,7 @@ export default function EditSubsidiaryPage() {
 
   if (loading) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
-        <div className="p-6">
+      <div className="p-6">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
             <div className="space-y-4">
@@ -109,13 +106,11 @@ export default function EditSubsidiaryPage() {
             </div>
           </div>
         </div>
-      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
-      <InnerPageShell
+    <InnerPageShell
         title="Edit Subsidiary"
         breadcrumbs={[{ label: 'Subsidiaries', href: '/admin/subsidiaries' }, { label: 'Edit' }]}
         actions={<Link href="/admin/subsidiaries" className="text-gray-600 hover:text-gray-800">← Back to Subsidiaries</Link>}
@@ -218,6 +213,5 @@ export default function EditSubsidiaryPage() {
         </form>
         </div>
       </InnerPageShell>
-    </AdminLayoutWrapper>
   );
 }

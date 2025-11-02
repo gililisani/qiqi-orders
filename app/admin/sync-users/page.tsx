@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import AdminLayoutWrapper from '../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../config/admin-routes';
 import InnerPageShell from '../../components/ui/InnerPageShell';
 import Link from 'next/link';
 
@@ -109,8 +107,7 @@ export default function SyncUsersPage() {
   };
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
-      <div className="p-6">
+    <div className="p-6">
         <InnerPageShell
           title="User Sync Check"
           breadcrumbs={[{ label: 'Sync Users' }]}
@@ -282,7 +279,6 @@ export default function SyncUsersPage() {
           </div>
         </InnerPageShell>
       </div>
-    </AdminLayoutWrapper>
   );
 }
 

@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
-import AdminLayoutWrapper from '../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../config/admin-routes';
 import Link from 'next/link';
 import { TagIcon } from '@heroicons/react/24/outline';
 
@@ -52,17 +50,14 @@ export default function ClassesPage() {
 
   if (loading) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
-        <div className="p-6">
+      <div className="p-6">
           <p>Loading classes...</p>
         </div>
-      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
-      <div className="p-6">
+    <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Classes Management</h1>
           <Link
@@ -143,6 +138,5 @@ export default function ClassesPage() {
           </div>
         )}
       </div>
-    </AdminLayoutWrapper>
   );
 }

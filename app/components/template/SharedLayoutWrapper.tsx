@@ -17,19 +17,19 @@ interface Route {
   path?: string;
 }
 
-interface AdminLayoutWrapperProps {
+interface SharedLayoutWrapperProps {
   children: React.ReactNode;
   routes?: Route[];
   brandName?: string;
   brandImg?: string;
 }
 
-export default function AdminLayoutWrapper({
+export default function SharedLayoutWrapper({
   children,
   routes = [],
   brandName,
   brandImg = "/QIQI-Logo.svg",
-}: AdminLayoutWrapperProps) {
+}: SharedLayoutWrapperProps) {
   const [controller] = useMaterialTailwindController();
   const { sidenavType, sidenavCollapsed } = controller;
   const pathname = usePathname();

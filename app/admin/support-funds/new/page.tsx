@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
-import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../../config/admin-routes';
 import Link from 'next/link';
 
 interface FormData {
@@ -55,8 +53,7 @@ export default function NewSupportFundPage() {
   };
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
-      <div className="p-6">
+    <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Add New Support Fund Level</h1>
           <Link
@@ -111,6 +108,5 @@ export default function NewSupportFundPage() {
           </div>
         </form>
       </div>
-    </AdminLayoutWrapper>
   );
 }

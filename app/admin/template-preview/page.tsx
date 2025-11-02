@@ -3,8 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import AdminLayoutWrapper from "@/app/components/template/AdminLayoutWrapper";
-import { adminRoutes } from "@/app/config/admin-routes";
 import { supabase } from "@/lib/supabaseClient";
 import {
   Card,
@@ -106,8 +104,7 @@ export default function TemplatePreviewPage() {
 
   if (loading) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
-        <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center gap-4">
             <Spinner className="h-12 w-12" onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
             <Typography variant="h6" color="blue-gray" {...defaultProps}>
@@ -115,13 +112,11 @@ export default function TemplatePreviewPage() {
             </Typography>
           </div>
         </div>
-      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
-      <div className="mt-8 mb-4">
+    <div className="mt-8 mb-4">
         <Typography variant="h2" color="blue-gray" className="mb-6" {...defaultProps}>
           Dashboard Overview
         </Typography>
@@ -340,7 +335,6 @@ export default function TemplatePreviewPage() {
           </CardBody>
         </Card>
       </div>
-    </AdminLayoutWrapper>
   );
 }
 

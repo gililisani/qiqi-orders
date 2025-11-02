@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
-import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../../config/admin-routes';
 import Link from 'next/link';
 
 export default function NewPaymentTermPage() {
@@ -47,8 +45,7 @@ export default function NewPaymentTermPage() {
   };
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
-      <div className="p-6">
+    <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Add New Payment Term</h1>
           <Link
@@ -112,6 +109,5 @@ export default function NewPaymentTermPage() {
           </div>
         </form>
       </div>
-    </AdminLayoutWrapper>
   );
 }

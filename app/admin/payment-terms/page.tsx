@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
-import AdminLayoutWrapper from '../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../config/admin-routes';
 import Link from 'next/link';
 import { CreditCardIcon } from '@heroicons/react/24/outline';
 
@@ -43,17 +41,14 @@ export default function PaymentTermsPage() {
 
   if (loading) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
-        <div className="p-6">
+      <div className="p-6">
           <p>Loading payment terms...</p>
         </div>
-      </AdminLayoutWrapper>
     );
   }
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
-      <div className="p-6">
+    <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Payment Terms Management</h1>
           <Link
@@ -136,6 +131,5 @@ export default function PaymentTermsPage() {
           </div>
         )}
       </div>
-    </AdminLayoutWrapper>
   );
 }
