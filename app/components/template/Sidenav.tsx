@@ -115,8 +115,8 @@ export default function Sidenav({
       shadow={sidenavType !== "transparent"}
       variant="gradient"
       className={`!fixed top-4 !z-50 h-[calc(100vh-2rem)] transition-all duration-300 ease-in-out ${
-        isCollapsed ? "w-20 max-w-[5rem]" : "w-full max-w-[18rem]"
-      } ${isCollapsed ? "" : "p-4"} shadow-blue-gray-900/5 ${
+        isCollapsed ? "w-[5rem] max-w-[5rem]" : "w-full max-w-[18rem]"
+      } ${isCollapsed ? "p-2" : "p-4"} shadow-blue-gray-900/5 ${
         openSidenav ? "left-4" : "-left-72"
       } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
         sidenavType === "dark" ? "!text-white" : "text-gray-900"
@@ -130,9 +130,9 @@ export default function Sidenav({
       {/* Logo */}
       <Link
         href={pathname.startsWith("/client") ? "/client" : "/admin"}
-        className={`flex items-center h-20 ${isCollapsed ? "justify-center" : "px-4 justify-start"}`}
+        className={`flex items-center justify-center ${isCollapsed ? "h-12 !p-2" : "h-20 !p-4"}`}
       >
-        <img src={brandImg} className="h-12 w-auto" alt="logo" />
+        <img src={brandImg} className={`${isCollapsed ? "h-8" : "h-12"} w-auto`} alt="logo" />
         {!isCollapsed && (
           <Typography variant="h6" color="blue-gray" className="ml-3" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
             {brandName}
@@ -155,7 +155,7 @@ export default function Sidenav({
       </IconButton>
 
       {/* Menu Items */}
-      <div className={isCollapsed ? "" : "px-2"}>
+      <div>
         {routes.map(({ name, icon, pages, title, divider, external, path }, key) =>
           pages ? (
             <div key={key} className="mb-1">
@@ -176,8 +176,8 @@ export default function Sidenav({
               <div>
                 <button
                   onClick={() => handleOpenCollapse(name)}
-                  className={`w-full flex items-center min-h-[2.5rem] rounded-lg transition-colors ${
-                    isCollapsed ? "justify-center py-2" : "px-3 py-2"
+                  className={`w-full flex items-center rounded-lg transition-colors ${
+                    isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
                   } ${
                     openCollapse === name && sidenavColor !== "white" && sidenavColor !== "transparent" && sidenavColor !== "gray"
                       ? "bg-gray-200"
@@ -186,20 +186,13 @@ export default function Sidenav({
                       : ""
                   } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
                 >
-                  {!isCollapsed && (
-                    <ChevronDownIcon
-                      className={`h-3 w-3 transition-transform mr-2 ${
-                        openCollapse === name ? "rotate-180" : ""
-                      }`}
-                    />
-                  )}
-                  <div className={`flex items-center ${icon ? "w-5 h-5" : ""}`}>
+                  <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                     {icon}
                   </div>
                   {!isCollapsed && (
                     <Typography
                       color="inherit"
-                      className="font-medium capitalize ml-3"
+                      className="flex-1 font-normal capitalize"
                       placeholder={undefined}
                       onPointerEnterCapture={undefined}
                       onPointerLeaveCapture={undefined}
@@ -207,19 +200,27 @@ export default function Sidenav({
                       {name}
                     </Typography>
                   )}
+                  {!isCollapsed && (
+                    <ChevronDownIcon
+                      strokeWidth={2.5}
+                      className={`h-3 w-3 transition-transform ${
+                        openCollapse === name ? "rotate-180" : ""
+                      }`}
+                    />
+                  )}
                 </button>
 
                 {/* Submenu */}
                 {openCollapse === name && (
-                  <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? "" : "pl-2"}`}>
+                  <div className="transition-all duration-300 ease-in-out overflow-hidden">
                     {pages.map((page: Route, idx) =>
                       page.pages ? (
                         /* Nested Accordion */
                         <div key={idx}>
                           <button
                             onClick={() => handleOpenSubCollapse(page.name)}
-                            className={`w-full flex items-center min-h-[2.5rem] rounded-lg transition-colors ${
-                              isCollapsed ? "justify-center py-2" : "px-2 py-2"
+                            className={`w-full flex items-center rounded-lg transition-colors ${
+                              isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
                             } ${
                               openSubCollapse === page.name && sidenavColor !== "white" && sidenavColor !== "transparent" && sidenavColor !== "gray"
                                 ? "bg-gray-200"
@@ -228,20 +229,13 @@ export default function Sidenav({
                                 : ""
                             } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
                           >
-                            {!isCollapsed && (
-                              <ChevronDownIcon
-                                className={`h-3 w-3 transition-transform mr-2 ${
-                                  openSubCollapse === page.name ? "rotate-180" : ""
-                                }`}
-                              />
-                            )}
-                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""}`}>
+                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                               {page.icon}
                             </div>
                             {!isCollapsed && (
                               <Typography
                                 color="inherit"
-                                className="font-medium capitalize ml-3"
+                                className="flex-1 font-normal capitalize"
                                 placeholder={undefined}
                                 onPointerEnterCapture={undefined}
                                 onPointerLeaveCapture={undefined}
@@ -249,61 +243,49 @@ export default function Sidenav({
                                 {page.name}
                               </Typography>
                             )}
+                            {!isCollapsed && (
+                              <ChevronDownIcon
+                                strokeWidth={2.5}
+                                className={`h-3 w-3 transition-transform ${
+                                  openSubCollapse === page.name ? "rotate-180" : ""
+                                }`}
+                              />
+                            )}
                           </button>
 
                           {openSubCollapse === page.name && (
-                            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? "" : "pl-2"}`}>
+                            <div className="transition-all duration-300 ease-in-out overflow-hidden">
                               {page.pages.map((subPage: Route, subIdx: number) =>
                                 subPage.external ? (
                                   <a
                                     key={subIdx}
                                     href={subPage.path}
                                     target="_blank"
-                                    className={`w-full flex items-center min-h-[2.5rem] rounded-lg transition-colors ${
-                                      isCollapsed ? "justify-center py-2" : "px-2 py-2"
+                                    className={`w-full flex items-center rounded-lg transition-colors ${
+                                      isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
                                     } ${
                                       pathname === subPage.path ? activeRouteClasses : ""
                                     } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
                                   >
-                                    <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""}`}>
+                                    <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                                       {subPage.icon}
                                     </div>
-                                    {!isCollapsed && (
-                                      <Typography
-                                        color="inherit"
-                                        className="font-medium ml-3"
-                                        placeholder={undefined}
-                                        onPointerEnterCapture={undefined}
-                                        onPointerLeaveCapture={undefined}
-                                      >
-                                        {subPage.name}
-                                      </Typography>
-                                    )}
+                                    {!isCollapsed && subPage.name}
                                   </a>
                                 ) : (
                                   <Link
                                     key={subIdx}
                                     href={subPage.path!}
-                                    className={`w-full flex items-center min-h-[2.5rem] rounded-lg transition-colors ${
-                                      isCollapsed ? "justify-center py-2" : "px-2 py-2"
+                                    className={`w-full flex items-center rounded-lg transition-colors ${
+                                      isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
                                     } ${
                                       pathname === subPage.path ? activeRouteClasses : ""
                                     } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
                                   >
-                                    <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""}`}>
+                                    <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                                       {subPage.icon}
                                     </div>
-                                    {!isCollapsed && (
-                                      <Typography
-                                        color="inherit"
-                                        className="font-medium ml-3"
-                                        placeholder={undefined}
-                                        onPointerEnterCapture={undefined}
-                                        onPointerLeaveCapture={undefined}
-                                      >
-                                        {subPage.name}
-                                      </Typography>
-                                    )}
+                                    {!isCollapsed && subPage.name}
                                   </Link>
                                 )
                               )}
@@ -315,49 +297,29 @@ export default function Sidenav({
                           key={idx}
                           href={page.path}
                           target="_blank"
-                          className={`w-full flex items-center min-h-[2.5rem] rounded-lg transition-colors ${
-                            isCollapsed ? "justify-center py-2" : "px-2 py-2"
+                          className={`w-full flex items-center rounded-lg transition-colors ${
+                            isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
                           } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
                         >
-                          <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""}`}>
+                          <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                             {page.icon}
                           </div>
-                          {!isCollapsed && (
-                            <Typography
-                              color="inherit"
-                              className="font-medium ml-3"
-                              placeholder={undefined}
-                              onPointerEnterCapture={undefined}
-                              onPointerLeaveCapture={undefined}
-                            >
-                              {page.name}
-                            </Typography>
-                          )}
+                          {!isCollapsed && page.name}
                         </a>
                       ) : (
                         <Link
                           key={idx}
                           href={page.path!}
-                          className={`w-full flex items-center min-h-[2.5rem] rounded-lg transition-colors ${
-                            isCollapsed ? "justify-center py-2" : "px-2 py-2"
+                          className={`w-full flex items-center rounded-lg transition-colors ${
+                            isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
                           } ${
                             pathname === page.path ? activeRouteClasses : ""
                           } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
                         >
-                          <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""}`}>
+                          <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                             {page.icon}
                           </div>
-                          {!isCollapsed && (
-                            <Typography
-                              color="inherit"
-                              className="font-medium ml-3"
-                              placeholder={undefined}
-                              onPointerEnterCapture={undefined}
-                              onPointerLeaveCapture={undefined}
-                            >
-                              {page.name}
-                            </Typography>
-                          )}
+                          {!isCollapsed && page.name}
                         </Link>
                       )
                     )}
@@ -372,50 +334,30 @@ export default function Sidenav({
                 <a
                   href={path}
                   target="_blank"
-                  className={`w-full flex items-center min-h-[2.5rem] rounded-lg transition-colors ${
-                    isCollapsed ? "justify-center py-2" : "px-3 py-2"
+                  className={`w-full flex items-center rounded-lg transition-colors ${
+                    isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
                   } ${
                     pathname === path ? activeRouteClasses : ""
                   } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
                 >
-                  <div className={`flex items-center ${icon ? "w-5 h-5" : ""}`}>
+                  <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                     {icon}
                   </div>
-                  {!isCollapsed && (
-                    <Typography
-                      color="inherit"
-                      className="font-medium ml-3"
-                      placeholder={undefined}
-                      onPointerEnterCapture={undefined}
-                      onPointerLeaveCapture={undefined}
-                    >
-                      {name}
-                    </Typography>
-                  )}
+                  {!isCollapsed && name}
                 </a>
               ) : (
                 <Link
                   href={path!}
-                  className={`w-full flex items-center min-h-[2.5rem] rounded-lg transition-colors ${
-                    isCollapsed ? "justify-center py-2" : "px-3 py-2"
+                  className={`w-full flex items-center rounded-lg transition-colors ${
+                    isCollapsed ? "justify-center py-2 px-0" : "py-3 px-3"
                   } ${
                     pathname === path ? activeRouteClasses : ""
                   } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
                 >
-                  <div className={`flex items-center ${icon ? "w-5 h-5" : ""}`}>
+                  <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                     {icon}
                   </div>
-                  {!isCollapsed && (
-                    <Typography
-                      color="inherit"
-                      className="font-medium ml-3"
-                      placeholder={undefined}
-                      onPointerEnterCapture={undefined}
-                      onPointerLeaveCapture={undefined}
-                    >
-                      {name}
-                    </Typography>
-                  )}
+                  {!isCollapsed && name}
                 </Link>
               )}
             </div>
