@@ -63,6 +63,38 @@ export default function Sidenav({
   const [openCollapse, setOpenCollapse] = React.useState<string | null>(null);
   const [openSubCollapse, setOpenSubCollapse] = React.useState<string | null>(null);
   const [isHovering, setIsHovering] = React.useState(false);
+  
+  // Initialize accordion states based on current pathname (only once)
+  React.useEffect(() => {
+    routes.forEach((route) => {
+      if (route.pages) {
+        const hasActiveSubPage = route.pages.some((page) => {
+          if (page.path) {
+            return pathname === page.path || pathname.startsWith(page.path + '/');
+          }
+          return false;
+        });
+        if (hasActiveSubPage && openCollapse !== route.name) {
+          setOpenCollapse(route.name);
+        }
+        
+        route.pages.forEach((page) => {
+          if (page.pages) {
+            const hasActiveNestedPage = page.pages.some((subPage) => {
+              if (subPage.path) {
+                return pathname === subPage.path || pathname.startsWith(subPage.path + '/');
+              }
+              return false;
+            });
+            if (hasActiveNestedPage) {
+              if (openSubCollapse !== page.name) setOpenSubCollapse(page.name);
+              if (openCollapse !== route.name) setOpenCollapse(route.name);
+            }
+          }
+        });
+      }
+    });
+  }, []); // Empty dependency array - only run once on mount
 
   const handleOpenCollapse = (value: string) => {
     setOpenCollapse((cur) => (cur === value ? null : value));
