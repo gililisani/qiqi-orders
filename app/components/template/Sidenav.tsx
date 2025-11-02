@@ -127,8 +127,8 @@ export default function Sidenav({
       shadow={sidenavType !== "transparent"}
       variant="gradient"
       className={`!fixed top-4 !z-50 h-[calc(100vh-2rem)] transition-all duration-300 ease-in-out ${
-        isCollapsed ? "w-20 max-w-[5rem]" : "w-full max-w-[18rem]"
-      } p-4 shadow-blue-gray-900/5 ${
+        isCollapsed ? "w-20 max-w-[5rem] !p-0" : "w-full max-w-[18rem]"
+      } ${isCollapsed ? "" : "p-4"} shadow-blue-gray-900/5 ${
         openSidenav ? "left-4" : "-left-72"
       } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
         sidenavType === "dark" ? "!text-white" : "text-gray-900"
@@ -141,7 +141,7 @@ export default function Sidenav({
     >
       <Link
         href={pathname.startsWith("/client") ? "/client" : "/admin"}
-        className={`flex items-center ${isCollapsed ? "justify-center" : "justify-start"} h-20 p-4`}
+        className={`flex items-center ${isCollapsed ? "justify-center" : "justify-start"} h-20 ${isCollapsed ? "" : "px-4 pt-4"}`}
       >
         <img src={brandImg} className="h-12 w-auto" alt="logo" />
         {!isCollapsed && (
@@ -215,6 +215,7 @@ export default function Sidenav({
                       onPointerLeaveCapture={undefined}
                     >
                       <ListItemPrefix
+                        className={isCollapsed ? "!mr-0" : ""}
                         placeholder={undefined}
                         onPointerEnterCapture={undefined}
                         onPointerLeaveCapture={undefined}
@@ -438,6 +439,7 @@ export default function Sidenav({
                       onPointerLeaveCapture={undefined}
                     >
                       <ListItemPrefix
+                        className={isCollapsed ? "!mr-0" : ""}
                         placeholder={undefined}
                         onPointerEnterCapture={undefined}
                         onPointerLeaveCapture={undefined}
@@ -468,6 +470,7 @@ export default function Sidenav({
                       onPointerLeaveCapture={undefined}
                     >
                       <ListItemPrefix
+                        className={isCollapsed ? "!mr-0" : ""}
                         placeholder={undefined}
                         onPointerEnterCapture={undefined}
                         onPointerLeaveCapture={undefined}
