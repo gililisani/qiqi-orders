@@ -202,6 +202,16 @@ export default function Sidenav({
               {/* Accordion Wrapper */}
               <Accordion
                 open={openCollapse === name}
+                icon={
+                  !isCollapsed ? (
+                    <ChevronDownIcon
+                      strokeWidth={2.5}
+                      className={`h-3 w-3 transition-transform ${
+                        openCollapse === name ? "rotate-180" : ""
+                      }`}
+                    />
+                  ) : null
+                }
                 placeholder={undefined}
                 onPointerEnterCapture={undefined}
                 onPointerLeaveCapture={undefined}
@@ -239,6 +249,16 @@ export default function Sidenav({
                         <Accordion
                           key={key}
                           open={openSubCollapse === page.name}
+                          icon={
+                            !isCollapsed ? (
+                              <ChevronDownIcon
+                                strokeWidth={2.5}
+                                className={`h-3 w-3 transition-transform ${
+                                  openSubCollapse === page.name ? "rotate-180" : ""
+                                }`}
+                              />
+                            ) : null
+                          }
                           placeholder={undefined}
                           onPointerEnterCapture={undefined}
                           onPointerLeaveCapture={undefined}
