@@ -132,8 +132,9 @@ export default function Sidenav({
   }, [openSidenav]);
 
   const isCollapsed = sidenavCollapsed && !isHovering;
-  const baseItemClasses = "cursor-pointer transition-all";
+  const baseItemClasses = "cursor-pointer transition-all rounded-lg";
   const activeRouteClasses = `${COLORS[sidenavColor]} text-white`;
+  const accordionBodyClasses = "transition-all duration-300 ease-in-out overflow-hidden";
 
   return (
     <Card
@@ -197,11 +198,11 @@ export default function Sidenav({
               )}
               
               {/* Accordion Wrapper */}
-              <div className={openCollapse === name && sidenavType === "dark" ? "bg-white/10" : openCollapse === name ? "bg-gray-200" : ""}>
+              <div>
                 {/* Accordion Header */}
                 <div 
                   onClick={() => handleOpenCollapse(name)}
-                  className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
+                  className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${openCollapse === name && sidenavType === "dark" ? "bg-white/10" : openCollapse === name ? "bg-gray-200" : ""} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}
                 >
                   <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
                     {icon}
@@ -229,7 +230,7 @@ export default function Sidenav({
 
                 {/* Accordion Body */}
                 {openCollapse === name && (
-                  <div className={`${isCollapsed ? "" : "pl-0"}`}>
+                  <div className={`${accordionBodyClasses} ${isCollapsed ? "" : "pl-0"}`}>
                     {pages.map((page: Route, key) =>
                       page.pages ? (
                         // Nested Accordion
@@ -264,7 +265,7 @@ export default function Sidenav({
                             )}
                           </div>
                           {openSubCollapse === page.name && (
-                            <div>
+                            <div className={accordionBodyClasses}>
                               {page.pages.map((subPage: Route, key: number) =>
                                 subPage.external ? (
                                   <a href={subPage.path} target="_blank" key={key}>
