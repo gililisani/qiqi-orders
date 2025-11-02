@@ -47,7 +47,7 @@ export default function AdminLayoutWrapper({
           brandImg={brandImg}
         />
       )}
-      <div className={`${isSimpleLayout ? "m-0" : "p-4"} ${!isSimpleLayout && (sidenavCollapsed ? "xl:ml-24" : "xl:ml-80")}`}>
+      <div className={`${isSimpleLayout ? "m-0" : "p-4"} ${!isSimpleLayout && (sidenavCollapsed ? "xl:ml-24" : "xl:ml-80")} ${!isSimpleLayout ? "transition-all duration-300" : ""}`}>
         {!isSimpleLayout && (
           <>
             <DashboardNavbar />

@@ -181,9 +181,9 @@ export default function Sidenav({
     >
       <Link
         href={pathname.startsWith("/client") ? "/client" : "/admin"}
-        className="mb-2 flex items-center justify-center !p-4"
+        className={`mb-2 flex items-center justify-center ${sidenavCollapsed && !isHovering ? "!p-2" : "!p-4"}`}
       >
-        <img src={brandImg} className="h-12 w-auto" alt="logo" />
+        <img src={brandImg} className={`${sidenavCollapsed && !isHovering ? "h-8" : "h-12"} w-auto`} alt="logo" />
       </Link>
       <IconButton
         ripple={false}
@@ -280,7 +280,7 @@ export default function Sidenav({
                       )}
                     </AccordionHeader>
                   </ListItem>
-                  <AccordionBody className="!py-1 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <AccordionBody className="!py-1 !pl-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                     <List className="!p-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                       {pages.map((page: Route, key) =>
                         page.pages ? (
@@ -337,7 +337,7 @@ export default function Sidenav({
                                 )}
                               </AccordionHeader>
                             </ListItem>
-                            <AccordionBody className="!py-1 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                            <AccordionBody className="!py-1 !pl-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                               <List className="!p-0 ext-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                 {page.pages.map((subPage: Route, key: number) =>
                                   subPage.external ? (
