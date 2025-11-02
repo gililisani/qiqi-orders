@@ -99,6 +99,40 @@ export default function Sidenav({
     setIsHovering(false);
   };
 
+  // Auto-open accordions for current pathname
+  React.useEffect(() => {
+    routes.forEach((route) => {
+      if (route.pages) {
+        // Check if any sub-page matches current pathname
+        const hasActiveSubPage = route.pages.some((page) => {
+          if (page.path) {
+            return pathname === page.path || pathname.startsWith(page.path + '/');
+          }
+          return false;
+        });
+        if (hasActiveSubPage) {
+          setOpenCollapse(route.name);
+        }
+        
+        // Check nested pages
+        route.pages.forEach((page) => {
+          if (page.pages) {
+            const hasActiveNestedPage = page.pages.some((subPage) => {
+              if (subPage.path) {
+                return pathname === subPage.path || pathname.startsWith(subPage.path + '/');
+              }
+              return false;
+            });
+            if (hasActiveNestedPage) {
+              setOpenSubCollapse(page.name);
+              setOpenCollapse(route.name);
+            }
+          }
+        });
+      }
+    });
+  }, [pathname, routes]);
+
   // Simple click outside handler
   React.useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -117,7 +151,7 @@ export default function Sidenav({
       ? "text-white hover:bg-opacity-25 focus:bg-opacity-100 active:bg-opacity-10 hover:text-white focus:text-white active:text-white"
       : "";
   const collapseHeaderClasses =
-    "border-b-0 !p-3 text-inherit hover:text-inherit focus:text-inherit active:text-inherit";
+    "border-b-0 !min-h-[2.5rem] !py-3 text-inherit hover:text-inherit focus:text-inherit active:text-inherit";
   const activeRouteClasses = `${collapseItemClasses} ${COLORS[sidenavColor]} text-white active:text-white hover:text-white focus:text-white`;
 
   return (
@@ -134,7 +168,7 @@ export default function Sidenav({
       variant="gradient"
       className={`!fixed top-4 !z-50 h-[calc(100vh-2rem)] ${
         sidenavCollapsed && !isHovering ? "w-[5rem] max-w-[5rem]" : "w-full max-w-[18rem]"
-      } p-4 shadow-blue-gray-900/5 ${
+      } ${sidenavCollapsed && !isHovering ? "p-2" : "p-4"} shadow-blue-gray-900/5 ${
         openSidenav ? "left-4" : "-left-72"
       } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
         sidenavType === "dark" ? "!text-white" : "text-gray-900"
@@ -332,7 +366,7 @@ export default function Sidenav({
                                           pathname === `${subPage.path}`
                                             ? activeRouteClasses
                                             : collapseItemClasses
-                                        } ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`}
+                                        }`}
                                         placeholder={undefined}
                                         onPointerEnterCapture={undefined}
                                         onPointerLeaveCapture={undefined}
@@ -362,7 +396,7 @@ export default function Sidenav({
                                 pathname === `${page.path}`
                                   ? activeRouteClasses
                                   : collapseItemClasses
-                              } ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`}
+                              }`}
                               placeholder={undefined}
                               onPointerEnterCapture={undefined}
                               onPointerLeaveCapture={undefined}
