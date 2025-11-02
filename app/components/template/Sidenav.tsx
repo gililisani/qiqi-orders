@@ -118,13 +118,13 @@ export default function Sidenav({
       }
       shadow={sidenavType !== "transparent"}
       variant="gradient"
-      className={`!fixed top-4 !z-50 h-[calc(100vh-2rem)] ${
-        isCollapsed ? "w-[5rem] max-w-[5rem]" : "w-full max-w-[18rem]"
+      className={`!fixed top-4 !z-50 h-[calc(100vh-2rem)] transition-all duration-300 ease-in-out ${
+        isCollapsed ? "w-20 max-w-[5rem]" : "w-full max-w-[18rem]"
       } p-4 shadow-blue-gray-900/5 ${
         openSidenav ? "left-4" : "-left-72"
       } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
         sidenavType === "dark" ? "!text-white" : "text-gray-900"
-      }} transition-all duration-300 ease-in-out xl:left-4 overflow-y-scroll`}
+      } xl:left-4 overflow-y-scroll`}
       placeholder={undefined}
       onPointerEnterCapture={undefined}
       onPointerLeaveCapture={undefined}
@@ -133,7 +133,7 @@ export default function Sidenav({
     >
       <Link
         href={pathname.startsWith("/client") ? "/client" : "/admin"}
-        className="flex items-center justify-center h-20 p-4"
+        className={`flex items-center ${isCollapsed ? "justify-center h-20" : "justify-start h-20"} p-4`}
       >
         <img src={brandImg} className="h-12 w-auto" alt="logo" />
       </Link>
@@ -167,63 +167,61 @@ export default function Sidenav({
                 </Typography>
               )}
               
-              {/* Accordion Wrapper */}
               <Accordion
                 open={openCollapse === name}
                 icon={
-                  !isCollapsed ? (
+                  !isCollapsed && (
                     <ChevronDownIcon
                       strokeWidth={2.5}
                       className={`h-3 w-3 transition-transform ${
                         openCollapse === name ? "rotate-180" : ""
                       }`}
                     />
-                  ) : null
+                  )
                 }
                 placeholder={undefined}
                 onPointerEnterCapture={undefined}
                 onPointerLeaveCapture={undefined}
               >
-                {/* Accordion Header */}
                 <AccordionHeader
                   onClick={() => handleOpenCollapse(name)}
-                  className={`${baseItemClasses} ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${openCollapse === name && sidenavType === "dark" ? "bg-white/10" : openCollapse === name ? "bg-gray-200" : ""} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""} !border-0`}
+                  className={`${baseItemClasses} py-3 ${isCollapsed ? "!px-0 justify-center" : "px-3"} ${openCollapse === name && sidenavType === "dark" ? "bg-white/10" : openCollapse === name ? "bg-gray-200" : ""} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""} !border-0`}
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
                 >
-                  <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                  <div className={`flex items-center ${icon ? "w-5 h-5" : ""}`}>
                     {icon}
                   </div>
-                  <Typography
-                    color="inherit"
-                    className={`flex-1 font-normal capitalize transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}
-                    placeholder={undefined}
-                    onPointerEnterCapture={undefined}
-                    onPointerLeaveCapture={undefined}
-                  >
-                    {name}
-                  </Typography>
+                  {!isCollapsed && (
+                    <Typography
+                      color="inherit"
+                      className="flex-1 font-normal capitalize ml-3"
+                      placeholder={undefined}
+                      onPointerEnterCapture={undefined}
+                      onPointerLeaveCapture={undefined}
+                    >
+                      {name}
+                    </Typography>
+                  )}
                 </AccordionHeader>
 
-                {/* Accordion Body */}
-                <AccordionBody className="!py-1 pl-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  <div>
+                <AccordionBody className="!py-1" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <div className={isCollapsed ? "" : "pl-8"}>
                     {pages.map((page: Route, key) =>
                       page.pages ? (
-                        // Nested Accordion
                         <Accordion
                           key={key}
                           open={openSubCollapse === page.name}
                           icon={
-                            !isCollapsed ? (
+                            !isCollapsed && (
                               <ChevronDownIcon
                                 strokeWidth={2.5}
                                 className={`h-3 w-3 transition-transform ${
                                   openSubCollapse === page.name ? "rotate-180" : ""
                                 }`}
                               />
-                            ) : null
+                            )
                           }
                           placeholder={undefined}
                           onPointerEnterCapture={undefined}
@@ -231,51 +229,57 @@ export default function Sidenav({
                         >
                           <AccordionHeader
                             onClick={() => handleOpenSubCollapse(page.name)}
-                            className={`${baseItemClasses} ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${
+                            className={`${baseItemClasses} py-3 ${isCollapsed ? "!px-0 justify-center" : "px-0"} ${
                               openSubCollapse === page.name && sidenavType === "dark" ? "bg-white/10" : openSubCollapse === page.name ? "bg-gray-200" : ""
                             } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""} !border-0`}
                             placeholder={undefined}
                             onPointerEnterCapture={undefined}
                             onPointerLeaveCapture={undefined}
                           >
-                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""}`}>
                               {page.icon}
                             </div>
-                            <Typography
-                              color="inherit"
-                              className={`flex-1 font-normal capitalize transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}
-                              placeholder={undefined}
-                              onPointerEnterCapture={undefined}
-                              onPointerLeaveCapture={undefined}
-                            >
-                              {page.name}
-                            </Typography>
+                            {!isCollapsed && (
+                              <Typography
+                                color="inherit"
+                                className="flex-1 font-normal capitalize ml-3"
+                                placeholder={undefined}
+                                onPointerEnterCapture={undefined}
+                                onPointerLeaveCapture={undefined}
+                              >
+                                {page.name}
+                              </Typography>
+                            )}
                           </AccordionHeader>
                           <AccordionBody className="!py-1" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                            <div>
+                            <div className={isCollapsed ? "" : "pl-8"}>
                               {page.pages.map((subPage: Route, key: number) =>
                                 subPage.external ? (
                                   <a href={subPage.path} target="_blank" key={key}>
-                                    <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
-                                      <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                                    <div className={`${baseItemClasses} flex items-center py-3 ${isCollapsed ? "!px-0 justify-center" : "px-0"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
+                                      <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""}`}>
                                         {subPage.icon}
                                       </div>
-                                      <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
-                                        {subPage.name}
-                                      </span>
+                                      {!isCollapsed && (
+                                        <span className="ml-3">
+                                          {subPage.name}
+                                        </span>
+                                      )}
                                     </div>
                                   </a>
                                 ) : (
                                   <Link href={subPage.path!} key={key}>
-                                    <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${
+                                    <div className={`${baseItemClasses} flex items-center py-3 ${isCollapsed ? "!px-0 justify-center" : "px-0"} ${
                                       pathname === subPage.path ? activeRouteClasses : ""
                                     } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
-                                      <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                                      <div className={`flex items-center ${subPage.icon ? "w-5 h-5" : ""}`}>
                                         {subPage.icon}
                                       </div>
-                                      <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
-                                        {subPage.name}
-                                      </span>
+                                      {!isCollapsed && (
+                                        <span className="ml-3">
+                                          {subPage.name}
+                                        </span>
+                                      )}
                                     </div>
                                   </Link>
                                 )
@@ -285,26 +289,30 @@ export default function Sidenav({
                         </Accordion>
                       ) : page.external ? (
                         <a key={key} href={page.path} target="_blank">
-                          <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
-                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                          <div className={`${baseItemClasses} flex items-center py-3 ${isCollapsed ? "!px-0 justify-center" : "px-0"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
+                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""}`}>
                               {page.icon}
                             </div>
-                            <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
-                              {page.name}
-                            </span>
+                            {!isCollapsed && (
+                              <span className="ml-3">
+                                {page.name}
+                              </span>
+                            )}
                           </div>
                         </a>
                       ) : (
                         <Link key={key} href={page.path!}>
-                          <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${
+                          <div className={`${baseItemClasses} flex items-center py-3 ${isCollapsed ? "!px-0 justify-center" : "px-0"} ${
                             pathname === page.path ? activeRouteClasses : ""
                           } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
-                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                            <div className={`flex items-center ${page.icon ? "w-5 h-5" : ""}`}>
                               {page.icon}
                             </div>
-                            <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
-                              {page.name}
-                            </span>
+                            {!isCollapsed && (
+                              <span className="ml-3">
+                                {page.name}
+                              </span>
+                            )}
                           </div>
                         </Link>
                       )
@@ -319,26 +327,30 @@ export default function Sidenav({
             <div key={key}>
               {external ? (
                 <a href={path} target="_blank">
-                  <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
-                    <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                  <div className={`${baseItemClasses} flex items-center py-3 ${isCollapsed ? "!px-0 justify-center" : "px-3"} hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
+                    <div className={`flex items-center ${icon ? "w-5 h-5" : ""}`}>
                       {icon}
                     </div>
-                    <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
-                      {name}
-                    </span>
+                    {!isCollapsed && (
+                      <span className="ml-3">
+                        {name}
+                      </span>
+                    )}
                   </div>
                 </a>
               ) : (
                 <Link href={path!}>
-                  <div className={`${baseItemClasses} flex items-center ${isCollapsed ? "py-2 px-0 justify-center" : "py-3 px-3"} ${
+                  <div className={`${baseItemClasses} flex items-center py-3 ${isCollapsed ? "!px-0 justify-center" : "px-3"} ${
                     pathname === path ? activeRouteClasses : ""
                   } hover:bg-gray-100 ${sidenavType === "dark" ? "hover:bg-white/10" : ""}`}>
-                    <div className={`flex items-center ${icon ? "w-5 h-5" : ""} ${isCollapsed ? "" : "mr-3"}`}>
+                    <div className={`flex items-center ${icon ? "w-5 h-5" : ""}`}>
                       {icon}
                     </div>
-                    <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
-                      {name}
-                    </span>
+                    {!isCollapsed && (
+                      <span className="ml-3">
+                        {name}
+                      </span>
+                    )}
                   </div>
                 </Link>
               )}
