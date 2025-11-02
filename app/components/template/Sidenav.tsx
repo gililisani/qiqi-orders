@@ -151,7 +151,7 @@ export default function Sidenav({
       ? "text-white hover:bg-opacity-25 focus:bg-opacity-100 active:bg-opacity-10 hover:text-white focus:text-white active:text-white"
       : "";
   const collapseHeaderClasses =
-    "border-b-0 !min-h-[2.5rem] !py-3 text-inherit hover:text-inherit focus:text-inherit active:text-inherit";
+    "border-b-0 !min-h-[2.5rem] text-inherit hover:text-inherit focus:text-inherit active:text-inherit";
   const activeRouteClasses = `${collapseItemClasses} ${COLORS[sidenavColor]} text-white active:text-white hover:text-white focus:text-white`;
 
   return (
@@ -261,7 +261,7 @@ export default function Sidenav({
                   >
                     <AccordionHeader
                       onClick={() => handleOpenCollapse(name)}
-                      className={collapseHeaderClasses}
+                      className={`${collapseHeaderClasses} ${sidenavCollapsed && !isHovering ? "!py-2 !px-0" : "!py-3"}`}
                       placeholder={undefined}
                       onPointerEnterCapture={undefined}
                       onPointerLeaveCapture={undefined}
@@ -318,7 +318,7 @@ export default function Sidenav({
                             >
                               <AccordionHeader
                                 onClick={() => handleOpenSubCollapse(page.name)}
-                                className={collapseHeaderClasses}
+                                className={`${collapseHeaderClasses} ${sidenavCollapsed && !isHovering ? "!py-2 !px-0" : "!py-3"}`}
                                 placeholder={undefined}
                                 onPointerEnterCapture={undefined}
                                 onPointerLeaveCapture={undefined}
@@ -338,7 +338,7 @@ export default function Sidenav({
                               </AccordionHeader>
                             </ListItem>
                             <AccordionBody className="!py-1 !pl-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                              <List className="!p-0 ext-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                              <List className="!p-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                 {page.pages.map((subPage: Route, key: number) =>
                                   subPage.external ? (
                                     <a
