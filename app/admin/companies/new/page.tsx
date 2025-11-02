@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
-import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../../config/admin-routes';
+
+
 import InnerPageShell from '../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 
@@ -228,7 +228,7 @@ export default function NewCompanyPage() {
   };
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
+    <>
       <div className="p-6">
         <InnerPageShell
           title="Add New Company"
@@ -638,6 +638,6 @@ export default function NewCompanyPage() {
         </form>
         </InnerPageShell>
       </div>
-    </AdminLayoutWrapper>
+    </>
   );
 }

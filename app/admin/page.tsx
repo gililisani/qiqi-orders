@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
-import AdminLayoutWrapper from '../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../config/admin-routes';
 import Link from 'next/link';
 import { generateNetSuiteCSV, downloadCSV, OrderForExport } from '../../lib/csvExport';
 import {
@@ -176,21 +174,19 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
-        <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center gap-4">
-            <Spinner className="h-12 w-12" onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
-            <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-              Loading dashboard...
-            </Typography>
-          </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-4">
+          <Spinner className="h-12 w-12" onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
+          <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+            Loading dashboard...
+          </Typography>
         </div>
-      </AdminLayoutWrapper>
+      </div>
     );
   }
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
+    <>
       <div className="mt-8 mb-4 space-y-6">
         <Typography variant="h2" color="blue-gray" className="mb-6" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
           Dashboard Overview
@@ -372,6 +368,6 @@ export default function AdminDashboard() {
           </CardBody>
         </Card>
       </div>
-    </AdminLayoutWrapper>
+    </>
   );
 }

@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
-import AdminLayoutWrapper from '../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../config/admin-routes';
+
+
 import Link from 'next/link';
 import { ShieldCheckIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
@@ -80,16 +80,16 @@ export default function AdminsPage() {
 
   if (loading) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
+      <
         <div className="p-6">
           <p>Loading admins...</p>
         </div>
-      </AdminLayoutWrapper>
+      </>
     );
   }
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
+    <>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Admins</h1>
@@ -196,6 +196,6 @@ export default function AdminsPage() {
           </div>
         )}
       </div>
-    </AdminLayoutWrapper>
+    </>
   );
 }

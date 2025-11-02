@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
-import AdminLayoutWrapper from '../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../config/admin-routes';
+
+
 import Link from 'next/link';
 import { BuildingOffice2Icon } from '@heroicons/react/24/outline';
 
@@ -56,16 +56,16 @@ export default function SubsidiariesPage() {
 
   if (loading) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
+      <
         <div className="p-6">
           <p>Loading subsidiaries...</p>
         </div>
-      </AdminLayoutWrapper>
+      </>
     );
   }
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
+    <>
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Subsidiaries Management</h1>
@@ -159,6 +159,6 @@ export default function SubsidiariesPage() {
           </div>
         )}
       </div>
-    </AdminLayoutWrapper>
+    </>
   );
 }

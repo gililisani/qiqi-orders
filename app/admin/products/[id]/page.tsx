@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../../config/admin-routes';
+
+
 import InnerPageShell from '../../../components/ui/InnerPageShell';
 import Card from '../../../components/ui/Card';
 import Link from 'next/link';
@@ -80,17 +80,17 @@ export default function ProductViewPage({ params }: { params: { id: string } }) 
 
   if (loading) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
+      <
         <div className="p-6">
           <p>Loading product...</p>
         </div>
-      </AdminLayoutWrapper>
+      </>
     );
   }
 
   if (error || !product) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
+      <
         <div className="p-6">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             {error || 'Product not found'}
@@ -102,12 +102,12 @@ export default function ProductViewPage({ params }: { params: { id: string } }) 
             ← Back to Products
           </Link>
         </div>
-      </AdminLayoutWrapper>
+      </>
     );
   }
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
+    <>
       <InnerPageShell
         title={product.item_name}
         breadcrumbs={[{ label: 'Products', href: '/admin/products' }, { label: product.item_name }]}
@@ -251,6 +251,6 @@ export default function ProductViewPage({ params }: { params: { id: string } }) 
           </div>
         </div>
       </InnerPageShell>
-    </AdminLayoutWrapper>
+    </>
   );
 }

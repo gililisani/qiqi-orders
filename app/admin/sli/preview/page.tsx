@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../../config/admin-routes';
+
+
 
 function SLIPreviewContent() {
   const searchParams = useSearchParams();
@@ -102,27 +102,27 @@ function SLIPreviewContent() {
 
   if (loading) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
+      <
         <div className="flex items-center justify-center h-screen">
           <div className="text-lg">Generating SLI...</div>
         </div>
-      </AdminLayoutWrapper>
+      </>
     );
   }
 
   if (error) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
+      <
         <div className="flex items-center justify-center h-screen">
           <div className="text-red-600 text-lg">{error}</div>
         </div>
-      </AdminLayoutWrapper>
+      </>
     );
   }
 
   if (isEditing && sliData) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
+      <
         <div className="max-w-6xl mx-auto p-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <h1 className="text-2xl font-bold mb-6">Edit SLI</h1>
@@ -174,12 +174,12 @@ function SLIPreviewContent() {
             </div>
           </div>
         </div>
-      </AdminLayoutWrapper>
+      </>
     );
   }
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
+    <>
       <div className="p-6">
         <div className="mb-4 flex gap-4 print:hidden">
           <button
@@ -217,18 +217,18 @@ function SLIPreviewContent() {
           ` : ''}
         }
       `}</style>
-    </AdminLayoutWrapper>
+    </>
   );
 }
 
 export default function StandaloneSLIPreviewPage() {
   return (
     <Suspense fallback={
-      <AdminLayoutWrapper routes={adminRoutes}>
+      <
         <div className="flex items-center justify-center h-screen">
           <div className="text-lg">Loading SLI...</div>
         </div>
-      </AdminLayoutWrapper>
+      </>
     }>
       <SLIPreviewContent />
     </Suspense>

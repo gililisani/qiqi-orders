@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
-import AdminLayoutWrapper from '../../../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../../../config/admin-routes';
+
+
 import Link from 'next/link';
 
 interface FormData {
@@ -157,17 +157,17 @@ export default function EditAdminPage() {
 
   if (initialLoading) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
+      <
         <div className="p-6">
           <p>Loading admin...</p>
         </div>
-      </AdminLayoutWrapper>
+      </>
     );
   }
 
   if (error && !admin) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
+      <
         <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Admin Not Found</h1>
@@ -180,12 +180,12 @@ export default function EditAdminPage() {
             </Link>
           </div>
         </div>
-      </AdminLayoutWrapper>
+      </>
     );
   }
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
+    <>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Edit Admin</h1>
@@ -313,6 +313,6 @@ export default function EditAdminPage() {
           </div>
         </form>
       </div>
-    </AdminLayoutWrapper>
+    </>
   );
 }

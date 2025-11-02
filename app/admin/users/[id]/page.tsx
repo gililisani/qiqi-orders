@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
-import AdminLayoutWrapper from '../../../components/template/AdminLayoutWrapper';
-import { adminRoutes } from '../../../config/admin-routes';
+
+
 import Card from '../../../components/ui/Card';
 import Link from 'next/link';
 
@@ -84,17 +84,17 @@ export default function UserViewPage() {
 
   if (loading) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
+      <
         <div className="p-6">
           <p>Loading user...</p>
         </div>
-      </AdminLayoutWrapper>
+      </>
     );
   }
 
   if (error || !client) {
     return (
-      <AdminLayoutWrapper routes={adminRoutes}>
+      <
         <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">User Not Found</h1>
@@ -107,12 +107,12 @@ export default function UserViewPage() {
             </Link>
           </div>
         </div>
-      </AdminLayoutWrapper>
+      </>
     );
   }
 
   return (
-    <AdminLayoutWrapper routes={adminRoutes}>
+    <>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">{client.name}</h1>
@@ -214,6 +214,6 @@ export default function UserViewPage() {
           </Card>
         </div>
       </div>
-    </AdminLayoutWrapper>
+    </>
   );
 }
