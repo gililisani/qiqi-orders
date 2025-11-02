@@ -299,6 +299,7 @@ export default function Sidenav({
                                 />
                               )
                             }
+                            className={sidenavCollapsed && !isHovering ? "!pl-0" : ""}
                             placeholder={undefined}
                             onPointerEnterCapture={undefined}
                             onPointerLeaveCapture={undefined}
