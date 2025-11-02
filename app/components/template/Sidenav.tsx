@@ -278,7 +278,7 @@ export default function Sidenav({
                             >
                               <AccordionHeader
                                 onClick={() => handleOpenSubCollapse(page.name)}
-                                className={`${collapseHeaderClasses} ${sidenavCollapsed ? "flex justify-center" : ""}`}
+                                className={`${collapseHeaderClasses} ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`}
                                 placeholder={undefined}
                                 onPointerEnterCapture={undefined}
                                 onPointerLeaveCapture={undefined}
@@ -326,7 +326,7 @@ export default function Sidenav({
                                           pathname === `${subPage.path}`
                                             ? activeRouteClasses
                                             : collapseItemClasses
-                                        } ${sidenavCollapsed ? "flex justify-center" : ""}`}
+                                        } ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`}
                                         placeholder={undefined}
                                         onPointerEnterCapture={undefined}
                                         onPointerLeaveCapture={undefined}
@@ -356,7 +356,7 @@ export default function Sidenav({
                                 pathname === `${page.path}`
                                   ? activeRouteClasses
                                   : collapseItemClasses
-                              } ${sidenavCollapsed ? "flex justify-center" : ""}`}
+                              } ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`}
                               placeholder={undefined}
                               onPointerEnterCapture={undefined}
                               onPointerLeaveCapture={undefined}
@@ -388,7 +388,7 @@ export default function Sidenav({
                         pathname === `${path}`
                           ? activeRouteClasses
                           : collapseItemClasses
-                      } ${sidenavCollapsed ? "flex justify-center" : ""}`}
+                      } ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`}
                       placeholder={undefined}
                       onPointerEnterCapture={undefined}
                       onPointerLeaveCapture={undefined}
