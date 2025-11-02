@@ -93,6 +93,12 @@ export default function Sidenav({
     }
   };
 
+  const handleToggleCollapse = () => {
+    setSidenavCollapsed(dispatch, !sidenavCollapsed);
+    // Reset hovering state when manually toggling
+    setIsHovering(false);
+  };
+
   // Simple click outside handler
   React.useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -162,7 +168,7 @@ export default function Sidenav({
         size="sm"
         variant="text"
         className="!absolute top-12 right-1 hidden xl:block"
-        onClick={() => setSidenavCollapsed(dispatch, !sidenavCollapsed)}
+        onClick={handleToggleCollapse}
         placeholder={undefined}
         onPointerEnterCapture={undefined}
         onPointerLeaveCapture={undefined}
@@ -388,7 +394,7 @@ export default function Sidenav({
                         pathname === `${path}`
                           ? activeRouteClasses
                           : collapseItemClasses
-                      } ${sidenavCollapsed && !isHovering ? "flex justify-center" : ""}`}
+                      }`}
                       placeholder={undefined}
                       onPointerEnterCapture={undefined}
                       onPointerLeaveCapture={undefined}

@@ -68,7 +68,6 @@ export const adminRoutes = [
   },
   {
     name: "system",
-    title: "System",
     icon: <Cog6ToothIcon {...icon} />,
     pages: [
       {
