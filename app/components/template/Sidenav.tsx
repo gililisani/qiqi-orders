@@ -123,7 +123,7 @@ export default function Sidenav({
       variant="gradient"
       className={`!fixed top-4 !z-50 h-[calc(100vh-2rem)] transition-all duration-300 ease-in-out ${
         isCollapsed ? "w-16 max-w-[4rem]" : "w-full max-w-[18rem]"
-      } ${isCollapsed ? "" : "p-4"} shadow-blue-gray-900/5 ${
+      } p-4 shadow-blue-gray-900/5 ${
         openSidenav ? "left-4" : "-left-72"
       } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
         sidenavType === "dark" ? "!text-white" : "text-gray-900"
@@ -189,21 +189,21 @@ export default function Sidenav({
                 }
               >
                 <ListItem
-                  className={`!p-0 ${
-                    openCollapse === name
-                      ? sidenavType === "dark"
-                        ? "bg-white/10"
-                        : "bg-gray-200"
-                      : ""
-                  } ${collapseItemClasses}`}
-                  selected={openCollapse === name}
+                  className="!p-0 !overflow-hidden"
+                  selected={false}
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
                 >
                   <AccordionHeader
                     onClick={() => handleOpenCollapse(name)}
-                    className={`border-b-0 text-inherit hover:text-inherit focus:text-inherit active:text-inherit ${isCollapsed ? "!p-2" : "!p-3"}`}
+                    className={`border-b-0 text-inherit hover:text-inherit focus:text-inherit active:text-inherit ${
+                      openCollapse === name
+                        ? sidenavType === "dark"
+                          ? "bg-white/10"
+                          : "bg-gray-200"
+                        : ""
+                    } ${collapseItemClasses} !rounded-lg`}
                     placeholder={undefined}
                     onPointerEnterCapture={undefined}
                     onPointerLeaveCapture={undefined}
@@ -244,21 +244,21 @@ export default function Sidenav({
                           }
                         >
                           <ListItem
-                            className={`!p-0 ${
-                              openSubCollapse === page.name
-                                ? sidenavType === "dark"
-                                  ? "bg-white/10"
-                                  : "bg-gray-200"
-                                : ""
-                            } ${collapseItemClasses}`}
-                            selected={openSubCollapse === page.name}
+                            className="!p-0 !overflow-hidden"
+                            selected={false}
                             placeholder={undefined}
                             onPointerEnterCapture={undefined}
                             onPointerLeaveCapture={undefined}
                           >
                             <AccordionHeader
                               onClick={() => handleOpenSubCollapse(page.name)}
-                              className={`border-b-0 text-inherit hover:text-inherit focus:text-inherit active:text-inherit ${isCollapsed ? "!p-2" : "!p-3"}`}
+                              className={`border-b-0 text-inherit hover:text-inherit focus:text-inherit active:text-inherit ${
+                                openSubCollapse === page.name
+                                  ? sidenavType === "dark"
+                                    ? "bg-white/10"
+                                    : "bg-gray-200"
+                                  : ""
+                              } ${collapseItemClasses} !rounded-lg`}
                               placeholder={undefined}
                               onPointerEnterCapture={undefined}
                               onPointerLeaveCapture={undefined}
@@ -287,7 +287,7 @@ export default function Sidenav({
                                     key={key}
                                   >
                                     <ListItem
-                                      className="capitalize"
+                                      className="capitalize !overflow-hidden !rounded-lg"
                                       placeholder={undefined}
                                       onPointerEnterCapture={undefined}
                                       onPointerLeaveCapture={undefined}
@@ -303,7 +303,7 @@ export default function Sidenav({
                                 ) : (
                                   <Link href={subPage.path!} key={key}>
                                     <ListItem
-                                      className={`capitalize ${
+                                      className={`capitalize !overflow-hidden !rounded-lg ${
                                         pathname === subPage.path
                                           ? activeRouteClasses
                                           : collapseItemClasses
@@ -328,7 +328,7 @@ export default function Sidenav({
                       ) : page.external ? (
                         <a key={key} href={page.path} target="_blank">
                           <ListItem 
-                            className="capitalize"
+                            className="capitalize !overflow-hidden !rounded-lg"
                             placeholder={undefined}
                             onPointerEnterCapture={undefined}
                             onPointerLeaveCapture={undefined}
@@ -344,7 +344,7 @@ export default function Sidenav({
                       ) : (
                         <Link href={page.path!} key={key}>
                           <ListItem
-                            className={`capitalize ${
+                            className={`capitalize !overflow-hidden !rounded-lg ${
                               pathname === page.path
                                 ? activeRouteClasses
                                 : collapseItemClasses
@@ -373,7 +373,7 @@ export default function Sidenav({
               {external ? (
                 <a key={key} href={path} target="_blank">
                   <ListItem 
-                    className="capitalize"
+                    className="capitalize !overflow-hidden !rounded-lg"
                     placeholder={undefined}
                     onPointerEnterCapture={undefined}
                     onPointerLeaveCapture={undefined}
@@ -389,7 +389,7 @@ export default function Sidenav({
               ) : (
                 <Link href={path!} key={key}>
                   <ListItem
-                    className={`capitalize ${
+                    className={`capitalize !overflow-hidden !rounded-lg ${
                       pathname === path
                         ? activeRouteClasses
                         : collapseItemClasses
