@@ -123,7 +123,7 @@ export default function Sidenav({
       variant="gradient"
       className={`!fixed top-4 !z-50 h-[calc(100vh-2rem)] transition-all duration-300 ease-in-out ${
         isCollapsed ? "w-16 max-w-[4rem]" : "w-full max-w-[18rem]"
-      } p-4 shadow-blue-gray-900/5 ${
+      } p-3 shadow-blue-gray-900/5 ${
         openSidenav ? "left-4" : "-left-72"
       } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
         sidenavType === "dark" ? "!text-white" : "text-gray-900"
@@ -287,7 +287,7 @@ export default function Sidenav({
                                     key={key}
                                   >
                                     <ListItem
-                                      className="capitalize"
+                                      className="!overflow-hidden capitalize"
                                       placeholder={undefined}
                                       onPointerEnterCapture={undefined}
                                       onPointerLeaveCapture={undefined}
@@ -328,7 +328,7 @@ export default function Sidenav({
                       ) : page.external ? (
                         <a key={key} href={page.path} target="_blank">
                           <ListItem 
-                            className="capitalize"
+                            className="!overflow-hidden capitalize"
                             placeholder={undefined}
                             onPointerEnterCapture={undefined}
                             onPointerLeaveCapture={undefined}
@@ -373,7 +373,7 @@ export default function Sidenav({
               {external ? (
                 <a key={key} href={path} target="_blank">
                   <ListItem 
-                    className="capitalize"
+                    className="!overflow-hidden capitalize"
                     placeholder={undefined}
                     onPointerEnterCapture={undefined}
                     onPointerLeaveCapture={undefined}
@@ -389,7 +389,7 @@ export default function Sidenav({
               ) : (
                 <Link href={path!} key={key}>
                   <ListItem
-                    className={`capitalize ${
+                    className={`!overflow-hidden capitalize ${
                       pathname === path
                         ? activeRouteClasses
                         : collapseItemClasses
