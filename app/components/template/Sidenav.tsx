@@ -189,7 +189,7 @@ export default function Sidenav({
                 }
               >
                 <ListItem
-                  className={`!overflow-hidden !p-0 ${
+                  className={`!overflow-hidden !rounded-lg !p-0 ${
                     openCollapse === name
                       ? sidenavType === "dark"
                         ? "bg-white/10"
@@ -244,7 +244,7 @@ export default function Sidenav({
                           }
                         >
                           <ListItem
-                            className={`!overflow-hidden !p-0 ${
+                            className={`!overflow-hidden !rounded-lg !p-0 ${
                               openSubCollapse === page.name
                                 ? sidenavType === "dark"
                                   ? "bg-white/10"
@@ -287,7 +287,7 @@ export default function Sidenav({
                                     key={key}
                                   >
                                     <ListItem
-                                      className="!overflow-hidden capitalize"
+                                      className="!overflow-hidden !rounded-lg capitalize"
                                       placeholder={undefined}
                                       onPointerEnterCapture={undefined}
                                       onPointerLeaveCapture={undefined}
@@ -303,7 +303,7 @@ export default function Sidenav({
                                 ) : (
                                   <Link href={subPage.path!} key={key}>
                                     <ListItem
-                                      className={`capitalize ${
+                                      className={`!overflow-hidden !rounded-lg capitalize ${
                                         pathname === subPage.path
                                           ? activeRouteClasses
                                           : collapseItemClasses
@@ -328,7 +328,7 @@ export default function Sidenav({
                       ) : page.external ? (
                         <a key={key} href={page.path} target="_blank">
                           <ListItem 
-                            className="!overflow-hidden capitalize"
+                            className="!overflow-hidden !rounded-lg capitalize"
                             placeholder={undefined}
                             onPointerEnterCapture={undefined}
                             onPointerLeaveCapture={undefined}
@@ -344,7 +344,7 @@ export default function Sidenav({
                       ) : (
                         <Link href={page.path!} key={key}>
                           <ListItem
-                            className={`capitalize ${
+                            className={`!overflow-hidden !rounded-lg capitalize ${
                               pathname === page.path
                                 ? activeRouteClasses
                                 : collapseItemClasses
@@ -389,7 +389,7 @@ export default function Sidenav({
               ) : (
                 <Link href={path!} key={key}>
                   <ListItem
-                    className={`!overflow-hidden capitalize ${
+                    className={`!overflow-hidden !rounded-lg capitalize ${
                       pathname === path
                         ? activeRouteClasses
                         : collapseItemClasses
