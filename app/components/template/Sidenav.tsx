@@ -122,7 +122,7 @@ export default function Sidenav({
       shadow={sidenavType !== "transparent"}
       variant="gradient"
       className={`!fixed top-4 !z-50 h-[calc(100vh-2rem)] transition-all duration-300 ease-in-out ${
-        isCollapsed ? "w-20 max-w-[5rem]" : "w-full max-w-[18rem]"
+        isCollapsed ? "w-16 max-w-[4rem]" : "w-full max-w-[18rem]"
       } ${isCollapsed ? "" : "p-4"} shadow-blue-gray-900/5 ${
         openSidenav ? "left-4" : "-left-72"
       } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
