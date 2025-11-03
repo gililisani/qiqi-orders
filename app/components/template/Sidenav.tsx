@@ -140,16 +140,6 @@ export default function Sidenav({
         className="flex items-center justify-center h-20"
       >
         <img src={brandImg} className="h-12 w-auto" alt="logo" />
-        <Typography 
-          variant="h6" 
-          color="blue-gray" 
-          className={`ml-3 transition-all duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : ""}`}
-          placeholder={undefined} 
-          onPointerEnterCapture={undefined} 
-          onPointerLeaveCapture={undefined}
-        >
-          {brandName}
-        </Typography>
       </Link>
 
       {/* Close button */}
