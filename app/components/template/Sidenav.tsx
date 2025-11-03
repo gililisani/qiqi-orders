@@ -189,14 +189,8 @@ export default function Sidenav({
                 }
               >
                 <ListItem
-                  className={`!overflow-hidden !rounded-lg !p-0 ${
-                    openCollapse === name
-                      ? sidenavType === "dark"
-                        ? "bg-white/10"
-                        : "bg-gray-200"
-                      : ""
-                  } ${collapseItemClasses}`}
-                  selected={openCollapse === name}
+                  className={`!overflow-hidden !rounded-lg !p-0 ${collapseItemClasses}`}
+                  selected={false}
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
@@ -244,14 +238,8 @@ export default function Sidenav({
                           }
                         >
                           <ListItem
-                            className={`!overflow-hidden !rounded-lg !p-0 ${
-                              openSubCollapse === page.name
-                                ? sidenavType === "dark"
-                                  ? "bg-white/10"
-                                  : "bg-gray-200"
-                                : ""
-                            } ${collapseItemClasses}`}
-                            selected={openSubCollapse === page.name}
+                            className={`!overflow-hidden !rounded-lg !p-0 ${collapseItemClasses}`}
+                            selected={false}
                             placeholder={undefined}
                             onPointerEnterCapture={undefined}
                             onPointerLeaveCapture={undefined}
