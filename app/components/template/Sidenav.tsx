@@ -106,8 +106,8 @@ export default function Sidenav({
   }, [openSidenav]);
 
   const isCollapsed = sidenavCollapsed && !isHovering;
-  const collapseItemClasses = sidenavType === "dark" ? "text-white hover:bg-opacity-25 focus:bg-opacity-100 active:bg-opacity-10 hover:text-white focus:text-white active:text-white" : "";
-  const activeRouteClasses = `${collapseItemClasses} ${COLORS[sidenavColor]} text-white active:text-white hover:text-white focus:text-white`;
+  const collapseItemClasses = sidenavType === "dark" ? "text-white hover:bg-opacity-25 focus:bg-opacity-100 active:bg-opacity-10 hover:text-white focus:text-white active:text-white" : "hover:bg-gray-100";
+  const activeRouteClasses = sidenavType === "dark" ? "bg-white/10 text-white hover:text-white" : "bg-gray-200";
 
   return (
     <Card
