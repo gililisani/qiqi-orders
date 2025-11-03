@@ -182,14 +182,14 @@ export default function Sidenav({
                 icon={
                   <ChevronDownIcon
                     strokeWidth={2.5}
-                    className={`mx-auto h-3 w-3 text-inherit transition-transform ${
+                    className={`mx-auto h-3 w-3 text-inherit transition-opacity duration-300 ${
                       openCollapse === name ? "rotate-180" : ""
-                    } ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : ""}`}
+                    } ${isCollapsed ? "opacity-0" : "opacity-100"}`}
                   />
                 }
               >
                 <ListItem
-                  className={`!overflow-hidden !p-0 ${
+                  className={`!p-0 ${
                     openCollapse === name
                       ? sidenavType === "dark"
                         ? "bg-white/10"
@@ -203,7 +203,7 @@ export default function Sidenav({
                 >
                   <AccordionHeader
                     onClick={() => handleOpenCollapse(name)}
-                    className="border-b-0 !p-3 text-inherit hover:text-inherit focus:text-inherit active:text-inherit"
+                    className={`border-b-0 text-inherit hover:text-inherit focus:text-inherit active:text-inherit ${isCollapsed ? "!p-2" : "!p-3"}`}
                     placeholder={undefined}
                     onPointerEnterCapture={undefined}
                     onPointerLeaveCapture={undefined}
@@ -213,7 +213,7 @@ export default function Sidenav({
                     </ListItemPrefix>
                     <Typography
                       color="inherit"
-                      className={`mr-auto font-normal capitalize transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}
+                      className={`mr-auto font-normal capitalize transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}
                       placeholder={undefined}
                       onPointerEnterCapture={undefined}
                       onPointerLeaveCapture={undefined}
@@ -235,11 +235,11 @@ export default function Sidenav({
                           icon={
                             <ChevronDownIcon
                               strokeWidth={2.5}
-                              className={`mx-auto h-3 w-3 text-inherit transition-transform ${
+                              className={`mx-auto h-3 w-3 text-inherit transition-opacity duration-300 ${
                                 openSubCollapse === page.name
                                   ? "rotate-180"
                                   : ""
-                              } ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : ""}`}
+                              } ${isCollapsed ? "opacity-0" : "opacity-100"}`}
                             />
                           }
                         >
@@ -258,7 +258,7 @@ export default function Sidenav({
                           >
                             <AccordionHeader
                               onClick={() => handleOpenSubCollapse(page.name)}
-                              className="border-b-0 !p-3 text-inherit hover:text-inherit focus:text-inherit active:text-inherit"
+                              className={`border-b-0 text-inherit hover:text-inherit focus:text-inherit active:text-inherit ${isCollapsed ? "!p-2" : "!p-3"}`}
                               placeholder={undefined}
                               onPointerEnterCapture={undefined}
                               onPointerLeaveCapture={undefined}
@@ -268,7 +268,7 @@ export default function Sidenav({
                               </ListItemPrefix>
                               <Typography
                                 color="inherit"
-                                className={`mr-auto font-normal capitalize transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}
+                                className={`mr-auto font-normal capitalize transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}
                                 placeholder={undefined}
                                 onPointerEnterCapture={undefined}
                                 onPointerLeaveCapture={undefined}
@@ -295,7 +295,7 @@ export default function Sidenav({
                                       <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                         {subPage.icon}
                                       </ListItemPrefix>
-                                      <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
+                                      <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
                                         {subPage.name}
                                       </span>
                                     </ListItem>
@@ -315,7 +315,7 @@ export default function Sidenav({
                                       <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                         {subPage.icon}
                                       </ListItemPrefix>
-                                      <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
+                                      <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
                                         {subPage.name}
                                       </span>
                                     </ListItem>
@@ -336,7 +336,7 @@ export default function Sidenav({
                             <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                               {page.icon}
                             </ListItemPrefix>
-                            <span className={`transition-all duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : ""}`}>
+                            <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
                               {page.name}
                             </span>
                           </ListItem>
@@ -356,7 +356,7 @@ export default function Sidenav({
                             <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                               {page.icon}
                             </ListItemPrefix>
-                            <span className={`transition-all duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : ""}`}>
+                            <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
                               {page.name}
                             </span>
                           </ListItem>
@@ -381,7 +381,7 @@ export default function Sidenav({
                     <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                       {icon}
                     </ListItemPrefix>
-                    <span className={`transition-all duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : ""}`}>
+                    <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
                       {name}
                     </span>
                   </ListItem>
@@ -401,7 +401,7 @@ export default function Sidenav({
                     <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                       {icon}
                     </ListItemPrefix>
-                    <span className={`transition-all duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : ""}`}>
+                    <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
                       {name}
                     </span>
                   </ListItem>
