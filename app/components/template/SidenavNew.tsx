@@ -1,4 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,33 +15,48 @@ import {
   AccordionBody,
   IconButton,
 } from "@material-tailwind/react";
-import routes from "@/routes";
 import { ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useOnClickOutside } from "usehooks-ts";
-import { useMaterialTailwindController, setOpenSidenav } from "@/context";
+import { useMaterialTailwindController, setOpenSidenav } from "@/app/context";
 
 const COLORS: Record<string, string> = {
-  dark: "tw-bg-gray-900 hover:tw-bg-gray-700 focus:tw-bg-gray-900 active:tw-bg-gray-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
-  blue: "tw-bg-blue-500 hover:tw-bg-blue-700 focus:tw-bg-blue-700 active:tw-bg-blue-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
+  dark: "bg-gray-900 hover:bg-gray-700 focus:bg-gray-900 active:bg-gray-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
+  blue: "bg-blue-500 hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
   "blue-gray":
-    "tw-bg-blue-gray-900 hover:tw-bg-blue-gray-900 focus:tw-bg-blue-gray-900 active:tw-bg-blue-gray-900 hover:tw-bg-opacity-80 focus:tw-bg-opacity-80 active:tw-bg-opacity-80",
+    "bg-blue-gray-900 hover:bg-blue-gray-900 focus:bg-blue-gray-900 active:bg-blue-gray-900 hover:bg-opacity-80 focus:bg-opacity-80 active:bg-opacity-80",
   green:
-    "tw-bg-green-500 hover:tw-bg-green-700 focus:tw-bg-green-700 active:tw-bg-green-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
+    "bg-green-500 hover:bg-green-700 focus:bg-green-700 active:bg-green-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
   orange:
-    "tw-bg-orange-500 hover:tw-bg-orange-700 focus:tw-bg-orange-700 active:tw-bg-orange-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
-  red: "tw-bg-red-500 hover:tw-bg-red-700 focus:tw-bg-red-700 active:tw-bg-red-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
-  pink: "tw-bg-pink-500 hover:tw-bg-pink-700 focus:tw-bg-pink-700 active:tw-bg-pink-700 hover:tw-bg-opacity-100 focus:tw-bg-opacity-100 active:tw-bg-opacity-100",
+    "bg-orange-500 hover:bg-orange-700 focus:bg-orange-700 active:bg-orange-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
+  red: "bg-red-500 hover:bg-red-700 focus:bg-red-700 active:bg-red-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
+  pink: "bg-pink-500 hover:bg-pink-700 focus:bg-pink-700 active:bg-pink-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
 };
 
-export default function Sidenav({
-  brandImg = "/img/logo-ct.png",
-  brandName = "Material Tailwind PRO",
-}: { brandImg?: string; brandName?: string }) {
+interface Route {
+  name: string;
+  icon?: React.ReactNode;
+  pages?: Route[];
+  title?: string;
+  divider?: boolean;
+  external?: boolean;
+  path?: string;
+}
+
+interface SidenavNewProps {
+  brandImg?: string;
+  brandName?: string;
+  routes?: Route[];
+}
+
+export default function SidenavNew({
+  brandImg = "/QIQI-Logo.svg",
+  brandName,
+  routes = [],
+}: SidenavNewProps) {
   const pathname = usePathname();
   const [controller, dispatch] = useMaterialTailwindController();
   const { sidenavType, sidenavColor, openSidenav }: any = controller;
 
-  // Rail collapse (start expanded to avoid confusion)
+  // Collapse rail + hover-to-peek
   const [collapsed, setCollapsed] = React.useState(false);
   const [hovering, setHovering] = React.useState(false);
   const isRail = collapsed && !hovering;
@@ -54,19 +71,30 @@ export default function Sidenav({
     setOpenSubCollapse((cur) => (cur === value ? null : value));
 
   const sidenavRef = React.useRef<HTMLDivElement | null>(null);
-  useOnClickOutside(sidenavRef, () => setOpenSidenav(dispatch, false));
+
+  React.useEffect(() => {
+    const handleClick = (event: MouseEvent) => {
+      if (sidenavRef.current && !sidenavRef.current.contains(event.target as Node)) {
+        setOpenSidenav(dispatch, false);
+      }
+    };
+    if (openSidenav) {
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }
+  }, [openSidenav]);
 
   const collapseItemClasses =
     sidenavType === "dark"
-      ? "tw-text-white hover:tw-bg-opacity-25 focus:tw-bg-opacity-100 active:tw-bg-opacity-10 hover:tw-text-white focus:tw-text-white active:tw-text-white"
+      ? "text-white hover:bg-opacity-25 focus:bg-opacity-100 active:bg-opacity-10 hover:text-white focus:text-white active:text-white"
       : "";
 
-  const activeRouteClasses = `${collapseItemClasses} ${COLORS[sidenavColor] || ""} tw-text-white active:tw-text-white hover:tw-text-white focus:tw-text-white`;
+  const activeRouteClasses = `${collapseItemClasses} ${COLORS[sidenavColor] || ""} text-white active:text-white hover:text-white focus:text-white`;
 
   // No-indent row: 2-column grid for ALL levels
-  const rowBase = "tw-grid tw-grid-cols-[1.75rem,1fr] tw-items-center tw-gap-2 tw-rounded-lg";
-  const rowPad = isRail ? "tw-py-2 tw-px-0" : "tw-py-2.5 tw-px-3";
-  const rowHover = sidenavType === "dark" ? "hover:tw-bg-white/10" : "hover:tw-bg-gray-100";
+  const rowBase = "grid grid-cols-[1.75rem,1fr] items-center gap-2 rounded-lg";
+  const rowPad = isRail ? "py-2 px-0" : "py-2.5 px-3";
+  const rowHover = sidenavType === "dark" ? "hover:bg-white/10" : "hover:bg-gray-100";
 
   return (
     <Card
@@ -75,22 +103,29 @@ export default function Sidenav({
       shadow={sidenavType !== "transparent"}
       variant="gradient"
       className={[
-        "!tw-fixed tw-top-4 !tw-z-50 tw-h-[calc(100vh-2rem)]",
-        isRail ? "tw-w-[5rem] tw-max-w-[5rem] tw-p-2" : "tw-w-full tw-max-w-[18rem] tw-p-4",
-        "tw-shadow-blue-gray-900/5",
-        openSidenav ? "tw-left-4" : "-tw-left-72",
+        "!fixed top-4 !z-50 h-[calc(100vh-2rem)]",
+        isRail ? "w-20 max-w-[5rem] p-2" : "w-full max-w-[18rem] p-4",
+        "shadow-blue-gray-900/5",
+        openSidenav ? "left-4" : "-left-72",
         sidenavType === "transparent" ? "shadow-none" : "shadow-xl",
-        sidenavType === "dark" ? "!tw-text-white" : "tw-text-gray-900",
-        "tw-transition-all tw-duration-300 tw-ease-in-out xl:tw-left-4 tw-overflow-y-scroll",
+        sidenavType === "dark" ? "!text-white" : "text-gray-900",
+        "transition-all duration-300 ease-in-out xl:left-4 overflow-y-scroll",
       ].join(" ")}
+      placeholder={undefined}
+      onPointerEnterCapture={undefined}
+      onPointerLeaveCapture={undefined}
       onMouseEnter={() => collapsed && setHovering(true)}
       onMouseLeave={() => collapsed && setHovering(false)}
     >
       {/* Header */}
-      <div className={["tw-flex tw-items-center", isRail ? "tw-justify-center tw-h-12 !tw-p-2" : "tw-justify-between tw-h-20 !tw-p-4"].join(" ")}>
-        <Link href="/" className="tw-flex tw-items-center tw-gap-2">
-          <img src={brandImg} className={isRail ? "tw-h-8 tw-w-auto" : "tw-h-7 tw-w-7"} alt="logo" />
-          {!isRail && <Typography variant="h6" color="blue-gray">{brandName}</Typography>}
+      <div className={["flex items-center", isRail ? "justify-center h-12 !p-2" : "justify-between h-20 !p-4"].join(" ")}>
+        <Link href={pathname.startsWith("/client") ? "/client" : "/admin"} className="flex items-center gap-2">
+          <img src={brandImg} className={isRail ? "h-8 w-auto" : "h-7 w-7"} alt="logo" />
+          {!isRail && (
+            <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              {brandName}
+            </Typography>
+          )}
         </Link>
 
         {/* Collapse toggle (desktop) */}
@@ -98,10 +133,10 @@ export default function Sidenav({
           type="button"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           onClick={() => setCollapsed((v) => !v)}
-          className="tw-hidden xl:tw-inline-flex tw-items-center tw-justify-center tw-rounded-md tw-p-2 hover:tw-bg-gray-100/50"
+          className="hidden xl:inline-flex items-center justify-center rounded-md p-2 hover:bg-gray-100/50"
           title={collapsed ? "Expand" : "Collapse"}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="tw-h-5 tw-w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             {collapsed ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6h18M3 12h10M3 18h18" />
             ) : (
@@ -115,20 +150,30 @@ export default function Sidenav({
           ripple={false}
           size="sm"
           variant="text"
-          className="!tw-absolute tw-top-1 tw-right-1 tw-block xl:tw-hidden"
+          className="!absolute top-1 right-1 block xl:hidden"
           onClick={() => setOpenSidenav(dispatch, false)}
+          placeholder={undefined}
+          onPointerEnterCapture={undefined}
+          onPointerLeaveCapture={undefined}
         >
-          <XMarkIcon className="tw-w-5 tw-h-5" />
+          <XMarkIcon className="w-5 h-5" />
         </IconButton>
       </div>
 
       {/* NAV */}
-      <List className="tw-text-inherit">
-        {routes.map(({ name, icon, pages, title, divider, external, path }: any, key: number) =>
+      <List className="text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+        {routes.map(({ name, icon, pages, title, divider, external, path }: Route, key: number) =>
           pages ? (
             <React.Fragment key={`${name}-${key}`}>
               {!isRail && title && (
-                <Typography variant="small" color="inherit" className="tw-ml-1 tw-mt-3 tw-mb-1 tw-text-[11px] tw-font-bold tw-uppercase tw-opacity-70">
+                <Typography
+                  variant="small"
+                  color="inherit"
+                  className="ml-1 mt-3 mb-1 text-[11px] font-bold uppercase opacity-70"
+                  placeholder={undefined}
+                  onPointerEnterCapture={undefined}
+                  onPointerLeaveCapture={undefined}
+                >
                   {title}
                 </Typography>
               )}
@@ -136,12 +181,15 @@ export default function Sidenav({
               {/* LEVEL 1 */}
               <Accordion
                 open={openCollapse === name}
+                placeholder={undefined}
+                onPointerEnterCapture={undefined}
+                onPointerLeaveCapture={undefined}
                 icon={
                   !isRail ? (
                     <ChevronDownIcon
                       strokeWidth={2.5}
-                      className={`tw-ml-auto tw-h-3 tw-w-3 tw-text-inherit tw-transition-transform ${
-                        openCollapse === name ? "tw-rotate-180" : ""
+                      className={`ml-auto h-3 w-3 text-inherit transition-transform ${
+                        openCollapse === name ? "rotate-180" : ""
                       }`}
                     />
                   ) : null
@@ -149,39 +197,48 @@ export default function Sidenav({
               >
                 <ListItem
                   className={[
-                    "!tw-overflow-hidden !tw-p-0",
-                    openCollapse === name ? (sidenavType === "dark" ? "tw-bg-white/10" : "tw-bg-gray-200") : "",
+                    "!overflow-hidden !p-0",
+                    openCollapse === name ? (sidenavType === "dark" ? "bg-white/10" : "bg-gray-200") : "",
                     collapseItemClasses,
-                    isRail ? "tw-justify-center" : "",
+                    isRail ? "justify-center" : "",
                   ].join(" ")}
                   selected={openCollapse === name}
+                  placeholder={undefined}
+                  onPointerEnterCapture={undefined}
+                  onPointerLeaveCapture={undefined}
                 >
                   <AccordionHeader
                     onClick={() => handleOpenCollapse(name)}
                     aria-expanded={openCollapse === name}
-                    className={`!tw-border-0 !tw-p-0 ${rowBase} ${rowPad} ${rowHover} tw-w-full`}
+                    className={`!border-0 !p-0 ${rowBase} ${rowPad} ${rowHover} w-full`}
+                    placeholder={undefined}
+                    onPointerEnterCapture={undefined}
+                    onPointerLeaveCapture={undefined}
                   >
-                    <ListItemPrefix className="tw-mr-0">
-                      <span className="tw-flex tw-h-5 tw-w-5 tw-items-center tw-justify-center">{icon}</span>
+                    <ListItemPrefix className="mr-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                      <span className="flex h-5 w-5 items-center justify-center">{icon}</span>
                     </ListItemPrefix>
-                    {!isRail && <span className="tw-truncate">{name}</span>}
+                    {!isRail && <span className="truncate">{name}</span>}
                   </AccordionHeader>
                 </ListItem>
 
                 {/* LEVEL 2 */}
-                <AccordionBody className="!tw-py-1 tw-text-inherit">
-                  <List className="!tw-p-0 tw-text-inherit">
-                    {pages.map((page: any, subKey: number) =>
+                <AccordionBody className="!py-1 text-inherit">
+                  <List className="!p-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                    {pages.map((page: Route, subKey: number) =>
                       page.pages ? (
                         <Accordion
                           key={`${page.name}-${subKey}`}
                           open={openSubCollapse === page.name}
+                          placeholder={undefined}
+                          onPointerEnterCapture={undefined}
+                          onPointerLeaveCapture={undefined}
                           icon={
                             !isRail ? (
                               <ChevronDownIcon
                                 strokeWidth={2.5}
-                                className={`tw-ml-auto tw-h-3 tw-w-3 tw-text-inherit tw-transition-transform ${
-                                  openSubCollapse === page.name ? "tw-rotate-180" : ""
+                                className={`ml-auto h-3 w-3 text-inherit transition-transform ${
+                                  openSubCollapse === page.name ? "rotate-180" : ""
                                 }`}
                               />
                             ) : null
@@ -189,29 +246,35 @@ export default function Sidenav({
                         >
                           <ListItem
                             className={[
-                              "!tw-p-0",
-                              openSubCollapse === page.name ? (sidenavType === "dark" ? "tw-bg-white/10" : "tw-bg-gray-200") : "",
+                              "!p-0",
+                              openSubCollapse === page.name ? (sidenavType === "dark" ? "bg-white/10" : "bg-gray-200") : "",
                               collapseItemClasses,
-                              isRail ? "tw-justify-center" : "",
+                              isRail ? "justify-center" : "",
                             ].join(" ")}
                             selected={openSubCollapse === page.name}
+                            placeholder={undefined}
+                            onPointerEnterCapture={undefined}
+                            onPointerLeaveCapture={undefined}
                           >
                             <AccordionHeader
                               onClick={() => handleOpenSubCollapse(page.name)}
                               aria-expanded={openSubCollapse === page.name}
-                              className={`!tw-border-0 !tw-p-0 ${rowBase} ${rowPad} ${rowHover} tw-w-full`}
+                              className={`!border-0 !p-0 ${rowBase} ${rowPad} ${rowHover} w-full`}
+                              placeholder={undefined}
+                              onPointerEnterCapture={undefined}
+                              onPointerLeaveCapture={undefined}
                             >
-                              <ListItemPrefix className="tw-mr-0">
-                                <span className="tw-flex tw-h-5 tw-w-5 tw-items-center tw-justify-center">{page.icon}</span>
+                              <ListItemPrefix className="mr-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                                <span className="flex h-5 w-5 items-center justify-center">{page.icon}</span>
                               </ListItemPrefix>
-                              {!isRail && <span className="tw-truncate">{page.name}</span>}
+                              {!isRail && <span className="truncate">{page.name}</span>}
                             </AccordionHeader>
                           </ListItem>
 
                           {/* LEVEL 3 */}
-                          <AccordionBody className="!tw-py-1 tw-text-inherit">
-                            <List className="!tw-p-0 tw-text-inherit">
-                              {page.pages.map((subPage: any, i: number) =>
+                          <AccordionBody className="!py-1 text-inherit">
+                            <List className="!p-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                              {page.pages.map((subPage: Route, i: number) =>
                                 subPage.external ? (
                                   <a
                                     key={`${subPage.name}-${i}`}
@@ -220,8 +283,8 @@ export default function Sidenav({
                                     rel="noopener noreferrer"
                                     className={`${rowBase} ${rowPad} ${rowHover}`}
                                   >
-                                    <span className="tw-flex tw-h-5 tw-w-5 tw-items-center tw-justify-center">{subPage.icon}</span>
-                                    {!isRail && <span className="tw-truncate">{subPage.name}</span>}
+                                    <span className="flex h-5 w-5 items-center justify-center">{subPage.icon}</span>
+                                    {!isRail && <span className="truncate">{subPage.name}</span>}
                                   </a>
                                 ) : (
                                   <Link href={`${subPage.path}`} key={`${subPage.name}-${i}`}>
@@ -230,8 +293,8 @@ export default function Sidenav({
                                         pathname === `${subPage.path}` ? activeRouteClasses : collapseItemClasses
                                       }`}
                                     >
-                                      <span className="tw-flex tw-h-5 tw-w-5 tw-items-center tw-justify-center">{subPage.icon}</span>
-                                      {!isRail && <span className="tw-truncate">{subPage.name}</span>}
+                                      <span className="flex h-5 w-5 items-center justify-center">{subPage.icon}</span>
+                                      {!isRail && <span className="truncate">{subPage.name}</span>}
                                     </div>
                                   </Link>
                                 )
@@ -242,19 +305,19 @@ export default function Sidenav({
                       ) : page.external ? (
                         <a key={`${page.name}-${subKey}`} href={page.path} target="_blank" rel="noopener noreferrer">
                           <div className={`${rowBase} ${rowPad} ${rowHover}`}>
-                            <span className="tw-flex tw-h-5 tw-w-5 tw-items-center tw-justify-center">{page.icon}</span>
-                            {!isRail && <span className="tw-truncate">{page.name}</span>}
+                            <span className="flex h-5 w-5 items-center justify-center">{page.icon}</span>
+                            {!isRail && <span className="truncate">{page.name}</span>}
                           </div>
                         </a>
                       ) : (
-                        <Link href={page.path} key={`${page.name}-${subKey}`}>
+                        <Link href={page.path!} key={`${page.name}-${subKey}`}>
                           <div
                             className={`${rowBase} ${rowPad} ${rowHover} ${
-                              pathname === `${page.path}` ? activeRouteClasses : collapseItemClasses
+                              pathname === page.path ? activeRouteClasses : collapseItemClasses
                             }`}
                           >
-                            <span className="tw-flex tw-h-5 tw-w-5 tw-items-center tw-justify-center">{page.icon}</span>
-                            {!isRail && <span className="tw-truncate">{page.name}</span>}
+                            <span className="flex h-5 w-5 items-center justify-center">{page.icon}</span>
+                            {!isRail && <span className="truncate">{page.name}</span>}
                           </div>
                         </Link>
                       )
@@ -263,26 +326,26 @@ export default function Sidenav({
                 </AccordionBody>
               </Accordion>
 
-              {divider && <hr className="tw-my-2 tw-border-blue-gray-50" />}
+              {divider && <hr className="my-2 border-blue-gray-50" />}
             </React.Fragment>
           ) : (
-            <div className="!tw-p-0 tw-text-inherit" key={`${name}-${key}`}>
+            <div className="!p-0 text-inherit" key={`${name}-${key}`}>
               {external ? (
                 <a href={path} target="_blank" rel="noopener noreferrer">
                   <div className={`${rowBase} ${rowPad} ${rowHover}`}>
-                    <span className="tw-flex tw-h-5 tw-w-5 tw-items-center tw-justify-center">{icon}</span>
-                    {!isRail && <span className="tw-truncate">{name}</span>}
+                    <span className="flex h-5 w-5 items-center justify-center">{icon}</span>
+                    {!isRail && <span className="truncate">{name}</span>}
                   </div>
                 </a>
               ) : (
-                <Link href={`${path}`}>
+                <Link href={path!}>
                   <div
                     className={`${rowBase} ${rowPad} ${rowHover} ${
-                      pathname === `${path}` ? activeRouteClasses : collapseItemClasses
+                      pathname === path ? activeRouteClasses : collapseItemClasses
                     }`}
                   >
-                    <span className="tw-flex tw-h-5 tw-w-5 tw-items-center tw-justify-center">{icon}</span>
-                    {!isRail && <span className="tw-truncate">{name}</span>}
+                    <span className="flex h-5 w-5 items-center justify-center">{icon}</span>
+                    {!isRail && <span className="truncate">{name}</span>}
                   </div>
                 </Link>
               )}
