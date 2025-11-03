@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import SidenavNew from "./SidenavNew";
+import Sidenav from "./Sidenav";
 import DashboardNavbar from "./DashboardNavbar";
 import Configurator from "./Configurator";
 import { usePathname } from "next/navigation";
