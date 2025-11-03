@@ -275,12 +275,14 @@ export default function Sidenav({
                                     key={key}
                                   >
                                     <ListItem
-                                      className="!overflow-hidden !rounded-lg capitalize"
+                                      className={`!overflow-hidden !rounded-lg capitalize ${
+                                        isCollapsed ? "!px-2 !justify-center" : ""
+                                      }`}
                                       placeholder={undefined}
                                       onPointerEnterCapture={undefined}
                                       onPointerLeaveCapture={undefined}
                                     >
-                                      <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                                      <ListItemPrefix className={isCollapsed ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                         {subPage.icon}
                                       </ListItemPrefix>
                                       <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
@@ -292,6 +294,8 @@ export default function Sidenav({
                                   <Link href={subPage.path!} key={key}>
                                     <ListItem
                                       className={`!overflow-hidden !rounded-lg capitalize ${
+                                        isCollapsed ? "!px-2 !justify-center" : ""
+                                      } ${
                                         pathname === subPage.path
                                           ? activeRouteClasses
                                           : collapseItemClasses
@@ -300,7 +304,7 @@ export default function Sidenav({
                                       onPointerEnterCapture={undefined}
                                       onPointerLeaveCapture={undefined}
                                     >
-                                      <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                                      <ListItemPrefix className={isCollapsed ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                         {subPage.icon}
                                       </ListItemPrefix>
                                       <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
@@ -316,12 +320,14 @@ export default function Sidenav({
                       ) : page.external ? (
                         <a key={key} href={page.path} target="_blank">
                           <ListItem 
-                            className="!overflow-hidden !rounded-lg capitalize"
+                            className={`!overflow-hidden !rounded-lg capitalize ${
+                              isCollapsed ? "!px-2 !justify-center" : ""
+                            }`}
                             placeholder={undefined}
                             onPointerEnterCapture={undefined}
                             onPointerLeaveCapture={undefined}
                           >
-                            <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                            <ListItemPrefix className={isCollapsed ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                               {page.icon}
                             </ListItemPrefix>
                             <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
@@ -333,6 +339,8 @@ export default function Sidenav({
                         <Link href={page.path!} key={key}>
                           <ListItem
                             className={`!overflow-hidden !rounded-lg capitalize ${
+                              isCollapsed ? "!px-2 !justify-center" : ""
+                            } ${
                               pathname === page.path
                                 ? activeRouteClasses
                                 : collapseItemClasses
@@ -341,7 +349,7 @@ export default function Sidenav({
                             onPointerEnterCapture={undefined}
                             onPointerLeaveCapture={undefined}
                           >
-                            <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                            <ListItemPrefix className={isCollapsed ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                               {page.icon}
                             </ListItemPrefix>
                             <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
@@ -361,12 +369,14 @@ export default function Sidenav({
               {external ? (
                 <a key={key} href={path} target="_blank">
                   <ListItem 
-                    className="!overflow-hidden capitalize"
+                    className={`!overflow-hidden !rounded-lg capitalize ${
+                      isCollapsed ? "!px-2 !justify-center" : ""
+                    }`}
                     placeholder={undefined}
                     onPointerEnterCapture={undefined}
                     onPointerLeaveCapture={undefined}
                   >
-                    <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                    <ListItemPrefix className={isCollapsed ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                       {icon}
                     </ListItemPrefix>
                     <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
@@ -378,6 +388,8 @@ export default function Sidenav({
                 <Link href={path!} key={key}>
                   <ListItem
                     className={`!overflow-hidden !rounded-lg capitalize ${
+                      isCollapsed ? "!px-2 !justify-center" : ""
+                    } ${
                       pathname === path
                         ? activeRouteClasses
                         : collapseItemClasses
@@ -386,7 +398,7 @@ export default function Sidenav({
                     onPointerEnterCapture={undefined}
                     onPointerLeaveCapture={undefined}
                   >
-                    <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                    <ListItemPrefix className={isCollapsed ? "!mr-0" : ""} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                       {icon}
                     </ListItemPrefix>
                     <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
