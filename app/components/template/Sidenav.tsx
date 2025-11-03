@@ -165,7 +165,7 @@ export default function Sidenav({
                 <Typography
                   variant="small"
                   color="inherit"
-                  className={`ml-2 mt-4 mb-1 text-xs font-bold uppercase transition-all duration-300 ${isCollapsed ? "opacity-0 h-0 overflow-hidden" : ""}`}
+                  className={`ml-2 mt-4 mb-1 text-xs font-bold uppercase transition-opacity duration-300 ${isCollapsed ? "opacity-0 h-0 overflow-hidden" : "opacity-100"}`}
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
@@ -213,7 +213,7 @@ export default function Sidenav({
                     </ListItemPrefix>
                     <Typography
                       color="inherit"
-                      className={`mr-auto font-normal capitalize transition-all duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : ""}`}
+                      className={`mr-auto font-normal capitalize transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}
                       placeholder={undefined}
                       onPointerEnterCapture={undefined}
                       onPointerLeaveCapture={undefined}
@@ -268,7 +268,7 @@ export default function Sidenav({
                               </ListItemPrefix>
                               <Typography
                                 color="inherit"
-                                className={`mr-auto font-normal capitalize transition-all duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : ""}`}
+                                className={`mr-auto font-normal capitalize transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}
                                 placeholder={undefined}
                                 onPointerEnterCapture={undefined}
                                 onPointerLeaveCapture={undefined}
@@ -295,7 +295,7 @@ export default function Sidenav({
                                       <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                         {subPage.icon}
                                       </ListItemPrefix>
-                                      <span className={`transition-all duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : ""}`}>
+                                      <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
                                         {subPage.name}
                                       </span>
                                     </ListItem>
@@ -315,7 +315,7 @@ export default function Sidenav({
                                       <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                                         {subPage.icon}
                                       </ListItemPrefix>
-                                      <span className={`transition-all duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : ""}`}>
+                                      <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
                                         {subPage.name}
                                       </span>
                                     </ListItem>
