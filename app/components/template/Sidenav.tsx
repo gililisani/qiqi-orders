@@ -6,36 +6,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 // @material-tailwind/react
-import {
-  Card,
-  Typography,
-  IconButton,
-  List,
-  ListItem,
-  ListItemPrefix,
-  Accordion,
-  AccordionHeader,
-  AccordionBody,
-} from "@material-tailwind/react";
+import { Card, Typography, IconButton } from "@material-tailwind/react";
 
 // @heroicons/react
 import { ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 // Context
 import { useMaterialTailwindController, setOpenSidenav } from "@/app/context";
-
-const COLORS = {
-  dark: "bg-gray-900 hover:bg-gray-700 focus:bg-gray-900 active:bg-gray-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
-  blue: "bg-blue-500 hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
-  "blue-gray":
-    "bg-blue-gray-900 hover:bg-blue-gray-900 focus:bg-blue-gray-900 active:bg-blue-gray-900 hover:bg-opacity-80 focus:bg-opacity-80 active:bg-opacity-80",
-  green:
-    "bg-green-500 hover:bg-green-700 focus:bg-green-700 active:bg-green-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
-  orange:
-    "bg-orange-500 hover:bg-orange-700 focus:bg-orange-700 active:bg-orange-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
-  red: "bg-red-500 hover:bg-red-700 focus:bg-red-700 active:bg-red-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
-  pink: "bg-pink-500 hover:bg-pink-700 focus:bg-pink-700 active:bg-pink-700 hover:bg-opacity-100 focus:bg-opacity-100 active:bg-opacity-100",
-} as any;
 
 interface Route {
   name: string;
@@ -106,8 +83,177 @@ export default function Sidenav({
   }, [openSidenav]);
 
   const isCollapsed = sidenavCollapsed && !isHovering;
-  const collapseItemClasses = sidenavType === "dark" ? "text-white hover:bg-opacity-25 focus:bg-opacity-100 active:bg-opacity-10 hover:text-white focus:text-white active:text-white" : "hover:bg-gray-100";
-  const activeRouteClasses = sidenavType === "dark" ? "bg-white/10 text-white hover:text-white" : "bg-gray-200";
+  const hoverBackgroundClass = sidenavType === "dark" ? "hover:bg-white/10" : "hover:bg-gray-100";
+  const activeItemClass = sidenavType === "dark" ? "bg-white/10 text-white" : "bg-gray-200 text-gray-900";
+
+  const isRouteActive = React.useMemo(() => {
+    const check = (route: Route): boolean => {
+      if (route.path && (pathname === route.path || pathname.startsWith(`${route.path}/`))) {
+        return true;
+      }
+      if (route.pages) {
+        return route.pages.some((child) => check(child));
+      }
+      return false;
+    };
+
+    return check;
+  }, [pathname]);
+
+  React.useEffect(() => {
+    let parentToOpen: string | null = null;
+    let childToOpen: string | null = null;
+
+    routes.forEach((route) => {
+      if (route.pages && isRouteActive(route)) {
+        parentToOpen = route.name;
+
+        route.pages.forEach((page) => {
+          if (page.pages && isRouteActive(page)) {
+            childToOpen = page.name;
+          }
+        });
+      }
+    });
+
+    if (parentToOpen !== null && parentToOpen !== openCollapse) {
+      setOpenCollapse(parentToOpen);
+    }
+
+    if (childToOpen !== null && childToOpen !== openSubCollapse) {
+      setOpenSubCollapse(childToOpen);
+    }
+  }, [routes, isRouteActive, openCollapse, openSubCollapse]);
+
+  const getSpacingClasses = (level: number) => {
+    if (isCollapsed) {
+      return "px-0 justify-center";
+    }
+
+    switch (level) {
+      case 0:
+        return "pl-3 pr-3 justify-start";
+      case 1:
+        return "pl-6 pr-3 justify-start";
+      default:
+        return "pl-9 pr-3 justify-start";
+    }
+  };
+
+  const renderMenuItems = (items: Route[], level = 0) => (
+    <ul className={`flex flex-col gap-1 ${level === 0 ? "" : "mt-1"}`}>
+      {items.map(({ name, icon, pages, title, divider, external, path }, index) => {
+        const key = `${name}-${index}`;
+        const hasChildren = Array.isArray(pages) && pages.length > 0;
+        const isActiveLeaf = !hasChildren && path ? isRouteActive({ name, path }) : false;
+        const parentActive = hasChildren ? isRouteActive({ name, pages }) : false;
+        const isOpen = level === 0 ? openCollapse === name : openSubCollapse === name;
+
+        const itemBaseClasses = [
+          "group relative flex items-center w-full min-h-[44px] rounded-lg transition-all duration-300 ease-in-out overflow-hidden text-inherit",
+          hoverBackgroundClass,
+          getSpacingClasses(level),
+          "focus:outline-none focus-visible:outline-none",
+        ];
+
+        if (isActiveLeaf || (parentActive && !isCollapsed)) {
+          itemBaseClasses.push(activeItemClass);
+        }
+
+        const iconWrapperClasses = [
+          "flex items-center justify-center h-5 w-5 text-inherit transition-all duration-300",
+          isCollapsed ? "mr-0" : "mr-3",
+        ].join(" ");
+
+        const labelClasses = [
+          "flex-1 text-sm font-normal capitalize transition-all duration-200",
+          isCollapsed ? "opacity-0 translate-x-2 pointer-events-none" : "opacity-100 translate-x-0",
+        ].join(" ");
+
+        const chevronClasses = [
+          "ml-auto h-3 w-3 transition-transform duration-300",
+          isOpen ? "rotate-180" : "",
+          isCollapsed ? "opacity-0 invisible" : "opacity-100",
+        ].join(" ");
+
+        const itemClasses = itemBaseClasses.join(" ");
+
+        const renderLabel = (text: string) => <span className={labelClasses}>{text}</span>;
+
+        if (hasChildren) {
+          return (
+            <li key={key} className="text-inherit">
+              {title && level === 0 && (
+                <Typography
+                  variant="small"
+                  color="inherit"
+                  className={`ml-2 mt-4 mb-1 text-xs font-bold uppercase transition-opacity duration-300 ${
+                    isCollapsed ? "opacity-0 h-0 overflow-hidden" : "opacity-100"
+                  }`}
+                  placeholder={undefined}
+                  onPointerEnterCapture={undefined}
+                  onPointerLeaveCapture={undefined}
+                >
+                  {title}
+                </Typography>
+              )}
+
+              <button
+                type="button"
+                onClick={() => (level === 0 ? handleOpenCollapse(name) : handleOpenSubCollapse(name))}
+                className={itemClasses}
+              >
+                <span className={iconWrapperClasses}>{icon}</span>
+                {renderLabel(name)}
+                <ChevronDownIcon className={chevronClasses} />
+              </button>
+
+              <div
+                className={`overflow-hidden transition-all duration-300 ${
+                  isOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+                }`}
+              >
+                {pages && renderMenuItems(pages, level + 1)}
+              </div>
+
+              {divider && <hr className="my-2 border-blue-gray-50" />}
+            </li>
+          );
+        }
+
+        if (external && path) {
+          return (
+            <li key={key} className="text-inherit">
+              <a
+                href={path}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={[itemClasses, isActiveLeaf ? activeItemClass : ""].join(" ")}
+              >
+                <span className={iconWrapperClasses}>{icon}</span>
+                {renderLabel(name)}
+              </a>
+              {divider && <hr className="my-2 border-blue-gray-50" />}
+            </li>
+          );
+        }
+
+        if (path) {
+          return (
+            <li key={key} className="text-inherit">
+              <Link href={path} className={[itemClasses, isActiveLeaf ? activeItemClass : ""].join(" ")}>
+                <span className={iconWrapperClasses}>{icon}</span>
+                {renderLabel(name)}
+              </Link>
+              {divider && <hr className="my-2 border-blue-gray-50" />}
+            </li>
+          );
+        }
+
+        return null;
+      })}
+    </ul>
+  );
 
   return (
     <Card
@@ -157,248 +303,7 @@ export default function Sidenav({
       </IconButton>
 
       {/* Menu Items */}
-      <List className="!m-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-        {routes.map(({ name, icon, pages, title, divider, external, path }, key) =>
-          pages ? (
-            <React.Fragment key={key}>
-              {title && (
-                <Typography
-                  variant="small"
-                  color="inherit"
-                  className={`ml-2 mt-4 mb-1 text-xs font-bold uppercase transition-opacity duration-300 ${isCollapsed ? "opacity-0 h-0 overflow-hidden" : "opacity-100"}`}
-                  placeholder={undefined}
-                  onPointerEnterCapture={undefined}
-                  onPointerLeaveCapture={undefined}
-                >
-                  {title}
-                </Typography>
-              )}
-              
-              <Accordion
-                open={openCollapse === name}
-                placeholder={undefined}
-                onPointerEnterCapture={undefined}
-                onPointerLeaveCapture={undefined}
-                icon={
-                  <ChevronDownIcon
-                    strokeWidth={2.5}
-                    className={`mx-auto h-3 w-3 text-inherit transition-opacity duration-300 ${
-                      openCollapse === name ? "rotate-180" : ""
-                    } ${isCollapsed ? "opacity-0" : "opacity-100"}`}
-                  />
-                }
-              >
-                <ListItem
-                  className={`!overflow-hidden !rounded-lg !p-0 ${collapseItemClasses}`}
-                  selected={false}
-                  placeholder={undefined}
-                  onPointerEnterCapture={undefined}
-                  onPointerLeaveCapture={undefined}
-                >
-                  <AccordionHeader
-                    onClick={() => handleOpenCollapse(name)}
-                    className="border-b-0 !p-3 text-inherit hover:text-inherit focus:text-inherit active:text-inherit"
-                    placeholder={undefined}
-                    onPointerEnterCapture={undefined}
-                    onPointerLeaveCapture={undefined}
-                  >
-                    <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                      {icon}
-                    </ListItemPrefix>
-                    <Typography
-                      color="inherit"
-                      className={`mr-auto font-normal capitalize transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}
-                      placeholder={undefined}
-                      onPointerEnterCapture={undefined}
-                      onPointerLeaveCapture={undefined}
-                    >
-                      {name}
-                    </Typography>
-                  </AccordionHeader>
-                </ListItem>
-                <AccordionBody className="!py-1 text-inherit">
-                  <List className="!p-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                    {pages.map((page: Route, key) =>
-                      page.pages ? (
-                        <Accordion
-                          key={key}
-                          open={openSubCollapse === page.name}
-                          placeholder={undefined}
-                          onPointerEnterCapture={undefined}
-                          onPointerLeaveCapture={undefined}
-                          icon={
-                            <ChevronDownIcon
-                              strokeWidth={2.5}
-                              className={`mx-auto h-3 w-3 text-inherit transition-opacity duration-300 ${
-                                openSubCollapse === page.name
-                                  ? "rotate-180"
-                                  : ""
-                              } ${isCollapsed ? "opacity-0" : "opacity-100"}`}
-                            />
-                          }
-                        >
-                          <ListItem
-                            className={`!overflow-hidden !rounded-lg !p-0 ${collapseItemClasses}`}
-                            selected={false}
-                            placeholder={undefined}
-                            onPointerEnterCapture={undefined}
-                            onPointerLeaveCapture={undefined}
-                          >
-                            <AccordionHeader
-                              onClick={() => handleOpenSubCollapse(page.name)}
-                              className="border-b-0 !p-3 text-inherit hover:text-inherit focus:text-inherit active:text-inherit"
-                              placeholder={undefined}
-                              onPointerEnterCapture={undefined}
-                              onPointerLeaveCapture={undefined}
-                            >
-                              <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                                {page.icon}
-                              </ListItemPrefix>
-                              <Typography
-                                color="inherit"
-                                className={`mr-auto font-normal capitalize transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}
-                                placeholder={undefined}
-                                onPointerEnterCapture={undefined}
-                                onPointerLeaveCapture={undefined}
-                              >
-                                {page.name}
-                              </Typography>
-                            </AccordionHeader>
-                          </ListItem>
-                          <AccordionBody className="!py-1 text-inherit">
-                            <List className="!p-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                              {page.pages.map((subPage: Route, key: number) =>
-                                subPage.external ? (
-                                  <a
-                                    href={subPage.path}
-                                    target="_blank"
-                                    key={key}
-                                  >
-                                    <ListItem
-                                      className="!overflow-hidden !rounded-lg capitalize"
-                                      placeholder={undefined}
-                                      onPointerEnterCapture={undefined}
-                                      onPointerLeaveCapture={undefined}
-                                    >
-                                      <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                                        {subPage.icon}
-                                      </ListItemPrefix>
-                                      <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
-                                        {subPage.name}
-                                      </span>
-                                    </ListItem>
-                                  </a>
-                                ) : (
-                                  <Link href={subPage.path!} key={key}>
-                                    <ListItem
-                                      className={`!overflow-hidden !rounded-lg capitalize ${
-                                        pathname === subPage.path
-                                          ? activeRouteClasses
-                                          : collapseItemClasses
-                                      }`}
-                                      placeholder={undefined}
-                                      onPointerEnterCapture={undefined}
-                                      onPointerLeaveCapture={undefined}
-                                    >
-                                      <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                                        {subPage.icon}
-                                      </ListItemPrefix>
-                                      <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
-                                        {subPage.name}
-                                      </span>
-                                    </ListItem>
-                                  </Link>
-                                )
-                              )}
-                            </List>
-                          </AccordionBody>
-                        </Accordion>
-                      ) : page.external ? (
-                        <a key={key} href={page.path} target="_blank">
-                          <ListItem 
-                            className="!overflow-hidden !rounded-lg capitalize"
-                            placeholder={undefined}
-                            onPointerEnterCapture={undefined}
-                            onPointerLeaveCapture={undefined}
-                          >
-                            <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                              {page.icon}
-                            </ListItemPrefix>
-                            <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
-                              {page.name}
-                            </span>
-                          </ListItem>
-                        </a>
-                      ) : (
-                        <Link href={page.path!} key={key}>
-                          <ListItem
-                            className={`!overflow-hidden !rounded-lg capitalize ${
-                              pathname === page.path
-                                ? activeRouteClasses
-                                : collapseItemClasses
-                            }`}
-                            placeholder={undefined}
-                            onPointerEnterCapture={undefined}
-                            onPointerLeaveCapture={undefined}
-                          >
-                            <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                              {page.icon}
-                            </ListItemPrefix>
-                            <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
-                              {page.name}
-                            </span>
-                          </ListItem>
-                        </Link>
-                      )
-                    )}
-                  </List>
-                </AccordionBody>
-              </Accordion>
-              {divider && <hr className="my-2 border-blue-gray-50" />}
-            </React.Fragment>
-          ) : (
-            <List key={key} className="!p-0 text-inherit" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-              {external ? (
-                <a key={key} href={path} target="_blank">
-                  <ListItem 
-                    className="!overflow-hidden capitalize"
-                    placeholder={undefined}
-                    onPointerEnterCapture={undefined}
-                    onPointerLeaveCapture={undefined}
-                  >
-                    <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                      {icon}
-                    </ListItemPrefix>
-                    <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
-                      {name}
-                    </span>
-                  </ListItem>
-                </a>
-              ) : (
-                <Link href={path!} key={key} className="!block !w-full">
-                  <ListItem
-                    className={`!overflow-hidden !rounded-lg capitalize ${
-                      pathname === path
-                        ? activeRouteClasses
-                        : collapseItemClasses
-                    }`}
-                    placeholder={undefined}
-                    onPointerEnterCapture={undefined}
-                    onPointerLeaveCapture={undefined}
-                  >
-                    <ListItemPrefix placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                      {icon}
-                    </ListItemPrefix>
-                    <span className={`transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}>
-                      {name}
-                    </span>
-                  </ListItem>
-                </Link>
-              )}
-            </List>
-          )
-        )}
-      </List>
+      {renderMenuItems(routes)}
     </Card>
   );
 }
