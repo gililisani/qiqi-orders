@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Sidenav from "./Sidenav";
+import SidenavSimple from "./SidenavSimple";
 import DashboardNavbar from "./DashboardNavbar";
 import Configurator from "./Configurator";
 import { usePathname } from "next/navigation";
@@ -41,7 +41,7 @@ export default function SharedLayoutWrapper({
   return (
     <div className="min-h-screen bg-blue-gray-50/50">
       {!isSimpleLayout && (
-        <Sidenav
+        <SidenavSimple
           routes={routes}
           brandName={brandName}
           brandImg={brandImg}
