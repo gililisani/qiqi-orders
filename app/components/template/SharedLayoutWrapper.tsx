@@ -41,7 +41,7 @@ export default function SharedLayoutWrapper({
   return (
     <div className="min-h-screen bg-blue-gray-50/50">
       {!isSimpleLayout && (
-        <SidenavNew
+        <Sidenav
           routes={routes}
           brandName={brandName}
           brandImg={brandImg}
