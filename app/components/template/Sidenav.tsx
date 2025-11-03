@@ -189,21 +189,21 @@ export default function Sidenav({
                 }
               >
                 <ListItem
-                  className="!p-0 !overflow-hidden"
-                  selected={false}
+                  className={`!overflow-hidden !p-0 ${
+                    openCollapse === name
+                      ? sidenavType === "dark"
+                        ? "bg-white/10"
+                        : "bg-gray-200"
+                      : ""
+                  } ${collapseItemClasses}`}
+                  selected={openCollapse === name}
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
                 >
                   <AccordionHeader
                     onClick={() => handleOpenCollapse(name)}
-                    className={`border-b-0 text-inherit hover:text-inherit focus:text-inherit active:text-inherit ${
-                      openCollapse === name
-                        ? sidenavType === "dark"
-                          ? "bg-white/10"
-                          : "bg-gray-200"
-                        : ""
-                    } ${collapseItemClasses} !rounded-lg`}
+                    className="border-b-0 !p-3 text-inherit hover:text-inherit focus:text-inherit active:text-inherit"
                     placeholder={undefined}
                     onPointerEnterCapture={undefined}
                     onPointerLeaveCapture={undefined}
@@ -244,21 +244,21 @@ export default function Sidenav({
                           }
                         >
                           <ListItem
-                            className="!p-0 !overflow-hidden"
-                            selected={false}
+                            className={`!p-0 ${
+                              openSubCollapse === page.name
+                                ? sidenavType === "dark"
+                                  ? "bg-white/10"
+                                  : "bg-gray-200"
+                                : ""
+                            } ${collapseItemClasses}`}
+                            selected={openSubCollapse === page.name}
                             placeholder={undefined}
                             onPointerEnterCapture={undefined}
                             onPointerLeaveCapture={undefined}
                           >
                             <AccordionHeader
                               onClick={() => handleOpenSubCollapse(page.name)}
-                              className={`border-b-0 text-inherit hover:text-inherit focus:text-inherit active:text-inherit ${
-                                openSubCollapse === page.name
-                                  ? sidenavType === "dark"
-                                    ? "bg-white/10"
-                                    : "bg-gray-200"
-                                  : ""
-                              } ${collapseItemClasses} !rounded-lg`}
+                              className="border-b-0 !p-3 text-inherit hover:text-inherit focus:text-inherit active:text-inherit"
                               placeholder={undefined}
                               onPointerEnterCapture={undefined}
                               onPointerLeaveCapture={undefined}
@@ -287,7 +287,7 @@ export default function Sidenav({
                                     key={key}
                                   >
                                     <ListItem
-                                      className="capitalize !overflow-hidden !rounded-lg"
+                                      className="capitalize"
                                       placeholder={undefined}
                                       onPointerEnterCapture={undefined}
                                       onPointerLeaveCapture={undefined}
@@ -303,7 +303,7 @@ export default function Sidenav({
                                 ) : (
                                   <Link href={subPage.path!} key={key}>
                                     <ListItem
-                                      className={`capitalize !overflow-hidden !rounded-lg ${
+                                      className={`capitalize ${
                                         pathname === subPage.path
                                           ? activeRouteClasses
                                           : collapseItemClasses
@@ -328,7 +328,7 @@ export default function Sidenav({
                       ) : page.external ? (
                         <a key={key} href={page.path} target="_blank">
                           <ListItem 
-                            className="capitalize !overflow-hidden !rounded-lg"
+                            className="capitalize"
                             placeholder={undefined}
                             onPointerEnterCapture={undefined}
                             onPointerLeaveCapture={undefined}
@@ -344,7 +344,7 @@ export default function Sidenav({
                       ) : (
                         <Link href={page.path!} key={key}>
                           <ListItem
-                            className={`capitalize !overflow-hidden !rounded-lg ${
+                            className={`capitalize ${
                               pathname === page.path
                                 ? activeRouteClasses
                                 : collapseItemClasses
@@ -373,7 +373,7 @@ export default function Sidenav({
               {external ? (
                 <a key={key} href={path} target="_blank">
                   <ListItem 
-                    className="capitalize !overflow-hidden !rounded-lg"
+                    className="capitalize"
                     placeholder={undefined}
                     onPointerEnterCapture={undefined}
                     onPointerLeaveCapture={undefined}
@@ -389,7 +389,7 @@ export default function Sidenav({
               ) : (
                 <Link href={path!} key={key}>
                   <ListItem
-                    className={`capitalize !overflow-hidden !rounded-lg ${
+                    className={`capitalize ${
                       pathname === path
                         ? activeRouteClasses
                         : collapseItemClasses
