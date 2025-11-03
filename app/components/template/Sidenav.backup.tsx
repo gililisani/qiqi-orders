@@ -375,7 +375,7 @@ export default function Sidenav({
                   </ListItem>
                 </a>
               ) : (
-                <Link href={path!} key={key} className="!block !w-full">
+                <Link href={path!} key={key}>
                   <ListItem
                     className={`!overflow-hidden !rounded-lg capitalize ${
                       pathname === path
