@@ -157,7 +157,7 @@ export default function Sidenav({
       </IconButton>
 
       {/* Menu Items */}
-      <List placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+      <List className="!m-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
         {routes.map(({ name, icon, pages, title, divider, external, path }, key) =>
           pages ? (
             <React.Fragment key={key}>
