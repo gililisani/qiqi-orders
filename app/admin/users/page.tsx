@@ -94,9 +94,9 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Users (Clients)</h1>
+    <div className="mt-8 mb-4 space-y-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Users (Clients)</h2>
+        <div className="flex items-center justify-end mb-6">
           <Link
             href="/admin/users/new"
             className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"

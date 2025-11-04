@@ -256,18 +256,8 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Orders</h1>
-          <p className="text-gray-500 mt-1 text-sm">{role === 'admin' ? 'Manage and track all orders' : 'View your orders'}</p>
-        </div>
-        {role === 'admin' ? (
-          <div className="text-xs text-gray-400">
-            Showing {((currentPage - 1) * ordersPerPage) + 1}-{Math.min(currentPage * ordersPerPage, totalOrders)} of {totalOrders} orders
-          </div>
-        ) : null}
-      </div>
+    <div className="mt-8 mb-4 space-y-6">
+      <h2 className="text-2xl font-semibold text-gray-900">Orders</h2>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center">

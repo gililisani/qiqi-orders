@@ -84,9 +84,9 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="space-y-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-semibold text-gray-900">Product Categories</h1>
+    <div className="mt-8 mb-4 space-y-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Product Categories</h2>
+        <div className="flex justify-end items-center">
           <div className="flex gap-3">
             <Link href="/admin/categories/reorder" className="px-3 py-2 border border-[#e5e5e5] rounded text-sm hover:bg-gray-50">Reorder Categories</Link>
             <Link href="/admin/categories/new" className="px-3 py-2 bg-black text-white rounded text-sm hover:bg-gray-900">Add Category</Link>

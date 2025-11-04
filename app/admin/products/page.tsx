@@ -240,9 +240,9 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="space-y-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Products Management</h1>
+    <div className="mt-8 mb-4 space-y-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Products Management</h2>
+        <div className="flex justify-end items-center">
           <div className="space-x-2">
             <Link
               href="/admin/products/bulk-upload"

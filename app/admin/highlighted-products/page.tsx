@@ -175,9 +175,10 @@ export default function HighlightedProductsManager() {
   }
 
   return (
-    <div className="p-6">
+    <div className="mt-8 mb-4 space-y-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Highlighted Products Manager</h2>
         <div className="space-y-6">
-          <Card header={<h2 className="font-semibold">Highlighted Products Manager</h2>}>
+          <Card>
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-4">
                 Manage products that appear in the rotating banner on client dashboards. 

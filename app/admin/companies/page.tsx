@@ -119,9 +119,9 @@ export default function CompaniesPage() {
   }
 
   return (
-    <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Companies Management</h1>
+    <div className="mt-8 mb-4 space-y-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Companies Management</h2>
+        <div className="flex justify-end items-center mb-6">
           <div className="flex gap-3">
             <Link
               href="/admin/companies/import"
