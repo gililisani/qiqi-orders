@@ -74,6 +74,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate password setup link using Supabase admin API
+    // Note: Password reset link expiration is controlled by Supabase's JWT expiry setting
+    // Default is 1 hour (3600 seconds). To set 24 hours (86400 seconds):
+    // - Check Authentication → Advanced settings in Supabase Dashboard
+    // - Or contact Supabase support if setting is not visible (may require paid plan)
+    // - The generateLink API does not support custom expiration time
     const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
       email: email,
