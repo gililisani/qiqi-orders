@@ -22,7 +22,7 @@ import {
 import {
   UserCircleIcon,
   Cog6ToothIcon,
-  BellIcon,
+  EnvelopeIcon,
   Bars3Icon,
   HomeIcon,
   Bars3CenterLeftIcon,
@@ -275,7 +275,7 @@ export function DashboardNavbar() {
             onClose={() => setFeedbackOpen(false)}
             buttonRef={feedbackButtonRef}
           />
-          {/* Client Notes Bell Icon - Only shown for clients */}
+          {/* Client Notes Envelope Icon - Only shown for clients */}
           {isClient && (
             <Link href="/client/notes">
               <IconButton 
@@ -285,7 +285,7 @@ export function DashboardNavbar() {
                 onPointerEnterCapture={undefined} 
                 onPointerLeaveCapture={undefined}
               >
-                <BellIcon className="h-5 w-5 text-gray-900" />
+                <EnvelopeIcon className="h-5 w-5 text-gray-900" />
                 {hasNewNotes && (
                   <span className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-600 rounded-full border-2 border-white z-10"></span>
                 )}
