@@ -16,7 +16,6 @@ import {
   MenuHandler,
   MenuList,
   MenuItem,
-  Badge,
 } from "@material-tailwind/react";
 
 // @heroicons/react
@@ -27,9 +26,6 @@ import {
   Bars3Icon,
   HomeIcon,
   Bars3CenterLeftIcon,
-  EnvelopeIcon,
-  MicrophoneIcon,
-  ShoppingCartIcon,
 } from "@heroicons/react/24/solid";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 
@@ -279,7 +275,7 @@ export function DashboardNavbar() {
             onClose={() => setFeedbackOpen(false)}
             buttonRef={feedbackButtonRef}
           />
-          {/* Client Notes Bell Icon */}
+          {/* Client Notes Bell Icon - Only shown for clients */}
           {isClient && (
             <Link href="/client/notes">
               <IconButton 
@@ -352,40 +348,6 @@ export function DashboardNavbar() {
           >
             <Cog6ToothIcon className="h-5 w-5 text-gray-900" />
           </IconButton>
-          {/* Hide the old bell menu for clients since we have a dedicated notes bell */}
-          {!isClient && (
-            <Menu>
-              <MenuHandler>
-                <span>
-                  <Badge>
-                    <IconButton variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                      <BellIcon className="h-5 w-5 text-gray-900" />
-                    </IconButton>
-                  </Badge>
-                </span>
-              </MenuHandler>
-              <MenuList className="!w-max border border-blue-gray-100" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                <MenuItem className="flex items-center gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  <EnvelopeIcon className="h-5 w-5 text-gray-900" />
-                  <Typography variant="small" className="!font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                    Check new messages
-                  </Typography>
-                </MenuItem>
-                <MenuItem className="flex items-center gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  <MicrophoneIcon className="h-5 w-5 text-gray-900" />
-                  <Typography variant="small" className="!font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                    Manage Podcast sessions
-                  </Typography>
-                </MenuItem>
-                <MenuItem className="flex items-center gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  <ShoppingCartIcon className="h-5 w-5 text-gray-900" />
-                  <Typography variant="small" className="!font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                    Payment successfully completed
-                  </Typography>
-                </MenuItem>
-              </MenuList>
-            </Menu>
-          )}
         </div>
       </div>
     </Navbar>
