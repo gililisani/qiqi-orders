@@ -148,9 +148,6 @@ export function DashboardNavbar() {
               {page?.split("-").join(" ")}
             </Typography>
           </Breadcrumbs>
-          <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-            {page?.split("-").join(" ")}
-          </Typography>
         </div>
         <div className="!flex items-center gap-2">
           <div className="mr-auto md:mr-4 md:w-56">
