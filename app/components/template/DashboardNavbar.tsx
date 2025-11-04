@@ -88,6 +88,23 @@ export function DashboardNavbar() {
     fetchUserData();
   }, [pathname]);
 
+  // Refresh notification indicator when window becomes visible (user returns to tab)
+  useEffect(() => {
+    if (!isClient) return;
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          checkForNewNotes(user.id);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isClient]);
+
   const checkForNewNotes = async (clientId: string) => {
     try {
       // Get client's company
