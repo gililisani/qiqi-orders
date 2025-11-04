@@ -70,23 +70,31 @@ export function DashboardNavbar() {
           }
           setUserEmail(user.email || data.user?.email || '');
 
-          // Check if user is a client
-          const { data: clientData } = await supabase
-            .from('clients')
-            .select('id')
-            .eq('id', user.id)
-            .single();
+          // Check if user is a client (determine from pathname or database check)
+          const isClientRoute = pathname.startsWith('/client');
+          
+          if (isClientRoute) {
+            const { data: clientData } = await supabase
+              .from('clients')
+              .select('id')
+              .eq('id', user.id)
+              .single();
 
-          if (clientData) {
-            setIsClient(true);
-            // If navigating away from notes page, refresh notification check
-            if (prevPathnameRef.current === '/client/notes' && pathname !== '/client/notes') {
-              setTimeout(() => {
+            if (clientData) {
+              setIsClient(true);
+              // If navigating away from notes page, refresh notification check
+              if (prevPathnameRef.current === '/client/notes' && pathname !== '/client/notes') {
+                setTimeout(() => {
+                  checkForNewNotes(user.id);
+                }, 500);
+              } else {
                 checkForNewNotes(user.id);
-              }, 500);
+              }
             } else {
-              checkForNewNotes(user.id);
+              setIsClient(false);
             }
+          } else {
+            setIsClient(false);
           }
         }
       } catch (error) {

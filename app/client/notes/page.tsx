@@ -46,12 +46,7 @@ export default function ClientNotesPage() {
         : clientData?.company;
       setCompany(companyData || null);
 
-      // Mark all notes as viewed for this client
-      if (companyData?.id) {
-        await markAllNotesAsViewed(user.id, companyData.id);
-        // Dispatch custom event to notify navbar
-        window.dispatchEvent(new Event('notesViewed'));
-      }
+      // Don't auto-mark notes as viewed - clients must manually check "Mark as Read"
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -59,49 +54,7 @@ export default function ClientNotesPage() {
     }
   };
 
-  const markAllNotesAsViewed = async (clientId: string, companyId: string) => {
-    try {
-      // Get all visible notes for this company
-      const { data: notes, error: notesError } = await supabase
-        .from('company_notes')
-        .select('id')
-        .eq('company_id', companyId)
-        .eq('visible_to_client', true);
 
-      if (notesError) throw notesError;
-      if (!notes || notes.length === 0) return;
-
-      // Get existing views
-      const { data: existingViews } = await supabase
-        .from('client_note_views')
-        .select('note_id')
-        .eq('client_id', clientId)
-        .in('note_id', notes.map(n => n.id));
-
-      const existingNoteIds = new Set(existingViews?.map(v => v.note_id) || []);
-
-      // Insert views for notes that haven't been viewed yet
-      const newViews = notes
-        .filter(note => !existingNoteIds.has(note.id))
-        .map(note => ({
-          client_id: clientId,
-          note_id: note.id,
-          viewed_at: new Date().toISOString()
-        }));
-
-      if (newViews.length > 0) {
-        const { error: insertError } = await supabase
-          .from('client_note_views')
-          .insert(newViews);
-
-        if (insertError) {
-          console.error('Error marking notes as viewed:', insertError);
-        }
-      }
-    } catch (err) {
-      console.error('Error in markAllNotesAsViewed:', err);
-    }
-  };
 
   if (loading) {
     return (

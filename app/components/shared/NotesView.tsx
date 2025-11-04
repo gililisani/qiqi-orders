@@ -71,6 +71,7 @@ export default function NotesView({
   const [replyingToNote, setReplyingToNote] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState<Record<string, string>>({});
   const [submittingReply, setSubmittingReply] = useState<string | null>(null);
+  const [readNotes, setReadNotes] = useState<Set<string>>(new Set()); // Track which notes are read
 
   const getEffectiveDate = (note: Note): Date => {
     // For internal notes with replies, use the latest reply date if it's more recent than note creation
@@ -232,6 +233,21 @@ export default function NotesView({
       // Store all notes - filtering will be applied by useEffect
       setAllNotes(notesData || []);
 
+      // Fetch read status for client users
+      if (userRole === 'client') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: viewsData } = await supabase
+            .from('client_note_views')
+            .select('note_id')
+            .eq('client_id', user.id)
+            .in('note_id', (notesData || []).map(n => n.id));
+
+          const readNoteIds = new Set(viewsData?.map(v => v.note_id) || []);
+          setReadNotes(readNoteIds);
+        }
+      }
+
       // Generate signed URLs for all attachments
       const urlPromises: Promise<void>[] = [];
       const urlMap: Record<string, string> = {};
@@ -310,6 +326,49 @@ export default function NotesView({
       alert('Failed to submit reply: ' + err.message);
     } finally {
       setSubmittingReply(null);
+    }
+  };
+
+  const handleMarkAsRead = async (noteId: string, isRead: boolean) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      if (isRead) {
+        // Mark as read
+        const { error } = await supabase
+          .from('client_note_views')
+          .upsert({
+            client_id: user.id,
+            note_id: noteId,
+            viewed_at: new Date().toISOString()
+          }, {
+            onConflict: 'client_id,note_id'
+          });
+
+        if (error) throw error;
+        setReadNotes(prev => new Set([...prev, noteId]));
+      } else {
+        // Mark as unread (remove from views)
+        const { error } = await supabase
+          .from('client_note_views')
+          .delete()
+          .eq('client_id', user.id)
+          .eq('note_id', noteId);
+
+        if (error) throw error;
+        setReadNotes(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(noteId);
+          return newSet;
+        });
+      }
+
+      // Dispatch event to update navbar notification
+      window.dispatchEvent(new Event('notesViewed'));
+    } catch (err: any) {
+      console.error('Error marking note as read:', err);
+      alert('Failed to update note status: ' + err.message);
     }
   };
 
@@ -471,29 +530,45 @@ export default function NotesView({
                   </div>
                 </div>
                 
-                {/* Action Buttons */}
-                {showActions && (allowEdit || allowDelete) && (
-                  <div className="flex space-x-2">
-                    {allowEdit && (
-                      <button 
-                        onClick={() => setEditingNote(note)}
-                        className="text-gray-600 hover:text-gray-800 text-sm flex items-center space-x-1"
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                        <span>Edit</span>
-                      </button>
-                    )}
-                    {allowDelete && (
-                      <button 
-                        onClick={() => handleDeleteNote(note.id)}
-                        className="text-red-600 hover:text-red-800 text-sm flex items-center space-x-1"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                        <span>Delete</span>
-                      </button>
-                    )}
-                  </div>
-                )}
+                {/* Right side: Action Buttons and Mark as Read checkbox */}
+                <div className="flex flex-col items-end gap-2">
+                  {/* Action Buttons */}
+                  {showActions && (allowEdit || allowDelete) && (
+                    <div className="flex space-x-2">
+                      {allowEdit && (
+                        <button 
+                          onClick={() => setEditingNote(note)}
+                          className="text-gray-600 hover:text-gray-800 text-sm flex items-center space-x-1"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                          <span>Edit</span>
+                        </button>
+                      )}
+                      {allowDelete && (
+                        <button 
+                          onClick={() => handleDeleteNote(note.id)}
+                          className="text-red-600 hover:text-red-800 text-sm flex items-center space-x-1"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                          <span>Delete</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Mark as Read checkbox for clients */}
+                  {userRole === 'client' && (
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={readNotes.has(note.id)}
+                        onChange={(e) => handleMarkAsRead(note.id, e.target.checked)}
+                        className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
+                      />
+                      <span className="text-sm text-gray-700">Mark as Read</span>
+                    </label>
+                  )}
+                </div>
               </div>
               
               <div className="prose max-w-none">
