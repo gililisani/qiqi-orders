@@ -2,20 +2,31 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
-import { DocumentIcon, CalendarIcon, UserIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { DocumentIcon, CalendarIcon, UserIcon, PlusIcon, PencilIcon, TrashIcon, ChatBubbleLeftIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
 import NoteForm from './NoteForm';
 
 interface Note {
   id: string;
   title: string;
   content: string;
-  note_type: 'meeting' | 'webinar' | 'event' | 'feedback';
+  note_type: 'meeting' | 'webinar' | 'event' | 'feedback' | 'general_note' | 'internal_note';
   meeting_date: string | null;
   visible_to_client: boolean;
   created_by: string;
   created_at: string;
   updated_at: string;
   attachments: Attachment[];
+  created_by_admin?: { name: string } | null;
+  replies?: NoteReply[];
+}
+
+interface NoteReply {
+  id: string;
+  note_id: string;
+  content: string;
+  created_by: string;
+  created_at: string;
+  created_by_admin?: { name: string } | null;
 }
 
 interface Attachment {
@@ -52,6 +63,9 @@ export default function NotesView({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({});
+  const [replyingToNote, setReplyingToNote] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState<Record<string, string>>({});
+  const [submittingReply, setSubmittingReply] = useState<string | null>(null);
 
   useEffect(() => {
     if (companyId) {
@@ -79,7 +93,8 @@ export default function NotesView({
         .from('company_notes')
         .select(`
           *,
-          attachments:note_attachments(*)
+          attachments:note_attachments(*),
+          created_by_admin:admins!company_notes_created_by_fkey(name)
         `)
         .eq('company_id', companyId);
 
@@ -92,6 +107,32 @@ export default function NotesView({
         .order('created_at', { ascending: false });
 
       if (notesError) throw notesError;
+
+      // Fetch replies for Internal Notes (only for admins)
+      if (userRole === 'admin' && notesData) {
+        const internalNoteIds = notesData
+          .filter((note: Note) => !note.visible_to_client)
+          .map((note: Note) => note.id);
+
+        if (internalNoteIds.length > 0) {
+          const { data: repliesData, error: repliesError } = await supabase
+            .from('note_replies')
+            .select(`
+              *,
+              created_by_admin:admins!note_replies_created_by_fkey(name)
+            `)
+            .in('note_id', internalNoteIds)
+            .order('created_at', { ascending: true });
+
+          if (!repliesError && repliesData) {
+            // Attach replies to their respective notes
+            notesData.forEach((note: Note) => {
+              note.replies = repliesData.filter((reply: NoteReply) => reply.note_id === note.id);
+            });
+          }
+        }
+      }
+
       setNotes(notesData || []);
 
       // Generate signed URLs for all attachments
@@ -144,6 +185,37 @@ export default function NotesView({
     setEditingNote(null);
   };
 
+  const handleSubmitReply = async (noteId: string) => {
+    const content = replyContent[noteId]?.trim();
+    if (!content) return;
+
+    setSubmittingReply(noteId);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { error } = await supabase
+        .from('note_replies')
+        .insert({
+          note_id: noteId,
+          content: content,
+          created_by: user.id
+        });
+
+      if (error) throw error;
+
+      // Clear reply input and refresh notes
+      setReplyContent(prev => ({ ...prev, [noteId]: '' }));
+      setReplyingToNote(null);
+      fetchNotes();
+    } catch (err: any) {
+      console.error('Error submitting reply:', err);
+      alert('Failed to submit reply: ' + err.message);
+    } finally {
+      setSubmittingReply(null);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -164,6 +236,10 @@ export default function NotesView({
         return '🎉';
       case 'feedback':
         return '💬';
+      case 'general_note':
+        return '📝';
+      case 'internal_note':
+        return '🔒';
       default:
         return '📝';
     }
@@ -179,8 +255,31 @@ export default function NotesView({
         return 'bg-green-100 text-green-800';
       case 'feedback':
         return 'bg-orange-100 text-orange-800';
+      case 'general_note':
+        return 'bg-gray-100 text-gray-800';
+      case 'internal_note':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getNoteTypeLabel = (type: string) => {
+    switch (type) {
+      case 'meeting':
+        return 'Meeting';
+      case 'webinar':
+        return 'Webinar';
+      case 'event':
+        return 'Event';
+      case 'feedback':
+        return 'Feedback';
+      case 'general_note':
+        return 'General Note';
+      case 'internal_note':
+        return 'Internal Note';
+      default:
+        return type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
     }
   };
 
@@ -250,10 +349,15 @@ export default function NotesView({
                   <span className="text-2xl">{getNoteTypeIcon(note.note_type)}</span>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">{note.title}</h3>
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
+                    <div className="flex items-center space-x-4 text-sm text-gray-500 flex-wrap gap-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getNoteTypeColor(note.note_type)}`}>
-                        {note.note_type.charAt(0).toUpperCase() + note.note_type.slice(1)}
+                        {getNoteTypeLabel(note.note_type)}
                       </span>
+                      {!note.visible_to_client && userRole === 'admin' && (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Internal
+                        </span>
+                      )}
                       {note.meeting_date && (
                         <div className="flex items-center space-x-1">
                           <CalendarIcon className="h-4 w-4" />
@@ -262,7 +366,9 @@ export default function NotesView({
                       )}
                       <div className="flex items-center space-x-1">
                         <UserIcon className="h-4 w-4" />
-                        <span>Created {formatDate(note.created_at)}</span>
+                        <span>
+                          {note.created_by_admin?.name ? `Created by ${note.created_by_admin.name}` : 'Created'} {formatDate(note.created_at)}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -329,6 +435,78 @@ export default function NotesView({
                       </a>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Replies Section - Only for Internal Notes (visible_to_client = false) and Admin users */}
+              {!note.visible_to_client && userRole === 'admin' && (
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-medium text-gray-900">
+                      Replies ({note.replies?.length || 0})
+                    </h4>
+                    {!replyingToNote && (
+                      <button
+                        onClick={() => setReplyingToNote(note.id)}
+                        className="text-sm text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+                      >
+                        <ChatBubbleLeftIcon className="h-4 w-4" />
+                        <span>Add Reply</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Existing Replies */}
+                  {note.replies && note.replies.length > 0 && (
+                    <div className="space-y-4 mb-4">
+                      {note.replies.map((reply) => (
+                        <div key={reply.id} className="bg-gray-50 rounded-lg p-4">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <UserIcon className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm font-medium text-gray-900">
+                              {reply.created_by_admin?.name || 'Admin'}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {formatDate(reply.created_at)}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{reply.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Reply Form */}
+                  {replyingToNote === note.id && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <textarea
+                        value={replyContent[note.id] || ''}
+                        onChange={(e) => setReplyContent(prev => ({ ...prev, [note.id]: e.target.value }))}
+                        placeholder="Write a reply..."
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black resize-y mb-3"
+                      />
+                      <div className="flex items-center space-x-2 justify-end">
+                        <button
+                          onClick={() => {
+                            setReplyingToNote(null);
+                            setReplyContent(prev => ({ ...prev, [note.id]: '' }));
+                          }}
+                          className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleSubmitReply(note.id)}
+                          disabled={!replyContent[note.id]?.trim() || submittingReply === note.id}
+                          className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition disabled:opacity-50 flex items-center space-x-2 text-sm"
+                        >
+                          <PaperAirplaneIcon className="h-4 w-4" />
+                          <span>{submittingReply === note.id ? 'Sending...' : 'Send Reply'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

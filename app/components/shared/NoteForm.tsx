@@ -12,7 +12,7 @@ interface NoteFormProps {
     id: string;
     title: string;
     content: string;
-    note_type: 'meeting' | 'webinar' | 'event' | 'feedback';
+    note_type: 'meeting' | 'webinar' | 'event' | 'feedback' | 'general_note' | 'internal_note';
     meeting_date: string | null;
     visible_to_client?: boolean;
     attachments: any[];
@@ -27,10 +27,12 @@ interface Attachment {
 export default function NoteForm({ companyId, onClose, onSuccess, editNote }: NoteFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showVisibilityWarning, setShowVisibilityWarning] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState<React.FormEvent<HTMLFormElement> | null>(null);
   const [formData, setFormData] = useState({
     title: editNote?.title || '',
     content: editNote?.content || '',
-    note_type: editNote?.note_type || 'meeting' as 'meeting' | 'webinar' | 'event' | 'feedback',
+    note_type: editNote?.note_type || 'meeting' as 'meeting' | 'webinar' | 'event' | 'feedback' | 'general_note' | 'internal_note',
     meeting_date: editNote?.meeting_date || '',
     visible_to_client: editNote?.visible_to_client !== undefined ? editNote.visible_to_client : true
   });
@@ -44,6 +46,14 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
       setFormData(prev => ({
         ...prev,
         [name]: checked
+      }));
+    } else if (name === 'note_type') {
+      // Auto-set visible_to_client based on note type
+      const newNoteType = value as 'meeting' | 'webinar' | 'event' | 'feedback' | 'general_note' | 'internal_note';
+      setFormData(prev => ({
+        ...prev,
+        [name]: newNoteType,
+        visible_to_client: newNoteType === 'internal_note' ? false : prev.visible_to_client
       }));
     } else {
       setFormData(prev => ({
@@ -95,8 +105,22 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Show warning whenever visible_to_client is checked (as per requirement)
+    if (formData.visible_to_client) {
+      setPendingSubmit(e as React.FormEvent<HTMLFormElement>);
+      setShowVisibilityWarning(true);
+      return;
+    }
+
+    await performSubmit(e);
+  };
+
+  const performSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     setError('');
+    setShowVisibilityWarning(false);
 
     try {
       // First, upload all attachments before creating the note
@@ -208,7 +232,19 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
       setError(err.message);
     } finally {
       setLoading(false);
+      setPendingSubmit(null);
     }
+  };
+
+  const handleConfirmVisibility = () => {
+    if (pendingSubmit) {
+      performSubmit(pendingSubmit);
+    }
+  };
+
+  const handleCancelVisibility = () => {
+    setShowVisibilityWarning(false);
+    setPendingSubmit(null);
   };
 
   return (
@@ -233,6 +269,34 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
             </div>
           )}
 
+          {/* Visibility Warning Modal */}
+          {showVisibilityWarning && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+              <div className="bg-white rounded-lg max-w-md w-full p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Visibility</h3>
+                <p className="text-gray-700 mb-6">
+                  This note will be visible to the Company. Are you sure you want to proceed?
+                </p>
+                <div className="flex space-x-4 justify-end">
+                  <button
+                    type="button"
+                    onClick={handleCancelVisibility}
+                    className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmVisibility}
+                    className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
+                  >
+                    Yes, Proceed
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -250,6 +314,8 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
                   <option value="webinar">📹 Webinar</option>
                   <option value="event">🎉 Event</option>
                   <option value="feedback">💬 Feedback</option>
+                  <option value="general_note">📝 General Note</option>
+                  <option value="internal_note">🔒 Internal Note</option>
                 </select>
               </div>
 
@@ -304,14 +370,17 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
                   name="visible_to_client"
                   checked={formData.visible_to_client}
                   onChange={handleChange}
-                  className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
+                  disabled={formData.note_type === 'internal_note'}
+                  className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="text-sm font-medium text-gray-700">
                   Visible to Client
                 </span>
               </label>
               <p className="text-xs text-gray-500 mt-1 ml-6">
-                If unchecked, this note will only be visible to admins and will not be shown to clients.
+                {formData.note_type === 'internal_note' 
+                  ? 'Internal Notes are always hidden from clients.' 
+                  : 'If unchecked, this note will only be visible to admins and will not be shown to clients.'}
               </p>
             </div>
 
