@@ -127,17 +127,10 @@ export default function Sidenav({
 
   const getSpacingClasses = (level: number) => {
     if (isCollapsed) {
-      return "px-0 justify-center";
+      return "px-3 justify-center";
     }
 
-    switch (level) {
-      case 0:
-        return "pl-3 pr-3 justify-start";
-      case 1:
-        return "pl-6 pr-3 justify-start";
-      default:
-        return "pl-9 pr-3 justify-start";
-    }
+    return "px-3 justify-start";
   };
 
   const renderMenuItems = (items: Route[], level = 0) => (
@@ -160,20 +153,17 @@ export default function Sidenav({
           itemBaseClasses.push(activeItemClass);
         }
 
-        const iconWrapperClasses = [
-          "flex items-center justify-center h-5 w-5 text-inherit transition-all duration-300",
-          isCollapsed ? "mr-0" : "mr-3",
-        ].join(" ");
+        const iconWrapperClasses = "flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit";
 
         const labelClasses = [
-          "flex-1 text-sm font-normal capitalize transition-all duration-200",
-          isCollapsed ? "opacity-0 translate-x-2 pointer-events-none" : "opacity-100 translate-x-0",
+          "min-w-0 flex-1 text-sm font-normal capitalize overflow-hidden transition-all duration-200",
+          isCollapsed ? "max-w-0 opacity-0 pointer-events-none ml-0" : "max-w-full opacity-100 ml-3",
         ].join(" ");
 
         const chevronClasses = [
-          "ml-auto h-3 w-3 transition-transform duration-300",
+          "flex-shrink-0 h-3 w-3 transition-transform duration-300",
           isOpen ? "rotate-180" : "",
-          isCollapsed ? "opacity-0 invisible" : "opacity-100",
+          isCollapsed ? "opacity-0 invisible" : "ml-3 opacity-100",
         ].join(" ");
 
         const itemClasses = itemBaseClasses.join(" ");
