@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useRef as useReactRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
@@ -56,7 +56,7 @@ export function DashboardNavbar() {
   const [hasNewNotes, setHasNewNotes] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
-  const prevPathnameRef = useReactRef(pathname);
+  const prevPathnameRef = useRef(pathname);
 
   useEffect(() => {
     const fetchUserData = async () => {
