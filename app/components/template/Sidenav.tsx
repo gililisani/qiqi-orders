@@ -266,14 +266,16 @@ export default function Sidenav({
       onMouseLeave={handleMouseLeave}
     >
       {/* Logo */}
-      {!isCollapsed && (
-        <Link
-          href={pathname.startsWith("/client") ? "/client" : "/admin"}
-          className="flex items-center justify-center h-20"
-        >
+      <Link
+        href={pathname.startsWith("/client") ? "/client" : "/admin"}
+        className="flex items-center justify-center h-20"
+      >
+        {isCollapsed ? (
+          <span className="text-2xl font-semibold text-inherit">Q</span>
+        ) : (
           <img src={brandImg} className="h-12 w-auto" alt="logo" />
-        </Link>
-      )}
+        )}
+      </Link>
 
       {/* Close button */}
       <IconButton
