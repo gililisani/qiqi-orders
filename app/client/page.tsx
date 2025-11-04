@@ -121,35 +121,45 @@ export default function ClientDashboard() {
           </h1>
         </div>
 
-        {/* Quick Actions - Two Boxes Side by Side */}
+        {/* Two Boxes Side by Side */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Left Box: New Order + Order History */}
           <Card>
-            <div className="p-6">
-              <h2 className="text-lg font-semibold mb-4">Place New Order</h2>
-              <p className="text-gray-600 mb-4">
-                Create a new order with product selection and support fund redemption.
-              </p>
-              <Link
-                href="/client/orders/new"
-                className="inline-block bg-black text-white px-6 py-3 rounded hover:opacity-90 transition"
-              >
-                New Order
-              </Link>
+            <div className="p-6 space-y-6">
+              {/* Place New Order */}
+              <div>
+                <h2 className="text-lg font-semibold mb-4">Place New Order</h2>
+                <p className="text-gray-600 mb-4">
+                  Create a new order with product selection and support fund redemption.
+                </p>
+                <Link
+                  href="/client/orders/new"
+                  className="inline-block bg-black text-white px-6 py-3 rounded hover:opacity-90 transition"
+                >
+                  New Order
+                </Link>
+              </div>
+
+              {/* Order History */}
+              <div className="border-t border-gray-200 pt-6">
+                <h2 className="text-lg font-semibold mb-4">Order History</h2>
+                <p className="text-gray-600 mb-4">
+                  View all your past and current orders.
+                </p>
+                <Link
+                  href="/client/orders"
+                  className="inline-block bg-gray-700 text-white px-6 py-3 rounded hover:opacity-90 transition"
+                >
+                  View Orders
+                </Link>
+              </div>
             </div>
           </Card>
 
+          {/* Right Box: Highlighted Products Carousel */}
           <Card>
             <div className="p-6">
-              <h2 className="text-lg font-semibold mb-4">Order History</h2>
-              <p className="text-gray-600 mb-4">
-                View all your past and current orders.
-              </p>
-              <Link
-                href="/client/orders"
-                className="inline-block bg-gray-700 text-white px-6 py-3 rounded hover:opacity-90 transition"
-              >
-                View Orders
-              </Link>
+              <HighlightedProductsCarousel />
             </div>
           </Card>
         </div>
@@ -230,9 +240,6 @@ export default function ClientDashboard() {
             )}
           </div>
         </Card>
-
-        {/* Highlighted Products */}
-        <HighlightedProductsCarousel />
 
         {/* Contract Information */}
         {company?.id && (
