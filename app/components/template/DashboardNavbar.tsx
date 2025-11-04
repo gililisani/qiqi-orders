@@ -89,6 +89,7 @@ export function DashboardNavbar() {
   }, [pathname]);
 
   // Refresh notification indicator when window becomes visible (user returns to tab)
+  // Also refresh when navigating away from notes page
   useEffect(() => {
     if (!isClient) return;
 
@@ -101,9 +102,42 @@ export function DashboardNavbar() {
       }
     };
 
+    // Listen for custom event when notes are viewed
+    const handleNotesViewed = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Small delay to ensure database update has completed
+        setTimeout(() => {
+          checkForNewNotes(user.id);
+        }, 500);
+      }
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isClient]);
+    window.addEventListener('notesViewed', handleNotesViewed);
+    
+    // Also check when navigating away from notes page
+    if (pathname === '/client/notes') {
+      // User is on notes page, they will view notes
+      // Check again after a delay
+      const timer = setTimeout(() => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          checkForNewNotes(user.id);
+        }
+      }, 1000);
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        window.removeEventListener('notesViewed', handleNotesViewed);
+      };
+    }
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('notesViewed', handleNotesViewed);
+    };
+  }, [isClient, pathname]);
 
   const checkForNewNotes = async (clientId: string) => {
     try {
@@ -255,7 +289,7 @@ export function DashboardNavbar() {
               >
                 <BellIcon className="h-5 w-5 text-gray-900" />
                 {hasNewNotes && (
-                  <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-600 rounded-full border-2 border-white"></span>
+                  <span className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-600 rounded-full border-2 border-white z-10"></span>
                 )}
               </IconButton>
             </Link>

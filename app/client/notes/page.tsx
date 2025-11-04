@@ -49,6 +49,8 @@ export default function ClientNotesPage() {
       // Mark all notes as viewed for this client
       if (companyData?.id) {
         await markAllNotesAsViewed(user.id, companyData.id);
+        // Dispatch custom event to notify navbar
+        window.dispatchEvent(new Event('notesViewed'));
       }
     } catch (err: any) {
       setError(err.message);
