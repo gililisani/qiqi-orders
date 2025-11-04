@@ -123,14 +123,10 @@ export default function Sidenav({
     if (childToOpen !== null && childToOpen !== openSubCollapse) {
       setOpenSubCollapse(childToOpen);
     }
-  }, [routes, isRouteActive, openCollapse, openSubCollapse]);
+  }, [routes, isRouteActive]);
 
-  const getSpacingClasses = (level: number) => {
-    if (isCollapsed) {
-      return "px-3 justify-center";
-    }
-
-    return "px-3 justify-start";
+  const getSpacingClasses = () => {
+    return isCollapsed ? "px-3 justify-start" : "px-3 justify-start";
   };
 
   const renderMenuItems = (items: Route[], level = 0) => (
@@ -139,31 +135,31 @@ export default function Sidenav({
         const key = `${name}-${index}`;
         const hasChildren = Array.isArray(pages) && pages.length > 0;
         const isActiveLeaf = !hasChildren && path ? isRouteActive({ name, path }) : false;
-        const parentActive = hasChildren ? isRouteActive({ name, pages }) : false;
         const isOpen = level === 0 ? openCollapse === name : openSubCollapse === name;
 
         const itemBaseClasses = [
           "group relative flex items-center w-full min-h-[44px] rounded-lg transition-all duration-300 ease-in-out overflow-hidden text-inherit",
           hoverBackgroundClass,
-          getSpacingClasses(level),
+          getSpacingClasses(),
+          isCollapsed ? "gap-0" : "gap-3",
           "focus:outline-none focus-visible:outline-none",
         ];
 
-        if (isActiveLeaf || (parentActive && !isCollapsed)) {
+        if (isActiveLeaf) {
           itemBaseClasses.push(activeItemClass);
         }
 
         const iconWrapperClasses = "flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit";
 
         const labelClasses = [
-          "min-w-0 flex-1 text-sm font-normal capitalize overflow-hidden transition-all duration-200",
-          isCollapsed ? "max-w-0 opacity-0 pointer-events-none ml-0" : "max-w-full opacity-100 ml-3",
+          "min-w-0 flex-1 text-sm font-normal capitalize text-left overflow-hidden whitespace-nowrap transition-all duration-200",
+          isCollapsed ? "max-w-0 opacity-0 pointer-events-none" : "max-w-full opacity-100",
         ].join(" ");
 
         const chevronClasses = [
           "flex-shrink-0 h-3 w-3 transition-transform duration-300",
           isOpen ? "rotate-180" : "",
-          isCollapsed ? "opacity-0 invisible" : "ml-3 opacity-100",
+          isCollapsed ? "opacity-0 invisible" : "ml-auto opacity-100",
         ].join(" ");
 
         const itemClasses = itemBaseClasses.join(" ");
