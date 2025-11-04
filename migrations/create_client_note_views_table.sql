@@ -1,5 +1,6 @@
 -- Create client_note_views table to track which notes have been viewed by clients
 -- This allows showing a "new note" indicator until the client accesses the Notes page
+-- Run this in Supabase SQL Editor
 
 CREATE TABLE IF NOT EXISTS client_note_views (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
