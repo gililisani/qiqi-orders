@@ -56,6 +56,8 @@ export function DashboardNavbar() {
   const [hasNewNotes, setHasNewNotes] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
+  const prevPathnameRef = React.useRef(pathname);
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -77,7 +79,14 @@ export function DashboardNavbar() {
 
           if (clientData) {
             setIsClient(true);
-            checkForNewNotes(user.id);
+            // If navigating away from notes page, refresh notification check
+            if (prevPathnameRef.current === '/client/notes' && pathname !== '/client/notes') {
+              setTimeout(() => {
+                checkForNewNotes(user.id);
+              }, 500);
+            } else {
+              checkForNewNotes(user.id);
+            }
           }
         }
       } catch (error) {
@@ -86,6 +95,7 @@ export function DashboardNavbar() {
     };
 
     fetchUserData();
+    prevPathnameRef.current = pathname;
   }, [pathname]);
 
   // Refresh notification indicator when window becomes visible (user returns to tab)
@@ -115,29 +125,12 @@ export function DashboardNavbar() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('notesViewed', handleNotesViewed);
-    
-    // Also check when navigating away from notes page
-    if (pathname === '/client/notes') {
-      // User is on notes page, they will view notes
-      // Check again after a delay
-      const timer = setTimeout(() => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          checkForNewNotes(user.id);
-        }
-      }, 1000);
-      return () => {
-        clearTimeout(timer);
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        window.removeEventListener('notesViewed', handleNotesViewed);
-      };
-    }
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('notesViewed', handleNotesViewed);
     };
-  }, [isClient, pathname]);
+  }, [isClient]);
 
   const checkForNewNotes = async (clientId: string) => {
     try {
