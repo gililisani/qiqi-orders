@@ -7,9 +7,6 @@ import Card from '../components/ui/Card';
 import Link from 'next/link';
 import OrderStatusBadge from '../components/ui/OrderStatusBadge';
 import { formatCurrency } from '../../lib/formatters';
-import ContractInfo from '../components/shared/ContractInfo';
-import TerritoryList from '../components/shared/TerritoryList';
-import NotesView from '../components/shared/NotesView';
 import HighlightedProductsCarousel from '../components/shared/HighlightedProductsCarousel';
 interface Order {
   id: string;
@@ -238,44 +235,6 @@ export default function ClientDashboard() {
             )}
           </div>
         </Card>
-
-        {/* Contract Information */}
-        {company?.id && (
-          <Card>
-            <ContractInfo
-              companyId={company.id}
-              userRole="client"
-              showActions={false}
-              allowEdit={false}
-            />
-          </Card>
-        )}
-
-        {/* Territories */}
-        {company?.id && (
-          <Card>
-            <TerritoryList
-              companyId={company.id}
-              userRole="client"
-              showActions={false}
-              allowEdit={false}
-            />
-          </Card>
-        )}
-
-        {/* Company Notes */}
-        {company?.id && (
-          <Card>
-            <NotesView
-              companyId={company.id}
-              userRole="client"
-              showActions={false}
-              allowEdit={false}
-              allowDelete={false}
-              allowCreate={false}
-            />
-          </Card>
-        )}
       </div>
   );
 }

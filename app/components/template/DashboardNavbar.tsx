@@ -53,6 +53,8 @@ export function DashboardNavbar() {
   const [userEmail, setUserEmail] = useState<string>('');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const feedbackButtonRef = useRef<HTMLButtonElement>(null);
+  const [hasNewNotes, setHasNewNotes] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -65,6 +67,18 @@ export function DashboardNavbar() {
             setUserName(data.user.name);
           }
           setUserEmail(user.email || data.user?.email || '');
+
+          // Check if user is a client
+          const { data: clientData } = await supabase
+            .from('clients')
+            .select('id')
+            .eq('id', user.id)
+            .single();
+
+          if (clientData) {
+            setIsClient(true);
+            checkForNewNotes(user.id);
+          }
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -72,7 +86,47 @@ export function DashboardNavbar() {
     };
 
     fetchUserData();
-  }, []);
+  }, [pathname]);
+
+  const checkForNewNotes = async (clientId: string) => {
+    try {
+      // Get client's company
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('company_id')
+        .eq('id', clientId)
+        .single();
+
+      if (!clientData?.company_id) return;
+
+      // Get all visible notes for this company
+      const { data: notes, error: notesError } = await supabase
+        .from('company_notes')
+        .select('id')
+        .eq('company_id', clientData.company_id)
+        .eq('visible_to_client', true);
+
+      if (notesError) throw notesError;
+      if (!notes || notes.length === 0) {
+        setHasNewNotes(false);
+        return;
+      }
+
+      // Get viewed notes
+      const { data: viewedNotes } = await supabase
+        .from('client_note_views')
+        .select('note_id')
+        .eq('client_id', clientId)
+        .in('note_id', notes.map(n => n.id));
+
+      const viewedNoteIds = new Set(viewedNotes?.map(v => v.note_id) || []);
+      const unreadNotes = notes.filter(note => !viewedNoteIds.has(note.id));
+
+      setHasNewNotes(unreadNotes.length > 0);
+    } catch (error) {
+      console.error('Error checking for new notes:', error);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -172,6 +226,23 @@ export function DashboardNavbar() {
             onClose={() => setFeedbackOpen(false)}
             buttonRef={feedbackButtonRef}
           />
+          {/* Client Notes Bell Icon */}
+          {isClient && (
+            <Link href="/client/notes">
+              <IconButton 
+                variant="text" 
+                className="relative"
+                placeholder={undefined} 
+                onPointerEnterCapture={undefined} 
+                onPointerLeaveCapture={undefined}
+              >
+                <BellIcon className="h-5 w-5 text-gray-900" />
+                {hasNewNotes && (
+                  <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-600 rounded-full border-2 border-white"></span>
+                )}
+              </IconButton>
+            </Link>
+          )}
           <Menu>
             <MenuHandler>
               <IconButton variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
@@ -228,37 +299,40 @@ export function DashboardNavbar() {
           >
             <Cog6ToothIcon className="h-5 w-5 text-gray-900" />
           </IconButton>
-          <Menu>
-            <MenuHandler>
-              <span>
-                <Badge>
-                  <IconButton variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                    <BellIcon className="h-5 w-5 text-gray-900" />
-                  </IconButton>
-                </Badge>
-              </span>
-            </MenuHandler>
-            <MenuList className="!w-max border border-blue-gray-100" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-              <MenuItem className="flex items-center gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                <EnvelopeIcon className="h-5 w-5 text-gray-900" />
-                <Typography variant="small" className="!font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  Check new messages
-                </Typography>
-              </MenuItem>
-              <MenuItem className="flex items-center gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                <MicrophoneIcon className="h-5 w-5 text-gray-900" />
-                <Typography variant="small" className="!font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  Manage Podcast sessions
-                </Typography>
-              </MenuItem>
-              <MenuItem className="flex items-center gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                <ShoppingCartIcon className="h-5 w-5 text-gray-900" />
-                <Typography variant="small" className="!font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  Payment successfully completed
-                </Typography>
-              </MenuItem>
-            </MenuList>
-          </Menu>
+          {/* Hide the old bell menu for clients since we have a dedicated notes bell */}
+          {!isClient && (
+            <Menu>
+              <MenuHandler>
+                <span>
+                  <Badge>
+                    <IconButton variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                      <BellIcon className="h-5 w-5 text-gray-900" />
+                    </IconButton>
+                  </Badge>
+                </span>
+              </MenuHandler>
+              <MenuList className="!w-max border border-blue-gray-100" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <MenuItem className="flex items-center gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <EnvelopeIcon className="h-5 w-5 text-gray-900" />
+                  <Typography variant="small" className="!font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                    Check new messages
+                  </Typography>
+                </MenuItem>
+                <MenuItem className="flex items-center gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <MicrophoneIcon className="h-5 w-5 text-gray-900" />
+                  <Typography variant="small" className="!font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                    Manage Podcast sessions
+                  </Typography>
+                </MenuItem>
+                <MenuItem className="flex items-center gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <ShoppingCartIcon className="h-5 w-5 text-gray-900" />
+                  <Typography variant="small" className="!font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                    Payment successfully completed
+                  </Typography>
+                </MenuItem>
+              </MenuList>
+            </Menu>
+          )}
         </div>
       </div>
     </Navbar>
