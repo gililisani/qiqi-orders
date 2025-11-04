@@ -21,25 +21,34 @@ export default function ConfirmPasswordResetPage() {
   const [isValidating, setIsValidating] = useState(true);
 
   useEffect(() => {
-    // Handle the hash fragment from the magic link
+    // Handle the hash fragment or query parameters from the magic link
     const handleAuthCallback = async () => {
       try {
-        // Check if we have a hash fragment with tokens
+        // Check both hash fragment and query parameters
+        // Some email clients convert # to ? or vice versa
         const hashFragment = window.location.hash;
+        const searchParams = window.location.search;
         
-        if (!hashFragment) {
+        let params: URLSearchParams;
+        
+        // Prefer hash fragment if available, otherwise use query params
+        if (hashFragment) {
+          params = new URLSearchParams(hashFragment.substring(1)); // Remove the #
+        } else if (searchParams) {
+          params = new URLSearchParams(searchParams.substring(1)); // Remove the ?
+        } else {
           setError('Invalid password reset link. Please request a new one.');
           setIsValidating(false);
           return;
         }
 
-        // Parse the hash fragment
-        const params = new URLSearchParams(hashFragment.substring(1)); // Remove the #
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
         const type = params.get('type');
 
         console.log('Password reset callback:', { 
+          hasHash: !!hashFragment,
+          hasSearch: !!searchParams,
           hasAccessToken: !!accessToken, 
           hasRefreshToken: !!refreshToken, 
           type 
@@ -60,7 +69,17 @@ export default function ConfirmPasswordResetPage() {
 
         if (sessionError || !data.session) {
           console.error('Session error:', sessionError);
-          setError('Failed to validate password reset link. Please request a new one.');
+          console.error('Full URL:', window.location.href);
+          console.error('Hash:', window.location.hash);
+          console.error('Search:', window.location.search);
+          
+          // Check if the error is due to an expired token
+          const errorMessage = sessionError?.message?.toLowerCase() || '';
+          if (errorMessage.includes('expired') || errorMessage.includes('invalid') || errorMessage.includes('token')) {
+            setError('This password reset link has expired. Password reset links are valid for 24 hours. Please contact your administrator to send you a new password setup link.');
+          } else {
+            setError(`Failed to validate password reset link: ${sessionError?.message || 'Unknown error'}. Please request a new one.`);
+          }
           setIsValidating(false);
           return;
         }
@@ -98,20 +117,44 @@ export default function ConfirmPasswordResetPage() {
     }
 
     try {
+      // First verify we still have a valid session
+      const { data: { session }, error: sessionCheckError } = await supabase.auth.getSession();
+      
+      if (sessionCheckError || !session) {
+        const errorMessage = sessionCheckError?.message?.toLowerCase() || '';
+        if (errorMessage.includes('expired') || errorMessage.includes('invalid') || errorMessage.includes('token')) {
+          setError('Your session has expired. Password reset links are valid for 24 hours. Please request a new password setup link from your administrator.');
+        } else {
+          setError('Auth session missing! Please click the password reset link in your email again.');
+        }
+        setIsSubmitting(false);
+        return;
+      }
+
       // Update the password
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
 
       if (error) {
-        setError(error.message);
+        const errorMessage = error.message?.toLowerCase() || '';
+        if (errorMessage.includes('expired') || errorMessage.includes('invalid') || errorMessage.includes('token') || errorMessage.includes('session')) {
+          setError('Your session has expired. Password reset links are valid for 24 hours. Please request a new password setup link from your administrator.');
+        } else {
+          setError(error.message);
+        }
       } else {
         // Sign out after password is set (don't auto-login)
         await supabase.auth.signOut();
         setSuccess(true);
       }
     } catch (err: any) {
-      setError('An unexpected error occurred. Please try again.');
+      const errorMessage = err?.message?.toLowerCase() || '';
+      if (errorMessage.includes('expired') || errorMessage.includes('invalid') || errorMessage.includes('token') || errorMessage.includes('session')) {
+        setError('Your session has expired. Password reset links are valid for 24 hours. Please request a new password setup link from your administrator.');
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
