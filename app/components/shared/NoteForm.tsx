@@ -14,6 +14,7 @@ interface NoteFormProps {
     content: string;
     note_type: 'meeting' | 'webinar' | 'event' | 'feedback';
     meeting_date: string | null;
+    visible_to_client?: boolean;
     attachments: any[];
   };
 }
@@ -30,17 +31,26 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
     title: editNote?.title || '',
     content: editNote?.content || '',
     note_type: editNote?.note_type || 'meeting' as 'meeting' | 'webinar' | 'event' | 'feedback',
-    meeting_date: editNote?.meeting_date || ''
+    meeting_date: editNote?.meeting_date || '',
+    visible_to_client: editNote?.visible_to_client !== undefined ? editNote.visible_to_client : true
   });
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    if (name === 'visible_to_client') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prev => ({
+        ...prev,
+        [name]: checked
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,7 +138,8 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
             title: formData.title,
             content: formData.content,
             note_type: formData.note_type,
-            meeting_date: formData.meeting_date || null
+            meeting_date: formData.meeting_date || null,
+            visible_to_client: formData.visible_to_client
           })
           .eq('id', editNote.id)
           .select('id')
@@ -149,6 +160,7 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
             content: formData.content,
             note_type: formData.note_type,
             meeting_date: formData.meeting_date || null,
+            visible_to_client: formData.visible_to_client,
             created_by: user.id
           })
           .select('id')
@@ -283,6 +295,24 @@ export default function NoteForm({ companyId, onClose, onSuccess, editNote }: No
                 placeholder="Enter note content..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               />
+            </div>
+
+            <div>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  name="visible_to_client"
+                  checked={formData.visible_to_client}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  Visible to Client
+                </span>
+              </label>
+              <p className="text-xs text-gray-500 mt-1 ml-6">
+                If unchecked, this note will only be visible to admins and will not be shown to clients.
+              </p>
             </div>
 
             <div>

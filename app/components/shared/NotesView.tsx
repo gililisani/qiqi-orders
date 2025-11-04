@@ -11,6 +11,7 @@ interface Note {
   content: string;
   note_type: 'meeting' | 'webinar' | 'event' | 'feedback';
   meeting_date: string | null;
+  visible_to_client: boolean;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -74,13 +75,20 @@ export default function NotesView({
 
   const fetchNotes = async () => {
     try {
-      const { data: notesData, error: notesError } = await supabase
+      let query = supabase
         .from('company_notes')
         .select(`
           *,
           attachments:note_attachments(*)
         `)
-        .eq('company_id', companyId)
+        .eq('company_id', companyId);
+
+      // If user is a client, only show notes visible to clients
+      if (userRole === 'client') {
+        query = query.eq('visible_to_client', true);
+      }
+
+      const { data: notesData, error: notesError } = await query
         .order('created_at', { ascending: false });
 
       if (notesError) throw notesError;
