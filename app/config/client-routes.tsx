@@ -2,6 +2,7 @@ import { Typography } from "@material-tailwind/react";
 import {
   RectangleGroupIcon,
   ShoppingCartIcon,
+  BuildingOfficeIcon,
 } from "@heroicons/react/24/solid";
 
 const text = {
@@ -33,6 +34,11 @@ export const clientRoutes = [
         path: "/client/orders",
       },
     ],
+  },
+  {
+    name: "Your Company",
+    icon: <BuildingOfficeIcon {...icon} />,
+    path: "/client/company",
   },
 ];
 

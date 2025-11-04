@@ -270,66 +270,85 @@ export default function YourCompanyPage() {
       {/* Company Details */}
       <Card header={<h3 className="text-lg font-semibold">Company Details</h3>}>
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Company Name</label>
-              <p className="text-sm text-gray-900">{company.company_name}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Left Column: Details */}
+            <div className="space-y-6">
+              <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-2">Details</h4>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Company Name</label>
+                  <p className="text-sm text-gray-900">{company.company_name}</p>
+                </div>
+
+                {company.company_email && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Company Email</label>
+                    <p className="text-sm text-gray-900">{company.company_email}</p>
+                  </div>
+                )}
+
+                {company.company_phone && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Company Phone</label>
+                    <p className="text-sm text-gray-900">{company.company_phone}</p>
+                  </div>
+                )}
+
+                {company.company_address && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Company Address</label>
+                    <p className="text-sm text-gray-900 whitespace-pre-line">{company.company_address}</p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Ship To Address</label>
+                  <p className="text-sm text-gray-900">{formatShipToAddress()}</p>
+                </div>
+
+                {company.company_tax_number && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Tax Information</label>
+                    <p className="text-sm text-gray-900">{company.company_tax_number}</p>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {supportFundPercent > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Support Funds</label>
-                <p className="text-sm text-gray-900">
-                  <span className="text-green-600 font-medium">{supportFundPercent}%</span>
-                </p>
-              </div>
-            )}
+            {/* Right Column: Financials */}
+            <div className="space-y-6">
+              <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-2">Financials</h4>
+              <div className="space-y-4">
+                {company.incoterm && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Incoterm</label>
+                    <p className="text-sm text-gray-900">{company.incoterm.name}</p>
+                  </div>
+                )}
 
-            {company.incoterm && (
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Incoterm</label>
-                <p className="text-sm text-gray-900">{company.incoterm.name}</p>
-              </div>
-            )}
+                {company.payment_term && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Payment Terms</label>
+                    <p className="text-sm text-gray-900">{company.payment_term.name}</p>
+                  </div>
+                )}
 
-            {company.payment_term && (
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Payment Terms</label>
-                <p className="text-sm text-gray-900">{company.payment_term.name}</p>
-              </div>
-            )}
+                {supportFundPercent > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Support Funds</label>
+                    <p className="text-sm text-gray-900">
+                      <span className="text-green-600 font-medium">{supportFundPercent}%</span>
+                    </p>
+                  </div>
+                )}
 
-            {company.company_tax_number && (
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Tax Number</label>
-                <p className="text-sm text-gray-900">{company.company_tax_number}</p>
+                {company.company_tax_number && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Tax</label>
+                    <p className="text-sm text-gray-900">{company.company_tax_number}</p>
+                  </div>
+                )}
               </div>
-            )}
-
-            {company.company_email && (
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
-                <p className="text-sm text-gray-900">{company.company_email}</p>
-              </div>
-            )}
-
-            {company.company_phone && (
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Phone</label>
-                <p className="text-sm text-gray-900">{company.company_phone}</p>
-              </div>
-            )}
-
-            {company.company_address && (
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-500 mb-1">Company Address</label>
-                <p className="text-sm text-gray-900 whitespace-pre-line">{company.company_address}</p>
-              </div>
-            )}
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-500 mb-1">Ship To Address</label>
-              <p className="text-sm text-gray-900">{formatShipToAddress()}</p>
             </div>
           </div>
         </div>
