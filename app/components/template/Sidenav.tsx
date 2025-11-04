@@ -134,11 +134,11 @@ export default function Sidenav({
       {items.map(({ name, icon, pages, title, divider, external, path }, index) => {
         const key = `${name}-${index}`;
         const hasChildren = Array.isArray(pages) && pages.length > 0;
-        const isActiveLeaf = !hasChildren && path ? isRouteActive({ name, path }) : false;
+        const isActiveLeaf = !hasChildren && path ? pathname === path : false;
         const isOpen = level === 0 ? openCollapse === name : openSubCollapse === name;
 
         const itemBaseClasses = [
-          "group relative flex items-center w-full min-h-[44px] rounded-lg transition-all duration-300 ease-in-out overflow-hidden text-inherit",
+          "group relative flex items-center w-full min-h-[44px] rounded-lg transition-all duration-300 ease-in-out overflow-hidden text-inherit active:scale-[0.98]",
           hoverBackgroundClass,
           getSpacingClasses(),
           isCollapsed ? "gap-0" : "gap-3",
@@ -195,8 +195,8 @@ export default function Sidenav({
               </button>
 
               <div
-                className={`overflow-hidden transition-all duration-300 ${
-                  isOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+                className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${
+                  isOpen ? "max-h-[1000px]" : "max-h-0"
                 }`}
               >
                 {pages && renderMenuItems(pages, level + 1)}
@@ -267,12 +267,14 @@ export default function Sidenav({
       onMouseLeave={handleMouseLeave}
     >
       {/* Logo */}
-      {/* <Link
-        href={pathname.startsWith("/client") ? "/client" : "/admin"}
-        className="flex items-center justify-center h-20"
-      >
-        <img src={brandImg} className="h-12 w-auto" alt="logo" />
-      </Link> */}
+      {!isCollapsed && (
+        <Link
+          href={pathname.startsWith("/client") ? "/client" : "/admin"}
+          className="flex items-center justify-center h-20"
+        >
+          <img src={brandImg} className="h-12 w-auto" alt="logo" />
+        </Link>
+      )}
 
       {/* Close button */}
       <IconButton
