@@ -113,13 +113,11 @@ export default function ClientDashboard() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="mt-8 mb-4 space-y-6">
         {/* Welcome Title */}
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Welcome {company?.company_name || 'Loading...'}
-          </h1>
-        </div>
+        <h2 className="text-2xl font-semibold text-gray-900">
+          Welcome {company?.company_name || 'Loading...'}
+        </h2>
 
         {/* Two Boxes Side by Side */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
