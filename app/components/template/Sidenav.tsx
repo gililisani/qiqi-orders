@@ -44,14 +44,6 @@ export default function Sidenav({
   const [openSubCollapse, setOpenSubCollapse] = React.useState<string | null>(null);
   const [isHovering, setIsHovering] = React.useState(false);
 
-  const handleOpenCollapse = (value: string) => {
-    setOpenCollapse((cur) => (cur === value ? null : value));
-  };
-
-  const handleOpenSubCollapse = (value: string) => {
-    setOpenSubCollapse((cur) => (cur === value ? null : value));
-  };
-
   const sidenavRef = React.useRef<HTMLDivElement>(null);
 
   const handleClickOutside = () => {
@@ -166,6 +158,11 @@ export default function Sidenav({
 
         const renderLabel = (text: string) => <span className={labelClasses}>{text}</span>;
 
+        const toggleAccordion = () => {
+          const toggle = level === 0 ? setOpenCollapse : setOpenSubCollapse;
+          toggle((cur: string | null) => (cur === name ? null : name));
+        };
+
         if (hasChildren) {
           return (
             <li key={key} className="text-inherit">
@@ -186,7 +183,7 @@ export default function Sidenav({
 
               <button
                 type="button"
-                onClick={() => (level === 0 ? handleOpenCollapse(name) : handleOpenSubCollapse(name))}
+                onClick={toggleAccordion}
                 className={itemClasses}
               >
                 <span className={iconWrapperClasses}>{icon}</span>
@@ -195,11 +192,13 @@ export default function Sidenav({
               </button>
 
               <div
-                className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${
-                  isOpen ? "max-h-[1000px]" : "max-h-0"
+                className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                  isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
                 }`}
               >
-                {pages && renderMenuItems(pages, level + 1)}
+                <div className="overflow-hidden">
+                  {pages && renderMenuItems(pages, level + 1)}
+                </div>
               </div>
 
               {divider && <hr className="my-2 border-blue-gray-50" />}
