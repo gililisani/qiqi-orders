@@ -166,6 +166,11 @@ const CategoryAccordion: React.FC<CategoryAccordionProps> = ({
                             >
                               {product.item_name}
                             </div>
+                            {product.out_of_stock && (
+                              <div className="text-xs text-red-600 font-medium mt-0.5">
+                                Out of Stock
+                              </div>
+                            )}
                             {!product.qualifies_for_credit_earning && (
                               <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
                                 Not Eligible for Credit
@@ -272,6 +277,7 @@ interface Product {
   visible_to_americas: boolean;
   visible_to_international: boolean;
   qualifies_for_credit_earning: boolean;
+  out_of_stock?: boolean;
   category_id?: number;
   category?: Category;
 }

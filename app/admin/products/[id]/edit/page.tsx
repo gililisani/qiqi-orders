@@ -54,6 +54,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     visible_to_americas: true,
     visible_to_international: true,
     qualifies_for_credit_earning: true,
+    out_of_stock: false,
     picture_url: '',
     case_weight: '',
     hs_code: '',
@@ -128,6 +129,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         visible_to_americas: data.visible_to_americas ?? true,
         visible_to_international: data.visible_to_international ?? true,
         qualifies_for_credit_earning: data.qualifies_for_credit_earning ?? true,
+        out_of_stock: data.out_of_stock ?? false,
         picture_url: data.picture_url || '',
         case_weight: data.case_weight?.toString() || '',
         hs_code: data.hs_code || '',
@@ -163,6 +165,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           visible_to_americas: formData.visible_to_americas,
           visible_to_international: formData.visible_to_international,
           qualifies_for_credit_earning: formData.qualifies_for_credit_earning,
+          out_of_stock: formData.out_of_stock,
           picture_url: formData.picture_url || null,
         case_weight: formData.case_weight ? parseFloat(formData.case_weight) : null,
         hs_code: formData.hs_code || null,
@@ -432,6 +435,17 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
                 />
                 <span className="ml-2 text-sm text-gray-700">Qualifies for Credit Earning</span>
+              </label>
+
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="out_of_stock"
+                  checked={formData.out_of_stock}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm text-gray-700">Out of Stock</span>
               </label>
             </div>
 
