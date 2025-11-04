@@ -46,6 +46,8 @@ interface NotesViewProps {
   allowDelete?: boolean;
   allowCreate?: boolean;
   className?: string;
+  categoryFilter?: string; // Filter by note type
+  timeFilter?: 'all' | '30days' | '3months' | 'ytd'; // Time period filter
 }
 
 export default function NotesView({
@@ -55,10 +57,13 @@ export default function NotesView({
   allowEdit = userRole === 'admin',
   allowDelete = userRole === 'admin',
   allowCreate = userRole === 'admin',
-  className = ''
+  className = '',
+  categoryFilter = 'all',
+  timeFilter = 'all'
 }: NotesViewProps) {
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [allNotes, setAllNotes] = useState<Note[]>([]); // Store all fetched notes
   const [error, setError] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -67,11 +72,70 @@ export default function NotesView({
   const [replyContent, setReplyContent] = useState<Record<string, string>>({});
   const [submittingReply, setSubmittingReply] = useState<string | null>(null);
 
+  const getEffectiveDate = (note: Note): Date => {
+    // For internal notes with replies, use the latest reply date if it's more recent than note creation
+    if (!note.visible_to_client && note.replies && note.replies.length > 0) {
+      const latestReply = note.replies.reduce((latest, reply) => {
+        return new Date(reply.created_at) > new Date(latest.created_at) ? reply : latest;
+      });
+      const latestReplyDate = new Date(latestReply.created_at);
+      const noteCreatedDate = new Date(note.created_at);
+      return latestReplyDate > noteCreatedDate ? latestReplyDate : noteCreatedDate;
+    }
+    // Otherwise use note creation date
+    return new Date(note.created_at);
+  };
+
+  const applyFilters = () => {
+    let filtered = [...allNotes];
+
+    // Apply category filter
+    if (categoryFilter && categoryFilter !== 'all') {
+      filtered = filtered.filter(note => note.note_type === categoryFilter);
+    }
+
+    // Apply time filter
+    if (timeFilter && timeFilter !== 'all') {
+      const now = new Date();
+      const effectiveDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      let cutoffDate: Date;
+      switch (timeFilter) {
+        case '30days':
+          cutoffDate = new Date(effectiveDate);
+          cutoffDate.setDate(cutoffDate.getDate() - 30);
+          break;
+        case '3months':
+          cutoffDate = new Date(effectiveDate);
+          cutoffDate.setMonth(cutoffDate.getMonth() - 3);
+          break;
+        case 'ytd':
+          cutoffDate = new Date(now.getFullYear(), 0, 1); // January 1st of current year
+          break;
+        default:
+          cutoffDate = new Date(0); // All time
+      }
+
+      filtered = filtered.filter(note => {
+        const effectiveNoteDate = getEffectiveDate(note);
+        return effectiveNoteDate >= cutoffDate;
+      });
+    }
+
+    setNotes(filtered);
+  };
+
   useEffect(() => {
     if (companyId) {
       fetchNotes();
     }
   }, [companyId]);
+
+  // Apply filters whenever categoryFilter, timeFilter, or allNotes change
+  useEffect(() => {
+    applyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryFilter, timeFilter, allNotes]);
 
   const getAttachmentUrl = async (attachment: Attachment): Promise<string> => {
     try {
@@ -165,7 +229,8 @@ export default function NotesView({
         }
       }
 
-      setNotes(notesData || []);
+      // Store all notes - filtering will be applied by useEffect
+      setAllNotes(notesData || []);
 
       // Generate signed URLs for all attachments
       const urlPromises: Promise<void>[] = [];
@@ -211,8 +276,8 @@ export default function NotesView({
     }
   };
 
-  const handleFormSuccess = () => {
-    fetchNotes(); // Refresh the list
+  const handleFormSuccess = async () => {
+    await fetchNotes(); // Refresh the list
     setShowCreateForm(false);
     setEditingNote(null);
   };
@@ -239,7 +304,7 @@ export default function NotesView({
       // Clear reply input and refresh notes
       setReplyContent(prev => ({ ...prev, [noteId]: '' }));
       setReplyingToNote(null);
-      fetchNotes();
+      await fetchNotes();
     } catch (err: any) {
       console.error('Error submitting reply:', err);
       alert('Failed to submit reply: ' + err.message);

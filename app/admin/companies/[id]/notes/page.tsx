@@ -20,6 +20,8 @@ export default function CompanyNotesPage() {
   const [loading, setLoading] = useState(true);
   const [company, setCompany] = useState<Company | null>(null);
   const [error, setError] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [timeFilter, setTimeFilter] = useState<'all' | '30days' | '3months' | 'ytd'>('all');
 
   useEffect(() => {
     if (companyId) {
@@ -90,7 +92,45 @@ export default function CompanyNotesPage() {
             </Link>
           }
         >
-          {/* Use Shared Notes Component with Admin Permissions */}
+          {/* Filters */}
+          <div className="mb-6 flex flex-wrap gap-4 items-end">
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Category
+              </label>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+              >
+                <option value="all">All Categories</option>
+                <option value="meeting">🤝 Meeting</option>
+                <option value="webinar">📹 Webinar</option>
+                <option value="event">🎉 Event</option>
+                <option value="feedback">💬 Feedback</option>
+                <option value="general_note">📝 General Note</option>
+                <option value="internal_note">🔒 Internal Note</option>
+              </select>
+            </div>
+
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Time Period
+              </label>
+              <select
+                value={timeFilter}
+                onChange={(e) => setTimeFilter(e.target.value as 'all' | '30days' | '3months' | 'ytd')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+              >
+                <option value="all">All Time</option>
+                <option value="30days">Last 30 Days</option>
+                <option value="3months">Last 3 Months</option>
+                <option value="ytd">Year to Date</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Use Shared Notes Component with Admin Permissions and Filters */}
           <NotesView
             companyId={companyId}
             userRole="admin"
@@ -98,6 +138,8 @@ export default function CompanyNotesPage() {
             allowEdit={true}
             allowDelete={true}
             allowCreate={true}
+            categoryFilter={categoryFilter}
+            timeFilter={timeFilter}
           />
         </InnerPageShell>
       </div>
