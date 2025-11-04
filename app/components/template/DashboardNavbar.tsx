@@ -54,7 +54,8 @@ export function DashboardNavbar() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const feedbackButtonRef = useRef<HTMLButtonElement>(null);
   const [hasNewNotes, setHasNewNotes] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+  // Initialize isClient from pathname immediately to prevent flash
+  const [isClient, setIsClient] = useState(pathname.startsWith('/client'));
 
   const prevPathnameRef = useRef(pathname);
 
