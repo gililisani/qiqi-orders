@@ -161,7 +161,7 @@ export default function TopNavbar() {
             <button 
               ref={feedbackButtonRef}
               onClick={() => setFeedbackOpen(!feedbackOpen)}
-              className="hidden lg:inline-flex h-8 items-center rounded-full border border-[#e5e5e5] px-3 text-xs text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+              className="hidden lg:inline-flex h-8 items-center rounded-full border border-[#e5e5e5] px-3 text-xs !text-gray-900 hover:bg-gray-50 whitespace-nowrap"
             >
               Feedback
             </button>

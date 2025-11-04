@@ -138,7 +138,7 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
     >
       {view === 'choice' && (
         <div className="p-6">
-          <h3 className="text-sm text-gray-600 mb-4">What would you like to share?</h3>
+          <h3 className="text-sm !text-gray-900 mb-4">What would you like to share?</h3>
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => setView('issue')}
@@ -181,7 +181,7 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
             ← Back
           </button>
           
-          <h3 className="text-lg font-semibold mb-4">
+          <h3 className="text-lg font-semibold mb-4 !text-gray-900">
             {view === 'issue' ? 'Report an Issue' : 'Share Your Idea'}
           </h3>
           
@@ -189,7 +189,7 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder={view === 'issue' ? 'I have an issue with.....' : 'It would be great if.....'}
-            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-y min-h-[120px]"
+            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-y min-h-[120px] !text-gray-900 placeholder:text-gray-400"
             rows={4}
           />
 
@@ -232,7 +232,7 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
 
       {view === 'success' && (
         <div className="p-6 text-center">
-          <h3 className="text-sm font-normal mb-2">
+          <h3 className="text-sm font-normal mb-2 !text-gray-900">
             {submittedType === 'issue' ? 'Your issue has been reported!' : 'Your feedback has been sent. Thanks!'}
           </h3>
           <p className="text-xs text-gray-600 mb-6">
