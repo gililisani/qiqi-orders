@@ -114,36 +114,14 @@ export default function ClientDashboard() {
 
   return (
     <div className="space-y-8">
-        {/* Welcome Section */}
-        <Card>
-          <div className="p-6">
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Qiqi Partners Hub</h1>
-                <p className="text-gray-600">
-                  Manage your orders and place new ones for {company?.company_name || 'your company'}.
-                </p>
-              </div>
-              <div className="ml-6 text-right">
-                <h2 className="text-xl font-semibold text-gray-900 capitalize">
-                  {company?.company_name || 'Loading...'}
-                </h2>
-              </div>
-            </div>
-            {company?.support_fund && company.support_fund.length > 0 && (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200">
-                <p className="text-sm text-green-800">
-                  <strong>Support Fund:</strong> You have {company.support_fund[0].percent}% support fund available for each order.
-                </p>
-              </div>
-            )}
-          </div>
-        </Card>
+        {/* Welcome Title */}
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Welcome {company?.company_name || 'Loading...'}
+          </h1>
+        </div>
 
-        {/* Highlighted Products */}
-        <HighlightedProductsCarousel />
-
-        {/* Quick Actions */}
+        {/* Quick Actions - Two Boxes Side by Side */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <div className="p-6">
@@ -153,7 +131,7 @@ export default function ClientDashboard() {
               </p>
               <Link
                 href="/client/orders/new"
-                className="inline-block bg-black text-white px-6 py-3 hover:opacity-90 transition"
+                className="inline-block bg-black text-white px-6 py-3 rounded hover:opacity-90 transition"
               >
                 New Order
               </Link>
@@ -168,51 +146,13 @@ export default function ClientDashboard() {
               </p>
               <Link
                 href="/client/orders"
-                className="inline-block bg-gray-700 text-white px-6 py-3 hover:opacity-90 transition"
+                className="inline-block bg-gray-700 text-white px-6 py-3 rounded hover:opacity-90 transition"
               >
                 View Orders
               </Link>
             </div>
           </Card>
         </div>
-
-        {/* Contract Information */}
-        {company?.id && (
-          <Card>
-            <ContractInfo
-              companyId={company.id}
-              userRole="client"
-              showActions={false}
-              allowEdit={false}
-            />
-          </Card>
-        )}
-
-        {/* Territories */}
-        {company?.id && (
-          <Card>
-            <TerritoryList
-              companyId={company.id}
-              userRole="client"
-              showActions={false}
-              allowEdit={false}
-            />
-          </Card>
-        )}
-
-        {/* Company Notes */}
-        {company?.id && (
-          <Card>
-            <NotesView
-              companyId={company.id}
-              userRole="client"
-              showActions={false}
-              allowEdit={false}
-              allowDelete={false}
-              allowCreate={false}
-            />
-          </Card>
-        )}
 
         {/* Recent Orders */}
         <Card header={<h2 className="font-semibold">Recent Orders</h2>}>
@@ -290,6 +230,47 @@ export default function ClientDashboard() {
             )}
           </div>
         </Card>
+
+        {/* Highlighted Products */}
+        <HighlightedProductsCarousel />
+
+        {/* Contract Information */}
+        {company?.id && (
+          <Card>
+            <ContractInfo
+              companyId={company.id}
+              userRole="client"
+              showActions={false}
+              allowEdit={false}
+            />
+          </Card>
+        )}
+
+        {/* Territories */}
+        {company?.id && (
+          <Card>
+            <TerritoryList
+              companyId={company.id}
+              userRole="client"
+              showActions={false}
+              allowEdit={false}
+            />
+          </Card>
+        )}
+
+        {/* Company Notes */}
+        {company?.id && (
+          <Card>
+            <NotesView
+              companyId={company.id}
+              userRole="client"
+              showActions={false}
+              allowEdit={false}
+              allowDelete={false}
+              allowCreate={false}
+            />
+          </Card>
+        )}
       </div>
   );
 }
