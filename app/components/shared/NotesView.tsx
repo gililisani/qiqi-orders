@@ -93,8 +93,7 @@ export default function NotesView({
         .from('company_notes')
         .select(`
           *,
-          attachments:note_attachments(*),
-          created_by_admin:admins!company_notes_created_by_fkey(name)
+          attachments:note_attachments(*)
         `)
         .eq('company_id', companyId);
 
@@ -108,6 +107,25 @@ export default function NotesView({
 
       if (notesError) throw notesError;
 
+      // Fetch admin names for note creators
+      if (notesData && notesData.length > 0) {
+        const creatorIds = [...new Set(notesData.map((note: Note) => note.created_by))];
+        
+        const { data: adminsData } = await supabase
+          .from('admins')
+          .select('id, name')
+          .in('id', creatorIds);
+
+        // Create a map of admin IDs to names
+        const adminsMap = new Map(adminsData?.map(admin => [admin.id, admin.name]) || []);
+
+        // Attach admin names to notes
+        notesData.forEach((note: Note) => {
+          const adminName = adminsMap.get(note.created_by);
+          note.created_by_admin = adminName ? { name: adminName } : null;
+        });
+      }
+
       // Fetch replies for Internal Notes (only for admins)
       if (userRole === 'admin' && notesData) {
         const internalNoteIds = notesData
@@ -117,14 +135,28 @@ export default function NotesView({
         if (internalNoteIds.length > 0) {
           const { data: repliesData, error: repliesError } = await supabase
             .from('note_replies')
-            .select(`
-              *,
-              created_by_admin:admins!note_replies_created_by_fkey(name)
-            `)
+            .select('*')
             .in('note_id', internalNoteIds)
             .order('created_at', { ascending: true });
 
           if (!repliesError && repliesData) {
+            // Fetch admin names for reply creators
+            const replyCreatorIds = [...new Set(repliesData.map((reply: NoteReply) => reply.created_by))];
+            
+            const { data: replyAdminsData } = await supabase
+              .from('admins')
+              .select('id, name')
+              .in('id', replyCreatorIds);
+
+            // Create a map of admin IDs to names for replies
+            const replyAdminsMap = new Map(replyAdminsData?.map(admin => [admin.id, admin.name]) || []);
+
+            // Attach admin names to replies and then attach replies to notes
+            repliesData.forEach((reply: NoteReply) => {
+              const adminName = replyAdminsMap.get(reply.created_by);
+              reply.created_by_admin = adminName ? { name: adminName } : null;
+            });
+
             // Attach replies to their respective notes
             notesData.forEach((note: Note) => {
               note.replies = repliesData.filter((reply: NoteReply) => reply.note_id === note.id);
