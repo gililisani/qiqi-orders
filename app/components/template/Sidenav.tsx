@@ -271,9 +271,9 @@ export default function Sidenav({
         className="flex items-center justify-center h-20"
       >
         {isCollapsed ? (
-          <span className="text-2xl font-semibold text-inherit">Q</span>
+          <img src="/QIQI-Logo-cropped.svg" className="h-9 w-auto" alt="Qiqi logo" />
         ) : (
-          <img src={brandImg} className="h-12 w-auto" alt="logo" />
+          <img src={brandImg} className="h-12 w-auto" alt="Qiqi logo" />
         )}
       </Link>
 
