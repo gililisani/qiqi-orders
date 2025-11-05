@@ -86,8 +86,9 @@ export default function AdminsPage() {
 
   return (
     <div className="mt-8 mb-4 space-y-6">
+      <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-semibold text-gray-900">Admins</h2>
-        <div className="flex items-center justify-end mb-6">
+        <div className="flex items-center">
           <Link
             href="/admin/admins/new"
             className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
@@ -95,6 +96,7 @@ export default function AdminsPage() {
             Add New Admin
           </Link>
         </div>
+      </div>
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">

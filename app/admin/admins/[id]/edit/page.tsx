@@ -55,12 +55,29 @@ export default function EditAdminPage() {
         changePassword: false,
         newPassword: ''
       });
+      
+      // Set breadcrumb
+      if ((window as any).__setBreadcrumbs && data.name) {
+        (window as any).__setBreadcrumbs([
+          { label: data.name },
+          { label: 'Edit' }
+        ]);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
       setInitialLoading(false);
     }
   };
+  
+  // Clean up breadcrumb on unmount
+  useEffect(() => {
+    return () => {
+      if ((window as any).__setBreadcrumbs) {
+        (window as any).__setBreadcrumbs([]);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,9 +196,9 @@ export default function EditAdminPage() {
   }
 
   return (
-    <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Edit Admin</h1>
+    <div className="mt-8 mb-4 space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Edit Admin</h2>
           <Link
             href="/admin/admins"
             className="text-gray-600 hover:text-gray-800"
@@ -305,6 +322,6 @@ export default function EditAdminPage() {
             </Link>
           </div>
         </form>
-      </div>
+    </div>
   );
 }

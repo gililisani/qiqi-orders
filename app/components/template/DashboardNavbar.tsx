@@ -85,6 +85,7 @@ export function DashboardNavbar() {
       'sli': 'SLI',
       'notes': 'Notes',
       'company': 'Your Company',
+      'admins': 'Admins',
     };
     
     // Special pages

@@ -76,9 +76,9 @@ export default function NewAdminPage() {
   };
 
   return (
-    <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Add New Admin</h1>
+    <div className="mt-8 mb-4 space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Add New Admin</h2>
           <Link
             href="/admin/admins"
             className="text-gray-600 hover:text-gray-800"
@@ -179,6 +179,6 @@ export default function NewAdminPage() {
             </Link>
           </div>
         </form>
-      </div>
+    </div>
   );
 }

@@ -27,6 +27,20 @@ export default function AdminViewPage() {
       fetchAdmin();
     }
   }, [adminId]);
+  
+  // Set breadcrumb when admin is loaded
+  useEffect(() => {
+    if (admin && (window as any).__setBreadcrumbs) {
+      (window as any).__setBreadcrumbs([
+        { label: admin.name }
+      ]);
+    }
+    return () => {
+      if ((window as any).__setBreadcrumbs) {
+        (window as any).__setBreadcrumbs([]);
+      }
+    };
+  }, [admin]);
 
   const fetchAdmin = async () => {
     try {
@@ -87,9 +101,9 @@ export default function AdminViewPage() {
   }
 
   return (
-    <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">{admin.name}</h1>
+    <div className="mt-8 mb-4 space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">{admin.name}</h2>
           <div className="flex space-x-2">
             <Link
               href={`/admin/admins/${admin.id}/edit`}
@@ -180,6 +194,6 @@ export default function AdminViewPage() {
             </div>
           </Card>
         </div>
-      </div>
+    </div>
   );
 }
