@@ -83,17 +83,18 @@ export default function ConfirmPasswordResetPage() {
           fullUrl: fullUrl.substring(0, 200) // Log first 200 chars to avoid logging full tokens
         });
 
-        // Verify this is a recovery/password reset link
+        // Verify this is a recovery/password setup or reset link
+        // Note: Supabase uses 'recovery' type for both new user setup and password reset
         if (!accessToken) {
           console.error('No access token found in URL');
-          setError('Invalid password reset link. The link appears to be corrupted or incomplete. Please request a new password reset link from your administrator.');
+          setError('Invalid password setup link. The link appears to be corrupted or incomplete. Please request a new link from your administrator.');
           setIsValidating(false);
           return;
         }
 
         if (type && type !== 'recovery') {
           console.error('Invalid link type:', type);
-          setError('Invalid password reset link type. Please request a new password reset link.');
+          setError('Invalid password setup link type. Please request a new link.');
           setIsValidating(false);
           return;
         }
@@ -109,11 +110,11 @@ export default function ConfirmPasswordResetPage() {
         // Clear the URL to remove tokens from address bar
         window.history.replaceState({}, '', window.location.pathname);
 
-        console.log('Tokens extracted successfully, ready for password reset');
+        console.log('Tokens extracted successfully, ready for password setup');
         setIsValidating(false);
       } catch (err: any) {
         console.error('Error extracting tokens:', err);
-        setError(`An error occurred while processing the reset link: ${err.message || 'Unknown error'}. Please try requesting a new password reset link.`);
+        setError(`An error occurred while processing the password setup link: ${err.message || 'Unknown error'}. Please try requesting a new link.`);
         setIsValidating(false);
       }
     };
@@ -143,7 +144,7 @@ export default function ConfirmPasswordResetPage() {
     try {
       // Check if we have valid tokens
       if (!resetTokens || !resetTokens.accessToken) {
-        setError('Reset tokens are missing. Please click the password reset link in your email again.');
+        setError('Password setup tokens are missing. Please click the link in your email again.');
         setIsSubmitting(false);
         return;
       }
@@ -159,11 +160,11 @@ export default function ConfirmPasswordResetPage() {
         console.error('Session error:', sessionError);
         const errorMessage = sessionError?.message?.toLowerCase() || '';
         if (errorMessage.includes('expired') || errorMessage.includes('jwt expired')) {
-          setError('This password reset link has expired. Password reset links are valid for 24 hours. Please contact your administrator to send you a new password setup link.');
+          setError('This password setup link has expired. Setup links are valid for 24 hours. Please contact your administrator to send you a new password setup link.');
         } else if (errorMessage.includes('invalid') || errorMessage.includes('token') || errorMessage.includes('malformed')) {
-          setError('Invalid password reset link. The link may have been corrupted. Please request a new password reset link.');
+          setError('Invalid password setup link. The link may have been corrupted. Please request a new link from your administrator.');
         } else {
-          setError(`Failed to validate password reset link: ${sessionError?.message || 'Unknown error'}. Please request a new one from your administrator.`);
+          setError(`Failed to validate password setup link: ${sessionError?.message || 'Unknown error'}. Please request a new one from your administrator.`);
         }
         setIsSubmitting(false);
         return;
@@ -179,7 +180,7 @@ export default function ConfirmPasswordResetPage() {
         await supabase.auth.signOut();
         const errorMessage = error.message?.toLowerCase() || '';
         if (errorMessage.includes('expired') || errorMessage.includes('invalid') || errorMessage.includes('token') || errorMessage.includes('session')) {
-          setError('Your session has expired. Password reset links are valid for 24 hours. Please request a new password setup link from your administrator.');
+          setError('Your session has expired. Password setup links are valid for 24 hours. Please request a new password setup link from your administrator.');
         } else {
           setError(error.message);
         }
@@ -192,7 +193,7 @@ export default function ConfirmPasswordResetPage() {
     } catch (err: any) {
       const errorMessage = err?.message?.toLowerCase() || '';
       if (errorMessage.includes('expired') || errorMessage.includes('invalid') || errorMessage.includes('token') || errorMessage.includes('session')) {
-        setError('Your session has expired. Password reset links are valid for 24 hours. Please request a new password setup link from your administrator.');
+        setError('Your session has expired. Password setup links are valid for 24 hours. Please request a new password setup link from your administrator.');
       } else {
         setError('An unexpected error occurred. Please try again.');
       }

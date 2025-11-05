@@ -74,25 +74,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate password setup link using Supabase admin API
-    // Note: Password reset link expiration is controlled by Supabase's JWT expiry setting
+    // Note: Supabase uses 'recovery' type for both new user password setup and password reset
+    // For new users, this is a "password setup link" (not a reset link)
+    // Link expiration is controlled by Supabase's JWT expiry setting
     // Default is 1 hour (3600 seconds). To set 24 hours (86400 seconds):
     // - Check Authentication → Advanced settings in Supabase Dashboard
     // - Or contact Supabase support if setting is not visible (may require paid plan)
     // - The generateLink API does not support custom expiration time
-    const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'recovery',
+    const { data: setupData, error: setupError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery', // Supabase uses 'recovery' for both setup and reset
       email: email,
       options: {
         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/confirm-password-reset`
       }
     });
 
-    if (resetError) {
-      console.error('Failed to generate setup link:', resetError);
+    if (setupError) {
+      console.error('Failed to generate password setup link:', setupError);
       return NextResponse.json({
         success: true,
         userId: authData.user.id,
-        warning: 'User created but failed to generate setup link. Please use Reset Password to send the link manually.'
+        warning: 'User created but failed to generate password setup link. Please use "Send Password Reset Email" in user edit page to send the setup link manually.'
       });
     }
 
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
       userName: name,
       userEmail: email,
       companyName: companyData?.company_name || 'Your Company',
-      setupLink: resetData.properties.action_link, // The magic link from Supabase
+      setupLink: setupData.properties.action_link, // The password setup link from Supabase
       siteUrl: siteUrl
     });
 

@@ -1,10 +1,11 @@
 /**
- * API Route: Send Password Reset Link to User (Admin)
+ * API Route: Send Password Setup/Reset Link to User (Admin)
  * 
  * POST /api/users/send-reset-link
  * 
- * Admin can send a password reset link to any user.
- * This is useful when editing users or when a user needs a new setup link.
+ * Admin can send a password setup link (for new users) or reset link (for existing users) to any user.
+ * Supabase uses 'recovery' type for both scenarios, but we use appropriate email templates.
+ * This is useful when editing users or when a user needs a new setup/reset link.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
