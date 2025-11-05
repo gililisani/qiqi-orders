@@ -77,17 +77,19 @@ export default function ImageUpload({ onImageUploaded, currentImageUrl, classNam
   return (
     <div className={`space-y-4 ${className}`}>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Product Image
-        </label>
+        {!hideTitle && (
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Product Image
+          </label>
+        )}
         
-              {previewUrl ? (
+        {previewUrl ? (
         <div className={`${largerImage ? 'w-full' : 'space-y-2'}`}>
           <div className={`relative ${largerImage ? 'w-full' : 'inline-block w-full flex justify-center'}`}>
             <img
               src={previewUrl}
               alt="Product preview"
-              className={`${largerImage ? 'w-full h-auto max-h-96 object-contain rounded-lg border border-gray-300' : 'w-32 h-32 object-cover rounded-lg border border-gray-300'}`}
+              className={`${largerImage ? 'w-full h-auto max-h-64 object-contain rounded-lg border border-gray-300' : 'w-32 h-32 object-cover rounded-lg border border-gray-300'}`}
             />
             <button
               type="button"

@@ -325,7 +325,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     Pricing
                   </Typography>
                 </CardHeader>
-                <CardBody className="px-4 pt-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <CardBody className="px-4 pt-6" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Input
                       label="Americas Price (USD)"
