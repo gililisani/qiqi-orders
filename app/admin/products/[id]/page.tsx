@@ -38,6 +38,20 @@ export default function ProductViewPage({ params }: { params: { id: string } }) 
     checkAdminAccess();
     fetchProduct();
   }, [params.id]);
+  
+  // Set breadcrumb when product is loaded
+  useEffect(() => {
+    if (product && (window as any).__setBreadcrumbs) {
+      (window as any).__setBreadcrumbs([
+        { label: product.item_name }
+      ]);
+    }
+    return () => {
+      if ((window as any).__setBreadcrumbs) {
+        (window as any).__setBreadcrumbs([]);
+      }
+    };
+  }, [product]);
 
   const checkAdminAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();

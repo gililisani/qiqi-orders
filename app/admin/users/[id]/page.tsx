@@ -36,6 +36,20 @@ export default function UserViewPage() {
       fetchClient();
     }
   }, [userId]);
+  
+  // Set breadcrumb when client is loaded
+  useEffect(() => {
+    if (client && (window as any).__setBreadcrumbs) {
+      (window as any).__setBreadcrumbs([
+        { label: client.name }
+      ]);
+    }
+    return () => {
+      if ((window as any).__setBreadcrumbs) {
+        (window as any).__setBreadcrumbs([]);
+      }
+    };
+  }, [client]);
 
   const fetchClient = async () => {
     try {

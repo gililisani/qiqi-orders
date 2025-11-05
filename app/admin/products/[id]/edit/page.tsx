@@ -151,12 +151,29 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         made_in: data.made_in || '',
         category_id: data.category_id?.toString() || ''
       });
+      
+      // Set breadcrumb
+      if ((window as any).__setBreadcrumbs && data.item_name) {
+        (window as any).__setBreadcrumbs([
+          { label: data.item_name },
+          { label: 'Edit' }
+        ]);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+  
+  // Clean up breadcrumb on unmount
+  useEffect(() => {
+    return () => {
+      if ((window as any).__setBreadcrumbs) {
+        (window as any).__setBreadcrumbs([]);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

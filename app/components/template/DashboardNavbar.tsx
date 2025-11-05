@@ -44,7 +44,6 @@ export function DashboardNavbar() {
   const [controller, dispatch] = useMaterialTailwindController();
   const { fixedNavbar, openSidenav, sidenavCollapsed } = controller;
   const pathname = usePathname();
-  const [layout, page] = pathname.split("/").filter((el) => el !== "");
   const [userName, setUserName] = useState<string>('User');
   const [userEmail, setUserEmail] = useState<string>('');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -52,6 +51,120 @@ export function DashboardNavbar() {
   const [hasNewNotes, setHasNewNotes] = useState(false);
   // Initialize isClient from pathname immediately to prevent flash
   const [isClient, setIsClient] = useState(pathname.startsWith('/client'));
+  
+  // State for dynamic breadcrumb items (set by pages)
+  const [dynamicBreadcrumbs, setDynamicBreadcrumbs] = React.useState<Array<{ label: string; href?: string }>>([]);
+  
+  // Parse breadcrumbs from pathname
+  const parseBreadcrumbs = React.useMemo(() => {
+    const segments = pathname.split("/").filter((el) => el !== "");
+    const isClientRoute = pathname.startsWith('/client');
+    const basePath = isClientRoute ? '/client' : '/admin';
+    
+    if (segments.length === 0 || (segments.length === 1 && segments[0] === (isClientRoute ? 'client' : 'admin'))) {
+      return []; // Dashboard - no breadcrumbs needed
+    }
+    
+    const breadcrumbs: Array<{ label: string; href?: string }> = [];
+    
+    // Route name mapping
+    const routeNames: Record<string, string> = {
+      'users': 'Users',
+      'products': 'Products',
+      'companies': 'Companies',
+      'orders': 'Orders',
+      'categories': 'Categories',
+      'highlighted-products': 'Highlighted Products',
+      'subsidiaries': 'Subsidiaries',
+      'support-funds': 'Support Funds',
+      'locations': 'Locations',
+      'classes': 'Classes',
+      'incoterms': 'Incoterms',
+      'payment-terms': 'Payment Terms',
+      'netsuite': 'NetSuite',
+      'sli': 'SLI',
+      'notes': 'Notes',
+      'company': 'Your Company',
+    };
+    
+    // Special pages
+    const specialPages: Record<string, string> = {
+      'new': 'New',
+      'edit': 'Edit',
+      'import': 'Import',
+      'bulk-upload': 'Bulk Upload',
+      'create': 'Create',
+    };
+    
+    let currentPath = basePath;
+    let i = 1; // Skip 'admin' or 'client'
+    
+    while (i < segments.length) {
+      const segment = segments[i];
+      
+      // Check if this segment is a route name (like 'users', 'products')
+      if (routeNames[segment]) {
+        const routePath = `${currentPath}/${segment}`;
+        breadcrumbs.push({
+          label: routeNames[segment],
+          href: routePath,
+        });
+        currentPath = routePath;
+        i++;
+        
+        // Check next segment
+        if (i < segments.length) {
+          const nextSeg = segments[i];
+          
+          // If it's a special page like 'new'
+          if (specialPages[nextSeg]) {
+            breadcrumbs.push({
+              label: specialPages[nextSeg],
+            });
+            break;
+          }
+          
+          // If it's an ID (UUID or number)
+          if (nextSeg && (nextSeg.length === 36 || !isNaN(Number(nextSeg)))) {
+            i++; // Skip the ID
+            // Check if there's 'edit' after the ID
+            if (i < segments.length && segments[i] === 'edit') {
+              // Will add 'Edit' later, but we need the item name first
+              // The page will set it via dynamic breadcrumbs
+              i++;
+            }
+            // The ID segment is handled - dynamic breadcrumbs will provide the name
+            break;
+          }
+        }
+      } else if (specialPages[segment]) {
+        // Direct special page (shouldn't happen normally, but handle it)
+        breadcrumbs.push({
+          label: specialPages[segment],
+        });
+        break;
+      } else {
+        // Unknown segment - skip
+        i++;
+      }
+    }
+    
+    // Merge with dynamic breadcrumbs (set by pages)
+    return [...breadcrumbs, ...dynamicBreadcrumbs];
+  }, [pathname, dynamicBreadcrumbs]);
+  
+  // Expose setDynamicBreadcrumbs via window for pages to use
+  React.useEffect(() => {
+    (window as any).__setBreadcrumbs = setDynamicBreadcrumbs;
+    return () => {
+      delete (window as any).__setBreadcrumbs;
+    };
+  }, []);
+  
+  // Clear dynamic breadcrumbs when pathname changes
+  React.useEffect(() => {
+    setDynamicBreadcrumbs([]);
+  }, [pathname]);
 
   const prevPathnameRef = useRef(pathname);
 
@@ -217,40 +330,51 @@ export function DashboardNavbar() {
               <ChevronLeftIcon className="h-5 w-5 text-gray-900" />
             )}
           </IconButton>
-          <Breadcrumbs
-            className={`bg-transparent !p-0 transition-all ${
-              fixedNavbar ? "mt-1" : ""
-            }`}
-            placeholder={undefined}
-            onPointerEnterCapture={undefined}
-            onPointerLeaveCapture={undefined}
-          >
-            <Link href={pathname.startsWith("/client") ? "/client" : "/admin"}>
-              <IconButton size="sm" variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                <HomeIcon className="h-4 w-4 text-gray-900" />
-              </IconButton>
-            </Link>
-            <Typography
-              variant="small"
-              color="blue-gray"
-              className="!font-normal opacity-50 transition-all hover:!text-blue-gray-700 hover:opacity-100"
+          {parseBreadcrumbs.length > 0 && (
+            <Breadcrumbs
+              className={`bg-transparent !p-0 transition-all ${
+                fixedNavbar ? "mt-1" : ""
+              }`}
               placeholder={undefined}
               onPointerEnterCapture={undefined}
               onPointerLeaveCapture={undefined}
             >
-              {layout}
-            </Typography>
-            <Typography
-              variant="small"
-              color="blue-gray"
-              className="!font-normal"
-              placeholder={undefined}
-              onPointerEnterCapture={undefined}
-              onPointerLeaveCapture={undefined}
-            >
-              {page?.split("-").join(" ")}
-            </Typography>
-          </Breadcrumbs>
+              <Link href={pathname.startsWith("/client") ? "/client" : "/admin"}>
+                <IconButton size="sm" variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <HomeIcon className="h-4 w-4 text-gray-900" />
+                </IconButton>
+              </Link>
+              {parseBreadcrumbs.map((crumb, idx) => (
+                <React.Fragment key={idx}>
+                  {crumb.href ? (
+                    <Link href={crumb.href}>
+                      <Typography
+                        variant="small"
+                        color="blue-gray"
+                        className="!font-normal opacity-50 transition-all hover:!text-blue-gray-700 hover:opacity-100"
+                        placeholder={undefined}
+                        onPointerEnterCapture={undefined}
+                        onPointerLeaveCapture={undefined}
+                      >
+                        {crumb.label}
+                      </Typography>
+                    </Link>
+                  ) : (
+                    <Typography
+                      variant="small"
+                      color="blue-gray"
+                      className="!font-normal"
+                      placeholder={undefined}
+                      onPointerEnterCapture={undefined}
+                      onPointerLeaveCapture={undefined}
+                    >
+                      {crumb.label}
+                    </Typography>
+                  )}
+                </React.Fragment>
+              ))}
+            </Breadcrumbs>
+          )}
         </div>
         <div className="!flex items-center gap-2">
           <div className="mr-auto md:mr-4 md:w-56">

@@ -94,6 +94,15 @@ export default function CompanyViewPage() {
       loadData();
     }
   }, [companyId]);
+  
+  // Clean up breadcrumb on unmount
+  useEffect(() => {
+    return () => {
+      if ((window as any).__setBreadcrumbs) {
+        (window as any).__setBreadcrumbs([]);
+      }
+    };
+  }, []);
 
   const fetchCompany = async () => {
     try {
@@ -151,6 +160,13 @@ export default function CompanyViewPage() {
 
       console.log('Company query result:', { data: combinedData });
       setCompany(combinedData);
+      
+      // Set breadcrumb
+      if ((window as any).__setBreadcrumbs && companyData.company_name) {
+        (window as any).__setBreadcrumbs([
+          { label: companyData.company_name }
+        ]);
+      }
     } catch (err: any) {
       console.error('Company fetch error:', err);
       setError(err.message);
