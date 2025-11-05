@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import InnerPageShell from '../../../components/ui/InnerPageShell';
 import Card from '../../../components/ui/Card';
 import Link from 'next/link';
 
@@ -101,148 +100,145 @@ export default function ProductViewPage({ params }: { params: { id: string } }) 
   }
 
   return (
-    <InnerPageShell
-        title={product.item_name}
-        breadcrumbs={[{ label: 'Products', href: '/admin/products' }, { label: product.item_name }]}
-        actions={
-          <div className="flex space-x-2">
-            <Link
-              href={`/admin/products/${product.id}/edit`}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:opacity-90 transition text-sm"
-            >
-              Edit Product
-            </Link>
-            <Link
-              href="/admin/products"
-              className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition text-sm"
-            >
-              Back to Products
-            </Link>
-          </div>
-        }
-      >
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* Left Column - Basic Info & Pricing */}
-            <div className="space-y-6">
-              <Card title="Product Information">
-                <div className="space-y-4">
-                  {/* Product Image */}
-                  {product.picture_url && (
-                    <div>
-                      <img
-                        src={product.picture_url}
-                        alt={product.item_name}
-                        className="w-full max-w-xs rounded-lg"
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Product ID</p>
-                      <p className="font-medium">{product.id}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">SKU</p>
-                      <p className="font-medium">{product.sku}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">NetSuite Name</p>
-                      <p className="font-medium">{product.netsuite_name || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">UPC</p>
-                      <p className="font-medium">{product.upc || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Size</p>
-                      <p className="font-medium">{product.size || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Case Pack</p>
-                      <p className="font-medium">{product.case_pack || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Case Weight</p>
-                      <p className="font-medium">{product.case_weight ? `${product.case_weight} kg` : 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">HS Code</p>
-                      <p className="font-medium">{product.hs_code || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Made In</p>
-                      <p className="font-medium">{product.made_in || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Created</p>
-                      <p className="font-medium text-sm">{new Date(product.created_at).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-
-              <Card title="Pricing">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Americas Price</p>
-                    <p className="font-medium text-lg">${product.price_americas.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">International Price</p>
-                    <p className="font-medium text-lg">${product.price_international.toFixed(2)}</p>
-                  </div>
-                </div>
-              </Card>
-            </div>
-
-            {/* Right Column - Status & Settings */}
-            <div className="space-y-6">
-              <Card title="Status & Visibility">
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-2">Product Status</p>
-                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-                      product.enable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {product.enable ? 'Enabled' : 'Disabled'}
-                    </span>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-gray-500 mb-2">Support Funds Eligible</p>
-                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-                      product.list_in_support_funds ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {product.list_in_support_funds ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-gray-500 mb-2">Visible to Americas</p>
-                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-                      product.visible_to_americas ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {product.visible_to_americas ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-gray-500 mb-2">Visible to International</p>
-                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-                      product.visible_to_international ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {product.visible_to_international ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-                </div>
-              </Card>
-            </div>
-
-          </div>
+    <div className="mt-8 mb-4 space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">{product.item_name}</h2>
+        <div className="flex gap-2">
+          <Link
+            href={`/admin/products/${product.id}/edit`}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:opacity-90 transition text-sm"
+          >
+            Edit Product
+          </Link>
+          <Link
+            href="/admin/products"
+            className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition text-sm"
+          >
+            Back to Products
+          </Link>
         </div>
-      </InnerPageShell>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Left Column - Basic Info & Pricing */}
+        <div className="space-y-6">
+          <Card title="Product Information">
+            <div className="space-y-4">
+              {/* Product Image */}
+              {product.picture_url && (
+                <div className="flex justify-center">
+                  <img
+                    src={product.picture_url}
+                    alt={product.item_name}
+                    className="w-full max-w-xs rounded-lg"
+                  />
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Product ID</p>
+                  <p className="font-medium">{product.id}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">SKU</p>
+                  <p className="font-medium">{product.sku}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">NetSuite Name</p>
+                  <p className="font-medium">{product.netsuite_name || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">UPC</p>
+                  <p className="font-medium">{product.upc || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Size</p>
+                  <p className="font-medium">{product.size || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Case Pack</p>
+                  <p className="font-medium">{product.case_pack || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Case Weight</p>
+                  <p className="font-medium">{product.case_weight ? `${product.case_weight} kg` : 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">HS Code</p>
+                  <p className="font-medium">{product.hs_code || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Made In</p>
+                  <p className="font-medium">{product.made_in || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Created</p>
+                  <p className="font-medium text-sm">{new Date(product.created_at).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card title="Pricing">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Americas Price</p>
+                <p className="font-medium text-lg">${product.price_americas.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">International Price</p>
+                <p className="font-medium text-lg">${product.price_international.toFixed(2)}</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Right Column - Status & Settings */}
+        <div className="space-y-6">
+          <Card title="Status & Visibility">
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-500 mb-2">Product Status</p>
+                <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                  product.enable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {product.enable ? 'Enabled' : 'Disabled'}
+                </span>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500 mb-2">Support Funds Eligible</p>
+                <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                  product.list_in_support_funds ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {product.list_in_support_funds ? 'Yes' : 'No'}
+                </span>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500 mb-2">Visible to Americas</p>
+                <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                  product.visible_to_americas ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {product.visible_to_americas ? 'Yes' : 'No'}
+                </span>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500 mb-2">Visible to International</p>
+                <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                  product.visible_to_international ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {product.visible_to_international ? 'Yes' : 'No'}
+                </span>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+      </div>
+    </div>
   );
 }
