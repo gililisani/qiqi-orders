@@ -144,7 +144,10 @@ export default function Sidenav({
       {items.map(({ name, icon, pages, title, divider, external, path }, index) => {
         const key = `${name}-${index}`;
         const hasChildren = Array.isArray(pages) && pages.length > 0;
-        const isActiveLeaf = !hasChildren && path ? pathname === path : false;
+        // Check if this route is active (exact match or nested route)
+        const isActiveLeaf = !hasChildren && path 
+          ? (pathname === path || pathname.startsWith(`${path}/`)) 
+          : false;
         const isOpen = level === 0 ? openCollapse === name : openSubCollapse === name;
 
         const itemBaseClasses = [
