@@ -147,6 +147,8 @@ export default function EditUserPage() {
           userId: userId,
           userEmail: formData.email,
           userName: formData.name,
+          companyId: companyId,
+          companyName: company?.company_name,
         }),
       });
 
@@ -155,12 +157,15 @@ export default function EditUserPage() {
       if (!response.ok) {
         setResetLinkMessage({
           type: 'error',
-          text: data.error || 'Failed to send password reset link. Please try again.'
+          text: data.error || 'Failed to send password link. Please try again.'
         });
       } else {
+        const isNewUser = data.isNewUser;
         setResetLinkMessage({
           type: 'success',
-          text: 'Password reset link sent successfully! The user will receive an email with instructions to reset their password.'
+          text: isNewUser
+            ? 'Password setup link sent successfully! The user will receive a welcome email with instructions to set their password.'
+            : 'Password reset link sent successfully! The user will receive an email with instructions to reset their password.'
         });
       }
     } catch (err: any) {
@@ -303,7 +308,7 @@ export default function EditUserPage() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">Password Management</h3>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-800 mb-4">
-                To reset the user's password, send them a password reset link via email. They will be able to set their own secure password.
+                Send a password setup link (for new users) or reset link (for existing users) via email. The system will automatically detect if the user has set their password before and send the appropriate email.
               </p>
               {resetLinkMessage && (
                 <div className={`mb-4 p-3 rounded ${
@@ -320,7 +325,7 @@ export default function EditUserPage() {
                 disabled={sendingResetLink || loading}
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
               >
-                {sendingResetLink ? 'Sending...' : 'Send Password Reset Email'}
+                {sendingResetLink ? 'Sending...' : 'Send Password Setup/Reset Email'}
               </button>
             </div>
           </div>
