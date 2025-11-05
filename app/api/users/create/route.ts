@@ -7,16 +7,35 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  const logContext = {
+    timestamp: new Date().toISOString(),
+    operation: 'create_user'
+  };
+
   try {
     const { name, email, companyId, enabled } = await request.json();
 
     // Validate input
     if (!name || !email || !companyId) {
+      console.error('[USER_CREATE] Validation failed:', { ...logContext, name: !!name, email: !!email, companyId: !!companyId });
       return NextResponse.json(
         { error: 'Missing required fields: name, email, and companyId' },
         { status: 400 }
       );
     }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.error('[USER_CREATE] Invalid email format:', { ...logContext, email });
+      return NextResponse.json(
+        { error: 'Invalid email format' },
+        { status: 400 }
+      );
+    }
+
+    console.log('[USER_CREATE] Starting user creation:', { ...logContext, email, companyId, name });
 
     // Create Supabase admin client with service role key
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
@@ -43,6 +62,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (authError) {
+      console.error('[USER_CREATE] Auth user creation failed:', { ...logContext, email, error: authError.message });
       if (authError.message.includes('already registered')) {
         return NextResponse.json(
           { error: 'A user with this email already exists. Please use a different email.' },
@@ -53,8 +73,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (!authData.user) {
+      console.error('[USER_CREATE] Auth user creation returned no user:', { ...logContext, email });
       throw new Error('Failed to create user account');
     }
+
+    console.log('[USER_CREATE] Auth user created:', { ...logContext, userId: authData.user.id, email });
 
     // Create the client profile in our clients table
     const { error: profileError } = await supabaseAdmin
@@ -68,10 +91,13 @@ export async function POST(request: NextRequest) {
       }]);
 
     if (profileError) {
+      console.error('[USER_CREATE] Profile creation failed, cleaning up auth user:', { ...logContext, userId: authData.user.id, error: profileError.message });
       // If profile creation fails, clean up the auth user
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       throw profileError;
     }
+
+    console.log('[USER_CREATE] Profile created:', { ...logContext, userId: authData.user.id });
 
     // Generate password setup link using Supabase admin API
     // Note: Supabase uses 'recovery' type for both new user password setup and password reset
@@ -90,7 +116,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (setupError) {
-      console.error('Failed to generate password setup link:', setupError);
+      console.error('[USER_CREATE] Failed to generate password setup link:', { ...logContext, userId: authData.user.id, email, error: setupError.message });
       return NextResponse.json({
         success: true,
         userId: authData.user.id,
@@ -98,12 +124,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    console.log('[USER_CREATE] Password setup link generated:', { ...logContext, userId: authData.user.id });
+
     // Get company name for the welcome email
-    const { data: companyData } = await supabaseAdmin
+    const { data: companyData, error: companyError } = await supabaseAdmin
       .from('companies')
       .select('company_name')
       .eq('id', companyId)
       .single();
+
+    if (companyError) {
+      console.warn('[USER_CREATE] Could not fetch company name:', { ...logContext, companyId, error: companyError.message });
+    }
 
     // Send welcome email via Microsoft Graph API (not Supabase email)
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -122,7 +154,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!emailResult.success) {
-      console.error('Failed to send welcome email:', emailResult.error);
+      console.error('[USER_CREATE] Failed to send welcome email:', { ...logContext, userId: authData.user.id, email, error: emailResult.error });
       return NextResponse.json({
         success: true,
         userId: authData.user.id,
@@ -130,7 +162,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log('Welcome email sent successfully to:', email);
+    const duration = Date.now() - startTime;
+    console.log('[USER_CREATE] SUCCESS - User created and email sent:', { 
+      ...logContext, 
+      userId: authData.user.id, 
+      email, 
+      companyId,
+      durationMs: duration,
+      messageId: emailResult.messageId 
+    });
 
     return NextResponse.json({
       success: true,
@@ -139,7 +179,13 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error creating user:', error);
+    const duration = Date.now() - startTime;
+    console.error('[USER_CREATE] ERROR - User creation failed:', { 
+      ...logContext, 
+      error: error.message, 
+      stack: error.stack,
+      durationMs: duration 
+    });
     return NextResponse.json(
       { error: error.message || 'Failed to create user' },
       { status: 500 }
