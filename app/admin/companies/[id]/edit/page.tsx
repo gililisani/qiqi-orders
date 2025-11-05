@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
-import InnerPageShell from '../../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 
 interface FormData {
@@ -125,6 +124,15 @@ export default function EditCompanyPage() {
       fetchCountries();
     }
   }, [companyId]);
+  
+  // Clean up breadcrumb on unmount
+  useEffect(() => {
+    return () => {
+      if ((window as any).__setBreadcrumbs) {
+        (window as any).__setBreadcrumbs([]);
+      }
+    };
+  }, []);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -209,6 +217,14 @@ export default function EditCompanyPage() {
       });
 
       setTerritories(territoriesData || []);
+      
+      // Set breadcrumb
+      if ((window as any).__setBreadcrumbs && data.company_name) {
+        (window as any).__setBreadcrumbs([
+          { label: data.company_name },
+          { label: 'Edit' }
+        ]);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -629,18 +645,22 @@ export default function EditCompanyPage() {
   }
 
   return (
-    <div className="p-6">
-        <InnerPageShell
-          title="Edit Company"
-          breadcrumbs={[{ label: 'Companies', href: '/admin/companies' }, { label: 'Edit' }]}
-          actions={<Link href={`/admin/companies/${companyId}`} className="text-gray-600 hover:text-gray-800">← Back</Link>}
+    <div className="mt-8 mb-4 space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Edit Company</h2>
+        <Link 
+          href={`/admin/companies/${companyId}`} 
+          className="text-gray-600 hover:text-gray-800"
         >
+          ← Back
+        </Link>
+      </div>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
 
         <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1257,7 +1277,6 @@ export default function EditCompanyPage() {
             </Link>
           </div>
         </form>
-        </InnerPageShell>
-      </div>
+    </div>
   );
 }

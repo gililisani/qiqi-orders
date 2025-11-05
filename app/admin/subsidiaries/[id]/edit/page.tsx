@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
-import InnerPageShell from '../../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 
 interface FormData {
@@ -109,18 +108,36 @@ export default function EditSubsidiaryPage() {
     );
   }
 
+  // Set breadcrumb
+  useEffect(() => {
+    if (formData.name && (window as any).__setBreadcrumbs) {
+      (window as any).__setBreadcrumbs([
+        { label: formData.name },
+        { label: 'Edit' }
+      ]);
+    }
+    return () => {
+      if ((window as any).__setBreadcrumbs) {
+        (window as any).__setBreadcrumbs([]);
+      }
+    };
+  }, [formData.name]);
+
   return (
-    <InnerPageShell
-        title="Edit Subsidiary"
-        breadcrumbs={[{ label: 'Subsidiaries', href: '/admin/subsidiaries' }, { label: 'Edit' }]}
-        actions={<Link href="/admin/subsidiaries" className="text-gray-600 hover:text-gray-800">← Back to Subsidiaries</Link>}
-      >
-        <div className="max-w-4xl mx-auto">
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-              {error}
-            </div>
-          )}
+    <div className="mt-8 mb-4 space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Edit Subsidiary</h2>
+        <Link href="/admin/subsidiaries" className="text-gray-600 hover:text-gray-800">
+          ← Back to Subsidiaries
+        </Link>
+      </div>
+      
+      <div className="max-w-4xl mx-auto">
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -211,7 +228,7 @@ export default function EditSubsidiaryPage() {
             </Link>
           </div>
         </form>
-        </div>
-      </InnerPageShell>
+      </div>
+    </div>
   );
 }

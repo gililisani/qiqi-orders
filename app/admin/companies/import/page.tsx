@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
-import InnerPageShell from '../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 
 interface ImportResult {
@@ -241,21 +240,21 @@ export default function ImportCompaniesPage() {
   };
 
   return (
-    <InnerPageShell title="Import Companies">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Import Companies</h1>
-              <p className="text-gray-600 mt-1">Bulk import companies from CSV file</p>
-            </div>
-            <Link
-              href="/admin/companies"
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Back to Companies
-            </Link>
-          </div>
+    <div className="mt-8 mb-4 space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900">Import Companies</h2>
+          <p className="text-gray-600 mt-1">Bulk import companies from CSV file</p>
+        </div>
+        <Link
+          href="/admin/companies"
+          className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50"
+        >
+          Back to Companies
+        </Link>
+      </div>
+      
+      <div className="max-w-4xl mx-auto space-y-6">
 
           {/* Instructions */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -330,7 +329,7 @@ export default function ImportCompaniesPage() {
             </div>
           )}
         </div>
-      </InnerPageShell>
+    </div>
   );
 }
 

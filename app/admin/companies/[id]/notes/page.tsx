@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
-import InnerPageShell from '../../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 import NotesView from '../../../../components/shared/NotesView';
 
@@ -74,25 +73,34 @@ export default function CompanyNotesPage() {
     );
   }
 
+  // Set breadcrumb
+  useEffect(() => {
+    if (company && (window as any).__setBreadcrumbs) {
+      (window as any).__setBreadcrumbs([
+        { label: company.company_name },
+        { label: 'Notes' }
+      ]);
+    }
+    return () => {
+      if ((window as any).__setBreadcrumbs) {
+        (window as any).__setBreadcrumbs([]);
+      }
+    };
+  }, [company]);
+
   return (
-    <div className="p-6">
-        <InnerPageShell
-          title={`Notes for ${company?.company_name}`}
-          breadcrumbs={[
-            { label: 'Companies', href: '/admin/companies' },
-            { label: company?.company_name || 'Company', href: `/admin/companies/${companyId}` },
-            { label: 'Notes' }
-          ]}
-          actions={
-            <Link
-              href={`/admin/companies/${companyId}`}
-              className="text-gray-600 hover:text-gray-800"
-            >
-              ← Back to Company
-            </Link>
-          }
+    <div className="mt-8 mb-4 space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Notes for {company?.company_name}</h2>
+        <Link
+          href={`/admin/companies/${companyId}`}
+          className="text-gray-600 hover:text-gray-800"
         >
-          {/* Filters */}
+          ← Back to Company
+        </Link>
+      </div>
+
+      {/* Filters */}
           <div className="mb-6 flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[200px]">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -141,7 +149,6 @@ export default function CompanyNotesPage() {
             categoryFilter={categoryFilter}
             timeFilter={timeFilter}
           />
-        </InnerPageShell>
-      </div>
+    </div>
   );
 }
