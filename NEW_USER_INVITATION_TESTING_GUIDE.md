@@ -185,17 +185,25 @@ echo "AZURE_TENANT_ID: ${AZURE_TENANT_ID:0:10}..."
 - Verify `AZURE_*` environment variables are set
 - Check Azure App Registration has email sending permissions
 
-### Issue 2: "Invalid password link"
-**Solution:** 
-- Check `NEXT_PUBLIC_SITE_URL` matches your actual domain
-- Verify link hasn't expired (24 hours default)
-- Check email client didn't modify the URL (some email clients strip `#`)
+### Issue 2: "Invalid password link" (Outlook/Email Client Issues)
+**Solution:** This is the MOST COMMON issue when users receive emails in Outlook.
+- **ADMIN ACTION: Resend the link** - Go to the user's edit page and click "Send Password Setup/Reset Email" button
+  - Navigate to: `/admin/users/[userId]/edit` OR `/admin/companies/[companyId]/users/[userId]/edit`
+  - Scroll to "Password Management" section
+  - Click "Send Password Setup/Reset Email" button
+  - A fresh link will be sent (the system automatically detects if it's a new user or existing user)
+- **USER ACTION (if they contact you):**
+  - Ask them to right-click the button in the email and "Copy link address"
+  - Paste the full link directly into their browser
+  - Or mark `orders@qiqiglobal.com` as a trusted sender in Outlook
+- **Alternative:** Check if link expired (24 hours default) - if so, resend
 
 ### Issue 3: "User created but email not sent"
 **Solution:**
 - Check server logs for email sending errors
 - Verify Azure credentials are correct
 - Check email service quotas/limits
+- **ADMIN ACTION:** Manually send the link using "Send Password Setup/Reset Email" button in user edit page
 
 ### Issue 4: "Last sign in" shows before password is set
 **Solution:** This should be fixed. The session is only created when password is submitted, not when link is clicked.
@@ -205,6 +213,17 @@ echo "AZURE_TENANT_ID: ${AZURE_TENANT_ID:0:10}..."
 - Verify password meets requirements (6+ characters)
 - Check if user is enabled in database
 - Verify user exists in `clients` table
+
+### Issue 6: User says "Link doesn't work" or "Link is broken"
+**ADMIN QUICK FIX:**
+1. Go to user edit page: `/admin/users/[userId]/edit` (or from company page)
+2. Scroll to "Password Management" section
+3. Click **"Send Password Setup/Reset Email"** button
+4. A new link will be sent immediately
+5. Tell the user to check their email (and spam folder)
+6. The new link will be fresh and should work
+
+**No code changes needed - this feature is already built in!**
 
 ---
 
@@ -280,12 +299,43 @@ fetch('/api/user-profile?email=USER_EMAIL')
 
 ---
 
+## Admin Self-Service: Resending Password Links
+
+**If a user reports their password setup link doesn't work, you can resend it yourself:**
+
+### Quick Steps:
+1. **Find the user:**
+   - Go to `/admin/users` and find the user, OR
+   - Go to `/admin/companies/[companyId]` and find the user in the users list
+
+2. **Edit the user:**
+   - Click "Edit" on the user
+   - OR go directly to `/admin/users/[userId]/edit`
+
+3. **Resend the link:**
+   - Scroll down to "Password Management" section
+   - Click **"Send Password Setup/Reset Email"** button
+   - The system will automatically:
+     - Detect if it's a new user (never set password) or existing user
+     - Send the appropriate email (Welcome email for new users, Reset email for existing)
+     - Generate a fresh, valid link
+
+4. **Notify the user:**
+   - Tell them to check their email (including spam folder)
+   - The new link will be valid for 24 hours
+   - If they still have issues, they can copy/paste the link directly
+
+**This works for both new user invitations and password resets!**
+
+---
+
 ## Need Help?
 
 If issues persist:
-1. Check server logs for detailed error messages
-2. Verify all environment variables
-3. Test email service independently
-4. Check Supabase dashboard for user status
-5. Verify redirect URLs are whitelisted in Supabase
+1. **First:** Try resending the link using the "Send Password Setup/Reset Email" button (see above)
+2. Check server logs for detailed error messages (look for `[USER_CREATE]` entries)
+3. Verify all environment variables
+4. Test email service independently
+5. Check Supabase dashboard for user status
+6. Verify redirect URLs are whitelisted in Supabase
 
