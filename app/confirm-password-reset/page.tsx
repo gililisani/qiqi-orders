@@ -11,6 +11,12 @@ import {
   Spinner,
 } from '../components/MaterialTailwind';
 
+interface ResetTokens {
+  accessToken: string;
+  refreshToken: string;
+  type: string;
+}
+
 export default function ConfirmPasswordResetPage() {
   const router = useRouter();
   const [newPassword, setNewPassword] = useState('');
@@ -19,10 +25,12 @@ export default function ConfirmPasswordResetPage() {
   const [success, setSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isValidating, setIsValidating] = useState(true);
+  const [resetTokens, setResetTokens] = useState<ResetTokens | null>(null);
 
   useEffect(() => {
-    // Handle the hash fragment or query parameters from the magic link
-    const handleAuthCallback = async () => {
+    // Extract tokens from URL WITHOUT creating a session
+    // This prevents "Last sign in" from being updated until password is actually set
+    const extractTokens = () => {
       try {
         // Check both hash fragment and query parameters
         // Some email clients convert # to ? or vice versa
@@ -66,7 +74,7 @@ export default function ConfirmPasswordResetPage() {
           }
         }
 
-        console.log('Password reset callback:', { 
+        console.log('Password reset token extraction:', { 
           hasHash: !!hashFragment,
           hasSearch: !!searchParams,
           hasAccessToken: !!accessToken, 
@@ -90,42 +98,27 @@ export default function ConfirmPasswordResetPage() {
           return;
         }
 
-        // Set the session using the tokens from the URL
-        const { data, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken || ''
+        // Store tokens WITHOUT creating a session yet
+        // This prevents "Last sign in" from being updated until password is set
+        setResetTokens({
+          accessToken,
+          refreshToken: refreshToken || '',
+          type: type || 'recovery'
         });
 
-        if (sessionError || !data.session) {
-          console.error('Session error:', sessionError);
-          console.error('Full URL length:', fullUrl.length);
-          console.error('Hash:', hashFragment ? hashFragment.substring(0, 100) : 'none');
-          console.error('Search:', searchParams ? searchParams.substring(0, 100) : 'none');
-          
-          // Check if the error is due to an expired token
-          const errorMessage = sessionError?.message?.toLowerCase() || '';
-          if (errorMessage.includes('expired') || errorMessage.includes('jwt expired')) {
-            setError('This password reset link has expired. Password reset links are valid for 24 hours. Please contact your administrator to send you a new password setup link.');
-          } else if (errorMessage.includes('invalid') || errorMessage.includes('token') || errorMessage.includes('malformed')) {
-            setError('Invalid password reset link. The link may have been corrupted by your email client. Please try copying the full link from your email and pasting it directly into your browser, or request a new password reset link.');
-          } else {
-            setError(`Failed to validate password reset link: ${sessionError?.message || 'Unknown error'}. Please request a new one from your administrator.`);
-          }
-          setIsValidating(false);
-          return;
-        }
+        // Clear the URL to remove tokens from address bar
+        window.history.replaceState({}, '', window.location.pathname);
 
-        console.log('Session established successfully for password reset');
-        // Valid session - user can now set password
+        console.log('Tokens extracted successfully, ready for password reset');
         setIsValidating(false);
       } catch (err: any) {
-        console.error('Error handling auth callback:', err);
+        console.error('Error extracting tokens:', err);
         setError(`An error occurred while processing the reset link: ${err.message || 'Unknown error'}. Please try requesting a new password reset link.`);
         setIsValidating(false);
       }
     };
 
-    handleAuthCallback();
+    extractTokens();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -148,15 +141,29 @@ export default function ConfirmPasswordResetPage() {
     }
 
     try {
-      // First verify we still have a valid session
-      const { data: { session }, error: sessionCheckError } = await supabase.auth.getSession();
-      
-      if (sessionCheckError || !session) {
-        const errorMessage = sessionCheckError?.message?.toLowerCase() || '';
-        if (errorMessage.includes('expired') || errorMessage.includes('invalid') || errorMessage.includes('token')) {
-          setError('Your session has expired. Password reset links are valid for 24 hours. Please request a new password setup link from your administrator.');
+      // Check if we have valid tokens
+      if (!resetTokens || !resetTokens.accessToken) {
+        setError('Reset tokens are missing. Please click the password reset link in your email again.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // NOW create the session (only when user is actually setting password)
+      // This ensures "Last sign in" is only updated when password is successfully set
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token: resetTokens.accessToken,
+        refresh_token: resetTokens.refreshToken
+      });
+
+      if (sessionError || !sessionData.session) {
+        console.error('Session error:', sessionError);
+        const errorMessage = sessionError?.message?.toLowerCase() || '';
+        if (errorMessage.includes('expired') || errorMessage.includes('jwt expired')) {
+          setError('This password reset link has expired. Password reset links are valid for 24 hours. Please contact your administrator to send you a new password setup link.');
+        } else if (errorMessage.includes('invalid') || errorMessage.includes('token') || errorMessage.includes('malformed')) {
+          setError('Invalid password reset link. The link may have been corrupted. Please request a new password reset link.');
         } else {
-          setError('Auth session missing! Please click the password reset link in your email again.');
+          setError(`Failed to validate password reset link: ${sessionError?.message || 'Unknown error'}. Please request a new one from your administrator.`);
         }
         setIsSubmitting(false);
         return;
@@ -168,6 +175,8 @@ export default function ConfirmPasswordResetPage() {
       });
 
       if (error) {
+        // Sign out if password update fails to avoid leaving user in a session state
+        await supabase.auth.signOut();
         const errorMessage = error.message?.toLowerCase() || '';
         if (errorMessage.includes('expired') || errorMessage.includes('invalid') || errorMessage.includes('token') || errorMessage.includes('session')) {
           setError('Your session has expired. Password reset links are valid for 24 hours. Please request a new password setup link from your administrator.');
@@ -176,6 +185,7 @@ export default function ConfirmPasswordResetPage() {
         }
       } else {
         // Sign out after password is set (don't auto-login)
+        // This ensures "Last sign in" timestamp accurately reflects when password was set
         await supabase.auth.signOut();
         setSuccess(true);
       }
