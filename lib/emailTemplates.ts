@@ -451,6 +451,82 @@ export function welcomeEmailTemplate(data: {
 }
 
 /**
+ * Password Reset Email Template
+ */
+export function passwordResetEmailTemplate(data: { 
+  userName: string; 
+  userEmail: string;
+  resetLink: string;
+  siteUrl: string;
+}): { subject: string; html: string } {
+  const content = `
+    <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: #111827;">
+      Reset Your Password 🔐
+    </h1>
+    
+    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
+      Hi <strong>${data.userName}</strong>,
+    </p>
+    
+    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
+      We received a request to reset your password for your Qiqi Partners Hub account.
+    </p>
+    
+    <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="margin: 0 0 12px; color: #1e40af; font-weight: 600;">
+        📧 Your Account Email:
+      </p>
+      <p style="margin: 0; color: #1e3a8a; font-family: monospace; font-size: 15px;">
+        ${data.userEmail}
+      </p>
+    </div>
+    
+    <h2 style="margin: 24px 0 16px; font-size: 20px; font-weight: 600; color: #111827;">
+      Reset Your Password
+    </h2>
+    
+    <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
+      Click the button below to reset your password. This link will expire in <strong>24 hours</strong> for security reasons.
+    </p>
+    
+    <div style="margin: 30px 0; text-align: center;">
+      <a href="${data.resetLink}" 
+         style="display: inline-block; padding: 16px 40px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+        Reset My Password →
+      </a>
+    </div>
+    
+    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="margin: 0 0 8px; color: #92400e; font-size: 14px; font-weight: 600;">
+        ⚠️ Security Notice:
+      </p>
+      <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.5;">
+        If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
+      </p>
+    </div>
+    
+    <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px; font-weight: 600;">
+        💡 Need Help?
+      </p>
+      <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${data.resetLink}" style="color: #3b82f6; word-break: break-all;">${data.resetLink}</a>
+      </p>
+    </div>
+    
+    <p style="margin: 24px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+      Questions? Contact our support team or your account administrator.
+    </p>
+  `;
+
+  return {
+    subject: `Reset Your Password - Qiqi Partners Hub`,
+    html: emailWrapper(content, data.siteUrl),
+  };
+}
+
+/**
  * Order Updated Email Template
  */
 export function orderUpdatedTemplate(data: OrderEmailData) {
