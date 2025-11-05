@@ -239,6 +239,25 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
+          {/* Top Row: Image on Left, Basic Info and Pricing on Right */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            {/* Left: Product Image Card - Full Height */}
+            <Card className="shadow-sm flex flex-col" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  Product Image
+                </Typography>
+              </CardHeader>
+              <CardBody className="px-4 pt-0 flex-1 flex flex-col justify-center" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <ImageUpload
+                  onImageUploaded={(url) => setFormData(prev => ({ ...prev, picture_url: url }))}
+                  currentImageUrl={formData.picture_url}
+                />
+              </CardBody>
+            </Card>
+
+            {/* Right: Basic Info and Pricing stacked */}
+            <div className="space-y-6">
               {/* Basic Information Card */}
               <Card className="shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                 <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
@@ -329,99 +348,20 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   </div>
                 </CardBody>
               </Card>
+            </div>
+          </div>
 
-              {/* Product Image Card */}
-              <Card className="shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                    Product Image
-                  </Typography>
-                </CardHeader>
-                <CardBody className="px-4 pt-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  <ImageUpload
-                    onImageUploaded={(url) => setFormData(prev => ({ ...prev, picture_url: url }))}
-                    currentImageUrl={formData.picture_url}
-                  />
-                </CardBody>
-              </Card>
-
-              {/* Packing List Information Card */}
-              <Card className="shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                    Packing List Information
-                  </Typography>
-                  <Typography variant="small" color="gray" className="mt-1 font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                    Required for international shipping and customs documentation
-                  </Typography>
-                </CardHeader>
-                <CardBody className="px-4 pt-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                         <Input
-                       label="Case Weight (kg)"
-                       name="case_weight"
-                       type="number"
-                       step="0.01"
-                       value={formData.case_weight}
-                       onChange={(e) => handleInputChange('case_weight', e.target.value)}
-                       placeholder="e.g., 12.50"
-                       onPointerEnterCapture={undefined}
-                       onPointerLeaveCapture={undefined}
-                       crossOrigin={undefined}
-                     />
-                     <Input
-                       label="HS Code"
-                       name="hs_code"
-                       value={formData.hs_code}
-                       onChange={(e) => handleInputChange('hs_code', e.target.value)}
-                       placeholder="e.g., 3305.10.00"
-                       onPointerEnterCapture={undefined}
-                       onPointerLeaveCapture={undefined}
-                       crossOrigin={undefined}
-                     />
-                     <Input
-                       label="Made In"
-                       name="made_in"
-                       value={formData.made_in}
-                       onChange={(e) => handleInputChange('made_in', e.target.value)}
-                       placeholder="e.g., USA, China, Italy"
-                       onPointerEnterCapture={undefined}
-                       onPointerLeaveCapture={undefined}
-                       crossOrigin={undefined}
-                     />
-                    <div className="md:col-span-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Category
-                      </label>
-                      <select
-                        name="category_id"
-                        value={formData.category_id}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                      >
-                        <option value="">No Category</option>
-                        {categories.map(category => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
-                      <Typography variant="small" color="gray" className="mt-1 font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                        Assign this product to a category for better organization
-                      </Typography>
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
-
-              {/* Product Settings Card */}
-              <Card className="shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                    Product Settings
-                  </Typography>
-                </CardHeader>
-                <CardBody className="px-4 pt-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+          {/* Bottom Row: Product Settings on Left, Packing List on Right */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left: Product Settings Card (merged with Client Class Visibility) */}
+            <Card className="shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  Product Settings
+                </Typography>
+              </CardHeader>
+              <CardBody className="px-4 pt-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <div className="space-y-4">
                   <div className="space-y-4">
                     <label className="flex items-center cursor-pointer">
                       <input
@@ -463,52 +403,119 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       />
                       <span className="ml-3 text-sm font-normal text-gray-700">Out of Stock</span>
                     </label>
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-                      <Typography variant="small" className="font-medium text-yellow-800 mb-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                        Support Fund Settings Explained:
-                      </Typography>
-                      <ul className="text-sm text-yellow-700 space-y-1">
-                        <li><strong>Eligible for Support Funds:</strong> Can this product be purchased WITH support fund credit?</li>
-                        <li><strong>Qualifies for Credit Earning:</strong> Does purchasing this product EARN support fund credit?</li>
-                        <li><strong>Note:</strong> Kits, discounted items, and promotional items typically should NOT qualify for credit earning.</li>
-                      </ul>
+                  </div>
+
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+                    <Typography variant="small" className="font-medium text-yellow-800 mb-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                      Support Fund Settings Explained:
+                    </Typography>
+                    <ul className="text-sm text-yellow-700 space-y-1">
+                      <li><strong>Eligible for Support Funds:</strong> Can this product be purchased WITH support fund credit?</li>
+                      <li><strong>Qualifies for Credit Earning:</strong> Does purchasing this product EARN support fund credit?</li>
+                      <li><strong>Note:</strong> Kits, discounted items, and promotional items typically should NOT qualify for credit earning.</li>
+                    </ul>
+                  </div>
+
+                  <div className="border-t pt-4 mt-4">
+                    <Typography variant="small" className="font-semibold text-gray-700 mb-3" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                      Client Class Visibility
+                    </Typography>
+                    <div className="space-y-3">
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="visible_to_americas"
+                          checked={formData.visible_to_americas}
+                          onChange={handleChange}
+                          className="h-4 w-4 text-blue-gray-600 focus:ring-blue-gray-500 border-gray-300 rounded transition"
+                        />
+                        <span className="ml-3 text-sm font-normal text-gray-700">Visible to Americas Clients</span>
+                      </label>
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="visible_to_international"
+                          checked={formData.visible_to_international}
+                          onChange={handleChange}
+                          className="h-4 w-4 text-blue-gray-600 focus:ring-blue-gray-500 border-gray-300 rounded transition"
+                        />
+                        <span className="ml-3 text-sm font-normal text-gray-700">Visible to International Clients</span>
+                      </label>
                     </div>
                   </div>
-                </CardBody>
-              </Card>
+                </div>
+              </CardBody>
+            </Card>
 
-              {/* Client Class Visibility Card */}
-              <Card className="shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                    Client Class Visibility
-                  </Typography>
-                </CardHeader>
-                <CardBody className="px-4 pt-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  <div className="space-y-4">
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="visible_to_americas"
-                        checked={formData.visible_to_americas}
-                        onChange={handleChange}
-                        className="h-4 w-4 text-blue-gray-600 focus:ring-blue-gray-500 border-gray-300 rounded transition"
-                      />
-                      <span className="ml-3 text-sm font-normal text-gray-700">Visible to Americas Clients</span>
+            {/* Right: Packing List Information Card */}
+            <Card className="shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  Packing List Information
+                </Typography>
+                <Typography variant="small" color="gray" className="mt-1 font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  Required for international shipping and customs documentation
+                </Typography>
+              </CardHeader>
+              <CardBody className="px-4 pt-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <div className="grid grid-cols-1 gap-6">
+                  <Input
+                    label="Case Weight (kg)"
+                    name="case_weight"
+                    type="number"
+                    step="0.01"
+                    value={formData.case_weight}
+                    onChange={(e) => handleInputChange('case_weight', e.target.value)}
+                    placeholder="e.g., 12.50"
+                    onPointerEnterCapture={undefined}
+                    onPointerLeaveCapture={undefined}
+                    crossOrigin={undefined}
+                  />
+                  <Input
+                    label="HS Code"
+                    name="hs_code"
+                    value={formData.hs_code}
+                    onChange={(e) => handleInputChange('hs_code', e.target.value)}
+                    placeholder="e.g., 3305.10.00"
+                    onPointerEnterCapture={undefined}
+                    onPointerLeaveCapture={undefined}
+                    crossOrigin={undefined}
+                  />
+                  <Input
+                    label="Made In"
+                    name="made_in"
+                    value={formData.made_in}
+                    onChange={(e) => handleInputChange('made_in', e.target.value)}
+                    placeholder="e.g., USA, China, Italy"
+                    onPointerEnterCapture={undefined}
+                    onPointerLeaveCapture={undefined}
+                    crossOrigin={undefined}
+                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Category
                     </label>
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="visible_to_international"
-                        checked={formData.visible_to_international}
-                        onChange={handleChange}
-                        className="h-4 w-4 text-blue-gray-600 focus:ring-blue-gray-500 border-gray-300 rounded transition"
-                      />
-                      <span className="ml-3 text-sm font-normal text-gray-700">Visible to International Clients</span>
-                    </label>
+                    <select
+                      name="category_id"
+                      value={formData.category_id}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                    >
+                      <option value="">No Category</option>
+                      {categories.map(category => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Typography variant="small" color="gray" className="mt-1 font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                      Assign this product to a category for better organization
+                    </Typography>
                   </div>
-                </CardBody>
-              </Card>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
 
               {/* Action Buttons */}
               <div className="flex justify-end gap-4 pt-4">
