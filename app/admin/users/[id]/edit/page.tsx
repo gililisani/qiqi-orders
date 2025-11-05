@@ -39,6 +39,8 @@ export default function EditUserPage() {
     changePassword: false,
     newPassword: ''
   });
+  const [sendingResetLink, setSendingResetLink] = useState(false);
+  const [resetLinkMessage, setResetLinkMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     if (userId) {
@@ -66,6 +68,7 @@ export default function EditUserPage() {
         changePassword: false,
         newPassword: ''
       });
+      setResetLinkMessage(null); // Clear any previous messages
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -121,18 +124,6 @@ export default function EditUserPage() {
         }
       }
 
-      // Update password if requested
-      if (formData.changePassword && formData.newPassword) {
-        const { error: passwordError } = await supabase.auth.admin.updateUserById(userId, {
-          password: formData.newPassword
-        });
-
-        if (passwordError) {
-          console.error('Error updating password:', passwordError);
-          // Don't throw here, other updates were successful
-        }
-      }
-
       router.push('/admin/users');
     } catch (err: any) {
       setError(err.message);
@@ -148,6 +139,46 @@ export default function EditUserPage() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+  };
+
+  const handleSendResetLink = async () => {
+    setSendingResetLink(true);
+    setResetLinkMessage(null);
+
+    try {
+      const response = await fetch('/api/users/send-reset-link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userId,
+          userEmail: formData.email,
+          userName: formData.name,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setResetLinkMessage({
+          type: 'error',
+          text: data.error || 'Failed to send password reset link. Please try again.'
+        });
+      } else {
+        setResetLinkMessage({
+          type: 'success',
+          text: 'Password reset link sent successfully! The user will receive an email with instructions to reset their password.'
+        });
+      }
+    } catch (err: any) {
+      setResetLinkMessage({
+        type: 'error',
+        text: 'An unexpected error occurred. Please try again.'
+      });
+    } finally {
+      setSendingResetLink(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -281,38 +312,34 @@ export default function EditUserPage() {
                 User is enabled
               </label>
             </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                name="changePassword"
-                checked={formData.changePassword}
-                onChange={handleChange}
-                className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
-              />
-              <label className="ml-2 block text-sm text-gray-700">
-                Change password
-              </label>
-            </div>
           </div>
 
-          {formData.changePassword && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                New Password *
-              </label>
-              <input
-                type="password"
-                name="newPassword"
-                value={formData.newPassword}
-                onChange={handleChange}
-                required={formData.changePassword}
-                minLength={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-              <p className="text-sm text-gray-500 mt-1">Minimum 6 characters</p>
+          {/* Password Reset Section */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Password Management</h3>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800 mb-4">
+                To reset the user's password, send them a password reset link via email. They will be able to set their own secure password.
+              </p>
+              {resetLinkMessage && (
+                <div className={`mb-4 p-3 rounded ${
+                  resetLinkMessage.type === 'success' 
+                    ? 'bg-green-100 border border-green-400 text-green-700' 
+                    : 'bg-red-100 border border-red-400 text-red-700'
+                }`}>
+                  {resetLinkMessage.text}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleSendResetLink}
+                disabled={sendingResetLink || loading}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
+              >
+                {sendingResetLink ? 'Sending...' : 'Send Password Reset Email'}
+              </button>
             </div>
-          )}
+          </div>
 
           <div className="bg-yellow-50 border border-yellow-200 rounded p-4">
             <h3 className="text-sm font-medium text-yellow-800 mb-2">User Information:</h3>
