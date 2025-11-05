@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import InnerPageShell from '../../../../components/ui/InnerPageShell';
 import Link from 'next/link';
 import ImageUpload from '../../../../components/ImageUpload';
 import {
@@ -224,20 +223,22 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   }
 
   return (
-    <InnerPageShell
-        title="Edit Product"
-        breadcrumbs={[{ label: 'Products', href: '/admin/products' }, { label: 'Edit' }]}
-        actions={<Link href={`/admin/products/${params.id}`} className="text-gray-600 hover:text-gray-800">← Back to Product</Link>}
-      >
-        <div className="max-w-6xl mx-auto">
-          {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
+    <div className="mt-8 mb-4 space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Edit Product</h2>
+        <Link href={`/admin/products/${params.id}`} className="text-gray-600 hover:text-gray-800">
+          ← Back to Product
+        </Link>
+      </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-6">
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <div className="space-y-6">
               {/* Basic Information Card */}
               <Card className="shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                 <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
@@ -533,9 +534,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   {saving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
-            </div>
-          </form>
         </div>
-      </InnerPageShell>
+      </form>
+    </div>
   );
 }
