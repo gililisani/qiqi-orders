@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
-import InnerPageShell from '../../../components/ui/InnerPageShell';
 import Card from '../../../components/ui/Card';
 import Link from 'next/link';
 
@@ -206,45 +205,39 @@ export default function CompanyViewPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
-          <p>Loading company...</p>
-        </div>
+      <div className="mt-8 mb-4 space-y-6">
+        <p>Loading company...</p>
+      </div>
     );
   }
 
   if (error || !company) {
     return (
-      <div className="p-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Company Not Found</h1>
-            <p className="text-gray-600 mb-4">{error || 'The company you are looking for does not exist.'}</p>
-            <Link
-              href="/admin/companies"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
-            >
-              Back to Companies
-            </Link>
-          </div>
+      <div className="mt-8 mb-4 space-y-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Company Not Found</h1>
+          <p className="text-gray-600 mb-4">{error || 'The company you are looking for does not exist.'}</p>
+          <Link
+            href="/admin/companies"
+            className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
+          >
+            Back to Companies
+          </Link>
         </div>
+      </div>
     );
   }
 
   return (
-    <div className="p-6">
-        <InnerPageShell
-          title={company.company_name}
-          breadcrumbs={[
-            { label: 'Companies', href: '/admin/companies' },
-            { label: company.company_name || 'Company' },
-          ]}
-          actions={
-            <>
-              <Link href={`/admin/companies/${company.id}/notes`} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">Notes</Link>
-              <Link href={`/admin/companies/${company.id}/edit`} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Edit Company</Link>
-              <Link href="/admin/companies" className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition">Back</Link>
-            </>
-          }
-        >
+    <div className="mt-8 mb-4 space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">{company.company_name}</h2>
+        <div className="flex gap-2">
+          <Link href={`/admin/companies/${company.id}/notes`} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">Notes</Link>
+          <Link href={`/admin/companies/${company.id}/edit`} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Edit Company</Link>
+          <Link href="/admin/companies" className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition">Back</Link>
+        </div>
+      </div>
         <div className="space-y-6">
           {/* Top Row: Two Blocks Side by Side */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -565,7 +558,6 @@ export default function CompanyViewPage() {
             )}
           </Card>
         </div>
-        </InnerPageShell>
-      </div>
+    </div>
   );
 }

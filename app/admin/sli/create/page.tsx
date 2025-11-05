@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import InnerPageShell from '../../../components/ui/InnerPageShell';
 import Card from '../../../components/ui/Card';
 import Link from 'next/link';
 
@@ -158,19 +157,15 @@ export default function CreateStandaloneSLIPage() {
   };
 
   return (
-    <InnerPageShell
-        title="Create Standalone SLI"
-        breadcrumbs={[
-          { label: 'Orders', href: '/admin/orders' },
-          { label: 'Create Standalone SLI' }
-        ]}
-        actions={
-          <Link href="/admin/orders" className="text-gray-600 hover:text-gray-800">
-            ← Back to Orders
-          </Link>
-        }
-      >
-        <div className="max-w-6xl mx-auto">
+    <div className="mt-8 mb-4 space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Create Standalone SLI</h2>
+        <Link href="/admin/orders" className="text-gray-600 hover:text-gray-800">
+          ← Back to Orders
+        </Link>
+      </div>
+
+      <div className="max-w-6xl mx-auto">
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
               {error}
@@ -697,8 +692,8 @@ export default function CreateStandaloneSLIPage() {
               </button>
             </div>
           </form>
-        </div>
-      </InnerPageShell>
+      </div>
+    </div>
   );
 }
 
