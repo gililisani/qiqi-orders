@@ -248,10 +248,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   Product Image
                 </Typography>
               </CardHeader>
-              <CardBody className="px-4 pt-0 flex-1 flex flex-col justify-center" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <CardBody className="px-4 pt-6 flex-1 flex flex-col" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                 <ImageUpload
                   onImageUploaded={(url) => setFormData(prev => ({ ...prev, picture_url: url }))}
                   currentImageUrl={formData.picture_url}
+                  hideTitle={true}
+                  largerImage={true}
                 />
               </CardBody>
             </Card>
@@ -265,7 +267,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     Basic Information
                   </Typography>
                 </CardHeader>
-                <CardBody className="px-4 pt-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <CardBody className="px-4 pt-6" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Input
                       label="Item Name"
@@ -360,7 +362,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   Product Settings
                 </Typography>
               </CardHeader>
-              <CardBody className="px-4 pt-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <CardBody className="px-4 pt-6" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                 <div className="space-y-4">
                   <div className="space-y-4">
                     <label className="flex items-center cursor-pointer">
@@ -405,11 +407,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     </label>
                   </div>
 
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-                    <Typography variant="small" className="font-medium text-yellow-800 mb-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
+                    <Typography variant="small" className="font-medium text-gray-800 mb-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                       Support Fund Settings Explained:
                     </Typography>
-                    <ul className="text-sm text-yellow-700 space-y-1">
+                    <ul className="text-sm text-gray-700 space-y-1">
                       <li><strong>Eligible for Support Funds:</strong> Can this product be purchased WITH support fund credit?</li>
                       <li><strong>Qualifies for Credit Earning:</strong> Does purchasing this product EARN support fund credit?</li>
                       <li><strong>Note:</strong> Kits, discounted items, and promotional items typically should NOT qualify for credit earning.</li>
@@ -449,15 +451,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
             {/* Right: Packing List Information Card */}
             <Card className="shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-              <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  Packing List Information
-                </Typography>
-                <Typography variant="small" color="gray" className="mt-1 font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  Required for international shipping and customs documentation
-                </Typography>
-              </CardHeader>
-              <CardBody className="px-4 pt-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                              <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                    Packing List Information
+                  </Typography>
+                </CardHeader>
+                <CardBody className="px-4 pt-6" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                 <div className="grid grid-cols-1 gap-6">
                   <Input
                     label="Case Weight (kg)"

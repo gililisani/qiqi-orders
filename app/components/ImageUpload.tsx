@@ -7,9 +7,11 @@ interface ImageUploadProps {
   onImageUploaded: (url: string) => void;
   currentImageUrl?: string;
   className?: string;
+  hideTitle?: boolean;
+  largerImage?: boolean;
 }
 
-export default function ImageUpload({ onImageUploaded, currentImageUrl, className = '' }: ImageUploadProps) {
+export default function ImageUpload({ onImageUploaded, currentImageUrl, className = '', hideTitle = false, largerImage = false }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -79,24 +81,26 @@ export default function ImageUpload({ onImageUploaded, currentImageUrl, classNam
           Product Image
         </label>
         
-        {previewUrl ? (
-          <div className="space-y-2">
-            <div className="relative inline-block">
-              <img
-                src={previewUrl}
-                alt="Product preview"
-                className="w-32 h-32 object-cover rounded-lg border border-gray-300"
-              />
-              <button
-                type="button"
-                onClick={handleRemoveImage}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
-              >
-                ×
-              </button>
-            </div>
-            <p className="text-sm text-gray-600">Click to change image</p>
+              {previewUrl ? (
+        <div className={`${largerImage ? 'w-full' : 'space-y-2'}`}>
+          <div className={`relative ${largerImage ? 'w-full' : 'inline-block w-full flex justify-center'}`}>
+            <img
+              src={previewUrl}
+              alt="Product preview"
+              className={`${largerImage ? 'w-full h-auto max-h-96 object-contain rounded-lg border border-gray-300' : 'w-32 h-32 object-cover rounded-lg border border-gray-300'}`}
+            />
+            <button
+              type="button"
+              onClick={handleRemoveImage}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 z-10"
+            >
+              ×
+            </button>
           </div>
+          {!hideTitle && (
+            <p className="text-sm text-gray-600">Click to change image</p>
+          )}
+        </div>
         ) : (
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
             <svg
