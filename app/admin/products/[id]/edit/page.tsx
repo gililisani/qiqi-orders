@@ -356,32 +356,38 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 </CardHeader>
                 <CardBody className="px-4 pt-0" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Input
-                      label="Case Weight (kg)"
-                      name="case_weight"
-                      type="number"
-                      step="0.01"
-                      value={formData.case_weight}
-                      onChange={(e) => handleInputChange('case_weight', e.target.value)}
-                      placeholder="e.g., 12.50"
-                      {...defaultProps}
-                    />
-                    <Input
-                      label="HS Code"
-                      name="hs_code"
-                      value={formData.hs_code}
-                      onChange={(e) => handleInputChange('hs_code', e.target.value)}
-                      placeholder="e.g., 3305.10.00"
-                      {...defaultProps}
-                    />
-                    <Input
-                      label="Made In"
-                      name="made_in"
-                      value={formData.made_in}
-                      onChange={(e) => handleInputChange('made_in', e.target.value)}
-                      placeholder="e.g., USA, China, Italy"
-                      {...defaultProps}
-                    />
+                                         <Input
+                       label="Case Weight (kg)"
+                       name="case_weight"
+                       type="number"
+                       step="0.01"
+                       value={formData.case_weight}
+                       onChange={(e) => handleInputChange('case_weight', e.target.value)}
+                       placeholder="e.g., 12.50"
+                       onPointerEnterCapture={undefined}
+                       onPointerLeaveCapture={undefined}
+                       crossOrigin={undefined}
+                     />
+                     <Input
+                       label="HS Code"
+                       name="hs_code"
+                       value={formData.hs_code}
+                       onChange={(e) => handleInputChange('hs_code', e.target.value)}
+                       placeholder="e.g., 3305.10.00"
+                       onPointerEnterCapture={undefined}
+                       onPointerLeaveCapture={undefined}
+                       crossOrigin={undefined}
+                     />
+                     <Input
+                       label="Made In"
+                       name="made_in"
+                       value={formData.made_in}
+                       onChange={(e) => handleInputChange('made_in', e.target.value)}
+                       placeholder="e.g., USA, China, Italy"
+                       onPointerEnterCapture={undefined}
+                       onPointerLeaveCapture={undefined}
+                       crossOrigin={undefined}
+                     />
                     <div className="md:col-span-3">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Category
