@@ -428,6 +428,24 @@ export function welcomeEmailTemplate(data: {
       </p>
     </div>
     
+    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="margin: 0 0 8px; color: #92400e; font-size: 14px; font-weight: 600;">
+        📧 Having trouble with the link? (Outlook/Email Client Users)
+      </p>
+      <p style="margin: 0 0 8px; color: #92400e; font-size: 14px; line-height: 1.5;">
+        If clicking the button above doesn't work (especially in Outlook), try this:
+      </p>
+      <ol style="margin: 8px 0 0 20px; color: #92400e; font-size: 14px; line-height: 1.8;">
+        <li>Right-click the button and select "Copy link address"</li>
+        <li>Paste the full link directly into your browser's address bar</li>
+        <li>Or mark <strong>orders@qiqiglobal.com</strong> as a trusted sender in your email client</li>
+      </ol>
+      <p style="margin: 12px 0 0; color: #92400e; font-size: 13px; line-height: 1.5;">
+        <strong>Alternative:</strong> If the link still doesn't work, copy and paste this entire link into your browser:<br/>
+        <a href="${data.setupLink}" style="color: #1e40af; word-break: break-all; font-size: 12px; font-family: monospace;">${data.setupLink}</a>
+      </p>
+    </div>
+    
     <h2 style="margin: 24px 0 16px; font-size: 18px; font-weight: 600; color: #111827;">
       What's Next?
     </h2>
@@ -509,9 +527,17 @@ export function passwordResetEmailTemplate(data: {
       <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px; font-weight: 600;">
         💡 Need Help?
       </p>
-      <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
-        If the button doesn't work, copy and paste this link into your browser:<br>
-        <a href="${data.resetLink}" style="color: #3b82f6; word-break: break-all;">${data.resetLink}</a>
+      <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px; line-height: 1.5;">
+        If the button doesn't work (especially in Outlook), try this:
+      </p>
+      <ol style="margin: 8px 0 0 20px; color: #6b7280; font-size: 14px; line-height: 1.8;">
+        <li>Right-click the button and select "Copy link address"</li>
+        <li>Paste the full link directly into your browser's address bar</li>
+        <li>Or mark <strong>orders@qiqiglobal.com</strong> as a trusted sender in Outlook</li>
+      </ol>
+      <p style="margin: 12px 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+        <strong>Full link:</strong><br>
+        <a href="${data.resetLink}" style="color: #3b82f6; word-break: break-all; font-size: 12px; font-family: monospace;">${data.resetLink}</a>
       </p>
     </div>
     

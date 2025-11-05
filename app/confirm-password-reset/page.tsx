@@ -21,7 +21,7 @@ export default function ConfirmPasswordResetPage() {
   const router = useRouter();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | React.ReactNode>('');
   const [success, setSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isValidating, setIsValidating] = useState(true);
@@ -60,17 +60,69 @@ export default function ConfirmPasswordResetPage() {
         }
         
         // Try to extract from full URL if email client modified the format
-        // Some email clients strip # and convert to ? or modify the URL structure
+        // Some email clients (especially Outlook) strip # and convert to ? or modify the URL structure
+        // Outlook may also wrap links in redirects or add tracking parameters
         if (!accessToken) {
-          // Try to find tokens in the URL string directly
-          const tokenMatch = fullUrl.match(/access_token=([^&]+)/);
-          const refreshMatch = fullUrl.match(/refresh_token=([^&]+)/);
-          const typeMatch = fullUrl.match(/type=([^&]+)/);
+          // Try multiple extraction strategies for email client modifications
+          
+          // Strategy 1: Direct regex match (handles broken URLs)
+          const tokenMatch = fullUrl.match(/access_token=([^&#\s"']+)/);
+          const refreshMatch = fullUrl.match(/refresh_token=([^&#\s"']+)/);
+          const typeMatch = fullUrl.match(/[&?]type=([^&#\s"']+)/);
           
           if (tokenMatch) {
-            accessToken = decodeURIComponent(tokenMatch[1]);
-            refreshToken = refreshMatch ? decodeURIComponent(refreshMatch[1]) : null;
-            type = typeMatch ? decodeURIComponent(typeMatch[1]) : null;
+            try {
+              accessToken = decodeURIComponent(tokenMatch[1]);
+              // Handle URL-encoded tokens
+              if (accessToken.includes('%')) {
+                accessToken = decodeURIComponent(accessToken);
+              }
+            } catch (e) {
+              // If decode fails, use raw token
+              accessToken = tokenMatch[1];
+            }
+            
+            if (refreshMatch) {
+              try {
+                refreshToken = decodeURIComponent(refreshMatch[1]);
+                if (refreshToken.includes('%')) {
+                  refreshToken = decodeURIComponent(refreshToken);
+                }
+              } catch (e) {
+                refreshToken = refreshMatch[1];
+              }
+            }
+            
+            if (typeMatch) {
+              type = decodeURIComponent(typeMatch[1]);
+            }
+          }
+          
+          // Strategy 2: Try to extract from URL after redirect unwrapping
+          // Some email clients wrap links in redirect URLs
+          if (!accessToken && fullUrl.includes('redirect') || fullUrl.includes('url=')) {
+            const redirectMatch = fullUrl.match(/[?&]url=([^&]+)/);
+            if (redirectMatch) {
+              const unwrappedUrl = decodeURIComponent(redirectMatch[1]);
+              const unwrappedTokenMatch = unwrappedUrl.match(/access_token=([^&#\s"']+)/);
+              if (unwrappedTokenMatch) {
+                accessToken = unwrappedTokenMatch[1];
+                const unwrappedRefreshMatch = unwrappedUrl.match(/refresh_token=([^&#\s"']+)/);
+                if (unwrappedRefreshMatch) {
+                  refreshToken = unwrappedRefreshMatch[1];
+                }
+              }
+            }
+          }
+          
+          // Strategy 3: Try extracting from base64 encoded or other encodings
+          // Some email clients encode the entire URL
+          if (!accessToken && fullUrl.length > 500) {
+            // Long URLs might have encoded tokens
+            const encodedMatch = fullUrl.match(/access_token%3D([^%&]+)/);
+            if (encodedMatch) {
+              accessToken = decodeURIComponent(encodedMatch[1].replace(/%3D/g, '='));
+            }
           }
         }
 
@@ -86,8 +138,31 @@ export default function ConfirmPasswordResetPage() {
         // Verify this is a recovery/password setup or reset link
         // Note: Supabase uses 'recovery' type for both new user setup and password reset
         if (!accessToken) {
-          console.error('No access token found in URL');
-          setError('Invalid password setup link. The link appears to be corrupted or incomplete. Please request a new link from your administrator.');
+          console.error('No access token found in URL after all extraction attempts:', {
+            hasHash: !!hashFragment,
+            hasSearch: !!searchParams,
+            urlLength: fullUrl.length,
+            urlPreview: fullUrl.substring(0, 300)
+          });
+          
+          setError(
+            <div>
+              <p className="mb-4">The password setup link appears to be corrupted or modified by your email client.</p>
+              <p className="mb-4"><strong>This often happens when:</strong></p>
+              <ul className="list-disc list-inside mb-4 space-y-1">
+                <li>Your email client (Outlook) marked the sender as untrusted</li>
+                <li>The link was modified by email security scanning</li>
+                <li>The link was copied incorrectly</li>
+              </ul>
+              <p className="mb-4"><strong>Solutions:</strong></p>
+              <ol className="list-decimal list-inside mb-4 space-y-1">
+                <li>Try copying the entire link from the email and pasting it directly into your browser</li>
+                <li>Mark orders@qiqiglobal.com as a trusted sender in Outlook</li>
+                <li>Contact your administrator to send a new password setup link</li>
+              </ol>
+              <p className="text-sm text-gray-600">If the problem persists, please contact your administrator.</p>
+            </div>
+          );
           setIsValidating(false);
           return;
         }
@@ -234,7 +309,7 @@ export default function ConfirmPasswordResetPage() {
 
         {error && !success && (
           <Alert color="red" className="mb-4">
-            {error}
+            {typeof error === 'string' ? error : <div>{error}</div>}
           </Alert>
         )}
 
