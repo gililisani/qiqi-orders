@@ -76,7 +76,25 @@ export default function Sidenav({
 
   const isCollapsed = sidenavCollapsed && !isHovering;
   const hoverBackgroundClass = sidenavType === "dark" ? "hover:bg-white/10" : "hover:bg-gray-100";
-  const activeItemClass = sidenavType === "dark" ? "bg-white/10 text-white" : "bg-gray-200 text-gray-900";
+  
+  // Map sidenavColor to gradient classes for active items
+  const getActiveItemClasses = () => {
+    const colorMap: Record<string, string> = {
+      pink: "bg-gradient-to-r from-pink-400 to-pink-600 text-white",
+      dark: "bg-gradient-to-r from-black to-black text-white",
+      blue: "bg-gradient-to-r from-blue-400 to-blue-600 text-white",
+      green: "bg-gradient-to-r from-green-400 to-green-600 text-white",
+      orange: "bg-gradient-to-r from-orange-400 to-orange-600 text-white",
+      red: "bg-gradient-to-r from-red-400 to-red-600 text-white",
+    };
+    
+    // Default fallback based on sidenavType if color not found
+    const defaultClass = sidenavType === "dark" ? "bg-white/10 text-white" : "bg-gray-200 text-gray-900";
+    
+    return colorMap[sidenavColor] || defaultClass;
+  };
+  
+  const activeItemClass = getActiveItemClasses();
 
   const isRouteActive = React.useMemo(() => {
     const check = (route: Route): boolean => {
@@ -131,14 +149,18 @@ export default function Sidenav({
 
         const itemBaseClasses = [
           "group relative flex items-center w-full min-h-[44px] rounded-lg transition-all duration-300 ease-in-out overflow-hidden text-inherit active:scale-[0.98]",
-          hoverBackgroundClass,
+          // Only add hover class if item is not active (active items should keep gradient, hover can slightly darken it)
+          isActiveLeaf ? "" : hoverBackgroundClass,
           getSpacingClasses(),
           isCollapsed ? "gap-0" : "gap-3",
           "focus:outline-none focus-visible:outline-none",
         ];
 
+        // Add active item classes if this is the active route
         if (isActiveLeaf) {
           itemBaseClasses.push(activeItemClass);
+          // Add a subtle hover effect for active items (slightly darker gradient)
+          itemBaseClasses.push("hover:opacity-90");
         }
 
         const iconWrapperClasses = "flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit";
