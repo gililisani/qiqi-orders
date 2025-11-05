@@ -144,9 +144,12 @@ export default function Sidenav({
       {items.map(({ name, icon, pages, title, divider, external, path }, index) => {
         const key = `${name}-${index}`;
         const hasChildren = Array.isArray(pages) && pages.length > 0;
-        // Check if this route is active (exact match or nested route)
+        // Check if this route is active
+        // For Dashboard (exact match only), for other routes (exact match or nested route)
         const isActiveLeaf = !hasChildren && path 
-          ? (pathname === path || pathname.startsWith(`${path}/`)) 
+          ? (path === "/admin" || path === "/client" 
+              ? pathname === path 
+              : (pathname === path || pathname.startsWith(`${path}/`))) 
           : false;
         const isOpen = level === 0 ? openCollapse === name : openSubCollapse === name;
 
@@ -296,9 +299,17 @@ export default function Sidenav({
         className="flex items-center justify-center h-20"
       >
         {isCollapsed ? (
-          <img src="/QIQI-Logo-cropped.svg" className="h-9 w-auto" alt="Qiqi logo" />
+          <img 
+            src="/QIQI-Logo-cropped.svg" 
+            className={`h-9 w-auto ${sidenavType === "dark" ? "brightness-0 invert" : ""}`} 
+            alt="Qiqi logo" 
+          />
         ) : (
-          <img src={brandImg} className="h-12 w-auto" alt="Qiqi logo" />
+          <img 
+            src={brandImg} 
+            className={`h-12 w-auto ${sidenavType === "dark" ? "brightness-0 invert" : ""}`} 
+            alt="Qiqi logo" 
+          />
         )}
       </Link>
 
