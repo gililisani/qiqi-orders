@@ -531,7 +531,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 </Link>
                 <Button
                   type="submit"
-                  color="blue-gray"
+                  className="bg-black text-white hover:opacity-90 disabled:opacity-50"
                   disabled={saving}
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}

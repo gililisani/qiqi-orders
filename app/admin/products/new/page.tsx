@@ -5,20 +5,54 @@ import { supabase } from '../../../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ImageUpload from '../../../components/ImageUpload';
-import Card from '../../../components/ui/Card';
-import FormField from '../../../components/ui/FormField';
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Input,
+  Button,
+  Typography,
+} from '../../../components/MaterialTailwind';
 
 interface Category {
   id: number;
   name: string;
-  description?: string;
+  sort_order: number;
 }
+
+const defaultProps = {
+  placeholder: undefined,
+  onPointerEnterCapture: undefined,
+  onPointerLeaveCapture: undefined,
+  crossOrigin: undefined,
+};
 
 export default function NewProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
+  const [formData, setFormData] = useState({
+    item_name: '',
+    netsuite_name: '',
+    sku: '',
+    upc: '',
+    size: '',
+    case_pack: '',
+    price_international: '',
+    price_americas: '',
+    enable: true,
+    list_in_support_funds: true,
+    visible_to_americas: true,
+    visible_to_international: true,
+    qualifies_for_credit_earning: true,
+    out_of_stock: false,
+    picture_url: '',
+    case_weight: '',
+    hs_code: '',
+    made_in: '',
+    category_id: ''
+  });
 
   useEffect(() => {
     fetchCategories();
@@ -37,27 +71,6 @@ export default function NewProductPage() {
       console.error('Error fetching categories:', err);
     }
   };
-
-  const [formData, setFormData] = useState({
-    item_name: '',
-    netsuite_name: '',
-    sku: '',
-    upc: '',
-    size: '',
-    case_pack: '',
-    price_international: '',
-    price_americas: '',
-    enable: true,
-    list_in_support_funds: true,
-    visible_to_americas: true,
-    visible_to_international: true,
-    qualifies_for_credit_earning: true,
-    picture_url: '',
-    case_weight: '',
-    hs_code: '',
-    made_in: '',
-    category_id: ''
-  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +94,8 @@ export default function NewProductPage() {
           visible_to_americas: formData.visible_to_americas,
           visible_to_international: formData.visible_to_international,
           qualifies_for_credit_earning: formData.qualifies_for_credit_earning,
-          picture_url: formData.picture_url,
+          out_of_stock: formData.out_of_stock,
+          picture_url: formData.picture_url || null,
           case_weight: formData.case_weight ? parseFloat(formData.case_weight) : null,
           hs_code: formData.hs_code || null,
           made_in: formData.made_in || null,
@@ -106,270 +120,333 @@ export default function NewProductPage() {
     }));
   };
 
+  const handleInputChange = (name: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   return (
-    <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-gray-900">Add New Product</h1>
-          <Link href="/admin/products" className="text-gray-600 hover:text-gray-900">← Back to Products</Link>
-        </div>
-
-        {error && (
-          <Card>
-            <div className="border border-red-300 bg-red-50 text-red-800 rounded-md px-4 py-3 text-sm">
-              {error}
-            </div>
-          </Card>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <Card header={<h2 className="font-semibold">Basic Information</h2>}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField label="Item Name *" htmlFor="item_name">
-                <input
-                  id="item_name"
-                  type="text"
-                  name="item_name"
-                  value={formData.item_name}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </FormField>
-
-              <FormField label="NetSuite Name" htmlFor="netsuite_name">
-                <input
-                  id="netsuite_name"
-                  type="text"
-                  name="netsuite_name"
-                  value={formData.netsuite_name}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </FormField>
-
-              <FormField label="SKU *" htmlFor="sku">
-                <input
-                  id="sku"
-                  type="text"
-                  name="sku"
-                  value={formData.sku}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </FormField>
-
-              <FormField label="UPC" htmlFor="upc">
-                <input
-                  id="upc"
-                  type="text"
-                  name="upc"
-                  value={formData.upc}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </FormField>
-
-              <FormField label="Size" htmlFor="size">
-                <input
-                  id="size"
-                  type="text"
-                  name="size"
-                  value={formData.size}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </FormField>
-
-              <FormField label="Case Pack" htmlFor="case_pack">
-                <input
-                  id="case_pack"
-                  type="number"
-                  name="case_pack"
-                  value={formData.case_pack}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </FormField>
-
-              <FormField label="Americas Price (USD) *" htmlFor="price_americas">
-                <input
-                  id="price_americas"
-                  type="number"
-                  step="0.01"
-                  name="price_americas"
-                  value={formData.price_americas}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </FormField>
-
-              <FormField label="International Price (USD) *" htmlFor="price_international">
-                <input
-                  id="price_international"
-                  type="number"
-                  step="0.01"
-                  name="price_international"
-                  value={formData.price_international}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </FormField>
-            </div>
-          </Card>
-
-          <Card header={<h2 className="font-semibold">Product Image</h2>}>
-            <ImageUpload
-              onImageUploaded={(url) => setFormData(prev => ({ ...prev, picture_url: url }))}
-              currentImageUrl={formData.picture_url}
-            />
-          </Card>
-
-          {/* Packing List Fields */}
-          <Card header={<h2 className="font-semibold">Packing List Information</h2>}>
-            <p className="text-sm text-gray-600 mb-4">Required for international shipping and customs documentation</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Case Weight (kg)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  name="case_weight"
-                  value={formData.case_weight}
-                  onChange={handleChange}
-                  placeholder="e.g., 12.50"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  HS Code
-                </label>
-                <input
-                  type="text"
-                  name="hs_code"
-                  value={formData.hs_code}
-                  onChange={handleChange}
-                  placeholder="e.g., 3305.10.00"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Made In
-                </label>
-                <input
-                  type="text"
-                  name="made_in"
-                  value={formData.made_in}
-                  onChange={handleChange}
-                  placeholder="e.g., USA, China, Italy"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select
-                  name="category_id"
-                  value={formData.category_id}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                >
-                  <option value="">No Category</option>
-                  {categories.map(category => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">Assign this product to a category for better organization</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card header={<h2 className="font-semibold">Visibility & Eligibility</h2>}>
-            <div className="flex space-x-6">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="enable"
-                  checked={formData.enable}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">Enable Product</span>
-              </label>
-
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="list_in_support_funds"
-                  checked={formData.list_in_support_funds}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">Eligible for Support Funds</span>
-              </label>
-
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="qualifies_for_credit_earning"
-                  checked={formData.qualifies_for_credit_earning}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">Qualifies for Credit Earning</span>
-              </label>
-            </div>
-            <div className="border-t pt-4">
-              <h3 className="text-lg font-medium text-gray-900 mb-3">Client Class Visibility</h3>
-              <div className="flex space-x-6">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="visible_to_americas"
-                    checked={formData.visible_to_americas}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Visible to Americas Clients</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="visible_to_international"
-                    checked={formData.visible_to_international}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Visible to International Clients</span>
-                </label>
-              </div>
-            </div>
-          </Card>
-
-          <div className="flex space-x-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
-            >
-              {loading ? 'Creating...' : 'Create Product'}
-            </button>
-            <Link
-              href="/admin/products"
-              className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition"
-            >
-              Cancel
-            </Link>
-          </div>
-        </form>
+    <div className="mt-8 mb-4 space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Add New Product</h2>
+        <Link href="/admin/products" className="text-gray-600 hover:text-gray-800">
+          ← Back to Products
+        </Link>
       </div>
+
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <div className="space-y-6">
+          {/* Top Row: Image on Left, Basic Info and Pricing on Right */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            {/* Left: Product Image Card - Full Height */}
+            <Card className="shadow-sm flex flex-col" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  Product Image
+                </Typography>
+              </CardHeader>
+              <CardBody className="px-4 pt-6 flex-1 flex flex-col" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <ImageUpload
+                  onImageUploaded={(url) => setFormData(prev => ({ ...prev, picture_url: url }))}
+                  currentImageUrl={formData.picture_url}
+                  hideTitle={true}
+                  largerImage={true}
+                />
+              </CardBody>
+            </Card>
+
+            {/* Right: Basic Info and Pricing stacked */}
+            <div className="space-y-6">
+              {/* Basic Information Card */}
+              <Card className="shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                    Basic Information
+                  </Typography>
+                </CardHeader>
+                <CardBody className="px-4 pt-6" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input
+                      label="Item Name"
+                      name="item_name"
+                      value={formData.item_name}
+                      onChange={(e) => handleInputChange('item_name', e.target.value)}
+                      required
+                      {...defaultProps}
+                    />
+                    <Input
+                      label="NetSuite Name"
+                      name="netsuite_name"
+                      value={formData.netsuite_name}
+                      onChange={(e) => handleInputChange('netsuite_name', e.target.value)}
+                      {...defaultProps}
+                    />
+                    <Input
+                      label="SKU"
+                      name="sku"
+                      value={formData.sku}
+                      onChange={(e) => handleInputChange('sku', e.target.value)}
+                      required
+                      {...defaultProps}
+                    />
+                    <Input
+                      label="UPC"
+                      name="upc"
+                      value={formData.upc}
+                      onChange={(e) => handleInputChange('upc', e.target.value)}
+                      {...defaultProps}
+                    />
+                    <Input
+                      label="Size"
+                      name="size"
+                      value={formData.size}
+                      onChange={(e) => handleInputChange('size', e.target.value)}
+                      {...defaultProps}
+                    />
+                    <Input
+                      label="Case Pack"
+                      name="case_pack"
+                      type="number"
+                      value={formData.case_pack}
+                      onChange={(e) => handleInputChange('case_pack', e.target.value)}
+                      {...defaultProps}
+                    />
+                  </div>
+                </CardBody>
+              </Card>
+
+              {/* Pricing Card */}
+              <Card className="shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                    Pricing
+                  </Typography>
+                </CardHeader>
+                <CardBody className="px-4 pt-6" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input
+                      label="Americas Price (USD)"
+                      name="price_americas"
+                      type="number"
+                      step="0.01"
+                      value={formData.price_americas}
+                      onChange={(e) => handleInputChange('price_americas', e.target.value)}
+                      required
+                      {...defaultProps}
+                    />
+                    <Input
+                      label="International Price (USD)"
+                      name="price_international"
+                      type="number"
+                      step="0.01"
+                      value={formData.price_international}
+                      onChange={(e) => handleInputChange('price_international', e.target.value)}
+                      required
+                      {...defaultProps}
+                    />
+                  </div>
+                </CardBody>
+              </Card>
+            </div>
+          </div>
+
+          {/* Bottom Row: Product Settings on Left, Packing List on Right */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left: Product Settings Card (merged with Client Class Visibility) */}
+            <Card className="shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  Product Settings
+                </Typography>
+              </CardHeader>
+              <CardBody className="px-4 pt-6" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <div className="space-y-4">
+                  <div className="space-y-4">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="enable"
+                        checked={formData.enable}
+                        onChange={handleChange}
+                        className="h-4 w-4 text-blue-gray-600 focus:ring-blue-gray-500 border-gray-300 rounded transition"
+                      />
+                      <span className="ml-3 text-sm font-normal text-gray-700">Enable Product</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="list_in_support_funds"
+                        checked={formData.list_in_support_funds}
+                        onChange={handleChange}
+                        className="h-4 w-4 text-blue-gray-600 focus:ring-blue-gray-500 border-gray-300 rounded transition"
+                      />
+                      <span className="ml-3 text-sm font-normal text-gray-700">Eligible for Support Funds</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="qualifies_for_credit_earning"
+                        checked={formData.qualifies_for_credit_earning}
+                        onChange={handleChange}
+                        className="h-4 w-4 text-blue-gray-600 focus:ring-blue-gray-500 border-gray-300 rounded transition"
+                      />
+                      <span className="ml-3 text-sm font-normal text-gray-700">Qualifies for Credit Earning</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="out_of_stock"
+                        checked={formData.out_of_stock}
+                        onChange={handleChange}
+                        className="h-4 w-4 text-blue-gray-600 focus:ring-blue-gray-500 border-gray-300 rounded transition"
+                      />
+                      <span className="ml-3 text-sm font-normal text-gray-700">Out of Stock</span>
+                    </label>
+                  </div>
+
+                  <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
+                    <Typography variant="small" className="font-medium text-gray-800 mb-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                      Support Fund Settings Explained:
+                    </Typography>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                      <li><strong>Eligible for Support Funds:</strong> Can this product be purchased WITH support fund credit?</li>
+                      <li><strong>Qualifies for Credit Earning:</strong> Does purchasing this product EARN support fund credit?</li>
+                      <li><strong>Note:</strong> Kits, discounted items, and promotional items typically should NOT qualify for credit earning.</li>
+                    </ul>
+                  </div>
+
+                  <div className="border-t pt-4 mt-4">
+                    <Typography variant="small" className="font-semibold text-gray-700 mb-3" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                      Client Class Visibility
+                    </Typography>
+                    <div className="space-y-3">
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="visible_to_americas"
+                          checked={formData.visible_to_americas}
+                          onChange={handleChange}
+                          className="h-4 w-4 text-blue-gray-600 focus:ring-blue-gray-500 border-gray-300 rounded transition"
+                        />
+                        <span className="ml-3 text-sm font-normal text-gray-700">Visible to Americas Clients</span>
+                      </label>
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="visible_to_international"
+                          checked={formData.visible_to_international}
+                          onChange={handleChange}
+                          className="h-4 w-4 text-blue-gray-600 focus:ring-blue-gray-500 border-gray-300 rounded transition"
+                        />
+                        <span className="ml-3 text-sm font-normal text-gray-700">Visible to International Clients</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+
+            {/* Right: Packing List Information Card */}
+            <Card className="shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+              <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                  Packing List Information
+                </Typography>
+              </CardHeader>
+              <CardBody className="px-4 pt-6" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                <div className="grid grid-cols-1 gap-6">
+                  <Input
+                    label="Case Weight (kg)"
+                    name="case_weight"
+                    type="number"
+                    step="0.01"
+                    value={formData.case_weight}
+                    onChange={(e) => handleInputChange('case_weight', e.target.value)}
+                    placeholder="e.g., 12.50"
+                    onPointerEnterCapture={undefined}
+                    onPointerLeaveCapture={undefined}
+                    crossOrigin={undefined}
+                  />
+                  <Input
+                    label="HS Code"
+                    name="hs_code"
+                    value={formData.hs_code}
+                    onChange={(e) => handleInputChange('hs_code', e.target.value)}
+                    placeholder="e.g., 3305.10.00"
+                    onPointerEnterCapture={undefined}
+                    onPointerLeaveCapture={undefined}
+                    crossOrigin={undefined}
+                  />
+                  <Input
+                    label="Made In"
+                    name="made_in"
+                    value={formData.made_in}
+                    onChange={(e) => handleInputChange('made_in', e.target.value)}
+                    placeholder="e.g., USA, China, Italy"
+                    onPointerEnterCapture={undefined}
+                    onPointerLeaveCapture={undefined}
+                    crossOrigin={undefined}
+                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Category
+                    </label>
+                    <select
+                      name="category_id"
+                      value={formData.category_id}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                    >
+                      <option value="">No Category</option>
+                      {categories.map(category => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Typography variant="small" color="gray" className="mt-1 font-normal" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                      Assign this product to a category for better organization
+                    </Typography>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-4 pt-4">
+            <Link href="/admin/products">
+              <Button
+                variant="outlined"
+                color="gray"
+                placeholder={undefined}
+                onPointerEnterCapture={undefined}
+                onPointerLeaveCapture={undefined}
+              >
+                Cancel
+              </Button>
+            </Link>
+            <Button
+              type="submit"
+              className="bg-black text-white hover:opacity-90 disabled:opacity-50"
+              disabled={loading}
+              placeholder={undefined}
+              onPointerEnterCapture={undefined}
+              onPointerLeaveCapture={undefined}
+            >
+              {loading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </div>
+      </form>
+    </div>
   );
 }
