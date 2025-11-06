@@ -136,9 +136,8 @@ export default function Sidenav({
   }, [routes, isRouteActive]);
 
   const getSpacingClasses = () => {
-    // When collapsed, use px-4 (16px) to center icons (12px + 4px = 16px shifts icon 4px right to center)
-    // When expanded, use px-3 (12px) for proper text alignment
-    return isCollapsed ? "px-4 justify-start" : "px-3 justify-start";
+    // Keep padding consistent to prevent movement during transition
+    return isCollapsed ? "px-3 justify-start" : "px-3 justify-start";
   };
 
   const renderMenuItems = (items: Route[], level = 0) => {
@@ -204,7 +203,9 @@ export default function Sidenav({
           itemBaseClasses.push("hover:opacity-90");
         }
 
-        const iconWrapperClasses = "flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit";
+        // Use transform to shift icon 4px right when collapsed to center it
+        // The transform is applied instantly (no transition) so icon doesn't move during menu expansion
+        const iconWrapperClasses = `flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit ${isCollapsed ? "[transform:translateX(4px)] [transition:none]" : ""}`;
 
         // When collapsed, use absolute positioning to remove label from flex flow completely
         // This prevents label from affecting icon position during transition
