@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
 import Card from '../../../components/ui/Card';
@@ -78,105 +78,106 @@ export default function CompanyViewPage() {
   const [error, setError] = useState('');
   const [userError, setUserError] = useState('');
 
-  const fetchCompany = useCallback(async () => {
-    try {
-      console.log('Fetching company with ID:', companyId);
-      
-      // Fetch company data
-      const { data: companyData, error: companyError } = await supabase
-        .from('companies')
-        .select(`
-          *,
-          support_fund:support_fund_levels(percent),
-          subsidiary:subsidiaries(name),
-          class:classes(name),
-          location:Locations(location_name),
-          incoterm:incoterms(name),
-          payment_term:payment_terms(name)
-        `)
-        .eq('id', companyId)
-        .single();
-
-      if (companyError) {
-        console.error('Error fetching company:', companyError);
-        throw companyError;
-      }
-
-      // Fetch territories
-      const { data: territoriesData, error: territoriesError } = await supabase
-        .from('company_territories')
-        .select('*')
-        .eq('company_id', companyId);
-
-      if (territoriesError) {
-        console.error('Error fetching territories:', territoriesError);
-        throw territoriesError;
-      }
-
-      // Fetch target periods
-      const { data: targetPeriodsData, error: targetPeriodsError } = await supabase
-        .from('target_periods')
-        .select('*')
-        .eq('company_id', companyId)
-        .order('start_date', { ascending: true });
-
-      if (targetPeriodsError) {
-        console.error('Error fetching target periods:', targetPeriodsError);
-        throw targetPeriodsError;
-      }
-
-      // Combine all data
-      const combinedData = {
-        ...companyData,
-        territories: territoriesData || [],
-        target_periods: targetPeriodsData || []
-      };
-
-      console.log('Company query result:', { data: combinedData });
-      setCompany(combinedData);
-    } catch (err: any) {
-      console.error('Company fetch error:', err);
-      setError(err.message);
-    }
-  }, [companyId]);
-
-  const fetchUsers = useCallback(async () => {
-    try {
-      console.log('Fetching clients for company:', companyId);
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('company_id', companyId)
-        .order('name', { ascending: true });
-
-      console.log('Clients query result:', { data, error });
-
-      if (error) {
-        console.error('Error fetching clients:', error);
-        throw error;
-      }
-      setUsers(data || []);
-    } catch (err: any) {
-      console.error('Clients fetch error:', err);
-    }
-  }, [companyId]);
-
   useEffect(() => {
-    if (companyId) {
-      const loadData = async () => {
-        setLoading(true);
-        setError('');
-        try {
-          await Promise.all([fetchCompany(), fetchUsers()]);
-        } catch (err) {
-          console.error('Error loading data:', err);
-        } finally {
-          setLoading(false);
+    if (!companyId) return;
+
+    const fetchCompany = async () => {
+      try {
+        console.log('Fetching company with ID:', companyId);
+        
+        // Fetch company data
+        const { data: companyData, error: companyError } = await supabase
+          .from('companies')
+          .select(`
+            *,
+            support_fund:support_fund_levels(percent),
+            subsidiary:subsidiaries(name),
+            class:classes(name),
+            location:Locations(location_name),
+            incoterm:incoterms(name),
+            payment_term:payment_terms(name)
+          `)
+          .eq('id', companyId)
+          .single();
+
+        if (companyError) {
+          console.error('Error fetching company:', companyError);
+          throw companyError;
         }
-      };
-      loadData();
-    }
-  }, [companyId, fetchCompany, fetchUsers]);
+
+        // Fetch territories
+        const { data: territoriesData, error: territoriesError } = await supabase
+          .from('company_territories')
+          .select('*')
+          .eq('company_id', companyId);
+
+        if (territoriesError) {
+          console.error('Error fetching territories:', territoriesError);
+          throw territoriesError;
+        }
+
+        // Fetch target periods
+        const { data: targetPeriodsData, error: targetPeriodsError } = await supabase
+          .from('target_periods')
+          .select('*')
+          .eq('company_id', companyId)
+          .order('start_date', { ascending: true });
+
+        if (targetPeriodsError) {
+          console.error('Error fetching target periods:', targetPeriodsError);
+          throw targetPeriodsError;
+        }
+
+        // Combine all data
+        const combinedData = {
+          ...companyData,
+          territories: territoriesData || [],
+          target_periods: targetPeriodsData || []
+        };
+
+        console.log('Company query result:', { data: combinedData });
+        setCompany(combinedData);
+      } catch (err: any) {
+        console.error('Company fetch error:', err);
+        setError(err.message);
+      }
+    };
+
+    const fetchUsers = async () => {
+      try {
+        console.log('Fetching clients for company:', companyId);
+        const { data, error } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('company_id', companyId)
+          .order('name', { ascending: true });
+
+        console.log('Clients query result:', { data, error });
+
+        if (error) {
+          console.error('Error fetching clients:', error);
+          throw error;
+        }
+        setUsers(data || []);
+      } catch (err: any) {
+        console.error('Clients fetch error:', err);
+      }
+    };
+
+    const loadData = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        await Promise.all([fetchCompany(), fetchUsers()]);
+      } catch (err) {
+        console.error('Error loading data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [companyId]);
   
   // Temporarily disabled breadcrumb setting to debug React error #310
   // useEffect(() => {
