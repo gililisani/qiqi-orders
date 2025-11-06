@@ -142,7 +142,7 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
   
   const { data: products, error: productsError } = await supabaseAdmin
     .from('Products')
-    .select('id, item_name, hs_code, case_weight, made_in, eccn_code, unit_of_measure, price_international')
+    .select('id, item_name, hs_code, case_weight, made_in, unit_of_measure, price_international')
     .in('id', productIds);
 
   if (productsError) {
@@ -164,7 +164,6 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
     hs_code?: string | null;
     case_weight?: number | null;
     made_in?: string | null;
-    eccn_code?: string | null;
     unit_of_measure?: string | null;
     price_international?: number | null;
   };
