@@ -28,8 +28,16 @@ export async function GET(
       .single();
 
     if (sliError || !sli) {
+      console.error('Error fetching SLI:', sliError);
       return NextResponse.json({ error: 'SLI not found' }, { status: 404 });
     }
+
+    console.log('Fetched SLI:', {
+      id: sli.id,
+      sli_number: sli.sli_number,
+      selected_products_type: typeof sli.selected_products,
+      selected_products: sli.selected_products,
+    });
 
     // Read HTML template
     const templatePath = path.join(process.cwd(), 'public', 'templates', 'sli-nested-tables.html');
@@ -113,13 +121,21 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
   }
 
   // Fetch product details from Products table
+  console.log('Processing selectedProducts:', JSON.stringify(selectedProducts, null, 2));
+  
   const productIds = selectedProducts
-    .map((sp: any) => sp.product_id)
-    .filter((id: any) => id); // Filter out any null/undefined IDs
+    .map((sp: any) => {
+      // Handle both product_id and id fields
+      const id = sp.product_id || sp.id;
+      return id;
+    })
+    .filter((id: any) => id && id !== 'undefined' && id !== 'null'); // Filter out any null/undefined IDs
+
+  console.log('Extracted product IDs:', productIds);
 
   if (productIds.length === 0) {
-    console.error('No valid product IDs found. selectedProducts:', selectedProducts);
-    throw new Error('No valid product IDs found in SLI');
+    console.error('No valid product IDs found. selectedProducts:', JSON.stringify(selectedProducts, null, 2));
+    throw new Error('No valid product IDs found in SLI. Please check that products were selected correctly.');
   }
 
   console.log('Fetching products with IDs:', productIds);
