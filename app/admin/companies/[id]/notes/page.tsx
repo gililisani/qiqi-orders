@@ -31,6 +31,40 @@ export default function CompanyNotesPage() {
     }
   }, [companyId]);
 
+  // Set breadcrumb - MUST be called before early returns to prevent hook ordering issues
+  useEffect(() => {
+    if (!company?.company_name) return;
+    
+    // Wait for breadcrumb function to be available
+    const setBreadcrumbs = () => {
+      if ((window as any).__setBreadcrumbs) {
+        try {
+          (window as any).__setBreadcrumbs([
+            { label: company.company_name },
+            { label: 'Notes' }
+          ]);
+        } catch (error) {
+          console.error('Error setting breadcrumbs:', error);
+        }
+      }
+    };
+    
+    // Try immediately, then retry after a short delay if needed
+    setBreadcrumbs();
+    const timeoutId = setTimeout(setBreadcrumbs, 100);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      if ((window as any).__setBreadcrumbs) {
+        try {
+          (window as any).__setBreadcrumbs([]);
+        } catch (error) {
+          // Ignore cleanup errors
+        }
+      }
+    };
+  }, [company]);
+
   const fetchCompany = async () => {
     try {
       const { data: companyData, error: companyError } = await supabase
@@ -75,40 +109,6 @@ export default function CompanyNotesPage() {
         </div>
     );
   }
-
-  // Set breadcrumb
-  useEffect(() => {
-    if (!company) return;
-    
-    // Wait for breadcrumb function to be available
-    const setBreadcrumbs = () => {
-      if ((window as any).__setBreadcrumbs) {
-        try {
-          (window as any).__setBreadcrumbs([
-            { label: company.company_name },
-            { label: 'Notes' }
-          ]);
-        } catch (error) {
-          console.error('Error setting breadcrumbs:', error);
-        }
-      }
-    };
-    
-    // Try immediately, then retry after a short delay if needed
-    setBreadcrumbs();
-    const timeoutId = setTimeout(setBreadcrumbs, 100);
-    
-    return () => {
-      clearTimeout(timeoutId);
-      if ((window as any).__setBreadcrumbs) {
-        try {
-          (window as any).__setBreadcrumbs([]);
-        } catch (error) {
-          // Ignore cleanup errors
-        }
-      }
-    };
-  }, [company]);
 
   return (
     <div className="mt-8 mb-4 space-y-6">
