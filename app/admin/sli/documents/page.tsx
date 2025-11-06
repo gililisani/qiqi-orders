@@ -14,7 +14,7 @@ interface StandaloneSLI {
   consignee_name: string;
   company?: {
     company_name: string;
-  };
+  } | null;
 }
 
 export default function SLIDocumentsPage() {
@@ -43,7 +43,16 @@ export default function SLIDocumentsPage() {
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
-      setSlis(data || []);
+      
+      // Transform data: Supabase returns company as an array, convert to single object
+      const transformedData = (data || []).map((sli: any) => ({
+        ...sli,
+        company: Array.isArray(sli.company) && sli.company.length > 0 
+          ? sli.company[0] 
+          : null,
+      }));
+      
+      setSlis(transformedData);
     } catch (err: any) {
       console.error('Error fetching SLIs:', err);
       setError(err.message);
