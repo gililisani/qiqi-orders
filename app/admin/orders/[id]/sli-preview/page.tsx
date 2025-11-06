@@ -44,8 +44,42 @@ export default function SLIPreviewPage() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPDF = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Not authenticated');
+        return;
+      }
+
+      // Call server-side PDF generation API
+      const response = await fetch(`/api/orders/${orderId}/sli/pdf`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate PDF');
+      }
+      
+      // Get the PDF blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || `SLI-${orderId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Error generating PDF:', err);
+      alert('Failed to generate PDF: ' + err.message);
+    }
   };
 
   if (loading) {
@@ -133,7 +167,7 @@ export default function SLIPreviewPage() {
         {/* Print button - only visible on screen, hidden when printing */}
         <div className="print:hidden fixed top-4 right-4 z-50 space-x-2">
           <button
-            onClick={handlePrint}
+            onClick={handleDownloadPDF}
             className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-lg"
           >
             Download as PDF

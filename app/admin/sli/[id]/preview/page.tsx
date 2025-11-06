@@ -2,8 +2,6 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 
 export default function StandaloneSLIPreviewPage() {
   const params = useParams();
@@ -12,7 +10,6 @@ export default function StandaloneSLIPreviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [generatingPDF, setGeneratingPDF] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchSLIHTML();
@@ -36,97 +33,29 @@ export default function StandaloneSLIPreviewPage() {
   };
 
   const handleDownloadPDF = async () => {
-    if (!contentRef.current) {
-      alert('Content not ready for PDF generation');
-      return;
-    }
-
     try {
       setGeneratingPDF(true);
-
-      // Hide the no-print elements temporarily
-      const noPrintElements = document.querySelectorAll('.no-print');
-      noPrintElements.forEach((el: any) => {
-        el.style.display = 'none';
-      });
-
-      // Capture the content as canvas
-      const canvas = await html2canvas(contentRef.current, {
-        scale: 1.5, // Good balance between quality and file size
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-      });
-
-      // Restore no-print elements
-      noPrintElements.forEach((el: any) => {
-        el.style.display = '';
-      });
-
-      // Create PDF - A4 portrait (210mm x 297mm)
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
       
-      const pdfWidth = 210; // A4 width in mm
-      const pdfHeight = 297; // A4 height in mm
+      // Call server-side PDF generation API
+      const response = await fetch(`/api/sli/${sliId}/pdf`);
       
-      // Calculate scaling - fit to page width, maintain aspect ratio
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const imgAspectRatio = imgWidth / imgHeight;
-      
-      // Convert canvas pixels to mm assuming 96 DPI
-      // At 96 DPI: 1 inch = 96 pixels = 25.4mm, so 1 pixel = 25.4/96 mm
-      const mmPerPixel = 25.4 / 96;
-      const imgWidthMM = imgWidth * mmPerPixel;
-      const imgHeightMM = imgHeight * mmPerPixel;
-      
-      // Scale to fit page width
-      const scale = pdfWidth / imgWidthMM;
-      const scaledWidth = pdfWidth;
-      const scaledHeight = imgHeightMM * scale;
-
-      // Split across pages if content is taller than one page
-      if (scaledHeight <= pdfHeight) {
-        // Content fits on one page
-        pdf.addImage(imgData, 'PNG', 0, 0, scaledWidth, scaledHeight, undefined, 'FAST');
-      } else {
-        // Content needs multiple pages
-        const totalPages = Math.ceil(scaledHeight / pdfHeight);
-        const imgHeightPerPage = imgHeight / totalPages;
-
-        for (let page = 0; page < totalPages; page++) {
-          if (page > 0) {
-            pdf.addPage();
-          }
-          
-          const sourceY = page * imgHeightPerPage;
-          const sourceHeight = Math.min(imgHeightPerPage, imgHeight - sourceY);
-          
-          // Create temporary canvas for this page
-          const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = imgWidth;
-          tempCanvas.height = sourceHeight;
-          const ctx = tempCanvas.getContext('2d');
-          if (ctx) {
-            // Draw the slice of the original canvas
-            ctx.drawImage(canvas, 0, sourceY, imgWidth, sourceHeight, 0, 0, imgWidth, sourceHeight);
-            const pageImgData = tempCanvas.toDataURL('image/png');
-            const pageHeightMM = (sourceHeight * mmPerPixel) * scale;
-            pdf.addImage(pageImgData, 'PNG', 0, 0, scaledWidth, pageHeightMM, undefined, 'FAST');
-          }
-        }
-      }
-
-      // Get SLI number for filename - extract from HTML or use ID
-      let sliNumber = sliId.substring(0, 8);
-      const sliNumberMatch = htmlContent.match(/SLI Number[:\s]*(\d+)/i);
-      if (sliNumberMatch) {
-        sliNumber = sliNumberMatch[1];
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate PDF');
       }
       
-      // Save PDF
-      pdf.save(`SLI-${sliNumber}.pdf`);
+      // Get the PDF blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || `SLI-${sliId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
     } catch (err: any) {
       console.error('Error generating PDF:', err);
       alert('Failed to generate PDF: ' + err.message);
