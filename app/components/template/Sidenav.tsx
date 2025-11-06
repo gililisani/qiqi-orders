@@ -202,13 +202,15 @@ export default function Sidenav({
           itemBaseClasses.push("hover:opacity-90");
         }
 
-        // When collapsed, use transform to center the icon (4px shift) without transitions
-        // Using transition-none to prevent transform animation, so icon stays visually stable
-        const iconWrapperClasses = `flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit transition-none ${isCollapsed ? "translate-x-1" : ""}`;
+        const iconWrapperClasses = "flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit";
 
+        // When collapsed, use absolute positioning to remove label from flex flow completely
+        // This prevents label from affecting icon position during transition
         const labelClasses = [
-          "min-w-0 text-sm font-normal capitalize text-left overflow-hidden whitespace-nowrap transition-all duration-200",
-          isCollapsed ? "max-w-0 opacity-0 pointer-events-none flex-none" : "max-w-full opacity-100 flex-1",
+          "text-sm font-normal capitalize text-left overflow-hidden whitespace-nowrap transition-all duration-200",
+          isCollapsed 
+            ? "absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden" 
+            : "min-w-0 max-w-full opacity-100 flex-1",
         ].join(" ");
 
         const chevronClasses = [
