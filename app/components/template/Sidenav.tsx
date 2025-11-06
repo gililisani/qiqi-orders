@@ -202,8 +202,9 @@ export default function Sidenav({
           itemBaseClasses.push("hover:opacity-90");
         }
 
-        // When collapsed, add margin-left to center the icon (4px = 16px - 12px padding difference)
-        const iconWrapperClasses = `flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit ${isCollapsed ? "ml-1" : ""}`;
+        // When collapsed, use transform to center the icon (4px shift) without transitions
+        // Using transition-none to prevent transform animation, so icon stays visually stable
+        const iconWrapperClasses = `flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit transition-none ${isCollapsed ? "translate-x-1" : ""}`;
 
         const labelClasses = [
           "min-w-0 text-sm font-normal capitalize text-left overflow-hidden whitespace-nowrap transition-all duration-200",
