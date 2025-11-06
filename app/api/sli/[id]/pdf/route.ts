@@ -29,9 +29,13 @@ export async function GET(
     const html = await htmlResponse.text();
 
     // Launch Puppeteer with Chromium for serverless
+    const isProduction = process.env.VERCEL || process.env.NODE_ENV === 'production';
+    
     browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
+      args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
+      executablePath: isProduction 
+        ? await chromium.executablePath() 
+        : undefined, // Use system Chrome in development
       headless: true,
     });
 
