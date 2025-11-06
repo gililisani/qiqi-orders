@@ -73,25 +73,82 @@ export default function SLIPreviewPage() {
   }
 
   return (
-    <div>
-      {/* Print button - only visible on screen, hidden when printing */}
-      <div className="print:hidden fixed top-4 right-4 z-50 space-x-2">
-        <button
-          onClick={handlePrint}
-          className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-lg"
-        >
-          Download as PDF
-        </button>
-        <button
-          onClick={() => window.close()}
-          className="px-6 py-3 bg-gray-600 text-white rounded hover:bg-gray-700 shadow-lg"
-        >
-          Close
-        </button>
-      </div>
+    <>
+      <style jsx global>{`
+        @media print {
+          /* Hide all admin layout elements */
+          nav,
+          header,
+          aside,
+          [role="navigation"],
+          [class*="sidenav"],
+          [class*="sidebar"],
+          [class*="breadcrumb"],
+          [class*="navbar"],
+          [class*="header"],
+          [class*="admin-layout"],
+          [class*="layout-wrapper"],
+          [class*="sticky"],
+          [class*="top-0"],
+          /* Hide the print button */
+          .print\\:hidden,
+          button {
+            display: none !important;
+            visibility: hidden !important;
+          }
+          
+          /* Reset body margins for printing */
+          @page {
+            margin: 0;
+          }
+          
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          
+          /* Hide everything except SLI content */
+          body * {
+            visibility: hidden;
+          }
+          
+          /* Make SLI content visible and properly positioned */
+          #sli-content,
+          #sli-content * {
+            visibility: visible !important;
+          }
+          
+          #sli-content {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+        }
+      `}</style>
+      
+      <div>
+        {/* Print button - only visible on screen, hidden when printing */}
+        <div className="print:hidden fixed top-4 right-4 z-50 space-x-2">
+          <button
+            onClick={handlePrint}
+            className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-lg"
+          >
+            Download as PDF
+          </button>
+          <button
+            onClick={() => window.close()}
+            className="px-6 py-3 bg-gray-600 text-white rounded hover:bg-gray-700 shadow-lg"
+          >
+            Close
+          </button>
+        </div>
 
-      {/* SLI Content */}
-      <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
-    </div>
+        {/* SLI Content */}
+        <div id="sli-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+      </div>
+    </>
   );
 }
