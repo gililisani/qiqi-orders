@@ -136,7 +136,7 @@ export default function Sidenav({
   }, [routes, isRouteActive]);
 
   const getSpacingClasses = () => {
-    return isCollapsed ? "px-3 justify-start" : "px-3 justify-start";
+    return isCollapsed ? "px-4 justify-start" : "px-3 justify-start";
   };
 
   const renderMenuItems = (items: Route[], level = 0) => {
