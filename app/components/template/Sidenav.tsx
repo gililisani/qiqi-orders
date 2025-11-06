@@ -136,7 +136,7 @@ export default function Sidenav({
   }, [routes, isRouteActive]);
 
   const getSpacingClasses = () => {
-    return isCollapsed ? "px-3 justify-start" : "px-3 justify-start";
+    return isCollapsed ? "px-3 justify-center" : "px-3 justify-start";
   };
 
   const renderMenuItems = (items: Route[], level = 0) => {
@@ -190,7 +190,7 @@ export default function Sidenav({
           "group relative flex items-center w-full min-h-[44px] rounded-lg transition-all duration-300 ease-in-out overflow-hidden text-inherit active:scale-[0.98]",
           // Only add hover class if item is not active (active items should keep gradient, hover can slightly darken it)
           isActiveLeaf ? "" : hoverBackgroundClass,
-          getSpacingClasses(),
+          isCollapsed ? "px-3 justify-center" : "px-3 justify-start",
           isCollapsed ? "gap-0" : "gap-3",
           "focus:outline-none focus-visible:outline-none",
         ];
