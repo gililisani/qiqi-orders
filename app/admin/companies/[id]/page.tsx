@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
 import Card from '../../../components/ui/Card';
@@ -78,33 +78,7 @@ export default function CompanyViewPage() {
   const [error, setError] = useState('');
   const [userError, setUserError] = useState('');
 
-  useEffect(() => {
-    if (companyId) {
-      const loadData = async () => {
-        setLoading(true);
-        setError('');
-        try {
-          await Promise.all([fetchCompany(), fetchUsers()]);
-        } catch (err) {
-          console.error('Error loading data:', err);
-        } finally {
-          setLoading(false);
-        }
-      };
-      loadData();
-    }
-  }, [companyId]);
-  
-  // Clean up breadcrumb on unmount
-  useEffect(() => {
-    return () => {
-      if ((window as any).__setBreadcrumbs) {
-        (window as any).__setBreadcrumbs([]);
-      }
-    };
-  }, []);
-
-  const fetchCompany = async () => {
+  const fetchCompany = useCallback(async () => {
     try {
       console.log('Fetching company with ID:', companyId);
       
@@ -160,20 +134,13 @@ export default function CompanyViewPage() {
 
       console.log('Company query result:', { data: combinedData });
       setCompany(combinedData);
-      
-      // Set breadcrumb
-      if ((window as any).__setBreadcrumbs && companyData.company_name) {
-        (window as any).__setBreadcrumbs([
-          { label: companyData.company_name }
-        ]);
-      }
     } catch (err: any) {
       console.error('Company fetch error:', err);
       setError(err.message);
     }
-  };
+  }, [companyId]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       console.log('Fetching clients for company:', companyId);
       const { data, error } = await supabase
@@ -192,7 +159,56 @@ export default function CompanyViewPage() {
     } catch (err: any) {
       console.error('Clients fetch error:', err);
     }
-  };
+  }, [companyId]);
+
+  useEffect(() => {
+    if (companyId) {
+      const loadData = async () => {
+        setLoading(true);
+        setError('');
+        try {
+          await Promise.all([fetchCompany(), fetchUsers()]);
+        } catch (err) {
+          console.error('Error loading data:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadData();
+    }
+  }, [companyId, fetchCompany, fetchUsers]);
+  
+  // Set breadcrumb when company data is available
+  useEffect(() => {
+    if (!company?.company_name) return;
+    
+    const setBreadcrumbs = () => {
+      if ((window as any).__setBreadcrumbs) {
+        try {
+          (window as any).__setBreadcrumbs([
+            { label: company.company_name }
+          ]);
+        } catch (error) {
+          console.error('Error setting breadcrumbs:', error);
+        }
+      }
+    };
+    
+    // Try immediately, then retry after a short delay if needed
+    setBreadcrumbs();
+    const timeoutId = setTimeout(setBreadcrumbs, 100);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      if ((window as any).__setBreadcrumbs) {
+        try {
+          (window as any).__setBreadcrumbs([]);
+        } catch (error) {
+          // Ignore cleanup errors
+        }
+      }
+    };
+  }, [company]);
 
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
