@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabase } from '../../../../../lib/supabase-provider';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 export default function SLIPreviewPage() {
   const params = useParams();
@@ -11,6 +13,8 @@ export default function SLIPreviewPage() {
   const [htmlContent, setHtmlContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchSLIHTML();
@@ -44,8 +48,96 @@ export default function SLIPreviewPage() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPDF = async () => {
+    if (!contentRef.current) {
+      alert('Content not ready for PDF generation');
+      return;
+    }
+
+    try {
+      setGeneratingPDF(true);
+
+      // Hide the print:hidden elements temporarily
+      const printHiddenElements = document.querySelectorAll('[class*="print:hidden"]');
+      printHiddenElements.forEach((el: any) => {
+        el.style.display = 'none';
+      });
+
+      // Capture the content as canvas
+      const canvas = await html2canvas(contentRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
+
+      // Restore print:hidden elements
+      printHiddenElements.forEach((el: any) => {
+        el.style.display = '';
+      });
+
+      // Create PDF - A4 portrait
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      // Calculate dimensions
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = pdfWidth / imgWidth; // Scale to fit page width
+      const scaledHeight = imgHeight * ratio;
+
+      // Split across pages if content is taller than one page
+      if (scaledHeight <= pdfHeight) {
+        // Content fits on one page
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, scaledHeight);
+      } else {
+        // Content needs multiple pages - split the canvas
+        // Calculate how many pixels fit on one PDF page
+        const pixelsPerPDFPage = pdfHeight / ratio;
+        const pageCount = Math.ceil(imgHeight / pixelsPerPDFPage);
+
+        for (let i = 0; i < pageCount; i++) {
+          if (i > 0) {
+            pdf.addPage();
+          }
+          
+          const sourceY = i * pixelsPerPDFPage;
+          const sourceHeight = Math.min(pixelsPerPDFPage, imgHeight - sourceY);
+          
+          // Create a temporary canvas for this page slice
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = imgWidth;
+          tempCanvas.height = sourceHeight;
+          const ctx = tempCanvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(canvas, 0, sourceY, imgWidth, sourceHeight, 0, 0, imgWidth, sourceHeight);
+            const pageImgData = tempCanvas.toDataURL('image/png');
+            const pageScaledHeight = sourceHeight * ratio;
+            pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, pageScaledHeight);
+          }
+        }
+      }
+
+      // Get order number for filename
+      const { data: order } = await supabase
+        .from('orders')
+        .select('invoice_number, so_number')
+        .eq('id', orderId)
+        .single();
+      
+      const filename = order?.invoice_number || order?.so_number || orderId.substring(0, 8);
+      
+      // Save PDF
+      pdf.save(`SLI-${filename}.pdf`);
+    } catch (err: any) {
+      console.error('Error generating PDF:', err);
+      alert('Failed to generate PDF: ' + err.message);
+    } finally {
+      setGeneratingPDF(false);
+    }
   };
 
   if (loading) {
@@ -77,10 +169,11 @@ export default function SLIPreviewPage() {
       {/* Print button - only visible on screen, hidden when printing */}
       <div className="print:hidden fixed top-4 right-4 z-50 space-x-2">
         <button
-          onClick={handlePrint}
-          className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-lg"
+          onClick={handleDownloadPDF}
+          disabled={generatingPDF}
+          className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-lg disabled:opacity-50"
         >
-          Download as PDF
+          {generatingPDF ? 'Generating PDF...' : 'Download as PDF'}
         </button>
         <button
           onClick={() => window.close()}
@@ -91,7 +184,7 @@ export default function SLIPreviewPage() {
       </div>
 
       {/* SLI Content */}
-      <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+      <div ref={contentRef} dangerouslySetInnerHTML={{ __html: htmlContent }} />
     </div>
   );
 }
