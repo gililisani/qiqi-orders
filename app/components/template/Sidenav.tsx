@@ -139,18 +139,51 @@ export default function Sidenav({
     return isCollapsed ? "px-3 justify-start" : "px-3 justify-start";
   };
 
-  const renderMenuItems = (items: Route[], level = 0) => (
+  const renderMenuItems = (items: Route[], level = 0) => {
+    // Helper function to check if a route is the most specific active match
+    // This prevents parent routes from being highlighted when a child route matches
+    const isMostSpecificActive = (routePath: string | undefined, routePages: Route[] | undefined): boolean => {
+      if (!routePath) return false;
+      
+      // Exact match is always active
+      if (pathname === routePath) return true;
+      
+      // For Dashboard, only exact match
+      if (routePath === "/admin" || routePath === "/client") {
+        return pathname === routePath;
+      }
+      
+      // Check if pathname starts with this route
+      if (!pathname.startsWith(`${routePath}/`)) return false;
+      
+      // If this route has children, check if any child route matches exactly
+      // If a child matches exactly, this parent should not be highlighted
+      if (routePages && routePages.length > 0) {
+        const hasExactChildMatch = routePages.some(child => 
+          child.path && pathname === child.path
+        );
+        if (hasExactChildMatch) return false;
+      }
+      
+      // Check if any sibling route (routes at the same level) matches exactly
+      // If a sibling matches exactly, this route should not be highlighted
+      const siblingRoutes = items.map(item => item.path);
+      const hasExactSiblingMatch = siblingRoutes.some(siblingPath => 
+        siblingPath && siblingPath !== routePath && pathname === siblingPath
+      );
+      if (hasExactSiblingMatch) return false;
+      
+      // Otherwise, it's active if pathname starts with the route path
+      return true;
+    };
+    
+    return (
     <ul className={`flex flex-col gap-1 ${level === 0 ? "" : "mt-1"}`}>
       {items.map(({ name, icon, pages, title, divider, external, path }, index) => {
         const key = `${name}-${index}`;
         const hasChildren = Array.isArray(pages) && pages.length > 0;
-        // Check if this route is active
-        // For Dashboard (exact match only), for other routes (exact match or nested route)
-        const isActiveLeaf = !hasChildren && path 
-          ? (path === "/admin" || path === "/client" 
-              ? pathname === path 
-              : (pathname === path || pathname.startsWith(`${path}/`))) 
-          : false;
+        // Check if this route is active (only if it's the most specific match)
+        const isActiveLeaf = !hasChildren && path ? isMostSpecificActive(path, pages) : false;
         const isOpen = level === 0 ? openCollapse === name : openSubCollapse === name;
 
         const itemBaseClasses = [
@@ -266,7 +299,8 @@ export default function Sidenav({
         return null;
       })}
     </ul>
-  );
+    );
+  };
 
   return (
     <Card
