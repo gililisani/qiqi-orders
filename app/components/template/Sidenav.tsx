@@ -136,7 +136,9 @@ export default function Sidenav({
   }, [routes, isRouteActive]);
 
   const getSpacingClasses = () => {
-    return isCollapsed ? "px-3 justify-start" : "px-3 justify-start";
+    // When collapsed, use px-4 (16px) to center icons (12px + 4px = 16px shifts icon 4px right to center)
+    // When expanded, use px-3 (12px) for proper text alignment
+    return isCollapsed ? "px-4 justify-start" : "px-3 justify-start";
   };
 
   const renderMenuItems = (items: Route[], level = 0) => {
