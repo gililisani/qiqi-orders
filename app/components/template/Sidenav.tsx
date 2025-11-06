@@ -192,9 +192,13 @@ export default function Sidenav({
           // Only add hover class if item is not active (active items should keep gradient, hover can slightly darken it)
           isActiveLeaf ? "" : hoverBackgroundClass,
           getSpacingClasses(),
+          // Keep gap consistent to prevent layout shift - gap change doesn't affect icon position when label is absolutely positioned
           isCollapsed ? "gap-0" : "gap-3",
           "focus:outline-none focus-visible:outline-none",
         ];
+        
+        // Add a style to prevent icon wrapper margin from transitioning
+        const iconWrapperStyle = isCollapsed ? { marginLeft: '4px', transition: 'none' } : { transition: 'none' };
 
         // Add active item classes if this is the active route
         if (isActiveLeaf) {
@@ -203,9 +207,7 @@ export default function Sidenav({
           itemBaseClasses.push("hover:opacity-90");
         }
 
-        // Use transform to shift icon 4px right when collapsed to center it
-        // The transform is applied instantly (no transition) so icon doesn't move during menu expansion
-        const iconWrapperClasses = `flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit ${isCollapsed ? "[transform:translateX(4px)] [transition:none]" : ""}`;
+        const iconWrapperClasses = "flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit";
 
         // When collapsed, use absolute positioning to remove label from flex flow completely
         // This prevents label from affecting icon position during transition
@@ -254,7 +256,7 @@ export default function Sidenav({
                 onClick={toggleAccordion}
                 className={itemClasses}
               >
-                <span className={iconWrapperClasses}>{icon}</span>
+                <span className={iconWrapperClasses} style={iconWrapperStyle}>{icon}</span>
                 {renderLabel(name)}
                 <ChevronDownIcon className={chevronClasses} />
               </button>
@@ -283,7 +285,7 @@ export default function Sidenav({
                 rel="noopener noreferrer"
                 className={itemClasses}
               >
-                <span className={iconWrapperClasses}>{icon}</span>
+                <span className={iconWrapperClasses} style={iconWrapperStyle}>{icon}</span>
                 {renderLabel(name)}
               </a>
               {divider && <hr className="my-2 border-blue-gray-50" />}
@@ -295,7 +297,7 @@ export default function Sidenav({
           return (
             <li key={key} className="text-inherit">
               <Link href={path} className={itemClasses}>
-                <span className={iconWrapperClasses}>{icon}</span>
+                <span className={iconWrapperClasses} style={iconWrapperStyle}>{icon}</span>
                 {renderLabel(name)}
               </Link>
               {divider && <hr className="my-2 border-blue-gray-50" />}
