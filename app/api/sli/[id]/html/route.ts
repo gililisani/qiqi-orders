@@ -114,7 +114,19 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
     throw new Error('Failed to fetch product details');
   }
 
-  const productsMap = new Map(products?.map((p: any) => [p.id, p]) || []);
+  // Type definition for product
+  type Product = {
+    id: string;
+    item_name: string;
+    hs_code?: string | null;
+    case_weight?: number | null;
+    made_in?: string | null;
+    eccn_code?: string | null;
+    unit_of_measure?: string | null;
+    price_international?: number | null;
+  };
+
+  const productsMap = new Map<string, Product>(products?.map((p: Product) => [p.id, p]) || []);
 
   // Prepare products for aggregation (same logic as order-based SLI)
   const productsForAggregation: Array<{
@@ -132,8 +144,8 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
     if (!product) return;
 
     const quantity = sp.quantity || 0;
-    const caseWeight = product.case_weight || 0;
-    const price = product.price_international || 0;
+    const caseWeight = (product.case_weight ?? 0) as number;
+    const price = (product.price_international ?? 0) as number;
     const casePack = 1; // Default case pack for standalone SLIs
     const totalWeight = quantity * caseWeight;
     const totalPrice = quantity * price;
