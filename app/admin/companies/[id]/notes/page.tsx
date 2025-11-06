@@ -25,6 +25,9 @@ export default function CompanyNotesPage() {
   useEffect(() => {
     if (companyId) {
       fetchCompany();
+    } else {
+      setError('Company ID is missing');
+      setLoading(false);
     }
   }, [companyId]);
 
@@ -75,15 +78,34 @@ export default function CompanyNotesPage() {
 
   // Set breadcrumb
   useEffect(() => {
-    if (company && (window as any).__setBreadcrumbs) {
-      (window as any).__setBreadcrumbs([
-        { label: company.company_name },
-        { label: 'Notes' }
-      ]);
-    }
-    return () => {
+    if (!company) return;
+    
+    // Wait for breadcrumb function to be available
+    const setBreadcrumbs = () => {
       if ((window as any).__setBreadcrumbs) {
-        (window as any).__setBreadcrumbs([]);
+        try {
+          (window as any).__setBreadcrumbs([
+            { label: company.company_name },
+            { label: 'Notes' }
+          ]);
+        } catch (error) {
+          console.error('Error setting breadcrumbs:', error);
+        }
+      }
+    };
+    
+    // Try immediately, then retry after a short delay if needed
+    setBreadcrumbs();
+    const timeoutId = setTimeout(setBreadcrumbs, 100);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      if ((window as any).__setBreadcrumbs) {
+        try {
+          (window as any).__setBreadcrumbs([]);
+        } catch (error) {
+          // Ignore cleanup errors
+        }
       }
     };
   }, [company]);
@@ -139,16 +161,18 @@ export default function CompanyNotesPage() {
           </div>
 
           {/* Use Shared Notes Component with Admin Permissions and Filters */}
-          <NotesView
-            companyId={companyId}
-            userRole="admin"
-            showActions={true}
-            allowEdit={true}
-            allowDelete={true}
-            allowCreate={true}
-            categoryFilter={categoryFilter}
-            timeFilter={timeFilter}
-          />
+          {companyId && (
+            <NotesView
+              companyId={companyId}
+              userRole="admin"
+              showActions={true}
+              allowEdit={true}
+              allowDelete={true}
+              allowCreate={true}
+              categoryFilter={categoryFilter}
+              timeFilter={timeFilter}
+            />
+          )}
     </div>
   );
 }

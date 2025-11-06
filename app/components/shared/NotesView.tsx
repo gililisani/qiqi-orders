@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { DocumentIcon, CalendarIcon, UserIcon, PlusIcon, PencilIcon, TrashIcon, ChatBubbleLeftIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
 import NoteForm from './NoteForm';
@@ -87,7 +87,7 @@ export default function NotesView({
     return new Date(note.created_at);
   };
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = [...allNotes];
 
     // Apply category filter
@@ -124,7 +124,7 @@ export default function NotesView({
     }
 
     setNotes(filtered);
-  };
+  }, [allNotes, categoryFilter, timeFilter]);
 
   useEffect(() => {
     if (companyId) {
@@ -135,8 +135,7 @@ export default function NotesView({
   // Apply filters whenever categoryFilter, timeFilter, or allNotes change
   useEffect(() => {
     applyFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryFilter, timeFilter, allNotes]);
+  }, [applyFilters]);
 
   const getAttachmentUrl = async (attachment: Attachment): Promise<string> => {
     try {
