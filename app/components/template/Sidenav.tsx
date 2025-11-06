@@ -192,13 +192,26 @@ export default function Sidenav({
           // Only add hover class if item is not active (active items should keep gradient, hover can slightly darken it)
           isActiveLeaf ? "" : hoverBackgroundClass,
           getSpacingClasses(),
-          // Keep gap consistent to prevent layout shift - gap change doesn't affect icon position when label is absolutely positioned
+          // Keep gap at 0 when collapsed to prevent any layout shift
+          // When expanded, gap is needed for spacing between icon and text
           isCollapsed ? "gap-0" : "gap-3",
           "focus:outline-none focus-visible:outline-none",
         ];
         
-        // Add a style to prevent icon wrapper margin from transitioning
-        const iconWrapperStyle = isCollapsed ? { marginLeft: '4px', transition: 'none' } : { transition: 'none' };
+        // Use fixed width and position to prevent any layout shifts
+        // The icon wrapper maintains consistent dimensions regardless of collapsed state
+        const iconWrapperStyle: React.CSSProperties = {
+          marginLeft: isCollapsed ? '4px' : '0px',
+          width: '20px',
+          height: '20px',
+          flexShrink: 0,
+          // Explicitly disable all transitions on this element
+          transition: 'none',
+          transitionProperty: 'none',
+          transitionDuration: '0s',
+          transitionDelay: '0s',
+          transitionTimingFunction: 'step-start'
+        };
 
         // Add active item classes if this is the active route
         if (isActiveLeaf) {
