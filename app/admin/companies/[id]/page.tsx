@@ -178,37 +178,20 @@ export default function CompanyViewPage() {
     }
   }, [companyId, fetchCompany, fetchUsers]);
   
-  // Set breadcrumb when company data is available
-  useEffect(() => {
-    if (!company?.company_name) return;
-    
-    const setBreadcrumbs = () => {
-      if ((window as any).__setBreadcrumbs) {
-        try {
-          (window as any).__setBreadcrumbs([
-            { label: company.company_name }
-          ]);
-        } catch (error) {
-          console.error('Error setting breadcrumbs:', error);
-        }
-      }
-    };
-    
-    // Try immediately, then retry after a short delay if needed
-    setBreadcrumbs();
-    const timeoutId = setTimeout(setBreadcrumbs, 100);
-    
-    return () => {
-      clearTimeout(timeoutId);
-      if ((window as any).__setBreadcrumbs) {
-        try {
-          (window as any).__setBreadcrumbs([]);
-        } catch (error) {
-          // Ignore cleanup errors
-        }
-      }
-    };
-  }, [company]);
+  // Temporarily disabled breadcrumb setting to debug React error #310
+  // useEffect(() => {
+  //   if (!company?.company_name) return;
+  //   if ((window as any).__setBreadcrumbs) {
+  //     (window as any).__setBreadcrumbs([
+  //       { label: company.company_name }
+  //     ]);
+  //   }
+  //   return () => {
+  //     if ((window as any).__setBreadcrumbs) {
+  //       (window as any).__setBreadcrumbs([]);
+  //     }
+  //   };
+  // }, [company?.company_name]);
 
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
