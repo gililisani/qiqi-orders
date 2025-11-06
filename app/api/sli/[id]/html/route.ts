@@ -140,9 +140,10 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
 
   console.log('Fetching products with IDs:', productIds);
   
+  // Fetch products - need price_international for value calculation in standalone SLIs
   const { data: products, error: productsError } = await supabaseAdmin
     .from('Products')
-    .select('id, item_name, hs_code, case_weight, made_in, unit_of_measure, price_international')
+    .select('id, hs_code, case_weight, item_name, made_in, price_international')
     .in('id', productIds);
 
   if (productsError) {
@@ -164,7 +165,6 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
     hs_code?: string | null;
     case_weight?: number | null;
     made_in?: string | null;
-    unit_of_measure?: string | null;
     price_international?: number | null;
   };
 
@@ -187,10 +187,9 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
 
     const quantity = sp.quantity || 0;
     const caseWeight = (product.case_weight ?? 0) as number;
-    const price = (product.price_international ?? 0) as number;
-    const casePack = 1; // Default case pack for standalone SLIs
+    const unitPrice = (product.price_international ?? 0) as number;
     const totalWeight = quantity * caseWeight;
-    const totalPrice = quantity * price;
+    const totalPrice = quantity * unitPrice;
 
     productsForAggregation.push({
       hs_code: product.hs_code || sp.hs_code || 'N/A',
@@ -274,21 +273,20 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
   let productRows = '';
   let totalValue = 0;
 
-  // Add grouped products (with HS codes)
+  // Add grouped products (with HS codes) - match order-based SLI format exactly
   groupedProducts.forEach((group) => {
     const df = getDorF(group.made_in);
-    const description = group.item_names.join(', ');
     const formattedQuantity = group.total_quantity.toLocaleString('en-US');
-    const formattedWeight = group.total_weight.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedWeight = group.total_weight.toFixed(2);
     const formattedValue = formatCurrency(group.total_value);
     totalValue += group.total_value;
 
     productRows += `
               <tr>
                 <td class="w-8">${df}</td>
-                <td class="w-18">${group.hs_code}<br>${description}</td>
-                <td class="w-10">${formattedQuantity} Each</td>
-                <td class="w-12"></td>
+                <td class="w-18">${group.hs_code}</td>
+                <td class="w-10">${formattedQuantity}</td>
+                <td class="w-12">Each</td>
                 <td class="w-10">${formattedWeight} kg</td>
                 <td class="w-10">EAR99</td>
                 <td class="w-8"></td>
@@ -298,20 +296,20 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
               </tr>`;
   });
 
-  // Add products without HS codes
+  // Add products without HS codes - match order-based SLI format exactly
   productsWithoutHS.forEach((product) => {
     const df = getDorF(product.made_in);
     const formattedQuantity = product.quantity.toLocaleString('en-US');
-    const formattedWeight = product.weight.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedWeight = product.weight.toFixed(2);
     const formattedValue = formatCurrency(product.value);
     totalValue += product.value;
 
     productRows += `
               <tr>
                 <td class="w-8">${df}</td>
-                <td class="w-18">N/A<br>${product.item_name}</td>
-                <td class="w-10">${formattedQuantity} Each</td>
-                <td class="w-12"></td>
+                <td class="w-18">N/A</td>
+                <td class="w-10">${formattedQuantity}</td>
+                <td class="w-12">Each</td>
                 <td class="w-10">${formattedWeight} kg</td>
                 <td class="w-10">EAR99</td>
                 <td class="w-8"></td>
@@ -341,47 +339,53 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
     }
   }
 
-  // Handle checkboxes
+  // Handle checkboxes - use stored values from checkbox_states, fallback to defaults like order-based SLI
   const checkboxStates = sli.checkbox_states || {};
   
   const checkbox = (isChecked: boolean, label: string = '') => {
     return `<span class="checkbox-wrapper"><span class="checkbox">${isChecked ? 'X' : ''}</span><span class="checkbox-label">${label}</span></span>`;
   };
   
-  // Box 8: Related Party
-  html = html.replace('[CHECKBOX] Related', checkbox(checkboxStates.related_party_related, 'Related'));
-  html = html.replace('[CHECKBOX] Non-Related', checkbox(checkboxStates.related_party_non_related, 'Non-Related'));
+  // Box 16: Hazardous Material - handle first with regex (like order-based SLI)
+  const hazmatCell = '16\\. Hazardous Material:</td>\\s*<td class="w-25"[^>]*>\\[CHECKBOX\\] Yes \\[CHECKBOX\\] No';
+  html = html.replace(new RegExp(hazmatCell), 
+    `16. Hazardous Material:</td><td class="w-25" style="word-spacing: 15px;">${checkbox(checkboxStates.hazardous_material_yes ?? false, 'Yes')} ${checkbox(checkboxStates.hazardous_material_no ?? true, 'No')}`);
   
-  // Box 10: Routed Export
-  const routedExportCell = /\[CHECKBOX\] Yes \[CHECKBOX\] No/g;
-  html = html.replace(routedExportCell, 
-    `${checkbox(checkboxStates.routed_export_yes, 'Yes')} ${checkbox(checkboxStates.routed_export_no, 'No')}`);
+  // Box 8: Related Party Indicator
+  html = html.replace('[CHECKBOX] Related', checkbox(checkboxStates.related_party_related ?? false, 'Related'));
+  html = html.replace('[CHECKBOX] Non-Related', checkbox(checkboxStates.related_party_non_related ?? true, 'Non-Related'));
   
-  // Box 12: Type of Consignee
-  html = html.replace('[CHECKBOX] Government Entity', checkbox(checkboxStates.consignee_type_government, 'Government Entity'));
-  html = html.replace('[CHECKBOX] Direct Consumer', checkbox(checkboxStates.consignee_type_direct_consumer, 'Direct Consumer'));
-  html = html.replace('[CHECKBOX] Other/Unknown', checkbox(checkboxStates.consignee_type_other_unknown, 'Other/Unknown'));
-  html = html.replace('[CHECKBOX] Re-Seller', checkbox(checkboxStates.consignee_type_reseller, 'Re-Seller'));
+  // Box 10: Routed Export Transaction - handle as a pair (like Box 16)
+  const routedExportCell = '10\\. Routed Export Transaction:</td>\\s*<td[^>]*>\\[CHECKBOX\\] Yes \\[CHECKBOX\\] No';
+  html = html.replace(new RegExp(routedExportCell), 
+    `10. Routed Export Transaction:</td><td style="word-spacing: 15px;">${checkbox(checkboxStates.routed_export_yes ?? false, 'Yes')} ${checkbox(checkboxStates.routed_export_no ?? false, 'No')}`);
   
-  // Box 16: Hazardous Material
-  const hazmatCell = '<td class="w-25" style="word-spacing: 15px;">[CHECKBOX] Yes [CHECKBOX] No</td>';
-  html = html.replace(hazmatCell, 
-    `<td class="w-25" style="word-spacing: 15px;">${checkbox(checkboxStates.hazardous_material_yes, 'Yes')} ${checkbox(checkboxStates.hazardous_material_no, 'No')}</td>`);
+  // Box 12: Ultimate Consignee Type
+  html = html.replace('[CHECKBOX] Government Entity', checkbox(checkboxStates.consignee_type_government ?? false, 'Government Entity'));
+  html = html.replace('[CHECKBOX] Direct Consumer', checkbox(checkboxStates.consignee_type_direct_consumer ?? false, 'Direct Consumer'));
+  html = html.replace('[CHECKBOX] Other/Unknown', checkbox(checkboxStates.consignee_type_other_unknown ?? false, 'Other/Unknown'));
+  html = html.replace('[CHECKBOX] Re-Seller', checkbox(checkboxStates.consignee_type_reseller ?? true, 'Re-Seller'));
   
-  // Box 21: TIB/Carnet
-  const tibCell = '<td class="w-20" style="word-spacing: 15px;">[CHECKBOX] Yes [CHECKBOX] No</td>';
-  html = html.replace(tibCell, 
-    `<td class="w-20" style="word-spacing: 15px;">${checkbox(checkboxStates.tib_carnet_yes, 'Yes')} ${checkbox(checkboxStates.tib_carnet_no, 'No')}</td>`);
+  // Box 21: TIB/Carnet - handle with regex like Box 16
+  const tibCell = '21\\. TIB\\/Carnet:</td>\\s*<td class="w-20"[^>]*>\\[CHECKBOX\\] Yes \\[CHECKBOX\\] No';
+  html = html.replace(new RegExp(tibCell), 
+    `21. TIB/Carnet:</td><td class="w-20" style="word-spacing: 15px;">${checkbox(checkboxStates.tib_carnet_yes ?? false, 'Yes')} ${checkbox(checkboxStates.tib_carnet_no ?? false, 'No')}`);
+  
+  // Box 23: Payment (if exists)
+  html = html.replace('[CHECKBOX] Prepaid', checkbox(checkboxStates.prepaid ?? false, 'Prepaid'));
+  html = html.replace('[CHECKBOX] Collect', checkbox(checkboxStates.collect ?? false, 'Collect'));
+  html = html.replace('[CHECKBOX] Abandoned', checkbox(checkboxStates.abandoned ?? false, 'Abandoned'));
+  html = html.replace('[CHECKBOX] Return to Shipper', checkbox(checkboxStates.return_to_shipper ?? false, 'Return to Shipper'));
   
   // Box 24: Deliver To
-  html = html.replace('[CHECKBOX] Deliver To:', checkbox(checkboxStates.deliver_to_checkbox, 'Deliver To:'));
+  html = html.replace('[CHECKBOX] Deliver To:', checkbox(checkboxStates.deliver_to_checkbox ?? false, 'Deliver To:'));
   
-  // Box 39 & 40
-  html = html.replace('39 [CHECKBOX]', `39 ${checkbox(false, '')}`);
-  html = html.replace('40 [CHECKBOX]', `40 ${checkbox(checkboxStates.declaration_statement_checkbox, '')}`);
+  // Replace any remaining [CHECKBOX] with unchecked boxes (no label) - this handles Box 39
+  html = html.replace(/\[CHECKBOX\]/g, checkbox(false, ''));
   
-  // Box 48: Signature
-  html = html.replace('48. [CHECKBOX]', `48. ${checkbox(checkboxStates.signature_checkbox, '')}`);
+  // Special cases: Box 40 and 48 should use stored values (default to checked)
+  html = html.replace(/40 <span class="checkbox-wrapper">.*?<\/span>/g, `40 ${checkbox(checkboxStates.declaration_statement_checkbox ?? true, '')}`);
+  html = html.replace(/48\. <span class="checkbox-wrapper">.*?<\/span>/g, `48. ${checkbox(checkboxStates.signature_checkbox ?? true, '')}`);
 
   return html;
 }
