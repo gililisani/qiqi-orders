@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+// Configure Chromium for serverless
+chromium.setGraphicsMode(false);
 
 export async function GET(
   request: NextRequest,
@@ -41,10 +45,12 @@ export async function GET(
     
     const { html } = await htmlResponse.json();
 
-    // Launch Puppeteer
+    // Launch Puppeteer with Chromium for serverless
     browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
     });
 
     const page = await browser.newPage();
