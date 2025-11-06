@@ -52,7 +52,7 @@ export default function StandaloneSLIPreviewPage() {
 
       // Capture the content as canvas
       const canvas = await html2canvas(contentRef.current, {
-        scale: 2,
+        scale: 1.5, // Good balance between quality and file size
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
@@ -63,47 +63,57 @@ export default function StandaloneSLIPreviewPage() {
         el.style.display = '';
       });
 
-      // Create PDF - A4 portrait
+      // Create PDF - A4 portrait (210mm x 297mm)
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const pdfWidth = 210; // A4 width in mm
+      const pdfHeight = 297; // A4 height in mm
       
-      // Calculate dimensions
+      // Calculate scaling - fit to page width, maintain aspect ratio
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      const ratio = pdfWidth / imgWidth; // Scale to fit page width
-      const scaledHeight = imgHeight * ratio;
+      const imgAspectRatio = imgWidth / imgHeight;
+      
+      // Convert canvas pixels to mm assuming 96 DPI
+      // At 96 DPI: 1 inch = 96 pixels = 25.4mm, so 1 pixel = 25.4/96 mm
+      const mmPerPixel = 25.4 / 96;
+      const imgWidthMM = imgWidth * mmPerPixel;
+      const imgHeightMM = imgHeight * mmPerPixel;
+      
+      // Scale to fit page width
+      const scale = pdfWidth / imgWidthMM;
+      const scaledWidth = pdfWidth;
+      const scaledHeight = imgHeightMM * scale;
 
       // Split across pages if content is taller than one page
       if (scaledHeight <= pdfHeight) {
         // Content fits on one page
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, scaledHeight);
+        pdf.addImage(imgData, 'PNG', 0, 0, scaledWidth, scaledHeight, undefined, 'FAST');
       } else {
-        // Content needs multiple pages - split the canvas
-        // Calculate how many pixels fit on one PDF page
-        const pixelsPerPDFPage = pdfHeight / ratio;
-        const pageCount = Math.ceil(imgHeight / pixelsPerPDFPage);
+        // Content needs multiple pages
+        const totalPages = Math.ceil(scaledHeight / pdfHeight);
+        const imgHeightPerPage = imgHeight / totalPages;
 
-        for (let i = 0; i < pageCount; i++) {
-          if (i > 0) {
+        for (let page = 0; page < totalPages; page++) {
+          if (page > 0) {
             pdf.addPage();
           }
           
-          const sourceY = i * pixelsPerPDFPage;
-          const sourceHeight = Math.min(pixelsPerPDFPage, imgHeight - sourceY);
+          const sourceY = page * imgHeightPerPage;
+          const sourceHeight = Math.min(imgHeightPerPage, imgHeight - sourceY);
           
-          // Create a temporary canvas for this page slice
+          // Create temporary canvas for this page
           const tempCanvas = document.createElement('canvas');
           tempCanvas.width = imgWidth;
           tempCanvas.height = sourceHeight;
           const ctx = tempCanvas.getContext('2d');
           if (ctx) {
+            // Draw the slice of the original canvas
             ctx.drawImage(canvas, 0, sourceY, imgWidth, sourceHeight, 0, 0, imgWidth, sourceHeight);
             const pageImgData = tempCanvas.toDataURL('image/png');
-            const pageScaledHeight = sourceHeight * ratio;
-            pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, pageScaledHeight);
+            const pageHeightMM = (sourceHeight * mmPerPixel) * scale;
+            pdf.addImage(pageImgData, 'PNG', 0, 0, scaledWidth, pageHeightMM, undefined, 'FAST');
           }
         }
       }
