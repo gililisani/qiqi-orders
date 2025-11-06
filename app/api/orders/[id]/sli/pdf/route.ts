@@ -50,24 +50,11 @@ export async function GET(
     
     if (isProduction) {
       try {
-        // Ensure fonts are available
-        await chromium.font();
         executablePath = await chromium.executablePath();
         launchArgs = chromium.args;
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error setting up Chromium:', error);
-        // Fallback: try with minimal args
-        executablePath = undefined;
-        launchArgs = [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process',
-          '--disable-gpu'
-        ];
+        throw new Error(`Failed to setup Chromium for PDF generation: ${error.message}. Please ensure @sparticuz/chromium is properly configured.`);
       }
     } else {
       // Development: use system Chrome if available
