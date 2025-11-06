@@ -81,6 +81,8 @@ export default function CompanyViewPage() {
   useEffect(() => {
     if (!companyId) return;
 
+    let isMounted = true;
+
     const fetchCompany = async () => {
       try {
         console.log('Fetching company with ID:', companyId);
@@ -100,6 +102,8 @@ export default function CompanyViewPage() {
           .eq('id', companyId)
           .single();
 
+        if (!isMounted) return;
+
         if (companyError) {
           console.error('Error fetching company:', companyError);
           throw companyError;
@@ -110,6 +114,8 @@ export default function CompanyViewPage() {
           .from('company_territories')
           .select('*')
           .eq('company_id', companyId);
+
+        if (!isMounted) return;
 
         if (territoriesError) {
           console.error('Error fetching territories:', territoriesError);
@@ -123,6 +129,8 @@ export default function CompanyViewPage() {
           .eq('company_id', companyId)
           .order('start_date', { ascending: true });
 
+        if (!isMounted) return;
+
         if (targetPeriodsError) {
           console.error('Error fetching target periods:', targetPeriodsError);
           throw targetPeriodsError;
@@ -135,9 +143,12 @@ export default function CompanyViewPage() {
           target_periods: targetPeriodsData || []
         };
 
+        if (!isMounted) return;
+
         console.log('Company query result:', { data: combinedData });
         setCompany(combinedData);
       } catch (err: any) {
+        if (!isMounted) return;
         console.error('Company fetch error:', err);
         setError(err.message);
       }
@@ -152,6 +163,8 @@ export default function CompanyViewPage() {
           .eq('company_id', companyId)
           .order('name', { ascending: true });
 
+        if (!isMounted) return;
+
         console.log('Clients query result:', { data, error });
 
         if (error) {
@@ -160,6 +173,7 @@ export default function CompanyViewPage() {
         }
         setUsers(data || []);
       } catch (err: any) {
+        if (!isMounted) return;
         console.error('Clients fetch error:', err);
       }
     };
@@ -170,13 +184,20 @@ export default function CompanyViewPage() {
       try {
         await Promise.all([fetchCompany(), fetchUsers()]);
       } catch (err) {
+        if (!isMounted) return;
         console.error('Error loading data:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [companyId]);
   
   // Temporarily disabled breadcrumb setting to debug React error #310
