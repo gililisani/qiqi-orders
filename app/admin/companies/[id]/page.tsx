@@ -213,7 +213,16 @@ export default function CompanyViewPage() {
         throw new Error(data.error || 'Failed to delete user');
       }
 
-      fetchUsers(); // Refresh the list
+      // Refresh the users list
+      const { data: usersData, error: usersError } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('company_id', companyId)
+        .order('name', { ascending: true });
+
+      if (!usersError && usersData) {
+        setUsers(usersData);
+      }
     } catch (err: any) {
       setUserError(err.message); // Use userError instead of error
     }
