@@ -45,11 +45,28 @@ export async function GET(
     // Launch Puppeteer with Chromium for serverless
     const isProduction = process.env.VERCEL || process.env.NODE_ENV === 'production';
     
+    let executablePath: string | undefined;
+    let launchArgs: string[];
+    
+    if (isProduction) {
+      try {
+        executablePath = await chromium.executablePath();
+        launchArgs = chromium.args;
+      } catch (error) {
+        console.error('Error getting Chromium executable path:', error);
+        // Fallback: try without specifying executable path
+        executablePath = undefined;
+        launchArgs = chromium.args;
+      }
+    } else {
+      // Development: use system Chrome if available
+      executablePath = undefined;
+      launchArgs = ['--no-sandbox', '--disable-setuid-sandbox'];
+    }
+    
     browser = await puppeteer.launch({
-      args: isProduction ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
-      executablePath: isProduction 
-        ? await chromium.executablePath() 
-        : undefined, // Use system Chrome in development
+      args: launchArgs,
+      executablePath,
       headless: true,
     });
 
