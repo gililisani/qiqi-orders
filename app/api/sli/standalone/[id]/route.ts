@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -12,10 +11,43 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   }
 });
 
-export async function POST(request: NextRequest) {
+// GET - Fetch standalone SLI
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    // Parse request body
+    const sliId = params.id;
+
+    const { data: sli, error: sliError } = await supabaseAdmin
+      .from('standalone_slis')
+      .select(`
+        *,
+        company:companies(company_name)
+      `)
+      .eq('id', sliId)
+      .single();
+
+    if (sliError || !sli) {
+      return NextResponse.json({ error: 'SLI not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, sli });
+  } catch (error: any) {
+    console.error('Error fetching standalone SLI:', error);
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+  }
+}
+
+// PUT - Update standalone SLI
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const sliId = params.id;
     const body = await request.json();
+    
     const {
       company_id,
       consignee_name,
@@ -45,41 +77,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'At least one product is required' }, { status: 400 });
     }
 
-    // Get user from cookies (for created_by field)
-    const cookieStore = cookies();
-    const allCookies = cookieStore.getAll();
-    
-    // Find the Supabase auth token cookie
-    const authCookie = allCookies.find(cookie => 
-      cookie.name.includes('auth-token') || cookie.name.includes('sb-')
-    );
-    
-    let userId = null;
-    if (authCookie) {
-      try {
-        const { data: { user } } = await supabaseAdmin.auth.getUser(authCookie.value);
-        userId = user?.id || null;
-      } catch (err) {
-        console.error('Error getting user from cookie:', err);
-      }
-    }
-
-    // Generate SLI number
-    const { data: sliNumberResult, error: sliNumberError } = await supabaseAdmin
-      .rpc('generate_sli_number');
-
-    if (sliNumberError) {
-      console.error('Error generating SLI number:', sliNumberError);
-      return NextResponse.json({ error: 'Failed to generate SLI number', details: sliNumberError.message }, { status: 500 });
-    }
-
-    const sliNumber = sliNumberResult || 100000;
-
-    // Create standalone SLI
+    // Update standalone SLI
     const { data: sli, error: sliError } = await supabaseAdmin
       .from('standalone_slis')
-      .insert({
-        sli_number: sliNumber,
+      .update({
         company_id: company_id || null,
         consignee_name,
         consignee_address_line1,
@@ -97,34 +98,55 @@ export async function POST(request: NextRequest) {
         instructions_to_forwarder: instructions_to_forwarder || null,
         selected_products,
         checkbox_states: checkbox_states || {},
-        created_by: userId,
       })
+      .eq('id', sliId)
       .select()
       .single();
 
     if (sliError) {
-      console.error('Error creating standalone SLI:', sliError);
-      
-      // Check if it's a column not found error (migration not run)
-      if (sliError.message?.includes('column') || sliError.message?.includes('does not exist')) {
-        return NextResponse.json({ 
-          error: 'Database migration required', 
-          details: 'Please run create_standalone_slis_table.sql in Supabase SQL Editor. Error: ' + sliError.message 
-        }, { status: 500 });
-      }
-      
-      return NextResponse.json({ error: 'Failed to create SLI', details: sliError.message }, { status: 500 });
+      console.error('Error updating standalone SLI:', sliError);
+      return NextResponse.json({ error: 'Failed to update SLI', details: sliError.message }, { status: 500 });
     }
 
     return NextResponse.json({
       success: true,
       sli_id: sli.id,
       sli_number: sli.sli_number,
-      message: 'Standalone SLI created successfully',
+      message: 'Standalone SLI updated successfully',
     });
 
   } catch (error: any) {
-    console.error('Standalone SLI creation error:', error);
+    console.error('Standalone SLI update error:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }
+
+// DELETE - Delete standalone SLI
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const sliId = params.id;
+
+    const { error: deleteError } = await supabaseAdmin
+      .from('standalone_slis')
+      .delete()
+      .eq('id', sliId);
+
+    if (deleteError) {
+      console.error('Error deleting standalone SLI:', deleteError);
+      return NextResponse.json({ error: 'Failed to delete SLI', details: deleteError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Standalone SLI deleted successfully',
+    });
+
+  } catch (error: any) {
+    console.error('Standalone SLI deletion error:', error);
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+  }
+}
+

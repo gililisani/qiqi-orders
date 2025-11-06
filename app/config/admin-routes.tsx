@@ -40,8 +40,8 @@ export const adminRoutes = [
       },
       {
         icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>S</Typography>,
-        name: "Create Standalone SLI",
-        path: "/admin/sli/create",
+        name: "SLI Documents",
+        path: "/admin/sli/documents",
       },
     ],
   },

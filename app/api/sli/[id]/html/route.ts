@@ -20,9 +20,9 @@ export async function GET(
       }
     });
 
-    // Fetch SLI data (works for both order-based and standalone)
+    // Fetch standalone SLI data from the new table
     const { data: sli, error: sliError } = await supabaseAdmin
-      .from('slis')
+      .from('standalone_slis')
       .select('*')
       .eq('id', sliId)
       .single();
@@ -35,14 +35,8 @@ export async function GET(
     const templatePath = path.join(process.cwd(), 'public', 'templates', 'sli-nested-tables.html');
     let html = fs.readFileSync(templatePath, 'utf-8');
 
-    // Determine if it's order-based or standalone
-    if (sli.sli_type === 'standalone') {
-      // Handle standalone SLI
-      html = await generateStandaloneSLIHTML(html, sli, supabaseAdmin);
-    } else {
-      // Handle order-based SLI (existing logic)
-      html = await generateOrderBasedSLIHTML(html, sli, supabaseAdmin);
-    }
+    // Generate HTML for standalone SLI
+    html = await generateStandaloneSLIHTML(html, sli, supabaseAdmin);
 
     return new NextResponse(html, {
       headers: {
@@ -101,41 +95,180 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
   // Replace {leave blank} placeholders
   html = html.replace(/{leave blank}/g, '');
 
-  // Handle products from manual_products
-  const products = sli.manual_products || [];
+  // Handle products from selected_products - fetch product details and aggregate by HS Code
+  const selectedProducts = sli.selected_products || [];
+  
+  if (selectedProducts.length === 0) {
+    throw new Error('No products found in SLI');
+  }
+
+  // Fetch product details from Products table
+  const productIds = selectedProducts.map((sp: any) => sp.product_id);
+  const { data: products, error: productsError } = await supabaseAdmin
+    .from('Products')
+    .select('id, item_name, hs_code, case_weight, made_in, eccn_code, unit_of_measure, price_international')
+    .in('id', productIds);
+
+  if (productsError) {
+    console.error('Error fetching products:', productsError);
+    throw new Error('Failed to fetch product details');
+  }
+
+  const productsMap = new Map(products?.map((p: any) => [p.id, p]) || []);
+
+  // Prepare products for aggregation (same logic as order-based SLI)
+  const productsForAggregation: Array<{
+    hs_code: string;
+    quantity: number;
+    case_qty: number;
+    case_weight: number;
+    total_price: number;
+    made_in: string;
+    item_name: string;
+  }> = [];
+
+  selectedProducts.forEach((sp: any) => {
+    const product = productsMap.get(sp.product_id);
+    if (!product) return;
+
+    const quantity = sp.quantity || 0;
+    const caseWeight = product.case_weight || 0;
+    const price = product.price_international || 0;
+    const casePack = 1; // Default case pack for standalone SLIs
+    const totalWeight = quantity * caseWeight;
+    const totalPrice = quantity * price;
+
+    productsForAggregation.push({
+      hs_code: product.hs_code || sp.hs_code || 'N/A',
+      quantity: quantity,
+      case_qty: quantity, // Use quantity as case_qty for standalone
+      case_weight: caseWeight,
+      total_price: totalPrice,
+      made_in: product.made_in || sp.made_in || '',
+      item_name: product.item_name || sp.product_name,
+    });
+  });
+
+  // Aggregate products by HS Code (same logic as sliGenerator.ts)
+  const groupedProducts: Map<string, {
+    hs_code: string;
+    total_quantity: number;
+    total_weight: number;
+    total_value: number;
+    made_in: string;
+    item_names: string[];
+  }> = new Map();
+
+  const productsWithoutHS: Array<{
+    quantity: number;
+    weight: number;
+    value: number;
+    made_in: string;
+    item_name: string;
+  }> = [];
+
+  productsForAggregation.forEach(product => {
+    const totalWeight = product.case_qty * product.case_weight;
+    
+    if (product.hs_code && product.hs_code.trim() !== '' && product.hs_code !== 'N/A') {
+      // Has HS code - group it
+      const hsCode = product.hs_code.trim();
+      
+      if (groupedProducts.has(hsCode)) {
+        const existing = groupedProducts.get(hsCode)!;
+        existing.total_quantity += product.quantity;
+        existing.total_weight += totalWeight;
+        existing.total_value += product.total_price;
+        existing.item_names.push(product.item_name);
+      } else {
+        groupedProducts.set(hsCode, {
+          hs_code: hsCode,
+          total_quantity: product.quantity,
+          total_weight: totalWeight,
+          total_value: product.total_price,
+          made_in: product.made_in || '',
+          item_names: [product.item_name],
+        });
+      }
+    } else {
+      // No HS code - keep separate with N/A
+      productsWithoutHS.push({
+        quantity: product.quantity,
+        weight: totalWeight,
+        value: product.total_price,
+        made_in: product.made_in || '',
+        item_name: product.item_name,
+      });
+    }
+  });
+
+  // Helper function to format currency
+  const formatCurrency = (value: number): string => {
+    return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  // Helper function to determine D/F based on made_in
+  const getDorF = (madeIn: string): string => {
+    const country = (madeIn || '').toLowerCase().trim();
+    if (country === 'united states' || country === 'usa' || country === 'us') {
+      return 'D';
+    }
+    return 'F';
+  };
+
+  // Generate product rows
   let productRows = '';
   let totalValue = 0;
 
-  products.forEach((product: any) => {
-    const df = 'F'; // Default to Foreign for standalone (no Made In info)
-    const hsCode = product.hs_code || 'N/A';
-    const description = product.description || '';
-    const quantity = parseFloat(product.quantity) || 0;
-    const weight = parseFloat(product.weight) || 0;
-    const value = parseFloat(product.value) || 0;
-    totalValue += value;
-
-    const formattedQuantity = quantity.toLocaleString('en-US');
-    const formattedWeight = weight.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const formattedValue = value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Add grouped products (with HS codes)
+  groupedProducts.forEach((group) => {
+    const df = getDorF(group.made_in);
+    const description = group.item_names.join(', ');
+    const formattedQuantity = group.total_quantity.toLocaleString('en-US');
+    const formattedWeight = group.total_weight.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedValue = formatCurrency(group.total_value);
+    totalValue += group.total_value;
 
     productRows += `
               <tr>
                 <td class="w-8">${df}</td>
-                <td class="w-18">${hsCode}<br>${description}</td>
-                <td class="w-10">${formattedQuantity} ${product.uom || 'Each'}</td>
+                <td class="w-18">${group.hs_code}<br>${description}</td>
+                <td class="w-10">${formattedQuantity} Each</td>
                 <td class="w-12"></td>
                 <td class="w-10">${formattedWeight} kg</td>
-                <td class="w-10">${product.eccn || 'EAR99'}</td>
+                <td class="w-10">EAR99</td>
                 <td class="w-8"></td>
-                <td class="w-12">${product.license_symbol || 'NLR'}</td>
+                <td class="w-12">NLR</td>
+                <td class="w-12">$${formattedValue}</td>
+                <td class="w-10"></td>
+              </tr>`;
+  });
+
+  // Add products without HS codes
+  productsWithoutHS.forEach((product) => {
+    const df = getDorF(product.made_in);
+    const formattedQuantity = product.quantity.toLocaleString('en-US');
+    const formattedWeight = product.weight.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedValue = formatCurrency(product.value);
+    totalValue += product.value;
+
+    productRows += `
+              <tr>
+                <td class="w-8">${df}</td>
+                <td class="w-18">N/A<br>${product.item_name}</td>
+                <td class="w-10">${formattedQuantity} Each</td>
+                <td class="w-12"></td>
+                <td class="w-10">${formattedWeight} kg</td>
+                <td class="w-10">EAR99</td>
+                <td class="w-8"></td>
+                <td class="w-12">NLR</td>
                 <td class="w-12">$${formattedValue}</td>
                 <td class="w-10"></td>
               </tr>`;
   });
 
   // Add total row
-  const formattedTotal = totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const formattedTotal = formatCurrency(totalValue);
   productRows += `
               <tr>
                 <td colspan="8" class="w-100" style="text-align: right; font-weight: bold;">TOTAL:</td>
@@ -143,7 +276,7 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
                 <td class="w-10"></td>
               </tr>`;
 
-  // Replace the dummy rows section (same pattern as sliGenerator)
+  // Replace the dummy rows section
   const dummyRowsStart = html.indexOf('<!-- Dummy rows 28-33 -->');
   if (dummyRowsStart !== -1) {
     const nextCommentOrClose = html.indexOf('</table>', dummyRowsStart);
@@ -154,7 +287,7 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
     }
   }
 
-  // Handle checkboxes using the EXACT same pattern as sliGenerator
+  // Handle checkboxes
   const checkboxStates = sli.checkbox_states || {};
   
   const checkbox = (isChecked: boolean, label: string = '') => {
@@ -165,7 +298,7 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
   html = html.replace('[CHECKBOX] Related', checkbox(checkboxStates.related_party_related, 'Related'));
   html = html.replace('[CHECKBOX] Non-Related', checkbox(checkboxStates.related_party_non_related, 'Non-Related'));
   
-  // Box 10: Routed Export (handle "Yes" and "No" together)
+  // Box 10: Routed Export
   const routedExportCell = /\[CHECKBOX\] Yes \[CHECKBOX\] No/g;
   html = html.replace(routedExportCell, 
     `${checkbox(checkboxStates.routed_export_yes, 'Yes')} ${checkbox(checkboxStates.routed_export_no, 'No')}`);
@@ -176,7 +309,7 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
   html = html.replace('[CHECKBOX] Other/Unknown', checkbox(checkboxStates.consignee_type_other_unknown, 'Other/Unknown'));
   html = html.replace('[CHECKBOX] Re-Seller', checkbox(checkboxStates.consignee_type_reseller, 'Re-Seller'));
   
-  // Box 16: Hazardous Material - always check "No"
+  // Box 16: Hazardous Material
   const hazmatCell = '<td class="w-25" style="word-spacing: 15px;">[CHECKBOX] Yes [CHECKBOX] No</td>';
   html = html.replace(hazmatCell, 
     `<td class="w-25" style="word-spacing: 15px;">${checkbox(checkboxStates.hazardous_material_yes, 'Yes')} ${checkbox(checkboxStates.hazardous_material_no, 'No')}</td>`);
@@ -185,12 +318,6 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
   const tibCell = '<td class="w-20" style="word-spacing: 15px;">[CHECKBOX] Yes [CHECKBOX] No</td>';
   html = html.replace(tibCell, 
     `<td class="w-20" style="word-spacing: 15px;">${checkbox(checkboxStates.tib_carnet_yes, 'Yes')} ${checkbox(checkboxStates.tib_carnet_no, 'No')}</td>`);
-  
-  // Box 23: Shipper Must Check
-  html = html.replace('[CHECKBOX] Prepaid [CHECKBOX] Collect', 
-    `${checkbox(checkboxStates.prepaid, 'Prepaid')} ${checkbox(checkboxStates.collect, 'Collect')}`);
-  html = html.replace('[CHECKBOX] Abandoned', checkbox(checkboxStates.abandoned, 'Abandoned'));
-  html = html.replace('[CHECKBOX] Return to Shipper', checkbox(checkboxStates.return_to_shipper, 'Return to Shipper'));
   
   // Box 24: Deliver To
   html = html.replace('[CHECKBOX] Deliver To:', checkbox(checkboxStates.deliver_to_checkbox, 'Deliver To:'));
@@ -204,10 +331,3 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
 
   return html;
 }
-
-async function generateOrderBasedSLIHTML(html: string, sli: any, supabaseAdmin: any): Promise<string> {
-  // For order-based SLIs, redirect to the existing order SLI route
-  // This is a fallback - order-based SLIs should use /api/orders/[id]/sli/html
-  throw new Error('Order-based SLIs should use /api/orders/[orderId]/sli/html route');
-}
-

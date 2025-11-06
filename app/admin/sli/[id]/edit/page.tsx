@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '../../../../lib/supabaseClient';
-import Card from '../../../components/ui/Card';
+import { useRouter, useParams } from 'next/navigation';
+import { supabase } from '../../../../../lib/supabaseClient';
+import Card from '../../../../components/ui/Card';
 import Link from 'next/link';
 
 interface Company {
@@ -52,9 +52,12 @@ interface CheckboxStates {
   signature_checkbox: boolean;
 }
 
-export default function CreateStandaloneSLIPage() {
+export default function EditStandaloneSLIPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const params = useParams();
+  const sliId = params.id as string;
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -68,25 +71,18 @@ export default function CreateStandaloneSLIPage() {
   const productDropdownRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState({
-    // Consignee Info
     consignee_name: '',
     consignee_address_line1: '',
     consignee_address_line2: '',
     consignee_address_line3: '',
     consignee_country: '',
-    
-    // Invoice & Date
     invoice_number: '',
     sli_date: new Date().toISOString().split('T')[0],
     date_of_export: '',
-    
-    // Forwarding Agent
     forwarding_agent_line1: '',
     forwarding_agent_line2: '',
     forwarding_agent_line3: '',
     forwarding_agent_line4: '',
-    
-    // Other Fields
     in_bond_code: '',
     instructions_to_forwarder: '',
   });
@@ -109,7 +105,6 @@ export default function CreateStandaloneSLIPage() {
     signature_checkbox: true,
   });
 
-  // Current product selection state
   const [currentProductId, setCurrentProductId] = useState('');
   const [currentQuantity, setCurrentQuantity] = useState(1);
 
@@ -118,7 +113,12 @@ export default function CreateStandaloneSLIPage() {
     fetchProducts();
   }, []);
 
-  // Close dropdowns when clicking outside
+  useEffect(() => {
+    if (companies.length > 0 && products.length > 0) {
+      fetchSLI();
+    }
+  }, [sliId, companies.length, products.length]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (companyDropdownRef.current && !companyDropdownRef.current.contains(event.target as Node)) {
@@ -132,6 +132,63 @@ export default function CreateStandaloneSLIPage() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const fetchSLI = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/sli/standalone/${sliId}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch SLI');
+      }
+
+      const sli = data.sli;
+
+      // Populate form data
+      setFormData({
+        consignee_name: sli.consignee_name || '',
+        consignee_address_line1: sli.consignee_address_line1 || '',
+        consignee_address_line2: sli.consignee_address_line2 || '',
+        consignee_address_line3: sli.consignee_address_line3 || '',
+        consignee_country: sli.consignee_country || '',
+        invoice_number: sli.invoice_number || '',
+        sli_date: sli.sli_date ? sli.sli_date.split('T')[0] : new Date().toISOString().split('T')[0],
+        date_of_export: sli.date_of_export ? sli.date_of_export.split('T')[0] : '',
+        forwarding_agent_line1: sli.forwarding_agent_line1 || '',
+        forwarding_agent_line2: sli.forwarding_agent_line2 || '',
+        forwarding_agent_line3: sli.forwarding_agent_line3 || '',
+        forwarding_agent_line4: sli.forwarding_agent_line4 || '',
+        in_bond_code: sli.in_bond_code || '',
+        instructions_to_forwarder: sli.instructions_to_forwarder || '',
+      });
+
+      setSelectedCompanyId(sli.company_id || '');
+      // Set company search term - use company name if available, otherwise use consignee name
+      if (sli.company_id && companies.length > 0) {
+        const company = companies.find(c => c.id === sli.company_id);
+        if (company) {
+          setCompanySearchTerm(company.company_name);
+        } else if (sli.consignee_name) {
+          setCompanySearchTerm(sli.consignee_name);
+        }
+      } else if (sli.consignee_name) {
+        setCompanySearchTerm(sli.consignee_name);
+      }
+
+      setCheckboxes({
+        ...checkboxes,
+        ...(sli.checkbox_states || {}),
+      });
+
+      setSelectedProducts(sli.selected_products || []);
+    } catch (err: any) {
+      console.error('Error fetching SLI:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchCompanies = async () => {
     try {
@@ -166,7 +223,6 @@ export default function CreateStandaloneSLIPage() {
     setCompanySearchTerm(company.company_name);
     setShowCompanyDropdown(false);
     
-    // Prefill form data
     setFormData(prev => ({
       ...prev,
       consignee_name: company.company_name,
@@ -191,7 +247,6 @@ export default function CreateStandaloneSLIPage() {
     const product = products.find(p => p.id === currentProductId);
     if (!product) return;
 
-    // Check if product already added
     if (selectedProducts.find(sp => sp.product_id === currentProductId)) {
       setError('Product already added. Update quantity or remove and re-add.');
       return;
@@ -205,7 +260,6 @@ export default function CreateStandaloneSLIPage() {
       made_in: product.made_in,
     }]);
 
-    // Reset selection
     setCurrentProductId('');
     setProductSearchTerm('');
     setCurrentQuantity(1);
@@ -232,19 +286,18 @@ export default function CreateStandaloneSLIPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     setError('');
 
-    // Validate
     if (selectedProducts.length === 0) {
       setError('Please add at least one product');
-      setLoading(false);
+      setSaving(false);
       return;
     }
 
     try {
-      const response = await fetch('/api/sli/standalone/create', {
-        method: 'POST',
+      const response = await fetch(`/api/sli/standalone/${sliId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
@@ -257,16 +310,15 @@ export default function CreateStandaloneSLIPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create SLI');
+        throw new Error(data.error || 'Failed to update SLI');
       }
 
-      // Redirect to SLI Documents page or show success
       router.push(`/admin/sli/documents`);
     } catch (err: any) {
-      console.error('SLI creation error:', err);
+      console.error('SLI update error:', err);
       setError(err.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -278,10 +330,21 @@ export default function CreateStandaloneSLIPage() {
     p.item_name.toLowerCase().includes(productSearchTerm.toLowerCase())
   );
 
+  if (loading) {
+    return (
+      <div className="mt-8 mb-4 space-y-6">
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading SLI...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-8 mb-4 space-y-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-semibold text-gray-900">Create Standalone SLI</h2>
+        <h2 className="text-2xl font-semibold text-gray-900">Edit Standalone SLI</h2>
         <Link href="/admin/sli/documents" className="text-gray-600 hover:text-gray-800">
           ← Back to SLI Documents
         </Link>
@@ -295,6 +358,7 @@ export default function CreateStandaloneSLIPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Same form structure as create page - copied from create page for consistency */}
           {/* Consignee Information */}
           <Card header={<h2 className="font-semibold">Consignee Information</h2>}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -517,7 +581,6 @@ export default function CreateStandaloneSLIPage() {
           {/* Products */}
           <Card header={<h2 className="font-semibold">Products</h2>}>
             <div className="space-y-4">
-              {/* Product Selection */}
               <div className="flex gap-4 items-end">
                 <div className="flex-1 relative" ref={productDropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -573,7 +636,6 @@ export default function CreateStandaloneSLIPage() {
                 </button>
               </div>
 
-              {/* Selected Products Table */}
               {selectedProducts.length > 0 && (
                 <div className="mt-4">
                   <h3 className="text-sm font-medium text-gray-700 mb-2">Selected Products</h3>
@@ -620,7 +682,7 @@ export default function CreateStandaloneSLIPage() {
             </div>
           </Card>
 
-          {/* Checkboxes */}
+          {/* Checkboxes - same as create page */}
           <Card header={<h2 className="font-semibold">Checkbox Options</h2>}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -796,7 +858,6 @@ export default function CreateStandaloneSLIPage() {
             </div>
           </Card>
 
-          {/* Submit Button */}
           <div className="flex justify-end gap-3">
             <Link
               href="/admin/sli/documents"
@@ -806,10 +867,10 @@ export default function CreateStandaloneSLIPage() {
             </Link>
             <button
               type="submit"
-              disabled={loading || selectedProducts.length === 0}
+              disabled={saving || selectedProducts.length === 0}
               className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition disabled:opacity-50"
             >
-              {loading ? 'Creating...' : 'Create SLI'}
+              {saving ? 'Saving...' : 'Update SLI'}
             </button>
           </div>
         </form>
@@ -817,3 +878,4 @@ export default function CreateStandaloneSLIPage() {
     </div>
   );
 }
+
