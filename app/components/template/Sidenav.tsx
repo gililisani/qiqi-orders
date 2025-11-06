@@ -136,7 +136,7 @@ export default function Sidenav({
   }, [routes, isRouteActive]);
 
   const getSpacingClasses = () => {
-    return isCollapsed ? "px-4 justify-start" : "px-3 justify-start";
+    return isCollapsed ? "px-3 justify-start" : "px-3 justify-start";
   };
 
   const renderMenuItems = (items: Route[], level = 0) => {
@@ -202,7 +202,8 @@ export default function Sidenav({
           itemBaseClasses.push("hover:opacity-90");
         }
 
-        const iconWrapperClasses = "flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit";
+        // When collapsed, add margin-left to center the icon (4px = 16px - 12px padding difference)
+        const iconWrapperClasses = `flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit ${isCollapsed ? "ml-1" : ""}`;
 
         const labelClasses = [
           "min-w-0 text-sm font-normal capitalize text-left overflow-hidden whitespace-nowrap transition-all duration-200",
