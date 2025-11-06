@@ -205,8 +205,8 @@ export default function Sidenav({
         const iconWrapperClasses = "flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit";
 
         const labelClasses = [
-          "min-w-0 flex-1 text-sm font-normal capitalize text-left overflow-hidden whitespace-nowrap transition-all duration-200",
-          isCollapsed ? "max-w-0 opacity-0 pointer-events-none" : "max-w-full opacity-100",
+          "min-w-0 text-sm font-normal capitalize text-left overflow-hidden whitespace-nowrap transition-all duration-200",
+          isCollapsed ? "max-w-0 opacity-0 pointer-events-none flex-none" : "max-w-full opacity-100 flex-1",
         ].join(" ");
 
         const chevronClasses = [
@@ -274,7 +274,7 @@ export default function Sidenav({
                 href={path}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={[itemClasses, isActiveLeaf ? activeItemClass : ""].join(" ")}
+                className={itemClasses}
               >
                 <span className={iconWrapperClasses}>{icon}</span>
                 {renderLabel(name)}
@@ -287,7 +287,7 @@ export default function Sidenav({
         if (path) {
           return (
             <li key={key} className="text-inherit">
-              <Link href={path} className={[itemClasses, isActiveLeaf ? activeItemClass : ""].join(" ")}>
+              <Link href={path} className={itemClasses}>
                 <span className={iconWrapperClasses}>{icon}</span>
                 {renderLabel(name)}
               </Link>
