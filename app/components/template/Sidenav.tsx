@@ -198,20 +198,32 @@ export default function Sidenav({
           "focus:outline-none focus-visible:outline-none",
         ];
         
-        // Use fixed width and position to prevent any layout shifts
-        // The icon wrapper maintains consistent dimensions regardless of collapsed state
-        const iconWrapperStyle: React.CSSProperties = {
-          marginLeft: isCollapsed ? '4px' : '0px',
-          width: '20px',
-          height: '20px',
-          flexShrink: 0,
-          // Explicitly disable all transitions on this element
-          transition: 'none',
-          transitionProperty: 'none',
-          transitionDuration: '0s',
-          transitionDelay: '0s',
-          transitionTimingFunction: 'step-start'
-        };
+        // When collapsed, position icon absolutely to remove it from flex flow
+        // This prevents any layout shifts from gap changes or label position changes
+        const iconWrapperStyle: React.CSSProperties = isCollapsed 
+          ? {
+              position: 'absolute',
+              left: '12px', // px-3 (12px) + 4px offset = 16px from left edge, but we want 4px from center, so 12px
+              width: '20px',
+              height: '20px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              // No transitions - instant position change
+              transition: 'none',
+              transitionProperty: 'none',
+              transitionDuration: '0s',
+              transitionDelay: '0s'
+            }
+          : {
+              marginLeft: '0px',
+              width: '20px',
+              height: '20px',
+              flexShrink: 0,
+              transition: 'none',
+              transitionProperty: 'none',
+              transitionDuration: '0s',
+              transitionDelay: '0s'
+            };
 
         // Add active item classes if this is the active route
         if (isActiveLeaf) {
