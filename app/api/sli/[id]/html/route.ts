@@ -96,14 +96,34 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
   html = html.replace(/{leave blank}/g, '');
 
   // Handle products from selected_products - fetch product details and aggregate by HS Code
-  const selectedProducts = sli.selected_products || [];
+  // Parse JSONB if it's a string
+  let selectedProducts = sli.selected_products || [];
+  if (typeof selectedProducts === 'string') {
+    try {
+      selectedProducts = JSON.parse(selectedProducts);
+    } catch (e) {
+      console.error('Error parsing selected_products JSON:', e);
+      selectedProducts = [];
+    }
+  }
   
-  if (selectedProducts.length === 0) {
+  if (!Array.isArray(selectedProducts) || selectedProducts.length === 0) {
+    console.error('No products found in SLI. selected_products:', selectedProducts);
     throw new Error('No products found in SLI');
   }
 
   // Fetch product details from Products table
-  const productIds = selectedProducts.map((sp: any) => sp.product_id);
+  const productIds = selectedProducts
+    .map((sp: any) => sp.product_id)
+    .filter((id: any) => id); // Filter out any null/undefined IDs
+
+  if (productIds.length === 0) {
+    console.error('No valid product IDs found. selectedProducts:', selectedProducts);
+    throw new Error('No valid product IDs found in SLI');
+  }
+
+  console.log('Fetching products with IDs:', productIds);
+  
   const { data: products, error: productsError } = await supabaseAdmin
     .from('Products')
     .select('id, item_name, hs_code, case_weight, made_in, eccn_code, unit_of_measure, price_international')
@@ -111,8 +131,15 @@ async function generateStandaloneSLIHTML(html: string, sli: any, supabaseAdmin: 
 
   if (productsError) {
     console.error('Error fetching products:', productsError);
-    throw new Error('Failed to fetch product details');
+    throw new Error(`Failed to fetch product details: ${productsError.message}`);
   }
+
+  if (!products || products.length === 0) {
+    console.error('No products returned from database. Product IDs:', productIds);
+    throw new Error(`No products found for IDs: ${productIds.join(', ')}`);
+  }
+
+  console.log('Successfully fetched products:', products.length);
 
   // Type definition for product
   type Product = {
