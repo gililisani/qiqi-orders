@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 
 export default function StandaloneSLIPreviewPage() {
@@ -129,7 +129,7 @@ export default function StandaloneSLIPreviewPage() {
       
       <div className="no-print h-16"></div>
       
-      <div ref={contentRef} dangerouslySetInnerHTML={{ __html: htmlContent }} />
+      <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
     </>
   );
 }
