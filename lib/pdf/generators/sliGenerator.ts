@@ -32,14 +32,23 @@ export async function generateSLIPDF(
   filename: string
 ): Promise<void> {
   try {
-    // Capture the HTML element as canvas with high quality
+    // Hide any navigation/button elements before capture
+    const noPrintElements = htmlElement.querySelectorAll('.no-print');
+    noPrintElements.forEach((el: any) => {
+      el.style.display = 'none';
+    });
+
+    // Capture the HTML element as canvas
     const canvas = await html2canvas(htmlElement, {
-      scale: 2,
+      scale: 2, // High quality
       useCORS: true,
       logging: false,
       backgroundColor: '#ffffff',
-      windowWidth: htmlElement.scrollWidth,
-      windowHeight: htmlElement.scrollHeight,
+    });
+
+    // Restore hidden elements
+    noPrintElements.forEach((el: any) => {
+      el.style.display = '';
     });
 
     // Create PDF - A4 portrait
@@ -51,54 +60,54 @@ export async function generateSLIPDF(
     // Convert canvas to image
     const imgData = canvas.toDataURL('image/png');
     
-    // Calculate the image dimensions in mm
-    // The canvas is captured at scale=2, so we have high-res pixels
-    // We want to fit the content to the full PDF width
-    const imgWidthMM = pdfWidth; // Fill the full page width
-    const imgHeightMM = (canvas.height / canvas.width) * imgWidthMM; // Maintain aspect ratio
+    // Calculate dimensions - fit image to page width
+    const imgWidthPx = canvas.width;
+    const imgHeightPx = canvas.height;
+    const aspectRatio = imgHeightPx / imgWidthPx;
+    
+    // Image will fill the full PDF width
+    const imgWidthMM = pdfWidth;
+    const imgHeightMM = pdfWidth * aspectRatio;
 
     // Check if content fits on one page
     if (imgHeightMM <= pdfHeight) {
-      // Single page - center vertically if there's space
-      const yOffset = 0; // Start from top
-      pdf.addImage(imgData, 'PNG', 0, yOffset, imgWidthMM, imgHeightMM, undefined, 'FAST');
+      // Single page - add the full image
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidthMM, imgHeightMM, undefined, 'FAST');
     } else {
-      // Multiple pages - split the canvas
+      // Multiple pages - need to split
       const totalPages = Math.ceil(imgHeightMM / pdfHeight);
+      const heightPerPageMM = pdfHeight;
+      const heightPerPagePx = (heightPerPageMM / imgWidthMM) * imgWidthPx;
       
       for (let page = 0; page < totalPages; page++) {
         if (page > 0) {
           pdf.addPage();
         }
 
-        // Calculate which portion of the canvas to use for this page
-        const pageStartMM = page * pdfHeight;
-        const pageHeightMM = Math.min(pdfHeight, imgHeightMM - pageStartMM);
-        
-        // Convert back to pixels
-        const pageStartPx = (pageStartMM / imgWidthMM) * canvas.width;
-        const pageHeightPx = (pageHeightMM / imgWidthMM) * canvas.width;
+        const sourceY = page * heightPerPagePx;
+        const sourceHeight = Math.min(heightPerPagePx, imgHeightPx - sourceY);
+        const destHeight = (sourceHeight / imgWidthPx) * imgWidthMM;
 
         // Create temporary canvas for this page slice
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = pageHeightPx;
+        tempCanvas.width = imgWidthPx;
+        tempCanvas.height = sourceHeight;
         const ctx = tempCanvas.getContext('2d');
         
         if (ctx) {
           ctx.drawImage(
             canvas,
             0,
-            pageStartPx,
-            canvas.width,
-            pageHeightPx,
+            sourceY,
+            imgWidthPx,
+            sourceHeight,
             0,
             0,
-            canvas.width,
-            pageHeightPx
+            imgWidthPx,
+            sourceHeight
           );
           const pageImgData = tempCanvas.toDataURL('image/png');
-          pdf.addImage(pageImgData, 'PNG', 0, 0, imgWidthMM, pageHeightMM, undefined, 'FAST');
+          pdf.addImage(pageImgData, 'PNG', 0, 0, imgWidthMM, destHeight, undefined, 'FAST');
         }
       }
     }
