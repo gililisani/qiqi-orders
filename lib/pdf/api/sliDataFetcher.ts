@@ -91,7 +91,7 @@ export async function fetchStandaloneSLIData(sliId: string): Promise<SLIDocument
     in_bond_code: sli.in_bond_code,
     instructions_to_forwarder: sli.instructions_to_forwarder,
     sli_date: sli.sli_date,
-    date_of_export: sli.date_of_export,
+    date_of_export: sli.date_of_export || new Date().toLocaleDateString('en-US'),
     products: Array.from(aggregatedProducts.values()),
     checkbox_states: sli.checkbox_states || {},
   };
@@ -196,7 +196,8 @@ export async function fetchOrderSLIData(orderId: string, authToken: string): Pro
     forwarding_agent_line4: sli.forwarding_agent_line4,
     in_bond_code: sli.in_bond_code,
     instructions_to_forwarder: sli.instructions_to_forwarder,
-    date_of_export: sli.date_of_export,
+    sli_date: sli.date_of_export,
+    date_of_export: sli.date_of_export || new Date().toLocaleDateString('en-US'),
     products: sliProducts,
     checkbox_states: sli.checkbox_states || {},
   };
