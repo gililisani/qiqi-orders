@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { generateSLIPDF } from '../../../../lib/pdf/generators/sliGenerator';
+import { generateSLIPDF } from '../../../../../lib/pdf/generators/sliGenerator';
 
 export default function StandaloneSLIPreviewPage() {
   const params = useParams();
