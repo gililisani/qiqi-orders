@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabase } from '../../../../../lib/supabase-provider';
+import { generateAndDownloadSLIPDF, type SLIPDFData } from '../../../../../lib/pdf/generators/sliGenerator';
 
 export default function SLIPreviewPage() {
   const params = useParams();
@@ -11,6 +12,7 @@ export default function SLIPreviewPage() {
   const [htmlContent, setHtmlContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
 
   useEffect(() => {
     fetchSLIHTML();
@@ -46,14 +48,16 @@ export default function SLIPreviewPage() {
 
   const handleDownloadPDF = async () => {
     try {
+      setGeneratingPDF(true);
+      
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         alert('Not authenticated');
         return;
       }
 
-      // Call server-side PDF generation API
-      const response = await fetch(`/api/orders/${orderId}/sli/pdf`, {
+      // Fetch SLI data for PDF generation
+      const response = await fetch(`/api/orders/${orderId}/sli/data`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -61,24 +65,24 @@ export default function SLIPreviewPage() {
       
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to generate PDF');
+        throw new Error(error.error || 'Failed to fetch SLI data');
       }
       
-      // Get the PDF blob
-      const blob = await response.blob();
+      const sliData: SLIPDFData = await response.json();
       
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || `SLI-${orderId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      // For order-based SLIs, use invoice number if no SLI number
+      if (sliData.sli_number === 0) {
+        // We'll use invoice number in the filename, but keep 0 for internal use
+        // The generator will handle this
+      }
+      
+      // Generate PDF using the reusable module
+      await generateAndDownloadSLIPDF(sliData);
     } catch (err: any) {
       console.error('Error generating PDF:', err);
       alert('Failed to generate PDF: ' + err.message);
+    } finally {
+      setGeneratingPDF(false);
     }
   };
 
@@ -168,9 +172,10 @@ export default function SLIPreviewPage() {
         <div className="print:hidden fixed top-4 right-4 z-50 space-x-2">
           <button
             onClick={handleDownloadPDF}
-            className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-lg"
+            disabled={generatingPDF}
+            className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-lg disabled:opacity-50"
           >
-            Download as PDF
+            {generatingPDF ? 'Generating PDF...' : 'Download as PDF'}
           </button>
           <button
             onClick={() => window.close()}

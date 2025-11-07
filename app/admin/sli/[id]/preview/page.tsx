@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { generateAndDownloadSLIPDF, type SLIPDFData } from '../../../../lib/pdf/generators/sliGenerator';
 
 export default function StandaloneSLIPreviewPage() {
   const params = useParams();
@@ -36,26 +37,18 @@ export default function StandaloneSLIPreviewPage() {
     try {
       setGeneratingPDF(true);
       
-      // Call server-side PDF generation API
-      const response = await fetch(`/api/sli/${sliId}/pdf`);
+      // Fetch SLI data for PDF generation
+      const response = await fetch(`/api/sli/${sliId}/data`);
       
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to generate PDF');
+        throw new Error(error.error || 'Failed to fetch SLI data');
       }
       
-      // Get the PDF blob
-      const blob = await response.blob();
+      const sliData: SLIPDFData = await response.json();
       
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || `SLI-${sliId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      // Generate PDF using the reusable module
+      await generateAndDownloadSLIPDF(sliData);
     } catch (err: any) {
       console.error('Error generating PDF:', err);
       alert('Failed to generate PDF: ' + err.message);
