@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabase } from '../../../../../lib/supabase-provider';
-import { generateAndDownloadSLIPDF } from '../../../../../lib/pdf/generators/reactPdfSliGenerator';
+import { generateAndDownloadSLIPDF } from '../../../../../lib/pdf/generators/sliPDFGenerator';
 import type { SLIDocumentData } from '../../../../../lib/pdf/components/SLIDocument';
 
 export default function SLIPreviewPage() {
