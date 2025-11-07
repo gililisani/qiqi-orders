@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { generateSLIPDF } from '../../../../../lib/pdf/generators/sliGenerator';
+import { generateAndDownloadSLIPDF } from '../../../../../lib/pdf/generators/reactPdfSliGenerator';
+import type { SLIDocumentData } from '../../../../../lib/pdf/components/SLIDocument';
 
 export default function StandaloneSLIPreviewPage() {
   const params = useParams();
@@ -11,12 +12,10 @@ export default function StandaloneSLIPreviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [generatingPDF, setGeneratingPDF] = useState(false);
-  const [sliNumber, setSliNumber] = useState<string>('');
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchSLIHTML();
-    fetchSLINumber();
   }, [sliId]);
 
   const fetchSLIHTML = async () => {
@@ -36,30 +35,22 @@ export default function StandaloneSLIPreviewPage() {
     }
   };
 
-  const fetchSLINumber = async () => {
-    try {
-      const response = await fetch(`/api/sli/standalone/${sliId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSliNumber(data.sli?.sli_number || sliId.substring(0, 8));
-      }
-    } catch (err) {
-      // Fallback to sliId
-      setSliNumber(sliId.substring(0, 8));
-    }
-  };
-
   const handleDownloadPDF = async () => {
-    if (!contentRef.current) {
-      alert('Content not ready for PDF generation');
-      return;
-    }
-
     try {
       setGeneratingPDF(true);
       
-      // Use the PDF generator module
-      await generateSLIPDF(contentRef.current, `SLI-${sliNumber}.pdf`);
+      // Fetch SLI data for React-PDF generation
+      const response = await fetch(`/api/sli/${sliId}/data`);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch SLI data');
+      }
+      
+      const sliData: SLIDocumentData = await response.json();
+      
+      // Generate PDF using React-PDF
+      await generateAndDownloadSLIPDF(sliData);
     } catch (err: any) {
       console.error('Error generating PDF:', err);
       alert('Failed to generate PDF: ' + err.message);
