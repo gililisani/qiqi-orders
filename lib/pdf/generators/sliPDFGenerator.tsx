@@ -10,6 +10,10 @@ export async function generateAndDownloadSLIPDF(
   filename?: string
 ): Promise<void> {
   try {
+    console.log('Generating PDF with data:', data);
+    console.log('Products:', data.products);
+    console.log('Products length:', data.products?.length);
+    
     // Generate PDF blob
     const blob = await pdf(<SLIDocument data={data} />).toBlob();
     
