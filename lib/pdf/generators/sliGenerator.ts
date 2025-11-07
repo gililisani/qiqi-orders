@@ -33,17 +33,23 @@ export async function generateSLIPDF(
 ): Promise<void> {
   try {
     // Hide any navigation/button elements before capture
-    const noPrintElements = htmlElement.querySelectorAll('.no-print');
+    const noPrintElements = document.querySelectorAll('.no-print');
     noPrintElements.forEach((el: any) => {
       el.style.display = 'none';
     });
 
-    // Capture the HTML element as canvas
-    const canvas = await html2canvas(htmlElement, {
-      scale: 2, // High quality
+    // Find the actual SLI page content (the div with class="page")
+    const pageElement = htmlElement.querySelector('.page') as HTMLElement || htmlElement;
+
+    // Capture the page element as canvas with fixed dimensions matching A4
+    // A4 at 96 DPI: 210mm = 794px, 297mm = 1123px
+    const canvas = await html2canvas(pageElement, {
+      scale: 2,
       useCORS: true,
       logging: false,
       backgroundColor: '#ffffff',
+      width: 794, // 210mm at 96 DPI
+      height: 1123, // 297mm at 96 DPI
     });
 
     // Restore hidden elements
@@ -60,57 +66,9 @@ export async function generateSLIPDF(
     // Convert canvas to image
     const imgData = canvas.toDataURL('image/png');
     
-    // Calculate dimensions - fit image to page width
-    const imgWidthPx = canvas.width;
-    const imgHeightPx = canvas.height;
-    const aspectRatio = imgHeightPx / imgWidthPx;
-    
-    // Image will fill the full PDF width
-    const imgWidthMM = pdfWidth;
-    const imgHeightMM = pdfWidth * aspectRatio;
-
-    // Check if content fits on one page
-    if (imgHeightMM <= pdfHeight) {
-      // Single page - add the full image
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidthMM, imgHeightMM, undefined, 'FAST');
-    } else {
-      // Multiple pages - need to split
-      const totalPages = Math.ceil(imgHeightMM / pdfHeight);
-      const heightPerPageMM = pdfHeight;
-      const heightPerPagePx = (heightPerPageMM / imgWidthMM) * imgWidthPx;
-      
-      for (let page = 0; page < totalPages; page++) {
-        if (page > 0) {
-          pdf.addPage();
-        }
-
-        const sourceY = page * heightPerPagePx;
-        const sourceHeight = Math.min(heightPerPagePx, imgHeightPx - sourceY);
-        const destHeight = (sourceHeight / imgWidthPx) * imgWidthMM;
-
-        // Create temporary canvas for this page slice
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = imgWidthPx;
-        tempCanvas.height = sourceHeight;
-        const ctx = tempCanvas.getContext('2d');
-        
-        if (ctx) {
-          ctx.drawImage(
-            canvas,
-            0,
-            sourceY,
-            imgWidthPx,
-            sourceHeight,
-            0,
-            0,
-            imgWidthPx,
-            sourceHeight
-          );
-          const pageImgData = tempCanvas.toDataURL('image/png');
-          pdf.addImage(pageImgData, 'PNG', 0, 0, imgWidthMM, destHeight, undefined, 'FAST');
-        }
-      }
-    }
+    // Since we captured at A4 dimensions (794x1123 px at scale 2 = 1588x2246)
+    // We can add it directly to fill the page
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
 
     // Save the PDF
     pdf.save(filename);
