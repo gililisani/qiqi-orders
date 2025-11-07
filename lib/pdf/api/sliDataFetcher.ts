@@ -159,18 +159,22 @@ export async function fetchOrderSLIData(orderId: string, authToken: string): Pro
   const productIds = (orderItems || []).map((item: any) => item.product_id);
   const { data: products } = await supabaseAdmin
     .from('Products')
-    .select('id, hs_code, case_weight, made_in')
+    .select('id, hs_code, case_weight, made_in, case_pack')
     .in('id', productIds);
 
   const productsMap = new Map((products || []).map((p: any) => [p.id, p]));
 
-  // Build products array
+  // Build products array using correct quantity calculation
   const sliProducts = (orderItems || []).map((item: any) => {
     const product = productsMap.get(item.product_id);
+    const casePack = product?.case_pack || 1;
+    const totalUnits = item.quantity || 0; // Total units ordered
+    const caseQty = Math.ceil(totalUnits / casePack); // Number of cases
+    
     return {
       hs_code: product?.hs_code || '',
-      quantity: item.case_qty || item.quantity || 0,
-      weight: (product?.case_weight || 0) * (item.case_qty || 0),
+      quantity: totalUnits, // Use total units, not case_qty
+      weight: (product?.case_weight || 0) * caseQty,
       value: item.total_price || 0,
       made_in: product?.made_in || '',
     };
