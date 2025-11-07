@@ -25,7 +25,9 @@ export interface PDFLineOptions {
 export interface PDFRectOptions {
   fillColor?: number[];
   strokeColor?: number[];
+  color?: number[];
   lineWidth?: number;
+  width?: number;
 }
 
 export type PDFInstance = jsPDF;
