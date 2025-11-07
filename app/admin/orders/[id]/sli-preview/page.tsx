@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabase } from '../../../../../lib/supabase-provider';
+import { generateSLIPDF } from '../../../../../lib/pdf/generators/sliGenerator';
 import { generateAndDownloadSLIPDF, type SLIPDFData } from '../../../../../lib/pdf/generators/sliGenerator';
 
 export default function SLIPreviewPage() {
@@ -13,9 +14,13 @@ export default function SLIPreviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [invoiceNumber, setInvoiceNumber] = useState<string>('');
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
 
   useEffect(() => {
     fetchSLIHTML();
+    fetchOrderInfo();
   }, [orderId]);
 
   const fetchSLIHTML = async () => {
@@ -43,6 +48,39 @@ export default function SLIPreviewPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOrderInfo = async () => {
+    try {
+      const { data: order } = await supabase
+        .from('orders')
+        .select('invoice_number, so_number')
+        .eq('id', orderId)
+        .single();
+      
+      setInvoiceNumber(order?.invoice_number || order?.so_number || orderId.substring(0, 8));
+    } catch (err) {
+      setInvoiceNumber(orderId.substring(0, 8));
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!contentRef.current) {
+      alert('Content not ready for PDF generation');
+      return;
+    }
+
+    try {
+      setGeneratingPDF(true);
+      
+      // Use the PDF generator module
+      await generateSLIPDF(contentRef.current, `SLI-${invoiceNumber}.pdf`);
+    } catch (err: any) {
+      console.error('Error generating PDF:', err);
+      alert('Failed to generate PDF: ' + err.message);
+    } finally {
+      setGeneratingPDF(false);
     }
   };
 
