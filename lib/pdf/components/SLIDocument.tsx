@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer';
 import { PAGE_SIZES } from '../constants';
 
