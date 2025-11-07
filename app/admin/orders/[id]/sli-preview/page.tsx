@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabase } from '../../../../../lib/supabase-provider';
 import { generateSLIPDF } from '../../../../../lib/pdf/generators/sliGenerator';
-import { generateAndDownloadSLIPDF, type SLIPDFData } from '../../../../../lib/pdf/generators/sliGenerator';
 
 export default function SLIPreviewPage() {
   const params = useParams();
@@ -16,7 +15,6 @@ export default function SLIPreviewPage() {
   const [generatingPDF, setGeneratingPDF] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState<string>('');
   const contentRef = useRef<HTMLDivElement>(null);
-  const [generatingPDF, setGeneratingPDF] = useState(false);
 
   useEffect(() => {
     fetchSLIHTML();
@@ -76,46 +74,6 @@ export default function SLIPreviewPage() {
       
       // Use the PDF generator module
       await generateSLIPDF(contentRef.current, `SLI-${invoiceNumber}.pdf`);
-    } catch (err: any) {
-      console.error('Error generating PDF:', err);
-      alert('Failed to generate PDF: ' + err.message);
-    } finally {
-      setGeneratingPDF(false);
-    }
-  };
-
-  const handleDownloadPDF = async () => {
-    try {
-      setGeneratingPDF(true);
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        alert('Not authenticated');
-        return;
-      }
-
-      // Fetch SLI data for PDF generation
-      const response = await fetch(`/api/orders/${orderId}/sli/data`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch SLI data');
-      }
-      
-      const sliData: SLIPDFData = await response.json();
-      
-      // For order-based SLIs, use invoice number if no SLI number
-      if (sliData.sli_number === 0) {
-        // We'll use invoice number in the filename, but keep 0 for internal use
-        // The generator will handle this
-      }
-      
-      // Generate PDF using the reusable module
-      await generateAndDownloadSLIPDF(sliData);
     } catch (err: any) {
       console.error('Error generating PDF:', err);
       alert('Failed to generate PDF: ' + err.message);
@@ -223,8 +181,8 @@ export default function SLIPreviewPage() {
           </button>
         </div>
 
-      {/* SLI Content */}
-      <div ref={contentRef} id="sli-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+        {/* SLI Content */}
+        <div ref={contentRef} id="sli-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />
       </div>
     </>
   );
