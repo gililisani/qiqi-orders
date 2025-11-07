@@ -1,5 +1,6 @@
 import { pdf } from '@react-pdf/renderer';
-import { SLIDocument, SLIDocumentData } from '../components/SLIDocument';
+import { SLIDocument } from '../components/SLIDocument';
+import type { SLIDocumentData } from '../components/SLIDocument';
 
 /**
  * Generate and download SLI PDF using React-PDF
