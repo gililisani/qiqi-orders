@@ -185,8 +185,8 @@ export default function SLIPreviewPage() {
           </button>
         </div>
 
-        {/* SLI Content */}
-        <div id="sli-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+      {/* SLI Content */}
+      <div ref={contentRef} id="sli-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />
       </div>
     </>
   );

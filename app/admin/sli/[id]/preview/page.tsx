@@ -122,7 +122,7 @@ export default function StandaloneSLIPreviewPage() {
       
       <div className="no-print h-16"></div>
       
-      <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+      <div ref={contentRef} dangerouslySetInnerHTML={{ __html: htmlContent }} />
     </>
   );
 }
