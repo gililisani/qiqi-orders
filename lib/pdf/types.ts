@@ -17,4 +17,15 @@ export interface PDFDimensions {
   height: number;
 }
 
+export interface PDFLineOptions {
+  color?: number[];
+  width?: number;
+}
+
+export interface PDFRectOptions {
+  fillColor?: number[];
+  strokeColor?: number[];
+  lineWidth?: number;
+}
+
 export type PDFInstance = jsPDF;
