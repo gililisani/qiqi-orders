@@ -169,12 +169,12 @@ export async function fetchOrderSLIData(orderId: string, authToken: string): Pro
     const product = productsMap.get(item.product_id);
     const casePack = product?.case_pack || 1;
     const totalUnits = item.quantity || 0; // Total units ordered
-    const caseQty = Math.ceil(totalUnits / casePack); // Number of cases
+    const caseQty = item.case_qty ?? Math.ceil(totalUnits / casePack); // Prefer stored case count
     
     return {
       hs_code: product?.hs_code || '',
       quantity: totalUnits, // Use total units, not case_qty
-      weight: (product?.case_weight || 0) * caseQty,
+      weight: (product?.case_weight || 0) * (caseQty || 0),
       value: item.total_price || 0,
       made_in: product?.made_in || '',
     };
