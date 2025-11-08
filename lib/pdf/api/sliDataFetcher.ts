@@ -168,14 +168,18 @@ export async function fetchOrderSLIData(orderId: string, authToken: string): Pro
   const sliProducts = (orderItems || []).map((item: any) => {
     const product = productsMap.get(item.product_id);
     const casePack = product?.case_pack || 1;
-    const totalUnits = item.quantity || 0; // Total units ordered
-    const caseQty = item.case_qty ?? Math.ceil(totalUnits / casePack); // Prefer stored case count
+    const totalUnits = Number(item.quantity) || 0; // Total units ordered
+    const storedCaseQty = Number(item.case_qty) || 0;
+    const caseQty = storedCaseQty > 0 ? storedCaseQty : Math.ceil(totalUnits / casePack); // Number of cases
+    const caseWeight = Number(product?.case_weight) || 0;
     
     return {
       hs_code: product?.hs_code || '',
       quantity: totalUnits, // Use total units, not case_qty
-      weight: (product?.case_weight || 0) * (caseQty || 0),
-      value: item.total_price || 0,
+      case_qty: caseQty,
+      case_weight: caseWeight,
+      weight: caseWeight * caseQty,
+      value: Number(item.total_price) || 0,
       made_in: product?.made_in || '',
     };
   });
