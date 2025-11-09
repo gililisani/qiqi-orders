@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import path from 'path';
+import { aggregateProductsByHS } from './sli/productAggregator';
 
 interface SLIData {
   // From SLI table
@@ -91,54 +92,10 @@ export function generateSLIHTML(data: SLIData): string {
   // Products with HS code: group and sum
   // Products without HS code: keep separate with N/A
   
-  const groupedProducts: Map<string, {
-    hs_code: string;
-    total_quantity: number;
-    total_weight: number;
-    total_value: number;
-    made_in: string;
-  }> = new Map();
-  
-  const productsWithoutHS: Array<{
-    quantity: number;
-    weight: number;
-    value: number;
-    made_in: string;
-  }> = [];
-  
-  data.products.forEach(product => {
-    const totalWeight = (product.case_qty || 0) * (product.case_weight || 0);
-    
-    if (product.hs_code && product.hs_code.trim() !== '') {
-      // Has HS code - group it
-      const hsCode = product.hs_code.trim();
-      
-      if (groupedProducts.has(hsCode)) {
-        const existing = groupedProducts.get(hsCode)!;
-        existing.total_quantity += product.quantity;
-        existing.total_weight += totalWeight;
-        existing.total_value += product.total_price;
-        // Keep the first made_in for the group
-      } else {
-        groupedProducts.set(hsCode, {
-          hs_code: hsCode,
-          total_quantity: product.quantity,
-          total_weight: totalWeight,
-          total_value: product.total_price,
-          made_in: product.made_in || '',
-        });
-      }
-    } else {
-      // No HS code - keep separate with N/A
-      productsWithoutHS.push({
-        quantity: product.quantity,
-        weight: totalWeight,
-        value: product.total_price,
-        made_in: product.made_in || '',
-      });
-    }
+  const { productsWithHS, productsWithoutHS } = aggregateProductsByHS({
+    products: data.products,
   });
-  
+
   // Helper function to format currency with thousand separator
   const formatCurrency = (value: number): string => {
     return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -154,7 +111,7 @@ export function generateSLIHTML(data: SLIData): string {
   };
 
   // Generate rows for products WITH HS code
-  const rowsWithHS = Array.from(groupedProducts.values()).map(group => {
+  const rowsWithHS = productsWithHS.map(group => {
     return `            <tr>
               <td class="w-8">${getDorF(group.made_in)}</td>
               <td class="w-18">${group.hs_code}</td>
@@ -174,13 +131,13 @@ export function generateSLIHTML(data: SLIData): string {
     return `            <tr>
               <td class="w-8">${getDorF(product.made_in)}</td>
               <td class="w-18">N/A</td>
-              <td class="w-10">${product.quantity.toLocaleString('en-US')}</td>
+              <td class="w-10">${product.total_quantity.toLocaleString('en-US')}</td>
               <td class="w-12">Each</td>
-              <td class="w-10">${product.weight.toFixed(2)} kg</td>
+              <td class="w-10">${product.total_weight.toFixed(2)} kg</td>
               <td class="w-10">EAR99</td>
               <td class="w-8"></td>
               <td class="w-12">NLR</td>
-              <td class="w-12">$${formatCurrency(product.value)}</td>
+              <td class="w-12">$${formatCurrency(product.total_value)}</td>
               <td class="w-10"></td>
             </tr>`;
   });

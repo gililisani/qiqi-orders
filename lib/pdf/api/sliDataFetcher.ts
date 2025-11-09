@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { SLIDocumentData } from '../components/SLIDocument';
+import { aggregateProductsByHS } from '../../sli/productAggregator';
 
 /**
  * Fetch standalone SLI data and transform it for PDF generation
@@ -48,32 +49,18 @@ export async function fetchStandaloneSLIData(sliId: string): Promise<SLIDocument
 
   const productsMap = new Map((products || []).map((p: any) => [p.id, p]));
 
-  // Aggregate products by HS code
-  const aggregatedProducts = new Map();
-  
-  selectedProducts.forEach((sp: any) => {
-    const product = productsMap.get(sp.product_id || sp.id);
-    if (!product) return;
-
-    const hsCode = product.hs_code || 'N/A';
-    const quantity = sp.quantity || 0;
-    const unitPrice = (product.price_international ?? 0) as number;
-    const caseWeight = (product.case_weight ?? 0) as number;
-
-    if (aggregatedProducts.has(hsCode)) {
-      const existing = aggregatedProducts.get(hsCode);
-      existing.quantity += quantity;
-      existing.weight += caseWeight * quantity;
-      existing.value += unitPrice * quantity;
-    } else {
-      aggregatedProducts.set(hsCode, {
-        hs_code: hsCode,
-        quantity: quantity,
-        weight: caseWeight * quantity,
-        value: unitPrice * quantity,
-        made_in: product.made_in || '',
-      });
-    }
+  const { productsWithHS, productsWithoutHS } = aggregateProductsByHS({
+    products: selectedProducts.map((sp: any) => {
+      const product = productsMap.get(sp.product_id || sp.id);
+      return {
+        hs_code: product?.hs_code || '',
+        quantity: sp.quantity || 0,
+        case_qty: sp.case_qty || 0,
+        case_weight: product?.case_weight || 0,
+        total_price: (product?.price_international ?? 0) * (sp.quantity || 0),
+        made_in: product?.made_in || '',
+      } as const;
+    }),
   });
 
   return {
@@ -92,7 +79,10 @@ export async function fetchStandaloneSLIData(sliId: string): Promise<SLIDocument
     instructions_to_forwarder: sli.instructions_to_forwarder,
     sli_date: sli.sli_date,
     date_of_export: sli.date_of_export || new Date().toLocaleDateString('en-US'),
-    products: Array.from(aggregatedProducts.values()),
+    products: [
+      ...productsWithHS,
+      ...productsWithoutHS,
+    ],
     checkbox_states: sli.checkbox_states || {},
   };
 }
@@ -164,61 +154,18 @@ export async function fetchOrderSLIData(orderId: string, authToken: string): Pro
 
   const productsMap = new Map((products || []).map((p: any) => [p.id, p]));
 
-  // Aggregate products by HS code (mirror HTML logic)
-  const aggregatedProducts = new Map<string, {
-    hs_code: string;
-    total_quantity: number;
-    total_weight: number;
-    total_value: number;
-    made_in: string;
-  }>();
-
-  const productsWithoutHS: Array<{
-    quantity: number;
-    weight: number;
-    value: number;
-    made_in: string;
-  }> = [];
-
-  (orderItems || []).forEach((item: any) => {
-    const product = productsMap.get(item.product_id);
-    if (!product) return;
-
-    const hsCodeRaw = product.hs_code?.trim() || '';
-    const hsCode = hsCodeRaw !== '' ? hsCodeRaw : 'N/A';
-
-    const totalUnits = Number(item.quantity) || 0;
-    const casePack = Number(product.case_pack) || 1;
-    const storedCaseQty = Number(item.case_qty) || 0;
-    const caseQty = storedCaseQty > 0 ? storedCaseQty : Math.ceil(totalUnits / casePack);
-    const caseWeight = Number(product.case_weight) || 0;
-    const weight = caseQty * caseWeight;
-    const value = Number(item.total_price) || 0;
-    const madeIn = product.made_in || '';
-
-    if (hsCodeRaw) {
-      if (aggregatedProducts.has(hsCode)) {
-        const existing = aggregatedProducts.get(hsCode)!;
-        existing.total_quantity += totalUnits;
-        existing.total_weight += weight;
-        existing.total_value += value;
-      } else {
-        aggregatedProducts.set(hsCode, {
-          hs_code: hsCode,
-          total_quantity: totalUnits,
-          total_weight: weight,
-          total_value: value,
-          made_in: madeIn,
-        });
-      }
-    } else {
-      productsWithoutHS.push({
-        quantity: totalUnits,
-        weight,
-        value,
-        made_in: madeIn,
-      });
-    }
+  const { productsWithHS, productsWithoutHS } = aggregateProductsByHS({
+    products: (orderItems || []).map((item: any) => {
+      const product = productsMap.get(item.product_id);
+      return {
+        hs_code: product?.hs_code || '',
+        quantity: item.quantity || 0,
+        case_qty: item.case_qty || 0,
+        case_weight: product?.case_weight || 0,
+        total_price: item.total_price || 0,
+        made_in: product?.made_in || '',
+      } as const;
+    }),
   });
 
   const company = order.companies as any;
@@ -240,26 +187,8 @@ export async function fetchOrderSLIData(orderId: string, authToken: string): Pro
     sli_date: sli.date_of_export,
     date_of_export: sli.date_of_export || new Date().toLocaleDateString('en-US'),
     products: [
-      ...Array.from(aggregatedProducts.values()).map((p) => ({
-        hs_code: p.hs_code,
-        quantity: p.total_quantity,
-        weight: p.total_weight,
-        value: p.total_value,
-        made_in: p.made_in,
-        total_quantity: p.total_quantity,
-        total_weight: p.total_weight,
-        total_value: p.total_value,
-      })),
-      ...productsWithoutHS.map(p => ({
-        hs_code: 'N/A',
-        quantity: p.quantity,
-        weight: p.weight,
-        value: p.value,
-        made_in: p.made_in,
-        total_quantity: p.quantity,
-        total_weight: p.weight,
-        total_value: p.value,
-      })),
+      ...productsWithHS,
+      ...productsWithoutHS,
     ],
     checkbox_states: sli.checkbox_states || {},
   };
