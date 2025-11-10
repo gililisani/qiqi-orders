@@ -38,6 +38,7 @@ interface Order {
       company_address?: string;
       phone?: string;
       email?: string;
+      footer_text?: string;
     };
     class?: { name: string };
     location?: { location_name: string };
@@ -704,6 +705,25 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
     // Update currentY to the end of the longer column
     currentY = Math.max(notesY, totalsY) + 10;
 
+    const footerText = order.company?.subsidiary?.footer_text?.trim();
+    if (footerText) {
+      if (currentY > pageHeight - 30) {
+        pdf.addPage();
+        currentY = margin;
+      }
+
+      addLine(margin, currentY, pageWidth - margin, currentY);
+      currentY += 6;
+      addText('Footer', margin, currentY, { fontSize: 10, fontStyle: 'bold' });
+      currentY += 5;
+      const footerLines = pdf.splitTextToSize(footerText, contentWidth);
+      footerLines.forEach((line: string) => {
+        addText(line, margin, currentY, { fontSize: 9 });
+        currentY += 5;
+      });
+      currentY += 5;
+    }
+
     pdf.save(`packing-slip-${order?.invoice_number || 'invoice'}.pdf`);
   };
 
@@ -1278,6 +1298,17 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
                 )}
               </div>
             </div>
+
+            {order.company?.subsidiary?.footer_text && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 font-sans">Footer</h3>
+                <div className="bg-gray-50 p-4 rounded-lg border border-[#e5e5e5]">
+                  <p className="text-gray-700 font-sans text-sm whitespace-pre-line">
+                    {order.company.subsidiary.footer_text}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
           )}
         </Card>

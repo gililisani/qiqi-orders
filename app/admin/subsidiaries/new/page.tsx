@@ -10,6 +10,7 @@ interface FormData {
   company_address: string;
   phone: string;
   email: string;
+  footer_text: string;
 }
 
 export default function NewSubsidiaryPage() {
@@ -20,7 +21,8 @@ export default function NewSubsidiaryPage() {
     ship_from_address: '',
     company_address: '',
     phone: '',
-    email: ''
+    email: '',
+    footer_text: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,7 +38,8 @@ export default function NewSubsidiaryPage() {
           ship_from_address: formData.ship_from_address,
           company_address: formData.company_address,
           phone: formData.phone,
-          email: formData.email
+          email: formData.email,
+          footer_text: formData.footer_text
         }]);
 
       if (error) throw error;
@@ -144,6 +147,20 @@ export default function NewSubsidiaryPage() {
               value={formData.email}
               onChange={handleChange}
               placeholder="Enter email address"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Footer Text
+            </label>
+            <textarea
+              name="footer_text"
+              value={formData.footer_text}
+              onChange={handleChange}
+              rows={3}
+              placeholder="Enter footer text to display on packing slips"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
             />
           </div>
