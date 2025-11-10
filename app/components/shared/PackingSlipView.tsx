@@ -707,21 +707,26 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
     const footerText = order.company?.subsidiary?.footer_text?.trim();
     if (footerText) {
-      if (currentY > pageHeight - 30) {
+      const footerPadding = 4;
+      const lineHeight = 5;
+      const footerLines = pdf.splitTextToSize(footerText, contentWidth - footerPadding * 2);
+      const footerHeight = footerPadding * 2 + Math.max(lineHeight, footerLines.length * lineHeight);
+
+      if (currentY > pageHeight - margin - footerHeight) {
         pdf.addPage();
         currentY = margin;
       }
 
-      addLine(margin, currentY, pageWidth - margin, currentY);
-      currentY += 6;
-      addText('Footer', margin, currentY, { fontSize: 10, fontStyle: 'bold' });
-      currentY += 5;
-      const footerLines = pdf.splitTextToSize(footerText, contentWidth);
+      const footerY = pageHeight - margin - footerHeight;
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.2);
+      pdf.rect(margin, footerY, contentWidth, footerHeight);
+
+      let footerTextY = footerY + footerPadding + 3;
       footerLines.forEach((line: string) => {
-        addText(line, margin, currentY, { fontSize: 9 });
-        currentY += 5;
+        addText(line, margin + footerPadding, footerTextY, { fontSize: 9 });
+        footerTextY += lineHeight;
       });
-      currentY += 5;
     }
 
     pdf.save(`packing-slip-${order?.invoice_number || 'invoice'}.pdf`);
