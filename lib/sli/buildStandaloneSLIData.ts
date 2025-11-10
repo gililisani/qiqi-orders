@@ -88,7 +88,9 @@ export async function buildStandaloneSLIData(
 
   const generatorProducts: GeneratorProduct[] = selectedProducts
     .map((sp) => {
-      const product = productsMap.get(sp.product_id || sp.id);
+      const rawId = sp.product_id ?? sp.id;
+      const productId = typeof rawId === 'string' ? rawId : undefined;
+      const product = productId ? productsMap.get(productId) : undefined;
       const quantity = Number(sp.quantity) || 0;
       const caseQty = Number(sp.case_qty) || quantity;
       const caseWeight = Number(product?.case_weight) || 0;
