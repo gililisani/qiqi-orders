@@ -35,6 +35,20 @@ export default function EditSubsidiaryPage() {
     }
   }, [subsidiaryId]);
 
+  useEffect(() => {
+    if (formData.name && (window as any).__setBreadcrumbs) {
+      (window as any).__setBreadcrumbs([
+        { label: formData.name },
+        { label: 'Edit' }
+      ]);
+    }
+    return () => {
+      if ((window as any).__setBreadcrumbs) {
+        (window as any).__setBreadcrumbs([]);
+      }
+    };
+  }, [formData.name]);
+
   const fetchSubsidiary = async () => {
     try {
       const { data, error } = await supabase
@@ -97,31 +111,16 @@ export default function EditSubsidiaryPage() {
   if (loading) {
     return (
       <div className="p-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-            <div className="space-y-4">
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              <div className="h-10 bg-gray-200 rounded"></div>
-            </div>
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+          <div className="space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            <div className="h-10 bg-gray-200 rounded"></div>
           </div>
         </div>
+      </div>
     );
   }
-
-  // Set breadcrumb
-  useEffect(() => {
-    if (formData.name && (window as any).__setBreadcrumbs) {
-      (window as any).__setBreadcrumbs([
-        { label: formData.name },
-        { label: 'Edit' }
-      ]);
-    }
-    return () => {
-      if ((window as any).__setBreadcrumbs) {
-        (window as any).__setBreadcrumbs([]);
-      }
-    };
-  }, [formData.name]);
 
   return (
     <div className="mt-8 mb-4 space-y-6">
