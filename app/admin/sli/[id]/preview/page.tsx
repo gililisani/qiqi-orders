@@ -80,20 +80,14 @@ export default function StandaloneSLIPreviewPage() {
   };
 
   const heading = useMemo(() => {
-    if (sliData) {
-      const parts: string[] = [];
-      if (sliData.sli_number) {
-        parts.push(`SLI #${sliData.sli_number}`);
-      }
-      if (sliData.consignee_name) {
-        parts.push(sliData.consignee_name);
-      }
-      if (parts.length) {
-        return parts.join(' – ');
-      }
+    if (sliData?.sli_number) {
+      return `SLI #${sliData.sli_number}`;
+    }
+    if (sliId) {
+      return `SLI ${sliId.slice(0, 8)}`;
     }
     return 'SLI Preview';
-  }, [sliData]);
+  }, [sliData, sliId]);
 
   const breadcrumbItems = useMemo(() => {
     return [
