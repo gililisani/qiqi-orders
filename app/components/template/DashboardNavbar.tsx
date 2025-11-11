@@ -332,27 +332,27 @@ export function DashboardNavbar() {
             )}
           </IconButton>
           {parseBreadcrumbs.length > 0 && (
-            <Breadcrumbs
-              className={`bg-transparent !p-0 transition-all ${
+             <Breadcrumbs
+               className={`bg-transparent !p-0 transition-all ${
                 fixedNavbar ? "mt-1" : ""
-              }`}
-              placeholder={undefined}
-              onPointerEnterCapture={undefined}
-              onPointerLeaveCapture={undefined}
-            >
-              <Link href={pathname.startsWith("/client") ? "/client" : "/admin"}>
-                <IconButton size="sm" variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  <HomeIcon className="h-4 w-4 text-gray-900" />
-                </IconButton>
-              </Link>
-              {parseBreadcrumbs.map((crumb, idx) => (
-                <React.Fragment key={idx}>
-                  {crumb.href ? (
-                    <Link href={crumb.href}>
+              } !flex-nowrap items-center gap-2 min-w-0 overflow-hidden`}
+               placeholder={undefined}
+               onPointerEnterCapture={undefined}
+               onPointerLeaveCapture={undefined}
+             >
+               <Link href={pathname.startsWith("/client") ? "/client" : "/admin"}>
+                 <IconButton size="sm" variant="text" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+                   <HomeIcon className="h-4 w-4 text-gray-900" />
+                 </IconButton>
+               </Link>
+               {parseBreadcrumbs.map((crumb, idx) => (
+                 <React.Fragment key={idx}>
+                   {crumb.href ? (
+                    <Link href={crumb.href} className="min-w-0">
                       <Typography
                         variant="small"
                         color="blue-gray"
-                        className="!font-normal opacity-50 transition-all hover:!text-blue-gray-700 hover:opacity-100 max-w-[220px] truncate whitespace-nowrap"
+                        className="!font-normal opacity-50 transition-all hover:!text-blue-gray-700 hover:opacity-100 max-w-[180px] truncate whitespace-nowrap"
                         title={crumb.label}
                         placeholder={undefined}
                         onPointerEnterCapture={undefined}
@@ -365,7 +365,7 @@ export function DashboardNavbar() {
                     <Typography
                       variant="small"
                       color="blue-gray"
-                      className="!font-normal max-w-[220px] truncate whitespace-nowrap"
+                      className="!font-normal max-w-[180px] truncate whitespace-nowrap"
                       title={crumb.label}
                       placeholder={undefined}
                       onPointerEnterCapture={undefined}
