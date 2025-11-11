@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { generateAndDownloadSLIPDF } from '../../../../../lib/pdf/generators/sliPDFGenerator';
 import type { SLIDocumentData } from '../../../../../lib/pdf/components/SLIDocument';
@@ -12,10 +12,12 @@ export default function StandaloneSLIPreviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [sliData, setSliData] = useState<SLIDocumentData | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchSLIHTML();
+    fetchSLIMetadata();
   }, [sliId]);
 
   const fetchSLIHTML = async () => {
@@ -35,22 +37,36 @@ export default function StandaloneSLIPreviewPage() {
     }
   };
 
+  const fetchSLIMetadata = async () => {
+    try {
+      const response = await fetch(`/api/sli/${sliId}/data`);
+      if (!response.ok) return;
+
+      const data: SLIDocumentData = await response.json();
+      setSliData(data);
+    } catch (err) {
+      console.error('Error fetching SLI metadata:', err);
+    }
+  };
+
   const handleDownloadPDF = async () => {
     try {
       setGeneratingPDF(true);
-      
-      // Fetch SLI data for React-PDF generation
-      const response = await fetch(`/api/sli/${sliId}/data`);
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch SLI data');
+
+      let data = sliData;
+
+      if (!data) {
+        const response = await fetch(`/api/sli/${sliId}/data`);
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to fetch SLI data');
+        }
+
+        data = await response.json();
+        setSliData(data);
       }
-      
-      const sliData: SLIDocumentData = await response.json();
-      
-      // Generate PDF using React-PDF
-      await generateAndDownloadSLIPDF(sliData);
+
+      await generateAndDownloadSLIPDF(data);
     } catch (err: any) {
       console.error('Error generating PDF:', err);
       alert('Failed to generate PDF: ' + err.message);
@@ -58,6 +74,51 @@ export default function StandaloneSLIPreviewPage() {
       setGeneratingPDF(false);
     }
   };
+
+  const heading = useMemo(() => {
+    if (sliData) {
+      const parts: string[] = [];
+      if (sliData.sli_number) {
+        parts.push(`SLI #${sliData.sli_number}`);
+      }
+      if (sliData.consignee_name) {
+        parts.push(sliData.consignee_name);
+      }
+      if (parts.length) {
+        return parts.join(' – ');
+      }
+    }
+    return 'SLI Preview';
+  }, [sliData]);
+
+  useEffect(() => {
+    const setBreadcrumbs = () => {
+      if ((window as any).__setBreadcrumbs) {
+        try {
+          (window as any).__setBreadcrumbs([
+            { label: 'SLI Documents' },
+            { label: heading },
+          ]);
+        } catch (err) {
+          console.error('Error setting breadcrumbs:', err);
+        }
+      }
+    };
+
+    setBreadcrumbs();
+    const timeoutId = setTimeout(setBreadcrumbs, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if ((window as any).__setBreadcrumbs) {
+        try {
+          (window as any).__setBreadcrumbs([]);
+        } catch (err) {
+          // ignore
+        }
+      }
+    };
+  }, [heading]);
 
   if (loading) {
     return (
@@ -96,11 +157,11 @@ export default function StandaloneSLIPreviewPage() {
           }
         }
       `}</style>
- 
-      <div className="no-print bg-white border-b border-gray-200">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl font-semibold text-slate-900">SLI Preview</h1>
-          <div className="flex flex-wrap items-center gap-2">
+
+      <div className="mt-8 mb-4 space-y-6">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-6 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-2xl font-semibold text-gray-900">{heading}</h2>
+          <div className="no-print flex flex-wrap gap-2 sm:justify-end">
             <a
               href={`/admin/sli/${sliId}/edit`}
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
@@ -122,10 +183,10 @@ export default function StandaloneSLIPreviewPage() {
             </button>
           </div>
         </div>
-      </div>
- 
-      <div className="mx-auto w-full max-w-5xl px-6 py-6">
-        <div ref={contentRef} dangerouslySetInnerHTML={{ __html: htmlContent }} />
+
+        <div className="mx-auto w-full max-w-5xl px-6">
+          <div ref={contentRef} id="sli-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+        </div>
       </div>
     </>
   );
