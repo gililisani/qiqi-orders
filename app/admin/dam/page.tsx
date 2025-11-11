@@ -254,7 +254,7 @@ export default function AdminDigitalAssetManagerPage() {
             const { data: signed, error: signedError } = await supabase
               .storage
               .from(BUCKET_ID)
-              .createSignedUrl(previewPath, 60);
+              .createSignedUrl(previewPath, 15 * 60);
             if (!signedError) {
               previewUrl = signed?.signedUrl ?? null;
             }
