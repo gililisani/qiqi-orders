@@ -95,14 +95,18 @@ export default function StandaloneSLIPreviewPage() {
     return 'SLI Preview';
   }, [sliData]);
 
+  const breadcrumbItems = useMemo(() => {
+    return [
+      { label: 'SLI Documents', href: '/admin/sli/documents' },
+      { label: heading },
+    ];
+  }, [heading]);
+
   useEffect(() => {
     const setBreadcrumbs = () => {
       if ((window as any).__setBreadcrumbs) {
         try {
-          (window as any).__setBreadcrumbs([
-            { label: 'SLI Documents' },
-            { label: heading },
-          ]);
+          (window as any).__setBreadcrumbs(breadcrumbItems);
         } catch (err) {
           console.error('Error setting breadcrumbs:', err);
         }
@@ -122,7 +126,7 @@ export default function StandaloneSLIPreviewPage() {
         }
       }
     };
-  }, [heading]);
+  }, [breadcrumbItems]);
 
   if (loading) {
     return (
