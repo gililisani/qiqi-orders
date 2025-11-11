@@ -1,45 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createAuth } from '../../../../platform/auth';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-async function requireAdmin(authHeader: string | null) {
-  if (!authHeader) {
-    throw NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: {
-      headers: {
-        Authorization: authHeader,
-      },
-    },
-  });
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabaseAnon.auth.getUser();
-
-  if (userError || !user) {
-    throw NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { data: adminRow, error: adminError } = await supabaseAnon
-    .from('admins')
-    .select('id')
-    .eq('id', user.id)
-    .eq('enabled', true)
-    .maybeSingle();
-
-  if (adminError || !adminRow) {
-    throw NextResponse.json({ error: 'Not authorized - admin access required' }, { status: 403 });
-  }
-
-  return user;
-}
 
 function createSupabaseAdminClient() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -52,7 +16,9 @@ function createSupabaseAdminClient() {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request.headers.get('authorization'));
+    const auth = createAuth();
+    await auth.requireRole(request, 'admin');
+
     const supabaseAdmin = createSupabaseAdminClient();
 
     const [tagsRes, audiencesRes, localesRes, regionsRes] = await Promise.all([
@@ -86,7 +52,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request.headers.get('authorization'));
+    const auth = createAuth();
+    await auth.requireRole(request, 'admin');
+
     const supabaseAdmin = createSupabaseAdminClient();
     const body = await request.json();
 

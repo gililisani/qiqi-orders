@@ -2,46 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createStorage } from '../../../../platform/storage';
 import { randomUUID } from 'crypto';
+import { createAuth } from '../../../../platform/auth';
+import { createQueue } from '../../../../platform/queue';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-async function requireAdmin(authHeader: string | null) {
-  if (!authHeader) {
-    throw NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: {
-      headers: {
-        Authorization: authHeader,
-      },
-    },
-  });
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabaseAnon.auth.getUser();
-
-  if (userError || !user) {
-    throw NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { data: adminRow, error: adminError } = await supabaseAnon
-    .from('admins')
-    .select('id')
-    .eq('id', user.id)
-    .eq('enabled', true)
-    .maybeSingle();
-
-  if (adminError || !adminRow) {
-    throw NextResponse.json({ error: 'Not authorized - admin access required' }, { status: 403 });
-  }
-
-  return user;
-}
 
 function createSupabaseAdminClient() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -63,7 +28,9 @@ function buildDownloadPath(assetId: string, versionId?: string | null, rendition
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request.headers.get('authorization'));
+    const auth = createAuth();
+    await auth.requireRole(request, 'admin');
+
     const supabaseAdmin = createSupabaseAdminClient();
 
     const { data, error } = await supabaseAdmin
@@ -84,7 +51,8 @@ export async function GET(request: NextRequest) {
           mime_type,
           file_size,
           processing_status,
-          created_at
+          created_at,
+          metadata
         ),
         tags:dam_asset_tag_map(tag:dam_tags(slug,label)),
         audiences:dam_asset_audience_map(audience:dam_audiences(code,label)),
@@ -148,9 +116,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const adminUser = await requireAdmin(request.headers.get('authorization'));
+    const auth = createAuth();
+    const adminUser = await auth.requireRole(request, 'admin');
+
     const supabaseAdmin = createSupabaseAdminClient();
     const storage = createStorage();
+    const queue = createQueue();
 
     const formData = await request.formData();
     const payloadRaw = formData.get('payload');
@@ -299,11 +270,10 @@ export async function POST(request: NextRequest) {
 
     if (insertVersionError) throw insertVersionError;
 
-    // For now, mark as complete until worker pipeline is wired.
-    await supabaseAdmin
-      .from('dam_asset_versions')
-      .update({ processing_status: 'complete' })
-      .eq('id', versionId);
+    await queue.enqueue('dam.process-version', {
+      assetId,
+      versionId,
+    });
 
     return NextResponse.json({ assetId, versionId }, { status: 201 });
   } catch (err: any) {

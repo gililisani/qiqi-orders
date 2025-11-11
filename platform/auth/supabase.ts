@@ -1,0 +1,98 @@
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import type { AuthAdapter, AuthUser } from './index';
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('Supabase auth driver requires SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY');
+}
+
+function extractToken(request: NextRequest): string | null {
+  const header = request.headers.get('authorization');
+  if (header) {
+    const match = header.match(/^Bearer\s+(.*)$/i);
+    if (match) return match[1];
+  }
+  const cookieToken = request.cookies.get('sb-access-token');
+  return cookieToken?.value ?? null;
+}
+
+function createSupabaseAnonClient(token: string) {
+  return createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  });
+}
+
+function createSupabaseServiceClient() {
+  return createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
+async function resolveRoles(userId: string): Promise<{ roles: string[]; locale?: string | null; region?: string | null }> {
+  const supabase = createSupabaseServiceClient();
+  const { data, error } = await supabase
+    .from('admins')
+    .select('enabled, locale, region')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  const roles: string[] = [];
+  if (data?.enabled) roles.push('admin');
+  return {
+    roles,
+    locale: data?.locale ?? null,
+    region: data?.region ?? null,
+  };
+}
+
+export function createSupabaseAuth(): AuthAdapter {
+  return {
+    async getUserFromRequest(request: NextRequest): Promise<AuthUser | null> {
+      const token = extractToken(request);
+      if (!token) return null;
+
+      const supabaseAnon = createSupabaseAnonClient(token);
+      const {
+        data: { user },
+        error,
+      } = await supabaseAnon.auth.getUser();
+
+      if (error || !user) {
+        return null;
+      }
+
+      const { roles, locale, region } = await resolveRoles(user.id);
+
+      return {
+        id: user.id,
+        roles,
+        locale: locale ?? (user.user_metadata?.locale as string | null | undefined) ?? null,
+        region: region ?? (user.user_metadata?.region as string | null | undefined) ?? null,
+      };
+    },
+
+    async requireRole(request: NextRequest, role: string): Promise<AuthUser> {
+      const user = await this.getUserFromRequest(request);
+      if (!user || !user.roles.includes(role)) {
+        throw NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+      }
+      return user;
+    },
+  };
+}
