@@ -352,7 +352,7 @@ export function DashboardNavbar() {
                       <Typography
                         variant="small"
                         color="blue-gray"
-                        className="!font-normal opacity-50 transition-all hover:!text-blue-gray-700 hover:opacity-100 max-w-[220px] truncate"
+                        className="!font-normal opacity-50 transition-all hover:!text-blue-gray-700 hover:opacity-100 max-w-[220px] truncate whitespace-nowrap"
                         title={crumb.label}
                         placeholder={undefined}
                         onPointerEnterCapture={undefined}
@@ -365,7 +365,7 @@ export function DashboardNavbar() {
                     <Typography
                       variant="small"
                       color="blue-gray"
-                      className="!font-normal max-w-[220px] truncate"
+                      className="!font-normal max-w-[220px] truncate whitespace-nowrap"
                       title={crumb.label}
                       placeholder={undefined}
                       onPointerEnterCapture={undefined}
