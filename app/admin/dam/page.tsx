@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '../../../lib/supabaseClient';
+import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../../components/ui/Card';
 import {
   ArrowPathIcon,
@@ -12,8 +12,6 @@ import {
   PhotoIcon,
   Squares2X2Icon,
 } from '@heroicons/react/24/outline';
-
-const BUCKET_ID = 'dam-assets';
 
 const assetTypeOptions: Array<{ value: string; label: string; icon: JSX.Element }> = [
   { value: 'image', label: 'Image', icon: <PhotoIcon className="h-4 w-4" /> },
@@ -56,6 +54,8 @@ interface AssetVersion {
   file_size?: number | null;
   processing_status: string;
   created_at: string;
+  downloadPath?: string | null;
+  previewPath?: string | null;
 }
 
 interface AssetRecord {
@@ -71,7 +71,6 @@ interface AssetRecord {
   audiences: string[];
   locales: LocaleOption[];
   regions: RegionOption[];
-  previewUrl?: string | null;
 }
 
 interface UploadFormState {
@@ -110,7 +109,15 @@ function formatBytes(bytes?: number | null): string {
   return `${value.toFixed(value >= 10 || value < 1 ? 0 : 1)} ${units[exponent]}`;
 }
 
+function buildAuthHeaders(accessToken: string | undefined | null) {
+  if (!accessToken) return {};
+  return {
+    Authorization: `Bearer ${accessToken}`,
+  };
+}
+
 export default function AdminDigitalAssetManagerPage() {
+  const { session } = useSupabase();
   const [assets, setAssets] = useState<AssetRecord[]>([]);
   const [loadingAssets, setLoadingAssets] = useState(true);
   const [error, setError] = useState<string>('');
@@ -132,7 +139,7 @@ export default function AdminDigitalAssetManagerPage() {
   useEffect(() => {
     fetchLookups();
     fetchAssets();
-  }, []);
+  }, [session?.access_token]);
 
   useEffect(() => {
     const setBreadcrumbs = () => {
@@ -158,27 +165,25 @@ export default function AdminDigitalAssetManagerPage() {
 
   const fetchLookups = async () => {
     try {
-      const [tagsRes, audiencesRes, localesRes, regionsRes] = await Promise.all([
-        supabase.from('dam_tags').select('*').order('label', { ascending: true }),
-        supabase.from('dam_audiences').select('*').order('label', { ascending: true }),
-        supabase.from('dam_locales').select('*').order('label', { ascending: true }),
-        supabase.from('dam_regions').select('*').order('label', { ascending: true }),
-      ]);
+      const response = await fetch('/api/dam/lookups', {
+        method: 'GET',
+        headers: {
+          ...buildAuthHeaders(session?.access_token),
+        },
+        credentials: 'same-origin',
+      });
 
-      if (tagsRes.error) throw tagsRes.error;
-      if (audiencesRes.error) throw audiencesRes.error;
-      if (localesRes.error) throw localesRes.error;
-      if (regionsRes.error) throw regionsRes.error;
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to load lookup data');
+      }
 
-      setTags((tagsRes.data ?? []).map((tag) => ({ id: tag.id, slug: tag.slug, label: tag.label })));
-      setAudiences((audiencesRes.data ?? []).map((aud) => ({ id: aud.id, code: aud.code, label: aud.label })));
-      const localeOptions = (localesRes.data ?? []).map((locale) => ({
-        code: locale.code,
-        label: locale.label,
-        is_default: locale.is_default,
-      }));
+      const payload = await response.json();
+      const localeOptions: LocaleOption[] = payload.locales || [];
+      setTags(payload.tags || []);
+      setAudiences(payload.audiences || []);
       setLocales(localeOptions);
-      setRegions((regionsRes.data ?? []).map((region) => ({ code: region.code, label: region.label })));
+      setRegions(payload.regions || []);
 
       const defaultLocale = localeOptions.find((loc) => loc.is_default) ?? localeOptions[0];
       if (defaultLocale) {
@@ -199,86 +204,21 @@ export default function AdminDigitalAssetManagerPage() {
       setLoadingAssets(true);
       setError('');
 
-      const { data, error: fetchError } = await supabase
-        .from('dam_assets')
-        .select(`
-          id,
-          title,
-          description,
-          asset_type,
-          product_line,
-          sku,
-          created_at,
-          current_version:dam_asset_versions!dam_assets_current_version_fk(
-            id,
-            version_number,
-            storage_path,
-            thumbnail_path,
-            mime_type,
-            file_size,
-            processing_status,
-            created_at
-          ),
-          tags:dam_asset_tag_map(tag:dam_tags(slug,label)),
-          audiences:dam_asset_audience_map(audience:dam_audiences(code,label)),
-          locales:dam_asset_locale_map(locale:dam_locales(code,label,is_default)),
-          regions:dam_asset_region_map(region:dam_regions(code,label))
-        `)
-        .order('created_at', { ascending: false });
+      const response = await fetch('/api/dam/assets', {
+        method: 'GET',
+        headers: {
+          ...buildAuthHeaders(session?.access_token),
+        },
+        credentials: 'same-origin',
+      });
 
-      if (fetchError) throw fetchError;
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to load assets');
+      }
 
-      const records = data ?? [];
-      const enriched: AssetRecord[] = await Promise.all(
-        records.map(async (record: any) => {
-          const currentVersionRaw = Array.isArray(record.current_version)
-            ? record.current_version[0]
-            : record.current_version;
-
-          const currentVersion: AssetVersion | undefined = currentVersionRaw
-            ? {
-                id: currentVersionRaw.id,
-                version_number: currentVersionRaw.version_number,
-                storage_path: currentVersionRaw.storage_path,
-                thumbnail_path: currentVersionRaw.thumbnail_path,
-                mime_type: currentVersionRaw.mime_type,
-                file_size: currentVersionRaw.file_size,
-                processing_status: currentVersionRaw.processing_status,
-                created_at: currentVersionRaw.created_at,
-              }
-            : undefined;
-
-          let previewUrl: string | null = null;
-          const previewPath = currentVersion?.thumbnail_path || currentVersion?.storage_path;
-          if (previewPath) {
-            const { data: signed, error: signedError } = await supabase
-              .storage
-              .from(BUCKET_ID)
-              .createSignedUrl(previewPath, 15 * 60);
-            if (!signedError) {
-              previewUrl = signed?.signedUrl ?? null;
-            }
-          }
-
-          return {
-            id: record.id,
-            title: record.title,
-            description: record.description,
-            asset_type: record.asset_type,
-            product_line: record.product_line,
-            sku: record.sku,
-            created_at: record.created_at,
-            current_version: currentVersion ?? null,
-            tags: (record.tags ?? []).map((row: any) => row?.tag?.label).filter(Boolean),
-            audiences: (record.audiences ?? []).map((row: any) => row?.audience?.label).filter(Boolean),
-            locales: (record.locales ?? []).map((row: any) => row?.locale).filter(Boolean),
-            regions: (record.regions ?? []).map((row: any) => row?.region).filter(Boolean),
-            previewUrl,
-          } as AssetRecord;
-        })
-      );
-
-      setAssets(enriched);
+      const payload = await response.json();
+      setAssets(payload.assets || []);
     } catch (err: any) {
       console.error('Failed to load assets', err);
       setError(err.message || 'Failed to load assets');
@@ -341,24 +281,28 @@ export default function AdminDigitalAssetManagerPage() {
     const trimmed = newTagLabel.trim();
     if (!trimmed) return;
 
-    const slug = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     try {
-      const { error: tagError } = await supabase.from('dam_tags').upsert({ slug, label: trimmed });
-      if (tagError) throw tagError;
-
-      setTags((prev) => {
-        const exists = prev.some((tag) => tag.slug === slug);
-        if (exists) return prev;
-        return [...prev, { id: crypto.randomUUID(), slug, label: trimmed }].sort((a, b) =>
-          a.label.localeCompare(b.label)
-        );
+      const response = await fetch('/api/dam/lookups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...buildAuthHeaders(session?.access_token),
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ action: 'add-tag', label: trimmed }),
       });
 
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to add tag');
+      }
+
+      const payload = await response.json();
+      setTags(payload.tags || []);
       setFormState((prev) => ({
         ...prev,
-        selectedTagSlugs: [...new Set([...prev.selectedTagSlugs, slug])],
+        selectedTagSlugs: [...new Set([...prev.selectedTagSlugs, payload.slug])],
       }));
-
       setNewTagLabel('');
     } catch (err: any) {
       setError(err.message || 'Failed to add tag');
@@ -402,48 +346,37 @@ export default function AdminDigitalAssetManagerPage() {
 
     setUploading(true);
     try {
-      const localesPayload = formState.selectedLocaleCodes.map((code) => ({
-        code,
-        primary: code === formState.primaryLocale,
-      }));
+      const payload = {
+        title: formState.title.trim(),
+        description: formState.description.trim() || undefined,
+        assetType: formState.assetType,
+        productLine: formState.productLine.trim() || undefined,
+        sku: formState.sku.trim() || undefined,
+        tags: formState.selectedTagSlugs,
+        audiences: formState.selectedAudienceCodes,
+        locales: formState.selectedLocaleCodes.map((code) => ({
+          code,
+          primary: code === formState.primaryLocale,
+        })),
+        regions: formState.selectedRegionCodes,
+      };
 
-      const { data: uploadInit, error: invokeError } = await supabase.functions.invoke('dam-upload', {
-        body: {
-          title: formState.title.trim(),
-          description: formState.description.trim() || undefined,
-          assetType: formState.assetType,
-          productLine: formState.productLine.trim() || undefined,
-          sku: formState.sku.trim() || undefined,
-          tags: formState.selectedTagSlugs,
-          audiences: formState.selectedAudienceCodes,
-          locales: localesPayload,
-          regions: formState.selectedRegionCodes,
-          fileName: formState.file.name,
-          fileType: formState.file.type || 'application/octet-stream',
-          fileSize: formState.file.size,
-        },
+      const formData = new FormData();
+      formData.append('payload', JSON.stringify(payload));
+      formData.append('file', formState.file);
+
+      const response = await fetch('/api/dam/assets', {
+        method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          ...buildAuthHeaders(session?.access_token),
         },
+        credentials: 'same-origin',
+        body: formData,
       });
 
-      if (invokeError) throw invokeError;
-      if (!uploadInit) throw new Error('Failed to initiate upload');
-
-      const { uploadUrl, token, storagePath } = uploadInit as any;
-      if (!uploadUrl || !token || !storagePath) {
-        throw new Error('Upload URL response malformed');
-      }
-
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET_ID)
-        .uploadToSignedUrl(storagePath, token, formState.file, {
-          upsert: false,
-          contentType: formState.file.type || 'application/octet-stream',
-        });
-
-      if (uploadError) {
-        throw uploadError;
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Upload failed');
       }
 
       setSuccessMessage('Asset uploaded successfully. Processing may take a few moments.');
@@ -782,10 +715,10 @@ export default function AdminDigitalAssetManagerPage() {
               {filteredAssets.map((asset) => (
                 <div key={asset.id} className="flex gap-4 rounded-xl border border-gray-200 p-4">
                   <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
-                    {asset.previewUrl ? (
+                    {asset.current_version?.previewPath ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={asset.previewUrl}
+                        src={asset.current_version.previewPath}
                         alt={asset.title}
                         className="h-full w-full object-cover"
                       />
@@ -842,6 +775,16 @@ export default function AdminDigitalAssetManagerPage() {
                       {asset.regions.length > 0 && (
                         <div>
                           <span className="font-medium text-gray-700">Regions:</span> {asset.regions.map((region) => region.label).join(', ')}
+                        </div>
+                      )}
+                      {asset.current_version?.downloadPath && (
+                        <div>
+                          <a
+                            href={asset.current_version.downloadPath}
+                            className="font-medium text-gray-700 underline-offset-2 hover:underline"
+                          >
+                            Download
+                          </a>
                         </div>
                       )}
                     </div>
