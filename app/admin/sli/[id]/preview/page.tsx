@@ -66,6 +66,10 @@ export default function StandaloneSLIPreviewPage() {
         setSliData(data);
       }
 
+      if (!data) {
+        throw new Error('SLI data is unavailable');
+      }
+
       await generateAndDownloadSLIPDF(data);
     } catch (err: any) {
       console.error('Error generating PDF:', err);
