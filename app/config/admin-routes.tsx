@@ -64,6 +64,11 @@ export const adminRoutes = [
         name: "Categories",
         path: "/admin/categories",
       },
+      {
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>D</Typography>,
+        name: "Digital Assets",
+        path: "/admin/dam",
+      },
     ],
   },
   {
