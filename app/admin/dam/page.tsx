@@ -117,7 +117,8 @@ function buildAuthHeaders(accessToken: string | undefined | null): Record<string
 }
 
 export default function AdminDigitalAssetManagerPage() {
-  const { session } = useSupabase();
+  const { session, supabase } = useSupabase();
+  const [accessToken, setAccessToken] = useState<string | null>(session?.access_token ?? null);
   const [assets, setAssets] = useState<AssetRecord[]>([]);
   const [loadingAssets, setLoadingAssets] = useState(true);
   const [error, setError] = useState<string>('');
@@ -137,12 +138,23 @@ export default function AdminDigitalAssetManagerPage() {
   const [localeFilter, setLocaleFilter] = useState<string>('');
 
   useEffect(() => {
-    if (!session?.access_token) {
-      return;
+    let active = true;
+    if (!accessToken) {
+      supabase.auth.getSession().then(({ data }) => {
+        if (!active) return;
+        setAccessToken(data.session?.access_token ?? null);
+      });
     }
-    fetchLookups();
-    fetchAssets();
-  }, [session?.access_token]);
+    return () => {
+      active = false;
+    };
+  }, [accessToken, supabase]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    fetchLookups(accessToken);
+    fetchAssets(accessToken);
+  }, [accessToken]);
 
   useEffect(() => {
     const setBreadcrumbs = () => {
@@ -166,9 +178,9 @@ export default function AdminDigitalAssetManagerPage() {
     };
   }, []);
 
-  const fetchLookups = async () => {
+  const fetchLookups = async (token: string) => {
     try {
-      const headers = buildAuthHeaders(session?.access_token);
+      const headers = buildAuthHeaders(token);
       const response = await fetch('/api/dam/lookups', {
         method: 'GET',
         headers: Object.keys(headers).length ? headers : undefined,
@@ -201,12 +213,12 @@ export default function AdminDigitalAssetManagerPage() {
     }
   };
 
-  const fetchAssets = async () => {
+  const fetchAssets = async (token: string) => {
     try {
       setLoadingAssets(true);
       setError('');
 
-      const headers = buildAuthHeaders(session?.access_token);
+      const headers = buildAuthHeaders(token);
       const response = await fetch('/api/dam/assets', {
         method: 'GET',
         headers: Object.keys(headers).length ? headers : undefined,
@@ -283,7 +295,8 @@ export default function AdminDigitalAssetManagerPage() {
     if (!trimmed) return;
 
     try {
-      const headers = buildAuthHeaders(session?.access_token);
+      if (!accessToken) return;
+      const headers = buildAuthHeaders(accessToken);
       const response = await fetch('/api/dam/lookups', {
         method: 'POST',
         headers: {
@@ -367,7 +380,8 @@ export default function AdminDigitalAssetManagerPage() {
       formData.append('payload', JSON.stringify(payload));
       formData.append('file', formState.file);
 
-      const headers = buildAuthHeaders(session?.access_token);
+      if (!accessToken) return;
+      const headers = buildAuthHeaders(accessToken);
       const response = await fetch('/api/dam/assets', {
         method: 'POST',
         headers: Object.keys(headers).length ? headers : undefined,
@@ -382,7 +396,7 @@ export default function AdminDigitalAssetManagerPage() {
 
       setSuccessMessage('Asset uploaded successfully. Processing may take a few moments.');
       resetForm();
-      fetchAssets();
+      fetchAssets(accessToken);
     } catch (err: any) {
       console.error('Upload failed', err);
       setError(err.message || 'Upload failed');
@@ -412,7 +426,7 @@ export default function AdminDigitalAssetManagerPage() {
         </div>
         <button
           type="button"
-          onClick={() => fetchAssets()}
+          onClick={() => fetchAssets(accessToken ?? '')}
           className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
         >
           <ArrowPathIcon className="h-4 w-4" />
