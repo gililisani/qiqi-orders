@@ -19,10 +19,10 @@ function getEnv(key: string): string | undefined {
 }
 
 function getSupabaseServiceClient() {
-  const url = getEnv('SUPABASE_URL');
+  const url = getEnv('SUPABASE_URL') ?? getEnv('NEXT_PUBLIC_SUPABASE_URL');
   const serviceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY');
   if (!url || !serviceKey) {
-    throw new Error('Supabase storage driver requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
+    throw new Error('Supabase storage driver requires SUPABASE_SERVICE_ROLE_KEY and either SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL');
   }
 
   return createClient(url, serviceKey, {
