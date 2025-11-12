@@ -109,12 +109,12 @@ export default function SyncUsersPage() {
     <div className="mt-8 mb-4 space-y-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-semibold text-gray-900">User Sync Check</h2>
-        <Link href="/admin/users" className="text-gray-600 hover:text-gray-800">
-          ← Back to Users
-        </Link>
+            <Link href="/admin/users" className="text-gray-600 hover:text-gray-800">
+              ← Back to Users
+            </Link>
       </div>
       
-      <div className="max-w-4xl space-y-6">
+          <div className="max-w-4xl space-y-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="text-sm font-semibold text-blue-900 mb-2">What This Tool Does:</h3>
               <p className="text-sm text-blue-800">
@@ -274,7 +274,7 @@ export default function SyncUsersPage() {
               </div>
             )}
           </div>
-    </div>
+      </div>
   );
 }
 

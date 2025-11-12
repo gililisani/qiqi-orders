@@ -84,7 +84,7 @@ export default function CompanyNotesPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
+        <div className="p-6">
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
             <p className="text-gray-600">Loading company...</p>
@@ -95,7 +95,7 @@ export default function CompanyNotesPage() {
 
   if (error) {
     return (
-      <div className="p-6">
+        <div className="p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
             <p className="text-gray-600 mb-4">{error}</p>
@@ -114,12 +114,12 @@ export default function CompanyNotesPage() {
     <div className="mt-8 mb-4 space-y-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-semibold text-gray-900">Notes for {company?.company_name}</h2>
-        <Link
-          href={`/admin/companies/${companyId}`}
-          className="text-gray-600 hover:text-gray-800"
-        >
-          ← Back to Company
-        </Link>
+            <Link
+              href={`/admin/companies/${companyId}`}
+              className="text-gray-600 hover:text-gray-800"
+            >
+              ← Back to Company
+            </Link>
       </div>
 
       {/* Filters */}
@@ -162,17 +162,17 @@ export default function CompanyNotesPage() {
 
           {/* Use Shared Notes Component with Admin Permissions and Filters */}
           {companyId && (
-            <NotesView
-              companyId={companyId}
-              userRole="admin"
-              showActions={true}
-              allowEdit={true}
-              allowDelete={true}
-              allowCreate={true}
+          <NotesView
+            companyId={companyId}
+            userRole="admin"
+            showActions={true}
+            allowEdit={true}
+            allowDelete={true}
+            allowCreate={true}
               categoryFilter={categoryFilter}
               timeFilter={timeFilter}
-            />
+          />
           )}
-    </div>
+      </div>
   );
 }
