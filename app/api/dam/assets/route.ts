@@ -319,7 +319,7 @@ export async function POST(request: NextRequest) {
     const nextVersionNumber = lastVersion ? Number(lastVersion.version_number) + 1 : 1;
     const versionId = randomUUID();
 
-    const { error: insertVersionError } = await supabaseAdmin
+    const { data: insertedVersion, error: insertVersionError } = await supabaseAdmin
       .from('dam_asset_versions')
       .insert([
         {
@@ -337,7 +337,8 @@ export async function POST(request: NextRequest) {
           processing_status: 'pending',
           created_by: adminUser.id,
         },
-      ], { returning: 'minimal' });
+      ])
+      .select('id');
 
     if (insertVersionError) throw insertVersionError;
 
