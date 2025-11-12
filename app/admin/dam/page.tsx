@@ -372,13 +372,12 @@ export default function AdminDigitalAssetManagerPage() {
         throw new Error('Supabase URL not configured');
       }
 
-      // For large files (>5MB), use Edge Function with presigned URL
-      // For small files, use API route (faster)
-      const useDirectUpload = file.size > 5 * 1024 * 1024;
+      // For large files (>5MB), use direct upload to Supabase Storage + API route
+      // For small files, use API route (faster, but has 4.5MB limit on Vercel)
+      const useDirectStorageUpload = file.size > 5 * 1024 * 1024;
 
-      if (useDirectUpload) {
-        // Step 1: Call Edge Function to get presigned upload URL
-        const edgeFunctionUrl = `${supabaseUrl}/functions/v1/dam-upload`;
+      if (useDirectStorageUpload) {
+        // Step 1: Call API route to create asset record and get storage path
         const payload = {
           title: formState.title.trim(),
           description: formState.description.trim() || undefined,
@@ -397,38 +396,55 @@ export default function AdminDigitalAssetManagerPage() {
           fileSize: file.size,
         };
 
-        const uploadResponse = await fetch(edgeFunctionUrl, {
+        const headers = buildAuthHeaders(accessToken);
+        const initResponse = await fetch('/api/dam/assets/init', {
           method: 'POST',
           headers: {
+            ...headers,
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
           },
+          credentials: 'same-origin',
           body: JSON.stringify(payload),
         });
 
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to initiate upload');
+        if (!initResponse.ok) {
+          const errorData = await initResponse.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to initialize upload');
         }
 
-        const { uploadUrl, token } = await uploadResponse.json();
+        const { assetId, storagePath } = await initResponse.json();
 
-        // Step 2: Upload file directly to Supabase Storage using presigned URL
-        // Supabase's createSignedUploadUrl returns a URL with the token already in it
-        const fileUploadResponse = await fetch(uploadUrl, {
-          method: 'PUT',
+        // Step 2: Upload file directly to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+          .from('dam-assets')
+          .upload(storagePath, file, {
+            cacheControl: '3600',
+            upsert: false,
+          });
+
+        if (uploadError) {
+          throw new Error(`Failed to upload file: ${uploadError.message}`);
+        }
+
+        // Step 3: Notify API route that upload is complete
+        const completeResponse = await fetch(`/api/dam/assets/${assetId}/complete`, {
+          method: 'POST',
           headers: {
-            'Content-Type': file.type || 'application/octet-stream',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...headers,
+            'Content-Type': 'application/json',
           },
-          body: file,
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            storagePath,
+            fileType: file.type || 'application/octet-stream',
+            fileName: file.name,
+            fileSize: file.size,
+          }),
         });
 
-        if (!fileUploadResponse.ok) {
-          const errorText = await fileUploadResponse.text().catch(() => 'Unknown error');
-          console.error('Upload error:', errorText);
-          throw new Error(`Failed to upload file to storage: ${fileUploadResponse.status} ${errorText}`);
+        if (!completeResponse.ok) {
+          const errorData = await completeResponse.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to complete upload');
         }
       } else {
         // For small files, use API route (existing implementation)
