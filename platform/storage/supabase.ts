@@ -48,7 +48,8 @@ export function createSupabaseStorage(): ObjectStorage {
 
     for (const item of data ?? []) {
       const path = prefix ? `${prefix}/${item.name}` : item.name;
-      if (item.metadata && typeof item.metadata.size === 'number') {
+      const isDir = item.id?.endsWith('/') || item.name.endsWith('/');
+      if (!isDir && item.metadata && typeof item.metadata.size === 'number') {
         acc.push({ path, bytes: item.metadata.size });
       } else {
         await listRecursive(path, acc);
