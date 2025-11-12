@@ -1,8 +1,21 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
-import pdfParse from 'pdf-parse';
 import { logger } from '../logger';
 import { createStorage } from '../../../platform/storage';
+
+// pdf-parse uses export =, which means the module itself is the function
+// We need to import it as a namespace and cast it as a callable function
+import * as pdfParseModule from 'pdf-parse';
+
+// Type assertion: pdf-parse uses export= so the module IS the function
+const pdfParse = pdfParseModule as unknown as (buffer: Buffer) => Promise<{
+  text: string;
+  numpages: number;
+  numrender: number;
+  info: any;
+  metadata: any;
+  version: string;
+}>;
 
 interface ProcessVersionPayload {
   assetId: string;
