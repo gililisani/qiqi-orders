@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../../components/ui/Card';
 import {
@@ -415,6 +415,16 @@ export default function AdminDigitalAssetManagerPage() {
     );
   };
 
+  const ensureTokenUrl = useCallback(
+    (url?: string | null) => {
+      if (!url) return url ?? '';
+      if (!accessToken) return url;
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}token=${encodeURIComponent(accessToken)}`;
+    },
+    [accessToken]
+  );
+
   return (
     <div className="mt-8 mb-4 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -730,10 +740,10 @@ export default function AdminDigitalAssetManagerPage() {
               {filteredAssets.map((asset) => (
                 <div key={asset.id} className="flex gap-4 rounded-xl border border-gray-200 p-4">
                   <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
-                    {asset.current_version?.previewPath ? (
+                    {accessToken && asset.current_version?.previewPath ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={asset.current_version.previewPath}
+                        src={ensureTokenUrl(asset.current_version.previewPath)}
                         alt={asset.title}
                         className="h-full w-full object-cover"
                       />
@@ -795,8 +805,13 @@ export default function AdminDigitalAssetManagerPage() {
                       {asset.current_version?.downloadPath && (
                         <div>
                           <a
-                            href={accessToken ? `${asset.current_version.downloadPath}&token=${encodeURIComponent(accessToken)}` : asset.current_version.downloadPath}
+                            href={ensureTokenUrl(asset.current_version.downloadPath)}
                             className="font-medium text-gray-700 underline-offset-2 hover:underline"
+                            onClick={(event) => {
+                              if (!accessToken) {
+                                event.preventDefault();
+                              }
+                            }}
                           >
                             Download
                           </a>
