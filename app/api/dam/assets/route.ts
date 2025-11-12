@@ -338,9 +338,14 @@ export async function POST(request: NextRequest) {
           created_by: adminUser.id,
         },
       ])
-      .select('id');
+      .select('id, asset_id, version_number, storage_path, thumbnail_path, mime_type, file_size, processing_status, created_at, metadata')
+      .maybeSingle();
 
     if (insertVersionError) throw insertVersionError;
+
+    if (!versionsByAsset.has(assetId) && insertedVersion) {
+      versionsByAsset.set(assetId, insertedVersion);
+    }
 
     await queue.enqueue('dam.process-version', {
       assetId,
