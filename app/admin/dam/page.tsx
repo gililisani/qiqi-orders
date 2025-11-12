@@ -140,7 +140,7 @@ export default function AdminDigitalAssetManagerPage() {
   useEffect(() => {
     let active = true;
     if (!accessToken) {
-      supabase.auth.getSession().then(({ data }) => {
+      supabase.auth.getSession().then(({ data }: { data: { session: { access_token: string } | null } }) => {
         if (!active) return;
         setAccessToken(data.session?.access_token ?? null);
       });
