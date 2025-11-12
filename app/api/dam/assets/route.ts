@@ -26,6 +26,17 @@ function buildDownloadPath(assetId: string, versionId?: string | null, rendition
   return base;
 }
 
+type LocaleOption = {
+  code: string;
+  label: string;
+  is_default?: boolean;
+};
+
+type RegionOption = {
+  code: string;
+  label: string;
+};
+
 export async function GET(request: NextRequest) {
   try {
     const auth = createAuth();
