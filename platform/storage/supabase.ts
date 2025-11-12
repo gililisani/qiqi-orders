@@ -52,7 +52,7 @@ export function createSupabaseStorage(): ObjectStorage {
         throw error;
       }
 
-      return { etag: data?.etag ?? null };
+      return { etag: null, path: data?.path ?? path };
     },
 
     async getSignedUrl(path, opts) {
