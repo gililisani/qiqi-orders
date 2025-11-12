@@ -137,6 +137,9 @@ export default function AdminDigitalAssetManagerPage() {
   const [localeFilter, setLocaleFilter] = useState<string>('');
 
   useEffect(() => {
+    if (!session?.access_token) {
+      return;
+    }
     fetchLookups();
     fetchAssets();
   }, [session?.access_token]);
