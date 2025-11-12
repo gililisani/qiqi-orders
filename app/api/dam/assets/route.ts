@@ -319,7 +319,7 @@ export async function POST(request: NextRequest) {
     const nextVersionNumber = lastVersion ? Number(lastVersion.version_number) + 1 : 1;
     const versionId = randomUUID();
 
-    const { data: insertedVersion, error: insertVersionError } = await supabaseAdmin
+    const { error: insertVersionError } = await supabaseAdmin
       .from('dam_asset_versions')
       .insert([
         {
@@ -337,15 +337,9 @@ export async function POST(request: NextRequest) {
           processing_status: 'pending',
           created_by: adminUser.id,
         },
-      ])
-      .select('id, asset_id, version_number, storage_path, thumbnail_path, mime_type, file_size, processing_status, created_at, metadata')
-      .maybeSingle();
+      ]);
 
     if (insertVersionError) throw insertVersionError;
-
-    if (!versionsByAsset.has(assetId) && insertedVersion) {
-      versionsByAsset.set(assetId, insertedVersion);
-    }
 
     await queue.enqueue('dam.process-version', {
       assetId,
