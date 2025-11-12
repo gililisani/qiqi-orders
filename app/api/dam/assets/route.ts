@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
     const assetIds = assetsData.map((record) => record.id);
     const { data: versionsData, error: versionsError } = await supabaseAdmin
       .from('dam_asset_versions')
-      .select('*')
+      .select('id, asset_id, version_number, storage_path, thumbnail_path, mime_type, file_size, processing_status, created_at, metadata')
       .in('asset_id', assetIds)
       .order('version_number', { ascending: false });
 
