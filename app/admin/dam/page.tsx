@@ -165,11 +165,10 @@ export default function AdminDigitalAssetManagerPage() {
 
   const fetchLookups = async () => {
     try {
+      const headers = buildAuthHeaders(session?.access_token);
       const response = await fetch('/api/dam/lookups', {
         method: 'GET',
-        headers: {
-          ...buildAuthHeaders(session?.access_token),
-        },
+        headers: Object.keys(headers).length ? headers : undefined,
         credentials: 'same-origin',
       });
 
@@ -204,11 +203,10 @@ export default function AdminDigitalAssetManagerPage() {
       setLoadingAssets(true);
       setError('');
 
+      const headers = buildAuthHeaders(session?.access_token);
       const response = await fetch('/api/dam/assets', {
         method: 'GET',
-        headers: {
-          ...buildAuthHeaders(session?.access_token),
-        },
+        headers: Object.keys(headers).length ? headers : undefined,
         credentials: 'same-origin',
       });
 
@@ -282,11 +280,12 @@ export default function AdminDigitalAssetManagerPage() {
     if (!trimmed) return;
 
     try {
+      const headers = buildAuthHeaders(session?.access_token);
       const response = await fetch('/api/dam/lookups', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...buildAuthHeaders(session?.access_token),
+          ...(Object.keys(headers).length ? headers : {}),
         },
         credentials: 'same-origin',
         body: JSON.stringify({ action: 'add-tag', label: trimmed }),
@@ -365,11 +364,10 @@ export default function AdminDigitalAssetManagerPage() {
       formData.append('payload', JSON.stringify(payload));
       formData.append('file', formState.file);
 
+      const headers = buildAuthHeaders(session?.access_token);
       const response = await fetch('/api/dam/assets', {
         method: 'POST',
-        headers: {
-          ...buildAuthHeaders(session?.access_token),
-        },
+        headers: Object.keys(headers).length ? headers : undefined,
         credentials: 'same-origin',
         body: formData,
       });
