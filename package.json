@@ -7,9 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "dam:worker": "tsx apps/worker/index.ts"
+    "dam:worker": "tsx apps/worker/index.ts",
+    "dam:export-storage": "tsx scripts/export-storage.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.614.0",
+    "@aws-sdk/s3-request-presigner": "^3.614.0",
     "@heroicons/react": "^2.2.0",
     "@material-tailwind/react": "^2.1.10",
     "@react-pdf/renderer": "^4.3.1",

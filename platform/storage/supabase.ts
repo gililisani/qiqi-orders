@@ -37,6 +37,25 @@ export function createSupabaseStorage(): ObjectStorage {
   const supabase = getSupabaseServiceClient();
   const bucket = getEnv('SUPABASE_STORAGE_BUCKET') ?? 'dam-assets';
 
+  const listRecursive = async (prefix: string, acc: Array<{ path: string; bytes: number }>) => {
+    const { data, error } = await supabase.storage.from(bucket).list(prefix, {
+      limit: 1000,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    for (const item of data ?? []) {
+      const path = prefix ? `${prefix}/${item.name}` : item.name;
+      if (item.metadata && typeof item.metadata.size === 'number') {
+        acc.push({ path, bytes: item.metadata.size });
+      } else {
+        await listRecursive(path, acc);
+      }
+    }
+  };
+
   return {
     async putObject(path, bytes, meta) {
       const { data, error } = await supabase.storage
@@ -53,6 +72,15 @@ export function createSupabaseStorage(): ObjectStorage {
       }
 
       return { etag: null, path: data?.path ?? path };
+    },
+
+    async getObject(path) {
+      const { data, error } = await supabase.storage.from(bucket).download(path);
+      if (error) {
+        throw error;
+      }
+      const arrayBuffer = await data.arrayBuffer();
+      return new Uint8Array(arrayBuffer);
     },
 
     async getSignedUrl(path, opts) {
@@ -77,18 +105,9 @@ export function createSupabaseStorage(): ObjectStorage {
     },
 
     async list(prefix) {
-      const { data, error } = await supabase.storage.from(bucket).list(prefix, {
-        recursive: true,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      return (data ?? []).map((obj) => ({
-        path: obj.name,
-        bytes: obj.metadata?.size ?? 0,
-      }));
+      const results: Array<{ path: string; bytes: number }> = [];
+      await listRecursive(prefix, results);
+      return results;
     },
   };
 }

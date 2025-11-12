@@ -20,6 +20,7 @@ interface JobRow {
 const workerId = process.env.WORKER_ID || `dam-worker-${randomUUID()}`;
 const pollInterval = Number(process.env.WORKER_POLL_INTERVAL_MS ?? 2000);
 const retryDelayMs = Number(process.env.WORKER_RETRY_DELAY_MS ?? 30_000);
+const metricsEvery = Number(process.env.WORKER_METRICS_INTERVAL ?? 5);
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -145,13 +146,44 @@ async function handleJob(job: JobRow) {
   }
 }
 
+async function fetchQueueCounts() {
+  const supabase = getSupabaseServiceClient();
+  const statuses = ['pending', 'processing', 'failed'];
+  const result: Record<string, number> = {};
+
+  for (const status of statuses) {
+    const { count, error } = await supabase
+      .from('dam_job_queue')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', status);
+    if (error) {
+      throw error;
+    }
+    result[status] = count ?? 0;
+  }
+
+  return result;
+}
+
 async function workLoop() {
   logger.info('DAM worker started', { workerId, pollInterval, retryDelayMs });
 
+  let iterations = 0;
   while (true) {
     try {
       const job = await fetchAndLockJob();
       if (!job) {
+        if (metricsEvery > 0 && iterations % metricsEvery === 0) {
+          try {
+            const counts = await fetchQueueCounts();
+            logger.debug('Queue depth', counts);
+          } catch (metricError) {
+            logger.warn('Failed to fetch queue metrics', {
+              error: metricError instanceof Error ? metricError.message : metricError,
+            });
+          }
+        }
+        iterations += 1;
         await sleep(pollInterval);
         continue;
       }
@@ -168,6 +200,7 @@ async function workLoop() {
           await markVersionFailed((job.payload as any).versionId as string, err instanceof Error ? err.message : String(err));
         }
       }
+      iterations += 1;
     } catch (err) {
       logger.error('Worker loop error', { error: err instanceof Error ? err.message : err });
       await sleep(pollInterval);
