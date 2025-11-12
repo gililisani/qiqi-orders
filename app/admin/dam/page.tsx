@@ -109,7 +109,7 @@ function formatBytes(bytes?: number | null): string {
   return `${value.toFixed(value >= 10 || value < 1 ? 0 : 1)} ${units[exponent]}`;
 }
 
-function buildAuthHeaders(accessToken: string | undefined | null) {
+function buildAuthHeaders(accessToken: string | undefined | null): Record<string, string> {
   if (!accessToken) return {};
   return {
     Authorization: `Bearer ${accessToken}`,
