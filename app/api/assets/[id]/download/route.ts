@@ -66,27 +66,41 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: 'Missing version parameter' }, { status: 400 });
     }
 
+    // Fetch version without embed to avoid relationship ambiguity
     const { data: version, error: versionError } = await supabaseAdmin
       .from('dam_asset_versions')
-      .select(
-        `
-          *,
-          asset:dam_assets(id, is_archived)
-        `
-      )
+      .select('*')
       .eq('id', versionId)
       .maybeSingle();
 
-    if (versionError) throw versionError;
-    if (!version || !version.asset) {
+    if (versionError) {
+      console.error('Version fetch error:', versionError);
+      throw versionError;
+    }
+    if (!version) {
       return NextResponse.json({ error: 'Asset version not found' }, { status: 404 });
     }
 
-    if (version.asset.id !== params.id) {
+    // Fetch asset separately to avoid relationship ambiguity
+    const { data: asset, error: assetError } = await supabaseAdmin
+      .from('dam_assets')
+      .select('id, is_archived')
+      .eq('id', version.asset_id)
+      .maybeSingle();
+
+    if (assetError) {
+      console.error('Asset fetch error:', assetError);
+      throw assetError;
+    }
+    if (!asset) {
+      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+    }
+
+    if (asset.id !== params.id) {
       return NextResponse.json({ error: 'Asset mismatch' }, { status: 404 });
     }
 
-    if (version.asset.is_archived) {
+    if (asset.is_archived) {
       return NextResponse.json({ error: 'Asset archived' }, { status: 410 });
     }
 
@@ -102,12 +116,19 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const storage = createStorage();
     const metadata = (version.metadata ?? {}) as Record<string, any>;
     const downloadName = typeof metadata.originalFileName === 'string' ? metadata.originalFileName : undefined;
-    const signedUrl = await storage.getSignedUrl(targetPath, {
-      expiresIn: 5 * 60,
-      downloadName,
-    });
-
-    return NextResponse.redirect(signedUrl, { status: 302 });
+    
+    try {
+      const signedUrl = await storage.getSignedUrl(targetPath, {
+        expiresIn: 5 * 60,
+        downloadName,
+      });
+      return NextResponse.redirect(signedUrl, { status: 302 });
+    } catch (storageError: any) {
+      console.error('Storage error:', storageError);
+      console.error('Target path:', targetPath);
+      console.error('Version:', JSON.stringify(version, null, 2));
+      throw new Error(`Failed to generate signed URL: ${storageError.message}`);
+    }
   } catch (err: any) {
     if (err instanceof NextResponse) return err;
     console.error('Download route error', err);
