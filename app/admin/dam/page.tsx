@@ -795,7 +795,7 @@ export default function AdminDigitalAssetManagerPage() {
                       {asset.current_version?.downloadPath && (
                         <div>
                           <a
-                            href={asset.current_version.downloadPath}
+                            href={accessToken ? `${asset.current_version.downloadPath}&token=${encodeURIComponent(accessToken)}` : asset.current_version.downloadPath}
                             className="font-medium text-gray-700 underline-offset-2 hover:underline"
                           >
                             Download

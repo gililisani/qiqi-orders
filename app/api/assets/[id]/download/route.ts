@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createStorage } from '../../../../../platform/storage';
-import { createAuth } from '../../../../../platform/auth';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 function createSupabaseAdminClient() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -15,10 +15,50 @@ function createSupabaseAdminClient() {
   });
 }
 
+async function ensureAdmin(request: NextRequest) {
+  const tokenFromHeader = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? null;
+  const tokenFromQuery = request.nextUrl.searchParams.get('token');
+  const accessToken = tokenFromHeader || tokenFromQuery;
+
+  if (!accessToken) {
+    throw NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  });
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+  }
+
+  const adminClient = createSupabaseAdminClient();
+  const { data: adminRow, error: adminError } = await adminClient
+    .from('admins')
+    .select('id')
+    .eq('id', user.id)
+    .eq('enabled', true)
+    .maybeSingle();
+
+  if (adminError || !adminRow) {
+    throw NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  }
+
+  return adminClient;
+}
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const auth = createAuth();
-    await auth.requireRole(request, 'admin');
+    const supabaseAdmin = await ensureAdmin(request);
 
     const versionId = request.nextUrl.searchParams.get('version');
     const rendition = request.nextUrl.searchParams.get('rendition');
@@ -26,7 +66,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: 'Missing version parameter' }, { status: 400 });
     }
 
-    const supabaseAdmin = createSupabaseAdminClient();
     const { data: version, error: versionError } = await supabaseAdmin
       .from('dam_asset_versions')
       .select(
