@@ -361,37 +361,108 @@ export default function AdminDigitalAssetManagerPage() {
 
     setUploading(true);
     try {
-      const payload = {
-        title: formState.title.trim(),
-        description: formState.description.trim() || undefined,
-        assetType: formState.assetType,
-        productLine: formState.productLine.trim() || undefined,
-        sku: formState.sku.trim() || undefined,
-        tags: formState.selectedTagSlugs,
-        audiences: formState.selectedAudienceCodes,
-        locales: formState.selectedLocaleCodes.map((code) => ({
-          code,
-          primary: code === formState.primaryLocale,
-        })),
-        regions: formState.selectedRegionCodes,
-      };
+      if (!accessToken) {
+        setError('Not authenticated');
+        return;
+      }
 
-      const formData = new FormData();
-      formData.append('payload', JSON.stringify(payload));
-      formData.append('file', formState.file);
+      const file = formState.file!;
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if (!supabaseUrl) {
+        throw new Error('Supabase URL not configured');
+      }
 
-      if (!accessToken) return;
-      const headers = buildAuthHeaders(accessToken);
-      const response = await fetch('/api/dam/assets', {
-        method: 'POST',
-        headers: Object.keys(headers).length ? headers : undefined,
-        credentials: 'same-origin',
-        body: formData,
-      });
+      // For large files (>5MB), use Edge Function with presigned URL
+      // For small files, use API route (faster)
+      const useDirectUpload = file.size > 5 * 1024 * 1024;
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || 'Upload failed');
+      if (useDirectUpload) {
+        // Step 1: Call Edge Function to get presigned upload URL
+        const edgeFunctionUrl = `${supabaseUrl}/functions/v1/dam-upload`;
+        const payload = {
+          title: formState.title.trim(),
+          description: formState.description.trim() || undefined,
+          assetType: formState.assetType,
+          productLine: formState.productLine.trim() || undefined,
+          sku: formState.sku.trim() || undefined,
+          tags: formState.selectedTagSlugs,
+          audiences: formState.selectedAudienceCodes,
+          locales: formState.selectedLocaleCodes.map((code) => ({
+            code,
+            primary: code === formState.primaryLocale,
+          })),
+          regions: formState.selectedRegionCodes,
+          fileName: file.name,
+          fileType: file.type || 'application/octet-stream',
+          fileSize: file.size,
+        };
+
+        const uploadResponse = await fetch(edgeFunctionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to initiate upload');
+        }
+
+        const { uploadUrl, token } = await uploadResponse.json();
+
+        // Step 2: Upload file directly to Supabase Storage using presigned URL
+        // Supabase's createSignedUploadUrl returns a URL with the token already in it
+        const fileUploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': file.type || 'application/octet-stream',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: file,
+        });
+
+        if (!fileUploadResponse.ok) {
+          const errorText = await fileUploadResponse.text().catch(() => 'Unknown error');
+          console.error('Upload error:', errorText);
+          throw new Error(`Failed to upload file to storage: ${fileUploadResponse.status} ${errorText}`);
+        }
+      } else {
+        // For small files, use API route (existing implementation)
+        const payload = {
+          title: formState.title.trim(),
+          description: formState.description.trim() || undefined,
+          assetType: formState.assetType,
+          productLine: formState.productLine.trim() || undefined,
+          sku: formState.sku.trim() || undefined,
+          tags: formState.selectedTagSlugs,
+          audiences: formState.selectedAudienceCodes,
+          locales: formState.selectedLocaleCodes.map((code) => ({
+            code,
+            primary: code === formState.primaryLocale,
+          })),
+          regions: formState.selectedRegionCodes,
+        };
+
+        const formData = new FormData();
+        formData.append('payload', JSON.stringify(payload));
+        formData.append('file', file);
+
+        const headers = buildAuthHeaders(accessToken);
+        const response = await fetch('/api/dam/assets', {
+          method: 'POST',
+          headers: Object.keys(headers).length ? headers : undefined,
+          credentials: 'same-origin',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || 'Upload failed');
+        }
       }
 
       setSuccessMessage('Asset uploaded successfully. Processing may take a few moments.');

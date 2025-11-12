@@ -263,6 +263,7 @@ async function handler(req: Request): HandlerResponse {
       file_size: payload.fileSize ?? null,
       checksum: payload.checksum ?? null,
       mime_type: payload.fileType,
+      processing_status: 'pending',
       created_by: user.id,
       metadata: {
         originalFileName: payload.fileName,
@@ -271,6 +272,22 @@ async function handler(req: Request): HandlerResponse {
 
     if (versionError) {
       throw new Error(`Failed to create asset version: ${versionError.message}`);
+    }
+
+    // Queue processing job
+    const { error: queueError } = await supabaseAdmin.from('dam_job_queue').insert({
+      job_name: 'dam.process-version',
+      payload: {
+        assetId,
+        versionId,
+      },
+      status: 'pending',
+      run_at: new Date().toISOString(),
+    });
+
+    if (queueError) {
+      console.error('Failed to queue processing job:', queueError);
+      // Don't fail the upload if queueing fails - job can be queued manually later
     }
 
     const responseBody = {
