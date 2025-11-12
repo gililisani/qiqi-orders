@@ -85,11 +85,14 @@ export function createSupabaseStorage(): ObjectStorage {
     },
 
     async getSignedUrl(path, opts) {
+      const options: { download?: string } = {};
+      if (opts.downloadName) {
+        options.download = opts.downloadName;
+      }
+
       const { data, error } = await supabase.storage
         .from(bucket)
-        .createSignedUrl(path, opts.expiresIn, {
-          download: opts.downloadName,
-        });
+        .createSignedUrl(path, opts.expiresIn, options);
 
       if (error || !data?.signedUrl) {
         throw error ?? new Error('Failed to generate signed URL');
