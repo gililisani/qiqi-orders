@@ -40,11 +40,11 @@ function createSupabaseServiceClient() {
   });
 }
 
-async function resolveRoles(userId: string): Promise<{ roles: string[]; locale?: string | null; region?: string | null }> {
+async function resolveRoles(userId: string): Promise<{ roles: string[]; locale: string | null; region: string | null }> {
   const supabase = createSupabaseServiceClient();
   const { data, error } = await supabase
     .from('admins')
-    .select('enabled, locale, region')
+    .select('enabled')
     .eq('id', userId)
     .maybeSingle();
 
@@ -56,8 +56,8 @@ async function resolveRoles(userId: string): Promise<{ roles: string[]; locale?:
   if (data?.enabled) roles.push('admin');
   return {
     roles,
-    locale: data?.locale ?? null,
-    region: data?.region ?? null,
+    locale: null,
+    region: null,
   };
 }
 
@@ -82,8 +82,8 @@ export function createSupabaseAuth(): AuthAdapter {
       return {
         id: user.id,
         roles,
-        locale: locale ?? (user.user_metadata?.locale as string | null | undefined) ?? null,
-        region: region ?? (user.user_metadata?.region as string | null | undefined) ?? null,
+        locale,
+        region,
       };
     },
 
