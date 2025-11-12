@@ -76,7 +76,8 @@ export async function GET(request: NextRequest) {
 
     const tagsByAsset = tagsData?.reduce((acc: Record<string, string[]>, row) => {
       const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
-      if (row.tag?.label) arr.push(row.tag.label);
+      const tagEntry = Array.isArray(row.tag) ? row.tag[0] : row.tag;
+      if (tagEntry?.label) arr.push(tagEntry.label);
       return acc;
     }, {}) ?? {};
 
@@ -87,7 +88,8 @@ export async function GET(request: NextRequest) {
 
     const audiencesByAsset = audiencesData?.reduce((acc: Record<string, string[]>, row) => {
       const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
-      if (row.audience?.label) arr.push(row.audience.label);
+      const audienceEntry = Array.isArray(row.audience) ? row.audience[0] : row.audience;
+      if (audienceEntry?.label) arr.push(audienceEntry.label);
       return acc;
     }, {}) ?? {};
 
@@ -98,11 +100,12 @@ export async function GET(request: NextRequest) {
 
     const localesByAsset = localesData?.reduce((acc: Record<string, LocaleOption[]>, row) => {
       const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
-      if (row.locale?.code) {
+      const localeEntry = Array.isArray(row.locale) ? row.locale[0] : row.locale;
+      if (localeEntry?.code) {
         arr.push({
-          code: row.locale.code,
-          label: row.locale.label,
-          is_default: row.locale.is_default,
+          code: localeEntry.code,
+          label: localeEntry.label,
+          is_default: localeEntry.is_default,
         });
       }
       return acc;
@@ -115,8 +118,9 @@ export async function GET(request: NextRequest) {
 
     const regionsByAsset = regionsData?.reduce((acc: Record<string, RegionOption[]>, row) => {
       const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
-      if (row.region?.code) {
-        arr.push({ code: row.region.code, label: row.region.label });
+      const regionEntry = Array.isArray(row.region) ? row.region[0] : row.region;
+      if (regionEntry?.code) {
+        arr.push({ code: regionEntry.code, label: regionEntry.label });
       }
       return acc;
     }, {}) ?? {};
