@@ -27,14 +27,17 @@
     "next": "14.2.4",
     "nodemailer": "^7.0.9",
     "oauth-1.0a": "^2.2.6",
+    "pdf-parse": "^2.4.5",
     "react": "18.3.1",
     "react-dom": "18.3.1",
+    "sharp": "^0.34.5",
     "svg2pdf.js": "^2.6.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.1",
     "@types/node": "20.11.30",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "18.2.66",
     "@types/react-dom": "18.2.22",
     "autoprefixer": "^10.4.19",
