@@ -14,6 +14,11 @@ function createSupabaseAdminClient() {
       autoRefreshToken: false,
       persistSession: false,
     },
+    global: {
+      headers: {
+        Prefer: 'return=minimal',
+      },
+    },
   });
 }
 
