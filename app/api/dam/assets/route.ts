@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     const supabaseAdmin = createSupabaseAdminClient();
 
-    const { data, error } = await supabaseAdmin
+    const { data: assetsData, error } = await supabaseAdmin
       .from('dam_assets')
       .select(`
         id,
@@ -43,30 +43,86 @@ export async function GET(request: NextRequest) {
         product_line,
         sku,
         created_at,
-        current_version:dam_asset_versions!dam_assets_current_version_fk(
-          id,
-          version_number,
-          storage_path,
-          thumbnail_path,
-          mime_type,
-          file_size,
-          processing_status,
-          created_at,
-          metadata
-        ),
-        tags:dam_asset_tag_map(tag:dam_tags(slug,label)),
-        audiences:dam_asset_audience_map(audience:dam_audiences(code,label)),
-        locales:dam_asset_locale_map(locale:dam_locales(code,label,is_default), is_primary),
-        regions:dam_asset_region_map(region:dam_regions(code,label))
+        search_tags
       `)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    const assets = (data ?? []).map((record: any) => {
-      const currentVersionRaw = Array.isArray(record.current_version)
-        ? record.current_version[0]
-        : record.current_version;
+    if (!assetsData || assetsData.length === 0) {
+      return NextResponse.json({ assets: [] });
+    }
+
+    const assetIds = assetsData.map((record) => record.id);
+    const { data: versionsData, error: versionsError } = await supabaseAdmin
+      .from('dam_asset_versions')
+      .select('*')
+      .in('asset_id', assetIds)
+      .order('version_number', { ascending: false });
+
+    if (versionsError) throw versionsError;
+
+    const versionsByAsset = new Map<string, any>();
+    for (const version of versionsData ?? []) {
+      if (!versionsByAsset.has(version.asset_id)) {
+        versionsByAsset.set(version.asset_id, version);
+      }
+    }
+
+    const { data: tagsData, error: tagsError } = await supabaseAdmin
+      .from('dam_asset_tag_map')
+      .select('asset_id, tag:dam_tags(label)');
+    if (tagsError) throw tagsError;
+
+    const tagsByAsset = tagsData?.reduce((acc: Record<string, string[]>, row) => {
+      const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
+      if (row.tag?.label) arr.push(row.tag.label);
+      return acc;
+    }, {}) ?? {};
+
+    const { data: audiencesData, error: audiencesError } = await supabaseAdmin
+      .from('dam_asset_audience_map')
+      .select('asset_id, audience:dam_audiences(label)');
+    if (audiencesError) throw audiencesError;
+
+    const audiencesByAsset = audiencesData?.reduce((acc: Record<string, string[]>, row) => {
+      const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
+      if (row.audience?.label) arr.push(row.audience.label);
+      return acc;
+    }, {}) ?? {};
+
+    const { data: localesData, error: localesError } = await supabaseAdmin
+      .from('dam_asset_locale_map')
+      .select('asset_id, locale:dam_locales(code,label,is_default)');
+    if (localesError) throw localesError;
+
+    const localesByAsset = localesData?.reduce((acc: Record<string, LocaleOption[]>, row) => {
+      const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
+      if (row.locale?.code) {
+        arr.push({
+          code: row.locale.code,
+          label: row.locale.label,
+          is_default: row.locale.is_default,
+        });
+      }
+      return acc;
+    }, {}) ?? {};
+
+    const { data: regionsData, error: regionsError } = await supabaseAdmin
+      .from('dam_asset_region_map')
+      .select('asset_id, region:dam_regions(code,label)');
+    if (regionsError) throw regionsError;
+
+    const regionsByAsset = regionsData?.reduce((acc: Record<string, RegionOption[]>, row) => {
+      const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
+      if (row.region?.code) {
+        arr.push({ code: row.region.code, label: row.region.label });
+      }
+      return acc;
+    }, {}) ?? {};
+
+    const assets = (assetsData ?? []).map((record: any) => {
+      const currentVersionRaw = versionsByAsset.get(record.id) ?? null;
       const currentVersion = currentVersionRaw
         ? {
             id: currentVersionRaw.id,
@@ -95,14 +151,10 @@ export async function GET(request: NextRequest) {
         sku: record.sku,
         created_at: record.created_at,
         current_version: currentVersion,
-        tags: (record.tags ?? []).map((row: any) => row?.tag?.label).filter(Boolean),
-        audiences: (record.audiences ?? []).map((row: any) => row?.audience?.label).filter(Boolean),
-        locales: (record.locales ?? []).map((row: any) => ({
-          code: row?.locale?.code,
-          label: row?.locale?.label,
-          is_default: row?.locale?.is_default,
-        })).filter((locale: any) => locale.code),
-        regions: (record.regions ?? []).map((row: any) => row?.region).filter(Boolean),
+        tags: tagsByAsset[record.id] ?? [],
+        audiences: audiencesByAsset[record.id] ?? [],
+        locales: localesByAsset[record.id] ?? [],
+        regions: regionsByAsset[record.id] ?? [],
       } as any;
     });
 
