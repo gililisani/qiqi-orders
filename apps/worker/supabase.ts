@@ -11,7 +11,7 @@ let client: SupabaseClient | null = null;
 
 export function getSupabaseServiceClient(): SupabaseClient {
   if (!client) {
-    client = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    client = createClient(SUPABASE_URL as string, SUPABASE_SERVICE_ROLE_KEY as string, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
