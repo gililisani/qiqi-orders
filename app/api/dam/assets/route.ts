@@ -51,7 +51,8 @@ export async function GET(request: NextRequest) {
 
     const { data: assetsData, error } = await supabaseAdmin
       .from('dam_assets')
-      .select(`
+      .select(
+        `
         id,
         title,
         description,
@@ -60,7 +61,8 @@ export async function GET(request: NextRequest) {
         sku,
         created_at,
         search_tags
-      `)
+      `
+      )
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -69,19 +71,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ assets: [] });
     }
 
-    const assetIds = assetsData.map((record) => record.id);
-    const { data: versionsData, error: versionsError } = await supabaseAdmin
-      .from('dam_asset_versions')
-      .select('id, asset_id, version_number, storage_path, thumbnail_path, mime_type, file_size, processing_status, created_at, metadata')
-      .in('asset_id', assetIds)
-      .order('version_number', { ascending: false });
+    async function fetchLatestVersion(assetId: string) {
+      const { data, error: versionError } = await supabaseAdmin
+        .from('dam_asset_versions')
+        .select(
+          'id, asset_id, version_number, storage_path, thumbnail_path, mime_type, file_size, processing_status, created_at, metadata'
+        )
+        .eq('asset_id', assetId)
+        .order('version_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    if (versionsError) throw versionsError;
+      if (versionError) {
+        throw versionError;
+      }
+      return data ?? null;
+    }
 
     const versionsByAsset = new Map<string, any>();
-    for (const version of versionsData ?? []) {
-      if (!versionsByAsset.has(version.asset_id)) {
-        versionsByAsset.set(version.asset_id, version);
+    for (const asset of assetsData) {
+      const version = await fetchLatestVersion(asset.id);
+      if (version) {
+        versionsByAsset.set(asset.id, version);
       }
     }
 
