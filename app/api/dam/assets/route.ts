@@ -319,21 +319,25 @@ export async function POST(request: NextRequest) {
     const nextVersionNumber = lastVersion ? Number(lastVersion.version_number) + 1 : 1;
     const versionId = randomUUID();
 
-    const { error: insertVersionError } = await supabaseAdmin.from('dam_asset_versions').insert({
-      id: versionId,
-      asset_id: assetId,
-      version_number: nextVersionNumber,
-      storage_bucket: process.env.SUPABASE_STORAGE_BUCKET ?? 'dam-assets',
-      storage_path: storagePath,
-      file_size: file.size,
-      checksum: null,
-      mime_type: file.type || 'application/octet-stream',
-      metadata: {
-        originalFileName: file.name,
-      },
-      processing_status: 'pending',
-      created_by: adminUser.id,
-    }, { returning: 'minimal' });
+    const { error: insertVersionError } = await supabaseAdmin
+      .from('dam_asset_versions')
+      .insert([
+        {
+          id: versionId,
+          asset_id: assetId,
+          version_number: nextVersionNumber,
+          storage_bucket: process.env.SUPABASE_STORAGE_BUCKET ?? 'dam-assets',
+          storage_path: storagePath,
+          file_size: file.size,
+          checksum: null,
+          mime_type: file.type || 'application/octet-stream',
+          metadata: {
+            originalFileName: file.name,
+          },
+          processing_status: 'pending',
+          created_by: adminUser.id,
+        },
+      ], { returning: 'minimal' });
 
     if (insertVersionError) throw insertVersionError;
 
