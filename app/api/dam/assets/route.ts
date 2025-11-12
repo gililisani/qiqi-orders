@@ -333,7 +333,7 @@ export async function POST(request: NextRequest) {
       },
       processing_status: 'pending',
       created_by: adminUser.id,
-    });
+    }, { returning: 'minimal' });
 
     if (insertVersionError) throw insertVersionError;
 
