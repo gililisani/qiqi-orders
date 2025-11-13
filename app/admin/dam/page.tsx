@@ -235,6 +235,14 @@ export default function AdminDigitalAssetManagerPage() {
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [localeFilter, setLocaleFilter] = useState<string>('');
   const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
+  const [isEditingAsset, setIsEditingAsset] = useState(false);
+  const [editingDownloadUrls, setEditingDownloadUrls] = useState({
+    vimeo_download_1080p: '',
+    vimeo_download_720p: '',
+    vimeo_download_480p: '',
+    vimeo_download_360p: '',
+  });
+  const [savingUrls, setSavingUrls] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -1537,7 +1545,7 @@ export default function AdminDigitalAssetManagerPage() {
                       allow="autoplay; fullscreen; picture-in-picture"
                       allowFullScreen
                       className="absolute inset-0 w-full h-full border-0 rounded-lg"
-                      title={selectedAsset.title}
+                      title={selectedAsset.title || 'Video'}
                     />
                   </div>
                 </div>
@@ -1558,52 +1566,164 @@ export default function AdminDigitalAssetManagerPage() {
 
               {/* Download Section */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Downloads</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-gray-900">Downloads</h3>
+                  {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id && (
+                    <button
+                      type="button"
+              onClick={() => {
+                if (!isEditingAsset) {
+                  setIsEditingAsset(true);
+                  setEditingDownloadUrls({
+                    vimeo_download_1080p: selectedAsset.vimeo_download_1080p || '',
+                    vimeo_download_720p: selectedAsset.vimeo_download_720p || '',
+                    vimeo_download_480p: selectedAsset.vimeo_download_480p || '',
+                    vimeo_download_360p: selectedAsset.vimeo_download_360p || '',
+                  });
+                } else {
+                  setIsEditingAsset(false);
+                }
+              }}
+                      className="text-sm text-blue-600 hover:text-blue-800 underline"
+                    >
+                      {isEditingAsset ? 'Cancel' : 'Edit URLs'}
+                    </button>
+                  )}
+                </div>
                 
                 {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id ? (
-                  <div className="space-y-2">
-                    {/* Progressive download buttons */}
-                    {[
-                      { quality: '1080p', url: selectedAsset.vimeo_download_1080p || null },
-                      { quality: '720p', url: selectedAsset.vimeo_download_720p || null },
-                      { quality: '480p', url: selectedAsset.vimeo_download_480p || null },
-                      { quality: '360p', url: selectedAsset.vimeo_download_360p || null },
-                    ]
-                      .filter((item) => item.url && typeof item.url === 'string' && item.url.trim() !== '')
-                      .map((item) => (
-                        <a
-                          key={item.quality}
-                          href={item.url!}
-                          download
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (accessToken) {
-                              await logDownload(
-                                selectedAsset.id,
-                                item.url!,
-                                `video-${item.quality}`,
-                                accessToken
-                              );
+                  <div className="space-y-4">
+                    {isEditingAsset ? (
+                      <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Download URL (1080p)
+                          </label>
+                          <input
+                            type="text"
+                            value={editingDownloadUrls.vimeo_download_1080p}
+                            onChange={(e) => setEditingDownloadUrls(prev => ({ ...prev, vimeo_download_1080p: e.target.value }))}
+                            placeholder="https://..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Download URL (720p)
+                          </label>
+                          <input
+                            type="text"
+                            value={editingDownloadUrls.vimeo_download_720p}
+                            onChange={(e) => setEditingDownloadUrls(prev => ({ ...prev, vimeo_download_720p: e.target.value }))}
+                            placeholder="https://..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Download URL (480p)
+                          </label>
+                          <input
+                            type="text"
+                            value={editingDownloadUrls.vimeo_download_480p}
+                            onChange={(e) => setEditingDownloadUrls(prev => ({ ...prev, vimeo_download_480p: e.target.value }))}
+                            placeholder="https://..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Download URL (360p)
+                          </label>
+                          <input
+                            type="text"
+                            value={editingDownloadUrls.vimeo_download_360p}
+                            onChange={(e) => setEditingDownloadUrls(prev => ({ ...prev, vimeo_download_360p: e.target.value }))}
+                            placeholder="https://..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!accessToken) return;
+                            setSavingUrls(true);
+                            try {
+                              const response = await fetch(`/api/dam/assets/${selectedAsset.id}`, {
+                                method: 'PATCH',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  ...buildAuthHeaders(accessToken),
+                                },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({
+                                  vimeo_download_1080p: editingDownloadUrls.vimeo_download_1080p.trim() || null,
+                                  vimeo_download_720p: editingDownloadUrls.vimeo_download_720p.trim() || null,
+                                  vimeo_download_480p: editingDownloadUrls.vimeo_download_480p.trim() || null,
+                                  vimeo_download_360p: editingDownloadUrls.vimeo_download_360p.trim() || null,
+                                }),
+                              });
+                              if (!response.ok) throw new Error('Failed to update URLs');
+                              const updated = await response.json();
+                              setSelectedAsset(prev => prev ? { ...prev, ...updated } : null);
+                              setIsEditingAsset(false);
+                              await fetchAssets(accessToken);
+                            } catch (err: any) {
+                              alert('Failed to save: ' + err.message);
+                            } finally {
+                              setSavingUrls(false);
                             }
-                            // Let the browser handle the download naturally
                           }}
-                          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition mr-2"
+                          disabled={savingUrls}
+                          className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                         >
-                          <ArrowDownTrayIcon className="h-4 w-4" />
-                          Download {item.quality}
-                        </a>
-                      ))}
-                    
-                    {/* Show message if no download URLs configured */}
-                    {(!selectedAsset.vimeo_download_1080p || (typeof selectedAsset.vimeo_download_1080p === 'string' && selectedAsset.vimeo_download_1080p.trim() === '')) && 
-                     (!selectedAsset.vimeo_download_720p || (typeof selectedAsset.vimeo_download_720p === 'string' && selectedAsset.vimeo_download_720p.trim() === '')) && 
-                     (!selectedAsset.vimeo_download_480p || (typeof selectedAsset.vimeo_download_480p === 'string' && selectedAsset.vimeo_download_480p.trim() === '')) && 
-                     (!selectedAsset.vimeo_download_360p || (typeof selectedAsset.vimeo_download_360p === 'string' && selectedAsset.vimeo_download_360p.trim() === '')) && (
-                      <p className="text-sm text-gray-500 italic">
-                        No download URLs configured. Add download URLs when uploading or editing this asset.
-                      </p>
+                          {savingUrls ? 'Saving...' : 'Save URLs'}
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Progressive download buttons */}
+                        {[
+                          { quality: '1080p', url: selectedAsset.vimeo_download_1080p || null },
+                          { quality: '720p', url: selectedAsset.vimeo_download_720p || null },
+                          { quality: '480p', url: selectedAsset.vimeo_download_480p || null },
+                          { quality: '360p', url: selectedAsset.vimeo_download_360p || null },
+                        ]
+                          .filter((item) => item.url && typeof item.url === 'string' && item.url.trim() !== '')
+                          .map((item) => (
+                            <a
+                              key={item.quality}
+                              href={item.url!}
+                              download
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (accessToken) {
+                                  await logDownload(
+                                    selectedAsset.id,
+                                    item.url!,
+                                    `video-${item.quality}`,
+                                    accessToken
+                                  );
+                                }
+                              }}
+                              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition mr-2"
+                            >
+                              <ArrowDownTrayIcon className="h-4 w-4" />
+                              Download {item.quality}
+                            </a>
+                          ))}
+                        
+                        {/* Show message if no download URLs configured */}
+                        {(!selectedAsset.vimeo_download_1080p || (typeof selectedAsset.vimeo_download_1080p === 'string' && selectedAsset.vimeo_download_1080p.trim() === '')) && 
+                         (!selectedAsset.vimeo_download_720p || (typeof selectedAsset.vimeo_download_720p === 'string' && selectedAsset.vimeo_download_720p.trim() === '')) && 
+                         (!selectedAsset.vimeo_download_480p || (typeof selectedAsset.vimeo_download_480p === 'string' && selectedAsset.vimeo_download_480p.trim() === '')) && 
+                         (!selectedAsset.vimeo_download_360p || (typeof selectedAsset.vimeo_download_360p === 'string' && selectedAsset.vimeo_download_360p.trim() === '')) && (
+                          <p className="text-sm text-gray-500 italic">
+                            No download URLs configured. Click "Edit URLs" to add download links.
+                          </p>
+                        )}
+                      </>
                     )}
-
                   </div>
                 ) : selectedAsset.current_version?.downloadPath ? (
                   <a

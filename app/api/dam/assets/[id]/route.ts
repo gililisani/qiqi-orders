@@ -26,6 +26,44 @@ async function getAdminUser(request: NextRequest): Promise<string> {
   return adminUser.id;
 }
 
+export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const adminUserId = await getAdminUser(request);
+    const supabaseAdmin = createSupabaseAdminClient();
+    const assetId = params.id;
+    const body = await request.json();
+
+    // Update only allowed fields
+    const updateData: any = {
+      updated_by: adminUserId,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (body.vimeo_download_1080p !== undefined) updateData.vimeo_download_1080p = body.vimeo_download_1080p;
+    if (body.vimeo_download_720p !== undefined) updateData.vimeo_download_720p = body.vimeo_download_720p;
+    if (body.vimeo_download_480p !== undefined) updateData.vimeo_download_480p = body.vimeo_download_480p;
+    if (body.vimeo_download_360p !== undefined) updateData.vimeo_download_360p = body.vimeo_download_360p;
+    if (body.vimeo_video_id !== undefined) updateData.vimeo_video_id = body.vimeo_video_id;
+    if (body.title !== undefined) updateData.title = body.title;
+    if (body.description !== undefined) updateData.description = body.description;
+
+    const { data, error } = await supabaseAdmin
+      .from('dam_assets')
+      .update(updateData)
+      .eq('id', assetId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(data, { status: 200 });
+  } catch (err: any) {
+    if (err instanceof NextResponse) return err;
+    console.error('Asset update failed', err);
+    return NextResponse.json({ error: err.message || 'Asset update failed' }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await getAdminUser(request);
