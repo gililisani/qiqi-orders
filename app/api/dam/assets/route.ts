@@ -65,6 +65,10 @@ export async function GET(request: NextRequest) {
         product_line,
         sku,
         vimeo_video_id,
+        vimeo_download_1080p,
+        vimeo_download_720p,
+        vimeo_download_480p,
+        vimeo_download_360p,
         created_at,
         search_tags
       `
@@ -226,6 +230,10 @@ export async function GET(request: NextRequest) {
         product_line: record.product_line,
         sku: record.sku,
         vimeo_video_id: record.vimeo_video_id ?? null,
+        vimeo_download_1080p: record.vimeo_download_1080p ?? null,
+        vimeo_download_720p: record.vimeo_download_720p ?? null,
+        vimeo_download_480p: record.vimeo_download_480p ?? null,
+        vimeo_download_360p: record.vimeo_download_360p ?? null,
         created_at: record.created_at,
         current_version: currentVersion,
         tags: tagsByAsset[record.id] ?? [],
@@ -307,8 +315,13 @@ export async function POST(request: NextRequest) {
         // https://vimeo.com/123456789
         // https://player.vimeo.com/video/123456789
         // https://vimeo.com/123456789?param=value
-        const match = vimeoInput.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/);
-        vimeoVideoId = match ? match[1] : vimeoInput.trim();
+        // Or just a numeric ID
+        if (/^\d+$/.test(vimeoInput.trim())) {
+          vimeoVideoId = vimeoInput.trim();
+        } else {
+          const match = vimeoInput.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/);
+          vimeoVideoId = match ? match[1] : null;
+        }
       }
       if (!vimeoVideoId) {
         return NextResponse.json({ error: 'Vimeo video ID or URL is required for video assets' }, { status: 400 });
@@ -334,6 +347,10 @@ export async function POST(request: NextRequest) {
         product_line: payload.productLine ?? null,
         sku: payload.sku ?? null,
         vimeo_video_id: vimeoVideoId,
+        vimeo_download_1080p: payload.vimeoDownload1080p ?? null,
+        vimeo_download_720p: payload.vimeoDownload720p ?? null,
+        vimeo_download_480p: payload.vimeoDownload480p ?? null,
+        vimeo_download_360p: payload.vimeoDownload360p ?? null,
         search_tags: tagsInput,
         created_by: adminUser.id,
         updated_by: adminUser.id,
@@ -350,6 +367,10 @@ export async function POST(request: NextRequest) {
           product_line: payload.productLine ?? null,
           sku: payload.sku ?? null,
           vimeo_video_id: vimeoVideoId,
+          vimeo_download_1080p: payload.vimeoDownload1080p ?? null,
+          vimeo_download_720p: payload.vimeoDownload720p ?? null,
+          vimeo_download_480p: payload.vimeoDownload480p ?? null,
+          vimeo_download_360p: payload.vimeoDownload360p ?? null,
           search_tags: tagsInput,
           updated_by: adminUser.id,
           updated_at: new Date().toISOString(),

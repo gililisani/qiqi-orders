@@ -6,6 +6,13 @@
 ALTER TABLE dam_assets
   ADD COLUMN IF NOT EXISTS vimeo_video_id TEXT;
 
+-- Add progressive download URL fields for Vimeo videos
+ALTER TABLE dam_assets
+  ADD COLUMN IF NOT EXISTS vimeo_download_1080p TEXT,
+  ADD COLUMN IF NOT EXISTS vimeo_download_720p TEXT,
+  ADD COLUMN IF NOT EXISTS vimeo_download_480p TEXT,
+  ADD COLUMN IF NOT EXISTS vimeo_download_360p TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_dam_assets_vimeo_video_id ON dam_assets(vimeo_video_id) WHERE vimeo_video_id IS NOT NULL;
 
 -- --------------------------------------------------

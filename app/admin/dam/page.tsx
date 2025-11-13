@@ -12,6 +12,8 @@ import {
   PhotoIcon,
   Squares2X2Icon,
   TrashIcon,
+  XMarkIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline';
 
 const assetTypeOptions: Array<{ value: string; label: string; icon: JSX.Element }> = [
@@ -70,6 +72,10 @@ interface AssetRecord {
   product_line?: string | null;
   sku?: string | null;
   vimeo_video_id?: string | null;
+  vimeo_download_1080p?: string | null;
+  vimeo_download_720p?: string | null;
+  vimeo_download_480p?: string | null;
+  vimeo_download_360p?: string | null;
   created_at: string;
   current_version?: AssetVersion | null;
   tags: string[];
@@ -91,6 +97,10 @@ interface UploadFormState {
   selectedRegionCodes: string[];
   file: File | null;
   vimeoVideoId: string; // Vimeo video ID or URL
+  vimeoDownload1080p: string;
+  vimeoDownload720p: string;
+  vimeoDownload480p: string;
+  vimeoDownload360p: string;
 }
 
 const defaultFormState: UploadFormState = {
@@ -106,6 +116,10 @@ const defaultFormState: UploadFormState = {
   selectedRegionCodes: [],
   file: null,
   vimeoVideoId: '',
+  vimeoDownload1080p: '',
+  vimeoDownload720p: '',
+  vimeoDownload480p: '',
+  vimeoDownload360p: '',
 };
 
 function formatBytes(bytes?: number | null): string {
@@ -121,6 +135,69 @@ function buildAuthHeaders(accessToken: string | undefined | null): Record<string
   return {
     Authorization: `Bearer ${accessToken}`,
   };
+}
+
+// Parse Vimeo video ID from various URL formats
+function parseVimeoId(input: string): string | null {
+  if (!input || !input.trim()) return null;
+  
+  const trimmed = input.trim();
+  
+  // Check if it's already just a numeric ID
+  if (/^\d+$/.test(trimmed)) {
+    return trimmed;
+  }
+  
+  // Try to extract from various Vimeo URL patterns
+  const patterns = [
+    /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/i,
+    /vimeo\.com\/(\d+)/i,
+    /player\.vimeo\.com\/video\/(\d+)/i,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = trimmed.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  
+  return null;
+}
+
+// Check if a string is a direct MP4/URL (starts with http:// or https://)
+function isDirectUrl(input: string): boolean {
+  return /^https?:\/\//i.test(input.trim());
+}
+
+// Log download event
+async function logDownload(
+  assetId: string,
+  downloadUrl: string,
+  downloadMethod: string,
+  accessToken: string | null
+): Promise<void> {
+  if (!accessToken) return;
+  
+  try {
+    const headers = buildAuthHeaders(accessToken);
+    await fetch('/api/dam/downloads/log', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        assetId,
+        downloadUrl,
+        downloadMethod,
+      }),
+    });
+  } catch (err) {
+    console.error('Failed to log download:', err);
+    // Don't block download if logging fails
+  }
 }
 
 export default function AdminDigitalAssetManagerPage() {
@@ -157,6 +234,7 @@ export default function AdminDigitalAssetManagerPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [localeFilter, setLocaleFilter] = useState<string>('');
+  const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -422,6 +500,10 @@ export default function AdminDigitalAssetManagerPage() {
       ...defaultFormState,
       selectedLocaleCodes: defaultLocale ? [defaultLocale.code] : [],
       primaryLocale: defaultLocale ? defaultLocale.code : null,
+      vimeoDownload1080p: '',
+      vimeoDownload720p: '',
+      vimeoDownload480p: '',
+      vimeoDownload360p: '',
     });
     setSuccessMessage('');
   };
@@ -520,13 +602,24 @@ export default function AdminDigitalAssetManagerPage() {
 
       // Handle video assets (Vimeo)
       if (formState.assetType === 'video') {
+        // Parse Vimeo ID from input
+        const vimeoId = parseVimeoId(formState.vimeoVideoId.trim());
+        if (!vimeoId) {
+          setError('Invalid Vimeo URL or ID. Please provide a valid Vimeo video URL or ID.');
+          return;
+        }
+
         const payload = {
           title: formState.title.trim(),
           description: formState.description.trim() || undefined,
           assetType: formState.assetType,
           productLine: formState.productLine.trim() || undefined,
           sku: formState.sku.trim() || undefined,
-          vimeoVideoId: formState.vimeoVideoId.trim(),
+          vimeoVideoId: vimeoId,
+          vimeoDownload1080p: formState.vimeoDownload1080p.trim() || undefined,
+          vimeoDownload720p: formState.vimeoDownload720p.trim() || undefined,
+          vimeoDownload480p: formState.vimeoDownload480p.trim() || undefined,
+          vimeoDownload360p: formState.vimeoDownload360p.trim() || undefined,
           tags: formState.selectedTagSlugs,
           audiences: formState.selectedAudienceCodes,
           locales: formState.selectedLocaleCodes.map((code) => ({
@@ -1116,19 +1209,70 @@ export default function AdminDigitalAssetManagerPage() {
             </div>
 
             {formState.assetType === 'video' ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Vimeo Video ID or URL *</label>
-                <input
-                  type="text"
-                  value={formState.vimeoVideoId}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, vimeoVideoId: event.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                  placeholder="e.g., 123456789 or https://vimeo.com/123456789"
-                  required
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  Upload your video to Vimeo first, then paste the video ID or URL here.
-                </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Vimeo Video ID or URL *</label>
+                  <input
+                    type="text"
+                    value={formState.vimeoVideoId}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, vimeoVideoId: event.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    placeholder="e.g., 123456789 or https://vimeo.com/123456789"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Upload your video to Vimeo first, then paste the video ID or URL here.
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Download URLs (Optional)</label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Paste direct MP4 download URLs for different quality levels. These will be stored as-is.
+                  </p>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">1080p</label>
+                      <input
+                        type="text"
+                        value={formState.vimeoDownload1080p}
+                        onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload1080p: event.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">720p</label>
+                      <input
+                        type="text"
+                        value={formState.vimeoDownload720p}
+                        onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload720p: event.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">480p</label>
+                      <input
+                        type="text"
+                        value={formState.vimeoDownload480p}
+                        onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload480p: event.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">360p</label>
+                      <input
+                        type="text"
+                        value={formState.vimeoDownload360p}
+                        onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload360p: event.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : (
               <div>
@@ -1224,7 +1368,11 @@ export default function AdminDigitalAssetManagerPage() {
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {filteredAssets.map((asset) => (
-                <div key={asset.id} className="flex gap-4 rounded-xl border border-gray-200 p-4">
+                <div
+                  key={asset.id}
+                  className="flex gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-gray-300 transition"
+                  onClick={() => setSelectedAsset(asset)}
+                >
                   <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
                     {asset.asset_type === 'video' && asset.vimeo_video_id ? (
                       // Vimeo video - show Vimeo poster/thumbnail (using oEmbed API for poster image)
@@ -1266,7 +1414,10 @@ export default function AdminDigitalAssetManagerPage() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleDeleteAsset(asset.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteAsset(asset.id);
+                          }}
                           className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition"
                           title="Delete asset"
                         >
@@ -1313,32 +1464,29 @@ export default function AdminDigitalAssetManagerPage() {
                           <span className="font-medium text-gray-700">Regions:</span> {asset.regions.map((region) => region.label).join(', ')}
                         </div>
                       )}
-                      {asset.asset_type === 'video' && asset.vimeo_video_id ? (
-                        <div>
-                          <a
-                            href={`https://vimeo.com/${asset.vimeo_video_id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-medium text-gray-700 underline-offset-2 hover:underline"
-                          >
-                            View on Vimeo
-                          </a>
-                        </div>
-                      ) : asset.current_version?.downloadPath ? (
+                      {asset.current_version?.downloadPath && (
                         <div>
                           <a
                             href={ensureTokenUrl(asset.current_version.downloadPath)}
                             className="font-medium text-gray-700 underline-offset-2 hover:underline"
-                            onClick={(event) => {
+                            onClick={async (e) => {
+                              e.stopPropagation();
                               if (!accessToken) {
-                                event.preventDefault();
+                                e.preventDefault();
+                                return;
                               }
+                              await logDownload(
+                                asset.id,
+                                asset.current_version!.downloadPath!,
+                                'api',
+                                accessToken
+                              );
                             }}
                           >
                             Download
                           </a>
                         </div>
-                      ) : null}
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1347,6 +1495,213 @@ export default function AdminDigitalAssetManagerPage() {
           )}
         </Card>
       </div>
+
+      {/* Asset Detail Modal */}
+      {selectedAsset && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedAsset(null);
+            }
+          }}
+        >
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-lg shadow-xl">
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => setSelectedAsset(null)}
+              className="absolute top-4 right-4 z-10 rounded-full bg-white/90 p-2 text-gray-600 hover:bg-white hover:text-gray-900 transition"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+
+            <div className="p-6">
+              {/* Header */}
+              <div className="mb-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <h2 className="text-2xl font-semibold text-gray-900">{selectedAsset.title}</h2>
+                  {renderAssetTypePill(selectedAsset.asset_type)}
+                </div>
+                {selectedAsset.description && (
+                  <p className="text-gray-600">{selectedAsset.description}</p>
+                )}
+              </div>
+
+              {/* Vimeo Player (for videos) */}
+              {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id && (
+                <div className="mb-6">
+                  <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
+                    <iframe
+                      src={`https://player.vimeo.com/video/${selectedAsset.vimeo_video_id}?byline=0&title=0&portrait=0`}
+                      allow="autoplay; fullscreen; picture-in-picture"
+                      allowFullScreen
+                      className="absolute inset-0 w-full h-full border-0 rounded-lg"
+                      title={selectedAsset.title}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Preview for non-video assets */}
+              {selectedAsset.asset_type !== 'video' && selectedAsset.current_version?.previewPath && accessToken && (
+                <div className="mb-6">
+                  <div className="relative w-full bg-gray-100 rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                    <img
+                      src={ensureTokenUrl(selectedAsset.current_version.previewPath)}
+                      alt={selectedAsset.title}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Download Section */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Downloads</h3>
+                
+                {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id ? (
+                  <div className="space-y-2">
+                    {/* Progressive download buttons */}
+                    {[
+                      { quality: '1080p', url: selectedAsset.vimeo_download_1080p },
+                      { quality: '720p', url: selectedAsset.vimeo_download_720p },
+                      { quality: '480p', url: selectedAsset.vimeo_download_480p },
+                      { quality: '360p', url: selectedAsset.vimeo_download_360p },
+                    ]
+                      .filter((item) => item.url)
+                      .map((item) => (
+                        <a
+                          key={item.quality}
+                          href={item.url!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={async () => {
+                            await logDownload(
+                              selectedAsset.id,
+                              item.url!,
+                              `vimeo-${item.quality}`,
+                              accessToken
+                            );
+                          }}
+                          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                        >
+                          <ArrowDownTrayIcon className="h-4 w-4" />
+                          Download {item.quality}
+                        </a>
+                      ))}
+
+                    {/* Fallback to Vimeo download page */}
+                    <div className="mt-4">
+                      <a
+                        href={`https://vimeo.com/${selectedAsset.vimeo_video_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={async () => {
+                          await logDownload(
+                            selectedAsset.id,
+                            `https://vimeo.com/${selectedAsset.vimeo_video_id}`,
+                            'vimeo-page',
+                            accessToken
+                          );
+                        }}
+                        className="text-sm text-gray-600 hover:text-gray-900 underline"
+                      >
+                        More download options on Vimeo →
+                      </a>
+                    </div>
+                  </div>
+                ) : selectedAsset.current_version?.downloadPath ? (
+                  <a
+                    href={ensureTokenUrl(selectedAsset.current_version.downloadPath)}
+                    onClick={async (e) => {
+                      if (!accessToken) {
+                        e.preventDefault();
+                        return;
+                      }
+                      await logDownload(
+                        selectedAsset.id,
+                        selectedAsset.current_version!.downloadPath!,
+                        'api',
+                        accessToken
+                      );
+                    }}
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                  >
+                    <ArrowDownTrayIcon className="h-4 w-4" />
+                    Download
+                  </a>
+                ) : (
+                  <p className="text-sm text-gray-500">No download available</p>
+                )}
+              </div>
+
+              {/* Metadata */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Details</h3>
+                <dl className="grid grid-cols-2 gap-4 text-sm">
+                  {selectedAsset.sku && (
+                    <>
+                      <dt className="font-medium text-gray-700">SKU</dt>
+                      <dd className="text-gray-600">{selectedAsset.sku}</dd>
+                    </>
+                  )}
+                  {selectedAsset.product_line && (
+                    <>
+                      <dt className="font-medium text-gray-700">Product Line</dt>
+                      <dd className="text-gray-600">{selectedAsset.product_line}</dd>
+                    </>
+                  )}
+                  <dt className="font-medium text-gray-700">Created</dt>
+                  <dd className="text-gray-600">{new Date(selectedAsset.created_at).toLocaleDateString()}</dd>
+                  {selectedAsset.current_version && (
+                    <>
+                      <dt className="font-medium text-gray-700">Size</dt>
+                      <dd className="text-gray-600">{formatBytes(selectedAsset.current_version.file_size) || '—'}</dd>
+                      <dt className="font-medium text-gray-700">Type</dt>
+                      <dd className="text-gray-600">{selectedAsset.current_version.mime_type || 'Unknown'}</dd>
+                    </>
+                  )}
+                </dl>
+
+                {selectedAsset.tags.length > 0 && (
+                  <div className="mt-4">
+                    <dt className="font-medium text-gray-700 mb-2">Tags</dt>
+                    <dd className="flex flex-wrap gap-2">
+                      {selectedAsset.tags.map((tag) => (
+                        <span key={tag} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">
+                          {tag}
+                        </span>
+                      ))}
+                    </dd>
+                  </div>
+                )}
+
+                {selectedAsset.audiences.length > 0 && (
+                  <div className="mt-4">
+                    <dt className="font-medium text-gray-700 mb-2">Audiences</dt>
+                    <dd className="text-gray-600">{selectedAsset.audiences.join(', ')}</dd>
+                  </div>
+                )}
+
+                {selectedAsset.locales.length > 0 && (
+                  <div className="mt-4">
+                    <dt className="font-medium text-gray-700 mb-2">Locales</dt>
+                    <dd className="text-gray-600">{selectedAsset.locales.map((l) => l.label).join(', ')}</dd>
+                  </div>
+                )}
+
+                {selectedAsset.regions.length > 0 && (
+                  <div className="mt-4">
+                    <dt className="font-medium text-gray-700 mb-2">Regions</dt>
+                    <dd className="text-gray-600">{selectedAsset.regions.map((r) => r.label).join(', ')}</dd>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
