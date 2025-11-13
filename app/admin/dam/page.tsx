@@ -330,6 +330,25 @@ export default function AdminDigitalAssetManagerPage() {
     return () => clearTimeout(timeoutId);
   }, [searchTerm, accessToken]);
 
+  // Auto-refresh assets list every 5 seconds if there are pending/processing items
+  useEffect(() => {
+    if (!accessToken) return;
+    const hasProcessingAssets = assets.some(
+      (asset) =>
+        asset.current_version &&
+        (asset.current_version.processing_status === 'pending' ||
+          asset.current_version.processing_status === 'processing')
+    );
+
+    if (!hasProcessingAssets) return;
+
+    const intervalId = setInterval(() => {
+      fetchAssets(accessToken, searchTerm || undefined);
+    }, 5000); // Refresh every 5 seconds
+
+    return () => clearInterval(intervalId);
+  }, [assets, accessToken, searchTerm]);
+
   const filteredAssets = useMemo(() => {
     // Assets are already filtered by search on the server
     // Only apply client-side filters for type and locale

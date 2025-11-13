@@ -81,6 +81,15 @@ async function extractPDFText(pdfBuffer: Buffer): Promise<{ text: string; pageCo
 
 async function extractVideoMetadata(videoBuffer: Buffer): Promise<VideoMetadata> {
   return new Promise((resolve, reject) => {
+    // Check if ffprobe is available
+    const { execSync } = require('child_process');
+    try {
+      execSync('which ffprobe', { stdio: 'ignore' });
+    } catch (checkErr) {
+      reject(new Error('ffprobe not found. Please install ffmpeg: brew install ffmpeg (macOS) or apt-get install ffmpeg (Linux)'));
+      return;
+    }
+
     // Write buffer to temp file for ffmpeg to process
     const fs = require('fs');
     const path = require('path');
@@ -88,7 +97,12 @@ async function extractVideoMetadata(videoBuffer: Buffer): Promise<VideoMetadata>
     
     const tempFilePath = path.join(os.tmpdir(), `video-${Date.now()}-${Math.random().toString(36)}.tmp`);
     
-    fs.writeFileSync(tempFilePath, videoBuffer);
+    try {
+      fs.writeFileSync(tempFilePath, videoBuffer);
+    } catch (writeErr) {
+      reject(new Error(`Failed to write temp video file: ${writeErr instanceof Error ? writeErr.message : String(writeErr)}`));
+      return;
+    }
 
     ffmpeg.ffprobe(tempFilePath, (err: Error | null, metadata: any) => {
       // Clean up temp file
@@ -99,12 +113,17 @@ async function extractVideoMetadata(videoBuffer: Buffer): Promise<VideoMetadata>
       }
 
       if (err) {
-        reject(new Error(`Failed to extract video metadata: ${err.message}`));
+        reject(new Error(`Failed to extract video metadata: ${err.message}. Make sure ffmpeg is installed.`));
         return;
       }
 
       const videoStream = metadata.streams?.find((s: any) => s.codec_type === 'video');
       const format = metadata.format;
+
+      if (!videoStream) {
+        reject(new Error('No video stream found in file'));
+        return;
+      }
 
       resolve({
         duration: format?.duration ? parseFloat(format.duration) : undefined,
@@ -123,6 +142,15 @@ async function generateVideoThumbnail(
   storage: any,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    // Check if ffmpeg is available
+    const { execSync } = require('child_process');
+    try {
+      execSync('which ffmpeg', { stdio: 'ignore' });
+    } catch (checkErr) {
+      reject(new Error('ffmpeg not found. Please install ffmpeg: brew install ffmpeg (macOS) or apt-get install ffmpeg (Linux)'));
+      return;
+    }
+
     // Write buffer to temp file for ffmpeg to process
     const fs = require('fs');
     const path = require('path');
