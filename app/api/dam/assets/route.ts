@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       const { data, error: versionError } = await supabaseAdmin
         .from('dam_asset_versions')
         .select(
-          'id, asset_id, version_number, storage_path, thumbnail_path, mime_type, file_size, processing_status, created_at, metadata, extracted_text'
+          'id, asset_id, version_number, storage_path, thumbnail_path, mime_type, file_size, processing_status, created_at, metadata, extracted_text, duration_seconds, width, height'
         )
         .eq('asset_id', assetId)
         .order('version_number', { ascending: false })
@@ -205,6 +205,9 @@ export async function GET(request: NextRequest) {
             file_size: currentVersionRaw.file_size,
             processing_status: currentVersionRaw.processing_status,
             created_at: currentVersionRaw.created_at,
+            duration_seconds: currentVersionRaw.duration_seconds,
+            width: currentVersionRaw.width,
+            height: currentVersionRaw.height,
             downloadPath: buildDownloadPath(record.id, currentVersionRaw.id, 'original'),
             previewPath: buildDownloadPath(
               record.id,
