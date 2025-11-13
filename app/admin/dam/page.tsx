@@ -452,7 +452,12 @@ export default function AdminDigitalAssetManagerPage() {
       canvas.height = viewport.height;
       canvas.width = viewport.width;
 
-      await page.render({ canvasContext: context, viewport }).promise;
+      // Render the page - canvas is required, canvasContext is optional for backwards compatibility
+      await page.render({
+        canvas: canvas,
+        viewport: viewport,
+        canvasContext: context, // Optional, but included for clarity
+      }).promise;
 
       // Convert canvas to base64 PNG
       const thumbnailData = canvas.toDataURL('image/png').split(',')[1]; // Remove data:image/png;base64, prefix
