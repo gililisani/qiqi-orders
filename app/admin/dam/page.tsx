@@ -727,6 +727,60 @@ export default function AdminDigitalAssetManagerPage() {
         </button>
       </div>
 
+      {/* Active Uploads Section */}
+      {activeUploads.length > 0 && (
+        <Card className="mb-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Active Uploads</h3>
+          <div className="space-y-3">
+            {activeUploads.map((upload) => (
+              <div key={upload.id} className="rounded-lg border border-gray-200 p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">{upload.fileName}</p>
+                    <p className="text-xs text-gray-500">
+                      {formatBytes(upload.fileSize)} •{' '}
+                      {upload.status === 'uploading'
+                        ? 'Uploading...'
+                        : upload.status === 'completing'
+                        ? 'Finalizing...'
+                        : upload.status === 'success'
+                        ? 'Complete'
+                        : 'Error'}
+                    </p>
+                  </div>
+                  {upload.status === 'error' && upload.error && (
+                    <span className="ml-4 text-xs text-red-600">{upload.error}</span>
+                  )}
+                  {upload.status === 'success' && (
+                    <span className="ml-4 text-xs text-green-600">✓ Success</span>
+                  )}
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      upload.status === 'error'
+                        ? 'bg-red-500'
+                        : upload.status === 'success'
+                        ? 'bg-green-500'
+                        : 'bg-black'
+                    }`}
+                    style={{ width: `${upload.progress}%` }}
+                  />
+                </div>
+                <div className="mt-1 flex justify-between text-xs text-gray-500">
+                  <span>{upload.progress}%</span>
+                  <span>
+                    {upload.status === 'uploading' || upload.status === 'completing'
+                      ? `${formatBytes((upload.progress / 100) * upload.fileSize)} of ${formatBytes(upload.fileSize)}`
+                      : ''}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <h3 className="mb-4 text-lg font-semibold text-gray-900">Upload Asset</h3>
