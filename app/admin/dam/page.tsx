@@ -414,8 +414,29 @@ export default function AdminDigitalAssetManagerPage() {
 
         const { assetId, storagePath } = await initResponse.json();
 
-        // Step 2: Upload file directly to Supabase Storage
-        const { error: uploadError } = await supabase.storage
+        // Step 2: Create an authenticated Supabase client for upload
+        // Use the access token directly to ensure authentication works
+        const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
+        const supabaseUpload = createSupabaseClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          {
+            global: {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            },
+          }
+        );
+
+        // Verify user is authenticated
+        const { data: { user }, error: userError } = await supabaseUpload.auth.getUser();
+        if (userError || !user) {
+          throw new Error('Not authenticated. Please refresh the page and try again.');
+        }
+
+        // Step 3: Upload file directly to Supabase Storage
+        const { error: uploadError } = await supabaseUpload.storage
           .from('dam-assets')
           .upload(storagePath, file, {
             cacheControl: '3600',
@@ -423,6 +444,13 @@ export default function AdminDigitalAssetManagerPage() {
           });
 
         if (uploadError) {
+          console.error('Storage upload error:', uploadError);
+          console.error('User:', user.id);
+          console.error('Storage path:', storagePath);
+          // Check if it's an RLS policy error
+          if (uploadError.message.includes('row-level security') || uploadError.message.includes('policy')) {
+            throw new Error('Permission denied. Please ensure you are logged in as an admin and the storage policies are configured correctly.');
+          }
           throw new Error(`Failed to upload file: ${uploadError.message}`);
         }
 
