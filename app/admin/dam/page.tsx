@@ -69,6 +69,7 @@ interface AssetRecord {
   asset_type: string;
   product_line?: string | null;
   sku?: string | null;
+  vimeo_video_id?: string | null;
   created_at: string;
   current_version?: AssetVersion | null;
   tags: string[];
@@ -89,6 +90,7 @@ interface UploadFormState {
   primaryLocale: string | null;
   selectedRegionCodes: string[];
   file: File | null;
+  vimeoVideoId: string; // Vimeo video ID or URL
 }
 
 const defaultFormState: UploadFormState = {
@@ -103,6 +105,7 @@ const defaultFormState: UploadFormState = {
   primaryLocale: null,
   selectedRegionCodes: [],
   file: null,
+  vimeoVideoId: '',
 };
 
 function formatBytes(bytes?: number | null): string {
@@ -330,24 +333,7 @@ export default function AdminDigitalAssetManagerPage() {
     return () => clearTimeout(timeoutId);
   }, [searchTerm, accessToken]);
 
-  // Auto-refresh assets list every 5 seconds if there are pending/processing items
-  useEffect(() => {
-    if (!accessToken) return;
-    const hasProcessingAssets = assets.some(
-      (asset) =>
-        asset.current_version &&
-        (asset.current_version.processing_status === 'pending' ||
-          asset.current_version.processing_status === 'processing')
-    );
-
-    if (!hasProcessingAssets) return;
-
-    const intervalId = setInterval(() => {
-      fetchAssets(accessToken, searchTerm || undefined);
-    }, 5000); // Refresh every 5 seconds
-
-    return () => clearInterval(intervalId);
-  }, [assets, accessToken, searchTerm]);
+  // Auto-refresh removed - no background processing
 
   const filteredAssets = useMemo(() => {
     // Assets are already filtered by search on the server
@@ -440,14 +426,69 @@ export default function AdminDigitalAssetManagerPage() {
     setSuccessMessage('');
   };
 
+  // Generate PDF thumbnail client-side
+  const generatePDFThumbnail = async (file: File): Promise<{ thumbnailData: string; thumbnailPath: string } | null> => {
+    if (!file.type.includes('pdf')) {
+      return null;
+    }
+
+    try {
+      // Dynamically import pdfjs-dist
+      const pdfjsLib = await import('pdfjs-dist');
+      
+      // Set worker source (use CDN for now - can be optimized later)
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const page = await pdf.getPage(1); // Get first page
+
+      // Render to canvas
+      const viewport = page.getViewport({ scale: 2.0 });
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      if (!context) return null;
+
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      await page.render({ canvasContext: context, viewport }).promise;
+
+      // Convert canvas to base64 PNG
+      const thumbnailData = canvas.toDataURL('image/png').split(',')[1]; // Remove data:image/png;base64, prefix
+      
+      // Generate thumbnail path (will be stored in asset_renditions)
+      const timestamp = Date.now();
+      const thumbnailPath = `temp-thumb-${timestamp}.png`; // Will be updated with proper path during upload
+
+      return { thumbnailData, thumbnailPath };
+    } catch (err) {
+      console.error('Failed to generate PDF thumbnail:', err);
+      return null; // Don't fail upload if thumbnail generation fails
+    }
+  };
+
   const handleUpload = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
     setSuccessMessage('');
 
-    if (!formState.file) {
-      setError('Please select a file to upload.');
-      return;
+    // Validate video assets
+    if (formState.assetType === 'video') {
+      if (!formState.vimeoVideoId.trim()) {
+        setError('Please provide a Vimeo video ID or URL for video assets.');
+        return;
+      }
+      if (formState.file) {
+        setError('Videos must be uploaded to Vimeo. Please paste the Vimeo video ID or URL instead of uploading a file.');
+        return;
+      }
+    } else {
+      // Require file for non-video assets
+      if (!formState.file) {
+        setError('Please select a file to upload.');
+        return;
+      }
     }
 
     if (!formState.title.trim()) {
@@ -472,7 +513,62 @@ export default function AdminDigitalAssetManagerPage() {
         return;
       }
 
+      // Handle video assets (Vimeo)
+      if (formState.assetType === 'video') {
+        const payload = {
+          title: formState.title.trim(),
+          description: formState.description.trim() || undefined,
+          assetType: formState.assetType,
+          productLine: formState.productLine.trim() || undefined,
+          sku: formState.sku.trim() || undefined,
+          vimeoVideoId: formState.vimeoVideoId.trim(),
+          tags: formState.selectedTagSlugs,
+          audiences: formState.selectedAudienceCodes,
+          locales: formState.selectedLocaleCodes.map((code) => ({
+            code,
+            primary: code === formState.primaryLocale,
+          })),
+          regions: formState.selectedRegionCodes,
+        };
+
+        const headers = buildAuthHeaders(accessToken);
+        const response = await fetch('/api/dam/assets', {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || 'Upload failed');
+        }
+
+        setSuccessMessage('Video asset added successfully.');
+        resetForm();
+        fetchAssets(accessToken);
+        setUploading(false);
+        return;
+      }
+
+      // Handle file uploads (images, PDFs, documents)
       const file = formState.file!;
+      
+      // Generate PDF thumbnail if needed
+      let thumbnailData: string | null = null;
+      let thumbnailPath: string | null = null;
+      if (file.type.includes('pdf')) {
+        const thumbnailResult = await generatePDFThumbnail(file);
+        if (thumbnailResult) {
+          thumbnailData = thumbnailResult.thumbnailData;
+          // Generate proper thumbnail path based on asset ID (will be set after asset creation)
+          thumbnailPath = `thumb-placeholder.png`; // Will be updated with proper path
+        }
+      }
+
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       if (!supabaseUrl) {
         throw new Error('Supabase URL not configured');
@@ -500,6 +596,8 @@ export default function AdminDigitalAssetManagerPage() {
           fileName: file.name,
           fileType: file.type || 'application/octet-stream',
           fileSize: file.size,
+          thumbnailData,
+          thumbnailPath: thumbnailData ? `${Date.now()}-thumb.png` : undefined,
         };
 
         const headers = buildAuthHeaders(accessToken);
@@ -630,6 +728,9 @@ export default function AdminDigitalAssetManagerPage() {
         );
 
         // Step 4: Notify API route that upload is complete
+        // Update thumbnail path with actual asset ID
+        const finalThumbnailPath = thumbnailData ? `${assetId}/${Date.now()}-thumb.png` : undefined;
+        
         const completeResponse = await fetch(`/api/dam/assets/${assetId}/complete`, {
           method: 'POST',
           headers: {
@@ -642,6 +743,8 @@ export default function AdminDigitalAssetManagerPage() {
             fileType: file.type || 'application/octet-stream',
             fileName: file.name,
             fileSize: file.size,
+            thumbnailData: thumbnailData || undefined,
+            thumbnailPath: finalThumbnailPath,
           }),
         });
 
@@ -679,6 +782,8 @@ export default function AdminDigitalAssetManagerPage() {
             primary: code === formState.primaryLocale,
           })),
           regions: formState.selectedRegionCodes,
+          thumbnailData: thumbnailData || undefined,
+          thumbnailPath: thumbnailData ? `${Date.now()}-thumb.png` : undefined,
         };
 
         const formData = new FormData();
@@ -699,7 +804,7 @@ export default function AdminDigitalAssetManagerPage() {
         }
       }
 
-      setSuccessMessage('Asset uploaded successfully. Processing may take a few moments.');
+      setSuccessMessage('Asset uploaded successfully.');
       resetForm();
       fetchAssets(accessToken);
     } catch (err: any) {
@@ -1005,22 +1110,39 @@ export default function AdminDigitalAssetManagerPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">File *</label>
-              <input
-                type="file"
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, file: event.target.files ? event.target.files[0] : null }))
-                }
-                className="mt-1 block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border file:border-gray-200 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:border-gray-400"
-                required
-              />
-              {formState.file && (
-                <p className="mt-2 text-xs text-gray-500">
-                  {formState.file.name} • {formatBytes(formState.file.size)}
+            {formState.assetType === 'video' ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Vimeo Video ID or URL *</label>
+                <input
+                  type="text"
+                  value={formState.vimeoVideoId}
+                  onChange={(event) => setFormState((prev) => ({ ...prev, vimeoVideoId: event.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                  placeholder="e.g., 123456789 or https://vimeo.com/123456789"
+                  required
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Upload your video to Vimeo first, then paste the video ID or URL here.
                 </p>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">File *</label>
+                <input
+                  type="file"
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, file: event.target.files ? event.target.files[0] : null }))
+                  }
+                  className="mt-1 block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border file:border-gray-200 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:border-gray-400"
+                  required={formState.assetType !== 'video'}
+                />
+                {formState.file && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    {formState.file.name} • {formatBytes(formState.file.size)}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center gap-2">
               <button
@@ -1099,7 +1221,20 @@ export default function AdminDigitalAssetManagerPage() {
               {filteredAssets.map((asset) => (
                 <div key={asset.id} className="flex gap-4 rounded-xl border border-gray-200 p-4">
                   <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
-                    {accessToken && asset.current_version?.previewPath ? (
+                    {asset.asset_type === 'video' && asset.vimeo_video_id ? (
+                      // Vimeo video - show Vimeo poster/thumbnail (using oEmbed API for poster image)
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={`https://vumbnail.com/${asset.vimeo_video_id}.jpg`}
+                        alt={asset.title}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          // Fallback to Vimeo's default thumbnail URL pattern
+                          (e.target as HTMLImageElement).src = `https://i.vimeocdn.com/video/${asset.vimeo_video_id}_640.jpg`;
+                        }}
+                      />
+                    ) : accessToken && asset.current_version?.previewPath ? (
+                      // Other assets - show preview/thumbnail
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={ensureTokenUrl(asset.current_version.previewPath)}
@@ -1145,14 +1280,10 @@ export default function AdminDigitalAssetManagerPage() {
                     <div className="space-y-1 text-xs text-gray-600">
                       {asset.current_version && (
                         <div className="flex items-center gap-3">
-                          <span>Status: {asset.current_version.processing_status}</span>
-                          <span>Size: {formatBytes(asset.current_version.file_size)}</span>
+                          <span>Size: {formatBytes(asset.current_version.file_size) || '—'}</span>
                           <span>{asset.current_version.mime_type || 'Unknown type'}</span>
-                          {asset.asset_type === 'video' && asset.current_version.duration_seconds && (
-                            <span>
-                              Duration: {Math.floor(Number(asset.current_version.duration_seconds) / 60)}:
-                              {String(Math.floor(Number(asset.current_version.duration_seconds) % 60)).padStart(2, '0')}
-                            </span>
+                          {asset.asset_type === 'video' && asset.vimeo_video_id && (
+                            <span>Vimeo ID: {asset.vimeo_video_id}</span>
                           )}
                         </div>
                       )}
@@ -1177,7 +1308,18 @@ export default function AdminDigitalAssetManagerPage() {
                           <span className="font-medium text-gray-700">Regions:</span> {asset.regions.map((region) => region.label).join(', ')}
                         </div>
                       )}
-                      {asset.current_version?.downloadPath && (
+                      {asset.asset_type === 'video' && asset.vimeo_video_id ? (
+                        <div>
+                          <a
+                            href={`https://vimeo.com/${asset.vimeo_video_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-gray-700 underline-offset-2 hover:underline"
+                          >
+                            View on Vimeo
+                          </a>
+                        </div>
+                      ) : asset.current_version?.downloadPath ? (
                         <div>
                           <a
                             href={ensureTokenUrl(asset.current_version.downloadPath)}
@@ -1191,7 +1333,7 @@ export default function AdminDigitalAssetManagerPage() {
                             Download
                           </a>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>

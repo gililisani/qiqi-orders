@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createStorage } from '../../../../platform/storage';
 import { randomUUID } from 'crypto';
 import { createAuth } from '../../../../platform/auth';
-import { createQueue } from '../../../../platform/queue';
+// Queue removed - all processing now happens client-side
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
         asset_type,
         product_line,
         sku,
+        vimeo_video_id,
         created_at,
         search_tags
       `
@@ -203,7 +204,7 @@ export async function GET(request: NextRequest) {
             thumbnail_path: currentVersionRaw.thumbnail_path,
             mime_type: currentVersionRaw.mime_type,
             file_size: currentVersionRaw.file_size,
-            processing_status: currentVersionRaw.processing_status,
+            processing_status: currentVersionRaw.processing_status || 'complete',
             created_at: currentVersionRaw.created_at,
             duration_seconds: currentVersionRaw.duration_seconds,
             width: currentVersionRaw.width,
@@ -224,6 +225,7 @@ export async function GET(request: NextRequest) {
         asset_type: record.asset_type,
         product_line: record.product_line,
         sku: record.sku,
+        vimeo_video_id: record.vimeo_video_id ?? null,
         created_at: record.created_at,
         current_version: currentVersion,
         tags: tagsByAsset[record.id] ?? [],
@@ -248,24 +250,43 @@ export async function POST(request: NextRequest) {
 
     const supabaseAdmin = createSupabaseAdminClient();
     const storage = createStorage();
-    const queue = createQueue();
 
-    const formData = await request.formData();
-    const payloadRaw = formData.get('payload');
-    const file = formData.get('file');
+    // Check if request is JSON (for video assets) or FormData (for file uploads)
+    const contentType = request.headers.get('content-type') || '';
+    let payload: any;
+    let file: File | null = null;
 
-    if (!payloadRaw || typeof payloadRaw !== 'string') {
-      return NextResponse.json({ error: 'Missing payload' }, { status: 400 });
+    if (contentType.includes('application/json')) {
+      // JSON request (video assets without file uploads)
+      payload = await request.json();
+    } else {
+      // FormData request (file uploads)
+      const formData = await request.formData();
+      const payloadRaw = formData.get('payload');
+      file = formData.get('file') as File | null;
+
+      if (!payloadRaw || typeof payloadRaw !== 'string') {
+        return NextResponse.json({ error: 'Missing payload' }, { status: 400 });
+      }
+
+      payload = JSON.parse(payloadRaw);
     }
-
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: 'Missing file' }, { status: 400 });
-    }
-
-    const payload = JSON.parse(payloadRaw);
 
     if (!payload.title || !payload.assetType) {
       return NextResponse.json({ error: 'Missing required metadata' }, { status: 400 });
+    }
+
+    // Block direct video file uploads - videos must use Vimeo
+    if (payload.assetType === 'video' && file) {
+      return NextResponse.json(
+        { error: 'Videos must be uploaded to Vimeo. Please paste the Vimeo video ID or URL instead of uploading a file.' },
+        { status: 400 }
+      );
+    }
+
+    // Require file for non-video assets
+    if (payload.assetType !== 'video' && !file) {
+      return NextResponse.json({ error: 'File is required for non-video assets' }, { status: 400 });
     }
 
     const assetId: string = payload.assetId || randomUUID();
@@ -277,12 +298,32 @@ export async function POST(request: NextRequest) {
       : [];
     const regionsInput: string[] = Array.isArray(payload.regions) ? payload.regions : [];
 
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const storagePath = `${assetId}/${Date.now()}-${file.name}`;
-    await storage.putObject(storagePath, bytes, {
-      contentType: file.type || 'application/octet-stream',
-      originalFileName: file.name,
-    });
+    // Parse Vimeo video ID from URL or use provided ID
+    let vimeoVideoId: string | null = null;
+    if (payload.assetType === 'video') {
+      const vimeoInput = payload.vimeoVideoId || payload.vimeoUrl || '';
+      if (vimeoInput) {
+        // Extract video ID from Vimeo URL patterns:
+        // https://vimeo.com/123456789
+        // https://player.vimeo.com/video/123456789
+        // https://vimeo.com/123456789?param=value
+        const match = vimeoInput.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/);
+        vimeoVideoId = match ? match[1] : vimeoInput.trim();
+      }
+      if (!vimeoVideoId) {
+        return NextResponse.json({ error: 'Vimeo video ID or URL is required for video assets' }, { status: 400 });
+      }
+    }
+
+    let storagePath: string | null = null;
+    if (file) {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      storagePath = `${assetId}/${Date.now()}-${file.name}`;
+      await storage.putObject(storagePath, bytes, {
+        contentType: file.type || 'application/octet-stream',
+        originalFileName: file.name,
+      });
+    }
 
     if (!payload.assetId) {
       const { error: insertAssetError } = await supabaseAdmin.from('dam_assets').insert({
@@ -292,6 +333,7 @@ export async function POST(request: NextRequest) {
         asset_type: payload.assetType,
         product_line: payload.productLine ?? null,
         sku: payload.sku ?? null,
+        vimeo_video_id: vimeoVideoId,
         search_tags: tagsInput,
         created_by: adminUser.id,
         updated_by: adminUser.id,
@@ -307,6 +349,7 @@ export async function POST(request: NextRequest) {
           asset_type: payload.assetType,
           product_line: payload.productLine ?? null,
           sku: payload.sku ?? null,
+          vimeo_video_id: vimeoVideoId,
           search_tags: tagsInput,
           updated_by: adminUser.id,
           updated_at: new Date().toISOString(),
@@ -368,43 +411,79 @@ export async function POST(request: NextRequest) {
       if (regionError) throw regionError;
     }
 
-    const { data: lastVersion, error: lastVersionError } = await supabaseAdmin
-      .from('dam_asset_versions')
-      .select('version_number')
-      .eq('asset_id', assetId)
-      .order('version_number', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (lastVersionError) throw lastVersionError;
-    const nextVersionNumber = lastVersion ? Number(lastVersion.version_number) + 1 : 1;
-    const versionId = randomUUID();
+    // Only create version record if we have a file (videos don't have storage files)
+    let versionId: string | null = null;
+    if (storagePath && file) {
+      const { data: lastVersion, error: lastVersionError } = await supabaseAdmin
+        .from('dam_asset_versions')
+        .select('version_number')
+        .eq('asset_id', assetId)
+        .order('version_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (lastVersionError) throw lastVersionError;
+      const nextVersionNumber = lastVersion ? Number(lastVersion.version_number) + 1 : 1;
+      versionId = randomUUID();
 
-    const { error: insertVersionError } = await supabaseAdmin
-      .from('dam_asset_versions')
-      .insert([
-        {
-          id: versionId,
-          asset_id: assetId,
-          version_number: nextVersionNumber,
-          storage_bucket: process.env.SUPABASE_STORAGE_BUCKET ?? 'dam-assets',
-          storage_path: storagePath,
-          file_size: file.size,
-          checksum: null,
-          mime_type: file.type || 'application/octet-stream',
-          metadata: {
-            originalFileName: file.name,
+      const { error: insertVersionError } = await supabaseAdmin
+        .from('dam_asset_versions')
+        .insert([
+          {
+            id: versionId,
+            asset_id: assetId,
+            version_number: nextVersionNumber,
+            storage_bucket: process.env.SUPABASE_STORAGE_BUCKET ?? 'dam-assets',
+            storage_path: storagePath,
+            file_size: file.size,
+            checksum: null,
+            mime_type: file.type || 'application/octet-stream',
+            metadata: {
+              originalFileName: file.name,
+            },
+            processing_status: 'complete', // Set to complete immediately - no background processing
+            created_by: adminUser.id,
           },
-          processing_status: 'pending',
+        ]);
+
+      if (insertVersionError) throw insertVersionError;
+    }
+
+    // Handle thumbnail if provided (from client-side PDF thumbnail generation)
+    if (payload.thumbnailPath && payload.thumbnailData && versionId) {
+      // Generate proper thumbnail path with asset ID
+      const finalThumbnailPath = `${assetId}/${Date.now()}-thumb.png`;
+      const thumbnailBytes = Uint8Array.from(atob(payload.thumbnailData), (c) => c.charCodeAt(0));
+      await storage.putObject(finalThumbnailPath, thumbnailBytes, {
+        contentType: 'image/png',
+        originalFileName: 'thumb.png',
+      });
+
+      // Update version with thumbnail path
+      await supabaseAdmin
+        .from('dam_asset_versions')
+        .update({ thumbnail_path: finalThumbnailPath })
+        .eq('id', versionId);
+
+      // Create rendition record
+      const { error: renditionError } = await supabaseAdmin
+        .from('dam_asset_renditions')
+        .insert({
+          asset_id: assetId,
+          version_id: versionId,
+          kind: 'thumb',
+          storage_bucket: 'dam-assets',
+          storage_path: finalThumbnailPath,
+          mime_type: 'image/png',
+          file_size: thumbnailBytes.length,
+          metadata: {},
           created_by: adminUser.id,
-        },
-      ]);
+        });
 
-    if (insertVersionError) throw insertVersionError;
-
-    await queue.enqueue('dam.process-version', {
-      assetId,
-      versionId,
-    });
+      if (renditionError) {
+        console.error('Failed to create thumbnail rendition:', renditionError);
+        // Don't fail the upload if thumbnail creation fails
+      }
+    }
 
     return NextResponse.json({ assetId, versionId }, { status: 201 });
   } catch (err: any) {

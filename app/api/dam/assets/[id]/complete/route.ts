@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { createAuth } from '../../../../../../platform/auth';
-import { createQueue } from '../../../../../../platform/queue';
+// Queue removed - all processing now happens client-side
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -33,7 +33,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const adminUserId = await getAdminUser(request);
 
     const supabaseAdmin = createSupabaseAdminClient();
-    const queue = createQueue();
     const body = await request.json();
 
     if (!body.storagePath) {
@@ -86,18 +85,50 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         metadata: {
           originalFileName: fileName,
         },
-        processing_status: 'pending',
+        processing_status: 'complete', // Set to complete immediately - no background processing
         created_by: adminUserId,
       },
     ]);
 
     if (insertVersionError) throw insertVersionError;
 
-    // Queue processing job
-    await queue.enqueue('dam.process-version', {
-      assetId,
-      versionId,
-    });
+    // Handle thumbnail if provided (from client-side PDF thumbnail generation)
+    if (body.thumbnailData && versionId) {
+      const storage = (await import('../../../../../../platform/storage')).createStorage();
+      // Generate proper thumbnail path with asset ID
+      const finalThumbnailPath = `${assetId}/${Date.now()}-thumb.png`;
+      const thumbnailBytes = Uint8Array.from(atob(body.thumbnailData), (c) => c.charCodeAt(0));
+      await storage.putObject(finalThumbnailPath, thumbnailBytes, {
+        contentType: 'image/png',
+        originalFileName: 'thumb.png',
+      });
+
+      // Update version with thumbnail path
+      await supabaseAdmin
+        .from('dam_asset_versions')
+        .update({ thumbnail_path: finalThumbnailPath })
+        .eq('id', versionId);
+
+      // Create rendition record
+      const { error: renditionError } = await supabaseAdmin
+        .from('dam_asset_renditions')
+        .insert({
+          asset_id: assetId,
+          version_id: versionId,
+          kind: 'thumb',
+          storage_bucket: 'dam-assets',
+          storage_path: finalThumbnailPath,
+          mime_type: 'image/png',
+          file_size: thumbnailBytes.length,
+          metadata: {},
+          created_by: adminUserId,
+        });
+
+      if (renditionError) {
+        console.error('Failed to create thumbnail rendition:', renditionError);
+        // Don't fail the upload if thumbnail creation fails
+      }
+    }
 
     return NextResponse.json({ assetId, versionId }, { status: 200 });
   } catch (err: any) {
