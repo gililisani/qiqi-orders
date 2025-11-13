@@ -1126,6 +1126,12 @@ export default function AdminDigitalAssetManagerPage() {
                           <span>Status: {asset.current_version.processing_status}</span>
                           <span>Size: {formatBytes(asset.current_version.file_size)}</span>
                           <span>{asset.current_version.mime_type || 'Unknown type'}</span>
+                          {asset.asset_type === 'video' && asset.current_version.metadata?.duration_seconds && (
+                            <span>
+                              Duration: {Math.floor(Number(asset.current_version.metadata.duration_seconds) / 60)}:
+                              {String(Math.floor(Number(asset.current_version.metadata.duration_seconds) % 60)).padStart(2, '0')}
+                            </span>
+                          )}
                         </div>
                       )}
                       {asset.tags.length > 0 && (

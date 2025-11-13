@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
+import ffmpeg from 'fluent-ffmpeg';
 import { logger } from '../logger';
 import { createStorage } from '../../../platform/storage';
 
@@ -37,6 +38,14 @@ const THUMBNAIL_WIDTH = 400;
 const THUMBNAIL_HEIGHT = 400;
 const THUMBNAIL_QUALITY = 85;
 
+interface VideoMetadata {
+  duration?: number;
+  width?: number;
+  height?: number;
+  format?: string;
+  bitrate?: number;
+}
+
 async function generateImageThumbnail(
   imageBuffer: Buffer,
   outputPath: string,
@@ -68,6 +77,119 @@ async function extractPDFText(pdfBuffer: Buffer): Promise<{ text: string; pageCo
     text: data.text || '',
     pageCount: data.numpages || 0,
   };
+}
+
+async function extractVideoMetadata(videoBuffer: Buffer): Promise<VideoMetadata> {
+  return new Promise((resolve, reject) => {
+    // Write buffer to temp file for ffmpeg to process
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+    
+    const tempFilePath = path.join(os.tmpdir(), `video-${Date.now()}-${Math.random().toString(36)}.tmp`);
+    
+    fs.writeFileSync(tempFilePath, videoBuffer);
+
+    ffmpeg.ffprobe(tempFilePath, (err: Error | null, metadata: any) => {
+      // Clean up temp file
+      try {
+        fs.unlinkSync(tempFilePath);
+      } catch (unlinkErr) {
+        logger.warn('Failed to delete temp video file', { tempFilePath, error: unlinkErr });
+      }
+
+      if (err) {
+        reject(new Error(`Failed to extract video metadata: ${err.message}`));
+        return;
+      }
+
+      const videoStream = metadata.streams?.find((s: any) => s.codec_type === 'video');
+      const format = metadata.format;
+
+      resolve({
+        duration: format?.duration ? parseFloat(format.duration) : undefined,
+        width: videoStream?.width ? parseInt(videoStream.width, 10) : undefined,
+        height: videoStream?.height ? parseInt(videoStream.height, 10) : undefined,
+        format: format?.format_name,
+        bitrate: format?.bit_rate ? parseInt(format.bit_rate, 10) : undefined,
+      });
+    });
+  });
+}
+
+async function generateVideoThumbnail(
+  videoBuffer: Buffer,
+  outputPath: string,
+  storage: any,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Write buffer to temp file for ffmpeg to process
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+    
+    const tempVideoPath = path.join(os.tmpdir(), `video-${Date.now()}-${Math.random().toString(36)}.tmp`);
+    const tempThumbPath = path.join(os.tmpdir(), `thumb-${Date.now()}-${Math.random().toString(36)}.jpg`);
+
+    try {
+      fs.writeFileSync(tempVideoPath, videoBuffer);
+
+      ffmpeg(tempVideoPath)
+        .screenshots({
+          timestamps: ['00:00:01'], // Extract frame at 1 second
+          filename: path.basename(tempThumbPath),
+          folder: path.dirname(tempThumbPath),
+          size: `${THUMBNAIL_WIDTH}x${THUMBNAIL_HEIGHT}`,
+        })
+        .on('end', async () => {
+          try {
+            // Read the generated thumbnail
+            const thumbnailBuffer = fs.readFileSync(tempThumbPath);
+            
+            // Resize and optimize with sharp
+            const optimizedThumbnail = await sharp(thumbnailBuffer)
+              .resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, {
+                fit: 'inside',
+                withoutEnlargement: true,
+              })
+              .jpeg({ quality: THUMBNAIL_QUALITY })
+              .toBuffer();
+
+            const thumbnailBytes = new Uint8Array(optimizedThumbnail);
+            await storage.putObject(outputPath, thumbnailBytes, {
+              contentType: 'image/jpeg',
+            });
+
+            // Clean up temp files
+            fs.unlinkSync(tempVideoPath);
+            fs.unlinkSync(tempThumbPath);
+
+            resolve();
+          } catch (processErr) {
+            // Clean up temp files on error
+            try {
+              fs.unlinkSync(tempVideoPath);
+              if (fs.existsSync(tempThumbPath)) fs.unlinkSync(tempThumbPath);
+            } catch (unlinkErr) {
+              logger.warn('Failed to delete temp files', { error: unlinkErr });
+            }
+            reject(processErr);
+          }
+        })
+        .on('error', (err: Error) => {
+          // Clean up temp files on error
+          try {
+            fs.unlinkSync(tempVideoPath);
+            if (fs.existsSync(tempThumbPath)) fs.unlinkSync(tempThumbPath);
+          } catch (unlinkErr) {
+            logger.warn('Failed to delete temp files', { error: unlinkErr });
+          }
+          reject(err);
+        });
+    } catch (writeErr) {
+      reject(new Error(`Failed to write temp video file: ${writeErr instanceof Error ? writeErr.message : String(writeErr)}`));
+    }
+  });
 }
 
 export async function processVersionJob(
@@ -206,6 +328,52 @@ export async function processVersionJob(
       });
       metadata.pdfExtractionError = err instanceof Error ? err.message : String(err);
       // Continue processing even if PDF extraction fails
+    }
+  }
+
+  // Process videos
+  else if (mimeType.startsWith('video/')) {
+    try {
+      // Extract video metadata (duration, dimensions) and generate thumbnail
+      const videoMetadata = await extractVideoMetadata(fileBuffer);
+      
+      if (videoMetadata.duration) {
+        updateData.duration_seconds = videoMetadata.duration;
+      }
+      if (videoMetadata.width) {
+        updateData.width = videoMetadata.width;
+      }
+      if (videoMetadata.height) {
+        updateData.height = videoMetadata.height;
+      }
+
+      // Generate video thumbnail (first frame)
+      try {
+        const thumbnailPath = `${payload.assetId}/thumbnails/${payload.versionId}.jpg`;
+        await generateVideoThumbnail(fileBuffer, thumbnailPath, storage);
+        updateData.thumbnail_path = thumbnailPath;
+
+        logger.info('Generated thumbnail for video', {
+          versionId: payload.versionId,
+          thumbnailPath,
+          duration: videoMetadata.duration,
+          dimensions: videoMetadata.width && videoMetadata.height ? `${videoMetadata.width}x${videoMetadata.height}` : undefined,
+        });
+      } catch (thumbErr) {
+        logger.error('Failed to generate video thumbnail', {
+          versionId: payload.versionId,
+          error: thumbErr instanceof Error ? thumbErr.message : String(thumbErr),
+        });
+        metadata.thumbnailError = thumbErr instanceof Error ? thumbErr.message : String(thumbErr);
+        // Continue processing even if thumbnail generation fails
+      }
+    } catch (err) {
+      logger.error('Failed to process video', {
+        versionId: payload.versionId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      metadata.videoProcessingError = err instanceof Error ? err.message : String(err);
+      // Continue processing even if video processing fails
     }
   }
 
