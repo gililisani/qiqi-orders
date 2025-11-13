@@ -133,6 +133,20 @@ export default function AdminDigitalAssetManagerPage() {
   const [uploading, setUploading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [newTagLabel, setNewTagLabel] = useState('');
+  
+  // Upload progress tracking
+  interface ActiveUpload {
+    id: string;
+    fileName: string;
+    fileSize: number;
+    progress: number;
+    status: 'pending' | 'uploading' | 'completing' | 'success' | 'error';
+    error?: string;
+    assetId?: string;
+    storagePath?: string;
+    startTime: number;
+  }
+  const [activeUploads, setActiveUploads] = useState<ActiveUpload[]>([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('');
@@ -155,7 +169,36 @@ export default function AdminDigitalAssetManagerPage() {
     if (!accessToken) return;
     fetchLookups(accessToken);
     fetchAssets(accessToken);
+    
+    // Restore active uploads from localStorage
+    const storedUploads = localStorage.getItem('dam_active_uploads');
+    if (storedUploads) {
+      try {
+        const uploads = JSON.parse(storedUploads) as ActiveUpload[];
+        // Filter out completed/old uploads (older than 1 hour)
+        const validUploads = uploads.filter(
+          (u) => u.status !== 'success' && u.status !== 'error' && Date.now() - u.startTime < 3600000
+        );
+        if (validUploads.length > 0) {
+          setActiveUploads(validUploads);
+          // Note: We don't automatically resume uploads on load - user needs to refresh or retry
+        } else {
+          localStorage.removeItem('dam_active_uploads');
+        }
+      } catch (e) {
+        console.error('Failed to restore uploads from localStorage', e);
+      }
+    }
   }, [accessToken]);
+
+  // Save active uploads to localStorage whenever they change
+  useEffect(() => {
+    if (activeUploads.length > 0) {
+      localStorage.setItem('dam_active_uploads', JSON.stringify(activeUploads));
+    } else {
+      localStorage.removeItem('dam_active_uploads');
+    }
+  }, [activeUploads]);
 
   useEffect(() => {
     const setBreadcrumbs = () => {
@@ -479,27 +522,92 @@ export default function AdminDigitalAssetManagerPage() {
           throw new Error('Permission denied. You must be an enabled admin to upload files.');
         }
 
-        // Step 3: Upload file directly to Supabase Storage
-        const { error: uploadError } = await supabase.storage
-          .from('dam-assets')
-          .upload(storagePath, file, {
-            cacheControl: '3600',
-            upsert: false,
+        // Step 3: Upload file directly to Supabase Storage with progress tracking
+        const uploadId = `${assetId}-${Date.now()}`;
+        const activeUpload: ActiveUpload = {
+          id: uploadId,
+          fileName: file.name,
+          fileSize: file.size,
+          progress: 0,
+          status: 'uploading',
+          assetId,
+          storagePath,
+          startTime: Date.now(),
+        };
+        setActiveUploads((prev) => [...prev, activeUpload]);
+
+        // Use XMLHttpRequest for progress tracking (Supabase JS SDK doesn't support progress)
+        const uploadError = await new Promise<string | null>((resolve) => {
+          const xhr = new XMLHttpRequest();
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+          const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+          
+          if (!supabaseUrl || !supabaseKey) {
+            resolve('Supabase configuration missing');
+            return;
+          }
+
+          // Get upload URL from Supabase
+          const uploadUrl = `${supabaseUrl}/storage/v1/object/dam-assets/${storagePath}`;
+
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+              const progress = Math.round((e.loaded / e.total) * 100);
+              setActiveUploads((prev) =>
+                prev.map((u) => (u.id === uploadId ? { ...u, progress } : u))
+              );
+            }
           });
 
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(null);
+            } else {
+              try {
+                const error = JSON.parse(xhr.responseText);
+                resolve(error.message || error.error || `Upload failed with status ${xhr.status}`);
+              } catch {
+                resolve(`Upload failed with status ${xhr.status}`);
+              }
+            }
+          });
+
+          xhr.addEventListener('error', () => {
+            resolve('Network error during upload');
+          });
+
+          xhr.addEventListener('abort', () => {
+            resolve('Upload cancelled');
+          });
+
+          xhr.open('POST', uploadUrl);
+          xhr.setRequestHeader('Authorization', `Bearer ${currentSession.access_token}`);
+          xhr.setRequestHeader('apikey', supabaseKey);
+          xhr.setRequestHeader('x-upsert', 'false');
+          xhr.setRequestHeader('cache-control', '3600');
+          xhr.send(file);
+        });
+
         if (uploadError) {
-          console.error('Storage upload error:', uploadError);
-          console.error('User:', user.id);
-          console.error('Storage path:', storagePath);
-          console.error('Session token present:', !!currentSession?.access_token);
+          setActiveUploads((prev) =>
+            prev.map((u) =>
+              u.id === uploadId ? { ...u, status: 'error', error: uploadError } : u
+            )
+          );
+          
           // Check if it's an RLS policy error
-          if (uploadError.message.includes('row-level security') || uploadError.message.includes('policy')) {
+          if (uploadError.includes('row-level security') || uploadError.includes('policy')) {
             throw new Error('Permission denied. Please ensure you are logged in as an enabled admin and the storage policies migration has been run in Supabase.');
           }
-          throw new Error(`Failed to upload file: ${uploadError.message}`);
+          throw new Error(`Failed to upload file: ${uploadError}`);
         }
 
-        // Step 3: Notify API route that upload is complete
+        // Update status to completing
+        setActiveUploads((prev) =>
+          prev.map((u) => (u.id === uploadId ? { ...u, status: 'completing', progress: 95 } : u))
+        );
+
+        // Step 4: Notify API route that upload is complete
         const completeResponse = await fetch(`/api/dam/assets/${assetId}/complete`, {
           method: 'POST',
           headers: {
@@ -517,8 +625,23 @@ export default function AdminDigitalAssetManagerPage() {
 
         if (!completeResponse.ok) {
           const errorData = await completeResponse.json().catch(() => ({}));
+          setActiveUploads((prev) =>
+            prev.map((u) =>
+              u.id === uploadId ? { ...u, status: 'error', error: errorData.error || 'Failed to complete upload' } : u
+            )
+          );
           throw new Error(errorData.error || 'Failed to complete upload');
         }
+
+        // Mark upload as successful
+        setActiveUploads((prev) =>
+          prev.map((u) => (u.id === uploadId ? { ...u, status: 'success', progress: 100 } : u))
+        );
+
+        // Remove successful upload from list after 3 seconds
+        setTimeout(() => {
+          setActiveUploads((prev) => prev.filter((u) => u.id !== uploadId));
+        }, 3000);
       } else {
         // For small files, use API route (existing implementation)
         const payload = {
