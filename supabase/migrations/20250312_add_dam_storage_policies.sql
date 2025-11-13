@@ -2,6 +2,9 @@
 -- Storage policies for dam-assets bucket
 -- --------------------------------------------------
 
+-- Enable RLS on storage.objects if not already enabled
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
 -- Drop existing policies if they exist (for idempotency)
 DROP POLICY IF EXISTS dam_assets_storage_upload ON storage.objects;
 DROP POLICY IF EXISTS dam_assets_storage_read ON storage.objects;
