@@ -1511,6 +1511,7 @@ export default function AdminDigitalAssetManagerPage() {
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setSelectedAsset(null);
+              setIsEditingAsset(false);
             }
           }}
         >
@@ -1518,7 +1519,10 @@ export default function AdminDigitalAssetManagerPage() {
             {/* Close button */}
             <button
               type="button"
-              onClick={() => setSelectedAsset(null)}
+              onClick={() => {
+                setSelectedAsset(null);
+                setIsEditingAsset(false);
+              }}
               className="absolute top-4 right-4 z-10 rounded-full bg-white/90 p-2 text-gray-600 hover:bg-white hover:text-gray-900 transition"
             >
               <XMarkIcon className="h-5 w-5" />
@@ -1663,11 +1667,16 @@ export default function AdminDigitalAssetManagerPage() {
                                   vimeo_download_360p: editingDownloadUrls.vimeo_download_360p.trim() || null,
                                 }),
                               });
-                              if (!response.ok) throw new Error('Failed to update URLs');
+                              if (!response.ok) {
+                                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                                throw new Error(errorData.error || 'Failed to update URLs');
+                              }
                               const updated = await response.json();
+                              // Update the selected asset with new data
                               setSelectedAsset(prev => prev ? { ...prev, ...updated } : null);
                               setIsEditingAsset(false);
-                              await fetchAssets(accessToken);
+                              // Refresh the asset list in background
+                              fetchAssets(accessToken);
                             } catch (err: any) {
                               alert('Failed to save: ' + err.message);
                             } finally {
