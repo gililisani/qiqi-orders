@@ -1574,15 +1574,16 @@ export default function AdminDigitalAssetManagerPage() {
                         <a
                           key={item.quality}
                           href={item.url!}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={async () => {
+                          download
+                          onClick={async (e) => {
+                            e.stopPropagation();
                             await logDownload(
                               selectedAsset.id,
                               item.url!,
-                              `vimeo-${item.quality}`,
+                              `video-${item.quality}`,
                               accessToken
                             );
+                            // Let the browser handle the download naturally
                           }}
                           className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
                         >
@@ -1590,26 +1591,17 @@ export default function AdminDigitalAssetManagerPage() {
                           Download {item.quality}
                         </a>
                       ))}
+                    
+                    {/* Show message if no download URLs configured */}
+                    {!selectedAsset.vimeo_download_1080p && 
+                     !selectedAsset.vimeo_download_720p && 
+                     !selectedAsset.vimeo_download_480p && 
+                     !selectedAsset.vimeo_download_360p && (
+                      <p className="text-sm text-gray-500 italic">
+                        No download URLs configured. Add download URLs when uploading or editing this asset.
+                      </p>
+                    )}
 
-                    {/* Fallback to Vimeo download page */}
-                    <div className="mt-4">
-                      <a
-                        href={`https://vimeo.com/${selectedAsset.vimeo_video_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={async () => {
-                          await logDownload(
-                            selectedAsset.id,
-                            `https://vimeo.com/${selectedAsset.vimeo_video_id}`,
-                            'vimeo-page',
-                            accessToken
-                          );
-                        }}
-                        className="text-sm text-gray-600 hover:text-gray-900 underline"
-                      >
-                        More download options on Vimeo →
-                      </a>
-                    </div>
                   </div>
                 ) : selectedAsset.current_version?.downloadPath ? (
                   <a
