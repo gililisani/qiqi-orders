@@ -1529,7 +1529,7 @@ export default function AdminDigitalAssetManagerPage() {
               </div>
 
               {/* Vimeo Player (for videos) */}
-              {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id && (
+              {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id ? (
                 <div className="mb-6">
                   <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
                     <iframe
@@ -1541,7 +1541,7 @@ export default function AdminDigitalAssetManagerPage() {
                     />
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {/* Preview for non-video assets */}
               {selectedAsset.asset_type !== 'video' && selectedAsset.current_version?.previewPath && accessToken && (
@@ -1564,12 +1564,12 @@ export default function AdminDigitalAssetManagerPage() {
                   <div className="space-y-2">
                     {/* Progressive download buttons */}
                     {[
-                      { quality: '1080p', url: selectedAsset.vimeo_download_1080p },
-                      { quality: '720p', url: selectedAsset.vimeo_download_720p },
-                      { quality: '480p', url: selectedAsset.vimeo_download_480p },
-                      { quality: '360p', url: selectedAsset.vimeo_download_360p },
+                      { quality: '1080p', url: selectedAsset.vimeo_download_1080p || null },
+                      { quality: '720p', url: selectedAsset.vimeo_download_720p || null },
+                      { quality: '480p', url: selectedAsset.vimeo_download_480p || null },
+                      { quality: '360p', url: selectedAsset.vimeo_download_360p || null },
                     ]
-                      .filter((item) => item.url)
+                      .filter((item) => item.url && item.url.trim() !== '')
                       .map((item) => (
                         <a
                           key={item.quality}
@@ -1577,15 +1577,17 @@ export default function AdminDigitalAssetManagerPage() {
                           download
                           onClick={async (e) => {
                             e.stopPropagation();
-                            await logDownload(
-                              selectedAsset.id,
-                              item.url!,
-                              `video-${item.quality}`,
-                              accessToken
-                            );
+                            if (accessToken) {
+                              await logDownload(
+                                selectedAsset.id,
+                                item.url!,
+                                `video-${item.quality}`,
+                                accessToken
+                              );
+                            }
                             // Let the browser handle the download naturally
                           }}
-                          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition mr-2"
                         >
                           <ArrowDownTrayIcon className="h-4 w-4" />
                           Download {item.quality}
@@ -1593,10 +1595,10 @@ export default function AdminDigitalAssetManagerPage() {
                       ))}
                     
                     {/* Show message if no download URLs configured */}
-                    {!selectedAsset.vimeo_download_1080p && 
-                     !selectedAsset.vimeo_download_720p && 
-                     !selectedAsset.vimeo_download_480p && 
-                     !selectedAsset.vimeo_download_360p && (
+                    {(!selectedAsset.vimeo_download_1080p || selectedAsset.vimeo_download_1080p.trim() === '') && 
+                     (!selectedAsset.vimeo_download_720p || selectedAsset.vimeo_download_720p.trim() === '') && 
+                     (!selectedAsset.vimeo_download_480p || selectedAsset.vimeo_download_480p.trim() === '') && 
+                     (!selectedAsset.vimeo_download_360p || selectedAsset.vimeo_download_360p.trim() === '') && (
                       <p className="text-sm text-gray-500 italic">
                         No download URLs configured. Add download URLs when uploading or editing this asset.
                       </p>
