@@ -48,8 +48,13 @@ export async function GET(request: NextRequest) {
     await auth.requireRole(request, 'admin');
 
     const supabaseAdmin = createSupabaseAdminClient();
+    
+    // Get search query parameter
+    const searchParams = request.nextUrl.searchParams;
+    const searchQuery = searchParams.get('q') || '';
 
-    const { data: assetsData, error } = await supabaseAdmin
+    // Build query with optional full-text search
+    let assetsQuery = supabaseAdmin
       .from('dam_assets')
       .select(
         `
@@ -62,8 +67,20 @@ export async function GET(request: NextRequest) {
         created_at,
         search_tags
       `
-      )
-      .order('created_at', { ascending: false });
+      );
+
+    // If search query provided, search in multiple fields and extracted text
+    if (searchQuery.trim()) {
+      const searchTerm = `%${searchQuery.trim()}%`;
+      
+      // Search in asset metadata (title, description, product_line, sku, search_tags)
+      // We'll filter in memory after fetching versions to also search extracted_text
+      assetsQuery = assetsQuery.or(
+        `title.ilike.${searchTerm},description.ilike.${searchTerm},product_line.ilike.${searchTerm},sku.ilike.${searchTerm}`
+      );
+    }
+
+    const { data: assetsData, error } = await assetsQuery.order('created_at', { ascending: false });
 
     if (error) throw error;
 
@@ -75,7 +92,7 @@ export async function GET(request: NextRequest) {
       const { data, error: versionError } = await supabaseAdmin
         .from('dam_asset_versions')
         .select(
-          'id, asset_id, version_number, storage_path, thumbnail_path, mime_type, file_size, processing_status, created_at, metadata'
+          'id, asset_id, version_number, storage_path, thumbnail_path, mime_type, file_size, processing_status, created_at, metadata, extracted_text'
         )
         .eq('asset_id', assetId)
         .order('version_number', { ascending: false })
@@ -94,6 +111,30 @@ export async function GET(request: NextRequest) {
       if (version) {
         versionsByAsset.set(asset.id, version);
       }
+    }
+
+    // If search query provided, filter assets by extracted_text in memory
+    // Note: assets are already filtered by metadata (title, description, etc.) in SQL query above
+    // We add an additional filter here to include assets where extracted_text matches
+    let filteredAssets = assetsData;
+    if (searchQuery.trim()) {
+      const lowerSearchQuery = searchQuery.trim().toLowerCase();
+      // Get asset IDs that matched metadata search
+      const metadataMatchedIds = new Set(assetsData.map((a) => a.id));
+      
+      // Also check extracted_text from all versions for matches
+      // We already fetched all versions above, now check extracted_text
+      const textMatchedIds = new Set<string>();
+      for (const [assetId, version] of versionsByAsset.entries()) {
+        if (version?.extracted_text?.toLowerCase().includes(lowerSearchQuery)) {
+          textMatchedIds.add(assetId);
+        }
+      }
+      
+      // Combine metadata matches and text matches
+      filteredAssets = assetsData.filter((asset) => {
+        return metadataMatchedIds.has(asset.id) || textMatchedIds.has(asset.id);
+      });
     }
 
     const { data: tagsData, error: tagsError } = await supabaseAdmin

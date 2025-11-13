@@ -214,13 +214,14 @@ export default function AdminDigitalAssetManagerPage() {
     }
   };
 
-  const fetchAssets = async (token: string) => {
+  const fetchAssets = async (token: string, search?: string) => {
     try {
       setLoadingAssets(true);
       setError('');
 
       const headers = buildAuthHeaders(token);
-      const response = await fetch('/api/dam/assets', {
+      const url = search ? `/api/dam/assets?q=${encodeURIComponent(search)}` : '/api/dam/assets';
+      const response = await fetch(url, {
         method: 'GET',
         headers: Object.keys(headers).length ? headers : undefined,
         credentials: 'same-origin',
@@ -274,20 +275,26 @@ export default function AdminDigitalAssetManagerPage() {
     }
   };
 
+  // Fetch assets when search term changes (debounced)
+  useEffect(() => {
+    if (!accessToken) return;
+    const timeoutId = setTimeout(() => {
+      fetchAssets(accessToken, searchTerm || undefined);
+    }, 300); // Debounce search by 300ms
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, accessToken]);
+
   const filteredAssets = useMemo(() => {
+    // Assets are already filtered by search on the server
+    // Only apply client-side filters for type and locale
     return assets.filter((asset) => {
       const matchesType = typeFilter ? asset.asset_type === typeFilter : true;
       const matchesLocale = localeFilter
         ? asset.locales.some((locale) => locale.code === localeFilter)
         : true;
-      const matchesSearch = searchTerm
-        ? [asset.title, asset.product_line, asset.sku]
-            .filter(Boolean)
-            .some((value) => value!.toLowerCase().includes(searchTerm.toLowerCase()))
-        : true;
-      return matchesType && matchesLocale && matchesSearch;
+      return matchesType && matchesLocale;
     });
-  }, [assets, searchTerm, typeFilter, localeFilter]);
+  }, [assets, typeFilter, localeFilter]);
 
   const toggleSelection = (list: string[], value: string): string[] => {
     if (list.includes(value)) {

@@ -156,6 +156,7 @@ export async function processVersionJob(
   // Process PDFs
   else if (mimeType === 'application/pdf') {
     try {
+      // Extract text first
       const { text, pageCount } = await extractPDFText(fileBuffer);
       updateData.extracted_text = text;
       updateData.page_count = pageCount;
@@ -166,10 +167,38 @@ export async function processVersionJob(
         textLength: text.length,
       });
 
-      // Generate PDF thumbnail (first page)
-      // For PDF thumbnails, we'd need pdf-poppler or similar
-      // For now, we'll skip PDF thumbnails as it requires additional dependencies
-      logger.debug('PDF thumbnail generation skipped (requires additional dependencies)');
+      // Generate PDF thumbnail (first page) using sharp
+      try {
+        const thumbnailPath = `${payload.assetId}/thumbnails/${payload.versionId}.jpg`;
+        
+        // Sharp can render PDF first page - convert to image
+        const thumbnail = await sharp(fileBuffer, { pages: 1 })
+          .resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, {
+            fit: 'inside',
+            withoutEnlargement: true,
+          })
+          .jpeg({ quality: THUMBNAIL_QUALITY })
+          .toBuffer();
+
+        const thumbnailBytes = new Uint8Array(thumbnail);
+        await storage.putObject(thumbnailPath, thumbnailBytes, {
+          contentType: 'image/jpeg',
+        });
+
+        updateData.thumbnail_path = thumbnailPath;
+
+        logger.info('Generated thumbnail for PDF', {
+          versionId: payload.versionId,
+          thumbnailPath,
+        });
+      } catch (thumbErr) {
+        logger.error('Failed to generate PDF thumbnail', {
+          versionId: payload.versionId,
+          error: thumbErr instanceof Error ? thumbErr.message : String(thumbErr),
+        });
+        metadata.thumbnailError = thumbErr instanceof Error ? thumbErr.message : String(thumbErr);
+        // Continue processing even if thumbnail generation fails
+      }
     } catch (err) {
       logger.error('Failed to extract PDF text', {
         versionId: payload.versionId,
