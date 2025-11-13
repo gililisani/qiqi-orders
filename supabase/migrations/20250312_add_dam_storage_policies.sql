@@ -2,8 +2,11 @@
 -- Storage policies for dam-assets bucket
 -- --------------------------------------------------
 
--- Note: RLS is already enabled on storage.objects by default in Supabase
--- We only need to create the policies
+-- IMPORTANT: RLS is ALREADY ENABLED on storage.objects by default in Supabase
+-- You cannot manually enable it (it's a system table owned by Supabase)
+-- You can verify RLS is enabled with: 
+--   SELECT tablename, rowsecurity FROM pg_tables WHERE tablename = 'objects' AND schemaname = 'storage';
+-- This migration only creates the policies (RLS must already be enabled)
 
 -- Drop existing policies if they exist (for idempotency)
 DROP POLICY IF EXISTS dam_assets_storage_upload ON storage.objects;
