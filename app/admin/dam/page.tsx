@@ -11,6 +11,7 @@ import {
   MusicalNoteIcon,
   PhotoIcon,
   Squares2X2Icon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 
 const assetTypeOptions: Array<{ value: string; label: string; icon: JSX.Element }> = [
@@ -237,6 +238,39 @@ export default function AdminDigitalAssetManagerPage() {
       setError(err.message || 'Failed to load assets');
     } finally {
       setLoadingAssets(false);
+    }
+  };
+
+  const handleDeleteAsset = async (assetId: string) => {
+    if (!window.confirm('Are you sure you want to delete this asset? This will delete all versions and files. This action cannot be undone.')) {
+      return;
+    }
+
+    if (!accessToken) {
+      setError('Not authenticated. Please refresh the page.');
+      return;
+    }
+
+    try {
+      setError('');
+      const headers = buildAuthHeaders(accessToken);
+      const response = await fetch(`/api/dam/assets/${assetId}`, {
+        method: 'DELETE',
+        headers: Object.keys(headers).length ? headers : undefined,
+        credentials: 'same-origin',
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to delete asset');
+      }
+
+      // Refresh assets list
+      await fetchAssets(accessToken);
+      setSuccessMessage('Asset deleted successfully.');
+    } catch (err: any) {
+      console.error('Failed to delete asset', err);
+      setError(err.message || 'Failed to delete asset');
     }
   };
 
@@ -879,9 +913,19 @@ export default function AdminDigitalAssetManagerPage() {
                   </div>
                   <div className="flex flex-1 flex-col justify-between">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-semibold text-gray-900">{asset.title}</h4>
-                        {renderAssetTypePill(asset.asset_type)}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-semibold text-gray-900">{asset.title}</h4>
+                          {renderAssetTypePill(asset.asset_type)}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAsset(asset.id)}
+                          className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition"
+                          title="Delete asset"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
                       </div>
                       {asset.description && (
                         <p className="text-xs text-gray-600 line-clamp-2">{asset.description}</p>
