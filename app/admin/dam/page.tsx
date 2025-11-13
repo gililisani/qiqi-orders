@@ -414,29 +414,32 @@ export default function AdminDigitalAssetManagerPage() {
 
         const { assetId, storagePath } = await initResponse.json();
 
-        // Step 2: Create an authenticated Supabase client for upload
-        // Use the access token directly to ensure authentication works
-        const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-        const supabaseUpload = createSupabaseClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          {
-            global: {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            },
-          }
-        );
+        // Step 2: Ensure session is properly set on the existing Supabase client
+        // The SupabaseProvider should have already set the session, but verify it's working
+        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !currentSession || !currentSession.access_token) {
+          throw new Error('Not authenticated. Please refresh the page and try again.');
+        }
 
-        // Verify user is authenticated
-        const { data: { user }, error: userError } = await supabaseUpload.auth.getUser();
+        // Verify user is an admin (check before upload to give better error message)
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError || !user) {
           throw new Error('Not authenticated. Please refresh the page and try again.');
         }
 
+        // Check if user is an admin
+        const { data: adminCheck, error: adminError } = await supabase
+          .from('admins')
+          .select('id, enabled')
+          .eq('id', user.id)
+          .single();
+
+        if (adminError || !adminCheck || !adminCheck.enabled) {
+          throw new Error('Permission denied. You must be an enabled admin to upload files.');
+        }
+
         // Step 3: Upload file directly to Supabase Storage
-        const { error: uploadError } = await supabaseUpload.storage
+        const { error: uploadError } = await supabase.storage
           .from('dam-assets')
           .upload(storagePath, file, {
             cacheControl: '3600',
@@ -447,9 +450,10 @@ export default function AdminDigitalAssetManagerPage() {
           console.error('Storage upload error:', uploadError);
           console.error('User:', user.id);
           console.error('Storage path:', storagePath);
+          console.error('Session token present:', !!currentSession?.access_token);
           // Check if it's an RLS policy error
           if (uploadError.message.includes('row-level security') || uploadError.message.includes('policy')) {
-            throw new Error('Permission denied. Please ensure you are logged in as an admin and the storage policies are configured correctly.');
+            throw new Error('Permission denied. Please ensure you are logged in as an enabled admin and the storage policies migration has been run in Supabase.');
           }
           throw new Error(`Failed to upload file: ${uploadError.message}`);
         }
