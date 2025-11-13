@@ -1520,7 +1520,7 @@ export default function AdminDigitalAssetManagerPage() {
               {/* Header */}
               <div className="mb-6">
                 <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-2xl font-semibold text-gray-900">{selectedAsset.title}</h2>
+                  <h2 className="text-2xl font-semibold text-gray-900">{selectedAsset.title || 'Untitled Asset'}</h2>
                   {renderAssetTypePill(selectedAsset.asset_type)}
                 </div>
                 {selectedAsset.description && (
@@ -1569,7 +1569,7 @@ export default function AdminDigitalAssetManagerPage() {
                       { quality: '480p', url: selectedAsset.vimeo_download_480p || null },
                       { quality: '360p', url: selectedAsset.vimeo_download_360p || null },
                     ]
-                      .filter((item) => item.url && item.url.trim() !== '')
+                      .filter((item) => item.url && typeof item.url === 'string' && item.url.trim() !== '')
                       .map((item) => (
                         <a
                           key={item.quality}
@@ -1595,10 +1595,10 @@ export default function AdminDigitalAssetManagerPage() {
                       ))}
                     
                     {/* Show message if no download URLs configured */}
-                    {(!selectedAsset.vimeo_download_1080p || selectedAsset.vimeo_download_1080p.trim() === '') && 
-                     (!selectedAsset.vimeo_download_720p || selectedAsset.vimeo_download_720p.trim() === '') && 
-                     (!selectedAsset.vimeo_download_480p || selectedAsset.vimeo_download_480p.trim() === '') && 
-                     (!selectedAsset.vimeo_download_360p || selectedAsset.vimeo_download_360p.trim() === '') && (
+                    {(!selectedAsset.vimeo_download_1080p || (typeof selectedAsset.vimeo_download_1080p === 'string' && selectedAsset.vimeo_download_1080p.trim() === '')) && 
+                     (!selectedAsset.vimeo_download_720p || (typeof selectedAsset.vimeo_download_720p === 'string' && selectedAsset.vimeo_download_720p.trim() === '')) && 
+                     (!selectedAsset.vimeo_download_480p || (typeof selectedAsset.vimeo_download_480p === 'string' && selectedAsset.vimeo_download_480p.trim() === '')) && 
+                     (!selectedAsset.vimeo_download_360p || (typeof selectedAsset.vimeo_download_360p === 'string' && selectedAsset.vimeo_download_360p.trim() === '')) && (
                       <p className="text-sm text-gray-500 italic">
                         No download URLs configured. Add download URLs when uploading or editing this asset.
                       </p>
