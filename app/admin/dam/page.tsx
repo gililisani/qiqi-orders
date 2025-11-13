@@ -55,6 +55,9 @@ interface AssetVersion {
   file_size?: number | null;
   processing_status: string;
   created_at: string;
+  duration_seconds?: number | null;
+  width?: number | null;
+  height?: number | null;
   downloadPath?: string | null;
   previewPath?: string | null;
 }
