@@ -2,8 +2,8 @@
 -- Storage policies for dam-assets bucket
 -- --------------------------------------------------
 
--- Enable RLS on storage.objects if not already enabled
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- Note: RLS is already enabled on storage.objects by default in Supabase
+-- We only need to create the policies
 
 -- Drop existing policies if they exist (for idempotency)
 DROP POLICY IF EXISTS dam_assets_storage_upload ON storage.objects;
