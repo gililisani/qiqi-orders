@@ -1201,6 +1201,66 @@ export default function AdminDigitalAssetManagerPage() {
     );
   };
 
+  const getAcceptAttribute = (assetType: string): string => {
+    switch (assetType) {
+      case 'image':
+        return 'image/*';
+      case 'document':
+        // PDF, Word (.doc, .docx), Apple Pages (.pages), Google Docs (.gdoc)
+        // PowerPoint (.ppt, .pptx), Apple Keynote (.key), Google Slides (.gslides)
+        // Excel (.xls, .xlsx), Apple Numbers (.numbers), Google Sheets (.gsheet)
+        return '.pdf,.doc,.docx,.pages,.gdoc,.ppt,.pptx,.key,.gslides,.xls,.xlsx,.numbers,.gsheet';
+      case 'font':
+        return '.ttf,.otf,.woff,.woff2,.eot,.ttc';
+      case 'audio':
+        return 'audio/*,.mp3,.wav,.m4a,.ogg,.flac,.aac,.wma';
+      case 'archive':
+        return '.zip,.rar,.7z,.tar,.gz';
+      case 'other':
+        return '*'; // Allow all file types
+      case 'video':
+        return ''; // Videos are handled via Vimeo, not file upload
+      default:
+        return '*';
+    }
+  };
+
+  const validateFileType = (file: File, assetType: string): boolean => {
+    const fileName = file.name.toLowerCase();
+    const mimeType = file.type.toLowerCase();
+
+    switch (assetType) {
+      case 'image':
+        return mimeType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(fileName);
+      case 'document':
+        return /\.(pdf|doc|docx|pages|gdoc|ppt|pptx|key|gslides|xls|xlsx|numbers|gsheet)$/i.test(fileName) ||
+               mimeType.includes('pdf') ||
+               mimeType.includes('msword') ||
+               mimeType.includes('presentation') ||
+               mimeType.includes('spreadsheet') ||
+               mimeType.includes('vnd.openxmlformats');
+      case 'font':
+        return /\.(ttf|otf|woff|woff2|eot|ttc)$/i.test(fileName) ||
+               mimeType.includes('font') ||
+               mimeType.includes('x-font');
+      case 'audio':
+        return mimeType.startsWith('audio/') || /\.(mp3|wav|m4a|ogg|flac|aac|wma)$/i.test(fileName);
+      case 'archive':
+        return /\.(zip|rar|7z|tar|gz)$/i.test(fileName) ||
+               mimeType.includes('zip') ||
+               mimeType.includes('rar') ||
+               mimeType.includes('x-7z-compressed') ||
+               mimeType.includes('x-tar') ||
+               mimeType.includes('gzip');
+      case 'other':
+        return true; // Allow all file types
+      case 'video':
+        return false; // Videos should use Vimeo
+      default:
+        return true;
+    }
+  };
+
   const ensureTokenUrl = useCallback(
     (url?: string | null) => {
       if (!url) return url ?? '';
@@ -1351,7 +1411,10 @@ export default function AdminDigitalAssetManagerPage() {
                 <label className="block text-sm font-medium text-gray-700">Asset Type</label>
                 <select
                   value={formState.assetType}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, assetType: event.target.value }))}
+                  onChange={(event) => {
+                    // Clear file when asset type changes to prevent mismatched file types
+                    setFormState((prev) => ({ ...prev, assetType: event.target.value, file: null }));
+                  }}
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
                 >
                   {assetTypeOptions.map((option) => (
@@ -1605,9 +1668,20 @@ export default function AdminDigitalAssetManagerPage() {
                 <label className="block text-sm font-medium text-gray-700">File *</label>
                 <input
                   type="file"
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, file: event.target.files ? event.target.files[0] : null }))
-                  }
+                  accept={getAcceptAttribute(formState.assetType)}
+                  onChange={(event) => {
+                    const file = event.target.files ? event.target.files[0] : null;
+                    if (file) {
+                      // Additional validation: check if file type matches the selected asset type
+                      const isValid = validateFileType(file, formState.assetType);
+                      if (!isValid) {
+                        alert(`Invalid file type. Please select a ${formState.assetType} file.`);
+                        event.target.value = ''; // Clear the input
+                        return;
+                      }
+                    }
+                    setFormState((prev) => ({ ...prev, file }));
+                  }}
                   className="mt-1 block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border file:border-gray-200 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:border-gray-400"
                   required={formState.assetType !== 'video'}
                 />
