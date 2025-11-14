@@ -141,12 +141,20 @@ export default function ClientDashboard() {
                 <p className="text-gray-600 mb-4">
                   View all your past and current orders.
                 </p>
-                <Link
-                  href="/client/orders"
-                  className="inline-block bg-gray-700 text-white px-6 py-3 rounded hover:opacity-90 transition"
-                >
-                  View Orders
-                </Link>
+                <div className="flex gap-3">
+                  <Link
+                    href="/client/orders"
+                    className="inline-block bg-gray-700 text-white px-6 py-3 rounded hover:opacity-90 transition"
+                  >
+                    View Orders
+                  </Link>
+                  <Link
+                    href="/client/assets"
+                    className="inline-block bg-gray-700 text-white px-6 py-3 rounded hover:opacity-90 transition"
+                  >
+                    Asset Library
+                  </Link>
+                </div>
               </div>
             </div>
           </Card>

@@ -151,6 +151,8 @@ export default function TopNavbar() {
                   <a href="/admin/incoterms" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Incoterms</a>
                   <a href="/admin/payment-terms" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Payment Terms</a>
                   <a href="/admin/netsuite" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">NetSuite</a>
+                  <div className="my-1 border-t border-gray-200"></div>
+                  <a href="/admin/dam" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Digital Asset Manager</a>
                 </div>
               </div>
             </div>
@@ -227,6 +229,8 @@ export default function TopNavbar() {
                   <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/incoterms">Incoterms</a>
                   <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/payment-terms">Payment Terms</a>
                   <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/netsuite">NetSuite</a>
+                  <div className="my-1 border-t border-gray-200"></div>
+                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam">Digital Asset Manager</a>
                 </div>
               </details>
             </div>
