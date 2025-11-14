@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       assetType: body.assetType,
       fileName: body.fileName,
       fileType: body.fileType,
-      hasThumbnail: !!body.thumbnailData,
+      fileSize: body.fileSize,
     });
 
     if (!body.title || !body.assetType || !body.fileName || !body.fileType) {

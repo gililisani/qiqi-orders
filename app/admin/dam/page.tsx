@@ -808,6 +808,8 @@ export default function AdminDigitalAssetManagerPage() {
 
       if (useDirectStorageUpload) {
         // Step 1: Call API route to create asset record and get storage path
+        // NOTE: Don't send thumbnailData here - it's too large and causes 413 errors
+        // We'll send it in the complete request instead
         const payload = {
           title: formState.title.trim(),
           description: formState.description.trim() || undefined,
@@ -824,8 +826,6 @@ export default function AdminDigitalAssetManagerPage() {
           fileName: file.name,
           fileType: file.type || 'application/octet-stream',
           fileSize: file.size,
-          thumbnailData,
-          thumbnailPath: thumbnailData ? `${Date.now()}-thumb.png` : undefined,
         };
 
         const headers = buildAuthHeaders(accessToken);
@@ -834,7 +834,7 @@ export default function AdminDigitalAssetManagerPage() {
           assetType: payload.assetType,
           fileName: payload.fileName,
           fileType: payload.fileType,
-          hasThumbnail: !!payload.thumbnailData,
+          fileSize: payload.fileSize,
         });
         
         const initResponse = await fetch('/api/dam/assets/init', {
