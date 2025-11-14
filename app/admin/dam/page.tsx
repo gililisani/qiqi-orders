@@ -22,6 +22,7 @@ const assetTypeOptions: Array<{ value: string; label: string; icon: JSX.Element 
   { value: 'video', label: 'Video', icon: <FilmIcon className="h-4 w-4" /> },
   { value: 'document', label: 'Document', icon: <DocumentTextIcon className="h-4 w-4" /> },
   { value: 'audio', label: 'Audio', icon: <MusicalNoteIcon className="h-4 w-4" /> },
+  { value: 'font', label: 'Font', icon: <DocumentTextIcon className="h-4 w-4" /> },
   { value: 'archive', label: 'Archive', icon: <Squares2X2Icon className="h-4 w-4" /> },
   { value: 'other', label: 'Other', icon: <Squares2X2Icon className="h-4 w-4" /> },
 ];
