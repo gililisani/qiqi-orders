@@ -14,6 +14,7 @@ import {
   TrashIcon,
   XMarkIcon,
   ArrowDownTrayIcon,
+  CheckIcon,
 } from '@heroicons/react/24/outline';
 
 const assetTypeOptions: Array<{ value: string; label: string; icon: JSX.Element }> = [
@@ -296,6 +297,8 @@ export default function AdminDigitalAssetManagerPage() {
     hasNextPage: boolean;
     hasPreviousPage: boolean;
   } | null>(null);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [productLines, setProductLines] = useState<string[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
   const [isEditingAsset, setIsEditingAsset] = useState(false);
@@ -476,12 +479,78 @@ export default function AdminDigitalAssetManagerPage() {
       }
 
       // Refresh assets list
-      await fetchAssets(accessToken, undefined, 1);
-      setCurrentPage(1);
+      await fetchAssets(accessToken, undefined, currentPage);
+      setSelectedAssetIds(new Set());
       setSuccessMessage('Asset deleted successfully.');
     } catch (err: any) {
       console.error('Failed to delete asset', err);
       setError(err.message || 'Failed to delete asset');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedAssetIds.size === 0) return;
+    
+    if (!window.confirm(`Are you sure you want to delete ${selectedAssetIds.size} asset(s)? This will delete all versions and files. This action cannot be undone.`)) {
+      return;
+    }
+
+    if (!accessToken) {
+      setError('Not authenticated. Please refresh the page.');
+      return;
+    }
+
+    try {
+      setBulkDeleting(true);
+      setError('');
+      const headers = buildAuthHeaders(accessToken);
+      
+      // Delete assets one by one
+      const deletePromises = Array.from(selectedAssetIds).map(assetId =>
+        fetch(`/api/dam/assets/${assetId}`, {
+          method: 'DELETE',
+          headers: Object.keys(headers).length ? headers : undefined,
+          credentials: 'same-origin',
+        }).then(res => {
+          if (!res.ok) {
+            const data = res.json().catch(() => ({}));
+            throw new Error(`Failed to delete asset ${assetId}`);
+          }
+          return res;
+        })
+      );
+
+      await Promise.all(deletePromises);
+      
+      // Refresh assets list
+      await fetchAssets(accessToken, undefined, currentPage);
+      setSelectedAssetIds(new Set());
+      setSuccessMessage(`${selectedAssetIds.size} asset(s) deleted successfully.`);
+    } catch (err: any) {
+      console.error('Failed to delete assets', err);
+      setError(err.message || 'Failed to delete assets');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const toggleAssetSelection = (assetId: string) => {
+    setSelectedAssetIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(assetId)) {
+        newSet.delete(assetId);
+      } else {
+        newSet.add(assetId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedAssetIds.size === filteredAssets.length) {
+      setSelectedAssetIds(new Set());
+    } else {
+      setSelectedAssetIds(new Set(filteredAssets.map(a => a.id)));
     }
   };
 
@@ -1595,14 +1664,69 @@ export default function AdminDigitalAssetManagerPage() {
               No assets found. Upload assets to populate the library.
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {filteredAssets.map((asset) => (
-                <div
-                  key={asset.id}
-                  className="flex gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-gray-300 transition"
-                  onClick={() => setSelectedAsset(asset)}
-                >
-                  <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+            <>
+              {/* Bulk Actions Bar */}
+              {selectedAssetIds.size > 0 && (
+                <div className="mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                  <span className="text-sm font-medium text-blue-900">
+                    {selectedAssetIds.size} asset{selectedAssetIds.size !== 1 ? 's' : ''} selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleBulkDelete}
+                    disabled={bulkDeleting}
+                    className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                    {bulkDeleting ? 'Deleting...' : `Delete ${selectedAssetIds.size}`}
+                  </button>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {/* Select All Checkbox */}
+                <div className="md:col-span-2 flex items-center gap-2 px-2 py-2 border-b border-gray-200">
+                  <button
+                    type="button"
+                    onClick={toggleSelectAll}
+                    className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
+                  >
+                    <div className={`flex h-4 w-4 items-center justify-center rounded border-2 ${
+                      selectedAssetIds.size === filteredAssets.length && filteredAssets.length > 0
+                        ? 'border-blue-600 bg-blue-600'
+                        : 'border-gray-300 bg-white'
+                    }`}>
+                      {selectedAssetIds.size === filteredAssets.length && filteredAssets.length > 0 && (
+                        <CheckIcon className="h-3 w-3 text-white" />
+                      )}
+                    </div>
+                    <span>Select All</span>
+                  </button>
+                </div>
+                
+                {filteredAssets.map((asset) => (
+                  <div
+                    key={asset.id}
+                    className="flex gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-gray-300 transition relative"
+                    onClick={() => setSelectedAsset(asset)}
+                  >
+                    {/* Selection Checkbox */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleAssetSelection(asset.id);
+                      }}
+                      className="absolute top-4 left-4 z-10 flex h-5 w-5 items-center justify-center rounded border-2 bg-white shadow-sm hover:bg-gray-50"
+                    >
+                      {selectedAssetIds.has(asset.id) && (
+                        <CheckIcon className="h-3 w-3 text-blue-600" />
+                      )}
+                    </button>
+                    {selectedAssetIds.has(asset.id) && (
+                      <div className="absolute inset-0 rounded-xl border-2 border-blue-600 bg-blue-50/20 pointer-events-none" />
+                    )}
+                    <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
                     {asset.asset_type === 'video' && asset.vimeo_video_id ? (
                       // Vimeo video - show Vimeo poster/thumbnail (using oEmbed API for poster image)
                       // eslint-disable-next-line @next/next/no-img-element
@@ -1653,6 +1777,9 @@ export default function AdminDigitalAssetManagerPage() {
                           <TrashIcon className="h-4 w-4" />
                         </button>
                       </div>
+                      {selectedAssetIds.has(asset.id) && (
+                        <div className="absolute inset-0 rounded-xl border-2 border-blue-600 bg-blue-50/20 pointer-events-none" />
+                      )}
                       {asset.description && (
                         <p className="text-xs text-gray-600 line-clamp-2">{asset.description}</p>
                       )}
@@ -1720,7 +1847,8 @@ export default function AdminDigitalAssetManagerPage() {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            </>
           )}
           
           {/* Pagination Controls */}
