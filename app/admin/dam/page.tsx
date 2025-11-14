@@ -597,9 +597,10 @@ export default function AdminDigitalAssetManagerPage() {
       const pdfjsLib = await import('pdfjs-dist');
       
       // Set worker source - use unpkg CDN which is more reliable
-      // Try to use the version from the package, fallback to latest stable
-      const pdfjsVersion = pdfjsLib.version || '3.11.174';
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.js`;
+      // Use the actual installed version (5.4.394) or fallback
+      const pdfjsVersion = pdfjsLib.version || '5.4.394';
+      // For v5.x, the worker path is different
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.mjs`;
       
       console.log('PDF.js worker URL:', pdfjsLib.GlobalWorkerOptions.workerSrc);
 
@@ -776,13 +777,19 @@ export default function AdminDigitalAssetManagerPage() {
       // Generate PDF thumbnail if needed
       let thumbnailData: string | null = null;
       let thumbnailPath: string | null = null;
-      if (file.type.includes('pdf')) {
+      if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+        console.log('Detected PDF file, generating thumbnail...');
         const thumbnailResult = await generatePDFThumbnail(file);
         if (thumbnailResult) {
           thumbnailData = thumbnailResult.thumbnailData;
+          console.log('Thumbnail generated successfully, size:', thumbnailData.length);
           // Generate proper thumbnail path based on asset ID (will be set after asset creation)
           thumbnailPath = `thumb-placeholder.png`; // Will be updated with proper path
+        } else {
+          console.warn('Thumbnail generation returned null');
         }
+      } else {
+        console.log('Not a PDF file, skipping thumbnail generation. File type:', file.type, 'File name:', file.name);
       }
 
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -946,6 +953,12 @@ export default function AdminDigitalAssetManagerPage() {
         // Step 4: Notify API route that upload is complete
         // Update thumbnail path with actual asset ID
         const finalThumbnailPath = thumbnailData ? `${assetId}/${Date.now()}-thumb.png` : undefined;
+        
+        console.log('Completing upload with thumbnail:', {
+          hasThumbnail: !!thumbnailData,
+          thumbnailPath: finalThumbnailPath,
+          thumbnailSize: thumbnailData?.length || 0,
+        });
         
         const completeResponse = await fetch(`/api/dam/assets/${assetId}/complete`, {
           method: 'POST',

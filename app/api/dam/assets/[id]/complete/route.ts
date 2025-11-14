@@ -94,40 +94,52 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     // Handle thumbnail if provided (from client-side PDF thumbnail generation)
     if (body.thumbnailData && versionId) {
+      console.log('Processing thumbnail for asset:', assetId, 'thumbnail data length:', body.thumbnailData.length);
       const storage = (await import('../../../../../../platform/storage')).createStorage();
       // Generate proper thumbnail path with asset ID
       const finalThumbnailPath = `${assetId}/${Date.now()}-thumb.png`;
-      const thumbnailBytes = Uint8Array.from(atob(body.thumbnailData), (c) => c.charCodeAt(0));
-      await storage.putObject(finalThumbnailPath, thumbnailBytes, {
-        contentType: 'image/png',
-        originalFileName: 'thumb.png',
-      });
-
-      // Update version with thumbnail path
-      await supabaseAdmin
-        .from('dam_asset_versions')
-        .update({ thumbnail_path: finalThumbnailPath })
-        .eq('id', versionId);
-
-      // Create rendition record
-      const { error: renditionError } = await supabaseAdmin
-        .from('dam_asset_renditions')
-        .insert({
-          asset_id: assetId,
-          version_id: versionId,
-          kind: 'thumb',
-          storage_bucket: 'dam-assets',
-          storage_path: finalThumbnailPath,
-          mime_type: 'image/png',
-          file_size: thumbnailBytes.length,
-          metadata: {},
-          created_by: adminUserId,
+      try {
+        const thumbnailBytes = Uint8Array.from(atob(body.thumbnailData), (c) => c.charCodeAt(0));
+        console.log('Thumbnail bytes length:', thumbnailBytes.length);
+        await storage.putObject(finalThumbnailPath, thumbnailBytes, {
+          contentType: 'image/png',
+          originalFileName: 'thumb.png',
         });
+        console.log('Thumbnail uploaded to storage:', finalThumbnailPath);
 
-      if (renditionError) {
-        console.error('Failed to create thumbnail rendition:', renditionError);
-        // Don't fail the upload if thumbnail creation fails
+        // Update version with thumbnail path
+        await supabaseAdmin
+          .from('dam_asset_versions')
+          .update({ thumbnail_path: finalThumbnailPath })
+          .eq('id', versionId);
+
+        // Create rendition record
+        const { error: renditionError } = await supabaseAdmin
+          .from('dam_asset_renditions')
+          .insert({
+            asset_id: assetId,
+            version_id: versionId,
+            kind: 'thumb',
+            storage_bucket: 'dam-assets',
+            storage_path: finalThumbnailPath,
+            mime_type: 'image/png',
+            file_size: thumbnailBytes.length,
+            metadata: {},
+            created_by: adminUserId,
+          });
+
+        if (renditionError) {
+          console.error('Failed to create thumbnail rendition:', renditionError);
+          // Don't fail the upload if thumbnail creation fails
+        } else {
+          console.log('Thumbnail rendition created successfully');
+        }
+      } catch (thumbError: any) {
+        console.error('Error processing thumbnail:', thumbError);
+        // Don't fail the upload if thumbnail processing fails
       }
+    } else {
+      console.log('No thumbnail data provided or no version ID');
     }
 
     return NextResponse.json({ assetId, versionId }, { status: 200 });
