@@ -133,25 +133,30 @@ export async function POST(
     
     console.log('Version record created successfully');
 
-    // Handle thumbnail if provided (from client-side PDF thumbnail generation)
-    if (body.thumbnailData && versionId) {
-      console.log('Processing thumbnail for asset:', assetId, 'thumbnail data length:', body.thumbnailData.length);
-      const storage = (await import('../../../../../../platform/storage')).createStorage();
-      // Generate proper thumbnail path with asset ID
-      const finalThumbnailPath = `${assetId}/${Date.now()}-thumb.png`;
+    // Handle thumbnail if provided (thumbnail already uploaded to storage, we just need to link it)
+    if (body.thumbnailPath && versionId) {
+      console.log('Linking thumbnail to version:', body.thumbnailPath);
       try {
-        const thumbnailBytes = Uint8Array.from(atob(body.thumbnailData), (c) => c.charCodeAt(0));
-        console.log('Thumbnail bytes length:', thumbnailBytes.length);
-        await storage.putObject(finalThumbnailPath, thumbnailBytes, {
-          contentType: 'image/png',
-          originalFileName: 'thumb.png',
-        });
-        console.log('Thumbnail uploaded to storage:', finalThumbnailPath);
+        // Get thumbnail file size from storage
+        const { data: thumbFile, error: thumbFileError } = await supabaseAdmin.storage
+          .from('dam-assets')
+          .list(assetId, {
+            limit: 100,
+          });
+        
+        let thumbFileSize: number | null = null;
+        if (!thumbFileError && thumbFile) {
+          const thumbFileName = body.thumbnailPath.split('/').pop();
+          const thumbFileInfo = thumbFile.find((f) => f.name === thumbFileName);
+          if (thumbFileInfo?.metadata?.size) {
+            thumbFileSize = thumbFileInfo.metadata.size;
+          }
+        }
 
         // Update version with thumbnail path
         await supabaseAdmin
           .from('dam_asset_versions')
-          .update({ thumbnail_path: finalThumbnailPath })
+          .update({ thumbnail_path: body.thumbnailPath })
           .eq('id', versionId);
 
         // Create rendition record
@@ -162,9 +167,9 @@ export async function POST(
             version_id: versionId,
             kind: 'thumb',
             storage_bucket: 'dam-assets',
-            storage_path: finalThumbnailPath,
+            storage_path: body.thumbnailPath,
             mime_type: 'image/png',
-            file_size: thumbnailBytes.length,
+            file_size: thumbFileSize,
             metadata: {},
             created_by: adminUserId,
           });
@@ -176,11 +181,11 @@ export async function POST(
           console.log('Thumbnail rendition created successfully');
         }
       } catch (thumbError: any) {
-        console.error('Error processing thumbnail:', thumbError);
-        // Don't fail the upload if thumbnail processing fails
+        console.error('Error linking thumbnail:', thumbError);
+        // Don't fail the upload if thumbnail linking fails
       }
     } else {
-      console.log('No thumbnail data provided or no version ID');
+      console.log('No thumbnail path provided');
     }
 
     return NextResponse.json({ assetId, versionId }, { status: 200 });

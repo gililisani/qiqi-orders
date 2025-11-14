@@ -854,6 +854,12 @@ export default function AdminDigitalAssetManagerPage() {
             statusText: initResponse.statusText,
             error: errorData,
           });
+          // Don't create any database records if init fails
+          setActiveUploads((prev) =>
+            prev.map((u) =>
+              u.id === uploadId ? { ...u, status: 'error', error: errorData.error || 'Failed to initialize upload' } : u
+            )
+          );
           throw new Error(errorData.error || `Failed to initialize upload: ${initResponse.status} ${initResponse.statusText}`);
         }
 
@@ -950,6 +956,21 @@ export default function AdminDigitalAssetManagerPage() {
         });
 
         if (uploadError) {
+          // Rollback: Delete the asset record if file upload fails
+          try {
+            console.log('Rolling back: deleting asset record due to upload failure', assetId);
+            await fetch(`/api/dam/assets/${assetId}`, {
+              method: 'DELETE',
+              headers: {
+                ...headers,
+              },
+              credentials: 'same-origin',
+            });
+            console.log('Asset record deleted (rollback successful)');
+          } catch (rollbackError) {
+            console.error('Failed to rollback asset record:', rollbackError);
+          }
+          
           setActiveUploads((prev) =>
             prev.map((u) =>
               u.id === uploadId ? { ...u, status: 'error', error: uploadError } : u
@@ -968,14 +989,43 @@ export default function AdminDigitalAssetManagerPage() {
           prev.map((u) => (u.id === uploadId ? { ...u, status: 'completing', progress: 95 } : u))
         );
 
-        // Step 4: Notify API route that upload is complete
-        // Update thumbnail path with actual asset ID
-        const finalThumbnailPath = thumbnailData ? `${assetId}/${Date.now()}-thumb.png` : undefined;
+        // Step 4: Upload thumbnail directly to storage if we have one
+        let uploadedThumbnailPath: string | null = null;
+        if (thumbnailData) {
+          try {
+            const finalThumbnailPath = `${assetId}/${Date.now()}-thumb.png`;
+            // Convert base64 to blob
+            const thumbnailBytes = Uint8Array.from(atob(thumbnailData), (c) => c.charCodeAt(0));
+            const thumbnailBlob = new Blob([thumbnailBytes], { type: 'image/png' });
+            
+            console.log('Uploading thumbnail to storage:', finalThumbnailPath);
+            
+            // Upload thumbnail directly to Supabase Storage
+            const { error: thumbUploadError } = await supabase.storage
+              .from('dam-assets')
+              .upload(finalThumbnailPath, thumbnailBlob, {
+                contentType: 'image/png',
+                cacheControl: '3600',
+                upsert: false,
+              });
+            
+            if (thumbUploadError) {
+              console.error('Failed to upload thumbnail:', thumbUploadError);
+              // Continue without thumbnail - don't fail the upload
+            } else {
+              uploadedThumbnailPath = finalThumbnailPath;
+              console.log('Thumbnail uploaded successfully:', uploadedThumbnailPath);
+            }
+          } catch (thumbError) {
+            console.error('Error uploading thumbnail:', thumbError);
+            // Continue without thumbnail
+          }
+        }
         
-        console.log('Completing upload with thumbnail:', {
-          hasThumbnail: !!thumbnailData,
-          thumbnailPath: finalThumbnailPath,
-          thumbnailSize: thumbnailData?.length || 0,
+        // Step 5: Notify API route that upload is complete (send only thumbnail path, not data)
+        console.log('Completing upload:', {
+          storagePath,
+          thumbnailPath: uploadedThumbnailPath,
         });
         
         const completeResponse = await fetch(`/api/dam/assets/${assetId}/complete`, {
@@ -990,19 +1040,39 @@ export default function AdminDigitalAssetManagerPage() {
             fileType: file.type || 'application/octet-stream',
             fileName: file.name,
             fileSize: file.size,
-            thumbnailData: thumbnailData || undefined,
-            thumbnailPath: finalThumbnailPath,
+            thumbnailPath: uploadedThumbnailPath || undefined,
           }),
         });
 
         if (!completeResponse.ok) {
           const errorData = await completeResponse.json().catch(() => ({}));
+          console.error('Complete route failed:', {
+            status: completeResponse.status,
+            statusText: completeResponse.statusText,
+            error: errorData,
+          });
+          
+          // Rollback: Delete the asset record if complete fails
+          try {
+            console.log('Rolling back: deleting asset record', assetId);
+            await fetch(`/api/dam/assets/${assetId}`, {
+              method: 'DELETE',
+              headers: {
+                ...headers,
+              },
+              credentials: 'same-origin',
+            });
+            console.log('Asset record deleted (rollback successful)');
+          } catch (rollbackError) {
+            console.error('Failed to rollback asset record:', rollbackError);
+          }
+          
           setActiveUploads((prev) =>
             prev.map((u) =>
               u.id === uploadId ? { ...u, status: 'error', error: errorData.error || 'Failed to complete upload' } : u
             )
           );
-          throw new Error(errorData.error || 'Failed to complete upload');
+          throw new Error(errorData.error || `Failed to complete upload: ${completeResponse.status} ${completeResponse.statusText}`);
         }
 
         // Mark upload as successful
