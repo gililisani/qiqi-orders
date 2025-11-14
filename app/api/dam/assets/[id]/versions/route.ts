@@ -22,6 +22,14 @@ function buildDownloadPath(assetId: string, versionId: string, rendition?: 'thum
   return base;
 }
 
+function buildPreviewPath(assetId: string, versionId: string, rendition?: 'thumbnail' | 'original') {
+  const base = `/api/assets/${assetId}/preview?version=${versionId}`;
+  if (rendition === 'thumbnail') {
+    return `${base}&rendition=thumbnail`;
+  }
+  return base;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> | { id: string } }
@@ -48,7 +56,7 @@ export async function GET(
     const versionsWithPaths = (versions || []).map((version) => ({
       ...version,
       downloadPath: buildDownloadPath(assetId, version.id, 'original'),
-      previewPath: buildDownloadPath(
+      previewPath: buildPreviewPath(
         assetId,
         version.id,
         version.thumbnail_path ? 'thumbnail' : 'original'
