@@ -285,6 +285,10 @@ export default function AdminDigitalAssetManagerPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [localeFilter, setLocaleFilter] = useState<string>('');
+  const [regionFilter, setRegionFilter] = useState<string>('');
+  const [tagFilter, setTagFilter] = useState<string>('');
+  const [productLineFilter, setProductLineFilter] = useState<string>('');
+  const [productLines, setProductLines] = useState<string[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
   const [isEditingAsset, setIsEditingAsset] = useState(false);
   const [editingDownloadUrls, setEditingDownloadUrls] = useState({
@@ -418,8 +422,12 @@ export default function AdminDigitalAssetManagerPage() {
         throw new Error(data.error || 'Failed to load assets');
       }
 
-      const payload = await response.json();
+      const payload = await response.json() as { assets?: AssetRecord[] };
       setAssets(payload.assets || []);
+      
+      // Extract unique product lines
+      const uniqueProductLines = [...new Set((payload.assets || []).map((a) => a.product_line).filter((pl: string | null | undefined): pl is string => Boolean(pl) && typeof pl === 'string'))];
+      setProductLines(uniqueProductLines);
     } catch (err: any) {
       console.error('Failed to load assets', err);
       setError(err.message || 'Failed to load assets');
@@ -461,7 +469,7 @@ export default function AdminDigitalAssetManagerPage() {
     }
   };
 
-  // Fetch assets when search term changes (debounced)
+  // Fetch assets when search term or filters change (debounced)
   useEffect(() => {
     if (!accessToken) return;
     const timeoutId = setTimeout(() => {
@@ -474,15 +482,24 @@ export default function AdminDigitalAssetManagerPage() {
 
   const filteredAssets = useMemo(() => {
     // Assets are already filtered by search on the server
-    // Only apply client-side filters for type and locale
+    // Apply client-side filters for type, locale, region, tag, and product line
     return assets.filter((asset) => {
       const matchesType = typeFilter ? asset.asset_type === typeFilter : true;
       const matchesLocale = localeFilter
         ? asset.locales.some((locale) => locale.code === localeFilter)
         : true;
-      return matchesType && matchesLocale;
+      const matchesRegion = regionFilter
+        ? asset.regions.some((region) => region.code === regionFilter)
+        : true;
+      const matchesTag = tagFilter
+        ? asset.tags.some((tag) => tag.toLowerCase().includes(tagFilter.toLowerCase()))
+        : true;
+      const matchesProductLine = productLineFilter
+        ? asset.product_line?.toLowerCase().includes(productLineFilter.toLowerCase())
+        : true;
+      return matchesType && matchesLocale && matchesRegion && matchesTag && matchesProductLine;
     });
-  }, [assets, typeFilter, localeFilter]);
+  }, [assets, typeFilter, localeFilter, regionFilter, tagFilter, productLineFilter]);
 
   const toggleSelection = (list: string[], value: string): string[] => {
     if (list.includes(value)) {
@@ -1378,7 +1395,7 @@ export default function AdminDigitalAssetManagerPage() {
               <h3 className="text-lg font-semibold text-gray-900">Asset Library</h3>
               <p className="text-sm text-gray-600">Search, filter, and review uploaded assets.</p>
             </div>
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:flex-wrap">
               <input
                 type="search"
                 placeholder="Search by title, product line, or SKU"
@@ -1399,6 +1416,18 @@ export default function AdminDigitalAssetManagerPage() {
                 ))}
               </select>
               <select
+                value={productLineFilter}
+                onChange={(event) => setProductLineFilter(event.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+              >
+                <option value="">All product lines</option>
+                {productLines.map((pl) => (
+                  <option key={pl} value={pl}>
+                    {pl}
+                  </option>
+                ))}
+              </select>
+              <select
                 value={localeFilter}
                 onChange={(event) => setLocaleFilter(event.target.value)}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
@@ -1407,6 +1436,30 @@ export default function AdminDigitalAssetManagerPage() {
                 {locales.map((locale) => (
                   <option key={locale.code} value={locale.code}>
                     {locale.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={regionFilter}
+                onChange={(event) => setRegionFilter(event.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+              >
+                <option value="">All regions</option>
+                {regions.map((region) => (
+                  <option key={region.code} value={region.code}>
+                    {region.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={tagFilter}
+                onChange={(event) => setTagFilter(event.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+              >
+                <option value="">All tags</option>
+                {tags.map((tag) => (
+                  <option key={tag.slug} value={tag.label}>
+                    {tag.label}
                   </option>
                 ))}
               </select>
