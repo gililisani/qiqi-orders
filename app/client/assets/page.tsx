@@ -298,7 +298,7 @@ export default function ClientAssetsPage() {
 
   if (error && !loadingAssets) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="mt-8 mb-4 space-y-6">
         <Card>
           <div className="p-6 text-center text-red-600">
             <p>Error loading assets: {error}</p>
@@ -309,7 +309,7 @@ export default function ClientAssetsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="mt-8 mb-4 space-y-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Asset Library</h1>
         <p className="mt-1 text-sm text-gray-600">Browse and download available assets.</p>
