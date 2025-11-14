@@ -84,10 +84,13 @@ function buildAuthHeaders(token: string | null): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
 }
 
-function ensureTokenUrl(path: string | null | undefined): string {
+function ensureTokenUrl(path: string | null | undefined, accessToken: string | null): string {
   if (!path) return '';
   if (path.startsWith('http')) return path;
-  return path.startsWith('/') ? path : `/${path}`;
+  const url = path.startsWith('/') ? path : `/${path}`;
+  if (!accessToken) return url;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}token=${encodeURIComponent(accessToken)}`;
 }
 
 async function logDownload(
@@ -619,7 +622,7 @@ export default function ClientAssetsPage() {
                 ) : selectedAsset.current_version?.previewPath && accessToken ? (
                   <div className="flex items-center justify-center rounded-lg border border-gray-200 bg-gray-50 p-8">
                     <img
-                      src={ensureTokenUrl(selectedAsset.current_version.previewPath)}
+                      src={ensureTokenUrl(selectedAsset.current_version.previewPath, accessToken)}
                       alt={selectedAsset.title}
                       className="max-h-96 max-w-full object-contain"
                     />
@@ -676,7 +679,7 @@ export default function ClientAssetsPage() {
                     onClick={async (e) => {
                       e.stopPropagation();
                       if (!accessToken) return;
-                      const downloadUrl = ensureTokenUrl(selectedAsset.current_version!.downloadPath!);
+                      const downloadUrl = ensureTokenUrl(selectedAsset.current_version!.downloadPath!, accessToken);
                       const filename = `${selectedAsset.title || 'asset'}.${selectedAsset.current_version!.mime_type?.split('/')[1] || 'bin'}`;
                       await triggerDownload(
                         downloadUrl,
