@@ -287,6 +287,15 @@ export default function AdminDigitalAssetManagerPage() {
   const [regionFilter, setRegionFilter] = useState<string>('');
   const [tagFilter, setTagFilter] = useState<string>('');
   const [productLineFilter, setProductLineFilter] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pagination, setPagination] = useState<{
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  } | null>(null);
   const [productLines, setProductLines] = useState<string[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
   const [isEditingAsset, setIsEditingAsset] = useState(false);
@@ -403,13 +412,18 @@ export default function AdminDigitalAssetManagerPage() {
     }
   };
 
-  const fetchAssets = async (token: string, search?: string) => {
+  const fetchAssets = async (token: string, search?: string, page: number = 1) => {
     try {
       setLoadingAssets(true);
       setError('');
 
       const headers = buildAuthHeaders(token);
-      const url = search ? `/api/dam/assets?q=${encodeURIComponent(search)}` : '/api/dam/assets';
+      const params = new URLSearchParams();
+      if (search) params.set('q', search);
+      params.set('page', page.toString());
+      params.set('limit', '50');
+      
+      const url = `/api/dam/assets?${params.toString()}`;
       const response = await fetch(url, {
         method: 'GET',
         headers: Object.keys(headers).length ? headers : undefined,
@@ -421,8 +435,10 @@ export default function AdminDigitalAssetManagerPage() {
         throw new Error(data.error || 'Failed to load assets');
       }
 
-      const payload = await response.json() as { assets?: AssetRecord[] };
+      const payload = await response.json() as { assets?: AssetRecord[]; pagination?: any };
       setAssets(payload.assets || []);
+      setPagination(payload.pagination || null);
+      setCurrentPage(page);
       
       // Extract unique product lines
       const uniqueProductLines = [...new Set((payload.assets || []).map((a) => a.product_line).filter((pl: string | null | undefined): pl is string => Boolean(pl) && typeof pl === 'string'))];
@@ -460,7 +476,8 @@ export default function AdminDigitalAssetManagerPage() {
       }
 
       // Refresh assets list
-      await fetchAssets(accessToken);
+      await fetchAssets(accessToken, undefined, 1);
+      setCurrentPage(1);
       setSuccessMessage('Asset deleted successfully.');
     } catch (err: any) {
       console.error('Failed to delete asset', err);
@@ -472,7 +489,8 @@ export default function AdminDigitalAssetManagerPage() {
   useEffect(() => {
     if (!accessToken) return;
     const timeoutId = setTimeout(() => {
-      fetchAssets(accessToken, searchTerm || undefined);
+      fetchAssets(accessToken, searchTerm || undefined, 1);
+      setCurrentPage(1);
     }, 300); // Debounce search by 300ms
     return () => clearTimeout(timeoutId);
   }, [searchTerm, accessToken]);
@@ -1116,7 +1134,10 @@ export default function AdminDigitalAssetManagerPage() {
         </div>
         <button
           type="button"
-          onClick={() => fetchAssets(accessToken ?? '')}
+          onClick={() => {
+            setCurrentPage(1);
+            fetchAssets(accessToken ?? '', undefined, 1);
+          }}
           className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
         >
           <ArrowPathIcon className="h-4 w-4" />
@@ -1701,6 +1722,48 @@ export default function AdminDigitalAssetManagerPage() {
               ))}
             </div>
           )}
+          
+          {/* Pagination Controls */}
+          {pagination && pagination.totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+              <div className="text-sm text-gray-700">
+                Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{' '}
+                <span className="font-medium">
+                  {Math.min(pagination.page * pagination.limit, pagination.total)}
+                </span>{' '}
+                of <span className="font-medium">{pagination.total}</span> assets
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newPage = currentPage - 1;
+                    setCurrentPage(newPage);
+                    fetchAssets(accessToken ?? '', searchTerm || undefined, newPage);
+                  }}
+                  disabled={!pagination.hasPreviousPage}
+                  className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-700">
+                  Page {pagination.page} of {pagination.totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newPage = currentPage + 1;
+                    setCurrentPage(newPage);
+                    fetchAssets(accessToken ?? '', searchTerm || undefined, newPage);
+                  }}
+                  disabled={!pagination.hasNextPage}
+                  className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
 
@@ -1876,7 +1939,7 @@ export default function AdminDigitalAssetManagerPage() {
                               setSelectedAsset(prev => prev ? { ...prev, ...updated } : null);
                               setIsEditingAsset(false);
                               // Refresh the asset list in background
-                              fetchAssets(accessToken);
+                              fetchAssets(accessToken, undefined, currentPage);
                             } catch (err: any) {
                               alert('Failed to save: ' + err.message);
                             } finally {

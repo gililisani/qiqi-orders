@@ -56,6 +56,9 @@ export async function GET(request: NextRequest) {
     const localeFilter = searchParams.get('locale') || '';
     const regionFilter = searchParams.get('region') || '';
     const tagFilter = searchParams.get('tag') || '';
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const offset = (page - 1) * limit;
 
     // Build query with optional full-text search
     let assetsQuery = supabaseAdmin
@@ -75,7 +78,8 @@ export async function GET(request: NextRequest) {
         vimeo_download_360p,
         created_at,
         search_tags
-      `
+      `,
+        { count: 'exact' }
       )
       .eq('is_archived', false); // Only show non-archived assets
 
@@ -95,12 +99,24 @@ export async function GET(request: NextRequest) {
       assetsQuery = assetsQuery.ilike('product_line', `%${productLineFilter}%`);
     }
 
-    const { data: assetsData, error } = await assetsQuery.order('created_at', { ascending: false });
+    const { data: assetsData, error, count } = await assetsQuery
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) throw error;
 
     if (!assetsData || assetsData.length === 0) {
-      return NextResponse.json({ assets: [] });
+      return NextResponse.json({ 
+        assets: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        }
+      });
     }
 
     async function fetchLatestVersion(assetId: string) {
@@ -278,7 +294,18 @@ export async function GET(request: NextRequest) {
       } as any;
     });
 
-    return NextResponse.json({ assets });
+    const totalPages = count ? Math.ceil(count / limit) : 1;
+    return NextResponse.json({ 
+      assets,
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      }
+    });
   } catch (err: any) {
     if (err instanceof NextResponse) return err;
     console.error('Client assets fetch failed', err);
