@@ -28,14 +28,6 @@ export async function POST(request: NextRequest) {
     const supabaseAdmin = createSupabaseAdminClient();
     const body = await request.json();
 
-    console.log('Init route called with:', {
-      title: body.title,
-      assetType: body.assetType,
-      fileName: body.fileName,
-      fileType: body.fileType,
-      fileSize: body.fileSize,
-    });
-
     if (!body.title || !body.assetType || !body.fileName || !body.fileType) {
       console.error('Missing required fields:', {
         title: !!body.title,
@@ -139,7 +131,6 @@ export async function POST(request: NextRequest) {
     // Generate storage path
     const storagePath = `${assetId}/${Date.now()}-${body.fileName}`;
 
-    console.log('Init route successful:', { assetId, storagePath });
     return NextResponse.json({ assetId, storagePath }, { status: 200 });
   } catch (err: any) {
     if (err instanceof NextResponse) return err;

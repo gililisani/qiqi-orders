@@ -37,20 +37,10 @@ export async function POST(
     const resolvedParams = params instanceof Promise ? await params : params;
     const assetId = resolvedParams.id;
     
-    console.log('Complete route called for asset:', assetId);
-    
     const adminUserId = await getAdminUser(request);
 
     const supabaseAdmin = createSupabaseAdminClient();
     const body = await request.json();
-
-    console.log('Complete route body:', {
-      storagePath: body.storagePath,
-      fileType: body.fileType,
-      fileName: body.fileName,
-      fileSize: body.fileSize,
-      hasThumbnail: !!body.thumbnailData,
-    });
 
     if (!body.storagePath) {
       console.error('Missing storagePath in complete request');
@@ -69,16 +59,15 @@ export async function POST(
         });
 
       if (fileInfoError) {
-        console.warn('Failed to get file info from storage (using provided size):', fileInfoError);
+        // Use provided fileSize if storage lookup fails
       } else if (fileInfo && fileInfo.length > 0) {
         const file = fileInfo.find((f) => f.name === fileName);
         if (file?.metadata?.size) {
           fileSize = file.metadata.size;
-          console.log('File size from storage:', fileSize);
         }
       }
     } catch (storageListError) {
-      console.warn('Error listing storage files (using provided size):', storageListError);
+      // Use provided fileSize if storage lookup fails
     }
 
     // Get latest version number
@@ -97,13 +86,6 @@ export async function POST(
     
     const nextVersionNumber = lastVersion ? Number(lastVersion.version_number) + 1 : 1;
     const versionId = randomUUID();
-    
-    console.log('Creating version:', {
-      assetId,
-      versionId,
-      versionNumber: nextVersionNumber,
-      storagePath: body.storagePath,
-    });
 
     // Create version record
     const versionData = {
@@ -122,20 +104,15 @@ export async function POST(
       created_by: adminUserId,
     };
     
-    console.log('Inserting version record:', versionData);
-    
     const { error: insertVersionError } = await supabaseAdmin.from('dam_asset_versions').insert([versionData]);
 
     if (insertVersionError) {
       console.error('Error inserting version:', insertVersionError);
       throw insertVersionError;
     }
-    
-    console.log('Version record created successfully');
 
     // Handle thumbnail if provided (thumbnail already uploaded to storage, we just need to link it)
     if (body.thumbnailPath && versionId) {
-      console.log('Linking thumbnail to version:', body.thumbnailPath);
       try {
         // Get thumbnail file size from storage
         const { data: thumbFile, error: thumbFileError } = await supabaseAdmin.storage
@@ -177,15 +154,11 @@ export async function POST(
         if (renditionError) {
           console.error('Failed to create thumbnail rendition:', renditionError);
           // Don't fail the upload if thumbnail creation fails
-        } else {
-          console.log('Thumbnail rendition created successfully');
         }
       } catch (thumbError: any) {
         console.error('Error linking thumbnail:', thumbError);
         // Don't fail the upload if thumbnail linking fails
       }
-    } else {
-      console.log('No thumbnail path provided');
     }
 
     return NextResponse.json({ assetId, versionId }, { status: 200 });

@@ -232,7 +232,6 @@ async function triggerDownload(
       }
     } catch (fetchError) {
       // If fetch fails (CORS issue), fall back to direct link
-      console.log('Direct fetch failed, using fallback method');
     }
     
     // Fallback: create temporary anchor and click it
@@ -591,8 +590,6 @@ export default function AdminDigitalAssetManagerPage() {
     }
 
     try {
-      console.log('Generating PDF thumbnail for:', file.name);
-      
       // Dynamically import pdfjs-dist
       const pdfjsLib = await import('pdfjs-dist');
       
@@ -601,26 +598,19 @@ export default function AdminDigitalAssetManagerPage() {
       const pdfjsVersion = pdfjsLib.version || '5.4.394';
       // For v5.x, the worker path is different
       pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.mjs`;
-      
-      console.log('PDF.js worker URL:', pdfjsLib.GlobalWorkerOptions.workerSrc);
 
       const arrayBuffer = await file.arrayBuffer();
-      console.log('PDF loaded, parsing document...');
       
       const pdf = await pdfjsLib.getDocument({ 
         data: arrayBuffer,
         useSystemFonts: true,
       }).promise;
       
-      console.log('PDF parsed, total pages:', pdf.numPages);
-      
       if (pdf.numPages === 0) {
-        console.warn('PDF has no pages');
         return null;
       }
       
       const page = await pdf.getPage(1); // Get first page
-      console.log('First page loaded');
 
       // Render to canvas with a reasonable scale for thumbnails
       const scale = 1.5; // Lower scale for smaller file size
@@ -635,8 +625,6 @@ export default function AdminDigitalAssetManagerPage() {
 
       canvas.height = viewport.height;
       canvas.width = viewport.width;
-      
-      console.log('Canvas created:', canvas.width, 'x', canvas.height);
 
       // Render the page - pdfjs-dist v5 requires canvas parameter
       await page.render({
@@ -644,8 +632,6 @@ export default function AdminDigitalAssetManagerPage() {
         canvasContext: context,
         viewport: viewport,
       }).promise;
-      
-      console.log('Page rendered to canvas');
 
       // Convert canvas to base64 PNG
       const dataUrl = canvas.toDataURL('image/png', 0.85); // 85% quality for smaller file size
@@ -656,8 +642,6 @@ export default function AdminDigitalAssetManagerPage() {
         return null;
       }
       
-      console.log('Thumbnail generated, size:', thumbnailData.length, 'bytes');
-      
       // Generate thumbnail path (will be stored in asset_renditions)
       const timestamp = Date.now();
       const thumbnailPath = `temp-thumb-${timestamp}.png`; // Will be updated with proper path during upload
@@ -665,11 +649,6 @@ export default function AdminDigitalAssetManagerPage() {
       return { thumbnailData, thumbnailPath };
     } catch (err) {
       console.error('Failed to generate PDF thumbnail:', err);
-      // Log more details about the error
-      if (err instanceof Error) {
-        console.error('Error message:', err.message);
-        console.error('Error stack:', err.stack);
-      }
       return null; // Don't fail upload if thumbnail generation fails
     }
   };
@@ -778,23 +757,17 @@ export default function AdminDigitalAssetManagerPage() {
       let thumbnailData: string | null = null;
       let thumbnailPath: string | null = null;
       if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
-        console.log('Detected PDF file, generating thumbnail...');
         try {
           const thumbnailResult = await generatePDFThumbnail(file);
           if (thumbnailResult) {
             thumbnailData = thumbnailResult.thumbnailData;
-            console.log('Thumbnail generated successfully, size:', thumbnailData.length);
             // Generate proper thumbnail path based on asset ID (will be set after asset creation)
             thumbnailPath = `thumb-placeholder.png`; // Will be updated with proper path
-          } else {
-            console.warn('Thumbnail generation returned null - continuing without thumbnail');
           }
         } catch (thumbError) {
           console.error('Thumbnail generation error (continuing without thumbnail):', thumbError);
           // Continue upload even if thumbnail generation fails
         }
-      } else {
-        console.log('Not a PDF file, skipping thumbnail generation. File type:', file.type, 'File name:', file.name);
       }
 
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -829,14 +802,6 @@ export default function AdminDigitalAssetManagerPage() {
         };
 
         const headers = buildAuthHeaders(accessToken);
-        console.log('Calling init route with payload:', {
-          title: payload.title,
-          assetType: payload.assetType,
-          fileName: payload.fileName,
-          fileType: payload.fileType,
-          fileSize: payload.fileSize,
-        });
-        
         const initResponse = await fetch('/api/dam/assets/init', {
           method: 'POST',
           headers: {
@@ -958,7 +923,6 @@ export default function AdminDigitalAssetManagerPage() {
         if (uploadError) {
           // Rollback: Delete the asset record if file upload fails
           try {
-            console.log('Rolling back: deleting asset record due to upload failure', assetId);
             await fetch(`/api/dam/assets/${assetId}`, {
               method: 'DELETE',
               headers: {
@@ -966,7 +930,6 @@ export default function AdminDigitalAssetManagerPage() {
               },
               credentials: 'same-origin',
             });
-            console.log('Asset record deleted (rollback successful)');
           } catch (rollbackError) {
             console.error('Failed to rollback asset record:', rollbackError);
           }
@@ -998,8 +961,6 @@ export default function AdminDigitalAssetManagerPage() {
             const thumbnailBytes = Uint8Array.from(atob(thumbnailData), (c) => c.charCodeAt(0));
             const thumbnailBlob = new Blob([thumbnailBytes], { type: 'image/png' });
             
-            console.log('Uploading thumbnail to storage:', finalThumbnailPath);
-            
             // Upload thumbnail directly to Supabase Storage
             const { error: thumbUploadError } = await supabase.storage
               .from('dam-assets')
@@ -1014,7 +975,6 @@ export default function AdminDigitalAssetManagerPage() {
               // Continue without thumbnail - don't fail the upload
             } else {
               uploadedThumbnailPath = finalThumbnailPath;
-              console.log('Thumbnail uploaded successfully:', uploadedThumbnailPath);
             }
           } catch (thumbError) {
             console.error('Error uploading thumbnail:', thumbError);
@@ -1023,11 +983,6 @@ export default function AdminDigitalAssetManagerPage() {
         }
         
         // Step 5: Notify API route that upload is complete (send only thumbnail path, not data)
-        console.log('Completing upload:', {
-          storagePath,
-          thumbnailPath: uploadedThumbnailPath,
-        });
-        
         const completeResponse = await fetch(`/api/dam/assets/${assetId}/complete`, {
           method: 'POST',
           headers: {
@@ -1054,7 +1009,6 @@ export default function AdminDigitalAssetManagerPage() {
           
           // Rollback: Delete the asset record if complete fails
           try {
-            console.log('Rolling back: deleting asset record', assetId);
             await fetch(`/api/dam/assets/${assetId}`, {
               method: 'DELETE',
               headers: {
@@ -1062,7 +1016,6 @@ export default function AdminDigitalAssetManagerPage() {
               },
               credentials: 'same-origin',
             });
-            console.log('Asset record deleted (rollback successful)');
           } catch (rollbackError) {
             console.error('Failed to rollback asset record:', rollbackError);
           }
