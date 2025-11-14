@@ -288,6 +288,10 @@ export default function AdminDigitalAssetManagerPage() {
   const [regionFilter, setRegionFilter] = useState<string>('');
   const [tagFilter, setTagFilter] = useState<string>('');
   const [productLineFilter, setProductLineFilter] = useState<string>('');
+  const [dateFromFilter, setDateFromFilter] = useState<string>('');
+  const [dateToFilter, setDateToFilter] = useState<string>('');
+  const [fileSizeMinFilter, setFileSizeMinFilter] = useState<string>('');
+  const [fileSizeMaxFilter, setFileSizeMaxFilter] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pagination, setPagination] = useState<{
     page: number;
@@ -302,6 +306,18 @@ export default function AdminDigitalAssetManagerPage() {
   const [productLines, setProductLines] = useState<string[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
   const [isEditingAsset, setIsEditingAsset] = useState(false);
+  const [assetVersions, setAssetVersions] = useState<Array<{
+    id: string;
+    version_number: number;
+    storage_path: string;
+    thumbnail_path?: string | null;
+    mime_type?: string | null;
+    file_size?: number | null;
+    created_at: string;
+    downloadPath: string;
+    previewPath: string;
+  }>>([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
   const [editingDownloadUrls, setEditingDownloadUrls] = useState({
     vimeo_download_1080p: '',
     vimeo_download_720p: '',
@@ -423,6 +439,18 @@ export default function AdminDigitalAssetManagerPage() {
       const headers = buildAuthHeaders(token);
       const params = new URLSearchParams();
       if (search) params.set('q', search);
+      if (dateFromFilter) params.set('dateFrom', dateFromFilter);
+      if (dateToFilter) params.set('dateTo', dateToFilter);
+      if (fileSizeMinFilter) {
+        // Convert MB to bytes
+        const bytes = parseFloat(fileSizeMinFilter) * 1024 * 1024;
+        params.set('fileSizeMin', Math.floor(bytes).toString());
+      }
+      if (fileSizeMaxFilter) {
+        // Convert MB to bytes
+        const bytes = parseFloat(fileSizeMaxFilter) * 1024 * 1024;
+        params.set('fileSizeMax', Math.floor(bytes).toString());
+      }
       params.set('page', page.toString());
       params.set('limit', '50');
       
@@ -562,7 +590,7 @@ export default function AdminDigitalAssetManagerPage() {
       setCurrentPage(1);
     }, 300); // Debounce search by 300ms
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, accessToken]);
+  }, [searchTerm, dateFromFilter, dateToFilter, fileSizeMinFilter, fileSizeMaxFilter, accessToken]);
 
   // Auto-refresh removed - no background processing
 
@@ -1192,6 +1220,30 @@ export default function AdminDigitalAssetManagerPage() {
     [accessToken]
   );
 
+  const fetchAssetVersions = async (assetId: string) => {
+    if (!accessToken) return;
+    
+    try {
+      setLoadingVersions(true);
+      const headers = buildAuthHeaders(accessToken);
+      const response = await fetch(`/api/dam/assets/${assetId}/versions`, {
+        headers: Object.keys(headers).length ? headers : undefined,
+        credentials: 'same-origin',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load versions');
+      }
+
+      const data = await response.json() as { versions?: any[] };
+      setAssetVersions(data.versions || []);
+    } catch (err: any) {
+      console.error('Failed to fetch versions', err);
+    } finally {
+      setLoadingVersions(false);
+    }
+  };
+
   return (
     <div className="mt-8 mb-4 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1651,6 +1703,71 @@ export default function AdminDigitalAssetManagerPage() {
               </select>
             </div>
           </div>
+          
+          {/* Advanced Search */}
+          <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <h4 className="mb-3 text-sm font-semibold text-gray-900">Advanced Search</h4>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Date From</label>
+                <input
+                  type="date"
+                  value={dateFromFilter}
+                  onChange={(event) => setDateFromFilter(event.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Date To</label>
+                <input
+                  type="date"
+                  value={dateToFilter}
+                  onChange={(event) => setDateToFilter(event.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Min File Size (MB)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={fileSizeMinFilter}
+                  onChange={(event) => setFileSizeMinFilter(event.target.value)}
+                  placeholder="0"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Max File Size (MB)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={fileSizeMaxFilter}
+                  onChange={(event) => setFileSizeMaxFilter(event.target.value)}
+                  placeholder="∞"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                />
+              </div>
+            </div>
+            {(dateFromFilter || dateToFilter || fileSizeMinFilter || fileSizeMaxFilter) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDateFromFilter('');
+                  setDateToFilter('');
+                  setFileSizeMinFilter('');
+                  setFileSizeMaxFilter('');
+                  setCurrentPage(1);
+                  fetchAssets(accessToken ?? '', searchTerm || undefined, 1);
+                }}
+                className="mt-3 text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                Clear advanced filters
+              </button>
+            )}
+          </div>
 
           {loadingAssets ? (
             <div className="flex items-center justify-center py-12 text-gray-600">
@@ -1708,7 +1825,12 @@ export default function AdminDigitalAssetManagerPage() {
                   <div
                     key={asset.id}
                     className="flex gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-gray-300 transition relative"
-                    onClick={() => setSelectedAsset(asset)}
+                    onClick={() => {
+                    setSelectedAsset(asset);
+                    if (accessToken) {
+                      fetchAssetVersions(asset.id);
+                    }
+                  }}
                   >
                     {/* Selection Checkbox */}
                     <button
@@ -1913,6 +2035,7 @@ export default function AdminDigitalAssetManagerPage() {
               onClick={() => {
                 setSelectedAsset(null);
                 setIsEditingAsset(false);
+                setAssetVersions([]);
               }}
               className="absolute top-4 right-4 z-10 rounded-full bg-white/90 p-2 text-gray-600 hover:bg-white hover:text-gray-900 transition"
             >
@@ -2210,6 +2333,78 @@ export default function AdminDigitalAssetManagerPage() {
                   <div className="mt-4">
                     <dt className="font-medium text-gray-700 mb-2">Regions</dt>
                     <dd className="text-gray-600">{selectedAsset.regions.map((r) => r.label).join(', ')}</dd>
+                  </div>
+                )}
+              </div>
+
+              {/* Versions Section */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Versions</h3>
+                {loadingVersions ? (
+                  <div className="text-sm text-gray-500">Loading versions...</div>
+                ) : assetVersions.length === 0 ? (
+                  <div className="text-sm text-gray-500">No versions found</div>
+                ) : (
+                  <div className="space-y-2">
+                    {assetVersions.map((version) => (
+                      <div
+                        key={version.id}
+                        className={`flex items-center justify-between rounded-lg border p-3 ${
+                          version.id === selectedAsset.current_version?.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium text-gray-900">v{version.version_number}</span>
+                          <span className="text-sm text-gray-600">
+                            {new Date(version.created_at).toLocaleDateString()}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {formatBytes(version.file_size) || '—'} • {version.mime_type || 'Unknown'}
+                          </span>
+                          {version.id === selectedAsset.current_version?.id && (
+                            <span className="rounded-full bg-blue-600 px-2 py-0.5 text-xs font-medium text-white">
+                              Current
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {version.previewPath && (
+                            <a
+                              href={ensureTokenUrl(version.previewPath)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-sm text-blue-600 hover:text-blue-800"
+                            >
+                              Preview
+                            </a>
+                          )}
+                          {version.downloadPath && (
+                            <button
+                              type="button"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (!accessToken) return;
+                                const downloadUrl = ensureTokenUrl(version.downloadPath);
+                                const filename = `${selectedAsset.title || 'asset'}-v${version.version_number}.${version.mime_type?.split('/')[1] || 'bin'}`;
+                                await triggerDownload(
+                                  downloadUrl,
+                                  filename,
+                                  selectedAsset.id,
+                                  'api',
+                                  accessToken
+                                );
+                              }}
+                              className="text-sm text-blue-600 hover:text-blue-800"
+                            >
+                              Download
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

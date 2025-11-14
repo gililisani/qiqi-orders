@@ -55,6 +55,10 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = (page - 1) * limit;
+    const dateFrom = searchParams.get('dateFrom') || '';
+    const dateTo = searchParams.get('dateTo') || '';
+    const fileSizeMin = searchParams.get('fileSizeMin') ? parseInt(searchParams.get('fileSizeMin')!) : null;
+    const fileSizeMax = searchParams.get('fileSizeMax') ? parseInt(searchParams.get('fileSizeMax')!) : null;
 
     // Build query with optional full-text search
     let assetsQuery = supabaseAdmin
@@ -87,6 +91,17 @@ export async function GET(request: NextRequest) {
       assetsQuery = assetsQuery.or(
         `title.ilike.${searchTerm},description.ilike.${searchTerm},product_line.ilike.${searchTerm},sku.ilike.${searchTerm}`
       );
+    }
+
+    // Apply date range filters
+    if (dateFrom) {
+      assetsQuery = assetsQuery.gte('created_at', dateFrom);
+    }
+    if (dateTo) {
+      // Add one day to include the entire end date
+      const endDate = new Date(dateTo);
+      endDate.setDate(endDate.getDate() + 1);
+      assetsQuery = assetsQuery.lt('created_at', endDate.toISOString());
     }
 
     const { data: assetsData, error, count } = await assetsQuery
@@ -145,6 +160,18 @@ export async function GET(request: NextRequest) {
       // Combine metadata matches and text matches
       filteredAssets = assetsData.filter((asset) => {
         return metadataMatchedIds.has(asset.id) || textMatchedIds.has(asset.id);
+      });
+    }
+
+    // Apply file size filters (filter in memory after fetching versions)
+    if (fileSizeMin !== null || fileSizeMax !== null) {
+      filteredAssets = filteredAssets.filter((asset) => {
+        const version = versionsByAsset.get(asset.id);
+        if (!version || version.file_size === null) return false;
+        const fileSize = version.file_size;
+        if (fileSizeMin !== null && fileSize < fileSizeMin) return false;
+        if (fileSizeMax !== null && fileSize > fileSizeMax) return false;
+        return true;
       });
     }
 
