@@ -29,6 +29,15 @@ function buildDownloadPath(assetId: string, versionId?: string | null, rendition
   return base;
 }
 
+function buildPreviewPath(assetId: string, versionId?: string | null, rendition?: 'thumbnail' | 'original') {
+  if (!versionId) return null;
+  const base = `/api/assets/${assetId}/preview?version=${versionId}`;
+  if (rendition === 'thumbnail') {
+    return `${base}&rendition=thumbnail`;
+  }
+  return base;
+}
+
 type LocaleOption = {
   code: string;
   label: string;
@@ -265,7 +274,7 @@ export async function GET(request: NextRequest) {
             width: currentVersionRaw.width,
             height: currentVersionRaw.height,
             downloadPath: buildDownloadPath(record.id, currentVersionRaw.id, 'original'),
-            previewPath: buildDownloadPath(
+            previewPath: buildPreviewPath(
               record.id,
               currentVersionRaw.id,
               currentVersionRaw.thumbnail_path ? 'thumbnail' : 'original'

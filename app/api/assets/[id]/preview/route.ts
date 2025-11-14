@@ -15,7 +15,7 @@ function createSupabaseAdminClient() {
   });
 }
 
-async function ensureAdmin(request: NextRequest) {
+async function ensureAuthenticated(request: NextRequest) {
   const tokenFromHeader = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? null;
   const tokenFromQuery = request.nextUrl.searchParams.get('token');
   const accessToken = tokenFromHeader || tokenFromQuery;
@@ -41,15 +41,18 @@ async function ensureAdmin(request: NextRequest) {
     throw NextResponse.json({ error: 'Not authorized' }, { status: 401 });
   }
 
+  // Check if user is admin or client
   const adminClient = createSupabaseAdminClient();
-  const { data: adminRow, error: adminError } = await adminClient
-    .from('admins')
-    .select('id')
-    .eq('id', user.id)
-    .eq('enabled', true)
-    .maybeSingle();
+  const [adminResult, clientResult] = await Promise.all([
+    adminClient.from('admins').select('id').eq('id', user.id).eq('enabled', true).maybeSingle(),
+    adminClient.from('clients').select('id').eq('id', user.id).eq('enabled', true).maybeSingle(),
+  ]);
 
-  if (adminError || !adminRow) {
+  if (adminResult.error && clientResult.error) {
+    throw NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  }
+
+  if (!adminResult.data && !clientResult.data) {
     throw NextResponse.json({ error: 'Not authorized' }, { status: 403 });
   }
 
@@ -58,7 +61,7 @@ async function ensureAdmin(request: NextRequest) {
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const supabaseAdmin = await ensureAdmin(request);
+    const supabaseAdmin = await ensureAuthenticated(request);
 
     const versionId = request.nextUrl.searchParams.get('version');
     const rendition = request.nextUrl.searchParams.get('rendition');
