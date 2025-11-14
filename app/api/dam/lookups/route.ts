@@ -25,21 +25,18 @@ export async function GET(request: NextRequest) {
 
     const supabaseAdmin = createSupabaseAdminClient();
 
-    const [tagsRes, audiencesRes, localesRes, regionsRes] = await Promise.all([
+    const [tagsRes, localesRes, regionsRes] = await Promise.all([
       supabaseAdmin.from('dam_tags').select('*').order('label', { ascending: true }),
-      supabaseAdmin.from('dam_audiences').select('*').order('label', { ascending: true }),
       supabaseAdmin.from('dam_locales').select('*').order('label', { ascending: true }),
       supabaseAdmin.from('dam_regions').select('*').order('label', { ascending: true }),
     ]);
 
     if (tagsRes.error) throw tagsRes.error;
-    if (audiencesRes.error) throw audiencesRes.error;
     if (localesRes.error) throw localesRes.error;
     if (regionsRes.error) throw regionsRes.error;
 
     return NextResponse.json({
       tags: (tagsRes.data ?? []).map((tag) => ({ id: tag.id, slug: tag.slug, label: tag.label })),
-      audiences: (audiencesRes.data ?? []).map((aud) => ({ id: aud.id, code: aud.code, label: aud.label })),
       locales: (localesRes.data ?? []).map((locale) => ({
         code: locale.code,
         label: locale.label,
@@ -92,6 +89,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         slug,
         tags: (tagsData ?? []).map((tag) => ({ id: tag.id, slug: tag.slug, label: tag.label })),
+      });
+    }
+
+    if (body?.action === 'add-locale') {
+      const code: string = body.code;
+      const label: string = body.label;
+      if (!code || !label || typeof code !== 'string' || typeof label !== 'string') {
+        return NextResponse.json({ error: 'Invalid locale code or label' }, { status: 400 });
+      }
+
+      const { error: insertError } = await supabaseAdmin
+        .from('dam_locales')
+        .insert({ code: code.trim().toLowerCase(), label: label.trim(), is_default: false });
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      const { data: localesData, error: localesError } = await supabaseAdmin
+        .from('dam_locales')
+        .select('*')
+        .order('label', { ascending: true });
+
+      if (localesError) throw localesError;
+
+      return NextResponse.json({
+        locales: (localesData ?? []).map((locale) => ({
+          code: locale.code,
+          label: locale.label,
+          is_default: locale.is_default,
+        })),
       });
     }
 

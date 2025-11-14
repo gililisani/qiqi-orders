@@ -32,12 +32,6 @@ interface TagOption {
   label: string;
 }
 
-interface AudienceOption {
-  id: string;
-  code: string;
-  label: string;
-}
-
 interface LocaleOption {
   code: string;
   label: string;
@@ -80,7 +74,6 @@ interface AssetRecord {
   created_at: string;
   current_version?: AssetVersion | null;
   tags: string[];
-  audiences: string[];
   locales: LocaleOption[];
   regions: RegionOption[];
 }
@@ -92,7 +85,6 @@ interface UploadFormState {
   productLine: string;
   sku: string;
   selectedTagSlugs: string[];
-  selectedAudienceCodes: string[];
   selectedLocaleCodes: string[];
   primaryLocale: string | null;
   selectedRegionCodes: string[];
@@ -111,7 +103,6 @@ const defaultFormState: UploadFormState = {
   productLine: '',
   sku: '',
   selectedTagSlugs: [],
-  selectedAudienceCodes: [],
   selectedLocaleCodes: [],
   primaryLocale: null,
   selectedRegionCodes: [],
@@ -259,7 +250,6 @@ export default function AdminDigitalAssetManagerPage() {
   const [error, setError] = useState<string>('');
 
   const [tags, setTags] = useState<TagOption[]>([]);
-  const [audiences, setAudiences] = useState<AudienceOption[]>([]);
   const [locales, setLocales] = useState<LocaleOption[]>([]);
   const [regions, setRegions] = useState<RegionOption[]>([]);
 
@@ -292,6 +282,7 @@ export default function AdminDigitalAssetManagerPage() {
   const [dateToFilter, setDateToFilter] = useState<string>('');
   const [fileSizeMinFilter, setFileSizeMinFilter] = useState<string>('');
   const [fileSizeMaxFilter, setFileSizeMaxFilter] = useState<string>('');
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pagination, setPagination] = useState<{
     page: number;
@@ -413,7 +404,6 @@ export default function AdminDigitalAssetManagerPage() {
       const payload = await response.json();
       const localeOptions: LocaleOption[] = payload.locales || [];
       setTags(payload.tags || []);
-      setAudiences(payload.audiences || []);
       setLocales(localeOptions);
       setRegions(payload.regions || []);
 
@@ -834,7 +824,7 @@ export default function AdminDigitalAssetManagerPage() {
           vimeoDownload480p: formState.vimeoDownload480p.trim() || undefined,
           vimeoDownload360p: formState.vimeoDownload360p.trim() || undefined,
           tags: formState.selectedTagSlugs,
-          audiences: formState.selectedAudienceCodes,
+          audiences: [],
           locales: formState.selectedLocaleCodes.map((code) => ({
             code,
             primary: code === formState.primaryLocale,
@@ -905,7 +895,7 @@ export default function AdminDigitalAssetManagerPage() {
           productLine: formState.productLine.trim() || undefined,
           sku: formState.sku.trim() || undefined,
           tags: formState.selectedTagSlugs,
-          audiences: formState.selectedAudienceCodes,
+          audiences: [],
           locales: formState.selectedLocaleCodes.map((code) => ({
             code,
             primary: code === formState.primaryLocale,
@@ -1161,7 +1151,7 @@ export default function AdminDigitalAssetManagerPage() {
           productLine: formState.productLine.trim() || undefined,
           sku: formState.sku.trim() || undefined,
           tags: formState.selectedTagSlugs,
-          audiences: formState.selectedAudienceCodes,
+          audiences: [],
           locales: formState.selectedLocaleCodes.map((code) => ({
             code,
             primary: code === formState.primaryLocale,
@@ -1439,33 +1429,51 @@ export default function AdminDigitalAssetManagerPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Audiences</label>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                {audiences.map((audience) => {
-                  const selected = formState.selectedAudienceCodes.includes(audience.code);
-                  return (
-                    <label key={audience.code} className="flex items-center gap-2 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() =>
-                          setFormState((prev) => ({
-                            ...prev,
-                            selectedAudienceCodes: toggleSelection(prev.selectedAudienceCodes, audience.code),
-                          }))
-                        }
-                        className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
-                      />
-                      <span>{audience.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Locales *</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">Locales *</label>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const code = prompt('Enter locale code (e.g., de-DE for German):');
+                    if (!code) return;
+                    const label = prompt('Enter locale label (e.g., German):');
+                    if (!label) return;
+                    
+                    try {
+                      const headers = buildAuthHeaders(accessToken);
+                      const response = await fetch('/api/dam/lookups', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          ...headers,
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({
+                          action: 'add-locale',
+                          code: code.trim(),
+                          label: label.trim(),
+                        }),
+                      });
+                      
+                      if (!response.ok) {
+                        const error = await response.json().catch(() => ({}));
+                        throw new Error(error.error || 'Failed to add locale');
+                      }
+                      
+                      const data = await response.json();
+                      setLocales(data.locales || []);
+                      alert('Locale added successfully!');
+                    } catch (err: any) {
+                      alert('Failed to add locale: ' + err.message);
+                    }
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  + Add Language
+                </button>
+              </div>
               <div className="mt-2 space-y-2">
                 {locales.map((locale) => {
                   const selected = formState.selectedLocaleCodes.includes(locale.code);
@@ -1498,7 +1506,10 @@ export default function AdminDigitalAssetManagerPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Regions (optional)</label>
+              <label className="block text-sm font-medium text-gray-700">
+                Regions (optional)
+                <span className="ml-2 text-xs font-normal text-gray-500">Filter assets by geographic region</span>
+              </label>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {regions.map((region) => {
                   const selected = formState.selectedRegionCodes.includes(region.code);
@@ -1704,68 +1715,86 @@ export default function AdminDigitalAssetManagerPage() {
             </div>
           </div>
           
-          {/* Advanced Search */}
-          <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <h4 className="mb-3 text-sm font-semibold text-gray-900">Advanced Search</h4>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Date From</label>
-                <input
-                  type="date"
-                  value={dateFromFilter}
-                  onChange={(event) => setDateFromFilter(event.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Date To</label>
-                <input
-                  type="date"
-                  value={dateToFilter}
-                  onChange={(event) => setDateToFilter(event.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Min File Size (MB)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={fileSizeMinFilter}
-                  onChange={(event) => setFileSizeMinFilter(event.target.value)}
-                  placeholder="0"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Max File Size (MB)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={fileSizeMaxFilter}
-                  onChange={(event) => setFileSizeMaxFilter(event.target.value)}
-                  placeholder="∞"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                />
-              </div>
-            </div>
-            {(dateFromFilter || dateToFilter || fileSizeMinFilter || fileSizeMaxFilter) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setDateFromFilter('');
-                  setDateToFilter('');
-                  setFileSizeMinFilter('');
-                  setFileSizeMaxFilter('');
-                  setCurrentPage(1);
-                  fetchAssets(accessToken ?? '', searchTerm || undefined, 1);
-                }}
-                className="mt-3 text-sm text-blue-600 hover:text-blue-800 underline"
+          {/* Advanced Search Accordion */}
+          <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50">
+            <button
+              type="button"
+              onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+              className="w-full flex items-center justify-between p-4 text-left"
+            >
+              <h4 className="text-sm font-semibold text-gray-900">Advanced Search</h4>
+              <svg
+                className={`h-5 w-5 text-gray-500 transition-transform ${showAdvancedSearch ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                Clear advanced filters
-              </button>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showAdvancedSearch && (
+              <div className="px-4 pb-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Date From</label>
+                    <input
+                      type="date"
+                      value={dateFromFilter}
+                      onChange={(event) => setDateFromFilter(event.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Date To</label>
+                    <input
+                      type="date"
+                      value={dateToFilter}
+                      onChange={(event) => setDateToFilter(event.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Min File Size (MB)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={fileSizeMinFilter}
+                      onChange={(event) => setFileSizeMinFilter(event.target.value)}
+                      placeholder="0"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Max File Size (MB)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={fileSizeMaxFilter}
+                      onChange={(event) => setFileSizeMaxFilter(event.target.value)}
+                      placeholder="∞"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    />
+                  </div>
+                </div>
+                {(dateFromFilter || dateToFilter || fileSizeMinFilter || fileSizeMaxFilter) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDateFromFilter('');
+                      setDateToFilter('');
+                      setFileSizeMinFilter('');
+                      setFileSizeMaxFilter('');
+                      setCurrentPage(1);
+                      fetchAssets(accessToken ?? '', searchTerm || undefined, 1);
+                    }}
+                    className="mt-3 text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Clear advanced filters
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
@@ -1926,11 +1955,6 @@ export default function AdminDigitalAssetManagerPage() {
                           <span className="font-medium text-gray-700">Tags:</span> {asset.tags.join(', ')}
                         </div>
                       )}
-                      {asset.audiences.length > 0 && (
-                        <div>
-                          <span className="font-medium text-gray-700">Audiences:</span> {asset.audiences.join(', ')}
-                        </div>
-                      )}
                       {asset.locales.length > 0 && (
                         <div>
                           <span className="font-medium text-gray-700">Locales:</span>{' '}
@@ -1974,7 +1998,7 @@ export default function AdminDigitalAssetManagerPage() {
           )}
           
           {/* Pagination Controls */}
-          {pagination && pagination.totalPages > 1 && (
+          {pagination && pagination.total > 0 && (
             <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
               <div className="text-sm text-gray-700">
                 Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{' '}
@@ -2315,12 +2339,6 @@ export default function AdminDigitalAssetManagerPage() {
                   </div>
                 )}
 
-                {selectedAsset.audiences.length > 0 && (
-                  <div className="mt-4">
-                    <dt className="font-medium text-gray-700 mb-2">Audiences</dt>
-                    <dd className="text-gray-600">{selectedAsset.audiences.join(', ')}</dd>
-                  </div>
-                )}
 
                 {selectedAsset.locales.length > 0 && (
                   <div className="mt-4">
@@ -2375,7 +2393,10 @@ export default function AdminDigitalAssetManagerPage() {
                               href={ensureTokenUrl(version.previewPath)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Just open in new tab, don't trigger download
+                              }}
                               className="text-sm text-blue-600 hover:text-blue-800"
                             >
                               Preview

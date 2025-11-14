@@ -187,17 +187,8 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {}) ?? {};
 
-    const { data: audiencesData, error: audiencesError } = await supabaseAdmin
-      .from('dam_asset_audience_map')
-      .select('asset_id, audience:dam_audiences(label)');
-    if (audiencesError) throw audiencesError;
-
-    const audiencesByAsset = audiencesData?.reduce((acc: Record<string, string[]>, row) => {
-      const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
-      const audienceEntry = Array.isArray(row.audience) ? row.audience[0] : row.audience;
-      if (audienceEntry?.label) arr.push(audienceEntry.label);
-      return acc;
-    }, {}) ?? {};
+    // Audience removed - no longer used
+    const audiencesByAsset: Record<string, string[]> = {};
 
     const { data: localesData, error: localesError } = await supabaseAdmin
       .from('dam_asset_locale_map')
@@ -270,7 +261,6 @@ export async function GET(request: NextRequest) {
         created_at: record.created_at,
         current_version: currentVersion,
         tags: tagsByAsset[record.id] ?? [],
-        audiences: audiencesByAsset[record.id] ?? [],
         locales: localesByAsset[record.id] ?? [],
         regions: regionsByAsset[record.id] ?? [],
       } as any;
@@ -344,7 +334,6 @@ export async function POST(request: NextRequest) {
     const assetId: string = payload.assetId || randomUUID();
 
     const tagsInput: string[] = Array.isArray(payload.tags) ? payload.tags : [];
-    const audiencesInput: string[] = Array.isArray(payload.audiences) ? payload.audiences : [];
     const localesInput: Array<{ code: string; primary?: boolean }> = Array.isArray(payload.locales)
       ? payload.locales
       : [];
@@ -439,21 +428,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await supabaseAdmin.from('dam_asset_audience_map').delete().eq('asset_id', assetId);
-    if (audiencesInput.length > 0) {
-      const { data: audienceRows, error: audienceError } = await supabaseAdmin
-        .from('dam_audiences')
-        .select('id, code')
-        .in('code', audiencesInput);
-      if (audienceError) throw audienceError;
-      const audienceMaps = (audienceRows ?? []).map((row) => ({ asset_id: assetId, audience_id: row.id }));
-      if (audienceMaps.length > 0) {
-        const { error: audienceMapError } = await supabaseAdmin
-          .from('dam_asset_audience_map')
-          .insert(audienceMaps);
-        if (audienceMapError) throw audienceMapError;
-      }
-    }
+    // Audience removed - no longer used
 
     await supabaseAdmin.from('dam_asset_locale_map').delete().eq('asset_id', assetId);
     if (localesInput.length > 0) {
