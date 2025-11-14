@@ -447,7 +447,7 @@ export default function ClientAssetsPage() {
                     />
                   ) : accessToken && asset.current_version?.previewPath ? (
                     <img
-                      src={ensureTokenUrl(asset.current_version.previewPath)}
+                      src={ensureTokenUrl(asset.current_version.previewPath, accessToken)}
                       alt={asset.title}
                       className="h-full w-full object-cover"
                     />
@@ -498,7 +498,7 @@ export default function ClientAssetsPage() {
                     />
                   ) : accessToken && asset.current_version?.previewPath ? (
                     <img
-                      src={ensureTokenUrl(asset.current_version.previewPath)}
+                      src={ensureTokenUrl(asset.current_version.previewPath, accessToken)}
                       alt={asset.title}
                       className="h-full w-full object-cover"
                     />
