@@ -125,6 +125,9 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     await supabaseAdmin.from('dam_asset_locale_map').delete().eq('asset_id', assetId);
     await supabaseAdmin.from('dam_asset_region_map').delete().eq('asset_id', assetId);
 
+    // Delete renditions (includes thumbnails)
+    await supabaseAdmin.from('dam_asset_renditions').delete().eq('asset_id', assetId);
+
     // Delete versions
     await supabaseAdmin.from('dam_asset_versions').delete().eq('asset_id', assetId);
 
