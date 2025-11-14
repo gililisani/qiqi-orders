@@ -17,7 +17,11 @@ function createSupabaseAdminClient() {
 export async function GET(request: NextRequest) {
   try {
     const auth = createAuth();
-    await auth.requireRole(request, 'admin');
+    const user = await auth.getUserFromRequest(request);
+    // Allow both admins and clients to access lookups
+    if (!user || (!user.roles.includes('admin') && !user.roles.includes('client'))) {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    }
 
     const supabaseAdmin = createSupabaseAdminClient();
 

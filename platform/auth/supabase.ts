@@ -42,18 +42,30 @@ function createSupabaseServiceClient() {
 
 async function resolveRoles(userId: string): Promise<{ roles: string[]; locale: string | null; region: string | null }> {
   const supabase = createSupabaseServiceClient();
-  const { data, error } = await supabase
+  
+  // Check if user is an admin
+  const { data: adminData, error: adminError } = await supabase
     .from('admins')
     .select('enabled')
     .eq('id', userId)
     .maybeSingle();
 
-  if (error) {
-    throw error;
+  // Check if user is a client
+  const { data: clientData, error: clientError } = await supabase
+    .from('clients')
+    .select('enabled')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (adminError && clientError) {
+    // If both queries error, throw the admin error (more likely to be a real error)
+    throw adminError;
   }
 
   const roles: string[] = [];
-  if (data?.enabled) roles.push('admin');
+  if (adminData?.enabled) roles.push('admin');
+  if (clientData?.enabled) roles.push('client');
+  
   return {
     roles,
     locale: null,

@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   try {
     // Require client authentication
     const auth = createAuth();
-    const clientUser = await auth.requireRole(request, 'Client');
+    const clientUser = await auth.requireRole(request, 'client');
 
     const supabaseAdmin = createSupabaseAdminClient();
     
