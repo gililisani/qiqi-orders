@@ -200,6 +200,57 @@ async function logDownload(
   }
 }
 
+async function triggerDownload(
+  url: string,
+  filename: string,
+  assetId: string,
+  downloadMethod: string,
+  accessToken: string | null
+): Promise<void> {
+  try {
+    // Log the download first
+    await logDownload(assetId, url, downloadMethod, accessToken);
+    
+    // Try to fetch and download as blob (works for direct file URLs)
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename || 'download';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+        return;
+      }
+    } catch (fetchError) {
+      // If fetch fails (CORS issue), fall back to direct link
+      console.log('Direct fetch failed, using fallback method');
+    }
+    
+    // Fallback: create temporary anchor and click it
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || 'download';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (err) {
+    console.error('Download failed:', err);
+    // Last resort: open in new tab
+    window.open(url, '_blank');
+  }
+}
+
 export default function AdminDigitalAssetManagerPage() {
   const { session, supabase } = useSupabase();
   const [accessToken, setAccessToken] = useState<string | null>(session?.access_token ?? null);
@@ -1700,26 +1751,26 @@ export default function AdminDigitalAssetManagerPage() {
                         ]
                           .filter((item) => item.url && typeof item.url === 'string' && item.url.trim() !== '')
                           .map((item) => (
-                            <a
+                            <button
                               key={item.quality}
-                              href={item.url!}
-                              download
+                              type="button"
                               onClick={async (e) => {
                                 e.stopPropagation();
-                                if (accessToken) {
-                                  await logDownload(
-                                    selectedAsset.id,
-                                    item.url!,
-                                    `video-${item.quality}`,
-                                    accessToken
-                                  );
-                                }
+                                e.preventDefault();
+                                const filename = `${selectedAsset.title || 'video'}-${item.quality}.mp4`;
+                                await triggerDownload(
+                                  item.url!,
+                                  filename,
+                                  selectedAsset.id,
+                                  `video-${item.quality}`,
+                                  accessToken
+                                );
                               }}
                               className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition mr-2"
                             >
                               <ArrowDownTrayIcon className="h-4 w-4" />
                               Download {item.quality}
-                            </a>
+                            </button>
                           ))}
                         
                         {/* Show message if no download URLs configured */}
@@ -1735,16 +1786,17 @@ export default function AdminDigitalAssetManagerPage() {
                     )}
                   </div>
                 ) : selectedAsset.current_version?.downloadPath ? (
-                  <a
-                    href={ensureTokenUrl(selectedAsset.current_version.downloadPath)}
+                  <button
+                    type="button"
                     onClick={async (e) => {
-                      if (!accessToken) {
-                        e.preventDefault();
-                        return;
-                      }
-                      await logDownload(
+                      e.stopPropagation();
+                      if (!accessToken) return;
+                      const downloadUrl = ensureTokenUrl(selectedAsset.current_version!.downloadPath!);
+                      const filename = `${selectedAsset.title || 'asset'}.${selectedAsset.current_version!.mime_type?.split('/')[1] || 'bin'}`;
+                      await triggerDownload(
+                        downloadUrl,
+                        filename,
                         selectedAsset.id,
-                        selectedAsset.current_version!.downloadPath!,
                         'api',
                         accessToken
                       );
@@ -1753,7 +1805,7 @@ export default function AdminDigitalAssetManagerPage() {
                   >
                     <ArrowDownTrayIcon className="h-4 w-4" />
                     Download
-                  </a>
+                  </button>
                 ) : (
                   <p className="text-sm text-gray-500">No download available</p>
                 )}
