@@ -586,39 +586,76 @@ export default function AdminDigitalAssetManagerPage() {
 
   // Generate PDF thumbnail client-side
   const generatePDFThumbnail = async (file: File): Promise<{ thumbnailData: string; thumbnailPath: string } | null> => {
-    if (!file.type.includes('pdf')) {
+    if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
       return null;
     }
 
     try {
+      console.log('Generating PDF thumbnail for:', file.name);
+      
       // Dynamically import pdfjs-dist
       const pdfjsLib = await import('pdfjs-dist');
       
-      // Set worker source (use CDN for now - can be optimized later)
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      // Set worker source - use unpkg CDN which is more reliable
+      // Try to use the version from the package, fallback to latest stable
+      const pdfjsVersion = pdfjsLib.version || '3.11.174';
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.js`;
+      
+      console.log('PDF.js worker URL:', pdfjsLib.GlobalWorkerOptions.workerSrc);
 
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      console.log('PDF loaded, parsing document...');
+      
+      const pdf = await pdfjsLib.getDocument({ 
+        data: arrayBuffer,
+        useSystemFonts: true,
+      }).promise;
+      
+      console.log('PDF parsed, total pages:', pdf.numPages);
+      
+      if (pdf.numPages === 0) {
+        console.warn('PDF has no pages');
+        return null;
+      }
+      
       const page = await pdf.getPage(1); // Get first page
+      console.log('First page loaded');
 
-      // Render to canvas
-      const viewport = page.getViewport({ scale: 2.0 });
+      // Render to canvas with a reasonable scale for thumbnails
+      const scale = 1.5; // Lower scale for smaller file size
+      const viewport = page.getViewport({ scale });
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
-      if (!context) return null;
+      
+      if (!context) {
+        console.error('Failed to get canvas context');
+        return null;
+      }
 
       canvas.height = viewport.height;
       canvas.width = viewport.width;
+      
+      console.log('Canvas created:', canvas.width, 'x', canvas.height);
 
-      // Render the page - canvas is required, canvasContext is optional for backwards compatibility
+      // Render the page - pdfjs-dist v5 requires canvas parameter
       await page.render({
         canvas: canvas,
+        canvasContext: context,
         viewport: viewport,
-        canvasContext: context, // Optional, but included for clarity
       }).promise;
+      
+      console.log('Page rendered to canvas');
 
       // Convert canvas to base64 PNG
-      const thumbnailData = canvas.toDataURL('image/png').split(',')[1]; // Remove data:image/png;base64, prefix
+      const dataUrl = canvas.toDataURL('image/png', 0.85); // 85% quality for smaller file size
+      const thumbnailData = dataUrl.split(',')[1]; // Remove data:image/png;base64, prefix
+      
+      if (!thumbnailData || thumbnailData.length === 0) {
+        console.error('Failed to generate thumbnail data');
+        return null;
+      }
+      
+      console.log('Thumbnail generated, size:', thumbnailData.length, 'bytes');
       
       // Generate thumbnail path (will be stored in asset_renditions)
       const timestamp = Date.now();
@@ -627,6 +664,11 @@ export default function AdminDigitalAssetManagerPage() {
       return { thumbnailData, thumbnailPath };
     } catch (err) {
       console.error('Failed to generate PDF thumbnail:', err);
+      // Log more details about the error
+      if (err instanceof Error) {
+        console.error('Error message:', err.message);
+        console.error('Error stack:', err.stack);
+      }
       return null; // Don't fail upload if thumbnail generation fails
     }
   };
