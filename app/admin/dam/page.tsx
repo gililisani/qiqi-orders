@@ -774,19 +774,24 @@ export default function AdminDigitalAssetManagerPage() {
       // Handle file uploads (images, PDFs, documents)
       const file = formState.file!;
       
-      // Generate PDF thumbnail if needed
+      // Generate PDF thumbnail if needed (don't block upload if it fails)
       let thumbnailData: string | null = null;
       let thumbnailPath: string | null = null;
       if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
         console.log('Detected PDF file, generating thumbnail...');
-        const thumbnailResult = await generatePDFThumbnail(file);
-        if (thumbnailResult) {
-          thumbnailData = thumbnailResult.thumbnailData;
-          console.log('Thumbnail generated successfully, size:', thumbnailData.length);
-          // Generate proper thumbnail path based on asset ID (will be set after asset creation)
-          thumbnailPath = `thumb-placeholder.png`; // Will be updated with proper path
-        } else {
-          console.warn('Thumbnail generation returned null');
+        try {
+          const thumbnailResult = await generatePDFThumbnail(file);
+          if (thumbnailResult) {
+            thumbnailData = thumbnailResult.thumbnailData;
+            console.log('Thumbnail generated successfully, size:', thumbnailData.length);
+            // Generate proper thumbnail path based on asset ID (will be set after asset creation)
+            thumbnailPath = `thumb-placeholder.png`; // Will be updated with proper path
+          } else {
+            console.warn('Thumbnail generation returned null - continuing without thumbnail');
+          }
+        } catch (thumbError) {
+          console.error('Thumbnail generation error (continuing without thumbnail):', thumbError);
+          // Continue upload even if thumbnail generation fails
         }
       } else {
         console.log('Not a PDF file, skipping thumbnail generation. File type:', file.type, 'File name:', file.name);
@@ -824,6 +829,14 @@ export default function AdminDigitalAssetManagerPage() {
         };
 
         const headers = buildAuthHeaders(accessToken);
+        console.log('Calling init route with payload:', {
+          title: payload.title,
+          assetType: payload.assetType,
+          fileName: payload.fileName,
+          fileType: payload.fileType,
+          hasThumbnail: !!payload.thumbnailData,
+        });
+        
         const initResponse = await fetch('/api/dam/assets/init', {
           method: 'POST',
           headers: {
@@ -836,7 +849,12 @@ export default function AdminDigitalAssetManagerPage() {
 
         if (!initResponse.ok) {
           const errorData = await initResponse.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to initialize upload');
+          console.error('Init route failed:', {
+            status: initResponse.status,
+            statusText: initResponse.statusText,
+            error: errorData,
+          });
+          throw new Error(errorData.error || `Failed to initialize upload: ${initResponse.status} ${initResponse.statusText}`);
         }
 
         const { assetId, storagePath } = await initResponse.json();

@@ -28,7 +28,21 @@ export async function POST(request: NextRequest) {
     const supabaseAdmin = createSupabaseAdminClient();
     const body = await request.json();
 
+    console.log('Init route called with:', {
+      title: body.title,
+      assetType: body.assetType,
+      fileName: body.fileName,
+      fileType: body.fileType,
+      hasThumbnail: !!body.thumbnailData,
+    });
+
     if (!body.title || !body.assetType || !body.fileName || !body.fileType) {
+      console.error('Missing required fields:', {
+        title: !!body.title,
+        assetType: !!body.assetType,
+        fileName: !!body.fileName,
+        fileType: !!body.fileType,
+      });
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -125,10 +139,16 @@ export async function POST(request: NextRequest) {
     // Generate storage path
     const storagePath = `${assetId}/${Date.now()}-${body.fileName}`;
 
+    console.log('Init route successful:', { assetId, storagePath });
     return NextResponse.json({ assetId, storagePath }, { status: 200 });
   } catch (err: any) {
     if (err instanceof NextResponse) return err;
     console.error('Asset init failed', err);
+    console.error('Error details:', {
+      message: err.message,
+      stack: err.stack,
+      name: err.name,
+    });
     return NextResponse.json({ error: err.message || 'Asset init failed' }, { status: 500 });
   }
 }
