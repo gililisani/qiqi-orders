@@ -28,35 +28,57 @@ async function getAdminUser(request: NextRequest): Promise<string> {
   return adminUser.id;
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> | { id: string } }
+) {
   try {
+    // Handle both sync and async params (Next.js 14/15 compatibility)
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const assetId = resolvedParams.id;
+    
+    console.log('Complete route called for asset:', assetId);
+    
     const adminUserId = await getAdminUser(request);
 
     const supabaseAdmin = createSupabaseAdminClient();
     const body = await request.json();
 
+    console.log('Complete route body:', {
+      storagePath: body.storagePath,
+      fileType: body.fileType,
+      fileName: body.fileName,
+      fileSize: body.fileSize,
+      hasThumbnail: !!body.thumbnailData,
+    });
+
     if (!body.storagePath) {
+      console.error('Missing storagePath in complete request');
       return NextResponse.json({ error: 'Missing storagePath' }, { status: 400 });
     }
 
-    const assetId = params.id;
-
-    // Get file info from storage
+    // Get file info from storage (optional - use provided fileSize if available)
     const fileName = body.storagePath.split('/').pop() || '';
-    const { data: fileInfo, error: fileInfoError } = await supabaseAdmin.storage
-      .from('dam-assets')
-      .list(assetId, {
-        limit: 100,
-      });
-
     let fileSize: number | null = body.fileSize ?? null;
-    if (fileInfoError) {
-      console.error('Failed to get file info:', fileInfoError);
-    } else if (fileInfo && fileInfo.length > 0) {
-      const file = fileInfo.find((f) => f.name === fileName);
-      if (file?.metadata?.size) {
-        fileSize = file.metadata.size;
+    
+    try {
+      const { data: fileInfo, error: fileInfoError } = await supabaseAdmin.storage
+        .from('dam-assets')
+        .list(assetId, {
+          limit: 100,
+        });
+
+      if (fileInfoError) {
+        console.warn('Failed to get file info from storage (using provided size):', fileInfoError);
+      } else if (fileInfo && fileInfo.length > 0) {
+        const file = fileInfo.find((f) => f.name === fileName);
+        if (file?.metadata?.size) {
+          fileSize = file.metadata.size;
+          console.log('File size from storage:', fileSize);
+        }
       }
+    } catch (storageListError) {
+      console.warn('Error listing storage files (using provided size):', storageListError);
     }
 
     // Get latest version number
@@ -67,30 +89,49 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       .order('version_number', { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (lastVersionError) throw lastVersionError;
+    
+    if (lastVersionError) {
+      console.error('Error fetching last version:', lastVersionError);
+      throw lastVersionError;
+    }
+    
     const nextVersionNumber = lastVersion ? Number(lastVersion.version_number) + 1 : 1;
     const versionId = randomUUID();
+    
+    console.log('Creating version:', {
+      assetId,
+      versionId,
+      versionNumber: nextVersionNumber,
+      storagePath: body.storagePath,
+    });
 
     // Create version record
-    const { error: insertVersionError } = await supabaseAdmin.from('dam_asset_versions').insert([
-      {
-        id: versionId,
-        asset_id: assetId,
-        version_number: nextVersionNumber,
-        storage_bucket: 'dam-assets',
-        storage_path: body.storagePath,
-        file_size: fileSize,
-        checksum: null,
-        mime_type: body.fileType || 'application/octet-stream',
-        metadata: {
-          originalFileName: fileName,
-        },
-        processing_status: 'complete', // Set to complete immediately - no background processing
-        created_by: adminUserId,
+    const versionData = {
+      id: versionId,
+      asset_id: assetId,
+      version_number: nextVersionNumber,
+      storage_bucket: 'dam-assets',
+      storage_path: body.storagePath,
+      file_size: fileSize,
+      checksum: null,
+      mime_type: body.fileType || 'application/octet-stream',
+      metadata: {
+        originalFileName: fileName,
       },
-    ]);
+      processing_status: 'complete' as const, // Set to complete immediately - no background processing
+      created_by: adminUserId,
+    };
+    
+    console.log('Inserting version record:', versionData);
+    
+    const { error: insertVersionError } = await supabaseAdmin.from('dam_asset_versions').insert([versionData]);
 
-    if (insertVersionError) throw insertVersionError;
+    if (insertVersionError) {
+      console.error('Error inserting version:', insertVersionError);
+      throw insertVersionError;
+    }
+    
+    console.log('Version record created successfully');
 
     // Handle thumbnail if provided (from client-side PDF thumbnail generation)
     if (body.thumbnailData && versionId) {
