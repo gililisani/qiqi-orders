@@ -346,6 +346,8 @@ export default function AdminDigitalAssetManagerPage() {
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
   const [hoveredAssetId, setHoveredAssetId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'compact' | 'comfortable'>('compact');
+  const [showRegions, setShowRegions] = useState(false);
+  const [showVideoDownloadFormats, setShowVideoDownloadFormats] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -2020,359 +2022,382 @@ export default function AdminDigitalAssetManagerPage() {
           {/* Drawer */}
           <div className="absolute right-0 top-0 h-full w-full max-w-[500px] bg-white shadow-xl flex flex-col">
             {/* Drawer Header */}
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h2 className="text-lg font-semibold text-gray-900">Upload Asset</h2>
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3 flex-shrink-0">
+              <h2 className="text-base font-semibold text-gray-900">Upload Asset</h2>
               <button
                 type="button"
                 onClick={() => setIsUploadDrawerOpen(false)}
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+                className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
               >
-                <XMarkIcon className="h-5 w-5" />
+                <XMarkIcon className="h-4 w-4" />
               </button>
             </div>
 
             {/* Drawer Content - Scrollable */}
-            <div className="flex-1 overflow-y-auto px-6 py-6">
+            <div className="flex-1 overflow-y-auto px-5 py-4">
               {error && (
-                <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                   {error}
                 </div>
               )}
               {successMessage && (
-                <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                <div className="mb-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">
                   {successMessage}
                 </div>
               )}
               
-              <form className="space-y-6" onSubmit={handleUpload}>
-                {/* Section 1: Basic Info */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Basic Information</h3>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-                    <input
-                      type="text"
-                      value={formState.title}
-                      onChange={(event) => setFormState((prev) => ({ ...prev, title: event.target.value }))}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                      required
-                    />
-                  </div>
+              <form id="upload-form" onSubmit={handleUpload} className="pb-4">
+                {/* Section 1: Basic Information */}
+                <div className="mb-5">
+                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Basic Information</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Title *</label>
+                      <input
+                        type="text"
+                        value={formState.title}
+                        onChange={(event) => setFormState((prev) => ({ ...prev, title: event.target.value }))}
+                        className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
+                        required
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea
-                      value={formState.description}
-                      onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
-                      rows={3}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                    />
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Description</label>
+                      <textarea
+                        value={formState.description}
+                        onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
+                        rows={2}
+                        className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none resize-none"
+                      />
+                    </div>
                   </div>
                 </div>
+
+                <div className="border-t border-gray-100 mb-5"></div>
 
                 {/* Section 2: Asset Taxonomy */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Asset Taxonomy</h3>
-              
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Asset Type *</label>
-                  <select
-                    value={formState.assetTypeId || ''}
-                    onChange={(event) => {
-                      const selectedTypeId = event.target.value || null;
-                      // Clear subtype when type changes
-                      setFormState((prev) => ({ 
-                        ...prev, 
-                        assetTypeId: selectedTypeId,
-                        assetSubtypeId: null,
-                        // Sync legacy assetType enum for backwards compatibility
-                        assetType: selectedTypeId ? (() => {
-                          const selectedType = assetTypes.find(t => t.id === selectedTypeId);
-                          if (!selectedType) return prev.assetType;
-                          const slugToEnumMap: Record<string, string> = {
-                            'image': 'image',
-                            'video': 'video',
-                            'document': 'document',
-                            'artwork': 'document',
-                            'audio': 'audio',
-                            'packaging-regulatory': 'document',
-                            'campaign': 'document',
-                          };
-                          return slugToEnumMap[selectedType.slug] || 'other';
-                        })() : prev.assetType,
-                        file: null // Clear file when type changes
-                      }));
-                    }}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                    required
-                  >
-                    <option value="">Select Asset Type</option>
-                    {assetTypes.map((type) => (
-                      <option key={type.id} value={type.id}>
-                        {type.name}
-                      </option>
-                    ))}
-                  </select>
-                  {/* Help text for Image vs Artwork */}
-                  {(() => {
-                    const selectedType = assetTypes.find(t => t.id === formState.assetTypeId);
-                    if (selectedType?.slug === 'image') {
-                      return (
-                        <p className="mt-1 text-xs text-blue-600">
-                          <strong>Image:</strong> Finished, exported, flattened visuals (JPG/PNG/WebP). Ready-to-use by distributors, no layers.
-                        </p>
-                      );
-                    }
-                    if (selectedType?.slug === 'artwork') {
-                      return (
-                        <p className="mt-1 text-xs text-purple-600">
-                          <strong>Artwork:</strong> Editable, layered, template or master design files (PSD/AI/EPS/SVG/INDD/CMYK PDFs). For designers.
-                        </p>
-                      );
-                    }
-                    return null;
-                  })()}
+                <div className="mb-5">
+                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Asset Taxonomy</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Asset Type *</label>
+                      <select
+                        value={formState.assetTypeId || ''}
+                        onChange={(event) => {
+                          const selectedTypeId = event.target.value || null;
+                          setFormState((prev) => ({ 
+                            ...prev, 
+                            assetTypeId: selectedTypeId,
+                            assetSubtypeId: null,
+                            assetType: selectedTypeId ? (() => {
+                              const selectedType = assetTypes.find(t => t.id === selectedTypeId);
+                              if (!selectedType) return prev.assetType;
+                              const slugToEnumMap: Record<string, string> = {
+                                'image': 'image',
+                                'video': 'video',
+                                'document': 'document',
+                                'artwork': 'document',
+                                'audio': 'audio',
+                                'packaging-regulatory': 'document',
+                                'campaign': 'document',
+                              };
+                              return slugToEnumMap[selectedType.slug] || 'other';
+                            })() : prev.assetType,
+                            file: null
+                          }));
+                        }}
+                        className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
+                        required
+                      >
+                        <option value="">Select Asset Type</option>
+                        {assetTypes.map((type) => (
+                          <option key={type.id} value={type.id}>
+                            {type.name}
+                          </option>
+                        ))}
+                      </select>
+                      {(() => {
+                        const selectedType = assetTypes.find(t => t.id === formState.assetTypeId);
+                        if (selectedType?.slug === 'image') {
+                          return (
+                            <p className="mt-1 text-[10px] text-blue-600 leading-tight">
+                              <strong>Image:</strong> Finished, exported visuals (JPG/PNG/WebP). No layers.
+                            </p>
+                          );
+                        }
+                        if (selectedType?.slug === 'artwork') {
+                          return (
+                            <p className="mt-1 text-[10px] text-purple-600 leading-tight">
+                              <strong>Artwork:</strong> Editable layered files (PSD/AI/EPS/SVG/INDD/CMYK PDFs). For designers.
+                            </p>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        Asset Sub-Type {formState.assetTypeId ? '*' : ''}
+                      </label>
+                      <select
+                        value={formState.assetSubtypeId || ''}
+                        onChange={(event) => {
+                          setFormState((prev) => ({ 
+                            ...prev, 
+                            assetSubtypeId: event.target.value || null 
+                          }));
+                        }}
+                        disabled={!formState.assetTypeId}
+                        className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed h-8"
+                        required={!!formState.assetTypeId}
+                      >
+                        <option value="">Select Sub-Type</option>
+                        {assetSubtypes
+                          .filter((subtype) => subtype.asset_type_id === formState.assetTypeId)
+                          .map((subtype) => (
+                            <option key={subtype.id} value={subtype.id}>
+                              {subtype.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Asset Sub-Type {formState.assetTypeId ? '*' : ''}
-                  </label>
-                  <select
-                    value={formState.assetSubtypeId || ''}
-                    onChange={(event) => {
-                      setFormState((prev) => ({ 
-                        ...prev, 
-                        assetSubtypeId: event.target.value || null 
-                      }));
-                    }}
-                    disabled={!formState.assetTypeId}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    required={!!formState.assetTypeId}
-                  >
-                    <option value="">Select Sub-Type</option>
-                    {assetSubtypes
-                      .filter((subtype) => subtype.asset_type_id === formState.assetTypeId)
-                      .map((subtype) => (
-                        <option key={subtype.id} value={subtype.id}>
-                          {subtype.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-            </div>
+                <div className="border-t border-gray-100 mb-5"></div>
 
                 {/* Section 3: Product Information */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Product Information</h3>
-              
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Product Line</label>
-                  <select
-                    value={formState.productLine}
-                    onChange={(event) => setFormState((prev) => ({ ...prev, productLine: event.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                  >
-                    <option value="">None</option>
-                    <option value="ProCtrl">ProCtrl</option>
-                    <option value="SelfCtrl">SelfCtrl</option>
-                    <option value="Both">Both</option>
-                  </select>
+                <div className="mb-5">
+                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Product Information</h3>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1.5">Product Line</label>
+                        <select
+                          value={formState.productLine}
+                          onChange={(event) => setFormState((prev) => ({ ...prev, productLine: event.target.value }))}
+                          className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
+                        >
+                          <option value="">None</option>
+                          <option value="ProCtrl">ProCtrl</option>
+                          <option value="SelfCtrl">SelfCtrl</option>
+                          <option value="Both">Both</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1.5">Product Name</label>
+                        <select
+                          value={formState.productName}
+                          onChange={(event) => setFormState((prev) => ({ ...prev, productName: event.target.value }))}
+                          className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
+                        >
+                          <option value="">Select Product</option>
+                          {PRODUCT_NAME_OPTIONS.map((name) => (
+                            <option key={name} value={name}>
+                              {name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {formState.productName && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1.5">SKU</label>
+                        <input
+                          type="text"
+                          value={formState.sku}
+                          onChange={(event) => setFormState((prev) => ({ ...prev, sku: event.target.value }))}
+                          className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
+                          placeholder="Optional"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Product Name</label>
-                  <select
-                    value={formState.productName}
-                    onChange={(event) => setFormState((prev) => ({ ...prev, productName: event.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                  >
-                    <option value="">Select Product</option>
-                    {PRODUCT_NAME_OPTIONS.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">SKU</label>
-                <input
-                  type="text"
-                  value={formState.sku}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, sku: event.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                  placeholder="Optional"
-                />
-              </div>
-            </div>
+                <div className="border-t border-gray-100 mb-5"></div>
 
                 {/* Section 4: Tags */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Tags</h3>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Tags</label>
-              <div className="mt-2 space-y-2">
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => {
-                    const selected = formState.selectedTagSlugs.includes(tag.slug);
-                    return (
+                <div className="mb-5">
+                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Tags</h3>
+                  <div className="space-y-2.5">
+                    <div className="flex flex-wrap gap-1.5">
+                      {tags.map((tag) => {
+                        const selected = formState.selectedTagSlugs.includes(tag.slug);
+                        return (
+                          <button
+                            type="button"
+                            key={tag.slug}
+                            onClick={() =>
+                              setFormState((prev) => ({
+                                ...prev,
+                                selectedTagSlugs: toggleSelection(prev.selectedTagSlugs, tag.slug),
+                              }))
+                            }
+                            className={`rounded-md border px-2 py-0.5 text-xs font-medium transition ${
+                              selected
+                                ? 'border-black bg-black text-white'
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
+                            }`}
+                          >
+                            {tag.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={newTagLabel}
+                        onChange={(event) => setNewTagLabel(event.target.value)}
+                        className="flex-1 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
+                        placeholder="Add new tag"
+                      />
                       <button
                         type="button"
-                        key={tag.slug}
-                        onClick={() =>
-                          setFormState((prev) => ({
-                            ...prev,
-                            selectedTagSlugs: toggleSelection(prev.selectedTagSlugs, tag.slug),
-                          }))
-                        }
-                        className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                          selected
-                            ? 'border-black bg-black text-white'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
-                        }`}
+                        onClick={handleAddTag}
+                        className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 h-8"
                       >
-                        {tag.label}
+                        Add
                       </button>
-                    );
-                  })}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={newTagLabel}
-                    onChange={(event) => setNewTagLabel(event.target.value)}
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                    placeholder="Add new tag"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddTag}
-                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+
+                <div className="border-t border-gray-100 mb-5"></div>
 
                 {/* Section 5: Locales & Regions */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Locales & Regions</h3>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-gray-700">Locales *</label>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const code = prompt('Enter locale code (e.g., de-DE for German):');
-                    if (!code) return;
-                    const label = prompt('Enter locale label (e.g., German):');
-                    if (!label) return;
-                    
-                    try {
-                      const headers = buildAuthHeaders(accessToken);
-                      const response = await fetch('/api/dam/lookups', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          ...headers,
-                        },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({
-                          action: 'add-locale',
-                          code: code.trim(),
-                          label: label.trim(),
-                        }),
-                      });
-                      
-                      if (!response.ok) {
-                        const error = await response.json().catch(() => ({}));
-                        throw new Error(error.error || 'Failed to add locale');
-                      }
-                      
-                      const data = await response.json();
-                      setLocales(data.locales || []);
-                      alert('Locale added successfully!');
-                    } catch (err: any) {
-                      alert('Failed to add locale: ' + err.message);
-                    }
-                  }}
-                  className="text-xs text-blue-600 hover:text-blue-800 underline"
-                >
-                  + Add Language
-                </button>
-              </div>
-              <div className="mt-2 space-y-2">
-                {locales.map((locale) => {
-                  const selected = formState.selectedLocaleCodes.includes(locale.code);
-                  return (
-                    <div key={locale.code} className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
-                      <label className="flex items-center gap-2 text-sm text-gray-700">
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          onChange={() => handleLocaleToggle(locale.code)}
-                          className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
-                        />
-                        <span>{locale.label}</span>
-                      </label>
-                      {selected && (
-                        <label className="flex items-center gap-1 text-xs text-gray-600">
-                          <input
-                            type="radio"
-                            name="primary-locale"
-                            checked={formState.primaryLocale === locale.code}
-                            onChange={() => handlePrimaryLocaleChange(locale.code)}
-                          />
-                          Primary
-                        </label>
+                <div className="mb-5">
+                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Locales & Regions</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-medium text-gray-700">Locales *</label>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const code = prompt('Enter locale code (e.g., de-DE for German):');
+                            if (!code) return;
+                            const label = prompt('Enter locale label (e.g., German):');
+                            if (!label) return;
+                            
+                            try {
+                              const headers = buildAuthHeaders(accessToken);
+                              const response = await fetch('/api/dam/lookups', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  ...headers,
+                                },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({
+                                  action: 'add-locale',
+                                  code: code.trim(),
+                                  label: label.trim(),
+                                }),
+                              });
+                              
+                              if (!response.ok) {
+                                const error = await response.json().catch(() => ({}));
+                                throw new Error(error.error || 'Failed to add locale');
+                              }
+                              
+                              const data = await response.json();
+                              setLocales(data.locales || []);
+                              alert('Locale added successfully!');
+                            } catch (err: any) {
+                              alert('Failed to add locale: ' + err.message);
+                            }
+                          }}
+                          className="text-[10px] text-blue-600 hover:text-blue-800 underline"
+                        >
+                          + Add Language
+                        </button>
+                      </div>
+                      <div className="space-y-1.5">
+                        {locales.map((locale) => {
+                          const selected = formState.selectedLocaleCodes.includes(locale.code);
+                          return (
+                            <div key={locale.code} className="flex items-center justify-between rounded-md border border-gray-200 px-2.5 py-1.5">
+                              <label className="flex items-center gap-2 text-xs text-gray-700">
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  onChange={() => handleLocaleToggle(locale.code)}
+                                  className="h-3.5 w-3.5 rounded border-gray-300 text-black focus:ring-black"
+                                />
+                                <span>{locale.label}</span>
+                              </label>
+                              {selected && (
+                                <label className="flex items-center gap-1 text-[10px] text-gray-600">
+                                  <input
+                                    type="radio"
+                                    name="primary-locale"
+                                    checked={formState.primaryLocale === locale.code}
+                                    onChange={() => handlePrimaryLocaleChange(locale.code)}
+                                    className="h-3 w-3"
+                                  />
+                                  Primary
+                                </label>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Regions - Collapsible */}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowRegions(!showRegions)}
+                        className="flex items-center justify-between w-full text-xs font-medium text-gray-700 mb-2"
+                      >
+                        <span>Region Restrictions (Optional)</span>
+                        <svg
+                          className={`h-3 w-3 text-gray-500 transition-transform ${showRegions ? 'rotate-180' : ''}`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {showRegions && (
+                        <div className="grid grid-cols-2 gap-1.5 pt-1">
+                          {regions.map((region) => {
+                            const selected = formState.selectedRegionCodes.includes(region.code);
+                            return (
+                              <label key={region.code} className="flex items-center gap-1.5 text-xs text-gray-700">
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  onChange={() =>
+                                    setFormState((prev) => ({
+                                      ...prev,
+                                      selectedRegionCodes: toggleSelection(prev.selectedRegionCodes, region.code),
+                                    }))
+                                  }
+                                  className="h-3.5 w-3.5 rounded border-gray-300 text-black focus:ring-black"
+                                />
+                                <span>{region.label}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
-                  );
-                })}
-              </div>
-            </div>
+                  </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Regions (optional)
-                      <span className="ml-2 text-xs font-normal text-gray-500">Filter assets by geographic region</span>
-                    </label>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                {regions.map((region) => {
-                  const selected = formState.selectedRegionCodes.includes(region.code);
-                  return (
-                    <label key={region.code} className="flex items-center gap-2 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() =>
-                          setFormState((prev) => ({
-                            ...prev,
-                            selectedRegionCodes: toggleSelection(prev.selectedRegionCodes, region.code),
-                          }))
-                        }
-                        className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
-                      />
-                      <span>{region.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+                <div className="border-t border-gray-100 mb-5"></div>
 
-                {/* Section 6: File or Vimeo Link */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">File or Vimeo Link</h3>
+                {/* Section 6: File Upload or Video Input */}
+                <div className="mb-5">
                   {(() => {
                     const selectedAssetType = assetTypes.find(t => t.id === formState.assetTypeId);
                     const isVideoType = selectedAssetType?.slug === 'video';
@@ -2380,150 +2405,171 @@ export default function AdminDigitalAssetManagerPage() {
                     
                     if (isVideoType) {
                       return (
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Vimeo Video ID or URL *</label>
-                      <input
-                        type="text"
-                        value={formState.vimeoVideoId}
-                        onChange={(event) => setFormState((prev) => ({ ...prev, vimeoVideoId: event.target.value }))}
-                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                        placeholder="e.g., 123456789 or https://vimeo.com/123456789"
-                        required
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        Upload your video to Vimeo first, then paste the video ID or URL here.
-                      </p>
-                    </div>
+                        <div>
+                          <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Video Options</h3>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1.5">Vimeo Video ID or URL *</label>
+                              <input
+                                type="text"
+                                value={formState.vimeoVideoId}
+                                onChange={(event) => setFormState((prev) => ({ ...prev, vimeoVideoId: event.target.value }))}
+                                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
+                                placeholder="e.g., 123456789 or https://vimeo.com/123456789"
+                                required
+                              />
+                              <p className="mt-1 text-[10px] text-gray-500 leading-tight">
+                                Upload your video to Vimeo first, then paste the video ID or URL here.
+                              </p>
+                            </div>
+                            
+                            {/* Collapsible Download Formats */}
+                            <div>
+                              <button
+                                type="button"
+                                onClick={() => setShowVideoDownloadFormats(!showVideoDownloadFormats)}
+                                className="flex items-center justify-between w-full text-xs font-medium text-gray-700 mb-2"
+                              >
+                                <span>Download Formats (Optional)</span>
+                                <svg
+                                  className={`h-3 w-3 text-gray-500 transition-transform ${showVideoDownloadFormats ? 'rotate-180' : ''}`}
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+                              {showVideoDownloadFormats && (
+                                <div className="space-y-2 pt-1">
+                                  <div>
+                                    <label className="block text-[10px] text-gray-600 mb-1">1080p</label>
+                                    <input
+                                      type="text"
+                                      value={formState.vimeoDownload1080p}
+                                      onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload1080p: event.target.value }))}
+                                      className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none h-7"
+                                      placeholder="https://..."
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] text-gray-600 mb-1">720p</label>
+                                    <input
+                                      type="text"
+                                      value={formState.vimeoDownload720p}
+                                      onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload720p: event.target.value }))}
+                                      className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none h-7"
+                                      placeholder="https://..."
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] text-gray-600 mb-1">480p</label>
+                                    <input
+                                      type="text"
+                                      value={formState.vimeoDownload480p}
+                                      onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload480p: event.target.value }))}
+                                      className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none h-7"
+                                      placeholder="https://..."
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] text-gray-600 mb-1">360p</label>
+                                    <input
+                                      type="text"
+                                      value={formState.vimeoDownload360p}
+                                      onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload360p: event.target.value }))}
+                                      className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none h-7"
+                                      placeholder="https://..."
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
                     
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Download URLs (Optional)</label>
-                      <p className="text-xs text-gray-500 mb-3">
-                        Paste direct MP4 download URLs for different quality levels. These will be stored as-is.
-                      </p>
-                      <div className="space-y-2">
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">1080p</label>
-                          <input
-                            type="text"
-                            value={formState.vimeoDownload1080p}
-                            onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload1080p: event.target.value }))}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                            placeholder="https://..."
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">720p</label>
-                          <input
-                            type="text"
-                            value={formState.vimeoDownload720p}
-                            onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload720p: event.target.value }))}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                            placeholder="https://..."
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">480p</label>
-                          <input
-                            type="text"
-                            value={formState.vimeoDownload480p}
-                            onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload480p: event.target.value }))}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                            placeholder="https://..."
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">360p</label>
-                          <input
-                            type="text"
-                            value={formState.vimeoDownload360p}
-                            onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload360p: event.target.value }))}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                            placeholder="https://..."
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-              
                     // For non-video types, show file upload
                     return (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">File *</label>
-                  <input
-                    type="file"
-                    accept={getAcceptAttribute(formState.assetType, formState.assetTypeId)}
-                    onChange={(event) => {
-                      const file = event.target.files ? event.target.files[0] : null;
-                      if (file) {
-                        // Additional validation: check if file type matches the selected asset type
-                        const isValid = validateFileType(file, formState.assetType, formState.assetTypeId);
-                        if (!isValid) {
-                          const selectedType = assetTypes.find(t => t.id === formState.assetTypeId);
-                          const typeName = selectedType?.name || formState.assetType;
-                          alert(`Invalid file type. Please select a ${typeName} file.`);
-                          event.target.value = ''; // Clear the input
-                          return;
-                        }
-                        // Additional warning for Image vs Artwork confusion
-                        const selectedType = assetTypes.find(t => t.id === formState.assetTypeId);
-                        if (selectedType?.slug === 'image' && /\.(psd|ai|eps|indd|svg)$/i.test(file.name)) {
-                          if (!confirm('Warning: This appears to be a design file (PSD/AI/EPS/INDD/SVG). Design files should use "Artwork" type, not "Image". Continue anyway?')) {
-                            event.target.value = '';
-                            return;
-                          }
-                        }
-                        if (selectedType?.slug === 'artwork' && /\.(jpg|jpeg|png|webp)$/i.test(file.name)) {
-                          if (!confirm('Warning: This appears to be a finished image (JPG/PNG/WebP). Finished images should use "Image" type, not "Artwork". Continue anyway?')) {
-                            event.target.value = '';
-                            return;
-                          }
-                        }
-                      }
-                      setFormState((prev) => ({ ...prev, file }));
-                    }}
-                    className="mt-1 block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border file:border-gray-200 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:border-gray-400"
-                    required={!isVideoType}
-                  />
-                  {formState.file && (
-                    <p className="mt-2 text-xs text-gray-500">
-                      {formState.file.name} • {formatBytes(formState.file.size)}
-                    </p>
-                  )}
-                  {isRegulatoryType && (
-                    <p className="mt-2 text-xs text-amber-600">
-                      ⚠ For regulatory assets, Product selection is recommended.
-                    </p>
-                  )}
-                </div>
-                      );
-                    })()}
-                </div>
-
-                {/* Section 7: Actions */}
-                <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
-                  <button
-                    type="submit"
-                    disabled={uploading}
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-black px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    <ArrowUpTrayIcon className="h-4 w-4" />
-                    {uploading ? 'Uploading…' : 'Upload Asset'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetForm();
-                      setIsUploadDrawerOpen(false);
-                    }}
-                    className="rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                  >
-                    Cancel
-                  </button>
+                        <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">File Upload</h3>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1.5">File *</label>
+                          <input
+                            type="file"
+                            accept={getAcceptAttribute(formState.assetType, formState.assetTypeId)}
+                            onChange={(event) => {
+                              const file = event.target.files ? event.target.files[0] : null;
+                              if (file) {
+                                const isValid = validateFileType(file, formState.assetType, formState.assetTypeId);
+                                if (!isValid) {
+                                  const selectedType = assetTypes.find(t => t.id === formState.assetTypeId);
+                                  const typeName = selectedType?.name || formState.assetType;
+                                  alert(`Invalid file type. Please select a ${typeName} file.`);
+                                  event.target.value = '';
+                                  return;
+                                }
+                                const selectedType = assetTypes.find(t => t.id === formState.assetTypeId);
+                                if (selectedType?.slug === 'image' && /\.(psd|ai|eps|indd|svg)$/i.test(file.name)) {
+                                  if (!confirm('Warning: This appears to be a design file (PSD/AI/EPS/INDD/SVG). Design files should use "Artwork" type, not "Image". Continue anyway?')) {
+                                    event.target.value = '';
+                                    return;
+                                  }
+                                }
+                                if (selectedType?.slug === 'artwork' && /\.(jpg|jpeg|png|webp)$/i.test(file.name)) {
+                                  if (!confirm('Warning: This appears to be a finished image (JPG/PNG/WebP). Finished images should use "Image" type, not "Artwork". Continue anyway?')) {
+                                    event.target.value = '';
+                                    return;
+                                  }
+                                }
+                              }
+                              setFormState((prev) => ({ ...prev, file }));
+                            }}
+                            className="block w-full text-xs text-gray-700 file:mr-4 file:rounded-md file:border file:border-gray-200 file:bg-white file:px-2.5 file:py-1.5 file:text-xs file:font-medium file:text-gray-700 hover:file:border-gray-400"
+                            required={!isVideoType}
+                          />
+                          {formState.file && (
+                            <p className="mt-1.5 text-[10px] text-gray-500">
+                              {formState.file.name} • {formatBytes(formState.file.size)}
+                            </p>
+                          )}
+                          {isRegulatoryType && (
+                            <p className="mt-1.5 text-[10px] text-amber-600">
+                              ⚠ For regulatory assets, Product selection is recommended.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </form>
+            </div>
+
+            {/* Sticky Footer with Actions */}
+            <div className="border-t border-gray-200 bg-white px-5 py-3 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  form="upload-form"
+                  disabled={uploading}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  <ArrowUpTrayIcon className="h-4 w-4" />
+                  {uploading ? 'Uploading…' : 'Upload Asset'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetForm();
+                    setIsUploadDrawerOpen(false);
+                  }}
+                  className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
