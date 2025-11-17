@@ -1288,12 +1288,35 @@ export default function AdminDigitalAssetManagerPage() {
     }
   };
 
-  const validateFileType = (file: File, assetType: string): boolean => {
+  const validateFileType = (file: File, assetType: string, assetTypeId?: string | null): boolean => {
     const fileName = file.name.toLowerCase();
     const mimeType = file.type.toLowerCase();
 
+    // Check taxonomy first if available
+    if (assetTypeId) {
+      const selectedType = assetTypes.find(t => t.id === assetTypeId);
+      if (selectedType?.slug === 'image') {
+        // Image: finished exports only (JPG/PNG/WebP) - NO PSD/AI/SVG
+        return /\.(jpg|jpeg|png|webp)$/i.test(fileName) || 
+               (mimeType.startsWith('image/') && !mimeType.includes('svg') && !mimeType.includes('x-photoshop'));
+      }
+      if (selectedType?.slug === 'artwork') {
+        // Artwork: editable layered files (PSD/AI/EPS/SVG/INDD/CMYK PDFs)
+        return /\.(psd|ai|eps|svg|indd|pdf)$/i.test(fileName) ||
+               mimeType.includes('photoshop') ||
+               mimeType.includes('illustrator') ||
+               mimeType.includes('svg') ||
+               mimeType.includes('pdf');
+      }
+    }
+
+    // Fallback to legacy enum
     switch (assetType) {
       case 'image':
+        // Legacy: allow all images, but warn if it's a design file
+        if (/\.(psd|ai|eps|indd)$/i.test(fileName)) {
+          alert('Warning: This appears to be a design file (PSD/AI/EPS/INDD). Consider using "Artwork" type instead of "Image".');
+        }
         return mimeType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(fileName);
       case 'document':
         return /\.(pdf|doc|docx|pages|gdoc|ppt|pptx|key|gslides|xls|xlsx|numbers|gsheet)$/i.test(fileName) ||
