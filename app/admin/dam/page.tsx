@@ -1250,10 +1250,24 @@ export default function AdminDigitalAssetManagerPage() {
     );
   };
 
-  const getAcceptAttribute = (assetType: string): string => {
+  const getAcceptAttribute = (assetType: string, assetTypeId?: string | null): string => {
+    // Check taxonomy first if available
+    if (assetTypeId) {
+      const selectedType = assetTypes.find(t => t.id === assetTypeId);
+      if (selectedType?.slug === 'image') {
+        // Image: finished exports only (JPG/PNG/WebP)
+        return '.jpg,.jpeg,.png,.webp';
+      }
+      if (selectedType?.slug === 'artwork') {
+        // Artwork: editable layered files (PSD/AI/EPS/SVG/INDD/CMYK PDFs)
+        return '.psd,.ai,.eps,.svg,.indd,.pdf';
+      }
+    }
+    
+    // Fallback to legacy enum
     switch (assetType) {
       case 'image':
-        return 'image/*';
+        return '.jpg,.jpeg,.png,.webp';
       case 'document':
         // PDF, Word (.doc, .docx), Apple Pages (.pages), Google Docs (.gdoc)
         // PowerPoint (.ppt, .pptx), Apple Keynote (.key), Google Slides (.gslides)
