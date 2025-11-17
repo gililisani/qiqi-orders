@@ -1931,8 +1931,7 @@ export default function AdminDigitalAssetManagerPage() {
                         )}
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
               </div>
             </>
           )}
@@ -2234,7 +2233,7 @@ export default function AdminDigitalAssetManagerPage() {
                 </div>
               </div>
             </div>
-
+          </div>
 
                 {/* Section 5: Locales & Regions */}
                 <div className="space-y-4">
@@ -2341,6 +2340,7 @@ export default function AdminDigitalAssetManagerPage() {
                 })}
               </div>
             </div>
+          </div>
 
                 {/* Section 6: File or Vimeo Link */}
                 <div className="space-y-4">
