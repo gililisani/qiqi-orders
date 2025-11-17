@@ -15,6 +15,9 @@ import {
   XMarkIcon,
   ArrowDownTrayIcon,
   CheckIcon,
+  EyeIcon,
+  PencilIcon,
+  MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 
 const assetTypeOptions: Array<{ value: string; label: string; icon: JSX.Element }> = [
@@ -340,6 +343,8 @@ export default function AdminDigitalAssetManagerPage() {
     vimeo_download_360p: '',
   });
   const [savingUrls, setSavingUrls] = useState(false);
+  const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
+  const [hoveredAssetId, setHoveredAssetId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -717,6 +722,7 @@ export default function AdminDigitalAssetManagerPage() {
       vimeoDownload360p: '',
     });
     setSuccessMessage('');
+    setIsUploadDrawerOpen(false); // Close drawer after successful upload
   };
 
   // Generate PDF thumbnail client-side
@@ -1381,120 +1387,666 @@ export default function AdminDigitalAssetManagerPage() {
     }
   };
 
-  return (
-    <div className="mt-8 mb-4 space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Digital Asset Manager</h2>
-          <p className="text-sm text-gray-600">
-            Upload and manage marketing and product collateral available to distributors and pros.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            setCurrentPage(1);
-            fetchAssets(accessToken ?? '', undefined, 1);
-          }}
-          className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-        >
-          <ArrowPathIcon className="h-4 w-4" />
-          Refresh
-        </button>
-      </div>
+  // Helper to get filter chips for active filters
+  const getActiveFilterChips = () => {
+    const chips: Array<{ label: string; onRemove: () => void }> = [];
+    
+    if (assetTypeFilter) {
+      const type = assetTypes.find(t => t.id === assetTypeFilter);
+      if (type) {
+        chips.push({
+          label: type.name,
+          onRemove: () => {
+            setAssetTypeFilter('');
+            setAssetSubtypeFilter('');
+          },
+        });
+      }
+    }
+    
+    if (assetSubtypeFilter) {
+      const subtype = assetSubtypes.find(s => s.id === assetSubtypeFilter);
+      if (subtype) {
+        chips.push({
+          label: subtype.name,
+          onRemove: () => setAssetSubtypeFilter(''),
+        });
+      }
+    }
+    
+    if (productLineFilter) {
+      chips.push({
+        label: productLineFilter,
+        onRemove: () => setProductLineFilter(''),
+      });
+    }
+    
+    if (productNameFilter) {
+      chips.push({
+        label: productNameFilter,
+        onRemove: () => setProductNameFilter(''),
+      });
+    }
+    
+    if (localeFilter) {
+      const locale = locales.find(l => l.code === localeFilter);
+      if (locale) {
+        chips.push({
+          label: locale.label,
+          onRemove: () => setLocaleFilter(''),
+        });
+      }
+    }
+    
+    if (regionFilter) {
+      const region = regions.find(r => r.code === regionFilter);
+      if (region) {
+        chips.push({
+          label: region.label,
+          onRemove: () => setRegionFilter(''),
+        });
+      }
+    }
+    
+    if (tagFilter) {
+      chips.push({
+        label: tagFilter,
+        onRemove: () => setTagFilter(''),
+      });
+    }
+    
+    return chips;
+  };
 
-      {/* Active Uploads Section */}
-      {activeUploads.length > 0 && (
-        <Card className="mb-6">
-          <h3 className="mb-4 text-lg font-semibold text-gray-900">Active Uploads</h3>
-          <div className="space-y-3">
-            {activeUploads.map((upload) => (
-              <div key={upload.id} className="rounded-lg border border-gray-200 p-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{upload.fileName}</p>
-                    <p className="text-xs text-gray-500">
-                      {formatBytes(upload.fileSize)} •{' '}
-                      {upload.status === 'uploading'
-                        ? 'Uploading...'
-                        : upload.status === 'completing'
-                        ? 'Finalizing...'
-                        : upload.status === 'success'
-                        ? 'Complete'
-                        : 'Error'}
-                    </p>
+  return (
+    <div className="relative min-h-screen bg-gray-50">
+      {/* Main Content - Full Width */}
+      <div className="w-full">
+        {/* Header with Search Bar */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center gap-4">
+            {/* Large Search Bar */}
+            <div className="flex-1 relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="search"
+                placeholder="Search assets by title, tag, SKU, product…"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10 text-sm"
+              />
+            </div>
+            
+            {/* Upload Button */}
+            <button
+              type="button"
+              onClick={() => setIsUploadDrawerOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-black px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
+            >
+              <ArrowUpTrayIcon className="h-4 w-4" />
+              Upload Asset
+            </button>
+            
+            {/* Refresh Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentPage(1);
+                fetchAssets(accessToken ?? '', undefined, 1);
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+            >
+              <ArrowPathIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Active Uploads Banner */}
+        {activeUploads.length > 0 && (
+          <div className="bg-white border-b border-gray-200 px-6 py-3">
+            <div className="space-y-2">
+              {activeUploads.map((upload) => (
+                <div key={upload.id} className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{upload.fileName}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-gray-200">
+                        <div
+                          className={`h-full transition-all duration-300 ${
+                            upload.status === 'error'
+                              ? 'bg-red-500'
+                              : upload.status === 'success'
+                              ? 'bg-green-500'
+                              : 'bg-black'
+                          }`}
+                          style={{ width: `${upload.progress}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-gray-500 whitespace-nowrap">{upload.progress}%</span>
+                    </div>
                   </div>
                   {upload.status === 'error' && upload.error && (
-                    <span className="ml-4 text-xs text-red-600">{upload.error}</span>
+                    <span className="text-xs text-red-600 whitespace-nowrap">{upload.error}</span>
                   )}
                   {upload.status === 'success' && (
-                    <span className="ml-4 text-xs text-green-600">✓ Success</span>
+                    <span className="text-xs text-green-600 whitespace-nowrap">✓ Complete</span>
                   )}
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                  <div
-                    className={`h-full transition-all duration-300 ${
-                      upload.status === 'error'
-                        ? 'bg-red-500'
-                        : upload.status === 'success'
-                        ? 'bg-green-500'
-                        : 'bg-black'
-                    }`}
-                    style={{ width: `${upload.progress}%` }}
-                  />
-                </div>
-                <div className="mt-1 flex justify-between text-xs text-gray-500">
-                  <span>{upload.progress}%</span>
-                  <span>
-                    {upload.status === 'uploading' || upload.status === 'completing'
-                      ? `${formatBytes((upload.progress / 100) * upload.fileSize)} of ${formatBytes(upload.fileSize)}`
-                      : ''}
-                  </span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </Card>
-      )}
+        )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <h3 className="mb-4 text-lg font-semibold text-gray-900">Upload Asset</h3>
-          {error && (
-            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
+        {/* Filter Row */}
+        <div className="bg-white border-b border-gray-200 px-6 py-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Filter Dropdowns */}
+            <select
+              value={assetTypeFilter}
+              onChange={(event) => {
+                setAssetTypeFilter(event.target.value);
+                setAssetSubtypeFilter('');
+              }}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none bg-white"
+            >
+              <option value="">Asset Type</option>
+              {assetTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={assetSubtypeFilter}
+              onChange={(event) => setAssetSubtypeFilter(event.target.value)}
+              disabled={!assetTypeFilter}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed bg-white"
+            >
+              <option value="">Sub-Type</option>
+              {assetSubtypes
+                .filter((subtype) => subtype.asset_type_id === assetTypeFilter)
+                .map((subtype) => (
+                  <option key={subtype.id} value={subtype.id}>
+                    {subtype.name}
+                  </option>
+                ))}
+            </select>
+
+            <select
+              value={productLineFilter}
+              onChange={(event) => setProductLineFilter(event.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none bg-white"
+            >
+              <option value="">Product Line</option>
+              <option value="ProCtrl">ProCtrl</option>
+              <option value="SelfCtrl">SelfCtrl</option>
+              <option value="Both">Both</option>
+              <option value="None">None</option>
+            </select>
+
+            <select
+              value={productNameFilter}
+              onChange={(event) => setProductNameFilter(event.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none bg-white"
+            >
+              <option value="">Product</option>
+              {PRODUCT_NAME_OPTIONS.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={localeFilter}
+              onChange={(event) => setLocaleFilter(event.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none bg-white"
+            >
+              <option value="">Locale</option>
+              {locales.map((locale) => (
+                <option key={locale.code} value={locale.code}>
+                  {locale.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={regionFilter}
+              onChange={(event) => setRegionFilter(event.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none bg-white"
+            >
+              <option value="">Region</option>
+              {regions.map((region) => (
+                <option key={region.code} value={region.code}>
+                  {region.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={tagFilter}
+              onChange={(event) => setTagFilter(event.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none bg-white"
+            >
+              <option value="">Tag</option>
+              {tags.map((tag) => (
+                <option key={tag.slug} value={tag.label}>
+                  {tag.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filter Chips */}
+          {getActiveFilterChips().length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-200">
+              {getActiveFilterChips().map((chip, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700"
+                >
+                  {chip.label}
+                  <button
+                    type="button"
+                    onClick={chip.onRemove}
+                    className="hover:text-gray-900"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
             </div>
           )}
-          {successMessage && (
-            <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-              {successMessage}
+        </div>
+
+        {/* Asset Library - Full Width */}
+        <div className="px-6 py-6">
+          {/* Advanced Search Accordion */}
+          <div className="mb-4 rounded-lg border border-gray-200 bg-white">
+            <button
+              type="button"
+              onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+              className="w-full flex items-center justify-between p-4 text-left"
+            >
+              <h4 className="text-sm font-semibold text-gray-900">Advanced Search</h4>
+              <svg
+                className={`h-5 w-5 text-gray-500 transition-transform ${showAdvancedSearch ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showAdvancedSearch && (
+              <div className="px-4 pb-4 border-t border-gray-200">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 pt-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Date From</label>
+                    <input
+                      type="date"
+                      value={dateFromFilter}
+                      onChange={(event) => setDateFromFilter(event.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Date To</label>
+                    <input
+                      type="date"
+                      value={dateToFilter}
+                      onChange={(event) => setDateToFilter(event.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Min File Size (MB)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={fileSizeMinFilter}
+                      onChange={(event) => setFileSizeMinFilter(event.target.value)}
+                      placeholder="0"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Max File Size (MB)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={fileSizeMaxFilter}
+                      onChange={(event) => setFileSizeMaxFilter(event.target.value)}
+                      placeholder="∞"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    />
+                  </div>
+                </div>
+                {(dateFromFilter || dateToFilter || fileSizeMinFilter || fileSizeMaxFilter) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDateFromFilter('');
+                      setDateToFilter('');
+                      setFileSizeMinFilter('');
+                      setFileSizeMaxFilter('');
+                      setCurrentPage(1);
+                      fetchAssets(accessToken ?? '', searchTerm || undefined, 1);
+                    }}
+                    className="mt-3 text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Clear advanced filters
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Asset Grid */}
+          {loadingAssets ? (
+            <div className="flex items-center justify-center py-12 text-gray-600">
+              <div className="flex items-center gap-3 text-sm">
+                <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                Loading assets…
+              </div>
+            </div>
+          ) : filteredAssets.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-gray-200 bg-white px-6 py-12 text-center text-sm text-gray-600">
+              No assets found. Upload assets to populate the library.
+            </div>
+          ) : (
+            <>
+              {/* Bulk Actions Bar */}
+              {selectedAssetIds.size > 0 && (
+                <div className="mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                  <span className="text-sm font-medium text-blue-900">
+                    {selectedAssetIds.size} asset{selectedAssetIds.size !== 1 ? 's' : ''} selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleBulkDelete}
+                    disabled={bulkDeleting}
+                    className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                    {bulkDeleting ? 'Deleting...' : `Delete ${selectedAssetIds.size}`}
+                  </button>
+                </div>
+              )}
+              
+              {/* Select All */}
+              {filteredAssets.length > 0 && (
+                <div className="mb-4 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleSelectAll}
+                    className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
+                  >
+                    <div className={`flex h-4 w-4 items-center justify-center rounded border-2 ${
+                      selectedAssetIds.size === filteredAssets.length && filteredAssets.length > 0
+                        ? 'border-blue-600 bg-blue-600'
+                        : 'border-gray-300 bg-white'
+                    }`}>
+                      {selectedAssetIds.size === filteredAssets.length && filteredAssets.length > 0 && (
+                        <CheckIcon className="h-3 w-3 text-white" />
+                      )}
+                    </div>
+                    <span>Select All</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Asset Grid - Beautiful Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {filteredAssets.map((asset) => (
+                    <div
+                      key={asset.id}
+                      className="group relative bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer"
+                      onMouseEnter={() => setHoveredAssetId(asset.id)}
+                      onMouseLeave={() => setHoveredAssetId(null)}
+                      onClick={() => {
+                        setSelectedAsset(asset);
+                        if (accessToken) {
+                          fetchAssetVersions(asset.id);
+                        }
+                      }}
+                    >
+                      {/* Selection Checkbox */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleAssetSelection(asset.id);
+                        }}
+                        className={`absolute top-2 left-2 z-20 flex h-5 w-5 items-center justify-center rounded border-2 bg-white shadow-sm transition ${
+                          selectedAssetIds.has(asset.id) ? 'border-blue-600 bg-blue-600' : 'border-gray-300 hover:border-gray-400'
+                        }`}
+                      >
+                        {selectedAssetIds.has(asset.id) && (
+                          <CheckIcon className="h-3 w-3 text-white" />
+                        )}
+                      </button>
+
+                      {/* Thumbnail */}
+                      <div className="relative aspect-square bg-gray-100 overflow-hidden">
+                        {asset.asset_type === 'video' && asset.vimeo_video_id ? (
+                          <img
+                            src={`https://vumbnail.com/${asset.vimeo_video_id}.jpg`}
+                            alt={asset.title}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = `https://i.vimeocdn.com/video/${asset.vimeo_video_id}_640.jpg`;
+                            }}
+                          />
+                        ) : accessToken && asset.current_version?.previewPath ? (
+                          <img
+                            src={ensureTokenUrl(asset.current_version.previewPath)}
+                            alt={asset.title}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-gray-400">
+                            <PhotoIcon className="h-12 w-12" />
+                          </div>
+                        )}
+                        
+                        {/* Version Badge */}
+                        {asset.current_version && (
+                          <span className="absolute bottom-2 right-2 rounded bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white">
+                            v{asset.current_version.version_number}
+                          </span>
+                        )}
+
+                        {/* Hover Overlay with Actions */}
+                        {hoveredAssetId === asset.id && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-3 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedAsset(asset);
+                                if (accessToken) {
+                                  fetchAssetVersions(asset.id);
+                                }
+                              }}
+                              className="rounded-lg bg-white/90 p-2 hover:bg-white transition"
+                              title="View"
+                            >
+                              <EyeIcon className="h-5 w-5 text-gray-900" />
+                            </button>
+                            {asset.current_version?.downloadPath && (
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!accessToken) return;
+                                  const downloadUrl = ensureTokenUrl(asset.current_version!.downloadPath!);
+                                  const filename = `${asset.title || 'asset'}.${asset.current_version!.mime_type?.split('/')[1] || 'bin'}`;
+                                  await triggerDownload(downloadUrl, filename, asset.id, 'api', accessToken);
+                                }}
+                                className="rounded-lg bg-white/90 p-2 hover:bg-white transition"
+                                title="Download"
+                              >
+                                <ArrowDownTrayIcon className="h-5 w-5 text-gray-900" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteAsset(asset.id);
+                              }}
+                              className="rounded-lg bg-white/90 p-2 hover:bg-white transition"
+                              title="Delete"
+                            >
+                              <TrashIcon className="h-5 w-5 text-red-600" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Card Footer */}
+                      <div className="p-3 space-y-1">
+                        <h4 className="text-sm font-semibold text-gray-900 truncate">{asset.title}</h4>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {renderAssetTypePill(asset.asset_type)}
+                          {asset.product_line && (
+                            <span className="text-xs text-gray-500">{asset.product_line}</span>
+                          )}
+                        </div>
+                        {asset.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {asset.tags.slice(0, 2).map((tag) => (
+                              <span key={tag} className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                                {tag}
+                              </span>
+                            ))}
+                            {asset.tags.length > 2 && (
+                              <span className="text-[10px] text-gray-400">+{asset.tags.length - 2}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          
+          {/* Pagination */}
+          {pagination && pagination.total > 0 && (
+            <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+              <div className="text-sm text-gray-700">
+                Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{' '}
+                <span className="font-medium">
+                  {Math.min(pagination.page * pagination.limit, pagination.total)}
+                </span>{' '}
+                of <span className="font-medium">{pagination.total}</span> assets
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newPage = currentPage - 1;
+                    setCurrentPage(newPage);
+                    fetchAssets(accessToken ?? '', searchTerm || undefined, newPage);
+                  }}
+                  disabled={!pagination.hasPreviousPage}
+                  className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-700">
+                  Page {pagination.page} of {pagination.totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newPage = currentPage + 1;
+                    setCurrentPage(newPage);
+                    fetchAssets(accessToken ?? '', searchTerm || undefined, newPage);
+                  }}
+                  disabled={!pagination.hasNextPage}
+                  className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
-          <form className="space-y-4" onSubmit={handleUpload}>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Title *</label>
-              <input
-                type="text"
-                value={formState.title}
-                onChange={(event) => setFormState((prev) => ({ ...prev, title: event.target.value }))}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                required
-              />
+        </div>
+      </div>
+
+      {/* Upload Drawer - Slide Over */}
+      {isUploadDrawerOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50 transition-opacity"
+            onClick={() => setIsUploadDrawerOpen(false)}
+          />
+          
+          {/* Drawer */}
+          <div className="absolute right-0 top-0 h-full w-full max-w-[500px] bg-white shadow-xl flex flex-col">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h2 className="text-lg font-semibold text-gray-900">Upload Asset</h2>
+              <button
+                type="button"
+                onClick={() => setIsUploadDrawerOpen(false)}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Description</label>
-              <textarea
-                value={formState.description}
-                onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
-                rows={3}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              />
-            </div>
+            {/* Drawer Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              {error && (
+                <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+              {successMessage && (
+                <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                  {successMessage}
+                </div>
+              )}
+              
+              <form className="space-y-6" onSubmit={handleUpload}>
+                {/* Section 1: Basic Info */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Basic Information</h3>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                    <input
+                      type="text"
+                      value={formState.title}
+                      onChange={(event) => setFormState((prev) => ({ ...prev, title: event.target.value }))}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                      required
+                    />
+                  </div>
 
-            {/* Asset Taxonomy Section */}
-            <div className="space-y-4 border-t border-gray-200 pt-4">
-              <h4 className="text-sm font-semibold text-gray-900">Asset Taxonomy</h4>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea
+                      value={formState.description}
+                      onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
+                      rows={3}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Section 2: Asset Taxonomy */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Asset Taxonomy</h3>
               
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
@@ -1586,9 +2138,9 @@ export default function AdminDigitalAssetManagerPage() {
               </div>
             </div>
 
-            {/* Product Information Section */}
-            <div className="space-y-4 border-t border-gray-200 pt-4">
-              <h4 className="text-sm font-semibold text-gray-900">Product Information</h4>
+                {/* Section 3: Product Information */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Product Information</h3>
               
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
@@ -1634,8 +2186,11 @@ export default function AdminDigitalAssetManagerPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Tags</label>
+                {/* Section 4: Tags */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Tags</h3>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Tags</label>
               <div className="mt-2 space-y-2">
                 <div className="flex flex-wrap gap-2">
                   {tags.map((tag) => {
@@ -1681,9 +2236,12 @@ export default function AdminDigitalAssetManagerPage() {
             </div>
 
 
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">Locales *</label>
+                {/* Section 5: Locales & Regions */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Locales & Regions</h3>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">Locales *</label>
                 <button
                   type="button"
                   onClick={async () => {
@@ -1756,11 +2314,11 @@ export default function AdminDigitalAssetManagerPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Regions (optional)
-                <span className="ml-2 text-xs font-normal text-gray-500">Filter assets by geographic region</span>
-              </label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Regions (optional)
+                      <span className="ml-2 text-xs font-normal text-gray-500">Filter assets by geographic region</span>
+                    </label>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {regions.map((region) => {
                   const selected = formState.selectedRegionCodes.includes(region.code);
@@ -1784,17 +2342,19 @@ export default function AdminDigitalAssetManagerPage() {
               </div>
             </div>
 
-            {/* Contextual Fields Based on Asset Type */}
-            {(() => {
-              const selectedAssetType = assetTypes.find(t => t.id === formState.assetTypeId);
-              const isVideoType = selectedAssetType?.slug === 'video';
-              const isRegulatoryType = selectedAssetType?.slug === 'packaging-regulatory';
-              
-              if (isVideoType) {
-                return (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Vimeo Video ID or URL *</label>
+                {/* Section 6: File or Vimeo Link */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">File or Vimeo Link</h3>
+                  {(() => {
+                    const selectedAssetType = assetTypes.find(t => t.id === formState.assetTypeId);
+                    const isVideoType = selectedAssetType?.slug === 'video';
+                    const isRegulatoryType = selectedAssetType?.slug === 'packaging-regulatory';
+                    
+                    if (isVideoType) {
+                      return (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Vimeo Video ID or URL *</label>
                       <input
                         type="text"
                         value={formState.vimeoVideoId}
@@ -1860,10 +2420,10 @@ export default function AdminDigitalAssetManagerPage() {
                 );
               }
               
-              // For non-video types, show file upload
-              return (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">File *</label>
+                    // For non-video types, show file upload
+                    return (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">File *</label>
                   <input
                     type="file"
                     accept={getAcceptAttribute(formState.assetType, formState.assetTypeId)}
@@ -1910,479 +2470,37 @@ export default function AdminDigitalAssetManagerPage() {
                     </p>
                   )}
                 </div>
-              );
-            })()}
-
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                disabled={uploading}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                <ArrowUpTrayIcon className="h-4 w-4" />
-                {uploading ? 'Uploading…' : 'Upload Asset'}
-              </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-              >
-                Reset
-              </button>
-            </div>
-          </form>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Asset Library</h3>
-              <p className="text-sm text-gray-600">Search, filter, and review uploaded assets.</p>
-            </div>
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:flex-wrap">
-              <input
-                type="search"
-                placeholder="Search by title, product line, or SKU"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none lg:w-64"
-              />
-              <select
-                value={typeFilter}
-                onChange={(event) => setTypeFilter(event.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              >
-                <option value="">All types (legacy)</option>
-                {assetTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={assetTypeFilter}
-                onChange={(event) => {
-                  setAssetTypeFilter(event.target.value);
-                  setAssetSubtypeFilter(''); // Clear subtype when type changes
-                }}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              >
-                <option value="">All Asset Types</option>
-                {assetTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={assetSubtypeFilter}
-                onChange={(event) => setAssetSubtypeFilter(event.target.value)}
-                disabled={!assetTypeFilter}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                <option value="">All Sub-Types</option>
-                {assetSubtypes
-                  .filter((subtype) => subtype.asset_type_id === assetTypeFilter)
-                  .map((subtype) => (
-                    <option key={subtype.id} value={subtype.id}>
-                      {subtype.name}
-                    </option>
-                  ))}
-              </select>
-              <select
-                value={productLineFilter}
-                onChange={(event) => setProductLineFilter(event.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              >
-                <option value="">All product lines</option>
-                <option value="ProCtrl">ProCtrl</option>
-                <option value="SelfCtrl">SelfCtrl</option>
-                <option value="Both">Both</option>
-                <option value="None">None</option>
-                {productLines.filter(pl => !['ProCtrl', 'SelfCtrl', 'Both', 'None'].includes(pl)).map((pl) => (
-                  <option key={pl} value={pl}>
-                    {pl}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={productNameFilter}
-                onChange={(event) => setProductNameFilter(event.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              >
-                <option value="">All products</option>
-                {PRODUCT_NAME_OPTIONS.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={localeFilter}
-                onChange={(event) => setLocaleFilter(event.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              >
-                <option value="">All locales</option>
-                {locales.map((locale) => (
-                  <option key={locale.code} value={locale.code}>
-                    {locale.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={regionFilter}
-                onChange={(event) => setRegionFilter(event.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              >
-                <option value="">All regions</option>
-                {regions.map((region) => (
-                  <option key={region.code} value={region.code}>
-                    {region.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={tagFilter}
-                onChange={(event) => setTagFilter(event.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              >
-                <option value="">All tags</option>
-                {tags.map((tag) => (
-                  <option key={tag.slug} value={tag.label}>
-                    {tag.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          
-          {/* Advanced Search Accordion */}
-          <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50">
-            <button
-              type="button"
-              onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-              className="w-full flex items-center justify-between p-4 text-left"
-            >
-              <h4 className="text-sm font-semibold text-gray-900">Advanced Search</h4>
-              <svg
-                className={`h-5 w-5 text-gray-500 transition-transform ${showAdvancedSearch ? 'rotate-180' : ''}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {showAdvancedSearch && (
-              <div className="px-4 pb-4">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Date From</label>
-                    <input
-                      type="date"
-                      value={dateFromFilter}
-                      onChange={(event) => setDateFromFilter(event.target.value)}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Date To</label>
-                    <input
-                      type="date"
-                      value={dateToFilter}
-                      onChange={(event) => setDateToFilter(event.target.value)}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Min File Size (MB)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      value={fileSizeMinFilter}
-                      onChange={(event) => setFileSizeMinFilter(event.target.value)}
-                      placeholder="0"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Max File Size (MB)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      value={fileSizeMaxFilter}
-                      onChange={(event) => setFileSizeMaxFilter(event.target.value)}
-                      placeholder="∞"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                    />
-                  </div>
+                    })()}
                 </div>
-                {(dateFromFilter || dateToFilter || fileSizeMinFilter || fileSizeMaxFilter) && (
+
+                {/* Section 7: Actions */}
+                <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
+                  <button
+                    type="submit"
+                    disabled={uploading}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-black px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    <ArrowUpTrayIcon className="h-4 w-4" />
+                    {uploading ? 'Uploading…' : 'Upload Asset'}
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
-                      setDateFromFilter('');
-                      setDateToFilter('');
-                      setFileSizeMinFilter('');
-                      setFileSizeMaxFilter('');
-                      setCurrentPage(1);
-                      fetchAssets(accessToken ?? '', searchTerm || undefined, 1);
+                      resetForm();
+                      setIsUploadDrawerOpen(false);
                     }}
-                    className="mt-3 text-sm text-blue-600 hover:text-blue-800 underline"
+                    className="rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100"
                   >
-                    Clear advanced filters
+                    Cancel
                   </button>
-                )}
-              </div>
-            )}
+                </div>
+              </form>
+            </div>
           </div>
+        </div>
+      )}
 
-          {loadingAssets ? (
-            <div className="flex items-center justify-center py-12 text-gray-600">
-              <div className="flex items-center gap-3 text-sm">
-                <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                Loading assets…
-              </div>
-            </div>
-          ) : filteredAssets.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-6 py-12 text-center text-sm text-gray-600">
-              No assets found. Upload assets to populate the library.
-            </div>
-          ) : (
-            <>
-              {/* Bulk Actions Bar */}
-              {selectedAssetIds.size > 0 && (
-                <div className="mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-                  <span className="text-sm font-medium text-blue-900">
-                    {selectedAssetIds.size} asset{selectedAssetIds.size !== 1 ? 's' : ''} selected
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleBulkDelete}
-                    disabled={bulkDeleting}
-                    className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                    {bulkDeleting ? 'Deleting...' : `Delete ${selectedAssetIds.size}`}
-                  </button>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {/* Select All Checkbox */}
-                <div className="md:col-span-2 flex items-center gap-2 px-2 py-2 border-b border-gray-200">
-                  <button
-                    type="button"
-                    onClick={toggleSelectAll}
-                    className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
-                  >
-                    <div className={`flex h-4 w-4 items-center justify-center rounded border-2 ${
-                      selectedAssetIds.size === filteredAssets.length && filteredAssets.length > 0
-                        ? 'border-blue-600 bg-blue-600'
-                        : 'border-gray-300 bg-white'
-                    }`}>
-                      {selectedAssetIds.size === filteredAssets.length && filteredAssets.length > 0 && (
-                        <CheckIcon className="h-3 w-3 text-white" />
-                      )}
-                    </div>
-                    <span>Select All</span>
-                  </button>
-                </div>
-                
-                {filteredAssets.map((asset) => (
-                  <div
-                    key={asset.id}
-                    className="flex gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-gray-300 transition relative"
-                    onClick={() => {
-                    setSelectedAsset(asset);
-                    if (accessToken) {
-                      fetchAssetVersions(asset.id);
-                    }
-                  }}
-                  >
-                    {/* Selection Checkbox */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleAssetSelection(asset.id);
-                      }}
-                      className="absolute top-4 left-4 z-10 flex h-5 w-5 items-center justify-center rounded border-2 bg-white shadow-sm hover:bg-gray-50"
-                    >
-                      {selectedAssetIds.has(asset.id) && (
-                        <CheckIcon className="h-3 w-3 text-blue-600" />
-                      )}
-                    </button>
-                    {selectedAssetIds.has(asset.id) && (
-                      <div className="absolute inset-0 rounded-xl border-2 border-blue-600 bg-blue-50/20 pointer-events-none" />
-                    )}
-                    <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
-                    {asset.asset_type === 'video' && asset.vimeo_video_id ? (
-                      // Vimeo video - show Vimeo poster/thumbnail (using oEmbed API for poster image)
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={`https://vumbnail.com/${asset.vimeo_video_id}.jpg`}
-                        alt={asset.title}
-                        className="h-full w-full object-cover"
-                        onError={(e) => {
-                          // Fallback to Vimeo's default thumbnail URL pattern
-                          (e.target as HTMLImageElement).src = `https://i.vimeocdn.com/video/${asset.vimeo_video_id}_640.jpg`;
-                        }}
-                      />
-                    ) : accessToken && asset.current_version?.previewPath ? (
-                      // Other assets - show preview/thumbnail
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={ensureTokenUrl(asset.current_version.previewPath)}
-                        alt={asset.title}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-gray-400">
-                        <PhotoIcon className="h-8 w-8" />
-                      </div>
-                    )}
-                    {asset.current_version && (
-                      <span className="absolute bottom-1 right-1 rounded bg-white/90 px-1 text-[10px] font-medium text-gray-700">
-                        v{asset.current_version.version_number}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-1 flex-col justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-semibold text-gray-900">{asset.title}</h4>
-                          {renderAssetTypePill(asset.asset_type)}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteAsset(asset.id);
-                          }}
-                          className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition"
-                          title="Delete asset"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
-                      </div>
-                      {selectedAssetIds.has(asset.id) && (
-                        <div className="absolute inset-0 rounded-xl border-2 border-blue-600 bg-blue-50/20 pointer-events-none" />
-                      )}
-                      {asset.description && (
-                        <p className="text-xs text-gray-600 line-clamp-2">{asset.description}</p>
-                      )}
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
-                        <span>Created {new Date(asset.created_at).toLocaleDateString()}</span>
-                        {asset.sku && <span>SKU {asset.sku}</span>}
-                        {asset.product_line && <span>{asset.product_line}</span>}
-                      </div>
-                    </div>
-                    <div className="space-y-1 text-xs text-gray-600">
-                      {asset.current_version && (
-                        <div className="flex items-center gap-3">
-                          <span>Size: {formatBytes(asset.current_version.file_size) || '—'}</span>
-                          <span>{asset.current_version.mime_type || 'Unknown type'}</span>
-                          {asset.asset_type === 'video' && asset.vimeo_video_id && (
-                            <span>Vimeo ID: {asset.vimeo_video_id}</span>
-                          )}
-                        </div>
-                      )}
-                      {asset.tags.length > 0 && (
-                        <div>
-                          <span className="font-medium text-gray-700">Tags:</span> {asset.tags.join(', ')}
-                        </div>
-                      )}
-                      {asset.locales.length > 0 && (
-                        <div>
-                          <span className="font-medium text-gray-700">Locales:</span>{' '}
-                          {asset.locales.map((locale) => locale.label).join(', ')}
-                        </div>
-                      )}
-                      {asset.regions.length > 0 && (
-                        <div>
-                          <span className="font-medium text-gray-700">Regions:</span> {asset.regions.map((region) => region.label).join(', ')}
-                        </div>
-                      )}
-                      {asset.current_version?.downloadPath && (
-                        <div>
-                          <a
-                            href={ensureTokenUrl(asset.current_version.downloadPath)}
-                            className="font-medium text-gray-700 underline-offset-2 hover:underline"
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              if (!accessToken) {
-                                e.preventDefault();
-                                return;
-                              }
-                              await logDownload(
-                                asset.id,
-                                asset.current_version!.downloadPath!,
-                                'api',
-                                accessToken
-                              );
-                            }}
-                          >
-                            Download
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              </div>
-            </>
-          )}
-          
-          {/* Pagination Controls */}
-          {pagination && pagination.total > 0 && (
-            <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
-              <div className="text-sm text-gray-700">
-                Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{' '}
-                <span className="font-medium">
-                  {Math.min(pagination.page * pagination.limit, pagination.total)}
-                </span>{' '}
-                of <span className="font-medium">{pagination.total}</span> assets
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newPage = currentPage - 1;
-                    setCurrentPage(newPage);
-                    fetchAssets(accessToken ?? '', searchTerm || undefined, newPage);
-                  }}
-                  disabled={!pagination.hasPreviousPage}
-                  className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <span className="text-sm text-gray-700">
-                  Page {pagination.page} of {pagination.totalPages}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newPage = currentPage + 1;
-                    setCurrentPage(newPage);
-                    fetchAssets(accessToken ?? '', searchTerm || undefined, newPage);
-                  }}
-                  disabled={!pagination.hasNextPage}
-                  className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* Asset Detail Modal */}
+      {/* Asset Detail Modal - Two Column Layout */}
       {selectedAsset && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -2393,7 +2511,7 @@ export default function AdminDigitalAssetManagerPage() {
             }
           }}
         >
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-lg shadow-xl">
+          <div className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
             {/* Close button */}
             <button
               type="button"
@@ -2402,50 +2520,57 @@ export default function AdminDigitalAssetManagerPage() {
                 setIsEditingAsset(false);
                 setAssetVersions([]);
               }}
-              className="absolute top-4 right-4 z-10 rounded-full bg-white/90 p-2 text-gray-600 hover:bg-white hover:text-gray-900 transition"
+              className="absolute top-4 right-4 z-20 rounded-full bg-white/90 p-2 text-gray-600 hover:bg-white hover:text-gray-900 transition shadow-sm"
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
 
-            <div className="p-6">
-              {/* Header */}
-              <div className="mb-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-2xl font-semibold text-gray-900">{selectedAsset.title || 'Untitled Asset'}</h2>
-                  {renderAssetTypePill(selectedAsset.asset_type)}
-                </div>
-                {selectedAsset.description && (
-                  <p className="text-gray-600">{selectedAsset.description}</p>
-                )}
-              </div>
-
-              {/* Vimeo Player (for videos) */}
-              {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id ? (
-                <div className="mb-6">
-                  <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
-                    <iframe
-                      src={`https://player.vimeo.com/video/${selectedAsset.vimeo_video_id}?byline=0&title=0&portrait=0`}
-                      allow="autoplay; fullscreen; picture-in-picture"
-                      allowFullScreen
-                      className="absolute inset-0 w-full h-full border-0 rounded-lg"
-                      title={selectedAsset.title || 'Video'}
-                    />
+            {/* Two Column Layout */}
+            <div className="flex flex-col lg:flex-row h-full overflow-hidden">
+              {/* Left Column - Preview */}
+              <div className="lg:w-2/3 bg-gray-50 flex items-center justify-center p-8 min-h-[400px]">
+                {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id ? (
+                  <div className="w-full max-w-4xl">
+                    <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
+                      <iframe
+                        src={`https://player.vimeo.com/video/${selectedAsset.vimeo_video_id}?byline=0&title=0&portrait=0`}
+                        allow="autoplay; fullscreen; picture-in-picture"
+                        allowFullScreen
+                        className="absolute inset-0 w-full h-full border-0 rounded-lg shadow-lg"
+                        title={selectedAsset.title || 'Video'}
+                      />
+                    </div>
                   </div>
-                </div>
-              ) : null}
-
-              {/* Preview for non-video assets */}
-              {selectedAsset.asset_type !== 'video' && selectedAsset.current_version?.previewPath && accessToken && (
-                <div className="mb-6">
-                  <div className="relative w-full bg-gray-100 rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                ) : selectedAsset.current_version?.previewPath && accessToken ? (
+                  <div className="w-full max-w-4xl bg-white rounded-lg shadow-lg p-4">
                     <img
                       src={ensureTokenUrl(selectedAsset.current_version.previewPath)}
                       alt={selectedAsset.title}
-                      className="w-full h-full object-contain"
+                      className="w-full h-auto max-h-[70vh] object-contain rounded"
                     />
                   </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-gray-400">
+                    <PhotoIcon className="h-24 w-24 mb-4" />
+                    <p className="text-sm">No preview available</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column - Metadata */}
+              <div className="lg:w-1/3 bg-white overflow-y-auto p-6 border-l border-gray-200">
+                {/* Header */}
+                <div className="mb-6 pb-6 border-b border-gray-200">
+                  <div className="flex items-start gap-3 mb-3">
+                    <h2 className="text-xl font-semibold text-gray-900 flex-1">{selectedAsset.title || 'Untitled Asset'}</h2>
+                  </div>
+                  <div className="flex items-center gap-2 mb-3">
+                    {renderAssetTypePill(selectedAsset.asset_type)}
+                  </div>
+                  {selectedAsset.description && (
+                    <p className="text-sm text-gray-600 leading-relaxed">{selectedAsset.description}</p>
+                  )}
                 </div>
-              )}
 
               {/* Download Section */}
               <div className="mb-6">
@@ -2639,136 +2764,194 @@ export default function AdminDigitalAssetManagerPage() {
                 )}
               </div>
 
-              {/* Metadata */}
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Details</h3>
-                <dl className="grid grid-cols-2 gap-4 text-sm">
-                  {selectedAsset.sku && (
-                    <>
-                      <dt className="font-medium text-gray-700">SKU</dt>
-                      <dd className="text-gray-600">{selectedAsset.sku}</dd>
-                    </>
-                  )}
-                  {selectedAsset.product_line && (
-                    <>
-                      <dt className="font-medium text-gray-700">Product Line</dt>
-                      <dd className="text-gray-600">{selectedAsset.product_line}</dd>
-                    </>
-                  )}
-                  <dt className="font-medium text-gray-700">Created</dt>
-                  <dd className="text-gray-600">{new Date(selectedAsset.created_at).toLocaleDateString()}</dd>
-                  {selectedAsset.current_version && (
-                    <>
-                      <dt className="font-medium text-gray-700">Size</dt>
-                      <dd className="text-gray-600">{formatBytes(selectedAsset.current_version.file_size) || '—'}</dd>
-                      <dt className="font-medium text-gray-700">Type</dt>
-                      <dd className="text-gray-600">{selectedAsset.current_version.mime_type || 'Unknown'}</dd>
-                    </>
-                  )}
-                </dl>
-
-                {selectedAsset.tags.length > 0 && (
-                  <div className="mt-4">
-                    <dt className="font-medium text-gray-700 mb-2">Tags</dt>
-                    <dd className="flex flex-wrap gap-2">
-                      {selectedAsset.tags.map((tag) => (
-                        <span key={tag} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">
-                          {tag}
-                        </span>
-                      ))}
-                    </dd>
-                  </div>
-                )}
-
-
-                {selectedAsset.locales.length > 0 && (
-                  <div className="mt-4">
-                    <dt className="font-medium text-gray-700 mb-2">Locales</dt>
-                    <dd className="text-gray-600">{selectedAsset.locales.map((l) => l.label).join(', ')}</dd>
-                  </div>
-                )}
-
-                {selectedAsset.regions.length > 0 && (
-                  <div className="mt-4">
-                    <dt className="font-medium text-gray-700 mb-2">Regions</dt>
-                    <dd className="text-gray-600">{selectedAsset.regions.map((r) => r.label).join(', ')}</dd>
-                  </div>
-                )}
-              </div>
-
-              {/* Versions Section */}
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Versions</h3>
-                {loadingVersions ? (
-                  <div className="text-sm text-gray-500">Loading versions...</div>
-                ) : assetVersions.length === 0 ? (
-                  <div className="text-sm text-gray-500">No versions found</div>
-                ) : (
-                  <div className="space-y-2">
-                    {assetVersions.map((version) => (
-                      <div
-                        key={version.id}
-                        className={`flex items-center justify-between rounded-lg border p-3 ${
-                          version.id === selectedAsset.current_version?.id
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 bg-white'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="font-medium text-gray-900">v{version.version_number}</span>
-                          <span className="text-sm text-gray-600">
-                            {new Date(version.created_at).toLocaleDateString()}
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            {formatBytes(version.file_size) || '—'} • {version.mime_type || 'Unknown'}
-                          </span>
-                          {version.id === selectedAsset.current_version?.id && (
-                            <span className="rounded-full bg-blue-600 px-2 py-0.5 text-xs font-medium text-white">
-                              Current
-                            </span>
-                          )}
+                {/* Metadata Section */}
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Details</h3>
+                    <dl className="space-y-3 text-sm">
+                      {selectedAsset.sku && (
+                        <div>
+                          <dt className="font-medium text-gray-700 mb-1">SKU</dt>
+                          <dd className="text-gray-600">{selectedAsset.sku}</dd>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {version.previewPath && (
-                            <a
-                              href={ensureTokenUrl(version.previewPath)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // Just open in new tab, don't trigger download
-                              }}
-                              className="text-sm text-blue-600 hover:text-blue-800"
-                            >
-                              Preview
-                            </a>
-                          )}
-                          {version.downloadPath && (
-                            <button
-                              type="button"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                if (!accessToken) return;
-                                const downloadUrl = ensureTokenUrl(version.downloadPath);
-                                const filename = `${selectedAsset.title || 'asset'}-v${version.version_number}.${version.mime_type?.split('/')[1] || 'bin'}`;
-                                await triggerDownload(
-                                  downloadUrl,
-                                  filename,
-                                  selectedAsset.id,
-                                  'api',
-                                  accessToken
-                                );
-                              }}
-                              className="text-sm text-blue-600 hover:text-blue-800"
-                            >
-                              Download
-                            </button>
-                          )}
+                      )}
+                      {selectedAsset.product_line && (
+                        <div>
+                          <dt className="font-medium text-gray-700 mb-1">Product Line</dt>
+                          <dd className="text-gray-600">{selectedAsset.product_line}</dd>
                         </div>
+                      )}
+                      {selectedAsset.product_name && (
+                        <div>
+                          <dt className="font-medium text-gray-700 mb-1">Product</dt>
+                          <dd className="text-gray-600">{selectedAsset.product_name}</dd>
+                        </div>
+                      )}
+                      <div>
+                        <dt className="font-medium text-gray-700 mb-1">Created</dt>
+                        <dd className="text-gray-600">{new Date(selectedAsset.created_at).toLocaleDateString()}</dd>
                       </div>
-                    ))}
+                      {selectedAsset.current_version && (
+                        <>
+                          <div>
+                            <dt className="font-medium text-gray-700 mb-1">Size</dt>
+                            <dd className="text-gray-600">{formatBytes(selectedAsset.current_version.file_size) || '—'}</dd>
+                          </div>
+                          <div>
+                            <dt className="font-medium text-gray-700 mb-1">File Type</dt>
+                            <dd className="text-gray-600">{selectedAsset.current_version.mime_type || 'Unknown'}</dd>
+                          </div>
+                        </>
+                      )}
+                    </dl>
                   </div>
-                )}
+
+                  {selectedAsset.tags.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Tags</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedAsset.tags.map((tag) => (
+                          <span key={tag} className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedAsset.locales.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Locales</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedAsset.locales.map((locale) => (
+                          <span key={locale.code} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                            {locale.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedAsset.regions.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Regions</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedAsset.regions.map((region) => (
+                          <span key={region.code} className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+                            {region.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Versions Section */}
+                <div className="pt-6 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Versions</h3>
+                  {loadingVersions ? (
+                    <div className="text-sm text-gray-500 py-4">Loading versions...</div>
+                  ) : assetVersions.length === 0 ? (
+                    <div className="text-sm text-gray-500 py-4">No versions found</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {assetVersions.map((version) => (
+                        <div
+                          key={version.id}
+                          className={`flex items-center justify-between rounded-lg border p-3 transition ${
+                            version.id === selectedAsset.current_version?.id
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <span className="font-medium text-gray-900">v{version.version_number}</span>
+                            <span className="text-xs text-gray-500 truncate">
+                              {formatBytes(version.file_size) || '—'} • {version.mime_type?.split('/')[1] || 'Unknown'}
+                            </span>
+                            {version.id === selectedAsset.current_version?.id && (
+                              <span className="rounded-full bg-blue-600 px-2 py-0.5 text-xs font-medium text-white whitespace-nowrap">
+                                Current
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {version.previewPath && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(ensureTokenUrl(version.previewPath), '_blank');
+                                }}
+                                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                Preview
+                              </button>
+                            )}
+                            {version.downloadPath && (
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!accessToken) return;
+                                  const downloadUrl = ensureTokenUrl(version.downloadPath);
+                                  const filename = `${selectedAsset.title || 'asset'}-v${version.version_number}.${version.mime_type?.split('/')[1] || 'bin'}`;
+                                  await triggerDownload(
+                                    downloadUrl,
+                                    filename,
+                                    selectedAsset.id,
+                                    'api',
+                                    accessToken
+                                  );
+                                }}
+                                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                Download
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="pt-6 border-t border-gray-200 flex flex-col gap-2">
+                  {selectedAsset.current_version?.downloadPath && (
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (!accessToken) return;
+                        const downloadUrl = ensureTokenUrl(selectedAsset.current_version!.downloadPath!);
+                        const filename = `${selectedAsset.title || 'asset'}.${selectedAsset.current_version!.mime_type?.split('/')[1] || 'bin'}`;
+                        await triggerDownload(
+                          downloadUrl,
+                          filename,
+                          selectedAsset.id,
+                          'api',
+                          accessToken
+                        );
+                      }}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition"
+                    >
+                      <ArrowDownTrayIcon className="h-4 w-4" />
+                      Download Asset
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteAsset(selectedAsset.id);
+                    }}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                    Delete Asset
+                  </button>
+                </div>
               </div>
             </div>
           </div>
