@@ -2795,9 +2795,9 @@ export default function AdminDigitalAssetManagerPage() {
 
                 {/* Metadata Section */}
               <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Details</h3>
-                    <dl className="space-y-3 text-sm">
+                <div className="pb-4 border-b border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2.5 uppercase tracking-wide">Details</h3>
+                    <dl className="space-y-2 text-sm">
                       {selectedAsset.sku && (
                         <div>
                           <dt className="font-medium text-gray-700 mb-1">SKU</dt>
