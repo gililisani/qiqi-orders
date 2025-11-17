@@ -2543,7 +2543,7 @@ export default function AdminDigitalAssetManagerPage() {
             }
           }}
         >
-          <div className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
+          <div className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-lg shadow-xl overflow-hidden flex flex-col">
             {/* Close button */}
             <button
               type="button"
@@ -2554,7 +2554,7 @@ export default function AdminDigitalAssetManagerPage() {
               }}
               className="absolute top-3 right-3 z-20 rounded-md bg-white/90 p-1.5 text-gray-600 hover:bg-white hover:text-gray-900 transition shadow-sm"
             >
-              <XMarkIcon className="h-5 w-5" />
+              <XMarkIcon className="h-4 w-4" />
             </button>
 
             {/* Two Column Layout */}
