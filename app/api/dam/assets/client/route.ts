@@ -61,7 +61,10 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const searchQuery = searchParams.get('q') || '';
     const typeFilter = searchParams.get('type') || '';
+    const assetTypeFilter = searchParams.get('assetType') || '';
+    const assetSubtypeFilter = searchParams.get('assetSubtype') || '';
     const productLineFilter = searchParams.get('productLine') || '';
+    const productNameFilter = searchParams.get('productName') || '';
     const localeFilter = searchParams.get('locale') || '';
     const regionFilter = searchParams.get('region') || '';
     const tagFilter = searchParams.get('tag') || '';
@@ -78,7 +81,10 @@ export async function GET(request: NextRequest) {
         title,
         description,
         asset_type,
+        asset_type_id,
+        asset_subtype_id,
         product_line,
+        product_name,
         sku,
         vimeo_video_id,
         vimeo_download_1080p,
@@ -96,7 +102,7 @@ export async function GET(request: NextRequest) {
     if (searchQuery.trim()) {
       const searchTerm = `%${searchQuery.trim()}%`;
       assetsQuery = assetsQuery.or(
-        `title.ilike.${searchTerm},description.ilike.${searchTerm},product_line.ilike.${searchTerm},sku.ilike.${searchTerm}`
+        `title.ilike.${searchTerm},description.ilike.${searchTerm},product_line.ilike.${searchTerm},product_name.ilike.${searchTerm},sku.ilike.${searchTerm}`
       );
     }
 
@@ -104,8 +110,20 @@ export async function GET(request: NextRequest) {
       assetsQuery = assetsQuery.eq('asset_type', typeFilter);
     }
 
+    if (assetTypeFilter) {
+      assetsQuery = assetsQuery.eq('asset_type_id', assetTypeFilter);
+    }
+
+    if (assetSubtypeFilter) {
+      assetsQuery = assetsQuery.eq('asset_subtype_id', assetSubtypeFilter);
+    }
+
     if (productLineFilter) {
       assetsQuery = assetsQuery.ilike('product_line', `%${productLineFilter}%`);
+    }
+
+    if (productNameFilter) {
+      assetsQuery = assetsQuery.ilike('product_name', `%${productNameFilter}%`);
     }
 
     const { data: assetsData, error, count } = await assetsQuery
@@ -287,7 +305,10 @@ export async function GET(request: NextRequest) {
         title: record.title,
         description: record.description,
         asset_type: record.asset_type,
+        asset_type_id: record.asset_type_id ?? null,
+        asset_subtype_id: record.asset_subtype_id ?? null,
         product_line: record.product_line,
+        product_name: record.product_name ?? null,
         sku: record.sku,
         vimeo_video_id: record.vimeo_video_id ?? null,
         vimeo_download_1080p: record.vimeo_download_1080p ?? null,

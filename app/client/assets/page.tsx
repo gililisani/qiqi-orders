@@ -55,8 +55,11 @@ interface AssetRecord {
   id: string;
   title: string;
   description?: string | null;
-  asset_type: string;
+  asset_type: string; // Legacy enum field
+  asset_type_id?: string | null; // New taxonomy Asset Type ID
+  asset_subtype_id?: string | null; // New taxonomy Asset Sub-Type ID
   product_line?: string | null;
+  product_name?: string | null; // New Product Name field
   sku?: string | null;
   vimeo_video_id?: string | null;
   vimeo_download_1080p?: string | null;
@@ -178,13 +181,18 @@ export default function ClientAssetsPage() {
   const [regions, setRegions] = useState<RegionOption[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [productLines, setProductLines] = useState<string[]>([]);
+  const [assetTypes, setAssetTypes] = useState<Array<{ id: string; name: string; slug: string }>>([]);
+  const [assetSubtypes, setAssetSubtypes] = useState<Array<{ id: string; name: string; slug: string; asset_type_id: string }>>([]);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('');
+  const [typeFilter, setTypeFilter] = useState<string>(''); // Legacy enum filter
+  const [assetTypeFilter, setAssetTypeFilter] = useState<string>(''); // New taxonomy Asset Type filter
+  const [assetSubtypeFilter, setAssetSubtypeFilter] = useState<string>(''); // New taxonomy Asset Sub-Type filter
   const [localeFilter, setLocaleFilter] = useState<string>('');
   const [regionFilter, setRegionFilter] = useState<string>('');
   const [tagFilter, setTagFilter] = useState<string>('');
   const [productLineFilter, setProductLineFilter] = useState<string>('');
+  const [productNameFilter, setProductNameFilter] = useState<string>(''); // New Product Name filter
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pagination, setPagination] = useState<{
     page: number;
@@ -218,10 +226,18 @@ export default function ClientAssetsPage() {
         credentials: 'same-origin',
       });
       if (!response.ok) throw new Error('Failed to load lookups');
-      const data = await response.json() as { locales?: LocaleOption[]; regions?: RegionOption[]; tags?: Array<{ label: string }> };
+      const data = await response.json() as { 
+        locales?: LocaleOption[]; 
+        regions?: RegionOption[]; 
+        tags?: Array<{ label: string }>;
+        assetTypes?: Array<{ id: string; name: string; slug: string }>;
+        assetSubtypes?: Array<{ id: string; name: string; slug: string; asset_type_id: string }>;
+      };
       setLocales(data.locales || []);
       setRegions(data.regions || []);
       setTags([...new Set((data.tags || []).map((t) => t.label))]);
+      setAssetTypes(data.assetTypes || []);
+      setAssetSubtypes(data.assetSubtypes || []);
     } catch (err: any) {
       console.error('Failed to load lookups', err);
     }
@@ -236,7 +252,10 @@ export default function ClientAssetsPage() {
       const params = new URLSearchParams();
       if (search) params.append('q', search);
       if (typeFilter) params.append('type', typeFilter);
+      if (assetTypeFilter) params.append('assetType', assetTypeFilter);
+      if (assetSubtypeFilter) params.append('assetSubtype', assetSubtypeFilter);
       if (productLineFilter) params.append('productLine', productLineFilter);
+      if (productNameFilter) params.append('productName', productNameFilter);
       if (localeFilter) params.append('locale', localeFilter);
       if (regionFilter) params.append('region', regionFilter);
       if (tagFilter) params.append('tag', tagFilter);
@@ -279,7 +298,7 @@ export default function ClientAssetsPage() {
       setCurrentPage(1);
     }, 300);
     return () => clearTimeout(timeoutId);
-  }, [accessToken, searchTerm, typeFilter, localeFilter, regionFilter, tagFilter, productLineFilter, fetchLookups]);
+  }, [accessToken, searchTerm, typeFilter, assetTypeFilter, assetSubtypeFilter, localeFilter, regionFilter, tagFilter, productLineFilter, productNameFilter, fetchLookups]);
 
   const filteredAssets = useMemo(() => {
     return assets; // Assets are already filtered by the API
@@ -332,7 +351,7 @@ export default function ClientAssetsPage() {
                 onChange={(event) => setTypeFilter(event.target.value)}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
               >
-                <option value="">All types</option>
+                <option value="">All types (legacy)</option>
                 {assetTypeOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -340,16 +359,62 @@ export default function ClientAssetsPage() {
                 ))}
               </select>
               <select
+                value={assetTypeFilter}
+                onChange={(event) => {
+                  setAssetTypeFilter(event.target.value);
+                  setAssetSubtypeFilter(''); // Clear subtype when type changes
+                }}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+              >
+                <option value="">All Asset Types</option>
+                {assetTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={assetSubtypeFilter}
+                onChange={(event) => setAssetSubtypeFilter(event.target.value)}
+                disabled={!assetTypeFilter}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                <option value="">All Sub-Types</option>
+                {assetSubtypes
+                  .filter((subtype) => subtype.asset_type_id === assetTypeFilter)
+                  .map((subtype) => (
+                    <option key={subtype.id} value={subtype.id}>
+                      {subtype.name}
+                    </option>
+                  ))}
+              </select>
+              <select
                 value={productLineFilter}
                 onChange={(event) => setProductLineFilter(event.target.value)}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
               >
                 <option value="">All product lines</option>
-                {productLines.map((pl) => (
+                <option value="ProCtrl">ProCtrl</option>
+                <option value="SelfCtrl">SelfCtrl</option>
+                <option value="Both">Both</option>
+                <option value="None">None</option>
+                {productLines.filter(pl => !['ProCtrl', 'SelfCtrl', 'Both', 'None'].includes(pl)).map((pl) => (
                   <option key={pl} value={pl}>
                     {pl}
                   </option>
                 ))}
+              </select>
+              <select
+                value={productNameFilter}
+                onChange={(event) => setProductNameFilter(event.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+              >
+                <option value="">All products</option>
+                <option value="Hair Controller">Hair Controller</option>
+                <option value="Curl Controller">Curl Controller</option>
+                <option value="Volume Controller">Volume Controller</option>
+                <option value="Texture Controller">Texture Controller</option>
+                <option value="Other">Other</option>
               </select>
               <select
                 value={localeFilter}

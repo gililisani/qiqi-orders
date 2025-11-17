@@ -64,8 +64,11 @@ interface AssetRecord {
   id: string;
   title: string;
   description?: string | null;
-  asset_type: string;
+  asset_type: string; // Legacy enum field
+  asset_type_id?: string | null; // New taxonomy Asset Type ID
+  asset_subtype_id?: string | null; // New taxonomy Asset Sub-Type ID
   product_line?: string | null;
+  product_name?: string | null; // New Product Name field
   sku?: string | null;
   vimeo_video_id?: string | null;
   vimeo_download_1080p?: string | null;
@@ -82,8 +85,11 @@ interface AssetRecord {
 interface UploadFormState {
   title: string;
   description: string;
-  assetType: string;
-  productLine: string;
+  assetType: string; // Legacy enum field (image, video, document, etc.)
+  assetTypeId: string | null; // New taxonomy Asset Type ID
+  assetSubtypeId: string | null; // New taxonomy Asset Sub-Type ID
+  productLine: string; // ProCtrl, SelfCtrl, Both, None
+  productName: string; // Hair Controller, Curl Controller, etc.
   sku: string;
   selectedTagSlugs: string[];
   selectedLocaleCodes: string[];
@@ -101,7 +107,10 @@ const defaultFormState: UploadFormState = {
   title: '',
   description: '',
   assetType: 'image',
+  assetTypeId: null,
+  assetSubtypeId: null,
   productLine: '',
+  productName: '',
   sku: '',
   selectedTagSlugs: [],
   selectedLocaleCodes: [],
@@ -114,6 +123,15 @@ const defaultFormState: UploadFormState = {
   vimeoDownload480p: '',
   vimeoDownload360p: '',
 };
+
+// Product name options (static list)
+const PRODUCT_NAME_OPTIONS = [
+  'Hair Controller',
+  'Curl Controller',
+  'Volume Controller',
+  'Texture Controller',
+  'Other',
+];
 
 function formatBytes(bytes?: number | null): string {
   if (!bytes || bytes <= 0) return '—';
@@ -253,6 +271,8 @@ export default function AdminDigitalAssetManagerPage() {
   const [tags, setTags] = useState<TagOption[]>([]);
   const [locales, setLocales] = useState<LocaleOption[]>([]);
   const [regions, setRegions] = useState<RegionOption[]>([]);
+  const [assetTypes, setAssetTypes] = useState<Array<{ id: string; name: string; slug: string }>>([]);
+  const [assetSubtypes, setAssetSubtypes] = useState<Array<{ id: string; name: string; slug: string; asset_type_id: string }>>([]);
 
   const [formState, setFormState] = useState<UploadFormState>(defaultFormState);
   const [uploading, setUploading] = useState(false);
@@ -274,11 +294,14 @@ export default function AdminDigitalAssetManagerPage() {
   const [activeUploads, setActiveUploads] = useState<ActiveUpload[]>([]);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('');
+  const [typeFilter, setTypeFilter] = useState<string>(''); // Legacy enum filter
+  const [assetTypeFilter, setAssetTypeFilter] = useState<string>(''); // New taxonomy Asset Type filter
+  const [assetSubtypeFilter, setAssetSubtypeFilter] = useState<string>(''); // New taxonomy Asset Sub-Type filter
   const [localeFilter, setLocaleFilter] = useState<string>('');
   const [regionFilter, setRegionFilter] = useState<string>('');
   const [tagFilter, setTagFilter] = useState<string>('');
   const [productLineFilter, setProductLineFilter] = useState<string>('');
+  const [productNameFilter, setProductNameFilter] = useState<string>(''); // New Product Name filter
   const [dateFromFilter, setDateFromFilter] = useState<string>('');
   const [dateToFilter, setDateToFilter] = useState<string>('');
   const [fileSizeMinFilter, setFileSizeMinFilter] = useState<string>('');
@@ -407,6 +430,8 @@ export default function AdminDigitalAssetManagerPage() {
       setTags(payload.tags || []);
       setLocales(localeOptions);
       setRegions(payload.regions || []);
+      setAssetTypes(payload.assetTypes || []);
+      setAssetSubtypes(payload.assetSubtypes || []);
 
       const defaultLocale = localeOptions.find((loc) => loc.is_default) ?? localeOptions[0];
       if (defaultLocale) {
@@ -587,9 +612,11 @@ export default function AdminDigitalAssetManagerPage() {
 
   const filteredAssets = useMemo(() => {
     // Assets are already filtered by search on the server
-    // Apply client-side filters for type, locale, region, tag, and product line
+    // Apply client-side filters for type, locale, region, tag, product line, and new taxonomy fields
     return assets.filter((asset) => {
       const matchesType = typeFilter ? asset.asset_type === typeFilter : true;
+      const matchesAssetType = assetTypeFilter ? asset.asset_type_id === assetTypeFilter : true;
+      const matchesAssetSubtype = assetSubtypeFilter ? asset.asset_subtype_id === assetSubtypeFilter : true;
       const matchesLocale = localeFilter
         ? asset.locales.some((locale) => locale.code === localeFilter)
         : true;
@@ -602,9 +629,12 @@ export default function AdminDigitalAssetManagerPage() {
       const matchesProductLine = productLineFilter
         ? asset.product_line?.toLowerCase().includes(productLineFilter.toLowerCase())
         : true;
-      return matchesType && matchesLocale && matchesRegion && matchesTag && matchesProductLine;
+      const matchesProductName = productNameFilter
+        ? asset.product_name?.toLowerCase().includes(productNameFilter.toLowerCase())
+        : true;
+      return matchesType && matchesAssetType && matchesAssetSubtype && matchesLocale && matchesRegion && matchesTag && matchesProductLine && matchesProductName;
     });
-  }, [assets, typeFilter, localeFilter, regionFilter, tagFilter, productLineFilter]);
+  }, [assets, typeFilter, assetTypeFilter, assetSubtypeFilter, localeFilter, regionFilter, tagFilter, productLineFilter, productNameFilter]);
 
   const toggleSelection = (list: string[], value: string): string[] => {
     if (list.includes(value)) {
@@ -764,8 +794,11 @@ export default function AdminDigitalAssetManagerPage() {
     setError('');
     setSuccessMessage('');
 
-    // Validate video assets
-    if (formState.assetType === 'video') {
+    // Validate video assets (check both legacy enum and new taxonomy)
+    const selectedAssetType = assetTypes.find(t => t.id === formState.assetTypeId);
+    const isVideoType = selectedAssetType?.slug === 'video' || formState.assetType === 'video';
+    
+    if (isVideoType) {
       if (!formState.vimeoVideoId.trim()) {
         setError('Please provide a Vimeo video ID or URL for video assets.');
         return;
@@ -797,6 +830,16 @@ export default function AdminDigitalAssetManagerPage() {
       return;
     }
 
+    // Validate taxonomy: require asset type and subtype for new assets
+    if (!formState.assetTypeId) {
+      setError('Please select an Asset Type.');
+      return;
+    }
+    if (!formState.assetSubtypeId) {
+      setError('Please select an Asset Sub-Type.');
+      return;
+    }
+
     setUploading(true);
     try {
       if (!accessToken) {
@@ -805,7 +848,7 @@ export default function AdminDigitalAssetManagerPage() {
       }
 
       // Handle video assets (Vimeo)
-      if (formState.assetType === 'video') {
+      if (isVideoType) {
         // Parse Vimeo ID from input
         const vimeoId = parseVimeoId(formState.vimeoVideoId.trim());
         if (!vimeoId) {
@@ -817,7 +860,10 @@ export default function AdminDigitalAssetManagerPage() {
           title: formState.title.trim(),
           description: formState.description.trim() || undefined,
           assetType: formState.assetType,
+          assetTypeId: formState.assetTypeId,
+          assetSubtypeId: formState.assetSubtypeId,
           productLine: formState.productLine.trim() || undefined,
+          productName: formState.productName.trim() || undefined,
           sku: formState.sku.trim() || undefined,
           vimeoVideoId: vimeoId,
           vimeoDownload1080p: formState.vimeoDownload1080p.trim() || undefined,
@@ -893,7 +939,10 @@ export default function AdminDigitalAssetManagerPage() {
           title: formState.title.trim(),
           description: formState.description.trim() || undefined,
           assetType: formState.assetType,
+          assetTypeId: formState.assetTypeId,
+          assetSubtypeId: formState.assetSubtypeId,
           productLine: formState.productLine.trim() || undefined,
+          productName: formState.productName.trim() || undefined,
           sku: formState.sku.trim() || undefined,
           tags: formState.selectedTagSlugs,
           audiences: [],
@@ -1406,24 +1455,117 @@ export default function AdminDigitalAssetManagerPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Asset Type</label>
-                <select
-                  value={formState.assetType}
-                  onChange={(event) => {
-                    // Clear file when asset type changes to prevent mismatched file types
-                    setFormState((prev) => ({ ...prev, assetType: event.target.value, file: null }));
-                  }}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                >
-                  {assetTypeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+            {/* Asset Taxonomy Section */}
+            <div className="space-y-4 border-t border-gray-200 pt-4">
+              <h4 className="text-sm font-semibold text-gray-900">Asset Taxonomy</h4>
+              
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Asset Type *</label>
+                  <select
+                    value={formState.assetTypeId || ''}
+                    onChange={(event) => {
+                      const selectedTypeId = event.target.value || null;
+                      // Clear subtype when type changes
+                      setFormState((prev) => ({ 
+                        ...prev, 
+                        assetTypeId: selectedTypeId,
+                        assetSubtypeId: null,
+                        // Sync legacy assetType enum for backwards compatibility
+                        assetType: selectedTypeId ? (() => {
+                          const selectedType = assetTypes.find(t => t.id === selectedTypeId);
+                          if (!selectedType) return prev.assetType;
+                          const slugToEnumMap: Record<string, string> = {
+                            'image': 'image',
+                            'video': 'video',
+                            'document': 'document',
+                            'artwork': 'document',
+                            'audio': 'audio',
+                            'packaging-regulatory': 'document',
+                            'campaign': 'document',
+                          };
+                          return slugToEnumMap[selectedType.slug] || 'other';
+                        })() : prev.assetType,
+                        file: null // Clear file when type changes
+                      }));
+                    }}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    required
+                  >
+                    <option value="">Select Asset Type</option>
+                    {assetTypes.map((type) => (
+                      <option key={type.id} value={type.id}>
+                        {type.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Asset Sub-Type {formState.assetTypeId ? '*' : ''}
+                  </label>
+                  <select
+                    value={formState.assetSubtypeId || ''}
+                    onChange={(event) => {
+                      setFormState((prev) => ({ 
+                        ...prev, 
+                        assetSubtypeId: event.target.value || null 
+                      }));
+                    }}
+                    disabled={!formState.assetTypeId}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    required={!!formState.assetTypeId}
+                  >
+                    <option value="">Select Sub-Type</option>
+                    {assetSubtypes
+                      .filter((subtype) => subtype.asset_type_id === formState.assetTypeId)
+                      .map((subtype) => (
+                        <option key={subtype.id} value={subtype.id}>
+                          {subtype.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
               </div>
+            </div>
+
+            {/* Product Information Section */}
+            <div className="space-y-4 border-t border-gray-200 pt-4">
+              <h4 className="text-sm font-semibold text-gray-900">Product Information</h4>
+              
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Product Line</label>
+                  <select
+                    value={formState.productLine}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, productLine: event.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                  >
+                    <option value="">None</option>
+                    <option value="ProCtrl">ProCtrl</option>
+                    <option value="SelfCtrl">SelfCtrl</option>
+                    <option value="Both">Both</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Product Name</label>
+                  <select
+                    value={formState.productName}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, productName: event.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                  >
+                    <option value="">Select Product</option>
+                    {PRODUCT_NAME_OPTIONS.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700">SKU</label>
                 <input
@@ -1434,17 +1576,6 @@ export default function AdminDigitalAssetManagerPage() {
                   placeholder="Optional"
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Product Line</label>
-              <input
-                type="text"
-                value={formState.productLine}
-                onChange={(event) => setFormState((prev) => ({ ...prev, productLine: event.target.value }))}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                placeholder="Optional"
-              />
             </div>
 
             <div>
@@ -1597,101 +1728,118 @@ export default function AdminDigitalAssetManagerPage() {
               </div>
             </div>
 
-            {formState.assetType === 'video' ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Vimeo Video ID or URL *</label>
-                  <input
-                    type="text"
-                    value={formState.vimeoVideoId}
-                    onChange={(event) => setFormState((prev) => ({ ...prev, vimeoVideoId: event.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                    placeholder="e.g., 123456789 or https://vimeo.com/123456789"
-                    required
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Upload your video to Vimeo first, then paste the video ID or URL here.
-                  </p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Download URLs (Optional)</label>
-                  <p className="text-xs text-gray-500 mb-3">
-                    Paste direct MP4 download URLs for different quality levels. These will be stored as-is.
-                  </p>
-                  <div className="space-y-2">
+            {/* Contextual Fields Based on Asset Type */}
+            {(() => {
+              const selectedAssetType = assetTypes.find(t => t.id === formState.assetTypeId);
+              const isVideoType = selectedAssetType?.slug === 'video';
+              const isRegulatoryType = selectedAssetType?.slug === 'packaging-regulatory';
+              
+              if (isVideoType) {
+                return (
+                  <div className="space-y-4">
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">1080p</label>
+                      <label className="block text-sm font-medium text-gray-700">Vimeo Video ID or URL *</label>
                       <input
                         type="text"
-                        value={formState.vimeoDownload1080p}
-                        onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload1080p: event.target.value }))}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                        placeholder="https://..."
+                        value={formState.vimeoVideoId}
+                        onChange={(event) => setFormState((prev) => ({ ...prev, vimeoVideoId: event.target.value }))}
+                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                        placeholder="e.g., 123456789 or https://vimeo.com/123456789"
+                        required
                       />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Upload your video to Vimeo first, then paste the video ID or URL here.
+                      </p>
                     </div>
+                    
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">720p</label>
-                      <input
-                        type="text"
-                        value={formState.vimeoDownload720p}
-                        onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload720p: event.target.value }))}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                        placeholder="https://..."
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">480p</label>
-                      <input
-                        type="text"
-                        value={formState.vimeoDownload480p}
-                        onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload480p: event.target.value }))}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                        placeholder="https://..."
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">360p</label>
-                      <input
-                        type="text"
-                        value={formState.vimeoDownload360p}
-                        onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload360p: event.target.value }))}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                        placeholder="https://..."
-                      />
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Download URLs (Optional)</label>
+                      <p className="text-xs text-gray-500 mb-3">
+                        Paste direct MP4 download URLs for different quality levels. These will be stored as-is.
+                      </p>
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">1080p</label>
+                          <input
+                            type="text"
+                            value={formState.vimeoDownload1080p}
+                            onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload1080p: event.target.value }))}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                            placeholder="https://..."
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">720p</label>
+                          <input
+                            type="text"
+                            value={formState.vimeoDownload720p}
+                            onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload720p: event.target.value }))}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                            placeholder="https://..."
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">480p</label>
+                          <input
+                            type="text"
+                            value={formState.vimeoDownload480p}
+                            onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload480p: event.target.value }))}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                            placeholder="https://..."
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">360p</label>
+                          <input
+                            type="text"
+                            value={formState.vimeoDownload360p}
+                            onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload360p: event.target.value }))}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                            placeholder="https://..."
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">File *</label>
-                <input
-                  type="file"
-                  accept={getAcceptAttribute(formState.assetType)}
-                  onChange={(event) => {
-                    const file = event.target.files ? event.target.files[0] : null;
-                    if (file) {
-                      // Additional validation: check if file type matches the selected asset type
-                      const isValid = validateFileType(file, formState.assetType);
-                      if (!isValid) {
-                        alert(`Invalid file type. Please select a ${formState.assetType} file.`);
-                        event.target.value = ''; // Clear the input
-                        return;
+                );
+              }
+              
+              // For non-video types, show file upload
+              return (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">File *</label>
+                  <input
+                    type="file"
+                    accept={getAcceptAttribute(formState.assetType)}
+                    onChange={(event) => {
+                      const file = event.target.files ? event.target.files[0] : null;
+                      if (file) {
+                        // Additional validation: check if file type matches the selected asset type
+                        const isValid = validateFileType(file, formState.assetType);
+                        if (!isValid) {
+                          alert(`Invalid file type. Please select a ${formState.assetType} file.`);
+                          event.target.value = ''; // Clear the input
+                          return;
+                        }
                       }
-                    }
-                    setFormState((prev) => ({ ...prev, file }));
-                  }}
-                  className="mt-1 block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border file:border-gray-200 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:border-gray-400"
-                  required={formState.assetType !== 'video'}
-                />
-                {formState.file && (
-                  <p className="mt-2 text-xs text-gray-500">
-                    {formState.file.name} • {formatBytes(formState.file.size)}
-                  </p>
-                )}
-              </div>
-            )}
+                      setFormState((prev) => ({ ...prev, file }));
+                    }}
+                    className="mt-1 block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border file:border-gray-200 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:border-gray-400"
+                    required={!isVideoType}
+                  />
+                  {formState.file && (
+                    <p className="mt-2 text-xs text-gray-500">
+                      {formState.file.name} • {formatBytes(formState.file.size)}
+                    </p>
+                  )}
+                  {isRegulatoryType && (
+                    <p className="mt-2 text-xs text-amber-600">
+                      ⚠ For regulatory assets, Product selection is recommended.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="flex items-center gap-2">
               <button
@@ -1732,7 +1880,7 @@ export default function AdminDigitalAssetManagerPage() {
                 onChange={(event) => setTypeFilter(event.target.value)}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
               >
-                <option value="">All types</option>
+                <option value="">All types (legacy)</option>
                 {assetTypeOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -1740,14 +1888,60 @@ export default function AdminDigitalAssetManagerPage() {
                 ))}
               </select>
               <select
+                value={assetTypeFilter}
+                onChange={(event) => {
+                  setAssetTypeFilter(event.target.value);
+                  setAssetSubtypeFilter(''); // Clear subtype when type changes
+                }}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+              >
+                <option value="">All Asset Types</option>
+                {assetTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={assetSubtypeFilter}
+                onChange={(event) => setAssetSubtypeFilter(event.target.value)}
+                disabled={!assetTypeFilter}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                <option value="">All Sub-Types</option>
+                {assetSubtypes
+                  .filter((subtype) => subtype.asset_type_id === assetTypeFilter)
+                  .map((subtype) => (
+                    <option key={subtype.id} value={subtype.id}>
+                      {subtype.name}
+                    </option>
+                  ))}
+              </select>
+              <select
                 value={productLineFilter}
                 onChange={(event) => setProductLineFilter(event.target.value)}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
               >
                 <option value="">All product lines</option>
-                {productLines.map((pl) => (
+                <option value="ProCtrl">ProCtrl</option>
+                <option value="SelfCtrl">SelfCtrl</option>
+                <option value="Both">Both</option>
+                <option value="None">None</option>
+                {productLines.filter(pl => !['ProCtrl', 'SelfCtrl', 'Both', 'None'].includes(pl)).map((pl) => (
                   <option key={pl} value={pl}>
                     {pl}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={productNameFilter}
+                onChange={(event) => setProductNameFilter(event.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+              >
+                <option value="">All products</option>
+                {PRODUCT_NAME_OPTIONS.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
                   </option>
                 ))}
               </select>

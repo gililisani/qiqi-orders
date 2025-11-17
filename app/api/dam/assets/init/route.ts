@@ -46,13 +46,40 @@ export async function POST(request: NextRequest) {
       : [];
     const regionsInput: string[] = Array.isArray(body.regions) ? body.regions : [];
 
+    // Sync asset_type enum with asset_type_id if provided
+    let syncedAssetType = body.assetType;
+    if (body.assetTypeId) {
+      // Get the slug from asset_type_id to sync with enum
+      const { data: assetTypeData } = await supabaseAdmin
+        .from('dam_asset_types')
+        .select('slug')
+        .eq('id', body.assetTypeId)
+        .single();
+      if (assetTypeData) {
+        // Map taxonomy slugs to enum values
+        const slugToEnumMap: Record<string, string> = {
+          'image': 'image',
+          'video': 'video',
+          'document': 'document',
+          'artwork': 'document',
+          'audio': 'audio',
+          'packaging-regulatory': 'document',
+          'campaign': 'document',
+        };
+        syncedAssetType = slugToEnumMap[assetTypeData.slug] || body.assetType || 'other';
+      }
+    }
+
     if (!body.assetId) {
       const { error: insertAssetError } = await supabaseAdmin.from('dam_assets').insert({
         id: assetId,
         title: body.title,
         description: body.description ?? null,
-        asset_type: body.assetType,
+        asset_type: syncedAssetType,
+        asset_type_id: body.assetTypeId ?? null,
+        asset_subtype_id: body.assetSubtypeId ?? null,
         product_line: body.productLine ?? null,
+        product_name: body.productName ?? null,
         sku: body.sku ?? null,
         search_tags: tagsInput,
         created_by: adminUser.id,
@@ -66,8 +93,11 @@ export async function POST(request: NextRequest) {
         .update({
           title: body.title,
           description: body.description ?? null,
-          asset_type: body.assetType,
+          asset_type: syncedAssetType,
+          asset_type_id: body.assetTypeId ?? null,
+          asset_subtype_id: body.assetSubtypeId ?? null,
           product_line: body.productLine ?? null,
+          product_name: body.productName ?? null,
           sku: body.sku ?? null,
           search_tags: tagsInput,
           updated_by: adminUser.id,

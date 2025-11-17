@@ -69,7 +69,10 @@ export async function GET(request: NextRequest) {
         title,
         description,
         asset_type,
+        asset_type_id,
+        asset_subtype_id,
         product_line,
+        product_name,
         sku,
         vimeo_video_id,
         vimeo_download_1080p,
@@ -251,7 +254,10 @@ export async function GET(request: NextRequest) {
         title: record.title,
         description: record.description,
         asset_type: record.asset_type,
+        asset_type_id: record.asset_type_id ?? null,
+        asset_subtype_id: record.asset_subtype_id ?? null,
         product_line: record.product_line,
+        product_name: record.product_name ?? null,
         sku: record.sku,
         vimeo_video_id: record.vimeo_video_id ?? null,
         vimeo_download_1080p: record.vimeo_download_1080p ?? null,
@@ -371,13 +377,40 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Sync asset_type enum with asset_type_id if provided
+    let syncedAssetType = payload.assetType;
+    if (payload.assetTypeId) {
+      // Get the slug from asset_type_id to sync with enum
+      const { data: assetTypeData } = await supabaseAdmin
+        .from('dam_asset_types')
+        .select('slug')
+        .eq('id', payload.assetTypeId)
+        .single();
+      if (assetTypeData) {
+        // Map taxonomy slugs to enum values
+        const slugToEnumMap: Record<string, string> = {
+          'image': 'image',
+          'video': 'video',
+          'document': 'document',
+          'artwork': 'document', // Map artwork to document enum
+          'audio': 'audio',
+          'packaging-regulatory': 'document', // Map to document enum
+          'campaign': 'document', // Map to document enum
+        };
+        syncedAssetType = slugToEnumMap[assetTypeData.slug] || payload.assetType || 'other';
+      }
+    }
+
     if (!payload.assetId) {
       const { error: insertAssetError } = await supabaseAdmin.from('dam_assets').insert({
         id: assetId,
         title: payload.title,
         description: payload.description ?? null,
-        asset_type: payload.assetType,
+        asset_type: syncedAssetType,
+        asset_type_id: payload.assetTypeId ?? null,
+        asset_subtype_id: payload.assetSubtypeId ?? null,
         product_line: payload.productLine ?? null,
+        product_name: payload.productName ?? null,
         sku: payload.sku ?? null,
         vimeo_video_id: vimeoVideoId,
         vimeo_download_1080p: payload.vimeoDownload1080p ?? null,
@@ -396,8 +429,11 @@ export async function POST(request: NextRequest) {
         .update({
           title: payload.title,
           description: payload.description ?? null,
-          asset_type: payload.assetType,
+          asset_type: syncedAssetType,
+          asset_type_id: payload.assetTypeId ?? null,
+          asset_subtype_id: payload.assetSubtypeId ?? null,
           product_line: payload.productLine ?? null,
+          product_name: payload.productName ?? null,
           sku: payload.sku ?? null,
           vimeo_video_id: vimeoVideoId,
           vimeo_download_1080p: payload.vimeoDownload1080p ?? null,
