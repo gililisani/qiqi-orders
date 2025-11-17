@@ -1481,15 +1481,15 @@ export default function AdminDigitalAssetManagerPage() {
               />
             </div>
             
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-1 rounded-md border border-gray-300 bg-white p-0.5">
+            {/* View Mode Toggle - Segmented Control */}
+            <div className="inline-flex items-center rounded-lg border border-gray-300 bg-gray-50 p-1">
               <button
                 type="button"
                 onClick={() => setViewMode('compact')}
-                className={`px-3 py-1.5 text-xs font-medium rounded transition ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
                   viewMode === 'compact'
-                    ? 'bg-black text-white'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 Compact
@@ -1497,10 +1497,10 @@ export default function AdminDigitalAssetManagerPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('comfortable')}
-                className={`px-3 py-1.5 text-xs font-medium rounded transition ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
                   viewMode === 'comfortable'
-                    ? 'bg-black text-white'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 Comfortable
@@ -1568,8 +1568,8 @@ export default function AdminDigitalAssetManagerPage() {
         )}
 
         {/* Filter Row */}
-        <div className="bg-white border-b border-gray-200 px-6 py-2">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="bg-white border-b border-gray-200 px-6 py-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {/* Filter Dropdowns */}
             <select
               value={assetTypeFilter}
@@ -1577,7 +1577,7 @@ export default function AdminDigitalAssetManagerPage() {
                 setAssetTypeFilter(event.target.value);
                 setAssetSubtypeFilter('');
               }}
-              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none bg-white"
+              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
             >
               <option value="">Asset Type</option>
               {assetTypes.map((type) => (
@@ -1606,7 +1606,7 @@ export default function AdminDigitalAssetManagerPage() {
             <select
               value={productLineFilter}
               onChange={(event) => setProductLineFilter(event.target.value)}
-              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none bg-white"
+              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
             >
               <option value="">Product Line</option>
               <option value="ProCtrl">ProCtrl</option>
@@ -1618,7 +1618,7 @@ export default function AdminDigitalAssetManagerPage() {
             <select
               value={productNameFilter}
               onChange={(event) => setProductNameFilter(event.target.value)}
-              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none bg-white"
+              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
             >
               <option value="">Product</option>
               {PRODUCT_NAME_OPTIONS.map((name) => (
@@ -1631,7 +1631,7 @@ export default function AdminDigitalAssetManagerPage() {
             <select
               value={localeFilter}
               onChange={(event) => setLocaleFilter(event.target.value)}
-              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none bg-white"
+              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
             >
               <option value="">Locale</option>
               {locales.map((locale) => (
@@ -1644,7 +1644,7 @@ export default function AdminDigitalAssetManagerPage() {
             <select
               value={regionFilter}
               onChange={(event) => setRegionFilter(event.target.value)}
-              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none bg-white"
+              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
             >
               <option value="">Region</option>
               {regions.map((region) => (
@@ -1657,7 +1657,7 @@ export default function AdminDigitalAssetManagerPage() {
             <select
               value={tagFilter}
               onChange={(event) => setTagFilter(event.target.value)}
-              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none bg-white"
+              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
             >
               <option value="">Tag</option>
               {tags.map((tag) => (
@@ -1670,7 +1670,7 @@ export default function AdminDigitalAssetManagerPage() {
 
           {/* Filter Chips */}
           {getActiveFilterChips().length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-gray-200">
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5 pt-1.5 border-t border-gray-100">
               {getActiveFilterChips().map((chip, idx) => (
                 <span
                   key={idx}
@@ -1691,7 +1691,7 @@ export default function AdminDigitalAssetManagerPage() {
         </div>
 
         {/* Asset Library - Full Width */}
-        <div className="px-6 py-4">
+        <div className="px-6 py-4 border-t border-gray-100">
           {/* Advanced Search Accordion */}
           <div className="mb-4 rounded-lg border border-gray-200 bg-white">
             <button
@@ -1830,7 +1830,7 @@ export default function AdminDigitalAssetManagerPage() {
               )}
 
               {/* Asset Grid - Beautiful Cards */}
-              <div className={`grid gap-2.5 ${
+              <div className={`grid gap-2 ${
                 viewMode === 'compact'
                   ? 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
                   : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
@@ -1838,7 +1838,8 @@ export default function AdminDigitalAssetManagerPage() {
                 {filteredAssets.map((asset) => (
                     <div
                       key={asset.id}
-                      className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow transition-all cursor-pointer"
+                      className="group relative bg-white rounded-md border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer"
+                      style={{ maxWidth: viewMode === 'compact' ? '240px' : 'none' }}
                       onMouseEnter={() => setHoveredAssetId(asset.id)}
                       onMouseLeave={() => setHoveredAssetId(null)}
                       onClick={() => {
@@ -1855,17 +1856,17 @@ export default function AdminDigitalAssetManagerPage() {
                           e.stopPropagation();
                           toggleAssetSelection(asset.id);
                         }}
-                        className={`absolute top-2 left-2 z-20 flex h-5 w-5 items-center justify-center rounded border-2 bg-white shadow-sm transition ${
+                        className={`absolute top-1.5 left-1.5 z-20 flex h-4 w-4 items-center justify-center rounded border-2 bg-white shadow-sm transition ${
                           selectedAssetIds.has(asset.id) ? 'border-blue-600 bg-blue-600' : 'border-gray-300 hover:border-gray-400'
                         }`}
                       >
                         {selectedAssetIds.has(asset.id) && (
-                          <CheckIcon className="h-3 w-3 text-white" />
+                          <CheckIcon className="h-2.5 w-2.5 text-white" />
                         )}
                       </button>
 
                       {/* Thumbnail */}
-                      <div className="relative aspect-square bg-gray-100 overflow-hidden">
+                      <div className="relative bg-gray-100 overflow-hidden" style={{ height: viewMode === 'compact' ? '160px' : '200px' }}>
                         {asset.asset_type === 'video' && asset.vimeo_video_id ? (
                           <img
                             src={`https://vumbnail.com/${asset.vimeo_video_id}.jpg`}
@@ -1896,7 +1897,7 @@ export default function AdminDigitalAssetManagerPage() {
 
                         {/* Hover Overlay with Actions */}
                         {hoveredAssetId === asset.id && (
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2 transition-opacity">
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/30 to-transparent flex items-center justify-center gap-1.5 transition-opacity duration-200">
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1906,10 +1907,10 @@ export default function AdminDigitalAssetManagerPage() {
                                   fetchAssetVersions(asset.id);
                                 }
                               }}
-                              className="rounded-md bg-white/95 p-1.5 hover:bg-white transition shadow-sm"
+                              className="rounded-md bg-white/95 p-1 hover:bg-white transition shadow-sm"
                               title="View"
                             >
-                              <EyeIcon className="h-4 w-4 text-gray-900" />
+                              <EyeIcon className="h-3.5 w-3.5 text-gray-900" />
                             </button>
                             {asset.current_version?.downloadPath && (
                               <button
@@ -1921,10 +1922,10 @@ export default function AdminDigitalAssetManagerPage() {
                                   const filename = `${asset.title || 'asset'}.${asset.current_version!.mime_type?.split('/')[1] || 'bin'}`;
                                   await triggerDownload(downloadUrl, filename, asset.id, 'api', accessToken);
                                 }}
-                                className="rounded-md bg-white/95 p-1.5 hover:bg-white transition shadow-sm"
+                                className="rounded-md bg-white/95 p-1 hover:bg-white transition shadow-sm"
                                 title="Download"
                               >
-                                <ArrowDownTrayIcon className="h-4 w-4 text-gray-900" />
+                                <ArrowDownTrayIcon className="h-3.5 w-3.5 text-gray-900" />
                               </button>
                             )}
                             <button
@@ -1933,10 +1934,10 @@ export default function AdminDigitalAssetManagerPage() {
                                 e.stopPropagation();
                                 handleDeleteAsset(asset.id);
                               }}
-                              className="rounded-md bg-white/95 p-1.5 hover:bg-white transition shadow-sm"
+                              className="rounded-md bg-white/95 p-1 hover:bg-white transition shadow-sm"
                               title="Delete"
                             >
-                              <TrashIcon className="h-4 w-4 text-red-600" />
+                              <TrashIcon className="h-3.5 w-3.5 text-red-600" />
                             </button>
                           </div>
                         )}
@@ -1947,16 +1948,12 @@ export default function AdminDigitalAssetManagerPage() {
                         <h4 className="text-xs font-semibold text-gray-900 truncate leading-tight">{asset.title}</h4>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {renderAssetTypePill(asset.asset_type, 'sm')}
-                          {asset.asset_subtype_id && (() => {
+                          {asset.asset_subtype_id ? (() => {
                             const subtype = assetSubtypes.find(s => s.id === asset.asset_subtype_id);
                             return subtype ? (
                               <span className="text-[10px] text-gray-600 truncate">{subtype.name}</span>
                             ) : null;
-                          })()}
-                          {asset.product_line && (
-                            <span className="text-[10px] text-gray-500">{asset.product_line}</span>
-                          )}
-                          {asset.locales.length > 0 && (
+                          })() : asset.locales.length > 0 && (
                             <span className="text-[10px] text-gray-500">{asset.locales[0].code}</span>
                           )}
                         </div>
@@ -2590,9 +2587,9 @@ export default function AdminDigitalAssetManagerPage() {
               </div>
 
               {/* Right Column - Metadata */}
-              <div className="lg:w-1/3 bg-white overflow-y-auto p-5 border-l border-gray-200">
+              <div className="lg:w-[45%] bg-white overflow-y-auto p-5 border-l border-gray-200">
                 {/* Header */}
-                <div className="mb-5 pb-5 border-b border-gray-200">
+                <div className="mb-4 pb-4 border-b border-gray-200">
                   <div className="flex items-start gap-2 mb-2">
                     <h2 className="text-lg font-semibold text-gray-900 flex-1">{selectedAsset.title || 'Untitled Asset'}</h2>
                   </div>
@@ -2605,9 +2602,9 @@ export default function AdminDigitalAssetManagerPage() {
                 </div>
 
               {/* Download Section */}
-              <div className="mb-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-base font-semibold text-gray-900">Downloads</h3>
+              <div className="mb-4 pb-4 border-b border-gray-100">
+                <div className="flex items-center justify-between mb-2.5">
+                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Downloads</h3>
                   {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id && (
                     <button
                       type="button"
@@ -2839,8 +2836,8 @@ export default function AdminDigitalAssetManagerPage() {
                   </div>
 
                   {selectedAsset.tags.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900 mb-2">Tags</h3>
+                    <div className="pb-4 border-b border-gray-100">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-2.5 uppercase tracking-wide">Tags</h3>
                       <div className="flex flex-wrap gap-2">
                         {selectedAsset.tags.map((tag) => (
                           <span key={tag} className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
@@ -2852,8 +2849,8 @@ export default function AdminDigitalAssetManagerPage() {
                   )}
 
                   {selectedAsset.locales.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900 mb-2">Locales</h3>
+                    <div className="pb-4 border-b border-gray-100">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-2.5 uppercase tracking-wide">Locales</h3>
                       <div className="flex flex-wrap gap-2">
                         {selectedAsset.locales.map((locale) => (
                           <span key={locale.code} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
@@ -2865,8 +2862,8 @@ export default function AdminDigitalAssetManagerPage() {
                   )}
 
                   {selectedAsset.regions.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900 mb-2">Regions</h3>
+                    <div className="pb-4 border-b border-gray-100">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-2.5 uppercase tracking-wide">Regions</h3>
                       <div className="flex flex-wrap gap-2">
                         {selectedAsset.regions.map((region) => (
                           <span key={region.code} className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
@@ -2879,8 +2876,8 @@ export default function AdminDigitalAssetManagerPage() {
                 </div>
 
                 {/* Versions Section */}
-                <div className="pt-4 border-t border-gray-200">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Versions</h3>
+                <div className="pt-4 pb-4 border-t border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2.5 uppercase tracking-wide">Versions</h3>
                   {loadingVersions ? (
                     <div className="text-sm text-gray-500 py-4">Loading versions...</div>
                   ) : assetVersions.length === 0 ? (
@@ -2890,7 +2887,7 @@ export default function AdminDigitalAssetManagerPage() {
                       {assetVersions.map((version) => (
                         <div
                           key={version.id}
-                          className={`flex items-center justify-between rounded-lg border p-3 transition ${
+                          className={`flex items-center justify-between rounded-md border p-2.5 transition ${
                             version.id === selectedAsset.current_version?.id
                               ? 'border-blue-500 bg-blue-50'
                               : 'border-gray-200 bg-white hover:border-gray-300'
@@ -2949,7 +2946,7 @@ export default function AdminDigitalAssetManagerPage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="pt-4 border-t border-gray-200 flex flex-col gap-2">
+                <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
                   {selectedAsset.current_version?.downloadPath && (
                     <button
                       type="button"
