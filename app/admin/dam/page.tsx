@@ -2470,6 +2470,7 @@ export default function AdminDigitalAssetManagerPage() {
                     </p>
                   )}
                 </div>
+                      );
                     })()}
                 </div>
 
