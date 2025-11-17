@@ -1499,6 +1499,25 @@ export default function AdminDigitalAssetManagerPage() {
                       </option>
                     ))}
                   </select>
+                  {/* Help text for Image vs Artwork */}
+                  {(() => {
+                    const selectedType = assetTypes.find(t => t.id === formState.assetTypeId);
+                    if (selectedType?.slug === 'image') {
+                      return (
+                        <p className="mt-1 text-xs text-blue-600">
+                          <strong>Image:</strong> Finished, exported, flattened visuals (JPG/PNG/WebP). Ready-to-use by distributors, no layers.
+                        </p>
+                      );
+                    }
+                    if (selectedType?.slug === 'artwork') {
+                      return (
+                        <p className="mt-1 text-xs text-purple-600">
+                          <strong>Artwork:</strong> Editable, layered, template or master design files (PSD/AI/EPS/SVG/INDD/CMYK PDFs). For designers.
+                        </p>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 <div>
@@ -1810,16 +1829,32 @@ export default function AdminDigitalAssetManagerPage() {
                   <label className="block text-sm font-medium text-gray-700">File *</label>
                   <input
                     type="file"
-                    accept={getAcceptAttribute(formState.assetType)}
+                    accept={getAcceptAttribute(formState.assetType, formState.assetTypeId)}
                     onChange={(event) => {
                       const file = event.target.files ? event.target.files[0] : null;
                       if (file) {
                         // Additional validation: check if file type matches the selected asset type
-                        const isValid = validateFileType(file, formState.assetType);
+                        const isValid = validateFileType(file, formState.assetType, formState.assetTypeId);
                         if (!isValid) {
-                          alert(`Invalid file type. Please select a ${formState.assetType} file.`);
+                          const selectedType = assetTypes.find(t => t.id === formState.assetTypeId);
+                          const typeName = selectedType?.name || formState.assetType;
+                          alert(`Invalid file type. Please select a ${typeName} file.`);
                           event.target.value = ''; // Clear the input
                           return;
+                        }
+                        // Additional warning for Image vs Artwork confusion
+                        const selectedType = assetTypes.find(t => t.id === formState.assetTypeId);
+                        if (selectedType?.slug === 'image' && /\.(psd|ai|eps|indd|svg)$/i.test(file.name)) {
+                          if (!confirm('Warning: This appears to be a design file (PSD/AI/EPS/INDD/SVG). Design files should use "Artwork" type, not "Image". Continue anyway?')) {
+                            event.target.value = '';
+                            return;
+                          }
+                        }
+                        if (selectedType?.slug === 'artwork' && /\.(jpg|jpeg|png|webp)$/i.test(file.name)) {
+                          if (!confirm('Warning: This appears to be a finished image (JPG/PNG/WebP). Finished images should use "Image" type, not "Artwork". Continue anyway?')) {
+                            event.target.value = '';
+                            return;
+                          }
                         }
                       }
                       setFormState((prev) => ({ ...prev, file }));
