@@ -345,6 +345,7 @@ export default function AdminDigitalAssetManagerPage() {
   const [savingUrls, setSavingUrls] = useState(false);
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
   const [hoveredAssetId, setHoveredAssetId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'compact' | 'comfortable'>('compact');
 
   useEffect(() => {
     let active = true;
@@ -1246,10 +1247,13 @@ export default function AdminDigitalAssetManagerPage() {
     }
   };
 
-  const renderAssetTypePill = (assetType: string) => {
+  const renderAssetTypePill = (assetType: string, size: 'sm' | 'md' = 'md') => {
     const option = assetTypeOptions.find((opt) => opt.value === assetType);
+    const sizeClasses = size === 'sm' 
+      ? 'text-[10px] px-1.5 py-0.5'
+      : 'text-xs px-2 py-1';
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-700">
+      <span className={`inline-flex items-center gap-0.5 rounded-md bg-gray-100 ${sizeClasses} text-gray-700`}>
         {option?.icon}
         {option?.label ?? assetType}
       </span>
@@ -1463,25 +1467,51 @@ export default function AdminDigitalAssetManagerPage() {
       {/* Main Content - Full Width */}
       <div className="w-full">
         {/* Header with Search Bar */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center gap-4">
+        <div className="bg-white border-b border-gray-200 px-6 py-3">
+          <div className="flex items-center gap-3">
             {/* Large Search Bar */}
             <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="search"
                 placeholder="Search assets by title, tag, SKU, product…"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10 text-sm"
+                className="w-full pl-9 pr-4 py-2 rounded-md border border-gray-300 focus:border-black focus:outline-none focus:ring-1 focus:ring-black/10 text-sm"
               />
+            </div>
+            
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-1 rounded-md border border-gray-300 bg-white p-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode('compact')}
+                className={`px-3 py-1.5 text-xs font-medium rounded transition ${
+                  viewMode === 'compact'
+                    ? 'bg-black text-white'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Compact
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('comfortable')}
+                className={`px-3 py-1.5 text-xs font-medium rounded transition ${
+                  viewMode === 'comfortable'
+                    ? 'bg-black text-white'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Comfortable
+              </button>
             </div>
             
             {/* Upload Button */}
             <button
               type="button"
               onClick={() => setIsUploadDrawerOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-black px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
+              className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
             >
               <ArrowUpTrayIcon className="h-4 w-4" />
               Upload Asset
@@ -1494,7 +1524,7 @@ export default function AdminDigitalAssetManagerPage() {
                 setCurrentPage(1);
                 fetchAssets(accessToken ?? '', undefined, 1);
               }}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+              className="inline-flex items-center justify-center rounded-md border border-gray-300 w-9 h-9 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
             >
               <ArrowPathIcon className="h-4 w-4" />
             </button>
@@ -1538,8 +1568,8 @@ export default function AdminDigitalAssetManagerPage() {
         )}
 
         {/* Filter Row */}
-        <div className="bg-white border-b border-gray-200 px-6 py-3">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="bg-white border-b border-gray-200 px-6 py-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Filter Dropdowns */}
             <select
               value={assetTypeFilter}
@@ -1547,7 +1577,7 @@ export default function AdminDigitalAssetManagerPage() {
                 setAssetTypeFilter(event.target.value);
                 setAssetSubtypeFilter('');
               }}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none bg-white"
+              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none bg-white"
             >
               <option value="">Asset Type</option>
               {assetTypes.map((type) => (
@@ -1561,7 +1591,7 @@ export default function AdminDigitalAssetManagerPage() {
               value={assetSubtypeFilter}
               onChange={(event) => setAssetSubtypeFilter(event.target.value)}
               disabled={!assetTypeFilter}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed bg-white"
+              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed bg-white"
             >
               <option value="">Sub-Type</option>
               {assetSubtypes
@@ -1576,7 +1606,7 @@ export default function AdminDigitalAssetManagerPage() {
             <select
               value={productLineFilter}
               onChange={(event) => setProductLineFilter(event.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none bg-white"
+              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none bg-white"
             >
               <option value="">Product Line</option>
               <option value="ProCtrl">ProCtrl</option>
@@ -1588,7 +1618,7 @@ export default function AdminDigitalAssetManagerPage() {
             <select
               value={productNameFilter}
               onChange={(event) => setProductNameFilter(event.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none bg-white"
+              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none bg-white"
             >
               <option value="">Product</option>
               {PRODUCT_NAME_OPTIONS.map((name) => (
@@ -1601,7 +1631,7 @@ export default function AdminDigitalAssetManagerPage() {
             <select
               value={localeFilter}
               onChange={(event) => setLocaleFilter(event.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none bg-white"
+              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none bg-white"
             >
               <option value="">Locale</option>
               {locales.map((locale) => (
@@ -1614,7 +1644,7 @@ export default function AdminDigitalAssetManagerPage() {
             <select
               value={regionFilter}
               onChange={(event) => setRegionFilter(event.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none bg-white"
+              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none bg-white"
             >
               <option value="">Region</option>
               {regions.map((region) => (
@@ -1627,7 +1657,7 @@ export default function AdminDigitalAssetManagerPage() {
             <select
               value={tagFilter}
               onChange={(event) => setTagFilter(event.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none bg-white"
+              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none bg-white"
             >
               <option value="">Tag</option>
               {tags.map((tag) => (
@@ -1640,11 +1670,11 @@ export default function AdminDigitalAssetManagerPage() {
 
           {/* Filter Chips */}
           {getActiveFilterChips().length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-200">
+            <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-gray-200">
               {getActiveFilterChips().map((chip, idx) => (
                 <span
                   key={idx}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700"
+                  className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700"
                 >
                   {chip.label}
                   <button
@@ -1661,7 +1691,7 @@ export default function AdminDigitalAssetManagerPage() {
         </div>
 
         {/* Asset Library - Full Width */}
-        <div className="px-6 py-6">
+        <div className="px-6 py-4">
           {/* Advanced Search Accordion */}
           <div className="mb-4 rounded-lg border border-gray-200 bg-white">
             <button
@@ -1800,11 +1830,15 @@ export default function AdminDigitalAssetManagerPage() {
               )}
 
               {/* Asset Grid - Beautiful Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <div className={`grid gap-2.5 ${
+                viewMode === 'compact'
+                  ? 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+                  : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+              }`}>
                 {filteredAssets.map((asset) => (
                     <div
                       key={asset.id}
-                      className="group relative bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer"
+                      className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow transition-all cursor-pointer"
                       onMouseEnter={() => setHoveredAssetId(asset.id)}
                       onMouseLeave={() => setHoveredAssetId(null)}
                       onClick={() => {
@@ -1855,14 +1889,14 @@ export default function AdminDigitalAssetManagerPage() {
                         
                         {/* Version Badge */}
                         {asset.current_version && (
-                          <span className="absolute bottom-2 right-2 rounded bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white">
+                          <span className="absolute bottom-1.5 right-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
                             v{asset.current_version.version_number}
                           </span>
                         )}
 
                         {/* Hover Overlay with Actions */}
                         {hoveredAssetId === asset.id && (
-                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-3 transition-opacity">
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2 transition-opacity">
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1872,10 +1906,10 @@ export default function AdminDigitalAssetManagerPage() {
                                   fetchAssetVersions(asset.id);
                                 }
                               }}
-                              className="rounded-lg bg-white/90 p-2 hover:bg-white transition"
+                              className="rounded-md bg-white/95 p-1.5 hover:bg-white transition shadow-sm"
                               title="View"
                             >
-                              <EyeIcon className="h-5 w-5 text-gray-900" />
+                              <EyeIcon className="h-4 w-4 text-gray-900" />
                             </button>
                             {asset.current_version?.downloadPath && (
                               <button
@@ -1887,10 +1921,10 @@ export default function AdminDigitalAssetManagerPage() {
                                   const filename = `${asset.title || 'asset'}.${asset.current_version!.mime_type?.split('/')[1] || 'bin'}`;
                                   await triggerDownload(downloadUrl, filename, asset.id, 'api', accessToken);
                                 }}
-                                className="rounded-lg bg-white/90 p-2 hover:bg-white transition"
+                                className="rounded-md bg-white/95 p-1.5 hover:bg-white transition shadow-sm"
                                 title="Download"
                               >
-                                <ArrowDownTrayIcon className="h-5 w-5 text-gray-900" />
+                                <ArrowDownTrayIcon className="h-4 w-4 text-gray-900" />
                               </button>
                             )}
                             <button
@@ -1899,36 +1933,33 @@ export default function AdminDigitalAssetManagerPage() {
                                 e.stopPropagation();
                                 handleDeleteAsset(asset.id);
                               }}
-                              className="rounded-lg bg-white/90 p-2 hover:bg-white transition"
+                              className="rounded-md bg-white/95 p-1.5 hover:bg-white transition shadow-sm"
                               title="Delete"
                             >
-                              <TrashIcon className="h-5 w-5 text-red-600" />
+                              <TrashIcon className="h-4 w-4 text-red-600" />
                             </button>
                           </div>
                         )}
                       </div>
 
                       {/* Card Footer */}
-                      <div className="p-3 space-y-1">
-                        <h4 className="text-sm font-semibold text-gray-900 truncate">{asset.title}</h4>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {renderAssetTypePill(asset.asset_type)}
+                      <div className="p-2 space-y-1">
+                        <h4 className="text-xs font-semibold text-gray-900 truncate leading-tight">{asset.title}</h4>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {renderAssetTypePill(asset.asset_type, 'sm')}
+                          {asset.asset_subtype_id && (() => {
+                            const subtype = assetSubtypes.find(s => s.id === asset.asset_subtype_id);
+                            return subtype ? (
+                              <span className="text-[10px] text-gray-600 truncate">{subtype.name}</span>
+                            ) : null;
+                          })()}
                           {asset.product_line && (
-                            <span className="text-xs text-gray-500">{asset.product_line}</span>
+                            <span className="text-[10px] text-gray-500">{asset.product_line}</span>
+                          )}
+                          {asset.locales.length > 0 && (
+                            <span className="text-[10px] text-gray-500">{asset.locales[0].code}</span>
                           )}
                         </div>
-                        {asset.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {asset.tags.slice(0, 2).map((tag) => (
-                              <span key={tag} className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                                {tag}
-                              </span>
-                            ))}
-                            {asset.tags.length > 2 && (
-                              <span className="text-[10px] text-gray-400">+{asset.tags.length - 2}</span>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -2521,7 +2552,7 @@ export default function AdminDigitalAssetManagerPage() {
                 setIsEditingAsset(false);
                 setAssetVersions([]);
               }}
-              className="absolute top-4 right-4 z-20 rounded-full bg-white/90 p-2 text-gray-600 hover:bg-white hover:text-gray-900 transition shadow-sm"
+              className="absolute top-3 right-3 z-20 rounded-md bg-white/90 p-1.5 text-gray-600 hover:bg-white hover:text-gray-900 transition shadow-sm"
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
@@ -2543,7 +2574,7 @@ export default function AdminDigitalAssetManagerPage() {
                     </div>
                   </div>
                 ) : selectedAsset.current_version?.previewPath && accessToken ? (
-                  <div className="w-full max-w-4xl bg-white rounded-lg shadow-lg p-4">
+                  <div className="w-full max-w-4xl bg-white rounded-md shadow-md p-3">
                     <img
                       src={ensureTokenUrl(selectedAsset.current_version.previewPath)}
                       alt={selectedAsset.title}
@@ -2559,13 +2590,13 @@ export default function AdminDigitalAssetManagerPage() {
               </div>
 
               {/* Right Column - Metadata */}
-              <div className="lg:w-1/3 bg-white overflow-y-auto p-6 border-l border-gray-200">
+              <div className="lg:w-1/3 bg-white overflow-y-auto p-5 border-l border-gray-200">
                 {/* Header */}
-                <div className="mb-6 pb-6 border-b border-gray-200">
-                  <div className="flex items-start gap-3 mb-3">
-                    <h2 className="text-xl font-semibold text-gray-900 flex-1">{selectedAsset.title || 'Untitled Asset'}</h2>
+                <div className="mb-5 pb-5 border-b border-gray-200">
+                  <div className="flex items-start gap-2 mb-2">
+                    <h2 className="text-lg font-semibold text-gray-900 flex-1">{selectedAsset.title || 'Untitled Asset'}</h2>
                   </div>
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-2">
                     {renderAssetTypePill(selectedAsset.asset_type)}
                   </div>
                   {selectedAsset.description && (
@@ -2574,9 +2605,9 @@ export default function AdminDigitalAssetManagerPage() {
                 </div>
 
               {/* Download Section */}
-              <div className="mb-6">
+              <div className="mb-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">Downloads</h3>
+                  <h3 className="text-base font-semibold text-gray-900">Downloads</h3>
                   {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id && (
                     <button
                       type="button"
@@ -2720,7 +2751,7 @@ export default function AdminDigitalAssetManagerPage() {
                                   accessToken
                                 );
                               }}
-                              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition mr-2"
+                              className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition mr-2"
                             >
                               <ArrowDownTrayIcon className="h-4 w-4" />
                               Download {item.quality}
@@ -2755,7 +2786,7 @@ export default function AdminDigitalAssetManagerPage() {
                         accessToken
                       );
                     }}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                    className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition shadow-sm"
                   >
                     <ArrowDownTrayIcon className="h-4 w-4" />
                     Download
@@ -2766,9 +2797,9 @@ export default function AdminDigitalAssetManagerPage() {
               </div>
 
                 {/* Metadata Section */}
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Details</h3>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Details</h3>
                     <dl className="space-y-3 text-sm">
                       {selectedAsset.sku && (
                         <div>
@@ -2809,7 +2840,7 @@ export default function AdminDigitalAssetManagerPage() {
 
                   {selectedAsset.tags.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Tags</h3>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-2">Tags</h3>
                       <div className="flex flex-wrap gap-2">
                         {selectedAsset.tags.map((tag) => (
                           <span key={tag} className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
@@ -2822,7 +2853,7 @@ export default function AdminDigitalAssetManagerPage() {
 
                   {selectedAsset.locales.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Locales</h3>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-2">Locales</h3>
                       <div className="flex flex-wrap gap-2">
                         {selectedAsset.locales.map((locale) => (
                           <span key={locale.code} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
@@ -2835,7 +2866,7 @@ export default function AdminDigitalAssetManagerPage() {
 
                   {selectedAsset.regions.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Regions</h3>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-2">Regions</h3>
                       <div className="flex flex-wrap gap-2">
                         {selectedAsset.regions.map((region) => (
                           <span key={region.code} className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
@@ -2848,8 +2879,8 @@ export default function AdminDigitalAssetManagerPage() {
                 </div>
 
                 {/* Versions Section */}
-                <div className="pt-6 border-t border-gray-200">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Versions</h3>
+                <div className="pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Versions</h3>
                   {loadingVersions ? (
                     <div className="text-sm text-gray-500 py-4">Loading versions...</div>
                   ) : assetVersions.length === 0 ? (
@@ -2918,7 +2949,7 @@ export default function AdminDigitalAssetManagerPage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="pt-6 border-t border-gray-200 flex flex-col gap-2">
+                <div className="pt-4 border-t border-gray-200 flex flex-col gap-2">
                   {selectedAsset.current_version?.downloadPath && (
                     <button
                       type="button"
@@ -2935,7 +2966,7 @@ export default function AdminDigitalAssetManagerPage() {
                           accessToken
                         );
                       }}
-                      className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition"
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-black px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition shadow-sm"
                     >
                       <ArrowDownTrayIcon className="h-4 w-4" />
                       Download Asset
@@ -2947,7 +2978,7 @@ export default function AdminDigitalAssetManagerPage() {
                       e.stopPropagation();
                       handleDeleteAsset(selectedAsset.id);
                     }}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-red-300 bg-white px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition"
                   >
                     <TrashIcon className="h-4 w-4" />
                     Delete Asset
