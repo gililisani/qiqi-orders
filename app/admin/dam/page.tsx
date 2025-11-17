@@ -2557,21 +2557,21 @@ export default function AdminDigitalAssetManagerPage() {
             {/* Two Column Layout */}
             <div className="flex flex-col lg:flex-row h-full overflow-hidden">
               {/* Left Column - Preview */}
-              <div className="lg:w-2/3 bg-gray-50 flex items-center justify-center p-8 min-h-[400px]">
+              <div className="lg:w-[55%] bg-gray-50 flex items-center justify-center p-6 min-h-[400px]">
                 {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id ? (
-                  <div className="w-full max-w-4xl">
-                    <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
+                  <div className="w-full max-w-3xl">
+                    <div className="relative w-full rounded-md overflow-hidden shadow-md" style={{ aspectRatio: '16/9' }}>
                       <iframe
                         src={`https://player.vimeo.com/video/${selectedAsset.vimeo_video_id}?byline=0&title=0&portrait=0`}
                         allow="autoplay; fullscreen; picture-in-picture"
                         allowFullScreen
-                        className="absolute inset-0 w-full h-full border-0 rounded-lg shadow-lg"
+                        className="absolute inset-0 w-full h-full border-0"
                         title={selectedAsset.title || 'Video'}
                       />
                     </div>
                   </div>
                 ) : selectedAsset.current_version?.previewPath && accessToken ? (
-                  <div className="w-full max-w-4xl bg-white rounded-md shadow-md p-3">
+                  <div className="w-full max-w-3xl bg-white rounded-md shadow-md p-4 border border-gray-100">
                     <img
                       src={ensureTokenUrl(selectedAsset.current_version.previewPath)}
                       alt={selectedAsset.title}
