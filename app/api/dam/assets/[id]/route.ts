@@ -43,6 +43,11 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (body.vimeo_download_720p !== undefined) updateData.vimeo_download_720p = body.vimeo_download_720p;
     if (body.vimeo_download_480p !== undefined) updateData.vimeo_download_480p = body.vimeo_download_480p;
     if (body.vimeo_download_360p !== undefined) updateData.vimeo_download_360p = body.vimeo_download_360p;
+    if (body.vimeo_download_formats !== undefined) {
+      updateData.vimeo_download_formats = Array.isArray(body.vimeo_download_formats) 
+        ? body.vimeo_download_formats 
+        : null;
+    }
     if (body.vimeo_video_id !== undefined) updateData.vimeo_video_id = body.vimeo_video_id;
     if (body.title !== undefined) updateData.title = body.title;
     if (body.description !== undefined) updateData.description = body.description;

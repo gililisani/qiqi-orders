@@ -63,6 +63,11 @@ interface AssetVersion {
   previewPath?: string | null;
 }
 
+type VimeoDownloadFormat = {
+  resolution: string;
+  url: string;
+};
+
 interface AssetRecord {
   id: string;
   title: string;
@@ -74,10 +79,11 @@ interface AssetRecord {
   product_name?: string | null; // New Product Name field
   sku?: string | null;
   vimeo_video_id?: string | null;
-  vimeo_download_1080p?: string | null;
-  vimeo_download_720p?: string | null;
-  vimeo_download_480p?: string | null;
-  vimeo_download_360p?: string | null;
+  vimeo_download_1080p?: string | null; // Legacy - kept for backwards compatibility
+  vimeo_download_720p?: string | null; // Legacy
+  vimeo_download_480p?: string | null; // Legacy
+  vimeo_download_360p?: string | null; // Legacy
+  vimeo_download_formats?: VimeoDownloadFormat[] | null; // New dynamic format
   created_at: string;
   current_version?: AssetVersion | null;
   tags: string[];
@@ -99,11 +105,8 @@ interface UploadFormState {
   primaryLocale: string | null;
   selectedRegionCodes: string[];
   file: File | null;
-  vimeoVideoId: string; // Vimeo video ID or URL
-  vimeoDownload1080p: string;
-  vimeoDownload720p: string;
-  vimeoDownload480p: string;
-  vimeoDownload360p: string;
+  vimeoVideoId: string; // Vimeo video ID or URL (main video for preview)
+  vimeoDownloadFormats: VimeoDownloadFormat[]; // Dynamic download formats
 }
 
 const defaultFormState: UploadFormState = {
@@ -121,10 +124,7 @@ const defaultFormState: UploadFormState = {
   selectedRegionCodes: [],
   file: null,
   vimeoVideoId: '',
-  vimeoDownload1080p: '',
-  vimeoDownload720p: '',
-  vimeoDownload480p: '',
-  vimeoDownload360p: '',
+  vimeoDownloadFormats: [],
 };
 
 // Product name options (static list)
@@ -133,6 +133,18 @@ const PRODUCT_NAME_OPTIONS = [
   'Curl Controller',
   'Volume Controller',
   'Texture Controller',
+  'Other',
+];
+
+// Resolution options for video downloads
+const RESOLUTION_OPTIONS = [
+  '4K',
+  '2K',
+  '1080p',
+  '720p',
+  '480p',
+  '360p',
+  '240p',
   'Other',
 ];
 
@@ -336,12 +348,7 @@ export default function AdminDigitalAssetManagerPage() {
     previewPath: string;
   }>>([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
-  const [editingDownloadUrls, setEditingDownloadUrls] = useState({
-    vimeo_download_1080p: '',
-    vimeo_download_720p: '',
-    vimeo_download_480p: '',
-    vimeo_download_360p: '',
-  });
+  const [editingDownloadUrls, setEditingDownloadUrls] = useState<VimeoDownloadFormat[]>([]);
   const [savingUrls, setSavingUrls] = useState(false);
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
   const [hoveredAssetId, setHoveredAssetId] = useState<string | null>(null);
@@ -719,10 +726,7 @@ export default function AdminDigitalAssetManagerPage() {
       ...defaultFormState,
       selectedLocaleCodes: defaultLocale ? [defaultLocale.code] : [],
       primaryLocale: defaultLocale ? defaultLocale.code : null,
-      vimeoDownload1080p: '',
-      vimeoDownload720p: '',
-      vimeoDownload480p: '',
-      vimeoDownload360p: '',
+      vimeoDownloadFormats: [],
     });
     setSuccessMessage('');
     setIsUploadDrawerOpen(false); // Close drawer after successful upload
@@ -875,10 +879,7 @@ export default function AdminDigitalAssetManagerPage() {
           productName: formState.productName.trim() || undefined,
           sku: formState.sku.trim() || undefined,
           vimeoVideoId: vimeoId,
-          vimeoDownload1080p: formState.vimeoDownload1080p.trim() || undefined,
-          vimeoDownload720p: formState.vimeoDownload720p.trim() || undefined,
-          vimeoDownload480p: formState.vimeoDownload480p.trim() || undefined,
-          vimeoDownload360p: formState.vimeoDownload360p.trim() || undefined,
+          vimeoDownloadFormats: formState.vimeoDownloadFormats.filter(f => f.url.trim() !== ''),
           tags: formState.selectedTagSlugs,
           audiences: [],
           locales: formState.selectedLocaleCodes.map((code) => ({
@@ -2419,7 +2420,7 @@ export default function AdminDigitalAssetManagerPage() {
                                 required
                               />
                               <p className="mt-1 text-[10px] text-gray-500 leading-tight">
-                                Enter the Vimeo URL or numeric ID. This is used for the video preview.
+                                This is the main video link used to embed the player in the detail modal. Enter the Vimeo URL or numeric ID.
                               </p>
                             </div>
                             
@@ -2441,52 +2442,74 @@ export default function AdminDigitalAssetManagerPage() {
                                   </svg>
                                   <div className="flex-1 min-w-0">
                                     <div className="text-xs font-medium text-gray-900">Download Formats (Optional)</div>
-                                    <div className="text-[10px] text-gray-500 mt-0.5">Paste direct Vimeo MP4 URLs for each quality you want to offer.</div>
+                                    <div className="text-[10px] text-gray-500 mt-0.5">Add direct download URLs for different video qualities (4K, 2K, 1080p, etc.).</div>
                                   </div>
                                 </div>
                               </button>
                               {showVideoDownloadFormats && (
-                                <div className="px-4 pb-4 pt-2 border-t border-gray-200 space-y-2">
-                                  <div>
-                                    <label className="block text-[10px] text-gray-600 mb-1">1080p</label>
-                                    <input
-                                      type="text"
-                                      value={formState.vimeoDownload1080p}
-                                      onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload1080p: event.target.value }))}
-                                      className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none h-7"
-                                      placeholder="https://..."
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-[10px] text-gray-600 mb-1">720p</label>
-                                    <input
-                                      type="text"
-                                      value={formState.vimeoDownload720p}
-                                      onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload720p: event.target.value }))}
-                                      className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none h-7"
-                                      placeholder="https://..."
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-[10px] text-gray-600 mb-1">480p</label>
-                                    <input
-                                      type="text"
-                                      value={formState.vimeoDownload480p}
-                                      onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload480p: event.target.value }))}
-                                      className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none h-7"
-                                      placeholder="https://..."
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-[10px] text-gray-600 mb-1">360p</label>
-                                    <input
-                                      type="text"
-                                      value={formState.vimeoDownload360p}
-                                      onChange={(event) => setFormState((prev) => ({ ...prev, vimeoDownload360p: event.target.value }))}
-                                      className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none h-7"
-                                      placeholder="https://..."
-                                    />
-                                  </div>
+                                <div className="px-4 pb-4 pt-2 border-t border-gray-200 space-y-2.5">
+                                  {formState.vimeoDownloadFormats.map((format, index) => (
+                                    <div key={index} className="flex items-start gap-2">
+                                      <div className="flex-1">
+                                        <label className="block text-[10px] text-gray-600 mb-1">Resolution</label>
+                                        <select
+                                          value={format.resolution}
+                                          onChange={(e) => {
+                                            const newFormats = [...formState.vimeoDownloadFormats];
+                                            newFormats[index].resolution = e.target.value;
+                                            setFormState((prev) => ({ ...prev, vimeoDownloadFormats: newFormats }));
+                                          }}
+                                          className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none h-7"
+                                        >
+                                          {RESOLUTION_OPTIONS.map((res) => (
+                                            <option key={res} value={res}>
+                                              {res}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div className="flex-1">
+                                        <label className="block text-[10px] text-gray-600 mb-1">Download URL</label>
+                                        <input
+                                          type="text"
+                                          value={format.url}
+                                          onChange={(e) => {
+                                            const newFormats = [...formState.vimeoDownloadFormats];
+                                            newFormats[index].url = e.target.value;
+                                            setFormState((prev) => ({ ...prev, vimeoDownloadFormats: newFormats }));
+                                          }}
+                                          className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none h-7"
+                                          placeholder="https://..."
+                                        />
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const newFormats = formState.vimeoDownloadFormats.filter((_, i) => i !== index);
+                                          setFormState((prev) => ({ ...prev, vimeoDownloadFormats: newFormats }));
+                                        }}
+                                        className="mt-5 text-red-600 hover:text-red-700"
+                                        title="Remove format"
+                                      >
+                                        <XMarkIcon className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFormState((prev) => ({
+                                        ...prev,
+                                        vimeoDownloadFormats: [...prev.vimeoDownloadFormats, { resolution: '1080p', url: '' }],
+                                      }));
+                                    }}
+                                    className="w-full mt-2 flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                  >
+                                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Add Download Format
+                                  </button>
                                 </div>
                               )}
                             </div>
@@ -2683,54 +2706,65 @@ export default function AdminDigitalAssetManagerPage() {
                   <div className="space-y-4">
                     {isEditingAsset ? (
                       <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Download URL (1080p)
-                          </label>
-                          <input
-                            type="text"
-                            value={editingDownloadUrls.vimeo_download_1080p}
-                            onChange={(e) => setEditingDownloadUrls(prev => ({ ...prev, vimeo_download_1080p: e.target.value }))}
-                            placeholder="https://..."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Download URL (720p)
-                          </label>
-                          <input
-                            type="text"
-                            value={editingDownloadUrls.vimeo_download_720p}
-                            onChange={(e) => setEditingDownloadUrls(prev => ({ ...prev, vimeo_download_720p: e.target.value }))}
-                            placeholder="https://..."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Download URL (480p)
-                          </label>
-                          <input
-                            type="text"
-                            value={editingDownloadUrls.vimeo_download_480p}
-                            onChange={(e) => setEditingDownloadUrls(prev => ({ ...prev, vimeo_download_480p: e.target.value }))}
-                            placeholder="https://..."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Download URL (360p)
-                          </label>
-                          <input
-                            type="text"
-                            value={editingDownloadUrls.vimeo_download_360p}
-                            onChange={(e) => setEditingDownloadUrls(prev => ({ ...prev, vimeo_download_360p: e.target.value }))}
-                            placeholder="https://..."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                          />
-                        </div>
+                        {editingDownloadUrls.map((format, index) => (
+                          <div key={index} className="flex items-start gap-2">
+                            <div className="flex-1">
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Resolution</label>
+                              <select
+                                value={format.resolution}
+                                onChange={(e) => {
+                                  const newFormats = [...editingDownloadUrls];
+                                  newFormats[index].resolution = e.target.value;
+                                  setEditingDownloadUrls(newFormats);
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                              >
+                                {RESOLUTION_OPTIONS.map((res) => (
+                                  <option key={res} value={res}>
+                                    {res}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex-1">
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Download URL</label>
+                              <input
+                                type="text"
+                                value={format.url}
+                                onChange={(e) => {
+                                  const newFormats = [...editingDownloadUrls];
+                                  newFormats[index].url = e.target.value;
+                                  setEditingDownloadUrls(newFormats);
+                                }}
+                                placeholder="https://..."
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newFormats = editingDownloadUrls.filter((_, i) => i !== index);
+                                setEditingDownloadUrls(newFormats);
+                              }}
+                              className="mt-6 text-red-600 hover:text-red-700"
+                              title="Remove format"
+                            >
+                              <XMarkIcon className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingDownloadUrls([...editingDownloadUrls, { resolution: '1080p', url: '' }]);
+                          }}
+                          className="w-full flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          Add Download Format
+                        </button>
                         <button
                           type="button"
                           onClick={async () => {
@@ -2745,10 +2779,7 @@ export default function AdminDigitalAssetManagerPage() {
                                 },
                                 credentials: 'same-origin',
                                 body: JSON.stringify({
-                                  vimeo_download_1080p: editingDownloadUrls.vimeo_download_1080p.trim() || null,
-                                  vimeo_download_720p: editingDownloadUrls.vimeo_download_720p.trim() || null,
-                                  vimeo_download_480p: editingDownloadUrls.vimeo_download_480p.trim() || null,
-                                  vimeo_download_360p: editingDownloadUrls.vimeo_download_360p.trim() || null,
+                                  vimeo_download_formats: editingDownloadUrls.filter(f => f.url.trim() !== ''),
                                 }),
                               });
                               if (!response.ok) {
@@ -2776,41 +2807,51 @@ export default function AdminDigitalAssetManagerPage() {
                     ) : (
                       <>
                         {/* Progressive download buttons */}
-                        {[
-                          { quality: '1080p', url: selectedAsset.vimeo_download_1080p || null },
-                          { quality: '720p', url: selectedAsset.vimeo_download_720p || null },
-                          { quality: '480p', url: selectedAsset.vimeo_download_480p || null },
-                          { quality: '360p', url: selectedAsset.vimeo_download_360p || null },
-                        ]
-                          .filter((item) => item.url && typeof item.url === 'string' && item.url.trim() !== '')
-                          .map((item) => (
-                            <button
-                              key={item.quality}
-                              type="button"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                const filename = `${selectedAsset.title || 'video'}-${item.quality}.mp4`;
-                                await triggerDownload(
-                                  item.url!,
-                                  filename,
-                                  selectedAsset.id,
-                                  `video-${item.quality}`,
-                                  accessToken
-                                );
-                              }}
-                              className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition mr-2"
-                            >
-                              <ArrowDownTrayIcon className="h-4 w-4" />
-                              Download {item.quality}
-                            </button>
-                          ))}
+                        {(() => {
+                          // Use new format if available, otherwise fall back to legacy fields
+                          const downloadFormats = selectedAsset.vimeo_download_formats && selectedAsset.vimeo_download_formats.length > 0
+                            ? selectedAsset.vimeo_download_formats
+                            : [
+                                ...(selectedAsset.vimeo_download_1080p ? [{ resolution: '1080p', url: selectedAsset.vimeo_download_1080p }] : []),
+                                ...(selectedAsset.vimeo_download_720p ? [{ resolution: '720p', url: selectedAsset.vimeo_download_720p }] : []),
+                                ...(selectedAsset.vimeo_download_480p ? [{ resolution: '480p', url: selectedAsset.vimeo_download_480p }] : []),
+                                ...(selectedAsset.vimeo_download_360p ? [{ resolution: '360p', url: selectedAsset.vimeo_download_360p }] : []),
+                              ];
+                          
+                          return downloadFormats.length > 0 ? (
+                            downloadFormats
+                              .filter((format) => format.url && typeof format.url === 'string' && format.url.trim() !== '')
+                              .map((format) => (
+                                <button
+                                  key={format.resolution}
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    const filename = `${selectedAsset.title || 'video'}-${format.resolution}.mp4`;
+                                    await triggerDownload(
+                                      format.url!,
+                                      filename,
+                                      selectedAsset.id,
+                                      `video-${format.resolution}`,
+                                      accessToken
+                                    );
+                                  }}
+                                  className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition mr-2"
+                                >
+                                  <ArrowDownTrayIcon className="h-4 w-4" />
+                                  Download {format.resolution}
+                                </button>
+                              ))
+                          ) : null;
+                        })()}
                         
                         {/* Show message if no download URLs configured */}
-                        {(!selectedAsset.vimeo_download_1080p || (typeof selectedAsset.vimeo_download_1080p === 'string' && selectedAsset.vimeo_download_1080p.trim() === '')) && 
-                         (!selectedAsset.vimeo_download_720p || (typeof selectedAsset.vimeo_download_720p === 'string' && selectedAsset.vimeo_download_720p.trim() === '')) && 
-                         (!selectedAsset.vimeo_download_480p || (typeof selectedAsset.vimeo_download_480p === 'string' && selectedAsset.vimeo_download_480p.trim() === '')) && 
-                         (!selectedAsset.vimeo_download_360p || (typeof selectedAsset.vimeo_download_360p === 'string' && selectedAsset.vimeo_download_360p.trim() === '')) && (
+                        {(() => {
+                          const hasFormats = selectedAsset.vimeo_download_formats && selectedAsset.vimeo_download_formats.length > 0;
+                          const hasLegacy = selectedAsset.vimeo_download_1080p || selectedAsset.vimeo_download_720p || selectedAsset.vimeo_download_480p || selectedAsset.vimeo_download_360p;
+                          return !hasFormats && !hasLegacy;
+                        })() && (
                           <p className="text-sm text-gray-500 italic">
                             No download URLs configured. Click "Edit URLs" to add download links.
                           </p>

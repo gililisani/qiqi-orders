@@ -79,6 +79,7 @@ export async function GET(request: NextRequest) {
         vimeo_download_720p,
         vimeo_download_480p,
         vimeo_download_360p,
+        vimeo_download_formats,
         created_at,
         search_tags
       `,
@@ -264,6 +265,11 @@ export async function GET(request: NextRequest) {
         vimeo_download_720p: record.vimeo_download_720p ?? null,
         vimeo_download_480p: record.vimeo_download_480p ?? null,
         vimeo_download_360p: record.vimeo_download_360p ?? null,
+        vimeo_download_formats: record.vimeo_download_formats 
+          ? (typeof record.vimeo_download_formats === 'string' 
+              ? JSON.parse(record.vimeo_download_formats) 
+              : record.vimeo_download_formats)
+          : null,
         created_at: record.created_at,
         current_version: currentVersion,
         tags: tagsByAsset[record.id] ?? [],
@@ -417,6 +423,9 @@ export async function POST(request: NextRequest) {
         vimeo_download_720p: payload.vimeoDownload720p ?? null,
         vimeo_download_480p: payload.vimeoDownload480p ?? null,
         vimeo_download_360p: payload.vimeoDownload360p ?? null,
+        vimeo_download_formats: payload.vimeoDownloadFormats && Array.isArray(payload.vimeoDownloadFormats) && payload.vimeoDownloadFormats.length > 0
+          ? payload.vimeoDownloadFormats
+          : null,
         search_tags: tagsInput,
         created_by: adminUser.id,
         updated_by: adminUser.id,
@@ -440,6 +449,9 @@ export async function POST(request: NextRequest) {
           vimeo_download_720p: payload.vimeoDownload720p ?? null,
           vimeo_download_480p: payload.vimeoDownload480p ?? null,
           vimeo_download_360p: payload.vimeoDownload360p ?? null,
+          vimeo_download_formats: payload.vimeoDownloadFormats && Array.isArray(payload.vimeoDownloadFormats) && payload.vimeoDownloadFormats.length > 0
+            ? payload.vimeoDownloadFormats
+            : null,
           search_tags: tagsInput,
           updated_by: adminUser.id,
           updated_at: new Date().toISOString(),
