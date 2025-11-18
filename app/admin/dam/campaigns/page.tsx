@@ -91,15 +91,19 @@ export default function CampaignsPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to create campaign');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Campaign creation error:', errorData);
+        throw new Error(errorData.error || errorData.message || 'Failed to create campaign');
+      }
 
       const data = await response.json();
       // Refresh campaigns list before redirecting
       await fetchCampaigns();
       router.push(`/admin/dam/campaigns/${data.campaign.id}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create campaign', err);
-      alert('Failed to create campaign');
+      alert(err.message || 'Failed to create campaign. Check console for details.');
     }
   };
 
