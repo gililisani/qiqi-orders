@@ -40,7 +40,6 @@ export default function CampaignsPage() {
   });
 
   const [accessToken, setAccessToken] = useState<string | null>(session?.access_token ?? null);
-  const [sessionChecked, setSessionChecked] = useState(false);
 
   // Get session from Supabase if not available from provider (same pattern as DAM page)
   useEffect(() => {
@@ -49,19 +48,12 @@ export default function CampaignsPage() {
       supabase.auth.getSession().then(({ data }: { data: { session: { access_token: string } | null } }) => {
         if (!active) return;
         setAccessToken(data.session?.access_token ?? null);
-        setSessionChecked(true);
-      }).catch(() => {
-        if (!active) return;
-        setSessionChecked(true);
       });
-    } else if (session !== undefined) {
-      // Session from provider is loaded (even if null)
-      setSessionChecked(true);
     }
     return () => {
       active = false;
     };
-  }, [accessToken, supabase, session]);
+  }, [accessToken, supabase]);
 
   // Update token when session from provider changes
   useEffect(() => {
@@ -73,10 +65,8 @@ export default function CampaignsPage() {
   // Fetch campaigns when we have a token
   useEffect(() => {
     if (!accessToken) {
-      // If session is checked and we have no token, ensure loading is false
-      if (sessionChecked) {
-        setLoading(false);
-      }
+      // No token available, stop loading
+      setLoading(false);
       return;
     }
 
@@ -89,19 +79,23 @@ export default function CampaignsPage() {
           Authorization: `Bearer ${accessToken}`,
         };
 
-        const response = await fetch('/api/campaigns', { headers });
+        const response = await fetch('/api/campaigns', { 
+          headers,
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        });
         
         if (cancelled) return;
         
         if (!response.ok) {
-          throw new Error('Failed to fetch campaigns');
+          const errorText = await response.text().catch(() => 'Unknown error');
+          throw new Error(`Failed to fetch campaigns: ${response.status} ${errorText}`);
         }
 
         const data = await response.json();
         if (!cancelled) {
           setCampaigns(data.campaigns || []);
         }
-      } catch (err) {
+      } catch (err: any) {
         if (!cancelled) {
           console.error('Failed to load campaigns', err);
           setCampaigns([]);
@@ -118,7 +112,7 @@ export default function CampaignsPage() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, sessionChecked]);
+  }, [accessToken]);
 
   const handleCreateCampaign = async () => {
     if (!newCampaign.name.trim()) {
