@@ -43,21 +43,29 @@ export default function CampaignsPage() {
 
   const fetchCampaigns = async () => {
     if (!accessToken) {
-      console.warn('No access token available, cannot fetch campaigns');
+      console.warn('No access token available, cannot fetch campaigns', { session: !!session });
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
+      console.log('Fetching campaigns with token:', accessToken.substring(0, 20) + '...');
       const headers: Record<string, string> = {
         Authorization: `Bearer ${accessToken}`,
       };
 
       const response = await fetch('/api/campaigns', { headers });
-      if (!response.ok) throw new Error('Failed to fetch campaigns');
+      console.log('Campaigns fetch response:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Campaigns fetch error:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch campaigns');
+      }
 
       const data = await response.json();
+      console.log('Campaigns data received:', data);
       setCampaigns(data.campaigns || []);
     } catch (err) {
       console.error('Failed to load campaigns', err);
@@ -67,10 +75,21 @@ export default function CampaignsPage() {
   };
 
   useEffect(() => {
+    console.log('Campaigns page - Session state:', { 
+      hasSession: !!session, 
+      hasToken: !!accessToken,
+      tokenPreview: accessToken ? accessToken.substring(0, 20) + '...' : 'none'
+    });
+    
     if (accessToken) {
       fetchCampaigns();
+    } else if (session === null) {
+      // Session loaded but no token - user not authenticated
+      console.warn('Session loaded but no access token');
+      setLoading(false);
     }
-  }, [accessToken]);
+    // If session is undefined, it's still loading, so we wait
+  }, [accessToken, session]);
 
   const handleCreateCampaign = async () => {
     if (!newCampaign.name.trim()) {
