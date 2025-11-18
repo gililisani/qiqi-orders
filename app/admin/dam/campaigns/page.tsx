@@ -40,6 +40,7 @@ export default function CampaignsPage() {
   });
 
   const [accessToken, setAccessToken] = useState<string | null>(session?.access_token ?? null);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
   // Get session from Supabase if not available from provider (same pattern as DAM page)
   useEffect(() => {
@@ -48,12 +49,19 @@ export default function CampaignsPage() {
       supabase.auth.getSession().then(({ data }: { data: { session: { access_token: string } | null } }) => {
         if (!active) return;
         setAccessToken(data.session?.access_token ?? null);
+        setSessionChecked(true);
+      }).catch(() => {
+        if (!active) return;
+        setSessionChecked(true);
       });
+    } else if (session !== undefined) {
+      // Session from provider is loaded (even if null)
+      setSessionChecked(true);
     }
     return () => {
       active = false;
     };
-  }, [accessToken, supabase]);
+  }, [accessToken, supabase, session]);
 
   // Update token when session from provider changes
   useEffect(() => {
@@ -62,9 +70,15 @@ export default function CampaignsPage() {
     }
   }, [session]);
 
-  // Fetch campaigns when we have a token (same pattern as DAM page)
+  // Fetch campaigns when we have a token
   useEffect(() => {
-    if (!accessToken) return;
+    if (!accessToken) {
+      // If session is checked and we have no token, stop loading
+      if (sessionChecked) {
+        setLoading(false);
+      }
+      return;
+    }
 
     const fetchCampaigns = async () => {
       try {
@@ -90,7 +104,7 @@ export default function CampaignsPage() {
     };
 
     fetchCampaigns();
-  }, [accessToken]);
+  }, [accessToken, sessionChecked]);
 
   const handleCreateCampaign = async () => {
     if (!newCampaign.name.trim()) {
