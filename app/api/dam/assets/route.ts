@@ -423,10 +423,17 @@ export async function POST(request: NextRequest) {
     }
 
     if (!payload.assetId) {
+      // Prepare description with video formats embedded
+      const descriptionWithFormats = payload.vimeoDownloadFormats && payload.vimeoDownloadFormats.length > 0
+        ? (payload.description 
+            ? `${payload.description}\n\n<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats)}-->`
+            : `<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats)}-->`)
+        : (payload.description ?? null);
+
       const { error: insertAssetError } = await supabaseAdmin.from('dam_assets').insert({
         id: assetId,
         title: payload.title,
-        description: payload.description ?? null,
+        description: descriptionWithFormats,
         asset_type: syncedAssetType,
         asset_type_id: payload.assetTypeId ?? null,
         asset_subtype_id: payload.assetSubtypeId ?? null,
@@ -439,10 +446,6 @@ export async function POST(request: NextRequest) {
         vimeo_download_720p: payload.vimeoDownload720p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '720p')?.url) ?? null,
         vimeo_download_480p: payload.vimeoDownload480p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '480p')?.url) ?? null,
         vimeo_download_360p: payload.vimeoDownload360p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '360p')?.url) ?? null,
-        // Store ALL formats as JSON in description field (we'll append, not replace)
-        description: payload.description 
-          ? `${payload.description}\n\n<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats || [])}-->`
-          : `<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats || [])}-->`,
         search_tags: tagsInput,
         created_by: adminUser.id,
         updated_by: adminUser.id,
@@ -454,7 +457,11 @@ export async function POST(request: NextRequest) {
         .from('dam_assets')
         .update({
           title: payload.title,
-          description: payload.description ?? null,
+          description: payload.vimeoDownloadFormats && payload.vimeoDownloadFormats.length > 0
+            ? (payload.description 
+                ? `${payload.description}\n\n<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats)}-->`
+                : `<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats)}-->`)
+            : (payload.description ?? null),
           asset_type: syncedAssetType,
           asset_type_id: payload.assetTypeId ?? null,
           asset_subtype_id: payload.assetSubtypeId ?? null,
@@ -467,10 +474,6 @@ export async function POST(request: NextRequest) {
           vimeo_download_720p: payload.vimeoDownload720p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '720p')?.url) ?? null,
           vimeo_download_480p: payload.vimeoDownload480p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '480p')?.url) ?? null,
           vimeo_download_360p: payload.vimeoDownload360p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '360p')?.url) ?? null,
-          // Store ALL formats as JSON in description field (we'll append, not replace)
-          description: payload.description 
-            ? `${payload.description}\n\n<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats || [])}-->`
-            : `<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats || [])}-->`,
           search_tags: tagsInput,
           updated_by: adminUser.id,
           updated_at: new Date().toISOString(),
