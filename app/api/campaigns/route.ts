@@ -49,18 +49,23 @@ export async function GET(request: NextRequest) {
     if (campaignsError) throw campaignsError;
 
     // Fetch asset counts for each campaign
-    const { data: assetCounts, error: countsError } = await supabaseAdmin
-      .from('campaign_assets')
-      .select('campaign_id')
-      .in('campaign_id', (campaigns || []).map(c => c.id));
+    let countsByCampaign: Record<string, number> = {};
+    if (campaigns && campaigns.length > 0) {
+      const { data: assetCounts, error: countsError } = await supabaseAdmin
+        .from('campaign_assets')
+        .select('campaign_id')
+        .in('campaign_id', campaigns.map(c => c.id));
 
-    if (countsError) throw countsError;
-
-    // Count assets per campaign
-    const countsByCampaign = (assetCounts || []).reduce((acc: Record<string, number>, row) => {
-      acc[row.campaign_id] = (acc[row.campaign_id] || 0) + 1;
-      return acc;
-    }, {});
+      if (countsError) {
+        console.error('Error fetching asset counts:', countsError);
+        // Continue with empty counts instead of failing
+      } else {
+        countsByCampaign = (assetCounts || []).reduce((acc: Record<string, number>, row) => {
+          acc[row.campaign_id] = (acc[row.campaign_id] || 0) + 1;
+          return acc;
+        }, {});
+      }
+    }
 
     // Fetch thumbnail paths for campaigns that have thumbnail_asset_id
     const thumbnailAssetIds = (campaigns || [])
@@ -69,27 +74,35 @@ export async function GET(request: NextRequest) {
 
     let thumbnailPaths: Record<string, string | null> = {};
     if (thumbnailAssetIds.length > 0) {
-      const { data: versions, error: versionsError } = await supabaseAdmin
-        .from('dam_asset_versions')
-        .select('asset_id, thumbnail_path')
-        .in('asset_id', thumbnailAssetIds)
-        .order('version_number', { ascending: false });
+      try {
+        const { data: versions, error: versionsError } = await supabaseAdmin
+          .from('dam_asset_versions')
+          .select('asset_id, thumbnail_path')
+          .in('asset_id', thumbnailAssetIds)
+          .order('version_number', { ascending: false });
 
-      if (!versionsError && versions) {
-        // Get latest version for each asset
-        const latestVersions = new Map<string, string | null>();
-        versions.forEach(v => {
-          if (!latestVersions.has(v.asset_id)) {
-            latestVersions.set(v.asset_id, v.thumbnail_path);
-          }
-        });
+        if (!versionsError && versions) {
+          // Get latest version for each asset
+          const latestVersions = new Map<string, string | null>();
+          versions.forEach(v => {
+            if (!latestVersions.has(v.asset_id)) {
+              latestVersions.set(v.asset_id, v.thumbnail_path);
+            }
+          });
 
-        // Map thumbnail paths to campaign thumbnail_asset_id
-        campaigns?.forEach(campaign => {
-          if (campaign.thumbnail_asset_id) {
-            thumbnailPaths[campaign.id] = latestVersions.get(campaign.thumbnail_asset_id) || null;
-          }
-        });
+          // Map thumbnail paths to campaign thumbnail_asset_id
+          campaigns?.forEach(campaign => {
+            if (campaign.thumbnail_asset_id) {
+              thumbnailPaths[campaign.id] = latestVersions.get(campaign.thumbnail_asset_id) || null;
+            }
+          });
+        } else if (versionsError) {
+          console.error('Error fetching thumbnail paths:', versionsError);
+          // Continue without thumbnails instead of failing
+        }
+      } catch (thumbError) {
+        console.error('Exception fetching thumbnail paths:', thumbError);
+        // Continue without thumbnails
       }
     }
 
