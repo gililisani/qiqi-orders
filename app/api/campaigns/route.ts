@@ -28,6 +28,15 @@ export async function GET(request: NextRequest) {
     const auth = createAuth();
     await auth.requireRole(request, 'admin');
 
+    // Verify service role key is configured
+    if (!SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY is not configured');
+      return NextResponse.json({ 
+        error: 'Server configuration error: Service role key not set',
+        code: 'CONFIG_ERROR'
+      }, { status: 500 });
+    }
+
     const supabaseAdmin = createSupabaseAdminClient();
 
     // Fetch campaigns with asset counts
