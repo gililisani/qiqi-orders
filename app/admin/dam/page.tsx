@@ -128,13 +128,7 @@ const defaultFormState: UploadFormState = {
 };
 
 // Product name options (static list)
-const PRODUCT_NAME_OPTIONS = [
-  'Hair Controller',
-  'Curl Controller',
-  'Volume Controller',
-  'Texture Controller',
-  'Other',
-];
+// PRODUCT_NAME_OPTIONS removed - now fetched dynamically from Products table
 
 // Resolution options for video downloads
 const RESOLUTION_OPTIONS = [
@@ -313,6 +307,7 @@ export default function AdminDigitalAssetManagerPage() {
   const [regions, setRegions] = useState<RegionOption[]>([]);
   const [assetTypes, setAssetTypes] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [assetSubtypes, setAssetSubtypes] = useState<Array<{ id: string; name: string; slug: string; asset_type_id: string }>>([]);
+  const [products, setProducts] = useState<Array<{ id: number; item_name: string }>>([]);
 
   const [formState, setFormState] = useState<UploadFormState>(defaultFormState);
   const [uploading, setUploading] = useState(false);
@@ -463,6 +458,7 @@ export default function AdminDigitalAssetManagerPage() {
       setRegions(payload.regions || []);
       setAssetTypes(payload.assetTypes || []);
       setAssetSubtypes(payload.assetSubtypes || []);
+      setProducts(payload.products || []);
 
       const defaultLocale = localeOptions.find((loc) => loc.is_default) ?? localeOptions[0];
       if (defaultLocale) {
@@ -1717,9 +1713,9 @@ export default function AdminDigitalAssetManagerPage() {
               className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
             >
               <option value="">Product</option>
-              {PRODUCT_NAME_OPTIONS.map((name) => (
-                <option key={name} value={name}>
-                  {name}
+              {products.map((product) => (
+                <option key={product.id} value={product.item_name}>
+                  {product.item_name}
                 </option>
               ))}
             </select>
@@ -2331,9 +2327,9 @@ export default function AdminDigitalAssetManagerPage() {
                           className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
                         >
                           <option value="">Select Product</option>
-                          {PRODUCT_NAME_OPTIONS.map((name) => (
-                            <option key={name} value={name}>
-                              {name}
+                          {products.map((product) => (
+                            <option key={product.id} value={product.item_name}>
+                              {product.item_name}
                             </option>
                           ))}
                         </select>

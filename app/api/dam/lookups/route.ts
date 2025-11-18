@@ -25,12 +25,13 @@ export async function GET(request: NextRequest) {
 
     const supabaseAdmin = createSupabaseAdminClient();
 
-    const [tagsRes, localesRes, regionsRes, assetTypesRes, assetSubtypesRes] = await Promise.all([
+    const [tagsRes, localesRes, regionsRes, assetTypesRes, assetSubtypesRes, productsRes] = await Promise.all([
       supabaseAdmin.from('dam_tags').select('*').order('label', { ascending: true }),
       supabaseAdmin.from('dam_locales').select('*').order('label', { ascending: true }),
       supabaseAdmin.from('dam_regions').select('*').order('label', { ascending: true }),
       supabaseAdmin.from('dam_asset_types').select('*').eq('active', true).order('display_order', { ascending: true }),
       supabaseAdmin.from('dam_asset_subtypes').select('*').eq('active', true).order('display_order', { ascending: true }),
+      supabaseAdmin.from('Products').select('id, item_name').eq('enable', true).order('item_name', { ascending: true }),
     ]);
 
     if (tagsRes.error) throw tagsRes.error;
@@ -38,6 +39,7 @@ export async function GET(request: NextRequest) {
     if (regionsRes.error) throw regionsRes.error;
     if (assetTypesRes.error) throw assetTypesRes.error;
     if (assetSubtypesRes.error) throw assetSubtypesRes.error;
+    if (productsRes.error) throw productsRes.error;
 
     return NextResponse.json({
       tags: (tagsRes.data ?? []).map((tag) => ({ id: tag.id, slug: tag.slug, label: tag.label })),
@@ -59,6 +61,10 @@ export async function GET(request: NextRequest) {
         slug: subtype.slug,
         asset_type_id: subtype.asset_type_id,
         display_order: subtype.display_order,
+      })),
+      products: (productsRes.data ?? []).map((product) => ({
+        id: product.id,
+        item_name: product.item_name,
       })),
     });
   } catch (err: any) {
