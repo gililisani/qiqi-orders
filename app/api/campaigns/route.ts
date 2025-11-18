@@ -141,16 +141,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid end date format' }, { status: 400 });
     }
 
+    // Log what we're trying to insert for debugging
+    const insertData = {
+      name: body.name.trim(),
+      description: body.description?.trim() || null,
+      thumbnail_asset_id: body.thumbnailAssetId || null,
+      product_line: body.productLine || null,
+      start_date: startDate,
+      end_date: endDate,
+    };
+    console.log('Attempting to insert campaign:', insertData);
+
     const { data: campaign, error: insertError } = await supabaseAdmin
       .from('campaigns')
-      .insert({
-        name: body.name.trim(),
-        description: body.description?.trim() || null,
-        thumbnail_asset_id: body.thumbnailAssetId || null,
-        product_line: body.productLine || null,
-        start_date: startDate,
-        end_date: endDate,
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -160,7 +164,14 @@ export async function POST(request: NextRequest) {
         details: insertError.details,
         hint: insertError.hint,
         code: insertError.code,
+        insertData,
       });
+      
+      // Check if it's an RLS policy error
+      if (insertError.message?.includes('policy') || insertError.code === '42501') {
+        console.error('RLS policy error detected. Service role key may not be bypassing RLS.');
+      }
+      
       throw insertError;
     }
 
