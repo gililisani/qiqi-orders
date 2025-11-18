@@ -71,6 +71,10 @@ export default function CampaignsPage() {
     }
 
     let cancelled = false;
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      abortController.abort();
+    }, 10000); // 10 second timeout
 
     const fetchCampaigns = async () => {
       try {
@@ -81,8 +85,10 @@ export default function CampaignsPage() {
 
         const response = await fetch('/api/campaigns', { 
           headers,
-          signal: AbortSignal.timeout(10000) // 10 second timeout
+          signal: abortController.signal
         });
+        
+        clearTimeout(timeoutId);
         
         if (cancelled) return;
         
@@ -96,8 +102,13 @@ export default function CampaignsPage() {
           setCampaigns(data.campaigns || []);
         }
       } catch (err: any) {
+        clearTimeout(timeoutId);
         if (!cancelled) {
-          console.error('Failed to load campaigns', err);
+          if (err.name === 'AbortError') {
+            console.error('Request timed out after 10 seconds');
+          } else {
+            console.error('Failed to load campaigns', err);
+          }
           setCampaigns([]);
         }
       } finally {
@@ -111,6 +122,8 @@ export default function CampaignsPage() {
     
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
+      abortController.abort();
     };
   }, [accessToken]);
 
