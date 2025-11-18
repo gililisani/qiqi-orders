@@ -185,14 +185,26 @@ async function triggerDownload(
       });
       
       if (response.ok) {
-        // Extract filename from Content-Disposition header if available
+        // Extract filename from Content-Disposition header if available (this is the source of truth from server)
         const contentDisposition = response.headers.get('content-disposition');
         let downloadFilename = filename || 'download';
         if (contentDisposition) {
+          // Try to extract filename from Content-Disposition header
+          // Format: attachment; filename="file.jpg" or attachment; filename*=UTF-8''file.jpg
           const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
           if (filenameMatch && filenameMatch[1]) {
-            downloadFilename = filenameMatch[1].replace(/['"]/g, '');
+            downloadFilename = filenameMatch[1].replace(/['"]/g, '').trim();
+          } else {
+            // Try alternative format: filename*=UTF-8''encoded-name
+            const filenameStarMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/);
+            if (filenameStarMatch && filenameStarMatch[1]) {
+              downloadFilename = decodeURIComponent(filenameStarMatch[1]);
+            }
           }
+        }
+        // If we still don't have a good filename and one was provided, use it
+        if (downloadFilename === 'download' && filename && filename !== 'download') {
+          downloadFilename = filename;
         }
         
         const blob = await response.blob();
@@ -1857,10 +1869,18 @@ export default function AdminDigitalAssetManagerPage() {
                       const cardDownloadKey = `card-${asset.id}`;
                       setDownloadingFormats(prev => new Set(prev).add(cardDownloadKey));
                       const downloadUrl = ensureTokenUrl(asset.current_version!.downloadPath!, accessToken);
-                      // Don't set filename - let server handle it based on use_title_as_filename flag
+                      // Get filename: use title if flag is set, otherwise use original filename from mime type
+                      let downloadFilename: string | null = null;
+                      if (asset.use_title_as_filename && asset.title) {
+                        const ext = asset.current_version!.mime_type?.split('/')[1] || 'bin';
+                        downloadFilename = `${asset.title}.${ext}`;
+                      } else if (asset.current_version!.mime_type) {
+                        const ext = asset.current_version!.mime_type.split('/')[1] || 'bin';
+                        downloadFilename = `asset.${ext}`; // Will be replaced by Content-Disposition header if available
+                      }
                       await triggerDownload(
                         downloadUrl,
-                        null,
+                        downloadFilename,
                         asset.id,
                         'api',
                         accessToken,
@@ -2592,10 +2612,18 @@ export default function AdminDigitalAssetManagerPage() {
               const downloadKey = `asset-action-${asset.id}`;
               setDownloadingFormats(prev => new Set(prev).add(downloadKey));
               const downloadUrl = ensureTokenUrl(asset.current_version.downloadPath, accessToken);
-              // Don't set filename - let server handle it based on use_title_as_filename flag
+              // Get filename: use title if flag is set, otherwise will be extracted from Content-Disposition header
+              let downloadFilename: string | null = null;
+              if (asset.use_title_as_filename && asset.title) {
+                const ext = asset.current_version.mime_type?.split('/')[1] || 'bin';
+                downloadFilename = `${asset.title}.${ext}`;
+              } else if (asset.current_version.mime_type) {
+                const ext = asset.current_version.mime_type.split('/')[1] || 'bin';
+                downloadFilename = `asset.${ext}`; // Will be replaced by Content-Disposition header if available
+              }
               await triggerDownload(
                 downloadUrl,
-                null,
+                downloadFilename,
                 asset.id,
                 'api',
                 accessToken,
