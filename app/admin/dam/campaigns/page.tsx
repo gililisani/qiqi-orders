@@ -27,7 +27,7 @@ interface Campaign {
 
 export default function CampaignsPage() {
   const router = useRouter();
-  const { session } = useSupabase();
+  const { session, supabase } = useSupabase();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -39,7 +39,31 @@ export default function CampaignsPage() {
     endDate: '',
   });
 
-  const accessToken = session?.access_token || null;
+  const [accessToken, setAccessToken] = useState<string | null>(session?.access_token ?? null);
+
+  // Try to get session from Supabase if not available from provider
+  useEffect(() => {
+    let active = true;
+    if (!accessToken && supabase) {
+      supabase.auth.getSession().then(({ data }: { data: { session: { access_token: string } | null } }) => {
+        if (!active) return;
+        const token = data.session?.access_token ?? null;
+        console.log('Fetched session from supabase:', { hasToken: !!token });
+        setAccessToken(token);
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [accessToken, supabase]);
+
+  // Also update token when session from provider changes
+  useEffect(() => {
+    if (session?.access_token) {
+      console.log('Session token updated from provider');
+      setAccessToken(session.access_token);
+    }
+  }, [session]);
 
   const fetchCampaigns = useCallback(async () => {
     if (!accessToken) {
