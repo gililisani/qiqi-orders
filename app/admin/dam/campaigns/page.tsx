@@ -136,19 +136,21 @@ export default function CampaignsPage() {
       campaignsCount: campaigns.length
     });
     
-    if (accessToken && !fetching && !loading) {
+    if (accessToken && !fetching) {
       console.log('Conditions met, calling fetchCampaigns');
       fetchCampaigns();
     } else if (accessToken && fetching) {
       console.log('Fetch already in progress, waiting...');
-    } else if (accessToken && loading) {
-      console.log('Already loading, waiting...');
     } else if (session === null && !accessToken) {
       // Session loaded but no token - user not authenticated
       console.warn('Session loaded but no access token - stopping loading');
       setLoading(false);
     } else {
-      console.log('Waiting for session/token...', { session: session === null ? 'null' : session === undefined ? 'undefined' : 'exists' });
+      console.log('Waiting for session/token...', { 
+        session: session === null ? 'null' : session === undefined ? 'undefined' : 'exists',
+        hasToken: !!accessToken,
+        fetching 
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, session]); // fetchCampaigns intentionally excluded to prevent infinite loops
