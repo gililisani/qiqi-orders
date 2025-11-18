@@ -1,0 +1,176 @@
+'use client';
+
+import { PhotoIcon, EyeIcon, ArrowDownTrayIcon, TrashIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { AssetRecord } from './types';
+import { formatBytes, ensureTokenUrl, getFileTypeBadge } from './utils';
+
+interface AssetCardProps {
+  asset: AssetRecord;
+  viewMode: 'compact' | 'comfortable' | 'grid' | 'list';
+  accessToken: string | null;
+  hoveredAssetId: string | null;
+  onMouseEnter: (assetId: string) => void;
+  onMouseLeave: () => void;
+  onClick: (asset: AssetRecord) => void;
+  // Admin-only props
+  isAdmin?: boolean;
+  selectedAssetIds?: Set<string>;
+  onToggleSelection?: (assetId: string) => void;
+  onDownload?: (asset: AssetRecord) => Promise<void>;
+  onDelete?: (assetId: string) => void;
+  downloadingFormats?: Set<string>;
+  assetSubtypes?: Array<{ id: string; name: string; slug: string; asset_type_id: string }>;
+  renderAssetTypePill?: (type: string, size?: string) => JSX.Element | null;
+}
+
+export default function AssetCard({
+  asset,
+  viewMode,
+  accessToken,
+  hoveredAssetId,
+  onMouseEnter,
+  onMouseLeave,
+  onClick,
+  isAdmin = false,
+  selectedAssetIds,
+  onToggleSelection,
+  onDownload,
+  onDelete,
+  downloadingFormats = new Set(),
+  assetSubtypes = [],
+  renderAssetTypePill,
+}: AssetCardProps) {
+  const isCompact = viewMode === 'compact';
+  const isHovered = hoveredAssetId === asset.id;
+  const isSelected = selectedAssetIds?.has(asset.id) ?? false;
+  const cardDownloadKey = `card-${asset.id}`;
+  const isDownloading = downloadingFormats.has(cardDownloadKey);
+
+  const thumbnailHeight = isCompact ? '160px' : viewMode === 'comfortable' ? '200px' : '200px';
+  const maxWidth = isCompact ? '240px' : undefined;
+
+  return (
+    <div
+      className="group relative bg-white rounded-md border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer"
+      style={{ maxWidth }}
+      onMouseEnter={() => onMouseEnter(asset.id)}
+      onMouseLeave={onMouseLeave}
+      onClick={() => onClick(asset)}
+    >
+      {/* Selection Checkbox (Admin only) */}
+      {isAdmin && onToggleSelection && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelection(asset.id);
+          }}
+          className={`absolute top-1.5 left-1.5 z-20 flex h-4 w-4 items-center justify-center rounded border-2 bg-white shadow-sm transition ${
+            isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-300 hover:border-gray-400'
+          }`}
+        >
+          {isSelected && <CheckIcon className="h-2.5 w-2.5 text-white" />}
+        </button>
+      )}
+
+      {/* Thumbnail */}
+      <div className="relative bg-gray-100 overflow-hidden" style={{ height: thumbnailHeight }}>
+        {asset.asset_type === 'video' && asset.vimeo_video_id ? (
+          <img
+            src={`https://vumbnail.com/${asset.vimeo_video_id}.jpg`}
+            alt={asset.title}
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = `https://i.vimeocdn.com/video/${asset.vimeo_video_id}_640.jpg`;
+            }}
+          />
+        ) : accessToken && asset.current_version?.previewPath ? (
+          <img
+            src={ensureTokenUrl(asset.current_version.previewPath, accessToken)}
+            alt={asset.title}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-gray-400">
+            <PhotoIcon className="h-12 w-12" />
+          </div>
+        )}
+
+        {/* File Type/Resolution Badge */}
+        {asset.current_version && (
+          <span className="absolute bottom-1.5 right-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
+            {getFileTypeBadge(asset)}
+          </span>
+        )}
+
+        {/* Hover Overlay with Actions */}
+        {isHovered && (
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/30 to-transparent flex items-center justify-center gap-1.5 transition-opacity duration-200">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick(asset);
+              }}
+              className="rounded-md bg-white/95 p-1 hover:bg-white transition shadow-sm"
+              title="View"
+            >
+              <EyeIcon className="h-3.5 w-3.5 text-gray-900" />
+            </button>
+            {asset.current_version?.downloadPath && onDownload && (
+              <button
+                type="button"
+                disabled={isDownloading}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await onDownload(asset);
+                }}
+                className="rounded-md bg-white/95 p-1 hover:bg-white transition shadow-sm disabled:opacity-50 disabled:cursor-wait"
+                title={isDownloading ? "Preparing..." : "Download"}
+              >
+                {isDownloading ? (
+                  <svg className="animate-spin h-3.5 w-3.5 text-gray-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <ArrowDownTrayIcon className="h-3.5 w-3.5 text-gray-900" />
+                )}
+              </button>
+            )}
+            {isAdmin && onDelete && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(asset.id);
+                }}
+                className="rounded-md bg-white/95 p-1 hover:bg-white transition shadow-sm"
+                title="Delete"
+              >
+                <TrashIcon className="h-3.5 w-3.5 text-red-600" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Card Footer */}
+      <div className="p-2 space-y-1">
+        <h4 className="text-xs font-semibold text-gray-900 truncate leading-tight">{asset.title}</h4>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {renderAssetTypePill && renderAssetTypePill(asset.asset_type, 'sm')}
+          {asset.asset_subtype_id ? (() => {
+            const subtype = assetSubtypes.find(s => s.id === asset.asset_subtype_id);
+            return subtype ? (
+              <span className="text-[10px] text-gray-600 truncate">{subtype.name}</span>
+            ) : null;
+          })() : asset.locales.length > 0 && (
+            <span className="text-[10px] text-gray-500">{asset.locales[0].code}</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+

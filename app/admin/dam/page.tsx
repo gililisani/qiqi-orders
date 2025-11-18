@@ -19,6 +19,10 @@ import {
   PencilIcon,
   MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
+import AssetCard from '../../components/dam/AssetCard';
+import AssetDetailModal from '../../components/dam/AssetDetailModal';
+import { AssetRecord, LocaleOption, RegionOption, AssetVersion, VimeoDownloadFormat } from '../../components/dam/types';
+import { formatBytes, ensureTokenUrl, getFileTypeBadge, buildAuthHeaders } from '../../components/dam/utils';
 
 const assetTypeOptions: Array<{ value: string; label: string; icon: JSX.Element }> = [
   { value: 'image', label: 'Image', icon: <PhotoIcon className="h-4 w-4" /> },
@@ -36,60 +40,7 @@ interface TagOption {
   label: string;
 }
 
-interface LocaleOption {
-  code: string;
-  label: string;
-  is_default?: boolean;
-}
-
-interface RegionOption {
-  code: string;
-  label: string;
-}
-
-interface AssetVersion {
-  id: string;
-  version_number: number;
-  storage_path: string;
-  thumbnail_path?: string | null;
-  mime_type?: string | null;
-  file_size?: number | null;
-  processing_status: string;
-  created_at: string;
-  duration_seconds?: number | null;
-  width?: number | null;
-  height?: number | null;
-  downloadPath?: string | null;
-  previewPath?: string | null;
-}
-
-type VimeoDownloadFormat = {
-  resolution: string;
-  url: string;
-};
-
-interface AssetRecord {
-  id: string;
-  title: string;
-  description?: string | null;
-  asset_type: string; // Legacy enum field
-  asset_type_id?: string | null; // New taxonomy Asset Type ID
-  asset_subtype_id?: string | null; // New taxonomy Asset Sub-Type ID
-  product_line?: string | null;
-  product_name?: string | null; // New Product Name field
-  sku?: string | null;
-  vimeo_video_id?: string | null;
-  vimeo_download_1080p?: string | null; // Legacy - kept for backwards compatibility
-  vimeo_download_720p?: string | null; // Legacy
-  vimeo_download_480p?: string | null; // Legacy
-  vimeo_download_360p?: string | null; // Legacy
-  vimeo_download_formats?: VimeoDownloadFormat[] | null; // New dynamic format
-  created_at: string;
-  current_version?: AssetVersion | null;
-  tags: string[];
-  locales: LocaleOption[];
-  regions: RegionOption[];
-}
+// Types are now imported from shared components/dam/types
 
 interface UploadFormState {
   title: string;
@@ -143,20 +94,7 @@ const RESOLUTION_OPTIONS = [
   'Other',
 ];
 
-function formatBytes(bytes?: number | null): string {
-  if (!bytes || bytes <= 0) return '—';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / Math.pow(1024, exponent);
-  return `${value.toFixed(value >= 10 || value < 1 ? 0 : 1)} ${units[exponent]}`;
-}
-
-function buildAuthHeaders(accessToken: string | undefined | null): Record<string, string> {
-  if (!accessToken) return {};
-  return {
-    Authorization: `Bearer ${accessToken}`,
-  };
-}
+// Utility functions are now imported from shared components/dam/utils
 
 // Parse Vimeo video ID from various URL formats
 function parseVimeoId(input: string): string | null {
@@ -1928,164 +1866,48 @@ export default function AdminDigitalAssetManagerPage() {
                   : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
               }`}>
                 {filteredAssets.map((asset) => (
-                    <div
-                      key={asset.id}
-                      className="group relative bg-white rounded-md border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer"
-                      style={{ maxWidth: viewMode === 'compact' ? '240px' : 'none' }}
-                      onMouseEnter={() => setHoveredAssetId(asset.id)}
-                      onMouseLeave={() => setHoveredAssetId(null)}
-                      onClick={() => {
-                        setSelectedAsset(asset);
-                      }}
-                    >
-                      {/* Selection Checkbox */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleAssetSelection(asset.id);
-                        }}
-                        className={`absolute top-1.5 left-1.5 z-20 flex h-4 w-4 items-center justify-center rounded border-2 bg-white shadow-sm transition ${
-                          selectedAssetIds.has(asset.id) ? 'border-blue-600 bg-blue-600' : 'border-gray-300 hover:border-gray-400'
-                        }`}
-                      >
-                        {selectedAssetIds.has(asset.id) && (
-                          <CheckIcon className="h-2.5 w-2.5 text-white" />
-                        )}
-                      </button>
-
-                      {/* Thumbnail */}
-                      <div className="relative bg-gray-100 overflow-hidden" style={{ height: viewMode === 'compact' ? '160px' : '200px' }}>
-                        {asset.asset_type === 'video' && asset.vimeo_video_id ? (
-                          <img
-                            src={`https://vumbnail.com/${asset.vimeo_video_id}.jpg`}
-                            alt={asset.title}
-                            className="h-full w-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = `https://i.vimeocdn.com/video/${asset.vimeo_video_id}_640.jpg`;
-                            }}
-                          />
-                        ) : accessToken && asset.current_version?.previewPath ? (
-                          <img
-                            src={ensureTokenUrl(asset.current_version.previewPath)}
-                            alt={asset.title}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-gray-400">
-                            <PhotoIcon className="h-12 w-12" />
-                          </div>
-                        )}
-                        
-                        {/* File Type/Resolution Badge */}
-                        {asset.current_version && (
-                          <span className="absolute bottom-1.5 right-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                            {getFileTypeBadge(asset)}
-                          </span>
-                        )}
-
-                        {/* Hover Overlay with Actions */}
-                        {hoveredAssetId === asset.id && (
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/30 to-transparent flex items-center justify-center gap-1.5 transition-opacity duration-200">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedAsset(asset);
-                              }}
-                              className="rounded-md bg-white/95 p-1 hover:bg-white transition shadow-sm"
-                              title="View"
-                            >
-                              <EyeIcon className="h-3.5 w-3.5 text-gray-900" />
-                            </button>
-                            {asset.current_version?.downloadPath && (
-                              (() => {
-                                const cardDownloadKey = `card-${asset.id}`;
-                                const isDownloading = downloadingFormats.has(cardDownloadKey);
-                                return (
-                                  <button
-                                    type="button"
-                                    disabled={isDownloading}
-                                    onClick={async (e) => {
-                                      e.stopPropagation();
-                                      if (!accessToken) return;
-                                      const downloadUrl = ensureTokenUrl(asset.current_version!.downloadPath!);
-                                      const filename = `${asset.title || 'asset'}.${asset.current_version!.mime_type?.split('/')[1] || 'bin'}`;
-                                      
-                                      // Set loading state
-                                      setDownloadingFormats(prev => new Set(prev).add(cardDownloadKey));
-                                      
-                                      await triggerDownload(
-                                        downloadUrl,
-                                        filename,
-                                        asset.id,
-                                        'api',
-                                        accessToken,
-                                        () => {
-                                          // Download started (save dialog opened) - stop loading
-                                          setDownloadingFormats(prev => {
-                                            const next = new Set(prev);
-                                            next.delete(cardDownloadKey);
-                                            return next;
-                                          });
-                                        },
-                                        () => {
-                                          // Download complete - ensure loading is stopped
-                                          setDownloadingFormats(prev => {
-                                            const next = new Set(prev);
-                                            next.delete(cardDownloadKey);
-                                            return next;
-                                          });
-                                        }
-                                      );
-                                    }}
-                                    className="rounded-md bg-white/95 p-1 hover:bg-white transition shadow-sm disabled:opacity-50 disabled:cursor-wait"
-                                    title={isDownloading ? "Preparing..." : "Download"}
-                                  >
-                                    {isDownloading ? (
-                                      <svg className="animate-spin h-3.5 w-3.5 text-gray-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                      </svg>
-                                    ) : (
-                                      <ArrowDownTrayIcon className="h-3.5 w-3.5 text-gray-900" />
-                                    )}
-                                  </button>
-                                );
-                              })()
-                            )}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteAsset(asset.id);
-                              }}
-                              className="rounded-md bg-white/95 p-1 hover:bg-white transition shadow-sm"
-                              title="Delete"
-                            >
-                              <TrashIcon className="h-3.5 w-3.5 text-red-600" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Card Footer */}
-                      <div className="p-2 space-y-1">
-                        <h4 className="text-xs font-semibold text-gray-900 truncate leading-tight">{asset.title}</h4>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {renderAssetTypePill(asset.asset_type, 'sm')}
-                          {asset.asset_subtype_id ? (() => {
-                            const subtype = assetSubtypes.find(s => s.id === asset.asset_subtype_id);
-                            return subtype ? (
-                              <span className="text-[10px] text-gray-600 truncate">{subtype.name}</span>
-                            ) : null;
-                          })() : asset.locales.length > 0 && (
-                            <span className="text-[10px] text-gray-500">{asset.locales[0].code}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                  <AssetCard
+                    key={asset.id}
+                    asset={asset}
+                    viewMode={viewMode}
+                    accessToken={accessToken}
+                    hoveredAssetId={hoveredAssetId}
+                    onMouseEnter={setHoveredAssetId}
+                    onMouseLeave={() => setHoveredAssetId(null)}
+                    onClick={setSelectedAsset}
+                    isAdmin={true}
+                    selectedAssetIds={selectedAssetIds}
+                    onToggleSelection={toggleAssetSelection}
+                    onDownload={async (asset) => {
+                      if (!accessToken) return;
+                      const cardDownloadKey = `card-${asset.id}`;
+                      setDownloadingFormats(prev => new Set(prev).add(cardDownloadKey));
+                      const downloadUrl = ensureTokenUrl(asset.current_version!.downloadPath!, accessToken);
+                      const filename = `${asset.title || 'asset'}.${asset.current_version!.mime_type?.split('/')[1] || 'bin'}`;
+                      await triggerDownload(
+                        downloadUrl,
+                        filename,
+                        asset.id,
+                        'api',
+                        accessToken,
+                        () => setDownloadingFormats(prev => {
+                          const next = new Set(prev);
+                          next.delete(cardDownloadKey);
+                          return next;
+                        }),
+                        () => setDownloadingFormats(prev => {
+                          const next = new Set(prev);
+                          next.delete(cardDownloadKey);
+                          return next;
+                        })
+                      );
+                    }}
+                    onDelete={handleDeleteAsset}
+                    downloadingFormats={downloadingFormats}
+                    assetSubtypes={assetSubtypes}
+                    renderAssetTypePill={renderAssetTypePill}
+                  />
+                ))}
               </div>
             </>
           )}
@@ -2731,529 +2553,178 @@ export default function AdminDigitalAssetManagerPage() {
         </div>
       )}
 
-      {/* Asset Detail Modal - Two Column Layout */}
+      {/* Asset Detail Modal - Using Shared Component */}
       {selectedAsset && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setSelectedAsset(null);
+        <AssetDetailModal
+          asset={selectedAsset}
+          accessToken={accessToken}
+          onClose={() => {
+            setSelectedAsset(null);
+            setIsEditingAsset(false);
+            setIsEditingExistingAsset(false);
+            setEditingAssetId(null);
+          }}
+          onDownload={async (asset, format) => {
+            if (!accessToken) return;
+            if (asset.asset_type === 'video' && format) {
+              // Video format download
+              const formatKey = `video-${asset.id}-${format}`;
+              setDownloadingFormats(prev => new Set(prev).add(formatKey));
+              const downloadFormats = asset.vimeo_download_formats && asset.vimeo_download_formats.length > 0
+                ? asset.vimeo_download_formats
+                : [
+                    ...(asset.vimeo_download_1080p ? [{ resolution: '1080p', url: asset.vimeo_download_1080p }] : []),
+                    ...(asset.vimeo_download_720p ? [{ resolution: '720p', url: asset.vimeo_download_720p }] : []),
+                    ...(asset.vimeo_download_480p ? [{ resolution: '480p', url: asset.vimeo_download_480p }] : []),
+                    ...(asset.vimeo_download_360p ? [{ resolution: '360p', url: asset.vimeo_download_360p }] : []),
+                  ];
+              const selectedFormat = downloadFormats.find(f => f.resolution === format);
+              if (selectedFormat?.url) {
+                const filename = `${asset.title || 'video'}-${format}.mp4`;
+                await triggerDownload(
+                  selectedFormat.url,
+                  filename,
+                  asset.id,
+                  `video-${format}`,
+                  accessToken,
+                  () => setDownloadingFormats(prev => {
+                    const next = new Set(prev);
+                    next.delete(formatKey);
+                    return next;
+                  }),
+                  () => setDownloadingFormats(prev => {
+                    const next = new Set(prev);
+                    next.delete(formatKey);
+                    return next;
+                  })
+                );
+              }
+            } else if (asset.current_version?.downloadPath) {
+              // Regular asset download
+              const downloadKey = `asset-action-${asset.id}`;
+              setDownloadingFormats(prev => new Set(prev).add(downloadKey));
+              const downloadUrl = ensureTokenUrl(asset.current_version.downloadPath, accessToken);
+              const filename = `${asset.title || 'asset'}.${asset.current_version.mime_type?.split('/')[1] || 'bin'}`;
+              await triggerDownload(
+                downloadUrl,
+                filename,
+                asset.id,
+                'api',
+                accessToken,
+                () => setDownloadingFormats(prev => {
+                  const next = new Set(prev);
+                  next.delete(downloadKey);
+                  return next;
+                }),
+                () => setDownloadingFormats(prev => {
+                  const next = new Set(prev);
+                  next.delete(downloadKey);
+                  return next;
+                })
+              );
+            }
+          }}
+          downloadingFormats={downloadingFormats}
+          isAdmin={true}
+          onEdit={(asset) => {
+            setIsEditingExistingAsset(true);
+            setEditingAssetId(asset.id);
+            setFormState({
+              ...defaultFormState,
+              title: asset.title || '',
+              description: asset.description || '',
+              assetType: asset.asset_type,
+              assetTypeId: asset.asset_type_id || '',
+              assetSubtypeId: asset.asset_subtype_id || '',
+              productLine: asset.product_line || '',
+              productName: asset.product_name || '',
+              sku: (() => {
+                if (asset.product_name) {
+                  const product = products.find(p => p.item_name === asset.product_name);
+                  return product?.sku || asset.sku || '';
+                }
+                return '';
+              })(),
+              selectedTagSlugs: asset.tags || [],
+              selectedLocaleCodes: asset.locales.map(l => l.code) || [],
+              primaryLocale: asset.locales.find(l => l.is_default)?.code || asset.locales[0]?.code || null,
+              selectedRegionCodes: asset.regions.map(r => r.code) || [],
+              vimeoVideoId: asset.vimeo_video_id || '',
+              vimeoDownloadFormats: asset.vimeo_download_formats && asset.vimeo_download_formats.length > 0
+                ? asset.vimeo_download_formats
+                : [
+                    ...(asset.vimeo_download_1080p ? [{ resolution: '1080p', url: asset.vimeo_download_1080p }] : []),
+                    ...(asset.vimeo_download_720p ? [{ resolution: '720p', url: asset.vimeo_download_720p }] : []),
+                    ...(asset.vimeo_download_480p ? [{ resolution: '480p', url: asset.vimeo_download_480p }] : []),
+                    ...(asset.vimeo_download_360p ? [{ resolution: '360p', url: asset.vimeo_download_360p }] : []),
+                  ],
+            });
+            setIsUploadDrawerOpen(true);
+            setSelectedAsset(null);
+          }}
+          onDelete={handleDeleteAsset}
+          isEditingVideoUrls={isEditingAsset}
+          editingDownloadUrls={editingDownloadUrls}
+          onToggleEditVideoUrls={() => {
+            if (!isEditingAsset) {
+              setIsEditingAsset(true);
+              const existingFormats = selectedAsset.vimeo_download_formats && selectedAsset.vimeo_download_formats.length > 0
+                ? selectedAsset.vimeo_download_formats
+                : [
+                    ...(selectedAsset.vimeo_download_1080p ? [{ resolution: '1080p', url: selectedAsset.vimeo_download_1080p }] : []),
+                    ...(selectedAsset.vimeo_download_720p ? [{ resolution: '720p', url: selectedAsset.vimeo_download_720p }] : []),
+                    ...(selectedAsset.vimeo_download_480p ? [{ resolution: '480p', url: selectedAsset.vimeo_download_480p }] : []),
+                    ...(selectedAsset.vimeo_download_360p ? [{ resolution: '360p', url: selectedAsset.vimeo_download_360p }] : []),
+                  ];
+              setEditingDownloadUrls(existingFormats);
+            } else {
               setIsEditingAsset(false);
             }
           }}
-        >
-          <div className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-lg shadow-xl overflow-hidden flex flex-col">
-            {/* Close button */}
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedAsset(null);
-                setIsEditingAsset(false);
-                setIsEditingExistingAsset(false);
-                setEditingAssetId(null);
-              }}
-              className="absolute top-3 right-3 z-20 rounded-md bg-white/90 p-1.5 text-gray-600 hover:bg-white hover:text-gray-900 transition shadow-sm"
-            >
-              <XMarkIcon className="h-4 w-4" />
-            </button>
-
-            {/* Two Column Layout */}
-            <div className="flex flex-col lg:flex-row h-full overflow-hidden">
-              {/* Left Column - Preview */}
-              <div className="lg:w-[55%] bg-gray-50 flex items-center justify-center p-6 min-h-[400px]">
-                {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id ? (
-                  <div className="w-full max-w-3xl">
-                    <div className="relative w-full rounded-md overflow-hidden shadow-md" style={{ aspectRatio: '16/9' }}>
-                      <iframe
-                        src={`https://player.vimeo.com/video/${selectedAsset.vimeo_video_id}?byline=0&title=0&portrait=0`}
-                        allow="autoplay; fullscreen; picture-in-picture"
-                        allowFullScreen
-                        className="absolute inset-0 w-full h-full border-0"
-                        title={selectedAsset.title || 'Video'}
-                      />
-                    </div>
-                  </div>
-                ) : selectedAsset.current_version?.previewPath && accessToken ? (
-                  <div className="w-full max-w-3xl">
-                    <img
-                      src={ensureTokenUrl(selectedAsset.current_version.previewPath)}
-                      alt={selectedAsset.title}
-                      className="w-full h-auto max-h-[70vh] object-contain"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center text-gray-400">
-                    <PhotoIcon className="h-24 w-24 mb-4" />
-                    <p className="text-sm">No preview available</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Right Column - Metadata */}
-              <div className="lg:w-[45%] bg-white overflow-y-auto p-5 border-l border-gray-200">
-                {/* Header */}
-                <div className="mb-4 pb-4 border-b border-gray-200">
-                  <div className="flex items-start gap-2 mb-2">
-                    <h2 className="text-lg font-semibold text-gray-900 flex-1">{selectedAsset.title || 'Untitled Asset'}</h2>
-                  </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    {renderAssetTypePill(selectedAsset.asset_type)}
-                  </div>
-                  {selectedAsset.description && (
-                    <p className="text-sm text-gray-600 leading-relaxed">{selectedAsset.description}</p>
-                  )}
-                </div>
-
-              {/* Download Section */}
-              <div className="mb-4 pb-4 border-b border-gray-100">
-                <div className="flex items-center justify-between mb-2.5">
-                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Downloads</h3>
-                  {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!isEditingAsset) {
-                          setIsEditingAsset(true);
-                          // Load existing formats or migrate from legacy fields
-                          const existingFormats = selectedAsset.vimeo_download_formats && selectedAsset.vimeo_download_formats.length > 0
-                            ? selectedAsset.vimeo_download_formats
-                            : [
-                                ...(selectedAsset.vimeo_download_1080p ? [{ resolution: '1080p', url: selectedAsset.vimeo_download_1080p }] : []),
-                                ...(selectedAsset.vimeo_download_720p ? [{ resolution: '720p', url: selectedAsset.vimeo_download_720p }] : []),
-                                ...(selectedAsset.vimeo_download_480p ? [{ resolution: '480p', url: selectedAsset.vimeo_download_480p }] : []),
-                                ...(selectedAsset.vimeo_download_360p ? [{ resolution: '360p', url: selectedAsset.vimeo_download_360p }] : []),
-                              ];
-                          setEditingDownloadUrls(existingFormats);
-                        } else {
-                          setIsEditingAsset(false);
-                        }
-                      }}
-                      className="text-sm text-blue-600 hover:text-blue-800 underline"
-                    >
-                      {isEditingAsset ? 'Cancel' : 'Edit Download URLs'}
-                    </button>
-                  )}
-                </div>
-                
-                {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id ? (
-                  <div className="space-y-4">
-                    {isEditingAsset ? (
-                      <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
-                        {editingDownloadUrls.map((format, index) => (
-                          <div key={index} className="flex items-start gap-2">
-                            <div className="flex-1">
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Resolution</label>
-                              <select
-                                value={format.resolution}
-                                onChange={(e) => {
-                                  const newFormats = [...editingDownloadUrls];
-                                  newFormats[index].resolution = e.target.value;
-                                  setEditingDownloadUrls(newFormats);
-                                }}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                              >
-                                {RESOLUTION_OPTIONS.map((res) => (
-                                  <option key={res} value={res}>
-                                    {res}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="flex-1">
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Download URL</label>
-                              <input
-                                type="text"
-                                value={format.url}
-                                onChange={(e) => {
-                                  const newFormats = [...editingDownloadUrls];
-                                  newFormats[index].url = e.target.value;
-                                  setEditingDownloadUrls(newFormats);
-                                }}
-                                placeholder="https://..."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                              />
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newFormats = editingDownloadUrls.filter((_, i) => i !== index);
-                                setEditingDownloadUrls(newFormats);
-                              }}
-                              className="mt-6 text-red-600 hover:text-red-700"
-                              title="Remove format"
-                            >
-                              <XMarkIcon className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingDownloadUrls([...editingDownloadUrls, { resolution: '1080p', url: '' }]);
-                          }}
-                          className="w-full flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                          Add Download Format
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!accessToken) return;
-                            setSavingUrls(true);
-                            try {
-                              const response = await fetch(`/api/dam/assets/${selectedAsset.id}`, {
-                                method: 'PATCH',
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                  ...buildAuthHeaders(accessToken),
-                                },
-                                credentials: 'same-origin',
-                                body: JSON.stringify({
-                                  vimeo_download_formats: editingDownloadUrls.filter(f => f.url.trim() !== ''),
-                                }),
-                              });
-                              if (!response.ok) {
-                                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                                throw new Error(errorData.error || 'Failed to update URLs');
-                              }
-                              const updated = await response.json();
-                              // Update the selected asset with new data
-                              setSelectedAsset(prev => prev ? { ...prev, ...updated } : null);
-                              setIsEditingAsset(false);
-                              // Refresh the asset list in background
-                              fetchAssets(accessToken, undefined, currentPage);
-                            } catch (err: any) {
-                              alert('Failed to save: ' + err.message);
-                            } finally {
-                              setSavingUrls(false);
-                            }
-                          }}
-                          disabled={savingUrls}
-                          className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                        >
-                          {savingUrls ? 'Saving...' : 'Save URLs'}
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        {/* Progressive download buttons */}
-                        {(() => {
-                          // Use new format if available, otherwise fall back to legacy fields
-                          const downloadFormats = selectedAsset.vimeo_download_formats && selectedAsset.vimeo_download_formats.length > 0
-                            ? selectedAsset.vimeo_download_formats
-                            : [
-                                ...(selectedAsset.vimeo_download_1080p ? [{ resolution: '1080p', url: selectedAsset.vimeo_download_1080p }] : []),
-                                ...(selectedAsset.vimeo_download_720p ? [{ resolution: '720p', url: selectedAsset.vimeo_download_720p }] : []),
-                                ...(selectedAsset.vimeo_download_480p ? [{ resolution: '480p', url: selectedAsset.vimeo_download_480p }] : []),
-                                ...(selectedAsset.vimeo_download_360p ? [{ resolution: '360p', url: selectedAsset.vimeo_download_360p }] : []),
-                              ];
-                          
-                          const validFormats = downloadFormats.filter((format) => format && format.url && typeof format.url === 'string' && format.url.trim() !== '');
-                          
-                          if (validFormats.length > 0) {
-                            return (
-                              <div className="flex flex-wrap gap-2">
-                                {validFormats.map((format) => {
-                                  const formatKey = `video-${selectedAsset.id}-${format.resolution}`;
-                                  const isDownloading = downloadingFormats.has(formatKey);
-                                  return (
-                                    <button
-                                      key={format.resolution}
-                                      type="button"
-                                      disabled={isDownloading}
-                                      onClick={async (e) => {
-                                        e.stopPropagation();
-                                        e.preventDefault();
-                                        if (!accessToken) return;
-                                        const filename = `${selectedAsset.title || 'video'}-${format.resolution}.mp4`;
-                                        
-                                        // Set loading state
-                                        setDownloadingFormats(prev => new Set(prev).add(formatKey));
-                                        
-                                        await triggerDownload(
-                                          format.url!,
-                                          filename,
-                                          selectedAsset.id,
-                                          `video-${format.resolution}`,
-                                          accessToken,
-                                          () => {
-                                            // Download started (save dialog opened) - stop loading
-                                            setDownloadingFormats(prev => {
-                                              const next = new Set(prev);
-                                              next.delete(formatKey);
-                                              return next;
-                                            });
-                                          },
-                                          () => {
-                                            // Download complete - ensure loading is stopped
-                                            setDownloadingFormats(prev => {
-                                              const next = new Set(prev);
-                                              next.delete(formatKey);
-                                              return next;
-                                            });
-                                          }
-                                        );
-                                      }}
-                                      className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-wait"
-                                    >
-                                      {isDownloading ? (
-                                        <>
-                                          <svg className="animate-spin h-4 w-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                          </svg>
-                                          Preparing...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <ArrowDownTrayIcon className="h-4 w-4" />
-                                          Download {format.resolution}
-                                        </>
-                                      )}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            );
-                          }
-                          
-                          return (
-                            <p className="text-sm text-gray-500 italic">
-                              No download URLs configured. Click "Edit Download URLs" above to add download links.
-                            </p>
-                          );
-                        })()}
-                      </>
-                    )}
-                  </div>
-                ) : null}
-                
-                {/* Preview button for non-video assets (replaces top Download) */}
-                {selectedAsset.asset_type !== 'video' && selectedAsset.current_version?.previewPath && accessToken ? (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.open(ensureTokenUrl(selectedAsset.current_version!.previewPath!), '_blank');
-                    }}
-                    className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition shadow-sm mb-3"
-                  >
-                    <EyeIcon className="h-4 w-4" />
-                    Preview
-                  </button>
-                ) : null}
-              </div>
-
-                {/* Metadata Section */}
-              <div className="space-y-4">
-                <div className="pb-4 border-b border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2.5 uppercase tracking-wide">Details</h3>
-                    <dl className="space-y-2 text-sm">
-                      {selectedAsset.sku && (
-                        <div>
-                          <dt className="font-medium text-gray-700 mb-1">SKU</dt>
-                          <dd className="text-gray-600">{selectedAsset.sku}</dd>
-                        </div>
-                      )}
-                      {selectedAsset.product_line && (
-                        <div>
-                          <dt className="font-medium text-gray-700 mb-1">Product Line</dt>
-                          <dd className="text-gray-600">{selectedAsset.product_line}</dd>
-                        </div>
-                      )}
-                      {selectedAsset.product_name && (
-                        <div>
-                          <dt className="font-medium text-gray-700 mb-1">Product</dt>
-                          <dd className="text-gray-600">{selectedAsset.product_name}</dd>
-                        </div>
-                      )}
-                      <div>
-                        <dt className="font-medium text-gray-700 mb-1">Created</dt>
-                        <dd className="text-gray-600">{new Date(selectedAsset.created_at).toLocaleDateString()}</dd>
-                      </div>
-                      {selectedAsset.current_version && (
-                        <>
-                          <div>
-                            <dt className="font-medium text-gray-700 mb-1">Size</dt>
-                            <dd className="text-gray-600">{formatBytes(selectedAsset.current_version.file_size) || '—'}</dd>
-                          </div>
-                          <div>
-                            <dt className="font-medium text-gray-700 mb-1">File Type</dt>
-                            <dd className="text-gray-600">{selectedAsset.current_version.mime_type || 'Unknown'}</dd>
-                          </div>
-                        </>
-                      )}
-                    </dl>
-                  </div>
-
-                  {selectedAsset.tags.length > 0 && (
-                    <div className="pb-4 border-b border-gray-100">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-2.5 uppercase tracking-wide">Tags</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedAsset.tags.map((tag) => (
-                          <span key={tag} className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedAsset.locales.length > 0 && (
-                    <div className="pb-4 border-b border-gray-100">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-2.5 uppercase tracking-wide">Locales</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedAsset.locales.map((locale) => (
-                          <span key={locale.code} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-                            {locale.label}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedAsset.regions.length > 0 && (
-                    <div className="pb-4 border-b border-gray-100">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-2.5 uppercase tracking-wide">Regions</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedAsset.regions.map((region) => (
-                          <span key={region.code} className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
-                            {region.label}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Action Buttons */}
-                <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
-                  {selectedAsset.current_version?.downloadPath && (
-                    (() => {
-                      const downloadKey = `asset-action-${selectedAsset.id}`;
-                      const isDownloading = downloadingFormats.has(downloadKey);
-                      return (
-                        <button
-                          type="button"
-                          disabled={isDownloading}
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (!accessToken) return;
-                            const downloadUrl = ensureTokenUrl(selectedAsset.current_version!.downloadPath!);
-                            const filename = `${selectedAsset.title || 'asset'}.${selectedAsset.current_version!.mime_type?.split('/')[1] || 'bin'}`;
-                            
-                            // Set loading state
-                            setDownloadingFormats(prev => new Set(prev).add(downloadKey));
-                            
-                            await triggerDownload(
-                              downloadUrl,
-                              filename,
-                              selectedAsset.id,
-                              'api',
-                              accessToken,
-                              () => {
-                                // Download started (save dialog opened) - stop loading
-                                setDownloadingFormats(prev => {
-                                  const next = new Set(prev);
-                                  next.delete(downloadKey);
-                                  return next;
-                                });
-                              },
-                              () => {
-                                // Download complete - ensure loading is stopped
-                                setDownloadingFormats(prev => {
-                                  const next = new Set(prev);
-                                  next.delete(downloadKey);
-                                  return next;
-                                });
-                              }
-                            );
-                          }}
-                          className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-black px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition shadow-sm disabled:opacity-50 disabled:cursor-wait"
-                        >
-                          {isDownloading ? (
-                            <>
-                              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                              Preparing...
-                            </>
-                          ) : (
-                            <>
-                              <ArrowDownTrayIcon className="h-4 w-4" />
-                              Download Asset
-                            </>
-                          )}
-                        </button>
-                      );
-                    })()
-                  )}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsEditingExistingAsset(true);
-                      setEditingAssetId(selectedAsset.id);
-                      // Populate form with existing asset data
-                      setFormState({
-                        ...defaultFormState,
-                        title: selectedAsset.title || '',
-                        description: selectedAsset.description || '',
-                        assetType: selectedAsset.asset_type,
-                        assetTypeId: selectedAsset.asset_type_id || '',
-                        assetSubtypeId: selectedAsset.asset_subtype_id || '',
-                        productLine: selectedAsset.product_line || '',
-                        productName: selectedAsset.product_name || '',
-                        sku: (() => {
-                          // Auto-populate SKU from Products table if product is selected
-                          if (selectedAsset.product_name) {
-                            const product = products.find(p => p.item_name === selectedAsset.product_name);
-                            return product?.sku || selectedAsset.sku || '';
-                          }
-                          return '';
-                        })(),
-                        selectedTagSlugs: selectedAsset.tags || [],
-                        selectedLocaleCodes: selectedAsset.locales.map(l => l.code) || [],
-                        primaryLocale: selectedAsset.locales.find(l => l.is_default)?.code || selectedAsset.locales[0]?.code || null,
-                        selectedRegionCodes: selectedAsset.regions.map(r => r.code) || [],
-                        vimeoVideoId: selectedAsset.vimeo_video_id || '',
-                        vimeoDownloadFormats: selectedAsset.vimeo_download_formats && selectedAsset.vimeo_download_formats.length > 0
-                          ? selectedAsset.vimeo_download_formats
-                          : [
-                              ...(selectedAsset.vimeo_download_1080p ? [{ resolution: '1080p', url: selectedAsset.vimeo_download_1080p }] : []),
-                              ...(selectedAsset.vimeo_download_720p ? [{ resolution: '720p', url: selectedAsset.vimeo_download_720p }] : []),
-                              ...(selectedAsset.vimeo_download_480p ? [{ resolution: '480p', url: selectedAsset.vimeo_download_480p }] : []),
-                              ...(selectedAsset.vimeo_download_360p ? [{ resolution: '360p', url: selectedAsset.vimeo_download_360p }] : []),
-                            ],
-                      });
-                      setIsUploadDrawerOpen(true);
-                      setSelectedAsset(null);
-                    }}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-                  >
-                    <PencilIcon className="h-4 w-4" />
-                    Edit Asset
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteAsset(selectedAsset.id);
-                    }}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-red-300 bg-white px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                    Delete Asset
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          onUpdateVideoUrls={async (formats) => {
+            if (!accessToken) return;
+            setSavingUrls(true);
+            try {
+              const response = await fetch(`/api/dam/assets/${selectedAsset.id}`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...buildAuthHeaders(accessToken),
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                  vimeo_download_formats: formats.filter(f => f.url.trim() !== ''),
+                }),
+              });
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || 'Failed to update URLs');
+              }
+              const updated = await response.json();
+              setSelectedAsset(prev => prev ? { ...prev, ...updated } : null);
+              setIsEditingAsset(false);
+              fetchAssets(accessToken, undefined, currentPage);
+            } catch (err: any) {
+              alert('Failed to save: ' + err.message);
+            } finally {
+              setSavingUrls(false);
+            }
+          }}
+          onVideoUrlChange={(index, field, value) => {
+            const newFormats = [...editingDownloadUrls];
+            newFormats[index][field] = value;
+            setEditingDownloadUrls(newFormats);
+          }}
+          onAddVideoFormat={() => {
+            setEditingDownloadUrls([...editingDownloadUrls, { resolution: '1080p', url: '' }]);
+          }}
+          onRemoveVideoFormat={(index) => {
+            setEditingDownloadUrls(editingDownloadUrls.filter((_, i) => i !== index));
+          }}
+          savingUrls={savingUrls}
+          resolutionOptions={RESOLUTION_OPTIONS}
+          renderAssetTypePill={renderAssetTypePill}
+        />
       )}
     </div>
   );
