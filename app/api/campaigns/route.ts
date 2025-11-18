@@ -206,12 +206,26 @@ export async function POST(request: NextRequest) {
       code: err.code,
       stack: err.stack,
     });
-    return NextResponse.json({ 
+    // Ensure error details are properly serialized
+    const errorResponse: any = {
       error: err.message || 'Failed to create campaign',
-      details: err.details,
-      hint: err.hint,
-      code: err.code,
-    }, { status: 500 });
+    };
+    
+    if (err.details) errorResponse.details = err.details;
+    if (err.hint) errorResponse.hint = err.hint;
+    if (err.code) errorResponse.code = err.code;
+    
+    // If it's a Supabase error, include the full error structure
+    if (err.code && err.message) {
+      errorResponse.fullError = {
+        message: err.message,
+        details: err.details,
+        hint: err.hint,
+        code: err.code,
+      };
+    }
+    
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
 
