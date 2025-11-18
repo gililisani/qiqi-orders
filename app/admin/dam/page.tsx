@@ -2622,11 +2622,11 @@ export default function AdminDigitalAssetManagerPage() {
                     </div>
                   </div>
                 ) : selectedAsset.current_version?.previewPath && accessToken ? (
-                  <div className="w-full max-w-3xl bg-white rounded-md shadow-md p-4 border border-gray-100">
+                  <div className="w-full max-w-3xl">
                     <img
                       src={ensureTokenUrl(selectedAsset.current_version.previewPath)}
                       alt={selectedAsset.title}
-                      className="w-full h-auto max-h-[70vh] object-contain rounded"
+                      className="w-full h-auto max-h-[70vh] object-contain"
                     />
                   </div>
                 ) : (
