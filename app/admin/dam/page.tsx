@@ -2406,8 +2406,8 @@ export default function AdminDigitalAssetManagerPage() {
                     if (isVideoType) {
                       return (
                         <div>
-                          <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Video Options</h3>
-                          <div className="space-y-3">
+                          <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-2.5">Video Options</h3>
+                          <div className="space-y-2.5">
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1.5">Vimeo Video ID or URL *</label>
                               <input
@@ -2419,29 +2419,34 @@ export default function AdminDigitalAssetManagerPage() {
                                 required
                               />
                               <p className="mt-1 text-[10px] text-gray-500 leading-tight">
-                                Upload your video to Vimeo first, then paste the video ID or URL here.
+                                Enter the Vimeo URL or numeric ID. This is used for the video preview.
                               </p>
                             </div>
                             
-                            {/* Collapsible Download Formats */}
-                            <div>
+                            {/* Collapsible Download Formats Card */}
+                            <div className="border border-gray-200 rounded-md bg-[#fafafa] overflow-hidden">
                               <button
                                 type="button"
                                 onClick={() => setShowVideoDownloadFormats(!showVideoDownloadFormats)}
-                                className="flex items-center justify-between w-full text-xs font-medium text-gray-700 mb-2"
+                                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors"
                               >
-                                <span>Download Formats (Optional)</span>
-                                <svg
-                                  className={`h-3 w-3 text-gray-500 transition-transform ${showVideoDownloadFormats ? 'rotate-180' : ''}`}
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <svg
+                                    className={`h-3.5 w-3.5 text-gray-500 flex-shrink-0 transition-transform ${showVideoDownloadFormats ? 'rotate-180' : ''}`}
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-medium text-gray-900">Download Formats (Optional)</div>
+                                    <div className="text-[10px] text-gray-500 mt-0.5">Paste direct Vimeo MP4 URLs for each quality you want to offer.</div>
+                                  </div>
+                                </div>
                               </button>
                               {showVideoDownloadFormats && (
-                                <div className="space-y-2 pt-1">
+                                <div className="px-4 pb-4 pt-2 border-t border-gray-200 space-y-2">
                                   <div>
                                     <label className="block text-[10px] text-gray-600 mb-1">1080p</label>
                                     <input
