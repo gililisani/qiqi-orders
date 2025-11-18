@@ -233,11 +233,14 @@ async function triggerDownload(
     }
     
     // Fallback: create temporary anchor and click it
-    // For download endpoints, we need to force download by setting the download attribute
+    // For download endpoints, the server sets Content-Disposition header which browser will use
+    // Don't set download attribute here - let the server's Content-Disposition header handle the filename
     const link = document.createElement('a');
     link.href = url;
-    // Always set download attribute to force download (use provided filename or default)
-    link.download = filename || 'download';
+    // Only set download attribute for external URLs (like Vimeo) where we provide the filename
+    if (filename) {
+      link.download = filename;
+    }
     // Don't set target='_blank' for downloads - we want the download to happen, not open in new tab
     link.rel = 'noopener noreferrer';
     document.body.appendChild(link);
