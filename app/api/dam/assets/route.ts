@@ -71,6 +71,7 @@ export async function GET(request: NextRequest) {
 
     // Build query with optional full-text search
     // Note: vimeo_download_formats is selected separately to avoid errors if column doesn't exist yet
+    // Select columns - handle use_title_as_filename gracefully if column doesn't exist yet
     let assetsQuery = supabaseAdmin
       .from('dam_assets')
       .select(
@@ -89,7 +90,6 @@ export async function GET(request: NextRequest) {
         vimeo_download_720p,
         vimeo_download_480p,
         vimeo_download_360p,
-        use_title_as_filename,
         created_at,
         search_tags
       `,
@@ -240,6 +240,25 @@ export async function GET(request: NextRequest) {
     // Frontend will fall back to legacy fields (1080p, 720p, etc.)
     const downloadFormatsByAsset: Record<string, any> = {};
 
+    // Try to fetch use_title_as_filename separately to handle missing column gracefully
+    let useTitleAsFilenameMap: Record<string, boolean> = {};
+    try {
+      const { data: filenameFlags } = await supabaseAdmin
+        .from('dam_assets')
+        .select('id, use_title_as_filename')
+        .in('id', (assetsData ?? []).map((r: any) => r.id));
+      if (filenameFlags) {
+        filenameFlags.forEach((flag: any) => {
+          if (flag.id) {
+            useTitleAsFilenameMap[flag.id] = flag.use_title_as_filename ?? false;
+          }
+        });
+      }
+    } catch (err) {
+      // Column doesn't exist yet - use defaults
+      console.log('use_title_as_filename column not found, using defaults');
+    }
+
     const assets = (assetsData ?? []).map((record: any) => {
       const currentVersionRaw = versionsByAsset.get(record.id) ?? null;
       const currentVersion = currentVersionRaw
@@ -295,7 +314,7 @@ export async function GET(request: NextRequest) {
         vimeo_download_480p: record.vimeo_download_480p ?? null,
         vimeo_download_360p: record.vimeo_download_360p ?? null,
         vimeo_download_formats: extractedFormats ?? downloadFormatsByAsset[record.id] ?? null,
-        use_title_as_filename: record.use_title_as_filename ?? false,
+        use_title_as_filename: useTitleAsFilenameMap[record.id] ?? false,
         created_at: record.created_at,
         current_version: currentVersion,
         tags: tagsByAsset[record.id] ?? [],
@@ -465,32 +484,38 @@ export async function POST(request: NextRequest) {
 
       if (insertAssetError) throw insertAssetError;
     } else {
+      const updateData: any = {
+        title: payload.title,
+        description: payload.vimeoDownloadFormats && payload.vimeoDownloadFormats.length > 0
+          ? (payload.description 
+              ? `${payload.description}\n\n<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats)}-->`
+              : `<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats)}-->`)
+          : (payload.description ?? null),
+        asset_type: syncedAssetType,
+        asset_type_id: payload.assetTypeId ?? null,
+        asset_subtype_id: payload.assetSubtypeId ?? null,
+        product_line: payload.productLine ?? null,
+        product_name: payload.productName ?? null,
+        sku: payload.sku ?? null,
+        vimeo_video_id: vimeoVideoId,
+        // Save all formats - convert matching ones to legacy fields AND store all in description as JSON backup
+        vimeo_download_1080p: payload.vimeoDownload1080p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '1080p')?.url) ?? null,
+        vimeo_download_720p: payload.vimeoDownload720p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '720p')?.url) ?? null,
+        vimeo_download_480p: payload.vimeoDownload480p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '480p')?.url) ?? null,
+        vimeo_download_360p: payload.vimeoDownload360p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '360p')?.url) ?? null,
+        search_tags: tagsInput,
+        updated_by: adminUser.id,
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Only include use_title_as_filename if provided (column may not exist yet)
+      if (payload.useTitleAsFilename !== undefined) {
+        updateData.use_title_as_filename = payload.useTitleAsFilename;
+      }
+      
       const { error: updateAssetError } = await supabaseAdmin
         .from('dam_assets')
-        .update({
-          title: payload.title,
-          description: payload.vimeoDownloadFormats && payload.vimeoDownloadFormats.length > 0
-            ? (payload.description 
-                ? `${payload.description}\n\n<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats)}-->`
-                : `<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats)}-->`)
-            : (payload.description ?? null),
-          asset_type: syncedAssetType,
-          asset_type_id: payload.assetTypeId ?? null,
-          asset_subtype_id: payload.assetSubtypeId ?? null,
-          product_line: payload.productLine ?? null,
-          product_name: payload.productName ?? null,
-          sku: payload.sku ?? null,
-          vimeo_video_id: vimeoVideoId,
-          // Save all formats - convert matching ones to legacy fields AND store all in description as JSON backup
-          vimeo_download_1080p: payload.vimeoDownload1080p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '1080p')?.url) ?? null,
-          vimeo_download_720p: payload.vimeoDownload720p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '720p')?.url) ?? null,
-          vimeo_download_480p: payload.vimeoDownload480p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '480p')?.url) ?? null,
-          vimeo_download_360p: payload.vimeoDownload360p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '360p')?.url) ?? null,
-          search_tags: tagsInput,
-          use_title_as_filename: payload.useTitleAsFilename !== undefined ? payload.useTitleAsFilename : undefined,
-          updated_by: adminUser.id,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', assetId);
 
       if (updateAssetError) throw updateAssetError;

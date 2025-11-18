@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!body.assetId) {
-      const { error: insertAssetError } = await supabaseAdmin.from('dam_assets').insert({
+      const insertData: any = {
         id: assetId,
         title: body.title,
         description: body.description ?? null,
@@ -82,29 +82,41 @@ export async function POST(request: NextRequest) {
         product_name: body.productName ?? null,
         sku: body.sku ?? null,
         search_tags: tagsInput,
-        use_title_as_filename: body.useTitleAsFilename ?? false,
         created_by: adminUser.id,
         updated_by: adminUser.id,
-      });
+      };
+      
+      // Only include use_title_as_filename if column exists (will be added after migration)
+      if (body.useTitleAsFilename !== undefined) {
+        insertData.use_title_as_filename = body.useTitleAsFilename;
+      }
+      
+      const { error: insertAssetError } = await supabaseAdmin.from('dam_assets').insert(insertData);
 
       if (insertAssetError) throw insertAssetError;
     } else {
+      const updateData: any = {
+        title: body.title,
+        description: body.description ?? null,
+        asset_type: syncedAssetType,
+        asset_type_id: body.assetTypeId ?? null,
+        asset_subtype_id: body.assetSubtypeId ?? null,
+        product_line: body.productLine ?? null,
+        product_name: body.productName ?? null,
+        sku: body.sku ?? null,
+        search_tags: tagsInput,
+        updated_by: adminUser.id,
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Only include use_title_as_filename if provided (column may not exist yet)
+      if (body.useTitleAsFilename !== undefined) {
+        updateData.use_title_as_filename = body.useTitleAsFilename;
+      }
+      
       const { error: updateAssetError } = await supabaseAdmin
         .from('dam_assets')
-        .update({
-          title: body.title,
-          description: body.description ?? null,
-          asset_type: syncedAssetType,
-          asset_type_id: body.assetTypeId ?? null,
-          asset_subtype_id: body.assetSubtypeId ?? null,
-          product_line: body.productLine ?? null,
-          product_name: body.productName ?? null,
-          sku: body.sku ?? null,
-          search_tags: tagsInput,
-          use_title_as_filename: body.useTitleAsFilename !== undefined ? body.useTitleAsFilename : undefined,
-          updated_by: adminUser.id,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', assetId);
 
       if (updateAssetError) throw updateAssetError;

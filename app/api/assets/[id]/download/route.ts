@@ -85,11 +85,65 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     // Fetch asset separately to avoid relationship ambiguity
-    const { data: asset, error: assetError } = await supabaseAdmin
+    // Try to get use_title_as_filename, but handle gracefully if column doesn't exist
+    let useTitleAsFilename = false;
+    try {
+      const { data: asset, error: assetError } = await supabaseAdmin
+        .from('dam_assets')
+        .select('id, is_archived, title, use_title_as_filename')
+        .eq('id', version.asset_id)
+        .maybeSingle();
+      
+      if (assetError) {
+        console.error('Asset fetch error:', assetError);
+        throw assetError;
+      }
+      if (!asset) {
+        return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      }
+      
+      if (asset.id !== params.id) {
+        return NextResponse.json({ error: 'Asset mismatch' }, { status: 404 });
+      }
+      
+      if (asset.is_archived) {
+        return NextResponse.json({ error: 'Asset archived' }, { status: 410 });
+      }
+      
+      useTitleAsFilename = (asset as any).use_title_as_filename ?? false;
+    } catch (err: any) {
+      // If column doesn't exist, try without it
+      const { data: asset, error: assetError } = await supabaseAdmin
+        .from('dam_assets')
+        .select('id, is_archived, title')
+        .eq('id', version.asset_id)
+        .maybeSingle();
+      
+      if (assetError) {
+        console.error('Asset fetch error:', assetError);
+        throw assetError;
+      }
+      if (!asset) {
+        return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      }
+      
+      if (asset.id !== params.id) {
+        return NextResponse.json({ error: 'Asset mismatch' }, { status: 404 });
+      }
+      
+      if (asset.is_archived) {
+        return NextResponse.json({ error: 'Asset archived' }, { status: 410 });
+      }
+      
+      useTitleAsFilename = false; // Default to false if column doesn't exist
+    }
+    
+    // Re-fetch asset for title (we already validated it above)
+    const { data: asset } = await supabaseAdmin
       .from('dam_assets')
-      .select('id, is_archived, title, use_title_as_filename')
+      .select('id, title')
       .eq('id', version.asset_id)
-      .maybeSingle();
+      .single();
 
     if (assetError) {
       console.error('Asset fetch error:', assetError);
@@ -121,7 +175,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     
     // Determine download filename: use title if flag is set, otherwise use original filename
     let downloadName: string | undefined = undefined;
-    if (asset.use_title_as_filename && asset.title) {
+    if (useTitleAsFilename && asset?.title) {
       // Use title as filename - get extension from original filename if available
       const originalFileName = typeof metadata.originalFileName === 'string' ? metadata.originalFileName : '';
       const extension = originalFileName ? originalFileName.split('.').pop() : '';
