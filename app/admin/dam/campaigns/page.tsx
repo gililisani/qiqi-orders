@@ -26,8 +26,10 @@ interface Campaign {
 }
 
 export default function CampaignsPage() {
+  console.log('CampaignsPage component rendering');
   const router = useRouter();
   const { session, supabase } = useSupabase();
+  console.log('useSupabase returned:', { hasSession: !!session, hasSupabase: !!supabase });
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -43,13 +45,20 @@ export default function CampaignsPage() {
 
   // Try to get session from Supabase if not available from provider
   useEffect(() => {
+    console.log('Session fetch effect running', { hasAccessToken: !!accessToken, hasSupabase: !!supabase });
     let active = true;
     if (!accessToken && supabase) {
+      console.log('Fetching session from supabase...');
       supabase.auth.getSession().then(({ data }: { data: { session: { access_token: string } | null } }) => {
-        if (!active) return;
+        if (!active) {
+          console.log('Component unmounted, ignoring session fetch');
+          return;
+        }
         const token = data.session?.access_token ?? null;
-        console.log('Fetched session from supabase:', { hasToken: !!token });
+        console.log('Fetched session from supabase:', { hasToken: !!token, tokenPreview: token ? token.substring(0, 20) + '...' : 'none' });
         setAccessToken(token);
+      }).catch((err) => {
+        console.error('Error fetching session from supabase:', err);
       });
     }
     return () => {
@@ -59,6 +68,7 @@ export default function CampaignsPage() {
 
   // Also update token when session from provider changes
   useEffect(() => {
+    console.log('Session provider effect running', { hasSession: !!session, hasToken: !!session?.access_token });
     if (session?.access_token) {
       console.log('Session token updated from provider');
       setAccessToken(session.access_token);
@@ -117,22 +127,29 @@ export default function CampaignsPage() {
   }, [accessToken, session, fetching]);
 
   useEffect(() => {
-    console.log('Campaigns page - Session state:', { 
+    console.log('Campaigns page - Main effect running:', { 
       hasSession: !!session, 
       hasToken: !!accessToken,
       tokenPreview: accessToken ? accessToken.substring(0, 20) + '...' : 'none',
       fetching,
-      loading
+      loading,
+      campaignsCount: campaigns.length
     });
     
-    if (accessToken && !fetching) {
+    if (accessToken && !fetching && !loading) {
+      console.log('Conditions met, calling fetchCampaigns');
       fetchCampaigns();
+    } else if (accessToken && fetching) {
+      console.log('Fetch already in progress, waiting...');
+    } else if (accessToken && loading) {
+      console.log('Already loading, waiting...');
     } else if (session === null && !accessToken) {
       // Session loaded but no token - user not authenticated
-      console.warn('Session loaded but no access token');
+      console.warn('Session loaded but no access token - stopping loading');
       setLoading(false);
+    } else {
+      console.log('Waiting for session/token...', { session: session === null ? 'null' : session === undefined ? 'undefined' : 'exists' });
     }
-    // If session is undefined, it's still loading, so we wait
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, session]); // fetchCampaigns intentionally excluded to prevent infinite loops
 
