@@ -123,6 +123,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ campaigns: campaignsWithCounts });
   } catch (err: any) {
+    // If err is a Response object (from auth.requireRole), return it directly
+    if (err instanceof Response || (err?.constructor?.name === 'Response') || (err?.status && err?.json)) {
+      return err;
+    }
+    
     // Extract error properties directly (Supabase errors may not serialize with JSON.stringify)
     const errorMessage = err?.message || err?.toString() || 'Failed to load campaigns';
     const errorCode = err?.code;
@@ -153,13 +158,6 @@ export async function GET(request: NextRequest) {
     if (errorCode) errorResponse.code = errorCode;
     if (errorDetails) errorResponse.details = errorDetails;
     if (errorHint) errorResponse.hint = errorHint;
-    
-    // Try to include string representation
-    try {
-      errorResponse.errorString = err?.toString();
-    } catch (e) {
-      // Ignore
-    }
     
     return NextResponse.json(errorResponse, { status: 500 });
   }
@@ -235,6 +233,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ campaign }, { status: 201 });
   } catch (err: any) {
+    // If err is a Response object (from auth.requireRole), return it directly
+    if (err instanceof Response || (err?.constructor?.name === 'Response') || (err?.status && err?.json)) {
+      return err;
+    }
+    
     // Extract error properties directly (Supabase errors may not serialize with JSON.stringify)
     const errorMessage = err?.message || err?.toString() || 'Failed to create campaign';
     const errorCode = err?.code;
@@ -260,13 +263,6 @@ export async function POST(request: NextRequest) {
     if (errorCode) errorResponse.code = errorCode;
     if (errorDetails) errorResponse.details = errorDetails;
     if (errorHint) errorResponse.hint = errorHint;
-    
-    // Try to include string representation
-    try {
-      errorResponse.errorString = err?.toString();
-    } catch (e) {
-      // Ignore
-    }
     
     return NextResponse.json(errorResponse, { status: 500 });
   }
