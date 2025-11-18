@@ -26,6 +26,15 @@ function createSupabaseAdminClient() {
 export async function GET(request: NextRequest) {
   try {
     const auth = createAuth();
+    
+    // Debug: Check user before requiring role
+    const user = await auth.getUserFromRequest(request);
+    console.log('Campaigns GET - User from request:', {
+      userId: user?.id,
+      roles: user?.roles,
+      hasAdmin: user?.roles?.includes('admin'),
+    });
+    
     await auth.requireRole(request, 'admin');
 
     // Verify service role key is configured
@@ -167,6 +176,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = createAuth();
+    
+    // Debug: Check user before requiring role
+    const user = await auth.getUserFromRequest(request);
+    console.log('Campaigns POST - User from request:', {
+      userId: user?.id,
+      roles: user?.roles,
+      hasAdmin: user?.roles?.includes('admin'),
+    });
+    
     const adminUser = await auth.requireRole(request, 'admin');
 
     // Verify service role key is configured
