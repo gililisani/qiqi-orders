@@ -185,15 +185,22 @@ async function triggerDownload(
       });
       
       if (response.ok) {
+        // Extract filename from Content-Disposition header if available
+        const contentDisposition = response.headers.get('content-disposition');
+        let downloadFilename = filename || 'download';
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (filenameMatch && filenameMatch[1]) {
+            downloadFilename = filenameMatch[1].replace(/['"]/g, '');
+          }
+        }
+        
         const blob = await response.blob();
         const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = blobUrl;
-        // Only set download attribute if filename is provided (for external URLs like Vimeo)
-        // For asset downloads, let the server's Content-Disposition header handle the filename
-        if (filename) {
-          link.download = filename;
-        }
+        // Always set download attribute to force download, not preview
+        link.download = downloadFilename;
         document.body.appendChild(link);
         
         // Call onDownloadStart before clicking (save dialog opens here)
@@ -214,14 +221,12 @@ async function triggerDownload(
     }
     
     // Fallback: create temporary anchor and click it
+    // For download endpoints, we need to force download by setting the download attribute
     const link = document.createElement('a');
     link.href = url;
-    // Only set download attribute if filename is provided (for external URLs like Vimeo)
-    // For asset downloads, let the server's Content-Disposition header handle the filename
-    if (filename) {
-      link.download = filename;
-    }
-    link.target = '_blank';
+    // Always set download attribute to force download (use provided filename or default)
+    link.download = filename || 'download';
+    // Don't set target='_blank' for downloads - we want the download to happen, not open in new tab
     link.rel = 'noopener noreferrer';
     document.body.appendChild(link);
     
