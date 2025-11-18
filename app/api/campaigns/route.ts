@@ -123,44 +123,43 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ campaigns: campaignsWithCounts });
   } catch (err: any) {
-    // Log the entire error object to see its structure
-    console.error('Campaigns fetch failed - full error object:', JSON.stringify(err, null, 2));
-    console.error('Campaigns fetch failed - error type:', typeof err);
-    console.error('Campaigns fetch failed - error constructor:', err?.constructor?.name);
-    console.error('Campaigns fetch failed - error keys:', Object.keys(err || {}));
+    // Extract error properties directly (Supabase errors may not serialize with JSON.stringify)
+    const errorMessage = err?.message || err?.toString() || 'Failed to load campaigns';
+    const errorCode = err?.code;
+    const errorDetails = err?.details;
+    const errorHint = err?.hint;
+    
+    // Log raw error properties
+    console.error('Campaigns fetch failed:', {
+      message: errorMessage,
+      code: errorCode,
+      details: errorDetails,
+      hint: errorHint,
+      constructor: err?.constructor?.name,
+      allProps: Object.getOwnPropertyNames(err || {}),
+      toString: err?.toString(),
+    });
     
     // If table doesn't exist, return empty array instead of error
-    if (err.code === '42P01' || err.message?.includes('does not exist')) {
+    if (errorCode === '42P01' || errorMessage?.includes('does not exist')) {
       return NextResponse.json({ campaigns: [] });
     }
     
-    // Handle different error types
-    let errorMessage = 'Failed to load campaigns';
-    let errorCode: string | undefined;
-    let errorDetails: any = {};
-    
-    if (err?.message) {
-      errorMessage = err.message;
-    }
-    if (err?.code) {
-      errorCode = err.code;
-      errorDetails.code = err.code;
-    }
-    if (err?.details) {
-      errorDetails.details = err.details;
-    }
-    if (err?.hint) {
-      errorDetails.hint = err.hint;
-    }
-    
-    // Include the full error object for debugging
+    // Build error response with extracted properties
     const errorResponse: any = {
       error: errorMessage,
-      ...errorDetails,
-      errorType: typeof err,
-      errorConstructor: err?.constructor?.name,
-      fullError: err,
     };
+    
+    if (errorCode) errorResponse.code = errorCode;
+    if (errorDetails) errorResponse.details = errorDetails;
+    if (errorHint) errorResponse.hint = errorHint;
+    
+    // Try to include string representation
+    try {
+      errorResponse.errorString = err?.toString();
+    } catch (e) {
+      // Ignore
+    }
     
     return NextResponse.json(errorResponse, { status: 500 });
   }
@@ -236,39 +235,38 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ campaign }, { status: 201 });
   } catch (err: any) {
-    // Log the entire error object to see its structure
-    console.error('Campaign creation failed - full error object:', JSON.stringify(err, null, 2));
-    console.error('Campaign creation failed - error type:', typeof err);
-    console.error('Campaign creation failed - error constructor:', err?.constructor?.name);
-    console.error('Campaign creation failed - error keys:', Object.keys(err || {}));
+    // Extract error properties directly (Supabase errors may not serialize with JSON.stringify)
+    const errorMessage = err?.message || err?.toString() || 'Failed to create campaign';
+    const errorCode = err?.code;
+    const errorDetails = err?.details;
+    const errorHint = err?.hint;
     
-    // Handle different error types
-    let errorMessage = 'Failed to create campaign';
-    let errorCode: string | undefined;
-    let errorDetails: any = {};
+    // Log raw error properties
+    console.error('Campaign creation failed:', {
+      message: errorMessage,
+      code: errorCode,
+      details: errorDetails,
+      hint: errorHint,
+      constructor: err?.constructor?.name,
+      allProps: Object.getOwnPropertyNames(err || {}),
+      toString: err?.toString(),
+    });
     
-    if (err?.message) {
-      errorMessage = err.message;
-    }
-    if (err?.code) {
-      errorCode = err.code;
-      errorDetails.code = err.code;
-    }
-    if (err?.details) {
-      errorDetails.details = err.details;
-    }
-    if (err?.hint) {
-      errorDetails.hint = err.hint;
-    }
-    
-    // Include the full error object for debugging
+    // Build error response with extracted properties
     const errorResponse: any = {
       error: errorMessage,
-      ...errorDetails,
-      errorType: typeof err,
-      errorConstructor: err?.constructor?.name,
-      fullError: err,
     };
+    
+    if (errorCode) errorResponse.code = errorCode;
+    if (errorDetails) errorResponse.details = errorDetails;
+    if (errorHint) errorResponse.hint = errorHint;
+    
+    // Try to include string representation
+    try {
+      errorResponse.errorString = err?.toString();
+    } catch (e) {
+      // Ignore
+    }
     
     return NextResponse.json(errorResponse, { status: 500 });
   }
