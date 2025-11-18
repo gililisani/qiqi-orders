@@ -42,13 +42,25 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const supabaseAdmin = createSupabaseAdminClient();
 
     // Fetch campaign
+    const campaignId = params.id;
+    if (!campaignId) {
+      return NextResponse.json({ error: 'Campaign ID is required' }, { status: 400 });
+    }
+
     const { data: campaign, error: campaignError } = await supabaseAdmin
       .from('campaigns')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', campaignId)
       .single();
 
-    if (campaignError) throw campaignError;
+    if (campaignError) {
+      // Check if it's a "not found" error (PGRST116)
+      if (campaignError.code === 'PGRST116' || campaignError.message?.includes('No rows')) {
+        return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
+      }
+      throw campaignError;
+    }
+    
     if (!campaign) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
     }
@@ -57,7 +69,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const { data: campaignAssets, error: campaignAssetsError } = await supabaseAdmin
       .from('campaign_assets')
       .select('asset_id')
-      .eq('campaign_id', params.id);
+      .eq('campaign_id', campaignId);
 
     if (campaignAssetsError) throw campaignAssetsError;
 
@@ -271,7 +283,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       asset_count: assets.length,
     });
   } catch (err: any) {
-    console.error('Campaign fetch failed', err);
+    console.error('Campaign API error', err);
+    // If it's a Response object from auth.requireRole, return it directly
+    if (err instanceof Response || (err?.status && err?.json)) {
+      return err;
+    }
     return NextResponse.json({ error: err.message || 'Failed to load campaign' }, { status: 500 });
   }
 }

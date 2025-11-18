@@ -35,7 +35,8 @@ export default function CampaignDetailPage() {
   const { session } = useSupabase();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [assets, setAssets] = useState<AssetRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('loading');
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [showAddAssetsModal, setShowAddAssetsModal] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
   const [hoveredAssetId, setHoveredAssetId] = useState<string | null>(null);
@@ -68,28 +69,35 @@ export default function CampaignDetailPage() {
 
   const fetchCampaign = async () => {
     if (!campaignId || !accessToken) {
-      setLoading(false);
+      setStatus('error');
+      setErrorMessage('Authentication required');
       return;
     }
     try {
-      setLoading(true);
+      setStatus('loading');
       const headers = buildAuthHeaders(accessToken);
       const response = await fetch(`/api/campaigns/${campaignId}`, { headers });
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to fetch campaign: ${response.status}`);
+        const errorMsg = errorData.error || `Failed to fetch campaign: ${response.status}`;
+        setStatus('error');
+        setErrorMessage(errorMsg);
+        setCampaign(null);
+        setAssets([]);
+        return;
       }
 
       const data = await response.json();
       setCampaign(data.campaign);
       setAssets(data.assets || []);
+      setStatus('success');
     } catch (err: any) {
       console.error('Campaign load error', err);
+      setStatus('error');
+      setErrorMessage(err.message || 'Failed to load campaign');
       setCampaign(null);
       setAssets([]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -98,7 +106,8 @@ export default function CampaignDetailPage() {
       fetchCampaign();
       fetchLookups();
     } else if (!accessToken) {
-      setLoading(false);
+      setStatus('error');
+      setErrorMessage('Authentication required');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId, accessToken]);
@@ -231,7 +240,7 @@ export default function CampaignDetailPage() {
     );
   };
 
-  if (loading) {
+  if (status === 'loading') {
     return (
       <div className="p-8">
         <div className="text-center text-gray-500">Loading campaign...</div>
@@ -239,11 +248,18 @@ export default function CampaignDetailPage() {
     );
   }
 
-  if (!campaign) {
+  if (status === 'error') {
+    return (
+      <div className="p-8">
+        <div className="text-center text-red-500">{errorMessage || 'Failed to load campaign'}</div>
+      </div>
+    );
+  }
+
+  if (status === 'success' && !campaign) {
     return (
       <div className="p-8">
         <div className="text-center text-red-500">Campaign not found</div>
-        <p className="mt-2 text-sm text-gray-600">The campaign may not exist or you may not have permission to view it.</p>
       </div>
     );
   }
