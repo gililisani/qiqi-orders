@@ -3168,7 +3168,7 @@ export default function AdminDigitalAssetManagerPage() {
                         sku: selectedAsset.sku || '',
                         selectedTagSlugs: selectedAsset.tags || [],
                         selectedLocaleCodes: selectedAsset.locales.map(l => l.code) || [],
-                        primaryLocale: selectedAsset.locales.find(l => l.primary)?.code || selectedAsset.locales[0]?.code || null,
+                        primaryLocale: selectedAsset.locales.find(l => l.is_default)?.code || selectedAsset.locales[0]?.code || null,
                         selectedRegionCodes: selectedAsset.regions.map(r => r.code) || [],
                         vimeoVideoId: selectedAsset.vimeo_video_id || '',
                         vimeoDownloadFormats: selectedAsset.vimeo_download_formats && selectedAsset.vimeo_download_formats.length > 0
