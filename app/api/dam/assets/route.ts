@@ -460,7 +460,7 @@ export async function POST(request: NextRequest) {
             : `<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats)}-->`)
         : (payload.description ?? null);
 
-      const { error: insertAssetError } = await supabaseAdmin.from('dam_assets').insert({
+      const insertData: any = {
         id: assetId,
         title: payload.title,
         description: descriptionWithFormats,
@@ -477,10 +477,16 @@ export async function POST(request: NextRequest) {
         vimeo_download_480p: payload.vimeoDownload480p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '480p')?.url) ?? null,
         vimeo_download_360p: payload.vimeoDownload360p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '360p')?.url) ?? null,
         search_tags: tagsInput,
-        use_title_as_filename: payload.useTitleAsFilename ?? false,
         created_by: adminUser.id,
         updated_by: adminUser.id,
-      });
+      };
+      
+      // Only include use_title_as_filename if provided (column may not exist yet)
+      if (payload.useTitleAsFilename !== undefined) {
+        insertData.use_title_as_filename = payload.useTitleAsFilename;
+      }
+      
+      const { error: insertAssetError } = await supabaseAdmin.from('dam_assets').insert(insertData);
 
       if (insertAssetError) throw insertAssetError;
     } else {
