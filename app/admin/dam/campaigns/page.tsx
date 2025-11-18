@@ -29,7 +29,7 @@ export default function CampaignsPage() {
   const router = useRouter();
   const { session, supabase } = useSupabase();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start as false, only set true when actually fetching
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newCampaign, setNewCampaign] = useState({
     name: '',
@@ -73,12 +73,14 @@ export default function CampaignsPage() {
   // Fetch campaigns when we have a token
   useEffect(() => {
     if (!accessToken) {
-      // If session is checked and we have no token, stop loading
+      // If session is checked and we have no token, ensure loading is false
       if (sessionChecked) {
         setLoading(false);
       }
       return;
     }
+
+    let cancelled = false;
 
     const fetchCampaigns = async () => {
       try {
@@ -89,21 +91,33 @@ export default function CampaignsPage() {
 
         const response = await fetch('/api/campaigns', { headers });
         
+        if (cancelled) return;
+        
         if (!response.ok) {
           throw new Error('Failed to fetch campaigns');
         }
 
         const data = await response.json();
-        setCampaigns(data.campaigns || []);
+        if (!cancelled) {
+          setCampaigns(data.campaigns || []);
+        }
       } catch (err) {
-        console.error('Failed to load campaigns', err);
-        setCampaigns([]);
+        if (!cancelled) {
+          console.error('Failed to load campaigns', err);
+          setCampaigns([]);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchCampaigns();
+    
+    return () => {
+      cancelled = true;
+    };
   }, [accessToken, sessionChecked]);
 
   const handleCreateCampaign = async () => {
