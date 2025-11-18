@@ -8,8 +8,8 @@ import MaterialThemeProvider from './components/ThemeProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Qiqi Orders',
-  description: 'Distributor Order Portal',
+  title: 'Qiqi Partners Hub',
+  description: 'Qiqi Partnerts Hub',
   icons: {
     icon: [
       { url: '/favicon/favicon 16x16.png', sizes: '16x16', type: 'image/png' },
