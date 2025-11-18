@@ -11,6 +11,14 @@ function createSupabaseAdminClient() {
       autoRefreshToken: false,
       persistSession: false,
     },
+    db: {
+      schema: 'public',
+    },
+    global: {
+      headers: {
+        'x-client-info': 'campaigns-api',
+      },
+    },
   });
 }
 
