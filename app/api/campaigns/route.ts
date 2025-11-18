@@ -121,6 +121,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Campaign name is required' }, { status: 400 });
     }
 
+    // Normalize dates: convert empty strings to null, validate date format
+    const startDate = body.startDate && body.startDate.trim() ? body.startDate.trim() : null;
+    const endDate = body.endDate && body.endDate.trim() ? body.endDate.trim() : null;
+    
+    // Validate date format if provided
+    if (startDate && isNaN(Date.parse(startDate))) {
+      return NextResponse.json({ error: 'Invalid start date format' }, { status: 400 });
+    }
+    if (endDate && isNaN(Date.parse(endDate))) {
+      return NextResponse.json({ error: 'Invalid end date format' }, { status: 400 });
+    }
+
     const { data: campaign, error: insertError } = await supabaseAdmin
       .from('campaigns')
       .insert({
@@ -128,8 +140,8 @@ export async function POST(request: NextRequest) {
         description: body.description?.trim() || null,
         thumbnail_asset_id: body.thumbnailAssetId || null,
         product_line: body.productLine || null,
-        start_date: body.startDate || null,
-        end_date: body.endDate || null,
+        start_date: startDate,
+        end_date: endDate,
       })
       .select()
       .single();
