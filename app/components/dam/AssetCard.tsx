@@ -20,7 +20,7 @@ interface AssetCardProps {
   onDelete?: (assetId: string) => void;
   downloadingFormats?: Set<string>;
   assetSubtypes?: Array<{ id: string; name: string; slug: string; asset_type_id: string }>;
-  renderAssetTypePill?: (type: string, size?: string) => JSX.Element | null;
+  renderAssetTypePill?: (type: string, size?: 'sm' | 'md') => JSX.Element | null;
 }
 
 export default function AssetCard({

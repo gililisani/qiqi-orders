@@ -1369,52 +1369,7 @@ export default function AdminDigitalAssetManagerPage() {
     }
   };
 
-  const ensureTokenUrl = useCallback(
-    (url?: string | null) => {
-      if (!url) return url ?? '';
-      if (!accessToken) return url;
-      const separator = url.includes('?') ? '&' : '?';
-      return `${url}${separator}token=${encodeURIComponent(accessToken)}`;
-    },
-    [accessToken]
-  );
-
-  // Helper to get file type badge text
-  const getFileTypeBadge = (asset: AssetRecord): string => {
-    if (asset.asset_type === 'video' && asset.vimeo_video_id) {
-      // For videos, show highest resolution
-      const formats = asset.vimeo_download_formats && asset.vimeo_download_formats.length > 0
-        ? asset.vimeo_download_formats
-        : [
-            ...(asset.vimeo_download_1080p ? [{ resolution: '1080p' }] : []),
-            ...(asset.vimeo_download_720p ? [{ resolution: '720p' }] : []),
-            ...(asset.vimeo_download_480p ? [{ resolution: '480p' }] : []),
-            ...(asset.vimeo_download_360p ? [{ resolution: '360p' }] : []),
-          ];
-      
-      if (formats.length > 0) {
-        // Sort by resolution priority (highest first)
-        const resolutionOrder: Record<string, number> = {
-          '4K': 1, '2K': 2, '1080p': 3, '720p': 4, '540p': 5, '480p': 6, '360p': 7, '240p': 8
-        };
-        formats.sort((a, b) => {
-          const aOrder = resolutionOrder[a.resolution] || 999;
-          const bOrder = resolutionOrder[b.resolution] || 999;
-          return aOrder - bOrder;
-        });
-        return formats[0].resolution;
-      }
-      return 'Video';
-    }
-    
-    // For images/files, show file extension
-    if (asset.current_version?.mime_type) {
-      const ext = asset.current_version.mime_type.split('/')[1];
-      return ext?.toUpperCase() || 'File';
-    }
-    
-    return asset.asset_type.toUpperCase();
-  };
+  // ensureTokenUrl and getFileTypeBadge are now imported from shared utils
 
   // Helper to get filter chips for active filters
   const getActiveFilterChips = () => {
