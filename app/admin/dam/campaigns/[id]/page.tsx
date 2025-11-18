@@ -46,14 +46,8 @@ export default function CampaignDetailPage() {
 
   const accessToken = session?.access_token || null;
 
-  useEffect(() => {
-    if (campaignId && accessToken) {
-      fetchCampaign();
-      fetchLookups();
-    }
-  }, [campaignId, accessToken]);
-
   const fetchLookups = async () => {
+    if (!accessToken) return;
     try {
       const headers = buildAuthHeaders(accessToken);
       const response = await fetch('/api/dam/lookups', {
@@ -73,21 +67,41 @@ export default function CampaignDetailPage() {
   };
 
   const fetchCampaign = async () => {
+    if (!campaignId || !accessToken) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const headers = buildAuthHeaders(accessToken);
       const response = await fetch(`/api/campaigns/${campaignId}`, { headers });
-      if (!response.ok) throw new Error('Failed to fetch campaign');
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch campaign: ${response.status}`);
+      }
 
       const data = await response.json();
       setCampaign(data.campaign);
       setAssets(data.assets || []);
-    } catch (err) {
-      console.error('Failed to load campaign', err);
+    } catch (err: any) {
+      console.error('Campaign load error', err);
+      setCampaign(null);
+      setAssets([]);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (campaignId && accessToken) {
+      fetchCampaign();
+      fetchLookups();
+    } else if (!accessToken) {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignId, accessToken]);
 
   const handleRemoveAsset = async (assetId: string) => {
     if (!window.confirm('Remove this asset from the campaign? Assets will remain in the library.')) {
@@ -229,6 +243,7 @@ export default function CampaignDetailPage() {
     return (
       <div className="p-8">
         <div className="text-center text-red-500">Campaign not found</div>
+        <p className="mt-2 text-sm text-gray-600">The campaign may not exist or you may not have permission to view it.</p>
       </div>
     );
   }
