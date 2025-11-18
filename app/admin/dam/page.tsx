@@ -1869,18 +1869,11 @@ export default function AdminDigitalAssetManagerPage() {
                       const cardDownloadKey = `card-${asset.id}`;
                       setDownloadingFormats(prev => new Set(prev).add(cardDownloadKey));
                       const downloadUrl = ensureTokenUrl(asset.current_version!.downloadPath!, accessToken);
-                      // Get filename: use title if flag is set, otherwise use original filename from mime type
-                      let downloadFilename: string | null = null;
-                      if (asset.use_title_as_filename && asset.title) {
-                        const ext = asset.current_version!.mime_type?.split('/')[1] || 'bin';
-                        downloadFilename = `${asset.title}.${ext}`;
-                      } else if (asset.current_version!.mime_type) {
-                        const ext = asset.current_version!.mime_type.split('/')[1] || 'bin';
-                        downloadFilename = `asset.${ext}`; // Will be replaced by Content-Disposition header if available
-                      }
+                      // Filename will be extracted from Content-Disposition header by triggerDownload
+                      // Pass null to let the server's Content-Disposition header be the source of truth
                       await triggerDownload(
                         downloadUrl,
-                        downloadFilename,
+                        null,
                         asset.id,
                         'api',
                         accessToken,
@@ -2612,18 +2605,11 @@ export default function AdminDigitalAssetManagerPage() {
               const downloadKey = `asset-action-${asset.id}`;
               setDownloadingFormats(prev => new Set(prev).add(downloadKey));
               const downloadUrl = ensureTokenUrl(asset.current_version.downloadPath, accessToken);
-              // Get filename: use title if flag is set, otherwise will be extracted from Content-Disposition header
-              let downloadFilename: string | null = null;
-              if (asset.use_title_as_filename && asset.title) {
-                const ext = asset.current_version.mime_type?.split('/')[1] || 'bin';
-                downloadFilename = `${asset.title}.${ext}`;
-              } else if (asset.current_version.mime_type) {
-                const ext = asset.current_version.mime_type.split('/')[1] || 'bin';
-                downloadFilename = `asset.${ext}`; // Will be replaced by Content-Disposition header if available
-              }
+              // Filename will be extracted from Content-Disposition header by triggerDownload
+              // Pass null to let the server's Content-Disposition header be the source of truth
               await triggerDownload(
                 downloadUrl,
-                downloadFilename,
+                null,
                 asset.id,
                 'api',
                 accessToken,
