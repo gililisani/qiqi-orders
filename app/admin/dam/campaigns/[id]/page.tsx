@@ -264,6 +264,10 @@ export default function CampaignDetailPage() {
     );
   }
 
+  if (status !== 'success' || !campaign) {
+    return null;
+  }
+
   return (
     <div className="p-8">
       {/* Header */}
