@@ -41,17 +41,18 @@ export default function CampaignsPage() {
 
   const accessToken = session?.access_token || null;
 
-  useEffect(() => {
-    fetchCampaigns();
-  }, []);
-
   const fetchCampaigns = async () => {
+    if (!accessToken) {
+      console.warn('No access token available, cannot fetch campaigns');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      const headers: Record<string, string> = {};
-      if (accessToken) {
-        headers.Authorization = `Bearer ${accessToken}`;
-      }
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${accessToken}`,
+      };
 
       const response = await fetch('/api/campaigns', { headers });
       if (!response.ok) throw new Error('Failed to fetch campaigns');
@@ -65,19 +66,28 @@ export default function CampaignsPage() {
     }
   };
 
+  useEffect(() => {
+    if (accessToken) {
+      fetchCampaigns();
+    }
+  }, [accessToken]);
+
   const handleCreateCampaign = async () => {
     if (!newCampaign.name.trim()) {
       alert('Campaign name is required');
       return;
     }
 
+    if (!accessToken) {
+      alert('You must be logged in to create a campaign');
+      return;
+    }
+
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
       };
-      if (accessToken) {
-        headers.Authorization = `Bearer ${accessToken}`;
-      }
 
       const response = await fetch('/api/campaigns', {
         method: 'POST',
