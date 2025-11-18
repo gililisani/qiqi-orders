@@ -93,7 +93,17 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ campaigns: campaignsWithCounts });
   } catch (err: any) {
-    console.error('Campaigns fetch failed', err);
+    console.error('Campaigns fetch failed', {
+      message: err.message,
+      details: err.details,
+      hint: err.hint,
+      code: err.code,
+      stack: err.stack,
+    });
+    // If table doesn't exist, return empty array instead of error
+    if (err.code === '42P01' || err.message?.includes('does not exist')) {
+      return NextResponse.json({ campaigns: [] });
+    }
     return NextResponse.json({ error: err.message || 'Failed to load campaigns' }, { status: 500 });
   }
 }
@@ -124,12 +134,31 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error('Campaign insert error:', {
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        code: insertError.code,
+      });
+      throw insertError;
+    }
 
     return NextResponse.json({ campaign }, { status: 201 });
   } catch (err: any) {
-    console.error('Campaign creation failed', err);
-    return NextResponse.json({ error: err.message || 'Failed to create campaign' }, { status: 500 });
+    console.error('Campaign creation failed', {
+      message: err.message,
+      details: err.details,
+      hint: err.hint,
+      code: err.code,
+      stack: err.stack,
+    });
+    return NextResponse.json({ 
+      error: err.message || 'Failed to create campaign',
+      details: err.details,
+      hint: err.hint,
+      code: err.code,
+    }, { status: 500 });
   }
 }
 
