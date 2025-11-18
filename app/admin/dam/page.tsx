@@ -361,18 +361,6 @@ export default function AdminDigitalAssetManagerPage() {
   const [productLines, setProductLines] = useState<string[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
   const [isEditingAsset, setIsEditingAsset] = useState(false);
-  const [assetVersions, setAssetVersions] = useState<Array<{
-    id: string;
-    version_number: number;
-    storage_path: string;
-    thumbnail_path?: string | null;
-    mime_type?: string | null;
-    file_size?: number | null;
-    created_at: string;
-    downloadPath: string;
-    previewPath: string;
-  }>>([]);
-  const [loadingVersions, setLoadingVersions] = useState(false);
   const [editingDownloadUrls, setEditingDownloadUrls] = useState<VimeoDownloadFormat[]>([]);
   const [savingUrls, setSavingUrls] = useState(false);
   const [downloadingFormats, setDownloadingFormats] = useState<Set<string>>(new Set()); // Track loading downloads by format key
@@ -381,6 +369,8 @@ export default function AdminDigitalAssetManagerPage() {
   const [viewMode, setViewMode] = useState<'compact' | 'comfortable'>('compact');
   const [showRegions, setShowRegions] = useState(false);
   const [showVideoDownloadFormats, setShowVideoDownloadFormats] = useState(false);
+  const [isEditingExistingAsset, setIsEditingExistingAsset] = useState(false);
+  const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -760,6 +750,8 @@ export default function AdminDigitalAssetManagerPage() {
       vimeoDownloadFormats: [],
     });
     setSuccessMessage('');
+    setIsEditingExistingAsset(false);
+    setEditingAssetId(null);
     setIsUploadDrawerOpen(false); // Close drawer after successful upload
   };
 
@@ -852,8 +844,8 @@ export default function AdminDigitalAssetManagerPage() {
         return;
       }
     } else {
-      // Require file for non-video assets
-      if (!formState.file) {
+      // Require file for non-video assets (unless editing existing asset)
+      if (!formState.file && !isEditingExistingAsset) {
         setError('Please select a file to upload.');
         return;
       }
@@ -901,6 +893,7 @@ export default function AdminDigitalAssetManagerPage() {
         }
 
         const payload = {
+          assetId: isEditingExistingAsset && editingAssetId ? editingAssetId : undefined,
           title: formState.title.trim(),
           description: formState.description.trim() || undefined,
           assetType: formState.assetType,
@@ -977,6 +970,7 @@ export default function AdminDigitalAssetManagerPage() {
         // NOTE: Don't send thumbnailData here - it's too large and causes 413 errors
         // We'll send it in the complete request instead
         const payload = {
+          assetId: isEditingExistingAsset && editingAssetId ? editingAssetId : undefined,
           title: formState.title.trim(),
           description: formState.description.trim() || undefined,
           assetType: formState.assetType,
@@ -1401,28 +1395,41 @@ export default function AdminDigitalAssetManagerPage() {
     [accessToken]
   );
 
-  const fetchAssetVersions = async (assetId: string) => {
-    if (!accessToken) return;
-    
-    try {
-      setLoadingVersions(true);
-      const headers = buildAuthHeaders(accessToken);
-      const response = await fetch(`/api/dam/assets/${assetId}/versions`, {
-        headers: Object.keys(headers).length ? headers : undefined,
-        credentials: 'same-origin',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to load versions');
+  // Helper to get file type badge text
+  const getFileTypeBadge = (asset: AssetRecord): string => {
+    if (asset.asset_type === 'video' && asset.vimeo_video_id) {
+      // For videos, show highest resolution
+      const formats = asset.vimeo_download_formats && asset.vimeo_download_formats.length > 0
+        ? asset.vimeo_download_formats
+        : [
+            ...(asset.vimeo_download_1080p ? [{ resolution: '1080p' }] : []),
+            ...(asset.vimeo_download_720p ? [{ resolution: '720p' }] : []),
+            ...(asset.vimeo_download_480p ? [{ resolution: '480p' }] : []),
+            ...(asset.vimeo_download_360p ? [{ resolution: '360p' }] : []),
+          ];
+      
+      if (formats.length > 0) {
+        // Sort by resolution priority (highest first)
+        const resolutionOrder: Record<string, number> = {
+          '4K': 1, '2K': 2, '1080p': 3, '720p': 4, '540p': 5, '480p': 6, '360p': 7, '240p': 8
+        };
+        formats.sort((a, b) => {
+          const aOrder = resolutionOrder[a.resolution] || 999;
+          const bOrder = resolutionOrder[b.resolution] || 999;
+          return aOrder - bOrder;
+        });
+        return formats[0].resolution;
       }
-
-      const data = await response.json() as { versions?: any[] };
-      setAssetVersions(data.versions || []);
-    } catch (err: any) {
-      console.error('Failed to fetch versions', err);
-    } finally {
-      setLoadingVersions(false);
+      return 'Video';
     }
+    
+    // For images/files, show file extension
+    if (asset.current_version?.mime_type) {
+      const ext = asset.current_version.mime_type.split('/')[1];
+      return ext?.toUpperCase() || 'File';
+    }
+    
+    return asset.asset_type.toUpperCase();
   };
 
   // Helper to get filter chips for active filters
@@ -1883,9 +1890,6 @@ export default function AdminDigitalAssetManagerPage() {
                       onMouseLeave={() => setHoveredAssetId(null)}
                       onClick={() => {
                         setSelectedAsset(asset);
-                        if (accessToken) {
-                          fetchAssetVersions(asset.id);
-                        }
                       }}
                     >
                       {/* Selection Checkbox */}
@@ -1927,10 +1931,10 @@ export default function AdminDigitalAssetManagerPage() {
                           </div>
                         )}
                         
-                        {/* Version Badge */}
+                        {/* File Type/Resolution Badge */}
                         {asset.current_version && (
                           <span className="absolute bottom-1.5 right-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                            v{asset.current_version.version_number}
+                            {getFileTypeBadge(asset)}
                           </span>
                         )}
 
@@ -1942,9 +1946,6 @@ export default function AdminDigitalAssetManagerPage() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedAsset(asset);
-                                if (accessToken) {
-                                  fetchAssetVersions(asset.id);
-                                }
                               }}
                               className="rounded-md bg-white/95 p-1 hover:bg-white transition shadow-sm"
                               title="View"
@@ -2100,10 +2101,17 @@ export default function AdminDigitalAssetManagerPage() {
           <div className="absolute right-0 top-0 h-full w-full max-w-[500px] bg-white shadow-xl flex flex-col">
             {/* Drawer Header */}
             <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3 flex-shrink-0">
-              <h2 className="text-base font-semibold text-gray-900">Upload Asset</h2>
+              <h2 className="text-base font-semibold text-gray-900">
+                {isEditingExistingAsset ? 'Edit Asset' : 'Upload Asset'}
+              </h2>
               <button
                 type="button"
-                onClick={() => setIsUploadDrawerOpen(false)}
+                onClick={() => {
+                  setIsUploadDrawerOpen(false);
+                  setIsEditingExistingAsset(false);
+                  setEditingAssetId(null);
+                  resetForm();
+                }}
                 className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
               >
                 <XMarkIcon className="h-4 w-4" />
@@ -2662,7 +2670,7 @@ export default function AdminDigitalAssetManagerPage() {
                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <ArrowUpTrayIcon className="h-4 w-4" />
-                  {uploading ? 'Uploading…' : 'Upload Asset'}
+                  {uploading ? (isEditingExistingAsset ? 'Updating…' : 'Uploading…') : (isEditingExistingAsset ? 'Update Asset' : 'Upload Asset')}
                 </button>
                 <button
                   type="button"
@@ -2698,7 +2706,8 @@ export default function AdminDigitalAssetManagerPage() {
               onClick={() => {
                 setSelectedAsset(null);
                 setIsEditingAsset(false);
-                setAssetVersions([]);
+                setIsEditingExistingAsset(false);
+                setEditingAssetId(null);
               }}
               className="absolute top-3 right-3 z-20 rounded-md bg-white/90 p-1.5 text-gray-600 hover:bg-white hover:text-gray-900 transition shadow-sm"
             >
@@ -2977,69 +2986,22 @@ export default function AdminDigitalAssetManagerPage() {
                       </>
                     )}
                   </div>
-                ) : selectedAsset.current_version?.downloadPath ? (
-                  (() => {
-                    const downloadKey = `asset-${selectedAsset.id}`;
-                    const isDownloading = downloadingFormats.has(downloadKey);
-                    return (
-                      <button
-                        type="button"
-                        disabled={isDownloading}
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (!accessToken) return;
-                          const downloadUrl = ensureTokenUrl(selectedAsset.current_version!.downloadPath!);
-                          const filename = `${selectedAsset.title || 'asset'}.${selectedAsset.current_version!.mime_type?.split('/')[1] || 'bin'}`;
-                          
-                          // Set loading state
-                          setDownloadingFormats(prev => new Set(prev).add(downloadKey));
-                          
-                          await triggerDownload(
-                            downloadUrl,
-                            filename,
-                            selectedAsset.id,
-                            'api',
-                            accessToken,
-                            () => {
-                              // Download started (save dialog opened) - stop loading
-                              setDownloadingFormats(prev => {
-                                const next = new Set(prev);
-                                next.delete(downloadKey);
-                                return next;
-                              });
-                            },
-                            () => {
-                              // Download complete - ensure loading is stopped
-                              setDownloadingFormats(prev => {
-                                const next = new Set(prev);
-                                next.delete(downloadKey);
-                                return next;
-                              });
-                            }
-                          );
-                        }}
-                        className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition shadow-sm disabled:opacity-50 disabled:cursor-wait"
-                      >
-                        {isDownloading ? (
-                          <>
-                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Preparing...
-                          </>
-                        ) : (
-                          <>
-                            <ArrowDownTrayIcon className="h-4 w-4" />
-                            Download
-                          </>
-                        )}
-                      </button>
-                    );
-                  })()
-                ) : (
-                  <p className="text-sm text-gray-500">No download available</p>
-                )}
+                ) : null}
+                
+                {/* Preview button for non-video assets (replaces top Download) */}
+                {selectedAsset.asset_type !== 'video' && selectedAsset.current_version?.previewPath && accessToken ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(ensureTokenUrl(selectedAsset.current_version!.previewPath!), '_blank');
+                    }}
+                    className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition shadow-sm mb-3"
+                  >
+                    <EyeIcon className="h-4 w-4" />
+                    Preview
+                  </button>
+                ) : null}
               </div>
 
                 {/* Metadata Section */}
@@ -3124,103 +3086,6 @@ export default function AdminDigitalAssetManagerPage() {
                   )}
                 </div>
 
-                {/* Versions Section */}
-                <div className="pt-4 pb-4 border-t border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2.5 uppercase tracking-wide">Versions</h3>
-                  {loadingVersions ? (
-                    <div className="text-sm text-gray-500 py-4">Loading versions...</div>
-                  ) : assetVersions.length === 0 ? (
-                    <div className="text-sm text-gray-500 py-4">No versions found</div>
-                  ) : (
-                    <div className="space-y-2">
-                      {assetVersions.map((version) => (
-                        <div
-                          key={version.id}
-                          className={`flex items-center justify-between rounded-md border p-2.5 transition ${
-                            version.id === selectedAsset.current_version?.id
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 bg-white hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <span className="font-medium text-gray-900">v{version.version_number}</span>
-                            <span className="text-xs text-gray-500 truncate">
-                              {formatBytes(version.file_size) || '—'} • {version.mime_type?.split('/')[1] || 'Unknown'}
-                            </span>
-                            {version.id === selectedAsset.current_version?.id && (
-                              <span className="rounded-full bg-blue-600 px-2 py-0.5 text-xs font-medium text-white whitespace-nowrap">
-                                Current
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {version.previewPath && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.open(ensureTokenUrl(version.previewPath), '_blank');
-                                }}
-                                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                              >
-                                Preview
-                              </button>
-                            )}
-                            {version.downloadPath && (
-                              (() => {
-                                const versionKey = `version-${selectedAsset.id}-${version.id}`;
-                                const isDownloading = downloadingFormats.has(versionKey);
-                                return (
-                                  <button
-                                    type="button"
-                                    disabled={isDownloading}
-                                    onClick={async (e) => {
-                                      e.stopPropagation();
-                                      if (!accessToken) return;
-                                      const downloadUrl = ensureTokenUrl(version.downloadPath);
-                                      const filename = `${selectedAsset.title || 'asset'}-v${version.version_number}.${version.mime_type?.split('/')[1] || 'bin'}`;
-                                      
-                                      // Set loading state
-                                      setDownloadingFormats(prev => new Set(prev).add(versionKey));
-                                      
-                                      await triggerDownload(
-                                        downloadUrl,
-                                        filename,
-                                        selectedAsset.id,
-                                        'api',
-                                        accessToken,
-                                        () => {
-                                          // Download started (save dialog opened) - stop loading
-                                          setDownloadingFormats(prev => {
-                                            const next = new Set(prev);
-                                            next.delete(versionKey);
-                                            return next;
-                                          });
-                                        },
-                                        () => {
-                                          // Download complete - ensure loading is stopped
-                                          setDownloadingFormats(prev => {
-                                            const next = new Set(prev);
-                                            next.delete(versionKey);
-                                            return next;
-                                          });
-                                        }
-                                      );
-                                    }}
-                                    className="text-xs text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50 disabled:cursor-wait"
-                                  >
-                                    {isDownloading ? 'Preparing...' : 'Download'}
-                                  </button>
-                                );
-                              })()
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
                 {/* Action Buttons */}
                 <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
                   {selectedAsset.current_version?.downloadPath && (
@@ -3284,6 +3149,45 @@ export default function AdminDigitalAssetManagerPage() {
                       );
                     })()
                   )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsEditingExistingAsset(true);
+                      setEditingAssetId(selectedAsset.id);
+                      // Populate form with existing asset data
+                      setFormState({
+                        ...defaultFormState,
+                        assetId: selectedAsset.id,
+                        title: selectedAsset.title || '',
+                        description: selectedAsset.description || '',
+                        assetType: selectedAsset.asset_type,
+                        assetTypeId: selectedAsset.asset_type_id || '',
+                        assetSubtypeId: selectedAsset.asset_subtype_id || '',
+                        productLine: selectedAsset.product_line || '',
+                        productName: selectedAsset.product_name || '',
+                        sku: selectedAsset.sku || '',
+                        tags: selectedAsset.tags || [],
+                        locales: selectedAsset.locales || [],
+                        regions: selectedAsset.regions.map(r => r.code) || [],
+                        vimeoVideoId: selectedAsset.vimeo_video_id || '',
+                        vimeoDownloadFormats: selectedAsset.vimeo_download_formats && selectedAsset.vimeo_download_formats.length > 0
+                          ? selectedAsset.vimeo_download_formats
+                          : [
+                              ...(selectedAsset.vimeo_download_1080p ? [{ resolution: '1080p', url: selectedAsset.vimeo_download_1080p }] : []),
+                              ...(selectedAsset.vimeo_download_720p ? [{ resolution: '720p', url: selectedAsset.vimeo_download_720p }] : []),
+                              ...(selectedAsset.vimeo_download_480p ? [{ resolution: '480p', url: selectedAsset.vimeo_download_480p }] : []),
+                              ...(selectedAsset.vimeo_download_360p ? [{ resolution: '360p', url: selectedAsset.vimeo_download_360p }] : []),
+                            ],
+                      });
+                      setIsUploadDrawerOpen(true);
+                      setSelectedAsset(null);
+                    }}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                  >
+                    <PencilIcon className="h-4 w-4" />
+                    Edit Asset
+                  </button>
                   <button
                     type="button"
                     onClick={(e) => {
