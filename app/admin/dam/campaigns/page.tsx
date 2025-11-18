@@ -94,6 +94,8 @@ export default function CampaignsPage() {
       if (!response.ok) throw new Error('Failed to create campaign');
 
       const data = await response.json();
+      // Refresh campaigns list before redirecting
+      await fetchCampaigns();
       router.push(`/admin/dam/campaigns/${data.campaign.id}`);
     } catch (err) {
       console.error('Failed to create campaign', err);

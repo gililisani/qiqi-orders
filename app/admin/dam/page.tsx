@@ -405,6 +405,22 @@ export default function AdminDigitalAssetManagerPage() {
     };
   }, []);
 
+  const fetchCampaigns = async (token: string) => {
+    try {
+      const headers = buildAuthHeaders(token);
+      const campaignsResponse = await fetch('/api/campaigns', { headers });
+      if (campaignsResponse.ok) {
+        const campaignsData = await campaignsResponse.json();
+        setCampaigns(campaignsData.campaigns || []);
+      } else {
+        console.error('Failed to fetch campaigns:', campaignsResponse.status);
+      }
+    } catch (err: any) {
+      console.error('Failed to load campaigns', err);
+      // Don't set error state - campaigns are optional
+    }
+  };
+
   const fetchLookups = async (token: string) => {
     try {
       const headers = buildAuthHeaders(token);
@@ -437,12 +453,8 @@ export default function AdminDigitalAssetManagerPage() {
         }));
       }
 
-      // Fetch campaigns
-      const campaignsResponse = await fetch('/api/campaigns', { headers });
-      if (campaignsResponse.ok) {
-        const campaignsData = await campaignsResponse.json();
-        setCampaigns(campaignsData.campaigns || []);
-      }
+      // Fetch campaigns on initial load
+      fetchCampaigns(token);
     } catch (err: any) {
       console.error('Failed to load lookup data', err);
       setError(err.message || 'Failed to load lookup data');
@@ -903,6 +915,8 @@ export default function AdminDigitalAssetManagerPage() {
         }
 
         setSuccessMessage('Video asset added successfully.');
+        // Refresh campaigns after successful upload
+        fetchCampaigns(accessToken);
         resetForm();
         fetchAssets(accessToken);
         setUploading(false);
@@ -951,6 +965,8 @@ export default function AdminDigitalAssetManagerPage() {
         }
 
         setSuccessMessage('Asset updated successfully.');
+        // Refresh campaigns after successful update
+        fetchCampaigns(accessToken);
         resetForm();
         fetchAssets(accessToken);
         setUploading(false);
@@ -1294,6 +1310,10 @@ export default function AdminDigitalAssetManagerPage() {
       }
 
       setSuccessMessage('Asset uploaded successfully.');
+      // Refresh campaigns after successful upload
+      if (accessToken) {
+        fetchCampaigns(accessToken);
+      }
       resetForm();
       fetchAssets(accessToken);
     } catch (err: any) {
@@ -1539,6 +1559,10 @@ export default function AdminDigitalAssetManagerPage() {
                 // Clear any previous messages when opening drawer
                 setSuccessMessage('');
                 setError('');
+                // Refresh campaigns when opening drawer
+                if (accessToken) {
+                  fetchCampaigns(accessToken);
+                }
                 setIsUploadDrawerOpen(true);
               }}
               className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
