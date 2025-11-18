@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSupabase } from '../../../../lib/supabase-provider';
 import {
@@ -41,7 +41,7 @@ export default function CampaignsPage() {
 
   const accessToken = session?.access_token || null;
 
-  const fetchCampaigns = async () => {
+  const fetchCampaigns = useCallback(async () => {
     if (!accessToken) {
       console.warn('No access token available, cannot fetch campaigns', { session: !!session });
       setLoading(false);
@@ -72,7 +72,7 @@ export default function CampaignsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessToken, session]);
 
   useEffect(() => {
     console.log('Campaigns page - Session state:', { 
@@ -89,7 +89,7 @@ export default function CampaignsPage() {
       setLoading(false);
     }
     // If session is undefined, it's still loading, so we wait
-  }, [accessToken, session]);
+  }, [accessToken, session, fetchCampaigns]);
 
   const handleCreateCampaign = async () => {
     if (!newCampaign.name.trim()) {
