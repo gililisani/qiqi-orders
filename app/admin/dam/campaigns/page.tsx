@@ -218,10 +218,21 @@ export default function CampaignsPage() {
     return null;
   };
 
-  if (loading) {
+  // Show loading state only if we're actually loading AND have a token
+  // If we don't have a token and session is null, show empty state
+  if (loading && (accessToken || session !== null)) {
     return (
       <div className="p-8">
         <div className="text-center text-gray-500">Loading campaigns...</div>
+      </div>
+    );
+  }
+
+  // If we don't have a token and session is explicitly null, show auth error
+  if (!accessToken && session === null) {
+    return (
+      <div className="p-8">
+        <div className="text-center text-red-500">Please log in to view campaigns.</div>
       </div>
     );
   }
