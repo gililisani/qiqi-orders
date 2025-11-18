@@ -353,8 +353,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Require file for non-video assets
-    if (payload.assetType !== 'video' && !file) {
+    // Require file for non-video assets (unless editing existing asset)
+    if (payload.assetType !== 'video' && !file && !payload.assetId) {
       return NextResponse.json({ error: 'File is required for non-video assets' }, { status: 400 });
     }
 
