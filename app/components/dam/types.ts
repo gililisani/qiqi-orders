@@ -55,5 +55,6 @@ export interface AssetRecord {
   tags: string[];
   locales: LocaleOption[];
   regions: RegionOption[];
+  campaign?: { id: string; name: string } | null; // Campaign info (optional)
 }
 

@@ -172,6 +172,20 @@ export async function POST(request: NextRequest) {
       if (regionError) throw regionError;
     }
 
+    // Handle campaign linking
+    if (body.campaignId) {
+      // Remove existing campaign link for this asset
+      await supabaseAdmin.from('campaign_assets').delete().eq('asset_id', assetId);
+      // Add new campaign link
+      const { error: campaignError } = await supabaseAdmin
+        .from('campaign_assets')
+        .insert({ campaign_id: body.campaignId, asset_id: assetId });
+      if (campaignError) {
+        console.error('Failed to link asset to campaign:', campaignError);
+        // Don't fail the entire upload if campaign linking fails
+      }
+    }
+
     // Generate storage path
     const storagePath = `${assetId}/${Date.now()}-${body.fileName}`;
 

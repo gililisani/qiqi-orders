@@ -295,6 +295,23 @@ export default function AssetDetailModal({
                       <dd className="text-gray-600">{asset.product_name}</dd>
                     </div>
                   )}
+                  {asset.campaign && (
+                    <div>
+                      <dt className="font-medium text-gray-700 mb-1">Campaign</dt>
+                      <dd className="text-gray-600">
+                        <a
+                          href={`/admin/dam/campaigns/${asset.campaign.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.location.href = `/admin/dam/campaigns/${asset.campaign!.id}`;
+                          }}
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          {asset.campaign.name}
+                        </a>
+                      </dd>
+                    </div>
+                  )}
                   <div>
                     <dt className="font-medium text-gray-700 mb-1">Created</dt>
                     <dd className="text-gray-600">{new Date(asset.created_at).toLocaleDateString()}</dd>

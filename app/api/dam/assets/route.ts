@@ -236,6 +236,27 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {}) ?? {};
 
+    // Fetch campaign info for assets
+    const campaignsByAsset: Record<string, { id: string; name: string }> = {};
+    try {
+      const { data: campaignAssetsData } = await supabaseAdmin
+        .from('campaign_assets')
+        .select('asset_id, campaign:campaigns(id, name)')
+        .in('asset_id', (assetsData ?? []).map((r: any) => r.id));
+      
+      if (campaignAssetsData) {
+        campaignAssetsData.forEach((row: any) => {
+          const campaign = Array.isArray(row.campaign) ? row.campaign[0] : row.campaign;
+          if (campaign?.id && campaign?.name) {
+            campaignsByAsset[row.asset_id] = { id: campaign.id, name: campaign.name };
+          }
+        });
+      }
+    } catch (err) {
+      // Campaign tables may not exist yet - ignore
+      console.log('Campaign info not available:', err);
+    }
+
     // vimeo_download_formats column will be null until migration is run
     // Frontend will fall back to legacy fields (1080p, 720p, etc.)
     const downloadFormatsByAsset: Record<string, any> = {};
@@ -325,6 +346,7 @@ export async function GET(request: NextRequest) {
         tags: tagsByAsset[record.id] ?? [],
         locales: localesByAsset[record.id] ?? [],
         regions: regionsByAsset[record.id] ?? [],
+        campaign: campaignsByAsset[record.id] || null,
       } as any;
     });
 
@@ -568,6 +590,20 @@ export async function POST(request: NextRequest) {
       }));
       const { error: regionError } = await supabaseAdmin.from('dam_asset_region_map').insert(regionMaps);
       if (regionError) throw regionError;
+    }
+
+    // Handle campaign linking
+    if (payload.campaignId) {
+      // Remove existing campaign link for this asset
+      await supabaseAdmin.from('campaign_assets').delete().eq('asset_id', assetId);
+      // Add new campaign link
+      const { error: campaignError } = await supabaseAdmin
+        .from('campaign_assets')
+        .insert({ campaign_id: payload.campaignId, asset_id: assetId });
+      if (campaignError) {
+        console.error('Failed to link asset to campaign:', campaignError);
+        // Don't fail the entire upload if campaign linking fails
+      }
     }
 
     // Only create version record if we have a file (videos don't have storage files)

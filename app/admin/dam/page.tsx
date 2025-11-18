@@ -59,6 +59,7 @@ interface UploadFormState {
   vimeoVideoId: string; // Vimeo video ID or URL (main video for preview)
   vimeoDownloadFormats: VimeoDownloadFormat[]; // Dynamic download formats
   useTitleAsFilename: boolean; // Override file name with title
+  campaignId: string | null; // Campaign ID (optional)
 }
 
 const defaultFormState: UploadFormState = {
@@ -78,6 +79,7 @@ const defaultFormState: UploadFormState = {
   vimeoVideoId: '',
   vimeoDownloadFormats: [],
   useTitleAsFilename: false, // Default: keep original filename
+  campaignId: null, // Default: no campaign
 };
 
 // Product name options (static list)
@@ -273,6 +275,7 @@ export default function AdminDigitalAssetManagerPage() {
   const [assetTypes, setAssetTypes] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [assetSubtypes, setAssetSubtypes] = useState<Array<{ id: string; name: string; slug: string; asset_type_id: string }>>([]);
   const [products, setProducts] = useState<Array<{ id: number; item_name: string; sku: string }>>([]);
+  const [campaigns, setCampaigns] = useState<Array<{ id: string; name: string }>>([]);
 
   const [formState, setFormState] = useState<UploadFormState>(defaultFormState);
   const [uploading, setUploading] = useState(false);
@@ -432,6 +435,13 @@ export default function AdminDigitalAssetManagerPage() {
           selectedLocaleCodes: [defaultLocale.code],
           primaryLocale: defaultLocale.code,
         }));
+      }
+
+      // Fetch campaigns
+      const campaignsResponse = await fetch('/api/campaigns', { headers });
+      if (campaignsResponse.ok) {
+        const campaignsData = await campaignsResponse.json();
+        setCampaigns(campaignsData.campaigns || []);
       }
     } catch (err: any) {
       console.error('Failed to load lookup data', err);
@@ -873,6 +883,7 @@ export default function AdminDigitalAssetManagerPage() {
           })),
           regions: formState.selectedRegionCodes,
           useTitleAsFilename: formState.useTitleAsFilename,
+          campaignId: formState.campaignId || undefined,
         };
 
         const headers = buildAuthHeaders(accessToken);
@@ -920,6 +931,7 @@ export default function AdminDigitalAssetManagerPage() {
           })),
           regions: formState.selectedRegionCodes,
           useTitleAsFilename: formState.useTitleAsFilename,
+          campaignId: formState.campaignId || undefined,
         };
 
         const headers = buildAuthHeaders(accessToken);
@@ -999,6 +1011,7 @@ export default function AdminDigitalAssetManagerPage() {
           fileType: file.type || 'application/octet-stream',
           fileSize: file.size,
           useTitleAsFilename: formState.useTitleAsFilename,
+          campaignId: formState.campaignId || undefined,
         };
 
         const headers = buildAuthHeaders(accessToken);
@@ -1259,6 +1272,7 @@ export default function AdminDigitalAssetManagerPage() {
           thumbnailData: thumbnailData || undefined,
           thumbnailPath: thumbnailData ? `${Date.now()}-thumb.png` : undefined,
           useTitleAsFilename: formState.useTitleAsFilename,
+          campaignId: formState.campaignId || undefined,
         };
 
         const formData = new FormData();
@@ -2338,6 +2352,31 @@ export default function AdminDigitalAssetManagerPage() {
 
                 <div className="border-t border-gray-100 mb-5"></div>
 
+                {/* Section 5.5: Campaign (optional) */}
+                <div className="mb-5">
+                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Campaign (Optional)</h3>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Campaign</label>
+                    <select
+                      value={formState.campaignId || ''}
+                      onChange={(e) => setFormState((prev) => ({ ...prev, campaignId: e.target.value || null }))}
+                      className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
+                    >
+                      <option value="">None</option>
+                      {campaigns.map((campaign) => (
+                        <option key={campaign.id} value={campaign.id}>
+                          {campaign.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-[10px] text-gray-500 leading-tight">
+                      Optionally assign this asset to a campaign.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-100 mb-5"></div>
+
                 {/* Section 6: File Upload or Video Input */}
                 <div className="mb-5">
                   {(() => {
@@ -2673,6 +2712,7 @@ export default function AdminDigitalAssetManagerPage() {
                     ...(asset.vimeo_download_480p ? [{ resolution: '480p', url: asset.vimeo_download_480p }] : []),
                     ...(asset.vimeo_download_360p ? [{ resolution: '360p', url: asset.vimeo_download_360p }] : []),
                   ],
+              campaignId: asset.campaign?.id || null,
             });
             setIsUploadDrawerOpen(true);
             setSelectedAsset(null);
