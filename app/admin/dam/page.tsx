@@ -232,11 +232,16 @@ async function triggerDownload(
   filename: string,
   assetId: string,
   downloadMethod: string,
-  accessToken: string | null
+  accessToken: string | null,
+  onDownloadStart?: () => void,
+  onDownloadComplete?: () => void
 ): Promise<void> {
   try {
-    // Log the download first
-    await logDownload(assetId, url, downloadMethod, accessToken);
+    // Start download immediately - don't wait for logging
+    // Log download in parallel (fire and forget for speed)
+    logDownload(assetId, url, downloadMethod, accessToken).catch(err => {
+      console.error('Failed to log download:', err);
+    });
     
     // Try to fetch and download as blob (works for direct file URLs)
     try {
@@ -252,9 +257,18 @@ async function triggerDownload(
         link.href = blobUrl;
         link.download = filename || 'download';
         document.body.appendChild(link);
+        
+        // Call onDownloadStart before clicking (save dialog opens here)
+        if (onDownloadStart) onDownloadStart();
+        
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(blobUrl);
+        
+        // Call onDownloadComplete after a short delay
+        if (onDownloadComplete) {
+          setTimeout(() => onDownloadComplete(), 100);
+        }
         return;
       }
     } catch (fetchError) {
@@ -268,10 +282,20 @@ async function triggerDownload(
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
     document.body.appendChild(link);
+    
+    // Call onDownloadStart before clicking (save dialog opens here)
+    if (onDownloadStart) onDownloadStart();
+    
     link.click();
     document.body.removeChild(link);
+    
+    // Call onDownloadComplete after a short delay
+    if (onDownloadComplete) {
+      setTimeout(() => onDownloadComplete(), 100);
+    }
   } catch (err) {
     console.error('Download failed:', err);
+    if (onDownloadComplete) onDownloadComplete();
     // Last resort: open in new tab
     window.open(url, '_blank');
   }
@@ -351,6 +375,7 @@ export default function AdminDigitalAssetManagerPage() {
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [editingDownloadUrls, setEditingDownloadUrls] = useState<VimeoDownloadFormat[]>([]);
   const [savingUrls, setSavingUrls] = useState(false);
+  const [downloadingFormats, setDownloadingFormats] = useState<Set<string>>(new Set()); // Track loading downloads by format key
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
   const [hoveredAssetId, setHoveredAssetId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'compact' | 'comfortable'>('compact');
@@ -2839,29 +2864,66 @@ export default function AdminDigitalAssetManagerPage() {
                           if (validFormats.length > 0) {
                             return (
                               <div className="flex flex-wrap gap-2">
-                                {validFormats.map((format) => (
-                                  <button
-                                    key={format.resolution}
-                                    type="button"
-                                    onClick={async (e) => {
-                                      e.stopPropagation();
-                                      e.preventDefault();
-                                      if (!accessToken) return;
-                                      const filename = `${selectedAsset.title || 'video'}-${format.resolution}.mp4`;
-                                      await triggerDownload(
-                                        format.url!,
-                                        filename,
-                                        selectedAsset.id,
-                                        `video-${format.resolution}`,
-                                        accessToken
-                                      );
-                                    }}
-                                    className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-                                  >
-                                    <ArrowDownTrayIcon className="h-4 w-4" />
-                                    Download {format.resolution}
-                                  </button>
-                                ))}
+                                {validFormats.map((format) => {
+                                  const formatKey = `video-${selectedAsset.id}-${format.resolution}`;
+                                  const isDownloading = downloadingFormats.has(formatKey);
+                                  return (
+                                    <button
+                                      key={format.resolution}
+                                      type="button"
+                                      disabled={isDownloading}
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        if (!accessToken) return;
+                                        const filename = `${selectedAsset.title || 'video'}-${format.resolution}.mp4`;
+                                        
+                                        // Set loading state
+                                        setDownloadingFormats(prev => new Set(prev).add(formatKey));
+                                        
+                                        await triggerDownload(
+                                          format.url!,
+                                          filename,
+                                          selectedAsset.id,
+                                          `video-${format.resolution}`,
+                                          accessToken,
+                                          () => {
+                                            // Download started (save dialog opened) - stop loading
+                                            setDownloadingFormats(prev => {
+                                              const next = new Set(prev);
+                                              next.delete(formatKey);
+                                              return next;
+                                            });
+                                          },
+                                          () => {
+                                            // Download complete - ensure loading is stopped
+                                            setDownloadingFormats(prev => {
+                                              const next = new Set(prev);
+                                              next.delete(formatKey);
+                                              return next;
+                                            });
+                                          }
+                                        );
+                                      }}
+                                      className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-wait"
+                                    >
+                                      {isDownloading ? (
+                                        <>
+                                          <svg className="animate-spin h-4 w-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                          </svg>
+                                          Preparing...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <ArrowDownTrayIcon className="h-4 w-4" />
+                                          Download {format.resolution}
+                                        </>
+                                      )}
+                                    </button>
+                                  );
+                                })}
                               </div>
                             );
                           }
@@ -2876,26 +2938,65 @@ export default function AdminDigitalAssetManagerPage() {
                     )}
                   </div>
                 ) : selectedAsset.current_version?.downloadPath ? (
-                  <button
-                    type="button"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (!accessToken) return;
-                      const downloadUrl = ensureTokenUrl(selectedAsset.current_version!.downloadPath!);
-                      const filename = `${selectedAsset.title || 'asset'}.${selectedAsset.current_version!.mime_type?.split('/')[1] || 'bin'}`;
-                      await triggerDownload(
-                        downloadUrl,
-                        filename,
-                        selectedAsset.id,
-                        'api',
-                        accessToken
-                      );
-                    }}
-                    className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition shadow-sm"
-                  >
-                    <ArrowDownTrayIcon className="h-4 w-4" />
-                    Download
-                  </button>
+                  (() => {
+                    const downloadKey = `asset-${selectedAsset.id}`;
+                    const isDownloading = downloadingFormats.has(downloadKey);
+                    return (
+                      <button
+                        type="button"
+                        disabled={isDownloading}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!accessToken) return;
+                          const downloadUrl = ensureTokenUrl(selectedAsset.current_version!.downloadPath!);
+                          const filename = `${selectedAsset.title || 'asset'}.${selectedAsset.current_version!.mime_type?.split('/')[1] || 'bin'}`;
+                          
+                          // Set loading state
+                          setDownloadingFormats(prev => new Set(prev).add(downloadKey));
+                          
+                          await triggerDownload(
+                            downloadUrl,
+                            filename,
+                            selectedAsset.id,
+                            'api',
+                            accessToken,
+                            () => {
+                              // Download started (save dialog opened) - stop loading
+                              setDownloadingFormats(prev => {
+                                const next = new Set(prev);
+                                next.delete(downloadKey);
+                                return next;
+                              });
+                            },
+                            () => {
+                              // Download complete - ensure loading is stopped
+                              setDownloadingFormats(prev => {
+                                const next = new Set(prev);
+                                next.delete(downloadKey);
+                                return next;
+                              });
+                            }
+                          );
+                        }}
+                        className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition shadow-sm disabled:opacity-50 disabled:cursor-wait"
+                      >
+                        {isDownloading ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Preparing...
+                          </>
+                        ) : (
+                          <>
+                            <ArrowDownTrayIcon className="h-4 w-4" />
+                            Download
+                          </>
+                        )}
+                      </button>
+                    );
+                  })()
                 ) : (
                   <p className="text-sm text-gray-500">No download available</p>
                 )}
@@ -3026,25 +3127,52 @@ export default function AdminDigitalAssetManagerPage() {
                               </button>
                             )}
                             {version.downloadPath && (
-                              <button
-                                type="button"
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  if (!accessToken) return;
-                                  const downloadUrl = ensureTokenUrl(version.downloadPath);
-                                  const filename = `${selectedAsset.title || 'asset'}-v${version.version_number}.${version.mime_type?.split('/')[1] || 'bin'}`;
-                                  await triggerDownload(
-                                    downloadUrl,
-                                    filename,
-                                    selectedAsset.id,
-                                    'api',
-                                    accessToken
-                                  );
-                                }}
-                                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                              >
-                                Download
-                              </button>
+                              (() => {
+                                const versionKey = `version-${selectedAsset.id}-${version.id}`;
+                                const isDownloading = downloadingFormats.has(versionKey);
+                                return (
+                                  <button
+                                    type="button"
+                                    disabled={isDownloading}
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      if (!accessToken) return;
+                                      const downloadUrl = ensureTokenUrl(version.downloadPath);
+                                      const filename = `${selectedAsset.title || 'asset'}-v${version.version_number}.${version.mime_type?.split('/')[1] || 'bin'}`;
+                                      
+                                      // Set loading state
+                                      setDownloadingFormats(prev => new Set(prev).add(versionKey));
+                                      
+                                      await triggerDownload(
+                                        downloadUrl,
+                                        filename,
+                                        selectedAsset.id,
+                                        'api',
+                                        accessToken,
+                                        () => {
+                                          // Download started (save dialog opened) - stop loading
+                                          setDownloadingFormats(prev => {
+                                            const next = new Set(prev);
+                                            next.delete(versionKey);
+                                            return next;
+                                          });
+                                        },
+                                        () => {
+                                          // Download complete - ensure loading is stopped
+                                          setDownloadingFormats(prev => {
+                                            const next = new Set(prev);
+                                            next.delete(versionKey);
+                                            return next;
+                                          });
+                                        }
+                                      );
+                                    }}
+                                    className="text-xs text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50 disabled:cursor-wait"
+                                  >
+                                    {isDownloading ? 'Preparing...' : 'Download'}
+                                  </button>
+                                );
+                              })()
                             )}
                           </div>
                         </div>
