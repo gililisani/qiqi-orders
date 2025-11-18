@@ -139,15 +139,15 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
     
     // Re-fetch asset for title (we already validated it above)
-    const { data: asset } = await supabaseAdmin
+    const { data: asset, error: assetTitleError } = await supabaseAdmin
       .from('dam_assets')
       .select('id, title')
       .eq('id', version.asset_id)
       .single();
 
-    if (assetError) {
-      console.error('Asset fetch error:', assetError);
-      throw assetError;
+    if (assetTitleError || !asset) {
+      console.error('Asset title fetch error:', assetTitleError);
+      // Use fallback - we already validated asset exists above
     }
     if (!asset) {
       return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
