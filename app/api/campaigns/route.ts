@@ -125,7 +125,24 @@ export async function GET(request: NextRequest) {
     if (err.code === '42P01' || err.message?.includes('does not exist')) {
       return NextResponse.json({ campaigns: [] });
     }
-    return NextResponse.json({ error: err.message || 'Failed to load campaigns' }, { status: 500 });
+    
+    // Return detailed error information
+    const errorResponse: any = {
+      error: err.message || 'Failed to load campaigns',
+    };
+    if (err.details) errorResponse.details = err.details;
+    if (err.hint) errorResponse.hint = err.hint;
+    if (err.code) errorResponse.code = err.code;
+    if (err.code && err.message) {
+      errorResponse.fullError = {
+        message: err.message,
+        details: err.details,
+        hint: err.hint,
+        code: err.code,
+      };
+    }
+    
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
 
