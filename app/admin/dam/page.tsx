@@ -3158,7 +3158,6 @@ export default function AdminDigitalAssetManagerPage() {
                       // Populate form with existing asset data
                       setFormState({
                         ...defaultFormState,
-                        assetId: selectedAsset.id,
                         title: selectedAsset.title || '',
                         description: selectedAsset.description || '',
                         assetType: selectedAsset.asset_type,
@@ -3167,9 +3166,10 @@ export default function AdminDigitalAssetManagerPage() {
                         productLine: selectedAsset.product_line || '',
                         productName: selectedAsset.product_name || '',
                         sku: selectedAsset.sku || '',
-                        tags: selectedAsset.tags || [],
-                        locales: selectedAsset.locales || [],
-                        regions: selectedAsset.regions.map(r => r.code) || [],
+                        selectedTagSlugs: selectedAsset.tags || [],
+                        selectedLocaleCodes: selectedAsset.locales.map(l => l.code) || [],
+                        primaryLocale: selectedAsset.locales.find(l => l.primary)?.code || selectedAsset.locales[0]?.code || null,
+                        selectedRegionCodes: selectedAsset.regions.map(r => r.code) || [],
                         vimeoVideoId: selectedAsset.vimeo_video_id || '',
                         vimeoDownloadFormats: selectedAsset.vimeo_download_formats && selectedAsset.vimeo_download_formats.length > 0
                           ? selectedAsset.vimeo_download_formats
