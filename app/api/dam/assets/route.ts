@@ -226,45 +226,9 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {}) ?? {};
 
-    // Try to fetch vimeo_download_formats separately if column exists
-    let downloadFormatsByAsset: Record<string, any> = {};
-    if (assetsData && assetsData.length > 0) {
-      try {
-        const { data: formatsData, error: formatsError } = await supabaseAdmin
-          .from('dam_assets')
-          .select('id, vimeo_download_formats')
-          .in('id', assetsData.map((a: any) => a.id));
-        
-        // If error indicates column doesn't exist, that's fine - we'll use legacy fields
-        if (formatsError) {
-          // Check if it's a column not found error
-          const errorMessage = formatsError.message || '';
-          if (errorMessage.includes('column') && errorMessage.includes('vimeo_download_formats')) {
-            // Column doesn't exist - that's okay
-            console.log('vimeo_download_formats column not available yet');
-          } else {
-            // Some other error - log it but don't fail
-            console.error('Error fetching vimeo_download_formats:', formatsError);
-          }
-        } else if (formatsData) {
-          formatsData.forEach((row: any) => {
-            if (row.vimeo_download_formats) {
-              downloadFormatsByAsset[row.id] = typeof row.vimeo_download_formats === 'string'
-                ? JSON.parse(row.vimeo_download_formats)
-                : row.vimeo_download_formats;
-            }
-          });
-        }
-      } catch (formatsError: any) {
-        // Column doesn't exist yet or other error - that's okay, we'll use legacy fields
-        const errorMessage = formatsError?.message || '';
-        if (errorMessage.includes('column') || errorMessage.includes('vimeo_download_formats')) {
-          console.log('vimeo_download_formats column not available yet');
-        } else {
-          console.error('Error fetching vimeo_download_formats:', formatsError);
-        }
-      }
-    }
+    // vimeo_download_formats column will be null until migration is run
+    // Frontend will fall back to legacy fields (1080p, 720p, etc.)
+    const downloadFormatsByAsset: Record<string, any> = {};
 
     const assets = (assetsData ?? []).map((record: any) => {
       const currentVersionRaw = versionsByAsset.get(record.id) ?? null;
@@ -459,9 +423,7 @@ export async function POST(request: NextRequest) {
         vimeo_download_720p: payload.vimeoDownload720p ?? null,
         vimeo_download_480p: payload.vimeoDownload480p ?? null,
         vimeo_download_360p: payload.vimeoDownload360p ?? null,
-        vimeo_download_formats: payload.vimeoDownloadFormats && Array.isArray(payload.vimeoDownloadFormats) && payload.vimeoDownloadFormats.length > 0
-          ? payload.vimeoDownloadFormats
-          : null,
+        // vimeo_download_formats will be added after migration is run
         search_tags: tagsInput,
         created_by: adminUser.id,
         updated_by: adminUser.id,
@@ -485,9 +447,7 @@ export async function POST(request: NextRequest) {
           vimeo_download_720p: payload.vimeoDownload720p ?? null,
           vimeo_download_480p: payload.vimeoDownload480p ?? null,
           vimeo_download_360p: payload.vimeoDownload360p ?? null,
-          vimeo_download_formats: payload.vimeoDownloadFormats && Array.isArray(payload.vimeoDownloadFormats) && payload.vimeoDownloadFormats.length > 0
-            ? payload.vimeoDownloadFormats
-            : null,
+          // vimeo_download_formats will be added after migration is run
           search_tags: tagsInput,
           updated_by: adminUser.id,
           updated_at: new Date().toISOString(),
