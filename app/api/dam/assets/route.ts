@@ -254,10 +254,25 @@ export async function GET(request: NextRequest) {
           }
         : null;
 
+      // Extract video formats from description if stored there
+      let extractedFormats: any[] | null = null;
+      let cleanDescription = record.description;
+      if (record.description && typeof record.description === 'string') {
+        const formatMatch = record.description.match(/<!--VIDEO_FORMATS:(.+?)-->/);
+        if (formatMatch) {
+          try {
+            extractedFormats = JSON.parse(formatMatch[1]);
+            cleanDescription = record.description.replace(/<!--VIDEO_FORMATS:.+?-->/, '').trim();
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+      }
+
       return {
         id: record.id,
         title: record.title,
-        description: record.description,
+        description: cleanDescription,
         asset_type: record.asset_type,
         asset_type_id: record.asset_type_id ?? null,
         asset_subtype_id: record.asset_subtype_id ?? null,
@@ -269,7 +284,7 @@ export async function GET(request: NextRequest) {
         vimeo_download_720p: record.vimeo_download_720p ?? null,
         vimeo_download_480p: record.vimeo_download_480p ?? null,
         vimeo_download_360p: record.vimeo_download_360p ?? null,
-        vimeo_download_formats: downloadFormatsByAsset[record.id] ?? null,
+        vimeo_download_formats: extractedFormats ?? downloadFormatsByAsset[record.id] ?? null,
         created_at: record.created_at,
         current_version: currentVersion,
         tags: tagsByAsset[record.id] ?? [],
@@ -419,11 +434,15 @@ export async function POST(request: NextRequest) {
         product_name: payload.productName ?? null,
         sku: payload.sku ?? null,
         vimeo_video_id: vimeoVideoId,
-        // Convert new dynamic formats to legacy fields for now
+        // Save all formats - convert matching ones to legacy fields AND store all in description as JSON backup
         vimeo_download_1080p: payload.vimeoDownload1080p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '1080p')?.url) ?? null,
         vimeo_download_720p: payload.vimeoDownload720p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '720p')?.url) ?? null,
         vimeo_download_480p: payload.vimeoDownload480p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '480p')?.url) ?? null,
         vimeo_download_360p: payload.vimeoDownload360p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '360p')?.url) ?? null,
+        // Store ALL formats as JSON in description field (we'll append, not replace)
+        description: payload.description 
+          ? `${payload.description}\n\n<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats || [])}-->`
+          : `<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats || [])}-->`,
         search_tags: tagsInput,
         created_by: adminUser.id,
         updated_by: adminUser.id,
@@ -443,11 +462,15 @@ export async function POST(request: NextRequest) {
           product_name: payload.productName ?? null,
           sku: payload.sku ?? null,
           vimeo_video_id: vimeoVideoId,
-          // Convert new dynamic formats to legacy fields for now
+          // Save all formats - convert matching ones to legacy fields AND store all in description as JSON backup
           vimeo_download_1080p: payload.vimeoDownload1080p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '1080p')?.url) ?? null,
           vimeo_download_720p: payload.vimeoDownload720p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '720p')?.url) ?? null,
           vimeo_download_480p: payload.vimeoDownload480p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '480p')?.url) ?? null,
           vimeo_download_360p: payload.vimeoDownload360p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '360p')?.url) ?? null,
+          // Store ALL formats as JSON in description field (we'll append, not replace)
+          description: payload.description 
+            ? `${payload.description}\n\n<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats || [])}-->`
+            : `<!--VIDEO_FORMATS:${JSON.stringify(payload.vimeoDownloadFormats || [])}-->`,
           search_tags: tagsInput,
           updated_by: adminUser.id,
           updated_at: new Date().toISOString(),
