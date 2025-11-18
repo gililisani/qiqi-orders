@@ -2658,7 +2658,9 @@ export default function AdminDigitalAssetManagerPage() {
                       <div>
                         <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">File Upload</h3>
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1.5">File *</label>
+                          <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                            File {!isEditingExistingAsset ? '*' : '(optional when editing)'}
+                          </label>
                           <input
                             type="file"
                             accept={getAcceptAttribute(formState.assetType, formState.assetTypeId)}
@@ -2690,7 +2692,7 @@ export default function AdminDigitalAssetManagerPage() {
                               setFormState((prev) => ({ ...prev, file }));
                             }}
                             className="block w-full text-xs text-gray-700 file:mr-4 file:rounded-md file:border file:border-gray-200 file:bg-white file:px-2.5 file:py-1.5 file:text-xs file:font-medium file:text-gray-700 hover:file:border-gray-400"
-                            required={!isVideoType}
+                            required={!isVideoType && !isEditingExistingAsset}
                           />
                           {formState.file && (
                             <p className="mt-1.5 text-[10px] text-gray-500">
