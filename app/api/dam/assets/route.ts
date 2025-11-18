@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
     const fileSizeMax = searchParams.get('fileSizeMax') ? parseInt(searchParams.get('fileSizeMax')!) : null;
 
     // Build query with optional full-text search
+    // Note: vimeo_download_formats is selected separately to avoid errors if column doesn't exist yet
     let assetsQuery = supabaseAdmin
       .from('dam_assets')
       .select(
@@ -79,7 +80,6 @@ export async function GET(request: NextRequest) {
         vimeo_download_720p,
         vimeo_download_480p,
         vimeo_download_360p,
-        vimeo_download_formats,
         created_at,
         search_tags
       `,
@@ -226,6 +226,28 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {}) ?? {};
 
+    // Try to fetch vimeo_download_formats separately if column exists
+    let downloadFormatsByAsset: Record<string, any> = {};
+    try {
+      const { data: formatsData } = await supabaseAdmin
+        .from('dam_assets')
+        .select('id, vimeo_download_formats')
+        .in('id', assetsData.map((a: any) => a.id));
+      
+      if (formatsData) {
+        formatsData.forEach((row: any) => {
+          if (row.vimeo_download_formats) {
+            downloadFormatsByAsset[row.id] = typeof row.vimeo_download_formats === 'string'
+              ? JSON.parse(row.vimeo_download_formats)
+              : row.vimeo_download_formats;
+          }
+        });
+      }
+    } catch (formatsError) {
+      // Column doesn't exist yet - that's okay, we'll use legacy fields
+      console.log('vimeo_download_formats column not available yet');
+    }
+
     const assets = (assetsData ?? []).map((record: any) => {
       const currentVersionRaw = versionsByAsset.get(record.id) ?? null;
       const currentVersion = currentVersionRaw
@@ -265,11 +287,7 @@ export async function GET(request: NextRequest) {
         vimeo_download_720p: record.vimeo_download_720p ?? null,
         vimeo_download_480p: record.vimeo_download_480p ?? null,
         vimeo_download_360p: record.vimeo_download_360p ?? null,
-        vimeo_download_formats: record.vimeo_download_formats 
-          ? (typeof record.vimeo_download_formats === 'string' 
-              ? JSON.parse(record.vimeo_download_formats) 
-              : record.vimeo_download_formats)
-          : null,
+        vimeo_download_formats: downloadFormatsByAsset[record.id] ?? null,
         created_at: record.created_at,
         current_version: currentVersion,
         tags: tagsByAsset[record.id] ?? [],
