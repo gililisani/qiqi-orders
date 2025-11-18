@@ -133,7 +133,8 @@ export default function CampaignsPage() {
       setLoading(false);
     }
     // If session is undefined, it's still loading, so we wait
-  }, [accessToken, session]); // Removed fetchCampaigns from deps to avoid loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken, session]); // fetchCampaigns intentionally excluded to prevent infinite loops
 
   const handleCreateCampaign = async () => {
     if (!newCampaign.name.trim()) {
@@ -171,8 +172,8 @@ export default function CampaignsPage() {
       }
 
       const data = await response.json();
-      // Refresh campaigns list before redirecting
-      await fetchCampaigns();
+      // Refresh campaigns list before redirecting (use the state directly to avoid dependency issues)
+      setCampaigns(prev => [...prev, data.campaign]);
       router.push(`/admin/dam/campaigns/${data.campaign.id}`);
     } catch (err: any) {
       console.error('Failed to create campaign', err);
