@@ -31,6 +31,15 @@ function buildDownloadPath(assetId: string, versionId?: string | null, rendition
   return base;
 }
 
+function buildPreviewPath(assetId: string, versionId?: string | null, rendition?: 'thumbnail' | 'original') {
+  if (!versionId) return null;
+  const base = `/api/assets/${assetId}/preview?version=${versionId}`;
+  if (rendition === 'thumbnail') {
+    return `${base}&rendition=thumbnail`;
+  }
+  return base;
+}
+
 type LocaleOption = {
   code: string;
   label: string;
@@ -80,6 +89,7 @@ export async function GET(request: NextRequest) {
         vimeo_download_720p,
         vimeo_download_480p,
         vimeo_download_360p,
+        use_title_as_filename,
         created_at,
         search_tags
       `,
@@ -246,7 +256,7 @@ export async function GET(request: NextRequest) {
             width: currentVersionRaw.width,
             height: currentVersionRaw.height,
             downloadPath: buildDownloadPath(record.id, currentVersionRaw.id, 'original'),
-            previewPath: buildDownloadPath(
+            previewPath: buildPreviewPath(
               record.id,
               currentVersionRaw.id,
               currentVersionRaw.thumbnail_path ? 'thumbnail' : 'original'
@@ -285,6 +295,7 @@ export async function GET(request: NextRequest) {
         vimeo_download_480p: record.vimeo_download_480p ?? null,
         vimeo_download_360p: record.vimeo_download_360p ?? null,
         vimeo_download_formats: extractedFormats ?? downloadFormatsByAsset[record.id] ?? null,
+        use_title_as_filename: record.use_title_as_filename ?? false,
         created_at: record.created_at,
         current_version: currentVersion,
         tags: tagsByAsset[record.id] ?? [],
@@ -447,6 +458,7 @@ export async function POST(request: NextRequest) {
         vimeo_download_480p: payload.vimeoDownload480p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '480p')?.url) ?? null,
         vimeo_download_360p: payload.vimeoDownload360p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '360p')?.url) ?? null,
         search_tags: tagsInput,
+        use_title_as_filename: payload.useTitleAsFilename ?? false,
         created_by: adminUser.id,
         updated_by: adminUser.id,
       });
@@ -475,6 +487,7 @@ export async function POST(request: NextRequest) {
           vimeo_download_480p: payload.vimeoDownload480p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '480p')?.url) ?? null,
           vimeo_download_360p: payload.vimeoDownload360p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '360p')?.url) ?? null,
           search_tags: tagsInput,
+          use_title_as_filename: payload.useTitleAsFilename !== undefined ? payload.useTitleAsFilename : undefined,
           updated_by: adminUser.id,
           updated_at: new Date().toISOString(),
         })

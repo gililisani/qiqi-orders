@@ -87,7 +87,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // Fetch asset separately to avoid relationship ambiguity
     const { data: asset, error: assetError } = await supabaseAdmin
       .from('dam_assets')
-      .select('id, is_archived')
+      .select('id, is_archived, title, use_title_as_filename')
       .eq('id', version.asset_id)
       .maybeSingle();
 
@@ -118,7 +118,18 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     const storage = createStorage();
     const metadata = (version.metadata ?? {}) as Record<string, any>;
-    const downloadName = typeof metadata.originalFileName === 'string' ? metadata.originalFileName : undefined;
+    
+    // Determine download filename: use title if flag is set, otherwise use original filename
+    let downloadName: string | undefined = undefined;
+    if (asset.use_title_as_filename && asset.title) {
+      // Use title as filename - get extension from original filename if available
+      const originalFileName = typeof metadata.originalFileName === 'string' ? metadata.originalFileName : '';
+      const extension = originalFileName ? originalFileName.split('.').pop() : '';
+      downloadName = extension ? `${asset.title}.${extension}` : asset.title;
+    } else if (typeof metadata.originalFileName === 'string') {
+      // Use original filename
+      downloadName = metadata.originalFileName;
+    }
     
     try {
       const signedUrl = await storage.getSignedUrl(targetPath, {

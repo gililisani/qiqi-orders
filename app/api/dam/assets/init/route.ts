@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
         product_name: body.productName ?? null,
         sku: body.sku ?? null,
         search_tags: tagsInput,
+        use_title_as_filename: body.useTitleAsFilename ?? false,
         created_by: adminUser.id,
         updated_by: adminUser.id,
       });
@@ -100,6 +101,7 @@ export async function POST(request: NextRequest) {
           product_name: body.productName ?? null,
           sku: body.sku ?? null,
           search_tags: tagsInput,
+          use_title_as_filename: body.useTitleAsFilename !== undefined ? body.useTitleAsFilename : undefined,
           updated_by: adminUser.id,
           updated_at: new Date().toISOString(),
         })

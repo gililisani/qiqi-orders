@@ -58,6 +58,7 @@ interface UploadFormState {
   file: File | null;
   vimeoVideoId: string; // Vimeo video ID or URL (main video for preview)
   vimeoDownloadFormats: VimeoDownloadFormat[]; // Dynamic download formats
+  useTitleAsFilename: boolean; // Override file name with title
 }
 
 const defaultFormState: UploadFormState = {
@@ -76,6 +77,7 @@ const defaultFormState: UploadFormState = {
   file: null,
   vimeoVideoId: '',
   vimeoDownloadFormats: [],
+  useTitleAsFilename: false, // Default: keep original filename
 };
 
 // Product name options (static list)
@@ -161,7 +163,7 @@ async function logDownload(
 
 async function triggerDownload(
   url: string,
-  filename: string,
+  filename: string | null | undefined,
   assetId: string,
   downloadMethod: string,
   accessToken: string | null,
@@ -187,7 +189,11 @@ async function triggerDownload(
         const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = blobUrl;
-        link.download = filename || 'download';
+        // Only set download attribute if filename is provided (for external URLs like Vimeo)
+        // For asset downloads, let the server's Content-Disposition header handle the filename
+        if (filename) {
+          link.download = filename;
+        }
         document.body.appendChild(link);
         
         // Call onDownloadStart before clicking (save dialog opens here)
@@ -210,7 +216,11 @@ async function triggerDownload(
     // Fallback: create temporary anchor and click it
     const link = document.createElement('a');
     link.href = url;
-    link.download = filename || 'download';
+    // Only set download attribute if filename is provided (for external URLs like Vimeo)
+    // For asset downloads, let the server's Content-Disposition header handle the filename
+    if (filename) {
+      link.download = filename;
+    }
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
     document.body.appendChild(link);
@@ -845,6 +855,7 @@ export default function AdminDigitalAssetManagerPage() {
             primary: code === formState.primaryLocale,
           })),
           regions: formState.selectedRegionCodes,
+          useTitleAsFilename: formState.useTitleAsFilename,
         };
 
         const headers = buildAuthHeaders(accessToken);
@@ -891,6 +902,7 @@ export default function AdminDigitalAssetManagerPage() {
             primary: code === formState.primaryLocale,
           })),
           regions: formState.selectedRegionCodes,
+          useTitleAsFilename: formState.useTitleAsFilename,
         };
 
         const headers = buildAuthHeaders(accessToken);
@@ -969,6 +981,7 @@ export default function AdminDigitalAssetManagerPage() {
           fileName: file.name,
           fileType: file.type || 'application/octet-stream',
           fileSize: file.size,
+          useTitleAsFilename: formState.useTitleAsFilename,
         };
 
         const headers = buildAuthHeaders(accessToken);
@@ -1228,6 +1241,7 @@ export default function AdminDigitalAssetManagerPage() {
           regions: formState.selectedRegionCodes,
           thumbnailData: thumbnailData || undefined,
           thumbnailPath: thumbnailData ? `${Date.now()}-thumb.png` : undefined,
+          useTitleAsFilename: formState.useTitleAsFilename,
         };
 
         const formData = new FormData();
@@ -1838,10 +1852,10 @@ export default function AdminDigitalAssetManagerPage() {
                       const cardDownloadKey = `card-${asset.id}`;
                       setDownloadingFormats(prev => new Set(prev).add(cardDownloadKey));
                       const downloadUrl = ensureTokenUrl(asset.current_version!.downloadPath!, accessToken);
-                      const filename = `${asset.title || 'asset'}.${asset.current_version!.mime_type?.split('/')[1] || 'bin'}`;
+                      // Don't set filename - let server handle it based on use_title_as_filename flag
                       await triggerDownload(
                         downloadUrl,
-                        filename,
+                        null,
                         asset.id,
                         'api',
                         accessToken,
@@ -2467,6 +2481,20 @@ export default function AdminDigitalAssetManagerPage() {
                               {formState.file.name} • {formatBytes(formState.file.size)}
                             </p>
                           )}
+                          {formState.file && (
+                            <div className="mt-2.5 flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id="useTitleAsFilename"
+                                checked={formState.useTitleAsFilename}
+                                onChange={(e) => setFormState((prev) => ({ ...prev, useTitleAsFilename: e.target.checked }))}
+                                className="h-3.5 w-3.5 rounded border-gray-300 text-black focus:ring-black"
+                              />
+                              <label htmlFor="useTitleAsFilename" className="text-xs text-gray-700 cursor-pointer">
+                                Override file name with title
+                              </label>
+                            </div>
+                          )}
                           {isRegulatoryType && (
                             <p className="mt-1.5 text-[10px] text-amber-600">
                               ⚠ For regulatory assets, Product selection is recommended.
@@ -2559,10 +2587,10 @@ export default function AdminDigitalAssetManagerPage() {
               const downloadKey = `asset-action-${asset.id}`;
               setDownloadingFormats(prev => new Set(prev).add(downloadKey));
               const downloadUrl = ensureTokenUrl(asset.current_version.downloadPath, accessToken);
-              const filename = `${asset.title || 'asset'}.${asset.current_version.mime_type?.split('/')[1] || 'bin'}`;
+              // Don't set filename - let server handle it based on use_title_as_filename flag
               await triggerDownload(
                 downloadUrl,
-                filename,
+                null,
                 asset.id,
                 'api',
                 accessToken,
@@ -2602,6 +2630,7 @@ export default function AdminDigitalAssetManagerPage() {
               })(),
               selectedTagSlugs: asset.tags || [],
               selectedLocaleCodes: asset.locales.map(l => l.code) || [],
+              useTitleAsFilename: asset.use_title_as_filename ?? false,
               primaryLocale: asset.locales.find(l => l.is_default)?.code || asset.locales[0]?.code || null,
               selectedRegionCodes: asset.regions.map(r => r.code) || [],
               vimeoVideoId: asset.vimeo_video_id || '',

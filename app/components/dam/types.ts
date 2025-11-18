@@ -48,6 +48,7 @@ export interface AssetRecord {
   vimeo_download_480p?: string | null;
   vimeo_download_360p?: string | null;
   vimeo_download_formats?: VimeoDownloadFormat[] | null;
+  use_title_as_filename?: boolean | null;
   created_at: string;
   current_version?: AssetVersion | null;
   tags: string[];
