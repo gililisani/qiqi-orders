@@ -138,7 +138,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       useTitleAsFilename = false; // Default to false if column doesn't exist
     }
     
-    // Re-fetch asset for title (we already validated it above)
+    // Re-fetch asset for title (we already validated existence and archived status above)
     const { data: asset, error: assetTitleError } = await supabaseAdmin
       .from('dam_assets')
       .select('id, title')
@@ -147,19 +147,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     if (assetTitleError || !asset) {
       console.error('Asset title fetch error:', assetTitleError);
-      // Use fallback - we already validated asset exists above
-    }
-    if (!asset) {
       return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     if (asset.id !== params.id) {
       return NextResponse.json({ error: 'Asset mismatch' }, { status: 404 });
     }
-
-    if (asset.is_archived) {
-      return NextResponse.json({ error: 'Asset archived' }, { status: 410 });
-    }
+    
+    // Note: is_archived was already checked in the try-catch block above
 
     let targetPath: string | null = version.storage_path;
     if (rendition === 'thumbnail' && version.thumbnail_path) {
