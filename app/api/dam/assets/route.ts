@@ -419,11 +419,11 @@ export async function POST(request: NextRequest) {
         product_name: payload.productName ?? null,
         sku: payload.sku ?? null,
         vimeo_video_id: vimeoVideoId,
-        vimeo_download_1080p: payload.vimeoDownload1080p ?? null,
-        vimeo_download_720p: payload.vimeoDownload720p ?? null,
-        vimeo_download_480p: payload.vimeoDownload480p ?? null,
-        vimeo_download_360p: payload.vimeoDownload360p ?? null,
-        // vimeo_download_formats will be added after migration is run
+        // Convert new dynamic formats to legacy fields for now
+        vimeo_download_1080p: payload.vimeoDownload1080p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '1080p')?.url) ?? null,
+        vimeo_download_720p: payload.vimeoDownload720p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '720p')?.url) ?? null,
+        vimeo_download_480p: payload.vimeoDownload480p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '480p')?.url) ?? null,
+        vimeo_download_360p: payload.vimeoDownload360p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '360p')?.url) ?? null,
         search_tags: tagsInput,
         created_by: adminUser.id,
         updated_by: adminUser.id,
@@ -443,11 +443,11 @@ export async function POST(request: NextRequest) {
           product_name: payload.productName ?? null,
           sku: payload.sku ?? null,
           vimeo_video_id: vimeoVideoId,
-          vimeo_download_1080p: payload.vimeoDownload1080p ?? null,
-          vimeo_download_720p: payload.vimeoDownload720p ?? null,
-          vimeo_download_480p: payload.vimeoDownload480p ?? null,
-          vimeo_download_360p: payload.vimeoDownload360p ?? null,
-          // vimeo_download_formats will be added after migration is run
+          // Convert new dynamic formats to legacy fields for now
+          vimeo_download_1080p: payload.vimeoDownload1080p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '1080p')?.url) ?? null,
+          vimeo_download_720p: payload.vimeoDownload720p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '720p')?.url) ?? null,
+          vimeo_download_480p: payload.vimeoDownload480p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '480p')?.url) ?? null,
+          vimeo_download_360p: payload.vimeoDownload360p ?? (payload.vimeoDownloadFormats?.find((f: any) => f.resolution === '360p')?.url) ?? null,
           search_tags: tagsInput,
           updated_by: adminUser.id,
           updated_at: new Date().toISOString(),

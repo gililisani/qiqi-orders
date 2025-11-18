@@ -2683,26 +2683,26 @@ export default function AdminDigitalAssetManagerPage() {
                   {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id && (
                     <button
                       type="button"
-              onClick={() => {
-                if (!isEditingAsset) {
-                  setIsEditingAsset(true);
-                  // Load existing formats or migrate from legacy fields
-                  const existingFormats = selectedAsset.vimeo_download_formats && selectedAsset.vimeo_download_formats.length > 0
-                    ? selectedAsset.vimeo_download_formats
-                    : [
-                        ...(selectedAsset.vimeo_download_1080p ? [{ resolution: '1080p', url: selectedAsset.vimeo_download_1080p }] : []),
-                        ...(selectedAsset.vimeo_download_720p ? [{ resolution: '720p', url: selectedAsset.vimeo_download_720p }] : []),
-                        ...(selectedAsset.vimeo_download_480p ? [{ resolution: '480p', url: selectedAsset.vimeo_download_480p }] : []),
-                        ...(selectedAsset.vimeo_download_360p ? [{ resolution: '360p', url: selectedAsset.vimeo_download_360p }] : []),
-                      ];
-                  setEditingDownloadUrls(existingFormats);
-                } else {
-                  setIsEditingAsset(false);
-                }
-              }}
+                      onClick={() => {
+                        if (!isEditingAsset) {
+                          setIsEditingAsset(true);
+                          // Load existing formats or migrate from legacy fields
+                          const existingFormats = selectedAsset.vimeo_download_formats && selectedAsset.vimeo_download_formats.length > 0
+                            ? selectedAsset.vimeo_download_formats
+                            : [
+                                ...(selectedAsset.vimeo_download_1080p ? [{ resolution: '1080p', url: selectedAsset.vimeo_download_1080p }] : []),
+                                ...(selectedAsset.vimeo_download_720p ? [{ resolution: '720p', url: selectedAsset.vimeo_download_720p }] : []),
+                                ...(selectedAsset.vimeo_download_480p ? [{ resolution: '480p', url: selectedAsset.vimeo_download_480p }] : []),
+                                ...(selectedAsset.vimeo_download_360p ? [{ resolution: '360p', url: selectedAsset.vimeo_download_360p }] : []),
+                              ];
+                          setEditingDownloadUrls(existingFormats);
+                        } else {
+                          setIsEditingAsset(false);
+                        }
+                      }}
                       className="text-sm text-blue-600 hover:text-blue-800 underline"
                     >
-                      {isEditingAsset ? 'Cancel' : 'Edit URLs'}
+                      {isEditingAsset ? 'Cancel' : 'Edit Download URLs'}
                     </button>
                   )}
                 </div>
@@ -2823,44 +2823,44 @@ export default function AdminDigitalAssetManagerPage() {
                                 ...(selectedAsset.vimeo_download_360p ? [{ resolution: '360p', url: selectedAsset.vimeo_download_360p }] : []),
                               ];
                           
-                          return downloadFormats.length > 0 ? (
-                            downloadFormats
-                              .filter((format) => format.url && typeof format.url === 'string' && format.url.trim() !== '')
-                              .map((format) => (
-                                <button
-                                  key={format.resolution}
-                                  type="button"
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                    const filename = `${selectedAsset.title || 'video'}-${format.resolution}.mp4`;
-                                    await triggerDownload(
-                                      format.url!,
-                                      filename,
-                                      selectedAsset.id,
-                                      `video-${format.resolution}`,
-                                      accessToken
-                                    );
-                                  }}
-                                  className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition mr-2"
-                                >
-                                  <ArrowDownTrayIcon className="h-4 w-4" />
-                                  Download {format.resolution}
-                                </button>
-                              ))
-                          ) : null;
+                          const validFormats = downloadFormats.filter((format) => format && format.url && typeof format.url === 'string' && format.url.trim() !== '');
+                          
+                          if (validFormats.length > 0) {
+                            return (
+                              <div className="flex flex-wrap gap-2">
+                                {validFormats.map((format) => (
+                                  <button
+                                    key={format.resolution}
+                                    type="button"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      e.preventDefault();
+                                      if (!accessToken) return;
+                                      const filename = `${selectedAsset.title || 'video'}-${format.resolution}.mp4`;
+                                      await triggerDownload(
+                                        format.url!,
+                                        filename,
+                                        selectedAsset.id,
+                                        `video-${format.resolution}`,
+                                        accessToken
+                                      );
+                                    }}
+                                    className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                                  >
+                                    <ArrowDownTrayIcon className="h-4 w-4" />
+                                    Download {format.resolution}
+                                  </button>
+                                ))}
+                              </div>
+                            );
+                          }
+                          
+                          return (
+                            <p className="text-sm text-gray-500 italic">
+                              No download URLs configured. Click "Edit Download URLs" above to add download links.
+                            </p>
+                          );
                         })()}
-                        
-                        {/* Show message if no download URLs configured */}
-                        {(() => {
-                          const hasFormats = selectedAsset.vimeo_download_formats && selectedAsset.vimeo_download_formats.length > 0;
-                          const hasLegacy = selectedAsset.vimeo_download_1080p || selectedAsset.vimeo_download_720p || selectedAsset.vimeo_download_480p || selectedAsset.vimeo_download_360p;
-                          return !hasFormats && !hasLegacy;
-                        })() && (
-                          <p className="text-sm text-gray-500 italic">
-                            No download URLs configured. Click "Edit URLs" to add download links.
-                          </p>
-                        )}
                       </>
                     )}
                   </div>

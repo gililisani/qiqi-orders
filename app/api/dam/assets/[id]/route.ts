@@ -39,16 +39,20 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       updated_at: new Date().toISOString(),
     };
 
+    // Handle both legacy fields and new dynamic formats
+    if (body.vimeo_download_formats && Array.isArray(body.vimeo_download_formats)) {
+      // Convert new format array to legacy fields
+      body.vimeo_download_formats.forEach((format: any) => {
+        if (format.resolution === '1080p' && format.url) updateData.vimeo_download_1080p = format.url;
+        if (format.resolution === '720p' && format.url) updateData.vimeo_download_720p = format.url;
+        if (format.resolution === '480p' && format.url) updateData.vimeo_download_480p = format.url;
+        if (format.resolution === '360p' && format.url) updateData.vimeo_download_360p = format.url;
+      });
+    }
     if (body.vimeo_download_1080p !== undefined) updateData.vimeo_download_1080p = body.vimeo_download_1080p;
     if (body.vimeo_download_720p !== undefined) updateData.vimeo_download_720p = body.vimeo_download_720p;
     if (body.vimeo_download_480p !== undefined) updateData.vimeo_download_480p = body.vimeo_download_480p;
     if (body.vimeo_download_360p !== undefined) updateData.vimeo_download_360p = body.vimeo_download_360p;
-    // vimeo_download_formats will be enabled after migration is run
-    // if (body.vimeo_download_formats !== undefined) {
-    //   updateData.vimeo_download_formats = Array.isArray(body.vimeo_download_formats) 
-    //     ? body.vimeo_download_formats 
-    //     : null;
-    // }
     if (body.vimeo_video_id !== undefined) updateData.vimeo_video_id = body.vimeo_video_id;
     if (body.title !== undefined) updateData.title = body.title;
     if (body.description !== undefined) updateData.description = body.description;
