@@ -307,7 +307,7 @@ export default function AdminDigitalAssetManagerPage() {
   const [regions, setRegions] = useState<RegionOption[]>([]);
   const [assetTypes, setAssetTypes] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [assetSubtypes, setAssetSubtypes] = useState<Array<{ id: string; name: string; slug: string; asset_type_id: string }>>([]);
-  const [products, setProducts] = useState<Array<{ id: number; item_name: string }>>([]);
+  const [products, setProducts] = useState<Array<{ id: number; item_name: string; sku: string }>>([]);
 
   const [formState, setFormState] = useState<UploadFormState>(defaultFormState);
   const [uploading, setUploading] = useState(false);
@@ -2323,7 +2323,15 @@ export default function AdminDigitalAssetManagerPage() {
                         <label className="block text-xs font-medium text-gray-700 mb-1.5">Product Name</label>
                         <select
                           value={formState.productName}
-                          onChange={(event) => setFormState((prev) => ({ ...prev, productName: event.target.value }))}
+                          onChange={(event) => {
+                            const selectedProductName = event.target.value;
+                            const selectedProduct = products.find(p => p.item_name === selectedProductName);
+                            setFormState((prev) => ({ 
+                              ...prev, 
+                              productName: selectedProductName,
+                              sku: selectedProductName ? (selectedProduct?.sku || '') : '', // Auto-populate SKU from Products table, clear if no product selected
+                            }));
+                          }}
                           className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
                         >
                           <option value="">Select Product</option>
@@ -2335,19 +2343,6 @@ export default function AdminDigitalAssetManagerPage() {
                         </select>
                       </div>
                     </div>
-
-                    {formState.productName && (
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">SKU</label>
-                        <input
-                          type="text"
-                          value={formState.sku}
-                          onChange={(event) => setFormState((prev) => ({ ...prev, sku: event.target.value }))}
-                          className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
-                          placeholder="Optional"
-                        />
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -3213,7 +3208,14 @@ export default function AdminDigitalAssetManagerPage() {
                         assetSubtypeId: selectedAsset.asset_subtype_id || '',
                         productLine: selectedAsset.product_line || '',
                         productName: selectedAsset.product_name || '',
-                        sku: selectedAsset.sku || '',
+                        sku: (() => {
+                          // Auto-populate SKU from Products table if product is selected
+                          if (selectedAsset.product_name) {
+                            const product = products.find(p => p.item_name === selectedAsset.product_name);
+                            return product?.sku || selectedAsset.sku || '';
+                          }
+                          return '';
+                        })(),
                         selectedTagSlugs: selectedAsset.tags || [],
                         selectedLocaleCodes: selectedAsset.locales.map(l => l.code) || [],
                         primaryLocale: selectedAsset.locales.find(l => l.is_default)?.code || selectedAsset.locales[0]?.code || null,

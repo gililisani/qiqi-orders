@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       supabaseAdmin.from('dam_regions').select('*').order('label', { ascending: true }),
       supabaseAdmin.from('dam_asset_types').select('*').eq('active', true).order('display_order', { ascending: true }),
       supabaseAdmin.from('dam_asset_subtypes').select('*').eq('active', true).order('display_order', { ascending: true }),
-      supabaseAdmin.from('Products').select('id, item_name').eq('enable', true).order('item_name', { ascending: true }),
+      supabaseAdmin.from('Products').select('id, item_name, sku').eq('enable', true).order('item_name', { ascending: true }),
     ]);
 
     if (tagsRes.error) throw tagsRes.error;
@@ -65,6 +65,7 @@ export async function GET(request: NextRequest) {
       products: (productsRes.data ?? []).map((product) => ({
         id: product.id,
         item_name: product.item_name,
+        sku: product.sku || '',
       })),
     });
   } catch (err: any) {
