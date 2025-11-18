@@ -937,6 +937,52 @@ export default function AdminDigitalAssetManagerPage() {
       }
 
       // Handle file uploads (images, PDFs, documents)
+      // If editing existing asset and no file provided, just update metadata
+      if (isEditingExistingAsset && editingAssetId && !formState.file) {
+        // Update metadata only (no file upload)
+        const payload = {
+          assetId: editingAssetId,
+          title: formState.title.trim(),
+          description: formState.description.trim() || undefined,
+          assetType: formState.assetType,
+          assetTypeId: formState.assetTypeId,
+          assetSubtypeId: formState.assetSubtypeId,
+          productLine: formState.productLine.trim() || undefined,
+          productName: formState.productName.trim() || undefined,
+          sku: formState.sku.trim() || undefined,
+          tags: formState.selectedTagSlugs,
+          audiences: [],
+          locales: formState.selectedLocaleCodes.map((code) => ({
+            code,
+            primary: code === formState.primaryLocale,
+          })),
+          regions: formState.selectedRegionCodes,
+        };
+
+        const headers = buildAuthHeaders(accessToken);
+        const response = await fetch('/api/dam/assets', {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || 'Update failed');
+        }
+
+        setSuccessMessage('Asset updated successfully.');
+        resetForm();
+        fetchAssets(accessToken);
+        setUploading(false);
+        return;
+      }
+
+      // If we get here, we have a file to upload
       const file = formState.file!;
       
       // Generate PDF thumbnail if needed (don't block upload if it fails)
@@ -1230,10 +1276,14 @@ export default function AdminDigitalAssetManagerPage() {
       } else {
         // For small files, use API route (existing implementation)
         const payload = {
+          assetId: isEditingExistingAsset && editingAssetId ? editingAssetId : undefined,
           title: formState.title.trim(),
           description: formState.description.trim() || undefined,
           assetType: formState.assetType,
+          assetTypeId: formState.assetTypeId,
+          assetSubtypeId: formState.assetSubtypeId,
           productLine: formState.productLine.trim() || undefined,
+          productName: formState.productName.trim() || undefined,
           sku: formState.sku.trim() || undefined,
           tags: formState.selectedTagSlugs,
           audiences: [],
