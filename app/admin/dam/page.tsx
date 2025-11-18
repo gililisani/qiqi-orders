@@ -185,9 +185,9 @@ async function triggerDownload(
       });
       
       if (response.ok) {
-        // Extract filename from Content-Disposition header if available (this is the source of truth from server)
+        // Extract filename from Content-Disposition header if available (preferred source)
         const contentDisposition = response.headers.get('content-disposition');
-        let downloadFilename = filename || 'download';
+        let downloadFilename: string | null = null;
         if (contentDisposition) {
           // Try to extract filename from Content-Disposition header
           // Format: attachment; filename="file.jpg" or attachment; filename*=UTF-8''file.jpg
@@ -202,9 +202,9 @@ async function triggerDownload(
             }
           }
         }
-        // If we still don't have a good filename and one was provided, use it
-        if (downloadFilename === 'download' && filename && filename !== 'download') {
-          downloadFilename = filename;
+        // Fallback to provided filename if header extraction failed
+        if (!downloadFilename) {
+          downloadFilename = filename || 'download';
         }
         
         const blob = await response.blob();
@@ -233,14 +233,11 @@ async function triggerDownload(
     }
     
     // Fallback: create temporary anchor and click it
-    // For download endpoints, the server sets Content-Disposition header which browser will use
-    // Don't set download attribute here - let the server's Content-Disposition header handle the filename
+    // Set download attribute to force download and use provided filename
     const link = document.createElement('a');
     link.href = url;
-    // Only set download attribute for external URLs (like Vimeo) where we provide the filename
-    if (filename) {
-      link.download = filename;
-    }
+    // Always set download attribute to force download (use provided filename or default)
+    link.download = filename || 'download';
     // Don't set target='_blank' for downloads - we want the download to happen, not open in new tab
     link.rel = 'noopener noreferrer';
     document.body.appendChild(link);
@@ -1872,11 +1869,17 @@ export default function AdminDigitalAssetManagerPage() {
                       const cardDownloadKey = `card-${asset.id}`;
                       setDownloadingFormats(prev => new Set(prev).add(cardDownloadKey));
                       const downloadUrl = ensureTokenUrl(asset.current_version!.downloadPath!, accessToken);
-                      // Filename will be extracted from Content-Disposition header by triggerDownload
-                      // Pass null to let the server's Content-Disposition header be the source of truth
+                      // Determine filename: use title if checkbox is checked, otherwise use original filename
+                      let downloadFilename: string | null = null;
+                      if (asset.use_title_as_filename && asset.title && asset.current_version?.mime_type) {
+                        const ext = asset.current_version.mime_type.split('/')[1] || 'bin';
+                        downloadFilename = `${asset.title}.${ext}`;
+                      } else if (asset.current_version?.originalFileName) {
+                        downloadFilename = asset.current_version.originalFileName;
+                      }
                       await triggerDownload(
                         downloadUrl,
-                        null,
+                        downloadFilename,
                         asset.id,
                         'api',
                         accessToken,
@@ -2608,11 +2611,17 @@ export default function AdminDigitalAssetManagerPage() {
               const downloadKey = `asset-action-${asset.id}`;
               setDownloadingFormats(prev => new Set(prev).add(downloadKey));
               const downloadUrl = ensureTokenUrl(asset.current_version.downloadPath, accessToken);
-              // Filename will be extracted from Content-Disposition header by triggerDownload
-              // Pass null to let the server's Content-Disposition header be the source of truth
+              // Determine filename: use title if checkbox is checked, otherwise use original filename
+              let downloadFilename: string | null = null;
+              if (asset.use_title_as_filename && asset.title && asset.current_version.mime_type) {
+                const ext = asset.current_version.mime_type.split('/')[1] || 'bin';
+                downloadFilename = `${asset.title}.${ext}`;
+              } else if (asset.current_version.originalFileName) {
+                downloadFilename = asset.current_version.originalFileName;
+              }
               await triggerDownload(
                 downloadUrl,
-                null,
+                downloadFilename,
                 asset.id,
                 'api',
                 accessToken,

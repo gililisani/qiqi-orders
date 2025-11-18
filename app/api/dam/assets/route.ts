@@ -261,6 +261,10 @@ export async function GET(request: NextRequest) {
 
     const assets = (assetsData ?? []).map((record: any) => {
       const currentVersionRaw = versionsByAsset.get(record.id) ?? null;
+      // Extract originalFileName from metadata
+      const metadata = currentVersionRaw?.metadata as Record<string, any> | null;
+      const originalFileName = metadata?.originalFileName || null;
+      
       const currentVersion = currentVersionRaw
         ? {
             id: currentVersionRaw.id,
@@ -280,6 +284,7 @@ export async function GET(request: NextRequest) {
               currentVersionRaw.id,
               currentVersionRaw.thumbnail_path ? 'thumbnail' : 'original'
             ),
+            originalFileName: originalFileName,
           }
         : null;
 

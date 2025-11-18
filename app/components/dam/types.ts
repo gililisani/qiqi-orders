@@ -25,6 +25,7 @@ export interface AssetVersion {
   height?: number | null;
   downloadPath?: string | null;
   previewPath?: string | null;
+  originalFileName?: string | null; // Original uploaded filename from metadata
 }
 
 export interface VimeoDownloadFormat {
