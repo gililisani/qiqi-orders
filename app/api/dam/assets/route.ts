@@ -228,24 +228,42 @@ export async function GET(request: NextRequest) {
 
     // Try to fetch vimeo_download_formats separately if column exists
     let downloadFormatsByAsset: Record<string, any> = {};
-    try {
-      const { data: formatsData } = await supabaseAdmin
-        .from('dam_assets')
-        .select('id, vimeo_download_formats')
-        .in('id', assetsData.map((a: any) => a.id));
-      
-      if (formatsData) {
-        formatsData.forEach((row: any) => {
-          if (row.vimeo_download_formats) {
-            downloadFormatsByAsset[row.id] = typeof row.vimeo_download_formats === 'string'
-              ? JSON.parse(row.vimeo_download_formats)
-              : row.vimeo_download_formats;
+    if (assetsData && assetsData.length > 0) {
+      try {
+        const { data: formatsData, error: formatsError } = await supabaseAdmin
+          .from('dam_assets')
+          .select('id, vimeo_download_formats')
+          .in('id', assetsData.map((a: any) => a.id));
+        
+        // If error indicates column doesn't exist, that's fine - we'll use legacy fields
+        if (formatsError) {
+          // Check if it's a column not found error
+          const errorMessage = formatsError.message || '';
+          if (errorMessage.includes('column') && errorMessage.includes('vimeo_download_formats')) {
+            // Column doesn't exist - that's okay
+            console.log('vimeo_download_formats column not available yet');
+          } else {
+            // Some other error - log it but don't fail
+            console.error('Error fetching vimeo_download_formats:', formatsError);
           }
-        });
+        } else if (formatsData) {
+          formatsData.forEach((row: any) => {
+            if (row.vimeo_download_formats) {
+              downloadFormatsByAsset[row.id] = typeof row.vimeo_download_formats === 'string'
+                ? JSON.parse(row.vimeo_download_formats)
+                : row.vimeo_download_formats;
+            }
+          });
+        }
+      } catch (formatsError: any) {
+        // Column doesn't exist yet or other error - that's okay, we'll use legacy fields
+        const errorMessage = formatsError?.message || '';
+        if (errorMessage.includes('column') || errorMessage.includes('vimeo_download_formats')) {
+          console.log('vimeo_download_formats column not available yet');
+        } else {
+          console.error('Error fetching vimeo_download_formats:', formatsError);
+        }
       }
-    } catch (formatsError) {
-      // Column doesn't exist yet - that's okay, we'll use legacy fields
-      console.log('vimeo_download_formats column not available yet');
     }
 
     const assets = (assetsData ?? []).map((record: any) => {
