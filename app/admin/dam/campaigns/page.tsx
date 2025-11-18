@@ -136,6 +136,14 @@ export default function CampaignsPage() {
       campaignsCount: campaigns.length
     });
     
+    // Safety timeout - if we've been loading for more than 5 seconds without a token, stop loading
+    const timeoutId = setTimeout(() => {
+      if (loading && !accessToken && !fetching) {
+        console.warn('Loading timeout - stopping loading state');
+        setLoading(false);
+      }
+    }, 5000);
+    
     if (accessToken && !fetching) {
       console.log('Conditions met, calling fetchCampaigns');
       fetchCampaigns();
@@ -152,6 +160,8 @@ export default function CampaignsPage() {
         fetching 
       });
     }
+    
+    return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, session]); // fetchCampaigns intentionally excluded to prevent infinite loops
 
