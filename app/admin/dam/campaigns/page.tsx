@@ -26,10 +26,8 @@ interface Campaign {
 }
 
 export default function CampaignsPage() {
-  console.log('CampaignsPage component rendering');
   const router = useRouter();
   const { session, supabase } = useSupabase();
-  console.log('useSupabase returned:', { hasSession: !!session, hasSupabase: !!supabase });
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -43,22 +41,13 @@ export default function CampaignsPage() {
 
   const [accessToken, setAccessToken] = useState<string | null>(session?.access_token ?? null);
 
-  // Try to get session from Supabase if not available from provider
+  // Get session from Supabase if not available from provider (same pattern as DAM page)
   useEffect(() => {
-    console.log('Session fetch effect running', { hasAccessToken: !!accessToken, hasSupabase: !!supabase });
     let active = true;
     if (!accessToken && supabase) {
-      console.log('Fetching session from supabase...');
       supabase.auth.getSession().then(({ data }: { data: { session: { access_token: string } | null } }) => {
-        if (!active) {
-          console.log('Component unmounted, ignoring session fetch');
-          return;
-        }
-        const token = data.session?.access_token ?? null;
-        console.log('Fetched session from supabase:', { hasToken: !!token, tokenPreview: token ? token.substring(0, 20) + '...' : 'none' });
-        setAccessToken(token);
-      }).catch((err: any) => {
-        console.error('Error fetching session from supabase:', err);
+        if (!active) return;
+        setAccessToken(data.session?.access_token ?? null);
       });
     }
     return () => {
@@ -66,104 +55,42 @@ export default function CampaignsPage() {
     };
   }, [accessToken, supabase]);
 
-  // Also update token when session from provider changes
+  // Update token when session from provider changes
   useEffect(() => {
-    console.log('Session provider effect running', { hasSession: !!session, hasToken: !!session?.access_token });
     if (session?.access_token) {
-      console.log('Session token updated from provider');
       setAccessToken(session.access_token);
     }
   }, [session]);
 
-  const [fetching, setFetching] = useState(false);
-
-  const fetchCampaigns = useCallback(async () => {
-    if (!accessToken) {
-      console.warn('No access token available, cannot fetch campaigns', { session: !!session });
-      setLoading(false);
-      return;
-    }
-
-    // Prevent duplicate fetches
-    if (fetching) {
-      console.log('Fetch already in progress, skipping...');
-      return;
-    }
-
-    try {
-      setFetching(true);
-      setLoading(true);
-      console.log('Fetching campaigns with token:', accessToken.substring(0, 20) + '...');
-      const headers: Record<string, string> = {
-        Authorization: `Bearer ${accessToken}`,
-      };
-
-      const response = await fetch('/api/campaigns', { 
-        headers,
-        signal: AbortSignal.timeout(30000) // 30 second timeout
-      });
-      console.log('Campaigns fetch response:', response.status, response.statusText);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Campaigns fetch error:', errorData);
-        throw new Error(errorData.error || 'Failed to fetch campaigns');
-      }
-
-      const data = await response.json();
-      console.log('Campaigns data received:', data);
-      setCampaigns(data.campaigns || []);
-    } catch (err: any) {
-      console.error('Failed to load campaigns', err);
-      if (err.name === 'AbortError' || err.name === 'TimeoutError') {
-        console.error('Request timed out');
-      }
-      // Set empty campaigns array on error so page doesn't stay in loading state
-      setCampaigns([]);
-    } finally {
-      setLoading(false);
-      setFetching(false);
-    }
-  }, [accessToken, session, fetching]);
-
+  // Fetch campaigns when we have a token (same pattern as DAM page)
   useEffect(() => {
-    console.log('Campaigns page - Main effect running:', { 
-      hasSession: !!session, 
-      hasToken: !!accessToken,
-      tokenPreview: accessToken ? accessToken.substring(0, 20) + '...' : 'none',
-      fetching,
-      loading,
-      campaignsCount: campaigns.length
-    });
-    
-    // Safety timeout - if we've been loading for more than 5 seconds without a token, stop loading
-    const timeoutId = setTimeout(() => {
-      if (loading && !accessToken && !fetching) {
-        console.warn('Loading timeout - stopping loading state');
+    if (!accessToken) return;
+
+    const fetchCampaigns = async () => {
+      try {
+        setLoading(true);
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${accessToken}`,
+        };
+
+        const response = await fetch('/api/campaigns', { headers });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch campaigns');
+        }
+
+        const data = await response.json();
+        setCampaigns(data.campaigns || []);
+      } catch (err) {
+        console.error('Failed to load campaigns', err);
+        setCampaigns([]);
+      } finally {
         setLoading(false);
       }
-    }, 5000);
-    
-    if (accessToken && !fetching) {
-      console.log('Conditions met, calling fetchCampaigns');
-      fetchCampaigns();
-    } else if (accessToken && fetching) {
-      console.log('Fetch already in progress, waiting...');
-    } else if (session === null && !accessToken) {
-      // Session loaded but no token - user not authenticated
-      console.warn('Session loaded but no access token - stopping loading');
-      setLoading(false);
-    } else {
-      console.log('Waiting for session/token...', { 
-        session: session === null ? 'null' : session === undefined ? 'undefined' : 'exists',
-        hasToken: !!accessToken,
-        fetching 
-      });
-    }
-    
-    return () => clearTimeout(timeoutId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken, session]); // fetchCampaigns intentionally excluded to prevent infinite loops
+    };
+
+    fetchCampaigns();
+  }, [accessToken]);
 
   const handleCreateCampaign = async () => {
     if (!newCampaign.name.trim()) {
@@ -228,30 +155,10 @@ export default function CampaignsPage() {
     return null;
   };
 
-  // Show loading state only if we're actually loading AND have a token or session is loaded
-  // After 10 seconds, always show content even if still loading (safety fallback)
-  const [showContent, setShowContent] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowContent(true);
-      setLoading(false); // Force stop loading after 10 seconds
-    }, 10000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (loading && !showContent && (accessToken || session !== null)) {
+  if (loading) {
     return (
       <div className="p-8">
         <div className="text-center text-gray-500">Loading campaigns...</div>
-      </div>
-    );
-  }
-
-  // If we don't have a token and session is explicitly null, show auth error
-  if (!accessToken && session === null && !showContent) {
-    return (
-      <div className="p-8">
-        <div className="text-center text-red-500">Please log in to view campaigns.</div>
       </div>
     );
   }
