@@ -2685,12 +2685,16 @@ export default function AdminDigitalAssetManagerPage() {
               onClick={() => {
                 if (!isEditingAsset) {
                   setIsEditingAsset(true);
-                  setEditingDownloadUrls({
-                    vimeo_download_1080p: selectedAsset.vimeo_download_1080p || '',
-                    vimeo_download_720p: selectedAsset.vimeo_download_720p || '',
-                    vimeo_download_480p: selectedAsset.vimeo_download_480p || '',
-                    vimeo_download_360p: selectedAsset.vimeo_download_360p || '',
-                  });
+                  // Load existing formats or migrate from legacy fields
+                  const existingFormats = selectedAsset.vimeo_download_formats && selectedAsset.vimeo_download_formats.length > 0
+                    ? selectedAsset.vimeo_download_formats
+                    : [
+                        ...(selectedAsset.vimeo_download_1080p ? [{ resolution: '1080p', url: selectedAsset.vimeo_download_1080p }] : []),
+                        ...(selectedAsset.vimeo_download_720p ? [{ resolution: '720p', url: selectedAsset.vimeo_download_720p }] : []),
+                        ...(selectedAsset.vimeo_download_480p ? [{ resolution: '480p', url: selectedAsset.vimeo_download_480p }] : []),
+                        ...(selectedAsset.vimeo_download_360p ? [{ resolution: '360p', url: selectedAsset.vimeo_download_360p }] : []),
+                      ];
+                  setEditingDownloadUrls(existingFormats);
                 } else {
                   setIsEditingAsset(false);
                 }
