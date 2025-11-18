@@ -541,7 +541,12 @@ export default function AdminDigitalAssetManagerPage() {
       // Refresh assets list
       await fetchAssets(accessToken, undefined, currentPage);
       setSelectedAssetIds(new Set());
-      setSuccessMessage('Asset deleted successfully.');
+      
+      // Close the popup if it's open
+      setSelectedAsset(null);
+      setIsEditingAsset(false);
+      
+      // Don't set success message - deletion happens outside drawer
     } catch (err: any) {
       console.error('Failed to delete asset', err);
       setError(err.message || 'Failed to delete asset');
@@ -1514,7 +1519,12 @@ export default function AdminDigitalAssetManagerPage() {
             {/* Upload Button */}
             <button
               type="button"
-              onClick={() => setIsUploadDrawerOpen(true)}
+              onClick={() => {
+                // Clear any previous messages when opening drawer
+                setSuccessMessage('');
+                setError('');
+                setIsUploadDrawerOpen(true);
+              }}
               className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
             >
               <ArrowUpTrayIcon className="h-4 w-4" />
@@ -2042,7 +2052,8 @@ export default function AdminDigitalAssetManagerPage() {
                   {error}
                 </div>
               )}
-              {successMessage && (
+              {/* Only show success message for uploads, not deletions */}
+              {successMessage && successMessage.includes('uploaded') && (
                 <div className="mb-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">
                   {successMessage}
                 </div>
