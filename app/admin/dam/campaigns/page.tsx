@@ -57,7 +57,7 @@ export default function CampaignsPage() {
         const token = data.session?.access_token ?? null;
         console.log('Fetched session from supabase:', { hasToken: !!token, tokenPreview: token ? token.substring(0, 20) + '...' : 'none' });
         setAccessToken(token);
-      }).catch((err) => {
+      }).catch((err: any) => {
         console.error('Error fetching session from supabase:', err);
       });
     }
