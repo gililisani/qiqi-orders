@@ -12,6 +12,9 @@ function createSupabaseAdminClient() {
       autoRefreshToken: false,
       persistSession: false,
     },
+    db: {
+      schema: 'public',
+    },
   });
 }
 
@@ -39,6 +42,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const auth = createAuth();
     await auth.requireRole(request, 'admin');
 
+    if (!SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY is not configured');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const supabaseAdmin = createSupabaseAdminClient();
 
     // Fetch campaign
@@ -47,6 +55,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: 'Campaign ID is required' }, { status: 400 });
     }
 
+    console.log('Fetching campaign with ID:', campaignId);
+
     const { data: campaign, error: campaignError } = await supabaseAdmin
       .from('campaigns')
       .select('*')
@@ -54,6 +64,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       .single();
 
     if (campaignError) {
+      console.error('Campaign query error:', {
+        code: campaignError.code,
+        message: campaignError.message,
+        details: campaignError.details,
+        hint: campaignError.hint,
+      });
+      
       // Check if it's a "not found" error (PGRST116)
       if (campaignError.code === 'PGRST116' || campaignError.message?.includes('No rows')) {
         return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
@@ -62,8 +79,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
     
     if (!campaign) {
+      console.error('Campaign query returned null data');
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
     }
+
+    console.log('Campaign found:', campaign.id, campaign.name);
 
     // Fetch asset IDs in this campaign
     const { data: campaignAssets, error: campaignAssetsError } = await supabaseAdmin

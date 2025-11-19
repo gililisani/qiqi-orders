@@ -75,11 +75,17 @@ export default function CampaignDetailPage() {
     }
     try {
       setStatus('loading');
+      console.log('Fetching campaign:', campaignId);
       const headers = buildAuthHeaders(accessToken);
       const response = await fetch(`/api/campaigns/${campaignId}`, { headers });
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('Campaign fetch failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+        });
         const errorMsg = errorData.error || `Failed to fetch campaign: ${response.status}`;
         setStatus('error');
         setErrorMessage(errorMsg);
@@ -89,6 +95,21 @@ export default function CampaignDetailPage() {
       }
 
       const data = await response.json();
+      console.log('Campaign data received:', {
+        hasCampaign: !!data.campaign,
+        campaignId: data.campaign?.id,
+        assetsCount: data.assets?.length || 0,
+      });
+      
+      if (!data.campaign) {
+        console.error('API returned success but no campaign data');
+        setStatus('error');
+        setErrorMessage('Campaign data is missing');
+        setCampaign(null);
+        setAssets([]);
+        return;
+      }
+      
       setCampaign(data.campaign);
       setAssets(data.assets || []);
       setStatus('success');
