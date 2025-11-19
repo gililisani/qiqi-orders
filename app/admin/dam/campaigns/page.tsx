@@ -27,9 +27,9 @@ interface Campaign {
 
 export default function CampaignsPage() {
   const router = useRouter();
-  const { session, supabase } = useSupabase();
+  const { session } = useSupabase();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(false); // Start as false, only set true when actually fetching
+  const [loading, setLoading] = useState(true); // Start as true - we're checking session
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newCampaign, setNewCampaign] = useState({
     name: '',
@@ -39,33 +39,12 @@ export default function CampaignsPage() {
     endDate: '',
   });
 
-  const [accessToken, setAccessToken] = useState<string | null>(session?.access_token ?? null);
+  // Use session directly - session is provided server-side, so it's available immediately
+  const accessToken = session?.access_token ?? null;
 
-  // Get session from Supabase if not available from provider (same pattern as DAM page)
-  useEffect(() => {
-    let active = true;
-    if (!accessToken && supabase) {
-      supabase.auth.getSession().then(({ data }: { data: { session: { access_token: string } | null } }) => {
-        if (!active) return;
-        setAccessToken(data.session?.access_token ?? null);
-      });
-    }
-    return () => {
-      active = false;
-    };
-  }, [accessToken, supabase]);
-
-  // Update token when session from provider changes
-  useEffect(() => {
-    if (session?.access_token) {
-      setAccessToken(session.access_token);
-    }
-  }, [session]);
-
-  // Fetch campaigns when we have a token
+  // Fetch campaigns immediately - session is already available from server
   useEffect(() => {
     if (!accessToken) {
-      // No token available, stop loading
       setLoading(false);
       return;
     }
@@ -74,7 +53,6 @@ export default function CampaignsPage() {
 
     const fetchCampaigns = async () => {
       try {
-        setLoading(true);
         const headers: Record<string, string> = {
           Authorization: `Bearer ${accessToken}`,
         };

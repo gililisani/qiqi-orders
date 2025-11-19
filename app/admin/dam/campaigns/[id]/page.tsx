@@ -35,7 +35,7 @@ export default function CampaignDetailPage() {
   const { session } = useSupabase();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [assets, setAssets] = useState<AssetRecord[]>([]);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('loading');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [showAddAssetsModal, setShowAddAssetsModal] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
@@ -45,7 +45,8 @@ export default function CampaignDetailPage() {
   const [assetTypes, setAssetTypes] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [assetSubtypes, setAssetSubtypes] = useState<Array<{ id: string; name: string; slug: string; asset_type_id: string }>>([]);
 
-  const accessToken = session?.access_token || null;
+  // Use session directly - no need for separate accessToken state
+  const accessToken = session?.access_token ?? null;
 
   const fetchLookups = async () => {
     if (!accessToken) return;
@@ -68,24 +69,25 @@ export default function CampaignDetailPage() {
   };
 
   const fetchCampaign = async () => {
-    if (!campaignId || !accessToken) {
+    if (!campaignId) {
+      setStatus('error');
+      setErrorMessage('Campaign ID is required');
+      return;
+    }
+
+    if (!accessToken) {
       setStatus('error');
       setErrorMessage('Authentication required');
       return;
     }
+
     try {
       setStatus('loading');
-      console.log('Fetching campaign:', campaignId);
       const headers = buildAuthHeaders(accessToken);
       const response = await fetch(`/api/campaigns/${campaignId}`, { headers });
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Campaign fetch failed:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData,
-        });
         const errorMsg = errorData.error || `Failed to fetch campaign: ${response.status}`;
         setStatus('error');
         setErrorMessage(errorMsg);
@@ -95,14 +97,8 @@ export default function CampaignDetailPage() {
       }
 
       const data = await response.json();
-      console.log('Campaign data received:', {
-        hasCampaign: !!data.campaign,
-        campaignId: data.campaign?.id,
-        assetsCount: data.assets?.length || 0,
-      });
       
       if (!data.campaign) {
-        console.error('API returned success but no campaign data');
         setStatus('error');
         setErrorMessage('Campaign data is missing');
         setCampaign(null);
@@ -123,13 +119,20 @@ export default function CampaignDetailPage() {
   };
 
   useEffect(() => {
-    if (campaignId && accessToken) {
-      fetchCampaign();
-      fetchLookups();
-    } else if (!accessToken) {
+    if (!campaignId) {
+      setStatus('error');
+      setErrorMessage('Campaign ID is required');
+      return;
+    }
+
+    if (!accessToken) {
       setStatus('error');
       setErrorMessage('Authentication required');
+      return;
     }
+
+    fetchCampaign();
+    fetchLookups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId, accessToken]);
 
