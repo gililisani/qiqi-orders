@@ -11,6 +11,9 @@ import {
 } from '@heroicons/react/24/outline';
 import { ensureTokenUrl } from '../../../components/dam/utils';
 
+// Note: We use Supabase directly (like Products/Orders pages) instead of API routes
+// RLS policies handle authentication automatically - no need for manual token management
+
 interface Campaign {
   id: string;
   name: string;
@@ -39,36 +42,9 @@ export default function CampaignsPage() {
     endDate: '',
   });
 
-  const [accessToken, setAccessToken] = useState<string | null>(session?.access_token ?? null);
-
-  // Fallback: Get session from Supabase if not available from provider (same pattern as DAM page)
+  // Fetch campaigns directly from Supabase - RLS handles authentication automatically
   useEffect(() => {
-    let active = true;
-    if (!accessToken && supabase) {
-      supabase.auth.getSession().then(({ data }: { data: { session: { access_token: string } | null } }) => {
-        if (!active) return;
-        setAccessToken(data.session?.access_token ?? null);
-      });
-    }
-    return () => {
-      active = false;
-    };
-  }, [accessToken, supabase]);
-
-  // Update token when session from provider changes
-  useEffect(() => {
-    if (session?.access_token) {
-      setAccessToken(session.access_token);
-    }
-  }, [session]);
-
-  // Fetch campaigns when we have a token
-  useEffect(() => {
-    if (!accessToken) {
-      console.log('Campaigns page: No access token available', { 
-        hasSession: !!session, 
-        sessionHasToken: !!session?.access_token 
-      });
+    if (!supabase) {
       setLoading(false);
       return;
     }
@@ -77,25 +53,85 @@ export default function CampaignsPage() {
 
     const fetchCampaigns = async () => {
       try {
-        console.log('Campaigns page: Fetching campaigns with token');
-        const headers: Record<string, string> = {
-          Authorization: `Bearer ${accessToken}`,
-        };
+        // Fetch campaigns directly - RLS policies ensure only admins can access
+        const { data: campaignsData, error: campaignsError } = await supabase
+          .from('campaigns')
+          .select(`
+            id,
+            name,
+            description,
+            thumbnail_asset_id,
+            product_line,
+            start_date,
+            end_date,
+            created_at,
+            updated_at
+          `)
+          .order('created_at', { ascending: false });
 
-        const response = await fetch('/api/campaigns', { headers });
-        
         if (cancelled) return;
-        
-        if (!response.ok) {
-          const errorText = await response.text().catch(() => 'Unknown error');
-          console.error('Campaigns fetch failed:', { status: response.status, error: errorText });
-          throw new Error(`Failed to fetch campaigns: ${response.status} ${errorText}`);
+
+        if (campaignsError) {
+          console.error('Failed to fetch campaigns:', campaignsError);
+          setCampaigns([]);
+          setLoading(false);
+          return;
         }
 
-        const data = await response.json();
-        console.log('Campaigns fetched successfully:', { count: data.campaigns?.length || 0 });
+        // Fetch asset counts for each campaign
+        const campaignIds = (campaignsData || []).map(c => c.id);
+        let countsByCampaign: Record<string, number> = {};
+        
+        if (campaignIds.length > 0) {
+          const { data: assetCounts } = await supabase
+            .from('campaign_assets')
+            .select('campaign_id')
+            .in('campaign_id', campaignIds);
+
+          if (assetCounts) {
+            countsByCampaign = assetCounts.reduce((acc: Record<string, number>, row) => {
+              acc[row.campaign_id] = (acc[row.campaign_id] || 0) + 1;
+              return acc;
+            }, {});
+          }
+        }
+
+        // Fetch thumbnail paths
+        const thumbnailAssetIds = (campaignsData || [])
+          .map(c => c.thumbnail_asset_id)
+          .filter((id): id is string => Boolean(id));
+
+        let thumbnailPaths: Record<string, string | null> = {};
+        if (thumbnailAssetIds.length > 0) {
+          const { data: versions } = await supabase
+            .from('dam_asset_versions')
+            .select('asset_id, thumbnail_path')
+            .in('asset_id', thumbnailAssetIds)
+            .order('version_number', { ascending: false });
+
+          if (versions) {
+            const latestVersions = new Map<string, string | null>();
+            versions.forEach(v => {
+              if (!latestVersions.has(v.asset_id)) {
+                latestVersions.set(v.asset_id, v.thumbnail_path);
+              }
+            });
+
+            campaignsData?.forEach(campaign => {
+              if (campaign.thumbnail_asset_id) {
+                thumbnailPaths[campaign.id] = latestVersions.get(campaign.thumbnail_asset_id) || null;
+              }
+            });
+          }
+        }
+
         if (!cancelled) {
-          setCampaigns(data.campaigns || []);
+          const campaignsWithCounts = (campaignsData || []).map(campaign => ({
+            ...campaign,
+            asset_count: countsByCampaign[campaign.id] || 0,
+            thumbnail_path: thumbnailPaths[campaign.id] || null,
+          }));
+          setCampaigns(campaignsWithCounts);
         }
       } catch (err: any) {
         if (!cancelled) {
@@ -114,7 +150,7 @@ export default function CampaignsPage() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, session]);
+  }, [supabase]);
 
   const handleCreateCampaign = async () => {
     if (!newCampaign.name.trim()) {
@@ -122,39 +158,30 @@ export default function CampaignsPage() {
       return;
     }
 
-    if (!accessToken) {
-      alert('You must be logged in to create a campaign');
+    if (!supabase) {
+      alert('Database connection unavailable');
       return;
     }
 
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      };
+      const { data: campaign, error } = await supabase
+        .from('campaigns')
+        .insert({
+          name: newCampaign.name.trim(),
+          description: newCampaign.description?.trim() || null,
+          product_line: newCampaign.productLine || null,
+          start_date: newCampaign.startDate || null,
+          end_date: newCampaign.endDate || null,
+        })
+        .select()
+        .single();
 
-      const response = await fetch('/api/campaigns', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          name: newCampaign.name,
-          description: newCampaign.description || null,
-          productLine: newCampaign.productLine || null,
-          startDate: newCampaign.startDate || null,
-          endDate: newCampaign.endDate || null,
-        }),
-      });
+      if (error) throw error;
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Campaign creation error:', errorData);
-        throw new Error(errorData.error || errorData.message || 'Failed to create campaign');
+      if (campaign) {
+        // Refresh campaigns list and redirect
+        router.push(`/admin/dam/campaigns/${campaign.id}`);
       }
-
-      const data = await response.json();
-      // Refresh campaigns list before redirecting (use the state directly to avoid dependency issues)
-      setCampaigns(prev => [...prev, data.campaign]);
-      router.push(`/admin/dam/campaigns/${data.campaign.id}`);
     } catch (err: any) {
       console.error('Failed to create campaign', err);
       alert(err.message || 'Failed to create campaign. Check console for details.');
@@ -228,9 +255,9 @@ export default function CampaignsPage() {
             >
               {/* Thumbnail */}
               <div className="relative h-48 bg-gray-100 overflow-hidden">
-                {campaign.thumbnail_path && accessToken ? (
+                {campaign.thumbnail_path ? (
                   <img
-                    src={ensureTokenUrl(campaign.thumbnail_path, accessToken)}
+                    src={ensureTokenUrl(campaign.thumbnail_path, session?.access_token ?? null)}
                     alt={campaign.name}
                     className="h-full w-full object-cover"
                   />
