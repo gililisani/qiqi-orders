@@ -89,7 +89,7 @@ export default function CampaignsPage() {
             .in('campaign_id', campaignIds);
 
           if (assetCounts) {
-            countsByCampaign = assetCounts.reduce((acc: Record<string, number>, row) => {
+            countsByCampaign = assetCounts.reduce((acc: Record<string, number>, row: any) => {
               acc[row.campaign_id] = (acc[row.campaign_id] || 0) + 1;
               return acc;
             }, {});
