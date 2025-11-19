@@ -145,22 +145,16 @@ export default function CampaignDetailPage() {
       return;
     }
 
-    // Wait for session to be available before checking accessToken
-    if (!session) {
-      // Session might still be loading, don't error yet
-      return;
-    }
-
     if (!accessToken) {
-      setStatus('error');
-      setErrorMessage('Authentication required');
+      // Don't set error immediately - accessToken might still be loading from getSession()
+      // The getSession() useEffect will set accessToken when ready, then this will run again
       return;
     }
 
     fetchCampaign();
     fetchLookups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaignId, session, accessToken]);
+  }, [campaignId, accessToken]);
 
   const handleRemoveAsset = async (assetId: string) => {
     if (!window.confirm('Remove this asset from the campaign? Assets will remain in the library.')) {
