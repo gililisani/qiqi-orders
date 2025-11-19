@@ -99,7 +99,7 @@ export default function CampaignsPage() {
         // Fetch thumbnail paths
         const thumbnailAssetIds = (campaignsData || [])
           .map((c: any) => c.thumbnail_asset_id)
-          .filter((id): id is string => Boolean(id));
+          .filter((id: any): id is string => Boolean(id));
 
         let thumbnailPaths: Record<string, string | null> = {};
         if (thumbnailAssetIds.length > 0) {
