@@ -290,7 +290,8 @@ export default function CampaignDetailPage() {
     );
   };
 
-  if (status === 'loading') {
+  // Show loading when status is 'idle' (waiting for session) or 'loading' (fetching data)
+  if (status === 'loading' || status === 'idle') {
     return (
       <div className="p-8">
         <div className="text-center text-gray-500">Loading campaign...</div>
