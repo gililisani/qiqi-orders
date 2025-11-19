@@ -27,7 +27,7 @@ interface Campaign {
 
 export default function CampaignsPage() {
   const router = useRouter();
-  const { session } = useSupabase();
+  const { session, supabase } = useSupabase();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true); // Start as true - we're checking session
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -39,12 +39,36 @@ export default function CampaignsPage() {
     endDate: '',
   });
 
-  // Use session directly - session is provided server-side, so it's available immediately
-  const accessToken = session?.access_token ?? null;
+  const [accessToken, setAccessToken] = useState<string | null>(session?.access_token ?? null);
 
-  // Fetch campaigns immediately - session is already available from server
+  // Fallback: Get session from Supabase if not available from provider (same pattern as DAM page)
+  useEffect(() => {
+    let active = true;
+    if (!accessToken && supabase) {
+      supabase.auth.getSession().then(({ data }: { data: { session: { access_token: string } | null } }) => {
+        if (!active) return;
+        setAccessToken(data.session?.access_token ?? null);
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [accessToken, supabase]);
+
+  // Update token when session from provider changes
+  useEffect(() => {
+    if (session?.access_token) {
+      setAccessToken(session.access_token);
+    }
+  }, [session]);
+
+  // Fetch campaigns when we have a token
   useEffect(() => {
     if (!accessToken) {
+      console.log('Campaigns page: No access token available', { 
+        hasSession: !!session, 
+        sessionHasToken: !!session?.access_token 
+      });
       setLoading(false);
       return;
     }
@@ -53,6 +77,7 @@ export default function CampaignsPage() {
 
     const fetchCampaigns = async () => {
       try {
+        console.log('Campaigns page: Fetching campaigns with token');
         const headers: Record<string, string> = {
           Authorization: `Bearer ${accessToken}`,
         };
@@ -63,10 +88,12 @@ export default function CampaignsPage() {
         
         if (!response.ok) {
           const errorText = await response.text().catch(() => 'Unknown error');
+          console.error('Campaigns fetch failed:', { status: response.status, error: errorText });
           throw new Error(`Failed to fetch campaigns: ${response.status} ${errorText}`);
         }
 
         const data = await response.json();
+        console.log('Campaigns fetched successfully:', { count: data.campaigns?.length || 0 });
         if (!cancelled) {
           setCampaigns(data.campaigns || []);
         }
@@ -87,7 +114,7 @@ export default function CampaignsPage() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken]);
+  }, [accessToken, session]);
 
   const handleCreateCampaign = async () => {
     if (!newCampaign.name.trim()) {

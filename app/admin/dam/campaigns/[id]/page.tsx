@@ -32,7 +32,7 @@ export default function CampaignDetailPage() {
   const router = useRouter();
   const params = useParams();
   const campaignId = params.id as string;
-  const { session } = useSupabase();
+  const { session, supabase } = useSupabase();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [assets, setAssets] = useState<AssetRecord[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -45,8 +45,28 @@ export default function CampaignDetailPage() {
   const [assetTypes, setAssetTypes] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [assetSubtypes, setAssetSubtypes] = useState<Array<{ id: string; name: string; slug: string; asset_type_id: string }>>([]);
 
-  // Use session directly - no need for separate accessToken state
-  const accessToken = session?.access_token ?? null;
+  const [accessToken, setAccessToken] = useState<string | null>(session?.access_token ?? null);
+
+  // Fallback: Get session from Supabase if not available from provider (same pattern as DAM page)
+  useEffect(() => {
+    let active = true;
+    if (!accessToken && supabase) {
+      supabase.auth.getSession().then(({ data }: { data: { session: { access_token: string } | null } }) => {
+        if (!active) return;
+        setAccessToken(data.session?.access_token ?? null);
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [accessToken, supabase]);
+
+  // Update token when session from provider changes
+  useEffect(() => {
+    if (session?.access_token) {
+      setAccessToken(session.access_token);
+    }
+  }, [session]);
 
   const fetchLookups = async () => {
     if (!accessToken) return;
