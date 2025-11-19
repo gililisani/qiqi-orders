@@ -98,7 +98,7 @@ export default function CampaignsPage() {
 
         // Fetch thumbnail paths
         const thumbnailAssetIds = (campaignsData || [])
-          .map(c => c.thumbnail_asset_id)
+          .map((c: any) => c.thumbnail_asset_id)
           .filter((id): id is string => Boolean(id));
 
         let thumbnailPaths: Record<string, string | null> = {};
@@ -111,13 +111,13 @@ export default function CampaignsPage() {
 
           if (versions) {
             const latestVersions = new Map<string, string | null>();
-            versions.forEach(v => {
+            versions.forEach((v: any) => {
               if (!latestVersions.has(v.asset_id)) {
                 latestVersions.set(v.asset_id, v.thumbnail_path);
               }
             });
 
-            campaignsData?.forEach(campaign => {
+            campaignsData?.forEach((campaign: any) => {
               if (campaign.thumbnail_asset_id) {
                 thumbnailPaths[campaign.id] = latestVersions.get(campaign.thumbnail_asset_id) || null;
               }
@@ -126,7 +126,7 @@ export default function CampaignsPage() {
         }
 
         if (!cancelled) {
-          const campaignsWithCounts = (campaignsData || []).map(campaign => ({
+          const campaignsWithCounts = (campaignsData || []).map((campaign: any) => ({
             ...campaign,
             asset_count: countsByCampaign[campaign.id] || 0,
             thumbnail_path: thumbnailPaths[campaign.id] || null,
