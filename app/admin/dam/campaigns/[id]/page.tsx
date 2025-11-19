@@ -145,6 +145,12 @@ export default function CampaignDetailPage() {
       return;
     }
 
+    // Wait for session to be available before checking accessToken
+    if (!session) {
+      // Session might still be loading, don't error yet
+      return;
+    }
+
     if (!accessToken) {
       setStatus('error');
       setErrorMessage('Authentication required');
@@ -154,7 +160,7 @@ export default function CampaignDetailPage() {
     fetchCampaign();
     fetchLookups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaignId, accessToken]);
+  }, [campaignId, session, accessToken]);
 
   const handleRemoveAsset = async (assetId: string) => {
     if (!window.confirm('Remove this asset from the campaign? Assets will remain in the library.')) {
