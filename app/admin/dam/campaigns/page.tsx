@@ -79,7 +79,7 @@ export default function CampaignsPage() {
         }
 
         // Fetch asset counts for each campaign
-        const campaignIds = (campaignsData || []).map(c => c.id);
+        const campaignIds = (campaignsData || []).map((c: any) => c.id);
         let countsByCampaign: Record<string, number> = {};
         
         if (campaignIds.length > 0) {
