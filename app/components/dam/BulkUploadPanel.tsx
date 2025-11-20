@@ -389,11 +389,11 @@ export default function BulkUploadPanel({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {files.map((file) => {
                 const isExpanded = expandedFiles.has(file.tempId);
-                const effectiveProductLine = getEffectiveValue(file, 'productLine');
-                const effectiveCampaignId = getEffectiveValue(file, 'campaignId');
-                const effectiveLocales = getEffectiveValue(file, 'selectedLocaleCodes');
-                const effectiveRegions = getEffectiveValue(file, 'selectedRegionCodes');
-                const effectiveTags = getEffectiveValue(file, 'selectedTagSlugs');
+                const effectiveProductLine = getEffectiveValue(file, 'productLine') as string;
+                const effectiveCampaignId = getEffectiveValue(file, 'campaignId') as string | null;
+                const effectiveLocales = getEffectiveValue(file, 'selectedLocaleCodes') as string[];
+                const effectiveRegions = getEffectiveValue(file, 'selectedRegionCodes') as string[];
+                const effectiveTags = getEffectiveValue(file, 'selectedTagSlugs') as string[];
                 const overrides = file.overrides || {};
 
                 return (
