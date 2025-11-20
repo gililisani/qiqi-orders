@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { PencilIcon } from '@heroicons/react/24/outline';
 import { LocaleOption, RegionOption, AssetRecord } from './types';
 import { ensureTokenUrl } from './utils';
@@ -215,7 +215,8 @@ export default function BulkEditPanel({
                   getEffectiveValue={(file, field) => getEffectiveValue(file as BulkEditFile, field)}
                   isUploading={isSaving}
                   />
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
