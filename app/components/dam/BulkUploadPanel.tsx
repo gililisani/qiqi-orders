@@ -272,24 +272,26 @@ export default function BulkUploadPanel({
             <p className="text-xs text-gray-400">or use the file selector above</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {files.map((file) => (
-              <BulkUploadCard
-                key={file.tempId}
-                file={file}
-                onFieldChange={handleFileFieldChange}
-                onRemove={handleRemoveFile}
-                assetTypes={assetTypes}
-                assetSubtypes={assetSubtypes}
-                products={products}
-                locales={locales}
-                regions={regions}
-                tags={tags}
-                globalDefaults={globalDefaults}
-                getEffectiveValue={getEffectiveValue}
-                isUploading={isUploading}
-              />
-            ))}
+          <div className="mt-4 rounded-lg border border-gray-300 bg-[#fafafa] p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {files.map((file) => (
+                <BulkUploadCard
+                  key={file.tempId}
+                  file={file}
+                  onFieldChange={handleFileFieldChange}
+                  onRemove={handleRemoveFile}
+                  assetTypes={assetTypes}
+                  assetSubtypes={assetSubtypes}
+                  products={products}
+                  locales={locales}
+                  regions={regions}
+                  tags={tags}
+                  globalDefaults={globalDefaults}
+                  getEffectiveValue={getEffectiveValue}
+                  isUploading={isUploading}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
