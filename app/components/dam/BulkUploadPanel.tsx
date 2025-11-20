@@ -242,6 +242,12 @@ export default function BulkUploadPanel({
     ));
   };
 
+  const handleFileFieldsChange = (tempId: string, updates: Partial<BulkFile>) => {
+    onFilesChange(files.map(f => 
+      f.tempId === tempId ? { ...f, ...updates } : f
+    ));
+  };
+
   const handleRemoveFile = (tempId: string) => {
     // Clean up object URLs before removing
     const fileToRemove = files.find(f => f.tempId === tempId);
@@ -356,6 +362,7 @@ export default function BulkUploadPanel({
                   key={file.tempId}
                   file={file}
                   onFieldChange={handleFileFieldChange}
+                  onFieldsChange={handleFileFieldsChange}
                   onRemove={handleRemoveFile}
                   assetTypes={assetTypes}
                   assetSubtypes={assetSubtypes}

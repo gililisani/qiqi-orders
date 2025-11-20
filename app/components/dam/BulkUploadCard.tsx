@@ -39,6 +39,7 @@ interface BulkFile {
 interface BulkUploadCardProps {
   file: BulkFile;
   onFieldChange: (tempId: string, field: keyof BulkFile, value: any) => void;
+  onFieldsChange?: (tempId: string, updates: Partial<BulkFile>) => void;
   onRemove: (tempId: string) => void;
   assetTypes: Array<{ id: string; name: string; slug: string }>;
   assetSubtypes: Array<{ id: string; name: string; slug: string; asset_type_id: string }>;
@@ -61,6 +62,7 @@ interface BulkUploadCardProps {
 export default function BulkUploadCard({
   file,
   onFieldChange,
+  onFieldsChange,
   onRemove,
   assetTypes,
   assetSubtypes,
@@ -208,11 +210,20 @@ export default function BulkUploadCard({
           <div>
             <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Product</label>
             <select
-              value={file.productName}
+              value={file.productName || ''}
               onChange={(e) => {
-                const selectedProduct = products.find(p => p.item_name === e.target.value);
-                onFieldChange(file.tempId, 'productName', e.target.value);
-                onFieldChange(file.tempId, 'sku', selectedProduct?.sku || '');
+                const selectedValue = e.target.value;
+                const selectedProduct = products.find(p => p.item_name === selectedValue);
+                // Update both fields atomically if onFieldsChange is available, otherwise update separately
+                if (onFieldsChange) {
+                  onFieldsChange(file.tempId, {
+                    productName: selectedValue,
+                    sku: selectedProduct?.sku || '',
+                  });
+                } else {
+                  onFieldChange(file.tempId, 'productName', selectedValue);
+                  onFieldChange(file.tempId, 'sku', selectedProduct?.sku || '');
+                }
               }}
               className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
               disabled={isUploading || file.status === 'uploading'}
