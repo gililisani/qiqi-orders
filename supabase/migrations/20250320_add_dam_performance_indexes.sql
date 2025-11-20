@@ -50,7 +50,7 @@ CREATE INDEX IF NOT EXISTS idx_dam_asset_region_map_region_code ON public.dam_as
 
 -- Index on asset_tag_map for tag filtering
 CREATE INDEX IF NOT EXISTS idx_dam_asset_tag_map_asset_id ON public.dam_asset_tag_map(asset_id);
-CREATE INDEX IF NOT EXISTS idx_dam_asset_tag_map_tag_slug ON public.dam_asset_tag_map(tag_slug);
+CREATE INDEX IF NOT EXISTS idx_dam_asset_tag_map_tag_id ON public.dam_asset_tag_map(tag_id);
 
 -- Index on campaigns for campaign filtering
 CREATE INDEX IF NOT EXISTS idx_campaign_assets_asset_id ON public.campaign_assets(asset_id);
