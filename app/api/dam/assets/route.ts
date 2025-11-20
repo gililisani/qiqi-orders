@@ -125,7 +125,14 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     if (!assetsData || assetsData.length === 0) {
-      return NextResponse.json({ assets: [] });
+      return NextResponse.json(
+        { assets: [] },
+        {
+          headers: {
+            'Cache-Control': 'private, max-age=60', // Cache for 1 minute
+          },
+        }
+      );
     }
 
     async function fetchLatestVersion(assetId: string) {
@@ -361,6 +368,10 @@ export async function GET(request: NextRequest) {
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1,
       }
+    }, {
+      headers: {
+        'Cache-Control': 'private, max-age=60', // Cache for 1 minute (private because it requires auth)
+      },
     });
   } catch (err: any) {
     if (err instanceof NextResponse) return err;

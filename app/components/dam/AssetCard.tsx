@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { PhotoIcon, EyeIcon, ArrowDownTrayIcon, TrashIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { AssetRecord } from './types';
 import { formatBytes, ensureTokenUrl, getFileTypeBadge } from './utils';
@@ -24,7 +24,7 @@ interface AssetCardProps {
   renderAssetTypePill?: (type: string, size?: 'sm' | 'md') => JSX.Element | null;
 }
 
-export default function AssetCard({
+const AssetCard = memo(function AssetCard({
   asset,
   viewMode,
   accessToken,
@@ -215,5 +215,25 @@ export default function AssetCard({
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function for memoization
+  // Only re-render if these props change
+  const prevSelected = prevProps.selectedAssetIds?.has(prevProps.asset.id) ?? false;
+  const nextSelected = nextProps.selectedAssetIds?.has(nextProps.asset.id) ?? false;
+  const prevDownloading = prevProps.downloadingFormats?.has(`card-${prevProps.asset.id}`) ?? false;
+  const nextDownloading = nextProps.downloadingFormats?.has(`card-${nextProps.asset.id}`) ?? false;
+  
+  return (
+    prevProps.asset.id === nextProps.asset.id &&
+    prevProps.asset.current_version?.previewPath === nextProps.asset.current_version?.previewPath &&
+    prevProps.viewMode === nextProps.viewMode &&
+    prevProps.accessToken === nextProps.accessToken &&
+    prevProps.hoveredAssetId === nextProps.hoveredAssetId &&
+    prevSelected === nextSelected &&
+    prevDownloading === nextDownloading &&
+    prevProps.asset.title === nextProps.asset.title
+  );
+});
+
+export default AssetCard;
 
