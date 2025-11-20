@@ -45,7 +45,7 @@ export default function BulkUploadDefaults({
   };
 
   return (
-    <div className="bg-gray-50 border-b border-gray-200 px-4 py-2">
+    <div className="bg-gray-50 border-b border-gray-200 px-4 py-1.5">
       <div className="flex items-center gap-3 flex-wrap">
         {/* Product Line */}
         <div className="flex items-center gap-1.5">

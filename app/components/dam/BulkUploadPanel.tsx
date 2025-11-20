@@ -272,8 +272,8 @@ export default function BulkUploadPanel({
             <p className="text-xs text-gray-400">or use the file selector above</p>
           </div>
         ) : (
-          <div className="mt-4 rounded-lg border border-gray-300 bg-[#fafafa] p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="mt-4 rounded-lg border border-gray-300 bg-[#fafafa] p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {files.map((file) => (
                 <BulkUploadCard
                   key={file.tempId}

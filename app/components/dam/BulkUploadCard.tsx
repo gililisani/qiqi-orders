@@ -74,10 +74,10 @@ export default function BulkUploadCard({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getFileIcon = () => {
-    if (file.assetType === 'image') return <PhotoIcon className="h-6 w-6 text-blue-500" />;
-    if (file.assetType === 'document' || file.assetType === 'artwork') return <DocumentTextIcon className="h-6 w-6 text-green-500" />;
-    if (file.assetType === 'video') return <FilmIcon className="h-6 w-6 text-purple-500" />;
-    return <DocumentTextIcon className="h-6 w-6 text-gray-500" />;
+    if (file.assetType === 'image') return <PhotoIcon className="h-10 w-10 text-blue-500" />;
+    if (file.assetType === 'document' || file.assetType === 'artwork') return <DocumentTextIcon className="h-10 w-10 text-green-500" />;
+    if (file.assetType === 'video') return <FilmIcon className="h-10 w-10 text-purple-500" />;
+    return <DocumentTextIcon className="h-10 w-10 text-gray-500" />;
   };
 
   const effectiveProductLine = getEffectiveValue(file, 'productLine') as string;
@@ -93,15 +93,15 @@ export default function BulkUploadCard({
   };
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+    <div className="rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow transition-shadow">
       {/* Card Header */}
-      <div className="flex items-start gap-2 p-3 border-b border-gray-100">
-        <div className="flex-shrink-0 mt-0.5">
+      <div className="flex items-start gap-2 p-2.5 border-b border-gray-100">
+        <div className="flex-shrink-0">
           {getFileIcon()}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-gray-900 truncate">{file.file.name}</p>
-          <p className="text-xs text-gray-500">{(file.file.size / 1024).toFixed(1)} KB</p>
+          <p className="text-sm font-semibold text-gray-900 truncate">{file.file.name}</p>
+          <p className="text-[11px] text-gray-400">{(file.file.size / 1024).toFixed(1)} KB</p>
         </div>
         <button
           type="button"
@@ -115,31 +115,31 @@ export default function BulkUploadCard({
 
       {/* Status */}
       {file.status === 'uploading' && (
-        <div className="px-3 py-1.5 text-xs text-blue-600 bg-blue-50 border-b border-gray-100">Uploading...</div>
+        <div className="px-2.5 py-1 text-xs text-blue-600 bg-blue-50 border-b border-gray-100">Uploading...</div>
       )}
       {file.status === 'success' && (
-        <div className="px-3 py-1.5 text-xs text-green-600 bg-green-50 border-b border-gray-100">✓ Uploaded</div>
+        <div className="px-2.5 py-1 text-xs text-green-600 bg-green-50 border-b border-gray-100">✓ Uploaded</div>
       )}
       {file.status === 'error' && file.error && (
-        <div className="px-3 py-1.5 text-xs text-red-600 bg-red-50 border-b border-gray-100">✗ {file.error}</div>
+        <div className="px-2.5 py-1 text-xs text-red-600 bg-red-50 border-b border-gray-100">✗ {file.error}</div>
       )}
 
       {/* Main Fields */}
-      <div className="p-3 space-y-2">
+      <div className="p-2.5 space-y-1.5">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+          <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Title *</label>
           <input
             type="text"
             value={file.title}
             onChange={(e) => onFieldChange(file.tempId, 'title', e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-8"
+            className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
             disabled={isUploading || file.status === 'uploading'}
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Type *</label>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Type *</label>
             <select
               value={file.assetTypeId || ''}
               onChange={(e) => {
@@ -158,7 +158,7 @@ export default function BulkUploadCard({
                 onFieldChange(file.tempId, 'assetType', selectedType ? slugToEnumMap[selectedType.slug] || 'other' : 'other');
                 onFieldChange(file.tempId, 'assetSubtypeId', null);
               }}
-              className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-8"
+              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
               disabled={isUploading || file.status === 'uploading'}
             >
               <option value="">Select</option>
@@ -169,11 +169,11 @@ export default function BulkUploadCard({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Sub-Type *</label>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Sub-Type *</label>
             <select
               value={file.assetSubtypeId || ''}
               onChange={(e) => onFieldChange(file.tempId, 'assetSubtypeId', e.target.value || null)}
-              className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-8"
+              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
               disabled={isUploading || file.status === 'uploading' || !file.assetTypeId}
             >
               <option value="">Select</option>
@@ -186,7 +186,7 @@ export default function BulkUploadCard({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Product</label>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Product</label>
             <select
               value={file.productName}
               onChange={(e) => {
@@ -194,7 +194,7 @@ export default function BulkUploadCard({
                 onFieldChange(file.tempId, 'productName', e.target.value);
                 onFieldChange(file.tempId, 'sku', selectedProduct?.sku || '');
               }}
-              className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-8"
+              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
               disabled={isUploading || file.status === 'uploading'}
             >
               <option value="">None</option>
@@ -210,7 +210,7 @@ export default function BulkUploadCard({
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-50 border-t border-gray-100 transition"
+        className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-50 border-t border-gray-100 transition"
         disabled={isUploading || file.status === 'uploading'}
       >
         <span>More metadata</span>
@@ -223,21 +223,21 @@ export default function BulkUploadCard({
 
       {/* Expanded Metadata */}
       {isExpanded && (
-        <div className="px-3 pb-3 space-y-2 border-t border-gray-100 bg-gray-50">
+        <div className="px-2.5 pb-2.5 space-y-1.5 border-t border-gray-100 bg-gray-50">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">SKU</label>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">SKU</label>
             <input
               type="text"
               value={file.sku}
               onChange={(e) => onFieldChange(file.tempId, 'sku', e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-8"
+              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
               disabled={isUploading || file.status === 'uploading'}
               placeholder="Auto-filled from product"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Tags (override)</label>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Tags (override)</label>
             <select
               multiple
               value={file.selectedTagSlugs}
@@ -245,18 +245,18 @@ export default function BulkUploadCard({
                 const selected = Array.from(e.target.selectedOptions, opt => opt.value);
                 handlePerFileOverride('tags', selected);
               }}
-              className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black min-h-[60px]"
+              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black min-h-[50px]"
               disabled={isUploading || file.status === 'uploading'}
             >
               {tags.map(tag => (
                 <option key={tag.slug} value={tag.slug}>{tag.label}</option>
               ))}
             </select>
-            <p className="text-xs text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Locales (override)</label>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Locales (override)</label>
             <select
               multiple
               value={file.selectedLocaleCodes}
@@ -267,18 +267,18 @@ export default function BulkUploadCard({
                   onFieldChange(file.tempId, 'primaryLocale', selected[0]);
                 }
               }}
-              className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black min-h-[60px]"
+              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black min-h-[50px]"
               disabled={isUploading || file.status === 'uploading'}
             >
               {locales.map(loc => (
                 <option key={loc.code} value={loc.code}>{loc.label}</option>
               ))}
             </select>
-            <p className="text-xs text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Regions (override)</label>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Regions (override)</label>
             <select
               multiple
               value={file.selectedRegionCodes}
@@ -286,14 +286,14 @@ export default function BulkUploadCard({
                 const selected = Array.from(e.target.selectedOptions, opt => opt.value);
                 handlePerFileOverride('regions', selected);
               }}
-              className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black min-h-[60px]"
+              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black min-h-[50px]"
               disabled={isUploading || file.status === 'uploading'}
             >
               {regions.map(reg => (
                 <option key={reg.code} value={reg.code}>{reg.label}</option>
               ))}
             </select>
-            <p className="text-xs text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
           </div>
         </div>
       )}
