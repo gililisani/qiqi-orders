@@ -126,8 +126,10 @@ export default function AssetCard({
               />
             )}
             {!imageLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-200 animate-pulse">
-                <PhotoIcon className="h-8 w-8 text-gray-400" />
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+                <div className="w-full h-full bg-gray-200 animate-pulse flex items-center justify-center">
+                  <PhotoIcon className="h-8 w-8 text-gray-400" />
+                </div>
               </div>
             )}
           </>

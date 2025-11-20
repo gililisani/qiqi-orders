@@ -1,5 +1,36 @@
 // Shared utility functions for DAM components
 
+// URL cache for signed URLs (5 minute TTL)
+const URL_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const urlCache = new Map<string, { url: string; timestamp: number }>();
+
+function getCachedUrl(key: string): string | null {
+  const cached = urlCache.get(key);
+  if (!cached) return null;
+  
+  // Check if cache is still valid
+  if (Date.now() - cached.timestamp > URL_CACHE_TTL) {
+    urlCache.delete(key);
+    return null;
+  }
+  
+  return cached.url;
+}
+
+function setCachedUrl(key: string, url: string): void {
+  urlCache.set(key, { url, timestamp: Date.now() });
+  
+  // Clean up old entries periodically (keep cache size reasonable)
+  if (urlCache.size > 1000) {
+    const now = Date.now();
+    for (const [k, v] of urlCache.entries()) {
+      if (now - v.timestamp > URL_CACHE_TTL) {
+        urlCache.delete(k);
+      }
+    }
+  }
+}
+
 export function formatBytes(bytes: number | null | undefined): string {
   if (!bytes || bytes <= 0) return '—';
   const units = ['B', 'KB', 'MB', 'GB'];
@@ -11,10 +42,24 @@ export function formatBytes(bytes: number | null | undefined): string {
 export function ensureTokenUrl(path: string | null | undefined, accessToken: string | null): string {
   if (!path) return '';
   if (path.startsWith('http')) return path;
+  
+  // Create cache key from path and token
+  const cacheKey = `${path}:${accessToken || 'no-token'}`;
+  
+  // Check cache first
+  const cached = getCachedUrl(cacheKey);
+  if (cached) return cached;
+  
+  // Generate URL
   const url = path.startsWith('/') ? path : `/${path}`;
-  if (!accessToken) return url;
-  const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}token=${encodeURIComponent(accessToken)}`;
+  const finalUrl = !accessToken 
+    ? url 
+    : `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(accessToken)}`;
+  
+  // Cache the URL
+  setCachedUrl(cacheKey, finalUrl);
+  
+  return finalUrl;
 }
 
 export function buildAuthHeaders(token: string | null): Record<string, string> {

@@ -892,8 +892,8 @@ export default function AdminDigitalAssetManagerPage() {
       
       const page = await pdf.getPage(1); // Get first page
 
-      // Render to canvas with a reasonable scale for thumbnails
-      const scale = 1.5; // Lower scale for smaller file size
+      // Render to canvas with optimized scale for thumbnails (reduced for smaller file size)
+      const scale = 1.2; // Reduced from 1.5 to 1.2 for smaller thumbnails
       const viewport = page.getViewport({ scale });
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
@@ -913,9 +913,22 @@ export default function AdminDigitalAssetManagerPage() {
         viewport: viewport,
       }).promise;
 
-      // Convert canvas to base64 PNG
-      const dataUrl = canvas.toDataURL('image/png', 0.85); // 85% quality for smaller file size
-      const thumbnailData = dataUrl.split(',')[1]; // Remove data:image/png;base64, prefix
+      // Convert canvas to WebP format (better compression than PNG)
+      // Fallback to JPEG if WebP is not supported
+      let dataUrl: string;
+      let mimeType = 'image/webp';
+      let extension = 'webp';
+      
+      try {
+        dataUrl = canvas.toDataURL('image/webp', 0.75); // 75% quality for smaller file size
+      } catch (e) {
+        // WebP not supported, fallback to JPEG
+        mimeType = 'image/jpeg';
+        extension = 'jpg';
+        dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+      }
+      
+      const thumbnailData = dataUrl.split(',')[1]; // Remove data:image/webp;base64, prefix
       
       if (!thumbnailData || thumbnailData.length === 0) {
         console.error('Failed to generate thumbnail data');
@@ -924,7 +937,7 @@ export default function AdminDigitalAssetManagerPage() {
       
       // Generate thumbnail path (will be stored in asset_renditions)
       const timestamp = Date.now();
-      const thumbnailPath = `temp-thumb-${timestamp}.png`; // Will be updated with proper path during upload
+      const thumbnailPath = `temp-thumb-${timestamp}.${extension}`;
 
       return { thumbnailData, thumbnailPath };
     } catch (err) {
@@ -2428,7 +2441,23 @@ export default function AdminDigitalAssetManagerPage() {
                   ? 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
                   : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
               }`}>
-                {filteredAssets.map((asset) => (
+                {loadingAssets ? (
+                  // Skeleton loaders while loading
+                  Array.from({ length: 12 }).map((_, index) => (
+                    <div
+                      key={`skeleton-${index}`}
+                      className="bg-white rounded-md border border-gray-200 overflow-hidden shadow-sm"
+                      style={{ maxWidth: viewMode === 'compact' ? '240px' : undefined }}
+                    >
+                      <div className="relative bg-gray-200 animate-pulse" style={{ height: viewMode === 'compact' ? '160px' : '200px' }} />
+                      <div className="p-2 space-y-1">
+                        <div className="h-3 bg-gray-200 rounded animate-pulse w-3/4" />
+                        <div className="h-2 bg-gray-200 rounded animate-pulse w-1/2" />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  filteredAssets.map((asset) => (
                   <AssetCard
                     key={asset.id}
                     asset={asset}
@@ -2477,7 +2506,8 @@ export default function AdminDigitalAssetManagerPage() {
                     assetSubtypes={assetSubtypes}
                     renderAssetTypePill={renderAssetTypePill}
                   />
-                ))}
+                ))
+                )}
               </div>
             </>
           )}
