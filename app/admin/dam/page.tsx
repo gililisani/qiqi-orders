@@ -1409,8 +1409,8 @@ export default function AdminDigitalAssetManagerPage() {
         const file = bulkFile.file;
         
         // Get effective values (use global defaults if not overridden)
-        const effectiveProductLine = getEffectiveValue(bulkFile, 'productLine');
-        const effectiveCampaignId = getEffectiveValue(bulkFile, 'campaignId');
+        const effectiveProductLine = getEffectiveValue(bulkFile, 'productLine') as string;
+        const effectiveCampaignId = getEffectiveValue(bulkFile, 'campaignId') as string | null;
         const effectiveLocales = getEffectiveValue(bulkFile, 'selectedLocaleCodes') as string[];
         const effectiveRegions = getEffectiveValue(bulkFile, 'selectedRegionCodes') as string[];
         const effectiveTags = getEffectiveValue(bulkFile, 'selectedTagSlugs') as string[];
