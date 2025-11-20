@@ -75,10 +75,10 @@ export default function BulkUploadCard({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getFileIcon = () => {
-    if (file.assetType === 'image') return <PhotoIcon className="h-10 w-10 text-blue-500" />;
-    if (file.assetType === 'document' || file.assetType === 'artwork') return <DocumentTextIcon className="h-10 w-10 text-green-500" />;
-    if (file.assetType === 'video') return <FilmIcon className="h-10 w-10 text-purple-500" />;
-    return <DocumentTextIcon className="h-10 w-10 text-gray-500" />;
+    if (file.assetType === 'image') return <PhotoIcon className="h-12 w-12 text-blue-500" />;
+    if (file.assetType === 'document' || file.assetType === 'artwork') return <DocumentTextIcon className="h-12 w-12 text-green-500" />;
+    if (file.assetType === 'video') return <FilmIcon className="h-12 w-12 text-purple-500" />;
+    return <DocumentTextIcon className="h-12 w-12 text-gray-500" />;
   };
 
   const renderThumbnail = () => {
@@ -88,7 +88,7 @@ export default function BulkUploadCard({
         <img
           src={file.previewUrl}
           alt={file.file.name}
-          className="h-10 w-10 rounded object-cover border border-gray-200"
+          className="h-12 w-12 rounded object-cover border border-gray-200"
           onError={(e) => {
             // Fallback to icon if image fails to load
             e.currentTarget.style.display = 'none';
@@ -120,8 +120,8 @@ export default function BulkUploadCard({
           {renderThumbnail()}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900 truncate">{file.file.name}</p>
-          <p className="text-[11px] text-gray-400">{(file.file.size / 1024).toFixed(1)} KB</p>
+          <p className="text-base font-semibold text-gray-900 truncate">{file.file.name}</p>
+          <p className="text-xs text-gray-500">{(file.file.size / 1024).toFixed(1)} KB</p>
         </div>
         <button
           type="button"
@@ -145,7 +145,7 @@ export default function BulkUploadCard({
       )}
 
       {/* Main Fields */}
-      <div className="p-2.5 space-y-1.5">
+      <div className="p-2.5 space-y-1">
         <div>
           <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Title *</label>
           <input
@@ -230,7 +230,7 @@ export default function BulkUploadCard({
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-50 border-t border-gray-100 transition"
+        className="w-full flex items-center justify-between px-2.5 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-50 border-t border-gray-100 transition"
         disabled={isUploading || file.status === 'uploading'}
       >
         <span>More metadata</span>
