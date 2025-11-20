@@ -370,6 +370,7 @@ export default function BulkUploadPanel({
                   locales={locales}
                   regions={regions}
                   tags={tags}
+                  campaigns={campaigns}
                   globalDefaults={globalDefaults}
                   getEffectiveValue={getEffectiveValue}
                   isUploading={isUploading}

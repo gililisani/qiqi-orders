@@ -94,11 +94,12 @@ const AssetCard = memo(function AssetCard({
             e.stopPropagation();
             onToggleSelection(asset.id);
           }}
-          className={`absolute top-1.5 left-1.5 z-20 flex h-4 w-4 items-center justify-center rounded border-2 bg-white shadow-sm transition ${
+          className={`absolute top-1.5 left-1.5 z-20 flex h-5 w-5 items-center justify-center rounded border-2 bg-white shadow-sm transition ${
             isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-300 hover:border-gray-400'
           }`}
+          aria-label={isSelected ? 'Deselect asset' : 'Select asset'}
         >
-          {isSelected && <CheckIcon className="h-2.5 w-2.5 text-white" />}
+          {isSelected && <CheckIcon className="h-4 w-4 text-white" />}
         </button>
       )}
 

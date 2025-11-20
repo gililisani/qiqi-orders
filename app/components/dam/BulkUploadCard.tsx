@@ -47,6 +47,7 @@ interface BulkUploadCardProps {
   locales: LocaleOption[];
   regions: RegionOption[];
   tags: Array<{ id: string; slug: string; label: string }> | Array<{ slug: string; label: string }>;
+  campaigns: Array<{ id: string; name: string }>;
   globalDefaults: {
     productLine: string;
     campaignId: string | null;
@@ -70,6 +71,7 @@ export default function BulkUploadCard({
   locales,
   regions,
   tags,
+  campaigns,
   globalDefaults,
   getEffectiveValue,
   isUploading,
@@ -265,11 +267,52 @@ export default function BulkUploadCard({
       {isExpanded && (
         <div className="px-2.5 pb-2.5 space-y-1.5 border-t border-gray-100 bg-gray-50">
           <div>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Description</label>
+            <textarea
+              value={file.description}
+              onChange={(e) => onFieldChange(file.tempId, 'description', e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black resize-none h-16"
+              disabled={isUploading || file.status === 'uploading'}
+              placeholder="Asset description"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Product Line (override)</label>
+            <select
+              value={file.productLine}
+              onChange={(e) => handlePerFileOverride('productLine', e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
+              disabled={isUploading || file.status === 'uploading'}
+            >
+              <option value="">None</option>
+              <option value="ProCtrl">ProCtrl</option>
+              <option value="SelfCtrl">SelfCtrl</option>
+              <option value="Both">Both</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Campaign (override)</label>
+            <select
+              value={file.campaignId || ''}
+              onChange={(e) => handlePerFileOverride('campaignId', e.target.value || null)}
+              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
+              disabled={isUploading || file.status === 'uploading'}
+            >
+              <option value="">None</option>
+              {campaigns.map(campaign => (
+                <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">SKU</label>
             <input
               type="text"
               value={file.sku}
-              onChange={(e) => onFieldChange(file.tempId, 'sku', e.target.value)}
+              onChange={(e) => handlePerFileOverride('sku', e.target.value)}
               className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
               disabled={isUploading || file.status === 'uploading'}
               placeholder="Auto-filled from product"

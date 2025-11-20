@@ -22,6 +22,7 @@ import {
 import AssetCard from '../../components/dam/AssetCard';
 import AssetDetailModal from '../../components/dam/AssetDetailModal';
 import BulkUploadPanel from '../../components/dam/BulkUploadPanel';
+import BulkEditPanel from '../../components/dam/BulkEditPanel';
 import { AssetRecord, LocaleOption, RegionOption, AssetVersion, VimeoDownloadFormat } from '../../components/dam/types';
 import { formatBytes, ensureTokenUrl, getFileTypeBadge, buildAuthHeaders } from '../../components/dam/utils';
 
@@ -338,6 +339,44 @@ export default function AdminDigitalAssetManagerPage() {
   
   // Bulk upload state
   const [isBulkUploadMode, setIsBulkUploadMode] = useState(false);
+  const [isBulkEditMode, setIsBulkEditMode] = useState(false);
+  const [bulkEditAssets, setBulkEditAssets] = useState<Array<{
+    assetId: string;
+    asset: AssetRecord;
+    title: string;
+    description: string;
+    assetType: string;
+    assetTypeId: string | null;
+    assetSubtypeId: string | null;
+    productLine: string;
+    productName: string;
+    sku: string;
+    selectedTagSlugs: string[];
+    selectedLocaleCodes: string[];
+    primaryLocale: string | null;
+    selectedRegionCodes: string[];
+    useTitleAsFilename: boolean;
+    campaignId: string | null;
+    status?: 'pending' | 'saving' | 'success' | 'error';
+    error?: string;
+    overrides?: {
+      productLine?: boolean;
+      locales?: boolean;
+      regions?: boolean;
+      tags?: boolean;
+      campaignId?: boolean;
+      sku?: boolean;
+    };
+  }>>([]);
+  const [bulkEditGlobalDefaults, setBulkEditGlobalDefaults] = useState({
+    productLine: '',
+    campaignId: null as string | null,
+    selectedLocaleCodes: [] as string[],
+    primaryLocale: null as string | null,
+    selectedRegionCodes: [] as string[],
+    selectedTagSlugs: [] as string[],
+  });
+  const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkFiles, setBulkFiles] = useState<Array<{
     tempId: string;
     file: File;
@@ -651,6 +690,141 @@ export default function AdminDigitalAssetManagerPage() {
       }
       return newSet;
     });
+  };
+
+  // Initialize bulk edit mode with selected assets
+  const initializeBulkEdit = () => {
+    if (selectedAssetIds.size === 0) return;
+    
+    // Close bulk upload mode if open
+    if (isBulkUploadMode) {
+      setIsBulkUploadMode(false);
+    }
+    
+    const selectedAssets = assets.filter(a => selectedAssetIds.has(a.id));
+    const bulkEditData = selectedAssets.map(asset => ({
+      assetId: asset.id,
+      asset,
+      title: asset.title || '',
+      description: asset.description || '',
+      assetType: asset.asset_type,
+      assetTypeId: asset.asset_type_id || null,
+      assetSubtypeId: asset.asset_subtype_id || null,
+      productLine: asset.product_line || '',
+      productName: asset.product_name || '',
+      sku: asset.sku || '',
+      selectedTagSlugs: asset.tags || [],
+      selectedLocaleCodes: asset.locales.map(l => l.code) || [],
+      primaryLocale: asset.locales.find(l => l.is_default)?.code || asset.locales[0]?.code || null,
+      selectedRegionCodes: asset.regions.map(r => r.code) || [],
+      useTitleAsFilename: asset.use_title_as_filename ?? false,
+      campaignId: asset.campaign?.id || null,
+      status: 'pending' as const,
+      overrides: {},
+    }));
+
+    setBulkEditAssets(bulkEditData);
+    
+    // Set global defaults from first asset (or empty)
+    if (bulkEditData.length > 0) {
+      const first = bulkEditData[0];
+      setBulkEditGlobalDefaults({
+        productLine: first.productLine,
+        campaignId: first.campaignId,
+        selectedLocaleCodes: first.selectedLocaleCodes,
+        primaryLocale: first.primaryLocale,
+        selectedRegionCodes: first.selectedRegionCodes,
+        selectedTagSlugs: first.selectedTagSlugs,
+      });
+    }
+    
+    setIsBulkEditMode(true);
+    // Clear selection after entering bulk edit mode (optional - you might want to keep selection)
+    // setSelectedAssetIds(new Set());
+  };
+
+  // Handle bulk edit save
+  const handleBulkEditSave = async () => {
+    if (!accessToken || bulkEditAssets.length === 0) return;
+
+    try {
+      setBulkSaving(true);
+      setError('');
+
+      const headers = buildAuthHeaders(accessToken);
+      
+      // Update each asset
+      const updatePromises = bulkEditAssets.map(async (editAsset) => {
+        const effectiveProductLine = editAsset.overrides?.productLine 
+          ? editAsset.productLine 
+          : bulkEditGlobalDefaults.productLine;
+        const effectiveCampaignId = editAsset.overrides?.campaignId 
+          ? editAsset.campaignId 
+          : bulkEditGlobalDefaults.campaignId;
+        const effectiveLocales = editAsset.overrides?.locales 
+          ? editAsset.selectedLocaleCodes 
+          : bulkEditGlobalDefaults.selectedLocaleCodes;
+        const effectiveRegions = editAsset.overrides?.regions 
+          ? editAsset.selectedRegionCodes 
+          : bulkEditGlobalDefaults.selectedRegionCodes;
+        const effectiveTags = editAsset.overrides?.tags 
+          ? editAsset.selectedTagSlugs 
+          : bulkEditGlobalDefaults.selectedTagSlugs;
+        const effectivePrimaryLocale = editAsset.primaryLocale || (effectiveLocales.length > 0 ? effectiveLocales[0] : null);
+
+        const payload = {
+          assetId: editAsset.assetId,
+          title: editAsset.title.trim(),
+          description: editAsset.description.trim() || undefined,
+          assetType: editAsset.assetType,
+          assetTypeId: editAsset.assetTypeId,
+          assetSubtypeId: editAsset.assetSubtypeId,
+          productLine: effectiveProductLine.trim() || undefined,
+          productName: editAsset.productName.trim() || undefined,
+          sku: editAsset.sku.trim() || undefined,
+          tags: effectiveTags,
+          audiences: [],
+          locales: effectiveLocales.map((code) => ({
+            code,
+            primary: code === effectivePrimaryLocale,
+          })),
+          regions: effectiveRegions,
+          useTitleAsFilename: editAsset.useTitleAsFilename,
+          campaignId: effectiveCampaignId || undefined,
+        };
+
+        const response = await fetch('/api/dam/assets', {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || `Failed to update asset ${editAsset.assetId}`);
+        }
+
+        return { assetId: editAsset.assetId, success: true };
+      });
+
+      await Promise.all(updatePromises);
+      
+      // Refresh assets list
+      await fetchAssets(accessToken, undefined, currentPage);
+      setSelectedAssetIds(new Set());
+      setIsBulkEditMode(false);
+      setBulkEditAssets([]);
+      setSuccessMessage(`${bulkEditAssets.length} asset(s) updated successfully.`);
+    } catch (err: any) {
+      console.error('Failed to save bulk edits', err);
+      setError(err.message || 'Failed to save bulk edits');
+    } finally {
+      setBulkSaving(false);
+    }
   };
 
   const toggleSelectAll = () => {
@@ -2077,6 +2251,11 @@ export default function AdminDigitalAssetManagerPage() {
                   setBulkFiles([]);
                   setSuccessMessage('');
                   setError('');
+                  // Close bulk edit mode if open
+                  if (isBulkEditMode) {
+                    setIsBulkEditMode(false);
+                    setBulkEditAssets([]);
+                  }
                   setIsBulkUploadMode(true);
                 }}
                 className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
@@ -2099,6 +2278,38 @@ export default function AdminDigitalAssetManagerPage() {
             </button>
           </div>
         </div>
+
+        {/* Bulk Edit Panel */}
+        {isBulkEditMode && (
+          <BulkEditPanel
+            assets={bulkEditAssets}
+            onAssetsChange={setBulkEditAssets}
+            onCancel={() => {
+              setIsBulkEditMode(false);
+              setBulkEditAssets([]);
+              setBulkEditGlobalDefaults({
+                productLine: '',
+                campaignId: null,
+                selectedLocaleCodes: [],
+                primaryLocale: null,
+                selectedRegionCodes: [],
+                selectedTagSlugs: [],
+              });
+            }}
+            onSave={handleBulkEditSave}
+            globalDefaults={bulkEditGlobalDefaults}
+            onGlobalDefaultsChange={setBulkEditGlobalDefaults}
+            locales={locales}
+            regions={regions}
+            tags={tags}
+            assetTypes={assetTypes}
+            assetSubtypes={assetSubtypes}
+            products={products}
+            campaigns={campaigns}
+            isSaving={bulkSaving}
+            accessToken={accessToken}
+          />
+        )}
 
         {/* Bulk Upload Panel */}
         {isBulkUploadMode && (
@@ -2401,15 +2612,26 @@ export default function AdminDigitalAssetManagerPage() {
                   <span className="text-sm font-medium text-blue-900">
                     {selectedAssetIds.size} asset{selectedAssetIds.size !== 1 ? 's' : ''} selected
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleBulkDelete}
-                    disabled={bulkDeleting}
-                    className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                    {bulkDeleting ? 'Deleting...' : `Delete ${selectedAssetIds.size}`}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={initializeBulkEdit}
+                      disabled={bulkDeleting}
+                      className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                      Bulk Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBulkDelete}
+                      disabled={bulkDeleting}
+                      className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                      {bulkDeleting ? 'Deleting...' : `Delete ${selectedAssetIds.size}`}
+                    </button>
+                  </div>
                 </div>
               )}
               
@@ -2436,6 +2658,7 @@ export default function AdminDigitalAssetManagerPage() {
               )}
 
               {/* Asset Grid - Beautiful Cards */}
+              {!isBulkEditMode && (
               <div className={`grid gap-2 ${
                 viewMode === 'compact'
                   ? 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
@@ -2509,6 +2732,7 @@ export default function AdminDigitalAssetManagerPage() {
                 ))
                 )}
               </div>
+              )}
             </>
           )}
           
