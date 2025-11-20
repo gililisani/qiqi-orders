@@ -316,14 +316,24 @@ export default function BulkUploadPanel({
       {/* File Selector / Drop Zone */}
       <div className="px-4 py-3 border-b border-gray-200">
         <label className="block text-xs font-medium text-gray-700 mb-2">Select Files</label>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          onChange={handleFileInputChange}
-          className="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-black file:text-white hover:file:opacity-90"
-          disabled={isUploading}
-        />
+        <div className="flex items-center">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={handleFileInputChange}
+            className="hidden"
+            disabled={isUploading}
+            id="bulk-upload-file-input"
+          />
+          <label
+            htmlFor="bulk-upload-file-input"
+            className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-xs font-medium text-white hover:opacity-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            <ArrowUpTrayIcon className="h-4 w-4" />
+            Choose Files
+          </label>
+        </div>
       </div>
 
       {/* File Grid - Scrollable */}
