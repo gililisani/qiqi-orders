@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect, useRef } from 'react';
 import { PhotoIcon, EyeIcon, ArrowDownTrayIcon, TrashIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { AssetRecord } from './types';
 import { formatBytes, ensureTokenUrl, getFileTypeBadge } from './utils';
@@ -49,6 +50,34 @@ export default function AssetCard({
   const thumbnailHeight = isCompact ? '160px' : viewMode === 'comfortable' ? '200px' : '200px';
   const maxWidth = isCompact ? '240px' : undefined;
 
+  // Lazy loading state
+  const [isInView, setIsInView] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const imgRef = useRef<HTMLDivElement>(null);
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    if (!imgRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsInView(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { rootMargin: '50px' } // Start loading 50px before entering viewport
+    );
+
+    observer.observe(imgRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <div
       className="group relative bg-white rounded-md border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer"
@@ -74,22 +103,34 @@ export default function AssetCard({
       )}
 
       {/* Thumbnail */}
-      <div className="relative bg-gray-100 overflow-hidden" style={{ height: thumbnailHeight }}>
+      <div ref={imgRef} className="relative bg-gray-100 overflow-hidden" style={{ height: thumbnailHeight }}>
         {asset.asset_type === 'video' && asset.vimeo_video_id ? (
           <img
-            src={`https://vumbnail.com/${asset.vimeo_video_id}.jpg`}
+            src={isInView ? `https://vumbnail.com/${asset.vimeo_video_id}.jpg` : ''}
             alt={asset.title}
             className="h-full w-full object-cover"
+            onLoad={() => setImageLoaded(true)}
             onError={(e) => {
               (e.target as HTMLImageElement).src = `https://i.vimeocdn.com/video/${asset.vimeo_video_id}_640.jpg`;
             }}
           />
         ) : accessToken && asset.current_version?.previewPath ? (
-          <img
-            src={ensureTokenUrl(asset.current_version.previewPath, accessToken)}
-            alt={asset.title}
-            className="h-full w-full object-cover"
-          />
+          <>
+            {isInView && (
+              <img
+                src={ensureTokenUrl(asset.current_version.previewPath, accessToken)}
+                alt={asset.title}
+                className="h-full w-full object-cover"
+                onLoad={() => setImageLoaded(true)}
+                onError={() => setImageLoaded(false)}
+              />
+            )}
+            {!imageLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-200 animate-pulse">
+                <PhotoIcon className="h-8 w-8 text-gray-400" />
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex h-full w-full items-center justify-center text-gray-400">
             <PhotoIcon className="h-12 w-12" />
