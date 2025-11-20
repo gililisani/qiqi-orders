@@ -176,9 +176,18 @@ export default function BulkUploadCard({
                   'packaging-regulatory': 'document',
                   'campaign': 'document',
                 };
-                onFieldChange(file.tempId, 'assetTypeId', selectedTypeId);
-                onFieldChange(file.tempId, 'assetType', selectedType ? slugToEnumMap[selectedType.slug] || 'other' : 'other');
-                onFieldChange(file.tempId, 'assetSubtypeId', null);
+                // Update all related fields atomically
+                if (onFieldsChange) {
+                  onFieldsChange(file.tempId, {
+                    assetTypeId: selectedTypeId,
+                    assetType: selectedType ? slugToEnumMap[selectedType.slug] || 'other' : 'other',
+                    assetSubtypeId: null, // Reset subtype when type changes
+                  });
+                } else {
+                  onFieldChange(file.tempId, 'assetTypeId', selectedTypeId);
+                  onFieldChange(file.tempId, 'assetType', selectedType ? slugToEnumMap[selectedType.slug] || 'other' : 'other');
+                  onFieldChange(file.tempId, 'assetSubtypeId', null);
+                }
               }}
               className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
               disabled={isUploading || file.status === 'uploading'}
