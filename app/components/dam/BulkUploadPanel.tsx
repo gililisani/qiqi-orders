@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { XMarkIcon, TrashIcon, PhotoIcon, DocumentTextIcon, FilmIcon, MusicalNoteIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, TrashIcon, PhotoIcon, DocumentTextIcon, FilmIcon, MusicalNoteIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import { LocaleOption, RegionOption, VimeoDownloadFormat } from './types';
 
 interface BulkFile {
@@ -25,6 +25,15 @@ interface BulkFile {
   campaignId: string | null;
   status?: 'pending' | 'uploading' | 'success' | 'error';
   error?: string;
+  // Track which fields have been overridden
+  overrides?: {
+    productLine?: boolean;
+    locales?: boolean;
+    regions?: boolean;
+    tags?: boolean;
+    campaignId?: boolean;
+    sku?: boolean;
+  };
 }
 
 interface BulkUploadPanelProps {
@@ -68,6 +77,7 @@ export default function BulkUploadPanel({
   isUploading,
 }: BulkUploadPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
 
   const inferAssetType = (fileName: string, mimeType: string): { type: string; typeId: string | null } => {
     const ext = fileName.toLowerCase().split('.').pop() || '';
@@ -124,6 +134,7 @@ export default function BulkUploadPanel({
         useTitleAsFilename: false,
         campaignId: globalDefaults.campaignId,
         status: 'pending',
+        overrides: {},
       };
     });
     
@@ -137,6 +148,11 @@ export default function BulkUploadPanel({
 
   const handleRemoveFile = (tempId: string) => {
     onFilesChange(files.filter(f => f.tempId !== tempId));
+    setExpandedFiles(prev => {
+      const next = new Set(prev);
+      next.delete(tempId);
+      return next;
+    });
   };
 
   const handleFileFieldChange = (tempId: string, field: keyof BulkFile, value: any) => {
@@ -145,25 +161,36 @@ export default function BulkUploadPanel({
     ));
   };
 
+  const handlePerFileOverride = (tempId: string, field: 'productLine' | 'locales' | 'regions' | 'tags' | 'campaignId' | 'sku', value: any) => {
+    onFilesChange(files.map(f => {
+      if (f.tempId === tempId) {
+        const overrides = { ...(f.overrides || {}), [field]: true };
+        return { ...f, [field]: value, overrides };
+      }
+      return f;
+    }));
+  };
+
   const handleGlobalDefaultChange = (field: keyof typeof globalDefaults, value: any) => {
     const newDefaults = { ...globalDefaults, [field]: value };
     onGlobalDefaultsChange(newDefaults);
     
     // Apply to all files that haven't been manually overridden
     onFilesChange(files.map(f => {
-      if (field === 'productLine' && f.productLine === globalDefaults.productLine) {
+      const overrides = f.overrides || {};
+      if (field === 'productLine' && !overrides.productLine) {
         return { ...f, productLine: value };
       }
-      if (field === 'selectedLocaleCodes' && JSON.stringify(f.selectedLocaleCodes) === JSON.stringify(globalDefaults.selectedLocaleCodes)) {
+      if (field === 'selectedLocaleCodes' && !overrides.locales) {
         return { ...f, selectedLocaleCodes: [...value], primaryLocale: value[0] || f.primaryLocale };
       }
-      if (field === 'selectedRegionCodes' && JSON.stringify(f.selectedRegionCodes) === JSON.stringify(globalDefaults.selectedRegionCodes)) {
+      if (field === 'selectedRegionCodes' && !overrides.regions) {
         return { ...f, selectedRegionCodes: [...value] };
       }
-      if (field === 'selectedTagSlugs' && JSON.stringify(f.selectedTagSlugs) === JSON.stringify(globalDefaults.selectedTagSlugs)) {
+      if (field === 'selectedTagSlugs' && !overrides.tags) {
         return { ...f, selectedTagSlugs: [...value] };
       }
-      if (field === 'campaignId' && f.campaignId === globalDefaults.campaignId) {
+      if (field === 'campaignId' && !overrides.campaignId) {
         return { ...f, campaignId: value };
       }
       return f;
@@ -171,21 +198,44 @@ export default function BulkUploadPanel({
   };
 
   const getFileIcon = (file: BulkFile) => {
-    if (file.assetType === 'image') return <PhotoIcon className="h-6 w-6 text-blue-500" />;
-    if (file.assetType === 'document' || file.assetType === 'artwork') return <DocumentTextIcon className="h-6 w-6 text-green-500" />;
-    if (file.assetType === 'video') return <FilmIcon className="h-6 w-6 text-purple-500" />;
-    if (file.assetType === 'audio') return <MusicalNoteIcon className="h-6 w-6 text-pink-500" />;
-    return <DocumentTextIcon className="h-6 w-6 text-gray-500" />;
+    if (file.assetType === 'image') return <PhotoIcon className="h-8 w-8 text-blue-500" />;
+    if (file.assetType === 'document' || file.assetType === 'artwork') return <DocumentTextIcon className="h-8 w-8 text-green-500" />;
+    if (file.assetType === 'video') return <FilmIcon className="h-8 w-8 text-purple-500" />;
+    if (file.assetType === 'audio') return <MusicalNoteIcon className="h-8 w-8 text-pink-500" />;
+    return <DocumentTextIcon className="h-8 w-8 text-gray-500" />;
   };
 
-  const canUpload = files.length > 0 && files.every(f => 
-    f.title.trim() && 
-    f.assetTypeId && 
-    f.assetSubtypeId && 
-    f.selectedLocaleCodes.length > 0 &&
-    f.primaryLocale &&
-    f.status !== 'uploading'
-  );
+  const getEffectiveValue = (file: BulkFile, field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedRegionCodes' | 'selectedTagSlugs') => {
+    const overrides = file.overrides || {};
+    if (field === 'productLine' && overrides.productLine) return file.productLine;
+    if (field === 'campaignId' && overrides.campaignId) return file.campaignId;
+    if (field === 'selectedLocaleCodes' && overrides.locales) return file.selectedLocaleCodes;
+    if (field === 'selectedRegionCodes' && overrides.regions) return file.selectedRegionCodes;
+    if (field === 'selectedTagSlugs' && overrides.tags) return file.selectedTagSlugs;
+    return globalDefaults[field];
+  };
+
+  const canUpload = files.length > 0 && files.every(f => {
+    const effectiveLocales = getEffectiveValue(f, 'selectedLocaleCodes');
+    return f.title.trim() && 
+      f.assetTypeId && 
+      f.assetSubtypeId && 
+      effectiveLocales.length > 0 &&
+      (f.primaryLocale || effectiveLocales[0]) &&
+      f.status !== 'uploading';
+  });
+
+  const toggleExpanded = (tempId: string) => {
+    setExpandedFiles(prev => {
+      const next = new Set(prev);
+      if (next.has(tempId)) {
+        next.delete(tempId);
+      } else {
+        next.add(tempId);
+      }
+      return next;
+    });
+  };
 
   return (
     <div className="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -230,13 +280,13 @@ export default function BulkUploadPanel({
           />
         </div>
 
-        {/* Global Defaults */}
+        {/* Global Defaults - Compact Card */}
         {files.length > 0 && (
           <div className="mb-4 rounded-md border border-gray-200 bg-gray-50 p-3">
             <h4 className="text-xs font-semibold text-gray-900 mb-2">Global Defaults</h4>
-            <p className="text-xs text-gray-500 mb-3">These defaults apply to all new assets (you can override per file).</p>
+            <p className="text-xs text-gray-500 mb-3">These defaults apply to all files unless overridden.</p>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Product Line</label>
                 <select
@@ -254,7 +304,7 @@ export default function BulkUploadPanel({
 
               {campaigns.length > 0 && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Campaign (Optional)</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Campaign</label>
                   <select
                     value={globalDefaults.campaignId || ''}
                     onChange={(e) => handleGlobalDefaultChange('campaignId', e.target.value || null)}
@@ -281,18 +331,18 @@ export default function BulkUploadPanel({
                       handleGlobalDefaultChange('primaryLocale', selected[0]);
                     }
                   }}
-                  className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none min-h-[60px]"
+                  className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none min-h-[50px]"
                   disabled={isUploading}
                 >
                   {locales.map(loc => (
                     <option key={loc.code} value={loc.code}>{loc.label}</option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-400 mt-0.5">Hold Ctrl/Cmd to select multiple</p>
+                <p className="text-xs text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Regions (Optional)</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Regions</label>
                 <select
                   multiple
                   value={globalDefaults.selectedRegionCodes}
@@ -300,18 +350,18 @@ export default function BulkUploadPanel({
                     const selected = Array.from(e.target.selectedOptions, opt => opt.value);
                     handleGlobalDefaultChange('selectedRegionCodes', selected);
                   }}
-                  className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none min-h-[60px]"
+                  className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none min-h-[50px]"
                   disabled={isUploading}
                 >
                   {regions.map(reg => (
                     <option key={reg.code} value={reg.code}>{reg.label}</option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-400 mt-0.5">Hold Ctrl/Cmd to select multiple</p>
+                <p className="text-xs text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
               </div>
 
-              <div className="col-span-2">
-                <label className="block text-xs font-medium text-gray-700 mb-1">Tags (Optional)</label>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Tags</label>
                 <select
                   multiple
                   value={globalDefaults.selectedTagSlugs}
@@ -319,34 +369,40 @@ export default function BulkUploadPanel({
                     const selected = Array.from(e.target.selectedOptions, opt => opt.value);
                     handleGlobalDefaultChange('selectedTagSlugs', selected);
                   }}
-                  className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none min-h-[60px]"
+                  className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none min-h-[50px]"
                   disabled={isUploading}
                 >
                   {tags.map(tag => (
                     <option key={tag.slug} value={tag.slug}>{tag.label}</option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-400 mt-0.5">Hold Ctrl/Cmd to select multiple</p>
+                <p className="text-xs text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Per-File Cards */}
+        {/* Per-File Cards - Grid Layout */}
         {files.length > 0 && (
-          <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-gray-900">Files ({files.length})</h4>
-            {files.map((file) => (
-              <div key={file.tempId} className="rounded-md border border-gray-200 bg-white p-3">
-                <div className="flex items-start gap-3">
-                  {/* Thumbnail/Icon */}
-                  <div className="flex-shrink-0">
-                    {getFileIcon(file)}
-                  </div>
+          <div>
+            <h4 className="text-xs font-semibold text-gray-900 mb-3">Files ({files.length})</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {files.map((file) => {
+                const isExpanded = expandedFiles.has(file.tempId);
+                const effectiveProductLine = getEffectiveValue(file, 'productLine');
+                const effectiveCampaignId = getEffectiveValue(file, 'campaignId');
+                const effectiveLocales = getEffectiveValue(file, 'selectedLocaleCodes');
+                const effectiveRegions = getEffectiveValue(file, 'selectedRegionCodes');
+                const effectiveTags = getEffectiveValue(file, 'selectedTagSlugs');
+                const overrides = file.overrides || {};
 
-                  {/* File Info & Fields */}
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
+                return (
+                  <div key={file.tempId} className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+                    {/* File Header */}
+                    <div className="flex items-start gap-2 mb-3">
+                      <div className="flex-shrink-0">
+                        {getFileIcon(file)}
+                      </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-gray-900 truncate">{file.file.name}</p>
                         <p className="text-xs text-gray-500">{(file.file.size / 1024).toFixed(1)} KB</p>
@@ -363,17 +419,17 @@ export default function BulkUploadPanel({
 
                     {/* Status */}
                     {file.status === 'uploading' && (
-                      <div className="text-xs text-blue-600">Uploading...</div>
+                      <div className="text-xs text-blue-600 mb-2">Uploading...</div>
                     )}
                     {file.status === 'success' && (
-                      <div className="text-xs text-green-600">✓ Uploaded</div>
+                      <div className="text-xs text-green-600 mb-2">✓ Uploaded</div>
                     )}
                     {file.status === 'error' && file.error && (
-                      <div className="text-xs text-red-600">✗ {file.error}</div>
+                      <div className="text-xs text-red-600 mb-2">✗ {file.error}</div>
                     )}
 
-                    {/* Editable Fields */}
-                    <div className="grid grid-cols-2 gap-2">
+                    {/* Main Fields */}
+                    <div className="space-y-2 mb-3">
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-0.5">Title *</label>
                         <input
@@ -385,51 +441,53 @@ export default function BulkUploadPanel({
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-0.5">Asset Type *</label>
-                        <select
-                          value={file.assetTypeId || ''}
-                          onChange={(e) => {
-                            const selectedTypeId = e.target.value || null;
-                            const selectedType = assetTypes.find(t => t.id === selectedTypeId);
-                            const slugToEnumMap: Record<string, string> = {
-                              'image': 'image',
-                              'video': 'video',
-                              'document': 'document',
-                              'artwork': 'document',
-                              'audio': 'audio',
-                              'packaging-regulatory': 'document',
-                              'campaign': 'document',
-                            };
-                            handleFileFieldChange(file.tempId, 'assetTypeId', selectedTypeId);
-                            handleFileFieldChange(file.tempId, 'assetType', selectedType ? slugToEnumMap[selectedType.slug] || 'other' : 'other');
-                            handleFileFieldChange(file.tempId, 'assetSubtypeId', null);
-                          }}
-                          className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none h-7"
-                          disabled={isUploading || file.status === 'uploading'}
-                        >
-                          <option value="">Select Type</option>
-                          {assetTypes.map(type => (
-                            <option key={type.id} value={type.id}>{type.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-0.5">Sub-Type *</label>
-                        <select
-                          value={file.assetSubtypeId || ''}
-                          onChange={(e) => handleFileFieldChange(file.tempId, 'assetSubtypeId', e.target.value || null)}
-                          className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none h-7"
-                          disabled={isUploading || file.status === 'uploading' || !file.assetTypeId}
-                        >
-                          <option value="">Select Sub-Type</option>
-                          {assetSubtypes
-                            .filter(st => st.asset_type_id === file.assetTypeId)
-                            .map(subtype => (
-                              <option key={subtype.id} value={subtype.id}>{subtype.name}</option>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-0.5">Asset Type *</label>
+                          <select
+                            value={file.assetTypeId || ''}
+                            onChange={(e) => {
+                              const selectedTypeId = e.target.value || null;
+                              const selectedType = assetTypes.find(t => t.id === selectedTypeId);
+                              const slugToEnumMap: Record<string, string> = {
+                                'image': 'image',
+                                'video': 'video',
+                                'document': 'document',
+                                'artwork': 'document',
+                                'audio': 'audio',
+                                'packaging-regulatory': 'document',
+                                'campaign': 'document',
+                              };
+                              handleFileFieldChange(file.tempId, 'assetTypeId', selectedTypeId);
+                              handleFileFieldChange(file.tempId, 'assetType', selectedType ? slugToEnumMap[selectedType.slug] || 'other' : 'other');
+                              handleFileFieldChange(file.tempId, 'assetSubtypeId', null);
+                            }}
+                            className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none h-7"
+                            disabled={isUploading || file.status === 'uploading'}
+                          >
+                            <option value="">Select Type</option>
+                            {assetTypes.map(type => (
+                              <option key={type.id} value={type.id}>{type.name}</option>
                             ))}
-                        </select>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-0.5">Sub-Type *</label>
+                          <select
+                            value={file.assetSubtypeId || ''}
+                            onChange={(e) => handleFileFieldChange(file.tempId, 'assetSubtypeId', e.target.value || null)}
+                            className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none h-7"
+                            disabled={isUploading || file.status === 'uploading' || !file.assetTypeId}
+                          >
+                            <option value="">Select Sub-Type</option>
+                            {assetSubtypes
+                              .filter(st => st.asset_type_id === file.assetTypeId)
+                              .map(subtype => (
+                                <option key={subtype.id} value={subtype.id}>{subtype.name}</option>
+                              ))}
+                          </select>
+                        </div>
                       </div>
 
                       <div>
@@ -451,14 +509,137 @@ export default function BulkUploadPanel({
                         </select>
                       </div>
                     </div>
+
+                    {/* Global Defaults Applied - Read-only chips */}
+                    <div className="mb-3 pt-2 border-t border-gray-100">
+                      <p className="text-xs text-gray-500 mb-1.5">Applied defaults:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {effectiveProductLine && (
+                          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700">
+                            {effectiveProductLine}
+                          </span>
+                        )}
+                        {effectiveCampaignId && campaigns.find(c => c.id === effectiveCampaignId) && (
+                          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700">
+                            {campaigns.find(c => c.id === effectiveCampaignId)?.name}
+                          </span>
+                        )}
+                        {effectiveLocales.length > 0 && (
+                          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700">
+                            {effectiveLocales.length} locale{effectiveLocales.length !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {effectiveRegions.length > 0 && (
+                          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700">
+                            {effectiveRegions.length} region{effectiveRegions.length !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {effectiveTags.length > 0 && (
+                          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700">
+                            {effectiveTags.length} tag{effectiveTags.length !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* More Details Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => toggleExpanded(file.tempId)}
+                      className="w-full flex items-center justify-between text-xs text-gray-600 hover:text-gray-900 py-1"
+                      disabled={isUploading || file.status === 'uploading'}
+                    >
+                      <span>More details</span>
+                      {isExpanded ? (
+                        <ChevronUpIcon className="h-4 w-4" />
+                      ) : (
+                        <ChevronDownIcon className="h-4 w-4" />
+                      )}
+                    </button>
+
+                    {/* Expanded Override Fields */}
+                    {isExpanded && (
+                      <div className="mt-2 pt-2 border-t border-gray-100 space-y-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-0.5">SKU</label>
+                          <input
+                            type="text"
+                            value={file.sku}
+                            onChange={(e) => handleFileFieldChange(file.tempId, 'sku', e.target.value)}
+                            className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none h-7"
+                            disabled={isUploading || file.status === 'uploading'}
+                            placeholder="Auto-filled from product"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-0.5">Tags (override)</label>
+                          <select
+                            multiple
+                            value={file.selectedTagSlugs}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, opt => opt.value);
+                              handlePerFileOverride(file.tempId, 'tags', selected);
+                            }}
+                            className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none min-h-[50px]"
+                            disabled={isUploading || file.status === 'uploading'}
+                          >
+                            {tags.map(tag => (
+                              <option key={tag.slug} value={tag.slug}>{tag.label}</option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-0.5">Locales (override)</label>
+                          <select
+                            multiple
+                            value={file.selectedLocaleCodes}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, opt => opt.value);
+                              handlePerFileOverride(file.tempId, 'locales', selected);
+                              if (selected.length > 0 && !selected.includes(file.primaryLocale || '')) {
+                                handleFileFieldChange(file.tempId, 'primaryLocale', selected[0]);
+                              }
+                            }}
+                            className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none min-h-[50px]"
+                            disabled={isUploading || file.status === 'uploading'}
+                          >
+                            {locales.map(loc => (
+                              <option key={loc.code} value={loc.code}>{loc.label}</option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-0.5">Regions (override)</label>
+                          <select
+                            multiple
+                            value={file.selectedRegionCodes}
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.selectedOptions, opt => opt.value);
+                              handlePerFileOverride(file.tempId, 'regions', selected);
+                            }}
+                            className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none min-h-[50px]"
+                            disabled={isUploading || file.status === 'uploading'}
+                          >
+                            {regions.map(reg => (
+                              <option key={reg.code} value={reg.code}>{reg.label}</option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </div>
-            ))}
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
     </div>
   );
 }
-

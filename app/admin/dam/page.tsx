@@ -1374,6 +1374,17 @@ export default function AdminDigitalAssetManagerPage() {
     setBulkUploading(true);
     const results: Array<{ tempId: string; success: boolean; error?: string }> = [];
 
+    // Helper to get effective value (global default if not overridden)
+    const getEffectiveValue = (bulkFile: typeof bulkFiles[0], field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedRegionCodes' | 'selectedTagSlugs') => {
+      const overrides = bulkFile.overrides || {};
+      if (field === 'productLine' && overrides.productLine) return bulkFile.productLine;
+      if (field === 'campaignId' && overrides.campaignId) return bulkFile.campaignId;
+      if (field === 'selectedLocaleCodes' && overrides.locales) return bulkFile.selectedLocaleCodes;
+      if (field === 'selectedRegionCodes' && overrides.regions) return bulkFile.selectedRegionCodes;
+      if (field === 'selectedTagSlugs' && overrides.tags) return bulkFile.selectedTagSlugs;
+      return bulkGlobalDefaults[field];
+    };
+
     // Upload files sequentially to avoid overwhelming the server
     for (const bulkFile of bulkFiles) {
       // Skip if already uploading or completed
@@ -1388,6 +1399,14 @@ export default function AdminDigitalAssetManagerPage() {
 
       try {
         const file = bulkFile.file;
+        
+        // Get effective values (use global defaults if not overridden)
+        const effectiveProductLine = getEffectiveValue(bulkFile, 'productLine');
+        const effectiveCampaignId = getEffectiveValue(bulkFile, 'campaignId');
+        const effectiveLocales = getEffectiveValue(bulkFile, 'selectedLocaleCodes');
+        const effectiveRegions = getEffectiveValue(bulkFile, 'selectedRegionCodes');
+        const effectiveTags = getEffectiveValue(bulkFile, 'selectedTagSlugs');
+        const effectivePrimaryLocale = bulkFile.primaryLocale || effectiveLocales[0] || null;
         
         // Generate PDF thumbnail if needed
         let thumbnailData: string | null = null;
@@ -1412,21 +1431,21 @@ export default function AdminDigitalAssetManagerPage() {
             assetType: bulkFile.assetType,
             assetTypeId: bulkFile.assetTypeId,
             assetSubtypeId: bulkFile.assetSubtypeId,
-            productLine: bulkFile.productLine.trim() || undefined,
+            productLine: effectiveProductLine.trim() || undefined,
             productName: bulkFile.productName.trim() || undefined,
             sku: bulkFile.sku.trim() || undefined,
-            tags: bulkFile.selectedTagSlugs,
+            tags: effectiveTags,
             audiences: [],
-            locales: bulkFile.selectedLocaleCodes.map((code) => ({
+            locales: effectiveLocales.map((code) => ({
               code,
-              primary: code === bulkFile.primaryLocale,
+              primary: code === effectivePrimaryLocale,
             })),
-            regions: bulkFile.selectedRegionCodes,
+            regions: effectiveRegions,
             fileName: file.name,
             fileType: file.type || 'application/octet-stream',
             fileSize: file.size,
             useTitleAsFilename: bulkFile.useTitleAsFilename,
-            campaignId: bulkFile.campaignId || undefined,
+            campaignId: effectiveCampaignId || undefined,
           };
 
           const headers = buildAuthHeaders(accessToken);
@@ -1566,20 +1585,20 @@ export default function AdminDigitalAssetManagerPage() {
             assetType: bulkFile.assetType,
             assetTypeId: bulkFile.assetTypeId,
             assetSubtypeId: bulkFile.assetSubtypeId,
-            productLine: bulkFile.productLine.trim() || undefined,
+            productLine: effectiveProductLine.trim() || undefined,
             productName: bulkFile.productName.trim() || undefined,
             sku: bulkFile.sku.trim() || undefined,
-            tags: bulkFile.selectedTagSlugs,
+            tags: effectiveTags,
             audiences: [],
-            locales: bulkFile.selectedLocaleCodes.map((code) => ({
+            locales: effectiveLocales.map((code) => ({
               code,
-              primary: code === bulkFile.primaryLocale,
+              primary: code === effectivePrimaryLocale,
             })),
-            regions: bulkFile.selectedRegionCodes,
+            regions: effectiveRegions,
             thumbnailData: thumbnailData || undefined,
             thumbnailPath: thumbnailData ? `${Date.now()}-thumb.png` : undefined,
             useTitleAsFilename: bulkFile.useTitleAsFilename,
-            campaignId: bulkFile.campaignId || undefined,
+            campaignId: effectiveCampaignId || undefined,
           };
 
           const formData = new FormData();
