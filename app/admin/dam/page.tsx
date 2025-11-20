@@ -1411,10 +1411,10 @@ export default function AdminDigitalAssetManagerPage() {
         // Get effective values (use global defaults if not overridden)
         const effectiveProductLine = getEffectiveValue(bulkFile, 'productLine');
         const effectiveCampaignId = getEffectiveValue(bulkFile, 'campaignId');
-        const effectiveLocales = getEffectiveValue(bulkFile, 'selectedLocaleCodes');
-        const effectiveRegions = getEffectiveValue(bulkFile, 'selectedRegionCodes');
-        const effectiveTags = getEffectiveValue(bulkFile, 'selectedTagSlugs');
-        const effectivePrimaryLocale = bulkFile.primaryLocale || effectiveLocales[0] || null;
+        const effectiveLocales = getEffectiveValue(bulkFile, 'selectedLocaleCodes') as string[];
+        const effectiveRegions = getEffectiveValue(bulkFile, 'selectedRegionCodes') as string[];
+        const effectiveTags = getEffectiveValue(bulkFile, 'selectedTagSlugs') as string[];
+        const effectivePrimaryLocale = bulkFile.primaryLocale || (effectiveLocales.length > 0 ? effectiveLocales[0] : null) || null;
         
         // Generate PDF thumbnail if needed
         let thumbnailData: string | null = null;
