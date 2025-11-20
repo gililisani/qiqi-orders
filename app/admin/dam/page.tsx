@@ -21,6 +21,7 @@ import {
 } from '@heroicons/react/24/outline';
 import AssetCard from '../../components/dam/AssetCard';
 import AssetDetailModal from '../../components/dam/AssetDetailModal';
+import BulkUploadPanel from '../../components/dam/BulkUploadPanel';
 import { AssetRecord, LocaleOption, RegionOption, AssetVersion, VimeoDownloadFormat } from '../../components/dam/types';
 import { formatBytes, ensureTokenUrl, getFileTypeBadge, buildAuthHeaders } from '../../components/dam/utils';
 
@@ -334,6 +335,40 @@ export default function AdminDigitalAssetManagerPage() {
   const [showVideoDownloadFormats, setShowVideoDownloadFormats] = useState(false);
   const [isEditingExistingAsset, setIsEditingExistingAsset] = useState(false);
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
+  
+  // Bulk upload state
+  const [isBulkUploadMode, setIsBulkUploadMode] = useState(false);
+  const [bulkFiles, setBulkFiles] = useState<Array<{
+    tempId: string;
+    file: File;
+    inferredAssetType: string;
+    inferredAssetTypeId: string | null;
+    title: string;
+    description: string;
+    assetType: string;
+    assetTypeId: string | null;
+    assetSubtypeId: string | null;
+    productLine: string;
+    productName: string;
+    sku: string;
+    selectedTagSlugs: string[];
+    selectedLocaleCodes: string[];
+    primaryLocale: string | null;
+    selectedRegionCodes: string[];
+    useTitleAsFilename: boolean;
+    campaignId: string | null;
+    status?: 'pending' | 'uploading' | 'success' | 'error';
+    error?: string;
+  }>>([]);
+  const [bulkGlobalDefaults, setBulkGlobalDefaults] = useState({
+    productLine: '',
+    campaignId: null as string | null,
+    selectedLocaleCodes: [] as string[],
+    primaryLocale: null as string | null,
+    selectedRegionCodes: [] as string[],
+    selectedTagSlugs: [] as string[],
+  });
+  const [bulkUploading, setBulkUploading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -1324,6 +1359,293 @@ export default function AdminDigitalAssetManagerPage() {
     }
   };
 
+  // Bulk upload handler - reuses existing upload logic
+  const handleBulkUpload = async () => {
+    if (!accessToken) {
+      setError('Not authenticated');
+      return;
+    }
+
+    if (bulkFiles.length === 0) {
+      setError('No files selected');
+      return;
+    }
+
+    setBulkUploading(true);
+    const results: Array<{ tempId: string; success: boolean; error?: string }> = [];
+
+    // Upload files sequentially to avoid overwhelming the server
+    for (const bulkFile of bulkFiles) {
+      // Skip if already uploading or completed
+      if (bulkFile.status === 'uploading' || bulkFile.status === 'success') {
+        continue;
+      }
+
+      // Update status to uploading
+      setBulkFiles(prev => prev.map(f => 
+        f.tempId === bulkFile.tempId ? { ...f, status: 'uploading' as const } : f
+      ));
+
+      try {
+        const file = bulkFile.file;
+        
+        // Generate PDF thumbnail if needed
+        let thumbnailData: string | null = null;
+        if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+          try {
+            const thumbnailResult = await generatePDFThumbnail(file);
+            if (thumbnailResult) {
+              thumbnailData = thumbnailResult.thumbnailData;
+            }
+          } catch (thumbError) {
+            console.error('Thumbnail generation error:', thumbError);
+          }
+        }
+
+        const useDirectStorageUpload = file.size > 5 * 1024 * 1024;
+
+        if (useDirectStorageUpload) {
+          // Large file: use init -> storage -> complete flow
+          const payload = {
+            title: bulkFile.title.trim(),
+            description: bulkFile.description.trim() || undefined,
+            assetType: bulkFile.assetType,
+            assetTypeId: bulkFile.assetTypeId,
+            assetSubtypeId: bulkFile.assetSubtypeId,
+            productLine: bulkFile.productLine.trim() || undefined,
+            productName: bulkFile.productName.trim() || undefined,
+            sku: bulkFile.sku.trim() || undefined,
+            tags: bulkFile.selectedTagSlugs,
+            audiences: [],
+            locales: bulkFile.selectedLocaleCodes.map((code) => ({
+              code,
+              primary: code === bulkFile.primaryLocale,
+            })),
+            regions: bulkFile.selectedRegionCodes,
+            fileName: file.name,
+            fileType: file.type || 'application/octet-stream',
+            fileSize: file.size,
+            useTitleAsFilename: bulkFile.useTitleAsFilename,
+            campaignId: bulkFile.campaignId || undefined,
+          };
+
+          const headers = buildAuthHeaders(accessToken);
+          const initResponse = await fetch('/api/dam/assets/init', {
+            method: 'POST',
+            headers: {
+              ...headers,
+              'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload),
+          });
+
+          if (!initResponse.ok) {
+            const errorData = await initResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to initialize upload: ${initResponse.status}`);
+          }
+
+          const { assetId, storagePath } = await initResponse.json();
+
+          // Upload file directly to Supabase Storage
+          const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError || !currentSession || !currentSession.access_token) {
+            throw new Error('Not authenticated');
+          }
+
+          const uploadError = await new Promise<string | null>((resolve) => {
+            const xhr = new XMLHttpRequest();
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+            const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+            
+            if (!supabaseUrl || !supabaseKey) {
+              resolve('Supabase configuration missing');
+              return;
+            }
+
+            const uploadUrl = `${supabaseUrl}/storage/v1/object/dam-assets/${storagePath}`;
+
+            xhr.addEventListener('load', () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(null);
+              } else {
+                try {
+                  const error = JSON.parse(xhr.responseText);
+                  resolve(error.message || error.error || `Upload failed with status ${xhr.status}`);
+                } catch {
+                  resolve(`Upload failed with status ${xhr.status}`);
+                }
+              }
+            });
+
+            xhr.addEventListener('error', () => resolve('Network error during upload'));
+            xhr.addEventListener('abort', () => resolve('Upload cancelled'));
+
+            xhr.open('POST', uploadUrl);
+            xhr.setRequestHeader('Authorization', `Bearer ${currentSession.access_token}`);
+            xhr.setRequestHeader('apikey', supabaseKey);
+            xhr.setRequestHeader('x-upsert', 'false');
+            xhr.setRequestHeader('cache-control', '3600');
+            xhr.send(file);
+          });
+
+          if (uploadError) {
+            // Rollback: Delete asset record
+            try {
+              await fetch(`/api/dam/assets/${assetId}`, {
+                method: 'DELETE',
+                headers,
+                credentials: 'same-origin',
+              });
+            } catch (rollbackError) {
+              console.error('Failed to rollback asset record:', rollbackError);
+            }
+            throw new Error(`Failed to upload file: ${uploadError}`);
+          }
+
+          // Upload thumbnail if we have one
+          let uploadedThumbnailPath: string | null = null;
+          if (thumbnailData) {
+            try {
+              const finalThumbnailPath = `${assetId}/${Date.now()}-thumb.png`;
+              const thumbnailBytes = Uint8Array.from(atob(thumbnailData), (c) => c.charCodeAt(0));
+              const thumbnailBlob = new Blob([thumbnailBytes], { type: 'image/png' });
+              
+              const { error: thumbUploadError } = await supabase.storage
+                .from('dam-assets')
+                .upload(finalThumbnailPath, thumbnailBlob, {
+                  contentType: 'image/png',
+                  cacheControl: '3600',
+                  upsert: false,
+                });
+              
+              if (!thumbUploadError) {
+                uploadedThumbnailPath = finalThumbnailPath;
+              }
+            } catch (thumbError) {
+              console.error('Error uploading thumbnail:', thumbError);
+            }
+          }
+          
+          // Complete upload
+          const completeResponse = await fetch(`/api/dam/assets/${assetId}/complete`, {
+            method: 'POST',
+            headers: {
+              ...headers,
+              'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              storagePath,
+              fileType: file.type || 'application/octet-stream',
+              fileName: file.name,
+              fileSize: file.size,
+              thumbnailPath: uploadedThumbnailPath || undefined,
+            }),
+          });
+
+          if (!completeResponse.ok) {
+            const errorData = await completeResponse.json().catch(() => ({}));
+            // Rollback
+            try {
+              await fetch(`/api/dam/assets/${assetId}`, {
+                method: 'DELETE',
+                headers,
+                credentials: 'same-origin',
+              });
+            } catch (rollbackError) {
+              console.error('Failed to rollback asset record:', rollbackError);
+            }
+            throw new Error(errorData.error || 'Failed to complete upload');
+          }
+        } else {
+          // Small file: use single API route
+          const payload = {
+            title: bulkFile.title.trim(),
+            description: bulkFile.description.trim() || undefined,
+            assetType: bulkFile.assetType,
+            assetTypeId: bulkFile.assetTypeId,
+            assetSubtypeId: bulkFile.assetSubtypeId,
+            productLine: bulkFile.productLine.trim() || undefined,
+            productName: bulkFile.productName.trim() || undefined,
+            sku: bulkFile.sku.trim() || undefined,
+            tags: bulkFile.selectedTagSlugs,
+            audiences: [],
+            locales: bulkFile.selectedLocaleCodes.map((code) => ({
+              code,
+              primary: code === bulkFile.primaryLocale,
+            })),
+            regions: bulkFile.selectedRegionCodes,
+            thumbnailData: thumbnailData || undefined,
+            thumbnailPath: thumbnailData ? `${Date.now()}-thumb.png` : undefined,
+            useTitleAsFilename: bulkFile.useTitleAsFilename,
+            campaignId: bulkFile.campaignId || undefined,
+          };
+
+          const formData = new FormData();
+          formData.append('payload', JSON.stringify(payload));
+          formData.append('file', file);
+
+          const headers = buildAuthHeaders(accessToken);
+          const response = await fetch('/api/dam/assets', {
+            method: 'POST',
+            headers: Object.keys(headers).length ? headers : undefined,
+            credentials: 'same-origin',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || 'Upload failed');
+          }
+        }
+
+        // Mark as success
+        setBulkFiles(prev => prev.map(f => 
+          f.tempId === bulkFile.tempId ? { ...f, status: 'success' as const } : f
+        ));
+        results.push({ tempId: bulkFile.tempId, success: true });
+      } catch (err: any) {
+        const errorMsg = err.message || 'Upload failed';
+        setBulkFiles(prev => prev.map(f => 
+          f.tempId === bulkFile.tempId ? { ...f, status: 'error' as const, error: errorMsg } : f
+        ));
+        results.push({ tempId: bulkFile.tempId, success: false, error: errorMsg });
+      }
+    }
+
+    setBulkUploading(false);
+
+    // Check if all succeeded
+    const successCount = results.filter(r => r.success).length;
+    const failedCount = results.filter(r => !r.success).length;
+
+    if (failedCount === 0) {
+      // All succeeded - refresh and close
+      setSuccessMessage(`${successCount} asset${successCount !== 1 ? 's' : ''} uploaded successfully.`);
+      if (accessToken) {
+        fetchCampaigns(accessToken);
+        fetchAssets(accessToken);
+      }
+      // Clear bulk files and exit bulk mode after a short delay
+      setTimeout(() => {
+        setBulkFiles([]);
+        setIsBulkUploadMode(false);
+        setBulkGlobalDefaults({
+          productLine: '',
+          campaignId: null,
+          selectedLocaleCodes: [],
+          primaryLocale: null,
+          selectedRegionCodes: [],
+          selectedTagSlugs: [],
+        });
+      }, 2000);
+    } else {
+      // Some failed - show error but keep panel open
+      setError(`${failedCount} of ${bulkFiles.length} upload${bulkFiles.length !== 1 ? 's' : ''} failed. Check individual files for details.`);
+    }
+  };
+
   const renderAssetTypePill = (assetType: string, size: 'sm' | 'md' = 'md') => {
     const option = assetTypeOptions.find((opt) => opt.value === assetType);
     const sizeClasses = size === 'sm' 
@@ -1552,24 +1874,49 @@ export default function AdminDigitalAssetManagerPage() {
               </button>
             </div>
             
-            {/* Upload Button */}
-            <button
-              type="button"
-              onClick={() => {
-                // Clear any previous messages when opening drawer
-                setSuccessMessage('');
-                setError('');
-                // Refresh campaigns when opening drawer
-                if (accessToken) {
-                  fetchCampaigns(accessToken);
-                }
-                setIsUploadDrawerOpen(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
-            >
-              <ArrowUpTrayIcon className="h-4 w-4" />
-              Upload Asset
-            </button>
+            {/* Upload Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  // Clear any previous messages when opening drawer
+                  setSuccessMessage('');
+                  setError('');
+                  // Refresh campaigns when opening drawer
+                  if (accessToken) {
+                    fetchCampaigns(accessToken);
+                  }
+                  setIsUploadDrawerOpen(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
+              >
+                <ArrowUpTrayIcon className="h-4 w-4" />
+                Upload Asset
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Initialize global defaults with current locale
+                  const defaultLocale = locales.find(loc => loc.is_default) || locales[0];
+                  setBulkGlobalDefaults({
+                    productLine: '',
+                    campaignId: null,
+                    selectedLocaleCodes: defaultLocale ? [defaultLocale.code] : [],
+                    primaryLocale: defaultLocale ? defaultLocale.code : null,
+                    selectedRegionCodes: [],
+                    selectedTagSlugs: [],
+                  });
+                  setBulkFiles([]);
+                  setSuccessMessage('');
+                  setError('');
+                  setIsBulkUploadMode(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+              >
+                <ArrowUpTrayIcon className="h-4 w-4" />
+                Bulk Upload
+              </button>
+            </div>
             
             {/* Refresh Button */}
             <button
@@ -1584,6 +1931,37 @@ export default function AdminDigitalAssetManagerPage() {
             </button>
           </div>
         </div>
+
+        {/* Bulk Upload Panel */}
+        {isBulkUploadMode && (
+          <BulkUploadPanel
+            files={bulkFiles}
+            onFilesChange={setBulkFiles}
+            onCancel={() => {
+              setIsBulkUploadMode(false);
+              setBulkFiles([]);
+              setBulkGlobalDefaults({
+                productLine: '',
+                campaignId: null,
+                selectedLocaleCodes: [],
+                primaryLocale: null,
+                selectedRegionCodes: [],
+                selectedTagSlugs: [],
+              });
+            }}
+            onUpload={handleBulkUpload}
+            globalDefaults={bulkGlobalDefaults}
+            onGlobalDefaultsChange={setBulkGlobalDefaults}
+            locales={locales}
+            regions={regions}
+            tags={tags}
+            assetTypes={assetTypes}
+            assetSubtypes={assetSubtypes}
+            products={products}
+            campaigns={campaigns}
+            isUploading={bulkUploading}
+          />
+        )}
 
         {/* Active Uploads Banner */}
         {activeUploads.length > 0 && (
