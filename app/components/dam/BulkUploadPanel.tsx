@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { LocaleOption, RegionOption } from './types';
 import BulkUploadCard from './BulkUploadCard';
@@ -27,6 +27,7 @@ interface BulkFile {
   campaignId: string | null;
   status?: 'pending' | 'uploading' | 'success' | 'error';
   error?: string;
+  previewUrl?: string | null; // Thumbnail preview URL (object URL for images, data URL for PDFs)
   overrides?: {
     productLine?: boolean;
     locales?: boolean;
@@ -105,12 +106,72 @@ export default function BulkUploadPanel({
     return { type: 'other', typeId: documentType?.id || null };
   };
 
-  const handleFileSelect = useCallback((selectedFiles: File[]) => {
+  // Generate PDF thumbnail preview (returns data URL)
+  const generatePDFPreview = async (file: File): Promise<string | null> => {
+    if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+      return null;
+    }
+
+    try {
+      const pdfjsLib = await import('pdfjs-dist');
+      const pdfjsVersion = pdfjsLib.version || '5.4.394';
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.mjs`;
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ 
+        data: arrayBuffer,
+        useSystemFonts: true,
+      }).promise;
+
+      if (pdf.numPages === 0) {
+        return null;
+      }
+
+      const page = await pdf.getPage(1);
+      const scale = 1.5;
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      
+      if (!context) {
+        return null;
+      }
+
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      await page.render({
+        canvas: canvas,
+        canvasContext: context,
+        viewport: viewport,
+      }).promise;
+
+      // Return data URL for preview
+      return canvas.toDataURL('image/png', 0.85);
+    } catch (err) {
+      console.error('Failed to generate PDF preview:', err);
+      return null;
+    }
+  };
+
+  const handleFileSelect = useCallback(async (selectedFiles: File[]) => {
     const defaultLocale = locales.find(loc => loc.is_default) || locales[0];
     
-    const newFiles: BulkFile[] = selectedFiles.map((file) => {
+    const newFiles: BulkFile[] = await Promise.all(selectedFiles.map(async (file) => {
       const inferred = inferAssetType(file.name, file.type);
       const baseTitle = file.name.replace(/\.[^/.]+$/, '');
+      
+      // Generate preview URL
+      let previewUrl: string | null = null;
+      
+      // For images, use object URL
+      if (file.type.startsWith('image/')) {
+        previewUrl = URL.createObjectURL(file);
+      }
+      // For PDFs, generate thumbnail
+      else if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+        previewUrl = await generatePDFPreview(file);
+      }
       
       return {
         tempId: `bulk-${Date.now()}-${Math.random()}`,
@@ -134,9 +195,10 @@ export default function BulkUploadPanel({
         useTitleAsFilename: false,
         campaignId: globalDefaults.campaignId,
         status: 'pending',
+        previewUrl,
         overrides: {},
       };
-    });
+    }));
     
     onFilesChange([...files, ...newFiles]);
   }, [files, globalDefaults, locales, onFilesChange, assetTypes]);
@@ -181,6 +243,11 @@ export default function BulkUploadPanel({
   };
 
   const handleRemoveFile = (tempId: string) => {
+    // Clean up object URLs before removing
+    const fileToRemove = files.find(f => f.tempId === tempId);
+    if (fileToRemove?.previewUrl && fileToRemove.file.type.startsWith('image/')) {
+      URL.revokeObjectURL(fileToRemove.previewUrl);
+    }
     onFilesChange(files.filter(f => f.tempId !== tempId));
   };
 

@@ -25,6 +25,7 @@ interface BulkFile {
   campaignId: string | null;
   status?: 'pending' | 'uploading' | 'success' | 'error';
   error?: string;
+  previewUrl?: string | null; // Thumbnail preview URL (object URL for images, data URL for PDFs)
   overrides?: {
     productLine?: boolean;
     locales?: boolean;
@@ -80,6 +81,25 @@ export default function BulkUploadCard({
     return <DocumentTextIcon className="h-10 w-10 text-gray-500" />;
   };
 
+  const renderThumbnail = () => {
+    // Show thumbnail if available (images or PDFs)
+    if (file.previewUrl) {
+      return (
+        <img
+          src={file.previewUrl}
+          alt={file.file.name}
+          className="h-10 w-10 rounded object-cover border border-gray-200"
+          onError={(e) => {
+            // Fallback to icon if image fails to load
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+      );
+    }
+    // Fallback to icon
+    return getFileIcon();
+  };
+
   const effectiveProductLine = getEffectiveValue(file, 'productLine') as string;
   const effectiveCampaignId = getEffectiveValue(file, 'campaignId') as string | null;
   const effectiveLocales = getEffectiveValue(file, 'selectedLocaleCodes') as string[];
@@ -97,7 +117,7 @@ export default function BulkUploadCard({
       {/* Card Header */}
       <div className="flex items-start gap-2 p-2.5 border-b border-gray-100">
         <div className="flex-shrink-0">
-          {getFileIcon()}
+          {renderThumbnail()}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 truncate">{file.file.name}</p>

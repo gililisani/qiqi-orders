@@ -359,6 +359,7 @@ export default function AdminDigitalAssetManagerPage() {
     campaignId: string | null;
     status?: 'pending' | 'uploading' | 'success' | 'error';
     error?: string;
+    previewUrl?: string | null;
     overrides?: {
       productLine?: boolean;
       locales?: boolean;
@@ -1656,6 +1657,12 @@ export default function AdminDigitalAssetManagerPage() {
       }
       // Clear bulk files and exit bulk mode after a short delay
       setTimeout(() => {
+        // Clean up object URLs before clearing files
+        bulkFiles.forEach(file => {
+          if (file.previewUrl && file.file.type.startsWith('image/')) {
+            URL.revokeObjectURL(file.previewUrl);
+          }
+        });
         setBulkFiles([]);
         setIsBulkUploadMode(false);
         setBulkGlobalDefaults({
@@ -1965,6 +1972,12 @@ export default function AdminDigitalAssetManagerPage() {
             files={bulkFiles}
             onFilesChange={setBulkFiles}
             onCancel={() => {
+              // Clean up object URLs before clearing files
+              bulkFiles.forEach(file => {
+                if (file.previewUrl && file.file.type.startsWith('image/')) {
+                  URL.revokeObjectURL(file.previewUrl);
+                }
+              });
               setIsBulkUploadMode(false);
               setBulkFiles([]);
               setBulkGlobalDefaults({
