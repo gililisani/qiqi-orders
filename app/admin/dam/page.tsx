@@ -359,6 +359,14 @@ export default function AdminDigitalAssetManagerPage() {
     campaignId: string | null;
     status?: 'pending' | 'uploading' | 'success' | 'error';
     error?: string;
+    overrides?: {
+      productLine?: boolean;
+      locales?: boolean;
+      regions?: boolean;
+      tags?: boolean;
+      campaignId?: boolean;
+      sku?: boolean;
+    };
   }>>([]);
   const [bulkGlobalDefaults, setBulkGlobalDefaults] = useState({
     productLine: '',
