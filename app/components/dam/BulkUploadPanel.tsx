@@ -40,7 +40,7 @@ interface BulkUploadPanelProps {
     selectedRegionCodes: string[];
     selectedTagSlugs: string[];
   };
-  onGlobalDefaultsChange: (defaults: Partial<BulkUploadPanelProps['globalDefaults']>) => void;
+  onGlobalDefaultsChange: (defaults: BulkUploadPanelProps['globalDefaults']) => void;
   locales: LocaleOption[];
   regions: RegionOption[];
   tags: Array<{ id: string; slug: string; label: string }> | Array<{ slug: string; label: string }>;
