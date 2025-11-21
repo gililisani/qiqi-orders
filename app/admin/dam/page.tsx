@@ -536,7 +536,7 @@ export default function AdminDigitalAssetManagerPage() {
           const allProductLinesData = await allProductLinesRes.json();
           setAllProductLines(allProductLinesData.productLines || []);
           // Extract unique product line codes for filter dropdown
-          const uniqueCodes = [...new Set((allProductLinesData.productLines || []).map((pl: any) => pl.code))];
+          const uniqueCodes = [...new Set((allProductLinesData.productLines || []).map((pl: any) => pl.code).filter((code: any): code is string => typeof code === 'string'))];
           setProductLineFilterOptions(uniqueCodes);
         }
         
