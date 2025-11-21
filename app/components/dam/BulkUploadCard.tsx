@@ -42,6 +42,7 @@ interface BulkUploadCardProps {
   assetTypes: Array<{ id: string; name: string; slug: string }>;
   assetSubtypes: Array<{ id: string; name: string; slug: string; asset_type_id: string }>;
   products: Array<{ id: number; item_name: string; sku: string }>;
+  productLines: Array<{ code: string; name: string }>;
   locales: LocaleOption[];
   tags: Array<{ id: string; slug: string; label: string }> | Array<{ slug: string; label: string }>;
   campaigns: Array<{ id: string; name: string }>;
@@ -63,7 +64,9 @@ export default function BulkUploadCard({
   assetTypes,
   assetSubtypes,
   products,
+  productLines,
   locales,
+  allLocales,
   tags,
   campaigns,
   globalDefaults,
@@ -381,9 +384,17 @@ export default function BulkUploadCard({
               disabled={isUploading || file.status === 'uploading'}
             >
               <option value="">None</option>
-              <option value="ProCtrl">ProCtrl</option>
-              <option value="SelfCtrl">SelfCtrl</option>
-              <option value="Both">Both</option>
+              {(() => {
+                // Get active product lines
+                const activeOptions = productLines.map(pl => ({ code: pl.code, name: pl.name, active: true }));
+                // If current value is inactive, add it to options
+                const currentValue = effectiveProductLine;
+                // Note: We'd need allProductLines prop to check for inactive, but for now just show active ones
+                // The main form handles inactive values, bulk upload is typically for new assets
+                return activeOptions.map(pl => (
+                  <option key={pl.code} value={pl.code}>{pl.name}</option>
+                ));
+              })()}
             </select>
           </div>
 
@@ -467,36 +478,50 @@ export default function BulkUploadCard({
           <div>
             <label className="block text-[11px] font-semibold text-gray-700 mb-1">Locales</label>
             <div className="space-y-1">
-              {locales.map((locale) => {
-                const selected = currentLocales.includes(locale.code);
-                return (
-                  <div key={locale.code} className="flex items-center justify-between rounded-md border border-gray-200 px-2 py-1">
-                    <label className="flex items-center gap-1.5 text-[10px] text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() => handleLocaleToggle(locale.code)}
-                        className="h-3.5 w-3.5 rounded border-gray-300 text-black focus:ring-black"
-                        disabled={isUploading || file.status === 'uploading'}
-                      />
-                      <span>{locale.label}</span>
-                    </label>
-                    {selected && (
-                      <label className="flex items-center gap-1 text-[9px] text-gray-600">
+              {(() => {
+                // Get active locales
+                const activeLocales = locales;
+                // Add any currently selected inactive locales
+                const selectedInactiveLocales = currentLocales
+                  .filter(code => !activeLocales.find(l => l.code === code))
+                  .map(code => {
+                    const inactive = allLocales?.find(l => l.code === code);
+                    return inactive ? { ...inactive, is_inactive: true } : null;
+                  })
+                  .filter((l): l is LocaleOption & { is_inactive: true } => l !== null);
+                const allDisplayLocales = [...activeLocales, ...selectedInactiveLocales];
+                
+                return allDisplayLocales.map((locale) => {
+                  const selected = currentLocales.includes(locale.code);
+                  return (
+                    <div key={locale.code} className="flex items-center justify-between rounded-md border border-gray-200 px-2 py-1">
+                      <label className="flex items-center gap-1.5 text-[10px] text-gray-700">
                         <input
-                          type="radio"
-                          name={`primary-locale-${file.tempId}`}
-                          checked={file.primaryLocale === locale.code}
-                          onChange={() => onFieldChange(file.tempId, 'primaryLocale', locale.code)}
-                          className="h-2.5 w-2.5"
-                          disabled={isUploading || file.status === 'uploading'}
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => handleLocaleToggle(locale.code)}
+                          className="h-3.5 w-3.5 rounded border-gray-300 text-black focus:ring-black"
+                          disabled={(isUploading || file.status === 'uploading') || (locale as any).is_inactive}
                         />
-                        Primary
+                        <span>{locale.label}{(locale as any).is_inactive ? ' (inactive)' : ''}</span>
                       </label>
-                    )}
-                  </div>
-                );
-              })}
+                      {selected && (
+                        <label className="flex items-center gap-1 text-[9px] text-gray-600">
+                          <input
+                            type="radio"
+                            name={`primary-locale-${file.tempId}`}
+                            checked={file.primaryLocale === locale.code}
+                            onChange={() => onFieldChange(file.tempId, 'primaryLocale', locale.code)}
+                            className="h-2.5 w-2.5"
+                            disabled={isUploading || file.status === 'uploading'}
+                          />
+                          Primary
+                        </label>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </div>
         </div>

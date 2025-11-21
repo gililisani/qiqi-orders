@@ -7,6 +7,7 @@ interface BulkUploadDefaultsProps {
   };
   onGlobalDefaultsChange: (defaults: BulkUploadDefaultsProps['globalDefaults']) => void;
   campaigns: Array<{ id: string; name: string }>;
+  productLines: Array<{ code: string; name: string }>;
   isUploading: boolean;
 }
 
@@ -14,6 +15,7 @@ export default function BulkUploadDefaults({
   globalDefaults,
   onGlobalDefaultsChange,
   campaigns,
+  productLines,
   isUploading,
 }: BulkUploadDefaultsProps) {
   const handleChange = (field: keyof typeof globalDefaults, value: any) => {
@@ -35,9 +37,9 @@ export default function BulkUploadDefaults({
             disabled={isUploading}
           >
             <option value="">None</option>
-            <option value="ProCtrl">ProCtrl</option>
-            <option value="SelfCtrl">SelfCtrl</option>
-            <option value="Both">Both</option>
+            {productLines.map(pl => (
+              <option key={pl.code} value={pl.code}>{pl.name}</option>
+            ))}
           </select>
         </div>
 

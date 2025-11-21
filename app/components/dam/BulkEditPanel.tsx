@@ -45,10 +45,12 @@ interface BulkEditPanelProps {
   };
   onGlobalDefaultsChange: (defaults: BulkEditPanelProps['globalDefaults']) => void;
   locales: LocaleOption[];
+  allLocales?: LocaleOption[]; // All locales including inactive (for showing current values)
   tags: Array<{ id: string; slug: string; label: string }> | Array<{ slug: string; label: string }>;
   assetTypes: Array<{ id: string; name: string; slug: string }>;
   assetSubtypes: Array<{ id: string; name: string; slug: string; asset_type_id: string }>;
   products: Array<{ id: number; item_name: string; sku: string }>;
+  productLines: Array<{ code: string; name: string }>;
   campaigns: Array<{ id: string; name: string }>;
   isSaving: boolean;
   accessToken: string | null;
@@ -63,10 +65,12 @@ export default function BulkEditPanel({
   globalDefaults,
   onGlobalDefaultsChange,
   locales,
+  allLocales,
   tags,
   assetTypes,
   assetSubtypes,
   products,
+  productLines,
   campaigns,
   isSaving,
   accessToken,
@@ -151,6 +155,7 @@ export default function BulkEditPanel({
           globalDefaults={globalDefaults}
           onGlobalDefaultsChange={onGlobalDefaultsChange}
           campaigns={campaigns}
+          productLines={productLines}
           isUploading={isSaving}
         />
       )}
@@ -205,7 +210,9 @@ export default function BulkEditPanel({
                   assetTypes={assetTypes}
                   assetSubtypes={assetSubtypes}
                   products={products}
+                  productLines={productLines}
                   locales={locales}
+                  allLocales={allLocales}
                   tags={tags}
                   campaigns={campaigns}
                   globalDefaults={globalDefaults}

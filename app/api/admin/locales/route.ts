@@ -98,6 +98,63 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+// POST /api/admin/locales - Create new locale
+export async function POST(request: NextRequest) {
+  try {
+    const auth = createAuth();
+    await auth.requireRole(request, 'admin');
+
+    const supabaseAdmin = createSupabaseAdminClient();
+    const body = await request.json();
+    const { code, label } = body;
+
+    if (!code || !label || typeof code !== 'string' || typeof label !== 'string') {
+      return NextResponse.json({ error: 'Locale code and label are required' }, { status: 400 });
+    }
+
+    // Check if locale with this code already exists
+    const { data: existing, error: checkError } = await supabaseAdmin
+      .from('dam_locales')
+      .select('code')
+      .eq('code', code.trim().toLowerCase())
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+
+    if (existing) {
+      return NextResponse.json({ error: 'A locale with this code already exists' }, { status: 400 });
+    }
+
+    const insertData: any = {
+      code: code.trim().toLowerCase(),
+      label: label.trim(),
+      is_default: false,
+      active: true, // Default to active
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from('dam_locales')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return NextResponse.json({ error: 'A locale with this code already exists' }, { status: 400 });
+      }
+      throw error;
+    }
+
+    return NextResponse.json({ locale: data });
+  } catch (err: any) {
+    if (err instanceof NextResponse) return err;
+    console.error('Locale create failed', err);
+    return NextResponse.json({ error: err.message || 'Failed to create locale' }, { status: 500 });
+  }
+}
+
 // DELETE /api/admin/locales - Delete locale (only if not in use)
 export async function DELETE(request: NextRequest) {
   try {

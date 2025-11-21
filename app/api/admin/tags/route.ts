@@ -125,6 +125,74 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+// POST /api/admin/tags - Create new tag
+export async function POST(request: NextRequest) {
+  try {
+    const auth = createAuth();
+    await auth.requireRole(request, 'admin');
+
+    const supabaseAdmin = createSupabaseAdminClient();
+    const body = await request.json();
+    const { label } = body;
+
+    if (!label || typeof label !== 'string') {
+      return NextResponse.json({ error: 'Tag label is required' }, { status: 400 });
+    }
+
+    // Generate slug from label
+    const slug = label
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
+    // Check if tag with this slug already exists
+    const { data: existingTag, error: checkError } = await supabaseAdmin
+      .from('dam_tags')
+      .select('id, slug, label')
+      .eq('slug', slug)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+
+    if (existingTag) {
+      return NextResponse.json({ 
+        error: 'A tag with this slug already exists',
+        tag: existingTag 
+      }, { status: 409 });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('dam_tags')
+      .insert({ slug, label: label.trim() })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        // Race condition - fetch existing tag
+        const { data: fetchedTag } = await supabaseAdmin
+          .from('dam_tags')
+          .select('id, slug, label')
+          .eq('slug', slug)
+          .single();
+        if (fetchedTag) {
+          return NextResponse.json({ tag: fetchedTag });
+        }
+      }
+      throw error;
+    }
+
+    return NextResponse.json({ tag: data });
+  } catch (err: any) {
+    if (err instanceof NextResponse) return err;
+    console.error('Tag create failed', err);
+    return NextResponse.json({ error: err.message || 'Failed to create tag' }, { status: 500 });
+  }
+}
+
 // DELETE /api/admin/tags - Delete tag (removes from all assets)
 export async function DELETE(request: NextRequest) {
   try {

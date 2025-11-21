@@ -16,6 +16,8 @@ export default function TagsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ label: string }>({ label: '' });
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState<{ label: string }>({ label: '' });
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -95,6 +97,43 @@ export default function TagsPage() {
     }
   };
 
+  const handleCreate = async () => {
+    if (!createForm.label.trim()) {
+      setError('Tag name is required');
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('Not authenticated');
+        return;
+      }
+
+      const response = await fetch('/api/admin/tags', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          label: createForm.label,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to create tag');
+      }
+
+      setShowCreateModal(false);
+      setCreateForm({ label: '' });
+      fetchTags();
+    } catch (err: any) {
+      setError(err.message || 'Failed to create tag');
+    }
+  };
+
   const handleDelete = async (tag: Tag) => {
     const message = tag.asset_count > 0
       ? `Delete tag "${tag.label}"? It will be removed from ${tag.asset_count} asset(s) and cannot be undone.`
@@ -141,15 +180,58 @@ export default function TagsPage() {
     <div className="mt-8 mb-4 space-y-6">
       <h2 className="text-2xl font-semibold text-gray-900">Tags Settings</h2>
 
-      <div className="mb-6">
+      <div className="mb-6 flex gap-4 items-center">
         <input
           type="text"
           placeholder="Search tags by name or slug..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full max-w-md px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+          className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
         />
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
+        >
+          Add Tag
+        </button>
       </div>
+
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Create New Tag</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tag Name *</label>
+                <input
+                  type="text"
+                  value={createForm.label}
+                  onChange={(e) => setCreateForm({ label: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  placeholder="e.g. Marketing, Product, Campaign"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setCreateForm({ label: '' });
+                }}
+                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreate}
+                className="px-4 py-2 bg-black text-white rounded hover:opacity-90"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">

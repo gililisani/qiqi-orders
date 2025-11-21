@@ -47,10 +47,12 @@ interface BulkUploadPanelProps {
   };
   onGlobalDefaultsChange: (defaults: BulkUploadPanelProps['globalDefaults']) => void;
   locales: LocaleOption[];
+  allLocales?: LocaleOption[]; // All locales including inactive (for showing current values)
   tags: Array<{ id: string; slug: string; label: string }> | Array<{ slug: string; label: string }>;
   assetTypes: Array<{ id: string; name: string; slug: string }>;
   assetSubtypes: Array<{ id: string; name: string; slug: string; asset_type_id: string }>;
   products: Array<{ id: number; item_name: string; sku: string }>;
+  productLines: Array<{ code: string; name: string }>;
   campaigns: Array<{ id: string; name: string }>;
   isUploading: boolean;
   accessToken?: string | null;
@@ -65,10 +67,12 @@ export default function BulkUploadPanel({
   globalDefaults,
   onGlobalDefaultsChange,
   locales,
+  allLocales,
   tags,
   assetTypes,
   assetSubtypes,
   products,
+  productLines,
   campaigns,
   isUploading,
   accessToken,
@@ -303,6 +307,7 @@ export default function BulkUploadPanel({
           globalDefaults={globalDefaults}
           onGlobalDefaultsChange={onGlobalDefaultsChange}
           campaigns={campaigns}
+          productLines={productLines}
           isUploading={isUploading}
         />
       )}
@@ -355,7 +360,9 @@ export default function BulkUploadPanel({
                   assetTypes={assetTypes}
                   assetSubtypes={assetSubtypes}
                   products={products}
+                  productLines={productLines}
                   locales={locales}
+                  allLocales={allLocales}
                   tags={tags}
                   campaigns={campaigns}
                   globalDefaults={globalDefaults}

@@ -17,6 +17,8 @@ export default function AssetTypesPage() {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ name: string; slug: string; active: boolean }>({ name: '', slug: '', active: true });
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState<{ name: string; slug: string }>({ name: '', slug: '' });
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -123,6 +125,44 @@ export default function AssetTypesPage() {
     }
   };
 
+  const handleCreate = async () => {
+    if (!createForm.name.trim()) {
+      setError('Asset type name is required');
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('Not authenticated');
+        return;
+      }
+
+      const response = await fetch('/api/admin/asset-types', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          name: createForm.name,
+          slug: createForm.slug || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to create asset type');
+      }
+
+      setShowCreateModal(false);
+      setCreateForm({ name: '', slug: '' });
+      fetchAssetTypes();
+    } catch (err: any) {
+      setError(err.message || 'Failed to create asset type');
+    }
+  };
+
   const handleDelete = async (type: AssetType) => {
     if (!confirm(`Delete asset type "${type.name}"? This will only work if no assets use it.`)) {
       return;
@@ -163,7 +203,68 @@ export default function AssetTypesPage() {
 
   return (
     <div className="mt-8 mb-4 space-y-6">
-      <h2 className="text-2xl font-semibold text-gray-900">Asset Types Settings</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-semibold text-gray-900">Asset Types Settings</h2>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
+        >
+          Add Asset Type
+        </button>
+      </div>
+
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Create New Asset Type</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={createForm.name}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    setCreateForm({ 
+                      name, 
+                      slug: createForm.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+                    });
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  placeholder="e.g. Image, Video, Document"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Slug (optional)</label>
+                <input
+                  type="text"
+                  value={createForm.slug}
+                  onChange={(e) => setCreateForm({ ...createForm, slug: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  placeholder="Auto-generated from name"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setCreateForm({ name: '', slug: '' });
+                }}
+                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreate}
+                className="px-4 py-2 bg-black text-white rounded hover:opacity-90"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">

@@ -25,14 +25,19 @@ export async function GET(request: NextRequest) {
 
     const supabaseAdmin = createSupabaseAdminClient();
 
-    const [tagsRes, localesRes, regionsRes, assetTypesRes, assetSubtypesRes, productsRes] = await Promise.all([
+    const [tagsRes, localesRes, regionsRes, assetTypesRes, assetSubtypesRes, productsRes, productLinesRes] = await Promise.all([
       supabaseAdmin.from('dam_tags').select('*').order('label', { ascending: true }),
-      supabaseAdmin.from('dam_locales').select('*').order('label', { ascending: true }),
+      supabaseAdmin.from('dam_locales').select('*').eq('active', true).order('label', { ascending: true }),
       supabaseAdmin.from('dam_regions').select('*').order('label', { ascending: true }),
       supabaseAdmin.from('dam_asset_types').select('*').eq('active', true).order('display_order', { ascending: true }),
       supabaseAdmin.from('dam_asset_subtypes').select('*').eq('active', true).order('display_order', { ascending: true }),
       supabaseAdmin.from('Products').select('id, item_name, sku').eq('enable', true).order('item_name', { ascending: true }),
+      supabaseAdmin.from('dam_product_lines').select('*').eq('active', true).order('display_order', { ascending: true }),
     ]);
+    
+    // Filter subtypes to only include those whose parent asset type is active
+    const activeTypeIds = new Set((assetTypesRes.data || []).map((t: any) => t.id));
+    const filteredSubtypes = (assetSubtypesRes.data || []).filter((st: any) => activeTypeIds.has(st.asset_type_id));
 
     if (tagsRes.error) throw tagsRes.error;
     if (localesRes.error) throw localesRes.error;
@@ -40,6 +45,7 @@ export async function GET(request: NextRequest) {
     if (assetTypesRes.error) throw assetTypesRes.error;
     if (assetSubtypesRes.error) throw assetSubtypesRes.error;
     if (productsRes.error) throw productsRes.error;
+    if (productLinesRes.error) throw productLinesRes.error;
 
     return NextResponse.json({
       tags: (tagsRes.data ?? []).map((tag) => ({ id: tag.id, slug: tag.slug, label: tag.label })),
@@ -55,7 +61,7 @@ export async function GET(request: NextRequest) {
         slug: type.slug,
         display_order: type.display_order,
       })),
-      assetSubtypes: (assetSubtypesRes.data ?? []).map((subtype) => ({
+      assetSubtypes: filteredSubtypes.map((subtype: any) => ({
         id: subtype.id,
         name: subtype.name,
         slug: subtype.slug,
@@ -66,6 +72,11 @@ export async function GET(request: NextRequest) {
         id: product.id,
         item_name: product.item_name,
         sku: product.sku || '',
+      })),
+      productLines: (productLinesRes.data ?? []).map((pl) => ({
+        code: pl.code,
+        name: pl.name,
+        slug: pl.slug,
       })),
     });
   } catch (err: any) {

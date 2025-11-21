@@ -106,6 +106,78 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+// POST /api/admin/asset-types - Create new asset type
+export async function POST(request: NextRequest) {
+  try {
+    const auth = createAuth();
+    await auth.requireRole(request, 'admin');
+
+    const supabaseAdmin = createSupabaseAdminClient();
+    const body = await request.json();
+    const { name, slug, active } = body;
+
+    if (!name || typeof name !== 'string') {
+      return NextResponse.json({ error: 'Asset type name is required' }, { status: 400 });
+    }
+
+    // Generate slug from name if not provided
+    const finalSlug = slug || name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
+    // Check if asset type with this slug already exists
+    const { data: existing, error: checkError } = await supabaseAdmin
+      .from('dam_asset_types')
+      .select('id, slug')
+      .eq('slug', finalSlug)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+
+    if (existing) {
+      return NextResponse.json({ error: 'An asset type with this slug already exists' }, { status: 400 });
+    }
+
+    // Get max display_order
+    const { data: maxOrderData } = await supabaseAdmin
+      .from('dam_asset_types')
+      .select('display_order')
+      .order('display_order', { ascending: false })
+      .limit(1)
+      .single();
+
+    const insertData: any = {
+      name: name.trim(),
+      slug: finalSlug,
+      active: active !== undefined ? active : true,
+      display_order: maxOrderData?.display_order ? maxOrderData.display_order + 1 : 0,
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from('dam_asset_types')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return NextResponse.json({ error: 'An asset type with this slug already exists' }, { status: 400 });
+      }
+      throw error;
+    }
+
+    return NextResponse.json({ assetType: data });
+  } catch (err: any) {
+    if (err instanceof NextResponse) return err;
+    console.error('Asset type create failed', err);
+    return NextResponse.json({ error: err.message || 'Failed to create asset type' }, { status: 500 });
+  }
+}
+
 // DELETE /api/admin/asset-types - Delete asset type (only if not in use)
 export async function DELETE(request: NextRequest) {
   try {

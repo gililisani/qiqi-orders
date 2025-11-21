@@ -271,10 +271,15 @@ export default function AdminDigitalAssetManagerPage() {
 
   const [tags, setTags] = useState<TagOption[]>([]);
   const [locales, setLocales] = useState<LocaleOption[]>([]);
+  const [allLocales, setAllLocales] = useState<LocaleOption[]>([]); // Store all locales (including inactive) for showing current values
   const [regions, setRegions] = useState<RegionOption[]>([]);
   const [assetTypes, setAssetTypes] = useState<Array<{ id: string; name: string; slug: string }>>([]);
+  const [allAssetTypes, setAllAssetTypes] = useState<Array<{ id: string; name: string; slug: string; active: boolean }>>([]); // All asset types including inactive
   const [assetSubtypes, setAssetSubtypes] = useState<Array<{ id: string; name: string; slug: string; asset_type_id: string }>>([]);
+  const [allAssetSubtypes, setAllAssetSubtypes] = useState<Array<{ id: string; name: string; slug: string; asset_type_id: string; active: boolean }>>([]); // All asset subtypes including inactive
   const [products, setProducts] = useState<Array<{ id: number; item_name: string; sku: string }>>([]);
+  const [productLines, setProductLines] = useState<Array<{ code: string; name: string; slug: string }>>([]);
+  const [allProductLines, setAllProductLines] = useState<Array<{ code: string; name: string; slug: string; active: boolean }>>([]); // Store all product lines for showing current values
   const [campaigns, setCampaigns] = useState<Array<{ id: string; name: string }>>([]);
 
   const [formState, setFormState] = useState<UploadFormState>(defaultFormState);
@@ -321,7 +326,7 @@ export default function AdminDigitalAssetManagerPage() {
   } | null>(null);
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const [productLines, setProductLines] = useState<string[]>([]);
+  const [productLineFilterOptions, setProductLineFilterOptions] = useState<string[]>([]); // For filter dropdown
   const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
   const [isEditingAsset, setIsEditingAsset] = useState(false);
   const [editingDownloadUrls, setEditingDownloadUrls] = useState<VimeoDownloadFormat[]>([]);
@@ -506,11 +511,48 @@ export default function AdminDigitalAssetManagerPage() {
       const payload = await response.json();
       const localeOptions: LocaleOption[] = payload.locales || [];
       setTags(payload.tags || []);
-      setLocales(localeOptions);
+      setLocales(localeOptions); // Only active locales
       setRegions(payload.regions || []);
       setAssetTypes(payload.assetTypes || []);
       setAssetSubtypes(payload.assetSubtypes || []);
       setProducts(payload.products || []);
+      setProductLines(payload.productLines || []); // Only active product lines
+      
+      // Fetch all locales, product lines, asset types, and subtypes (including inactive) for showing current values
+      try {
+        const [allLocalesRes, allProductLinesRes, allAssetTypesRes, allAssetSubtypesRes] = await Promise.all([
+          fetch('/api/admin/locales', { headers }),
+          fetch('/api/admin/product-lines', { headers }),
+          fetch('/api/admin/asset-types', { headers }),
+          fetch('/api/admin/asset-subtypes', { headers }),
+        ]);
+        
+        if (allLocalesRes.ok) {
+          const allLocalesData = await allLocalesRes.json();
+          setAllLocales(allLocalesData.locales || []);
+        }
+        
+        if (allProductLinesRes.ok) {
+          const allProductLinesData = await allProductLinesRes.json();
+          setAllProductLines(allProductLinesData.productLines || []);
+          // Extract unique product line codes for filter dropdown
+          const uniqueCodes = [...new Set((allProductLinesData.productLines || []).map((pl: any) => pl.code))];
+          setProductLineFilterOptions(uniqueCodes);
+        }
+        
+        if (allAssetTypesRes.ok) {
+          const allAssetTypesData = await allAssetTypesRes.json();
+          setAllAssetTypes(allAssetTypesData.assetTypes || []);
+        }
+        
+        if (allAssetSubtypesRes.ok) {
+          const allAssetSubtypesData = await allAssetSubtypesRes.json();
+          setAllAssetSubtypes(allAssetSubtypesData.assetSubtypes || []);
+        }
+      } catch (err) {
+        // Silently fail - these are optional for showing inactive values
+        console.warn('Failed to fetch all taxonomy data:', err);
+      }
 
       const defaultLocale = localeOptions.find((loc) => loc.is_default) ?? localeOptions[0];
       if (defaultLocale) {
@@ -2335,10 +2377,14 @@ export default function AdminDigitalAssetManagerPage() {
             globalDefaults={bulkEditGlobalDefaults}
             onGlobalDefaultsChange={setBulkEditGlobalDefaults}
             locales={locales}
+            allLocales={allLocales}
             tags={tags}
             assetTypes={assetTypes}
             assetSubtypes={assetSubtypes}
             products={products}
+            productLines={productLines}
+            locales={locales}
+            allLocales={allLocales}
             campaigns={campaigns}
             isSaving={bulkSaving}
             accessToken={accessToken}
@@ -2456,10 +2502,9 @@ export default function AdminDigitalAssetManagerPage() {
               className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
             >
               <option value="">Product Line</option>
-              <option value="ProCtrl">ProCtrl</option>
-              <option value="SelfCtrl">SelfCtrl</option>
-              <option value="Both">Both</option>
-              <option value="None">None</option>
+              {productLines.map(pl => (
+                <option key={pl.code} value={pl.code}>{pl.name}</option>
+              ))}
             </select>
 
             <select
@@ -2919,11 +2964,23 @@ export default function AdminDigitalAssetManagerPage() {
                         required
                       >
                         <option value="">Select Asset Type</option>
-                        {assetTypes.map((type) => (
-                          <option key={type.id} value={type.id}>
-                            {type.name}
-                          </option>
-                        ))}
+                        {(() => {
+                          // Get active asset types
+                          const activeTypes = assetTypes;
+                          // If current value is inactive, add it to options
+                          const currentValue = formState.assetTypeId;
+                          const currentInactive = currentValue && !assetTypes.find(t => t.id === currentValue)
+                            ? allAssetTypes.find(t => t.id === currentValue)
+                            : null;
+                          const allOptions = currentInactive 
+                            ? [...activeTypes, { id: currentInactive.id, name: currentInactive.name, slug: currentInactive.slug }]
+                            : activeTypes;
+                          return allOptions.map(type => (
+                            <option key={type.id} value={type.id}>
+                              {type.name}{currentInactive && type.id === currentInactive.id ? ' (inactive)' : ''}
+                            </option>
+                          ));
+                        })()}
                       </select>
                       {(() => {
                         const selectedType = assetTypes.find(t => t.id === formState.assetTypeId);
@@ -2962,13 +3019,25 @@ export default function AdminDigitalAssetManagerPage() {
                         required={!!formState.assetTypeId}
                       >
                         <option value="">Select Sub-Type</option>
-                        {assetSubtypes
-                          .filter((subtype) => subtype.asset_type_id === formState.assetTypeId)
-                          .map((subtype) => (
+                        {(() => {
+                          // Get active subtypes for the selected asset type
+                          const activeSubtypes = assetSubtypes.filter(
+                            (subtype) => subtype.asset_type_id === formState.assetTypeId
+                          );
+                          // If current value is inactive, add it to options
+                          const currentValue = formState.assetSubtypeId;
+                          const currentInactive = currentValue && !activeSubtypes.find(st => st.id === currentValue)
+                            ? allAssetSubtypes.find(st => st.id === currentValue && st.asset_type_id === formState.assetTypeId)
+                            : null;
+                          const allOptions = currentInactive 
+                            ? [...activeSubtypes, { id: currentInactive.id, name: currentInactive.name, slug: currentInactive.slug, asset_type_id: currentInactive.asset_type_id }]
+                            : activeSubtypes;
+                          return allOptions.map((subtype) => (
                             <option key={subtype.id} value={subtype.id}>
-                              {subtype.name}
+                              {subtype.name}{currentInactive && subtype.id === currentInactive.id ? ' (inactive)' : ''}
                             </option>
-                          ))}
+                          ));
+                        })()}
                       </select>
                     </div>
                   </div>
@@ -2989,9 +3058,23 @@ export default function AdminDigitalAssetManagerPage() {
                           className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
                         >
                           <option value="">None</option>
-                          <option value="ProCtrl">ProCtrl</option>
-                          <option value="SelfCtrl">SelfCtrl</option>
-                          <option value="Both">Both</option>
+                          {(() => {
+                            // Get active product lines
+                            const activeOptions = productLines.map(pl => ({ code: pl.code, name: pl.name, active: true }));
+                            // If current value is inactive, add it to options
+                            const currentValue = formState.productLine;
+                            const currentInactive = currentValue && !productLines.find(pl => pl.code === currentValue)
+                              ? allProductLines.find(pl => pl.code === currentValue)
+                              : null;
+                            const allOptions = currentInactive 
+                              ? [...activeOptions, { code: currentInactive.code, name: currentInactive.name, active: false }]
+                              : activeOptions;
+                            return allOptions.map(pl => (
+                              <option key={pl.code} value={pl.code}>
+                                {pl.name}{!pl.active ? ' (inactive)' : ''}
+                              </option>
+                            ));
+                          })()}
                         </select>
                       </div>
 
@@ -3122,34 +3205,49 @@ export default function AdminDigitalAssetManagerPage() {
                         </button>
                       </div>
                       <div className="space-y-1.5">
-                        {locales.map((locale) => {
-                          const selected = formState.selectedLocaleCodes.includes(locale.code);
-                          return (
-                            <div key={locale.code} className="flex items-center justify-between rounded-md border border-gray-200 px-2.5 py-1.5">
-                              <label className="flex items-center gap-2 text-xs text-gray-700">
-                                <input
-                                  type="checkbox"
-                                  checked={selected}
-                                  onChange={() => handleLocaleToggle(locale.code)}
-                                  className="h-3.5 w-3.5 rounded border-gray-300 text-black focus:ring-black"
-                                />
-                                <span>{locale.label}</span>
-                              </label>
-                              {selected && (
-                                <label className="flex items-center gap-1 text-[10px] text-gray-600">
+                        {(() => {
+                          // Get active locales
+                          const activeLocales = locales;
+                          // Add any currently selected inactive locales
+                          const selectedInactiveLocales = formState.selectedLocaleCodes
+                            .filter(code => !activeLocales.find(l => l.code === code))
+                            .map(code => {
+                              const inactive = allLocales.find(l => l.code === code);
+                              return inactive ? { ...inactive, is_inactive: true } : null;
+                            })
+                            .filter((l): l is LocaleOption & { is_inactive: true } => l !== null);
+                          const allDisplayLocales = [...activeLocales, ...selectedInactiveLocales];
+                          
+                          return allDisplayLocales.map((locale) => {
+                            const selected = formState.selectedLocaleCodes.includes(locale.code);
+                            return (
+                              <div key={locale.code} className="flex items-center justify-between rounded-md border border-gray-200 px-2.5 py-1.5">
+                                <label className="flex items-center gap-2 text-xs text-gray-700">
                                   <input
-                                    type="radio"
-                                    name="primary-locale"
-                                    checked={formState.primaryLocale === locale.code}
-                                    onChange={() => handlePrimaryLocaleChange(locale.code)}
-                                    className="h-3 w-3"
+                                    type="checkbox"
+                                    checked={selected}
+                                    onChange={() => handleLocaleToggle(locale.code)}
+                                    className="h-3.5 w-3.5 rounded border-gray-300 text-black focus:ring-black"
+                                    disabled={(locale as any).is_inactive}
                                   />
-                                  Primary
+                                  <span>{locale.label}{(locale as any).is_inactive ? ' (inactive)' : ''}</span>
                                 </label>
-                              )}
-                            </div>
-                          );
-                        })}
+                                {selected && (
+                                  <label className="flex items-center gap-1 text-[10px] text-gray-600">
+                                    <input
+                                      type="radio"
+                                      name="primary-locale"
+                                      checked={formState.primaryLocale === locale.code}
+                                      onChange={() => handlePrimaryLocaleChange(locale.code)}
+                                      className="h-3 w-3"
+                                    />
+                                    Primary
+                                  </label>
+                                )}
+                              </div>
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                   </div>

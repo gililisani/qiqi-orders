@@ -108,6 +108,71 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+// POST /api/admin/product-lines - Create new product line
+export async function POST(request: NextRequest) {
+  try {
+    const auth = createAuth();
+    await auth.requireRole(request, 'admin');
+
+    const supabaseAdmin = createSupabaseAdminClient();
+    const body = await request.json();
+    const { name, slug, active } = body;
+
+    if (!name || typeof name !== 'string') {
+      return NextResponse.json({ error: 'Product line name is required' }, { status: 400 });
+    }
+
+    // Generate slug from name if not provided
+    const finalSlug = slug || name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
+    // Check if product line with this slug already exists
+    const { data: existing, error: checkError } = await supabaseAdmin
+      .from('dam_product_lines')
+      .select('id, code, slug')
+      .eq('slug', finalSlug)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+
+    if (existing) {
+      return NextResponse.json({ error: 'A product line with this slug already exists' }, { status: 400 });
+    }
+
+    // Use code = slug for consistency
+    const insertData: any = {
+      code: finalSlug,
+      name: name.trim(),
+      slug: finalSlug,
+      active: active !== undefined ? active : true,
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from('dam_product_lines')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return NextResponse.json({ error: 'A product line with this slug already exists' }, { status: 400 });
+      }
+      throw error;
+    }
+
+    return NextResponse.json({ productLine: data });
+  } catch (err: any) {
+    if (err instanceof NextResponse) return err;
+    console.error('Product line create failed', err);
+    return NextResponse.json({ error: err.message || 'Failed to create product line' }, { status: 500 });
+  }
+}
+
 // DELETE /api/admin/product-lines - Delete product line (only if not in use)
 export async function DELETE(request: NextRequest) {
   try {
