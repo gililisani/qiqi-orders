@@ -104,6 +104,17 @@ export default function BulkEditPanel({
     return globalDefaults[field];
   };
 
+  // Wrapper function to convert BulkFile to BulkEditFile for getEffectiveValue
+  const getEffectiveValueWrapper = (file: any, field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedRegionCodes' | 'selectedTagSlugs') => {
+    // Find the corresponding BulkEditFile by tempId
+    const editFile = assets.find(a => a.assetId === file.tempId);
+    if (!editFile) {
+      // Fallback to global defaults if asset not found
+      return globalDefaults[field];
+    }
+    return getEffectiveValue(editFile, field);
+  };
+
   const canSave = assets.length > 0 && assets.every(f => {
     const effectiveLocales = getEffectiveValue(f, 'selectedLocaleCodes') as string[];
     return f.title.trim() && 
@@ -212,7 +223,7 @@ export default function BulkEditPanel({
                   tags={tags}
                   campaigns={campaigns}
                   globalDefaults={globalDefaults}
-                  getEffectiveValue={(file, field) => getEffectiveValue(file as BulkEditFile, field)}
+                  getEffectiveValue={getEffectiveValueWrapper}
                   isUploading={isSaving}
                   />
                 );
