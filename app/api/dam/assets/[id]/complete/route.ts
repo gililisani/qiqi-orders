@@ -88,7 +88,7 @@ export async function POST(
     const versionId = randomUUID();
 
     // Create version record
-    const versionData = {
+    const versionData: any = {
       id: versionId,
       asset_id: assetId,
       version_number: nextVersionNumber,
@@ -103,6 +103,12 @@ export async function POST(
       processing_status: 'complete' as const, // Set to complete immediately - no background processing
       created_by: adminUserId,
     };
+
+    // Add width/height if provided (for images)
+    if (body.width !== undefined && body.height !== undefined) {
+      versionData.width = body.width;
+      versionData.height = body.height;
+    }
     
     const { error: insertVersionError } = await supabaseAdmin.from('dam_asset_versions').insert([versionData]);
 

@@ -957,7 +957,7 @@ export default function AdminDigitalAssetManagerPage() {
   };
 
   // Generate image thumbnail client-side (300x300px max, WebP format, quality 80%)
-  const generateImageThumbnail = async (file: File): Promise<{ thumbnailData: string; thumbnailPath: string; mimeType: string } | null> => {
+  const generateImageThumbnail = async (file: File): Promise<{ thumbnailData: string; thumbnailPath: string; mimeType: string; width: number; height: number } | null> => {
     // Only process image files
     if (!file.type.startsWith('image/')) {
       return null;
@@ -1030,10 +1030,67 @@ export default function AdminDigitalAssetManagerPage() {
       const extension = mimeType === 'image/webp' ? 'webp' : 'jpg';
       const thumbnailPath = `temp-thumb-${timestamp}.${extension}`;
 
-      return { thumbnailData, thumbnailPath, mimeType };
+      // Return original image dimensions (before thumbnail resize)
+      return { thumbnailData, thumbnailPath, mimeType, width: img.width, height: img.height };
     } catch (err) {
       console.error('Failed to generate image thumbnail:', err);
       return null; // Don't fail upload if thumbnail generation fails
+    }
+  };
+
+  // Generate generic document thumbnail (for Word, Excel, etc.)
+  const generateDocumentThumbnail = async (file: File, fileType: 'word' | 'excel'): Promise<{ thumbnailData: string; thumbnailPath: string; mimeType: string } | null> => {
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      // Create 400x400 thumbnail
+      canvas.width = 400;
+      canvas.height = 400;
+
+      // Background
+      ctx.fillStyle = '#f3f4f6';
+      ctx.fillRect(0, 0, 400, 400);
+
+      // Icon color based on file type
+      const iconColor = fileType === 'word' ? '#2b579a' : '#217346'; // Word blue or Excel green
+      
+      // Draw document icon
+      ctx.fillStyle = iconColor;
+      ctx.fillRect(100, 80, 200, 240); // Document body
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(100, 80, 200, 40); // Document header
+      
+      // Draw lines (simulating document content)
+      ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < 8; i++) {
+        ctx.fillRect(120, 140 + i * 25, 160, 3);
+      }
+
+      // Convert to WebP
+      let dataUrl: string;
+      let mimeType = 'image/webp';
+      let extension = 'webp';
+      
+      try {
+        dataUrl = canvas.toDataURL('image/webp', 0.8);
+      } catch (e) {
+        mimeType = 'image/jpeg';
+        extension = 'jpg';
+        dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      }
+
+      const thumbnailData = dataUrl.split(',')[1];
+      if (!thumbnailData) return null;
+
+      const timestamp = Date.now();
+      const thumbnailPath = `temp-thumb-${timestamp}.${extension}`;
+
+      return { thumbnailData, thumbnailPath, mimeType };
+    } catch (err) {
+      console.error('Failed to generate document thumbnail:', err);
+      return null;
     }
   };
 
@@ -1292,6 +1349,8 @@ export default function AdminDigitalAssetManagerPage() {
       let thumbnailData: string | null = null;
       let thumbnailPath: string | null = null;
       let thumbnailMimeType: string | null = null;
+      let imageWidth: number | null = null;
+      let imageHeight: number | null = null;
       
       // Generate image thumbnail for image files
       if (file.type.startsWith('image/')) {
@@ -1301,6 +1360,8 @@ export default function AdminDigitalAssetManagerPage() {
             thumbnailData = thumbnailResult.thumbnailData;
             thumbnailPath = thumbnailResult.thumbnailPath;
             thumbnailMimeType = thumbnailResult.mimeType;
+            imageWidth = thumbnailResult.width;
+            imageHeight = thumbnailResult.height;
           }
         } catch (thumbError) {
           console.error('Image thumbnail generation error (continuing without thumbnail):', thumbError);
@@ -1622,6 +1683,8 @@ export default function AdminDigitalAssetManagerPage() {
           thumbnailPath: thumbnailPath || undefined,
           useTitleAsFilename: formState.useTitleAsFilename,
           campaignId: formState.campaignId || undefined,
+          width: imageWidth || undefined,
+          height: imageHeight || undefined,
         };
 
         const formData = new FormData();
@@ -1710,6 +1773,8 @@ export default function AdminDigitalAssetManagerPage() {
         let thumbnailData: string | null = null;
         let thumbnailPath: string | null = null;
         let thumbnailMimeType: string | null = null;
+        let imageWidth: number | null = null;
+        let imageHeight: number | null = null;
         
         // Generate image thumbnail for image files
         if (file.type.startsWith('image/')) {
@@ -1718,6 +1783,9 @@ export default function AdminDigitalAssetManagerPage() {
             if (thumbnailResult) {
               thumbnailData = thumbnailResult.thumbnailData;
               thumbnailPath = thumbnailResult.thumbnailPath;
+              thumbnailMimeType = thumbnailResult.mimeType;
+              imageWidth = thumbnailResult.width;
+              imageHeight = thumbnailResult.height;
             }
           } catch (thumbError) {
             console.error('Image thumbnail generation error:', thumbError);
@@ -1730,9 +1798,36 @@ export default function AdminDigitalAssetManagerPage() {
             if (thumbnailResult) {
               thumbnailData = thumbnailResult.thumbnailData;
               thumbnailPath = thumbnailResult.thumbnailPath;
+              thumbnailMimeType = thumbnailResult.mimeType;
             }
           } catch (thumbError) {
             console.error('PDF thumbnail generation error:', thumbError);
+          }
+        }
+        // Generate generic thumbnail for Word documents
+        else if (file.type.includes('word') || file.type.includes('msword') || file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx')) {
+          try {
+            const thumbnailResult = await generateDocumentThumbnail(file, 'word');
+            if (thumbnailResult) {
+              thumbnailData = thumbnailResult.thumbnailData;
+              thumbnailPath = thumbnailResult.thumbnailPath;
+              thumbnailMimeType = thumbnailResult.mimeType;
+            }
+          } catch (thumbError) {
+            console.error('Word thumbnail generation error:', thumbError);
+          }
+        }
+        // Generate generic thumbnail for Excel files
+        else if (file.type.includes('excel') || file.type.includes('spreadsheet') || file.name.toLowerCase().endsWith('.xls') || file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.csv')) {
+          try {
+            const thumbnailResult = await generateDocumentThumbnail(file, 'excel');
+            if (thumbnailResult) {
+              thumbnailData = thumbnailResult.thumbnailData;
+              thumbnailPath = thumbnailResult.thumbnailPath;
+              thumbnailMimeType = thumbnailResult.mimeType;
+            }
+          } catch (thumbError) {
+            console.error('Excel thumbnail generation error:', thumbError);
           }
         }
 
@@ -1880,6 +1975,8 @@ export default function AdminDigitalAssetManagerPage() {
               fileName: file.name,
               fileSize: file.size,
               thumbnailPath: uploadedThumbnailPath || undefined,
+              width: imageWidth || undefined,
+              height: imageHeight || undefined,
             }),
           });
 
@@ -1916,9 +2013,11 @@ export default function AdminDigitalAssetManagerPage() {
             })),
             regions: effectiveRegions,
             thumbnailData: thumbnailData || undefined,
-            thumbnailPath: thumbnailPath || (thumbnailData ? `${Date.now()}-thumb.png` : undefined),
+            thumbnailPath: thumbnailPath || undefined,
             useTitleAsFilename: bulkFile.useTitleAsFilename,
             campaignId: effectiveCampaignId || undefined,
+            width: imageWidth || undefined,
+            height: imageHeight || undefined,
           };
 
           const formData = new FormData();

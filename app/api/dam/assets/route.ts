@@ -631,25 +631,31 @@ export async function POST(request: NextRequest) {
       const nextVersionNumber = lastVersion ? Number(lastVersion.version_number) + 1 : 1;
       versionId = randomUUID();
 
+      const versionInsertData: any = {
+        id: versionId,
+        asset_id: assetId,
+        version_number: nextVersionNumber,
+        storage_bucket: process.env.SUPABASE_STORAGE_BUCKET ?? 'dam-assets',
+        storage_path: storagePath,
+        file_size: file.size,
+        checksum: null,
+        mime_type: file.type || 'application/octet-stream',
+        metadata: {
+          originalFileName: file.name,
+        },
+        processing_status: 'complete', // Set to complete immediately - no background processing
+        created_by: adminUser.id,
+      };
+
+      // Add width/height if provided (for images)
+      if (payload.width !== undefined && payload.height !== undefined) {
+        versionInsertData.width = payload.width;
+        versionInsertData.height = payload.height;
+      }
+
       const { error: insertVersionError } = await supabaseAdmin
         .from('dam_asset_versions')
-        .insert([
-          {
-            id: versionId,
-            asset_id: assetId,
-            version_number: nextVersionNumber,
-            storage_bucket: process.env.SUPABASE_STORAGE_BUCKET ?? 'dam-assets',
-            storage_path: storagePath,
-            file_size: file.size,
-            checksum: null,
-            mime_type: file.type || 'application/octet-stream',
-            metadata: {
-              originalFileName: file.name,
-            },
-            processing_status: 'complete', // Set to complete immediately - no background processing
-            created_by: adminUser.id,
-          },
-        ]);
+        .insert([versionInsertData]);
 
       if (insertVersionError) throw insertVersionError;
     }

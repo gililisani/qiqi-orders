@@ -67,6 +67,47 @@ export function buildAuthHeaders(token: string | null): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
 }
 
+// Get friendly file type name from MIME type
+export function getFriendlyFileType(mimeType: string | null | undefined): string {
+  if (!mimeType) return 'File';
+  
+  const mimeToFriendly: Record<string, string> = {
+    // Images
+    'image/jpeg': 'JPEG',
+    'image/jpg': 'JPEG',
+    'image/png': 'PNG',
+    'image/gif': 'GIF',
+    'image/webp': 'WebP',
+    'image/svg+xml': 'SVG',
+    // Documents
+    'application/pdf': 'PDF',
+    'application/msword': 'Word Document',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word Document',
+    'application/vnd.ms-excel': 'Excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel',
+    'text/csv': 'CSV',
+    'application/vnd.ms-powerpoint': 'PowerPoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PowerPoint',
+    // Audio
+    'audio/mpeg': 'MP3',
+    'audio/wav': 'WAV',
+    'audio/mp4': 'AAC',
+    // Video
+    'video/mp4': 'MP4',
+    'video/quicktime': 'MOV',
+    // Archives
+    'application/zip': 'ZIP',
+    'application/x-rar-compressed': 'RAR',
+    // Fonts
+    'font/ttf': 'TTF',
+    'font/otf': 'OTF',
+    'application/font-woff': 'WOFF',
+    'application/font-woff2': 'WOFF2',
+  };
+  
+  return mimeToFriendly[mimeType.toLowerCase()] || mimeType.split('/')[1]?.toUpperCase() || 'File';
+}
+
 export function getFileTypeBadge(asset: {
   asset_type: string;
   vimeo_video_id?: string | null;
@@ -103,10 +144,9 @@ export function getFileTypeBadge(asset: {
     return 'Video';
   }
   
-  // For images/files, show file extension
+  // For images/files, show friendly file type name
   if (asset.current_version?.mime_type) {
-    const ext = asset.current_version.mime_type.split('/')[1];
-    return ext?.toUpperCase() || 'File';
+    return getFriendlyFileType(asset.current_version.mime_type);
   }
   
   return asset.asset_type.toUpperCase();

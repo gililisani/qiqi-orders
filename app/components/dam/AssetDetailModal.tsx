@@ -2,7 +2,7 @@
 
 import { XMarkIcon, PhotoIcon, EyeIcon, ArrowDownTrayIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { AssetRecord, VimeoDownloadFormat } from './types';
-import { formatBytes, ensureTokenUrl } from './utils';
+import { formatBytes, ensureTokenUrl, getFriendlyFileType } from './utils';
 
 interface AssetDetailModalProps {
   asset: AssetRecord;
@@ -326,8 +326,14 @@ export default function AssetDetailModal({
                       </div>
                       <div>
                         <dt className="font-medium text-gray-700 mb-1">File Type</dt>
-                        <dd className="text-gray-600">{asset.current_version.mime_type?.split('/')[1] || 'Unknown'}</dd>
+                        <dd className="text-gray-600">{getFriendlyFileType(asset.current_version.mime_type)}</dd>
                       </div>
+                      {asset.current_version.width && asset.current_version.height && (
+                        <div>
+                          <dt className="font-medium text-gray-700 mb-1">Dimensions</dt>
+                          <dd className="text-gray-600">{asset.current_version.width} × {asset.current_version.height} px</dd>
+                        </div>
+                      )}
                     </>
                   )}
                 </dl>
