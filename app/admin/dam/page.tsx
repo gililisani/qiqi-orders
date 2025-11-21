@@ -2375,9 +2375,6 @@ export default function AdminDigitalAssetManagerPage() {
               setBulkGlobalDefaults({
                 productLine: '',
                 campaignId: null,
-                selectedLocaleCodes: [],
-                primaryLocale: null,
-                selectedTagSlugs: [],
               });
             }}
             onUpload={handleBulkUpload}
