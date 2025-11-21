@@ -194,7 +194,7 @@ export default function BulkEditPanel({
                       selectedRegionCodes: asset.selectedRegionCodes,
                       useTitleAsFilename: asset.useTitleAsFilename,
                       campaignId: asset.campaignId,
-                      status: asset.status,
+                      status: asset.status === 'saving' ? 'uploading' : asset.status,
                       error: asset.error,
                       overrides: asset.overrides,
                       previewUrl: asset.asset.current_version?.previewPath 
