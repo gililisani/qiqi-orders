@@ -47,8 +47,11 @@ const AssetCard = memo(function AssetCard({
   const cardDownloadKey = `card-${asset.id}`;
   const isDownloading = downloadingFormats.has(cardDownloadKey);
 
+  // Thumbnails are generated at 400px max, so display them smaller to avoid upscaling
+  // Compact: 160px height, ~240px width (downscaled from 400px)
+  // Comfortable: 200px height, ~300px width (downscaled from 400px)
   const thumbnailHeight = isCompact ? '160px' : viewMode === 'comfortable' ? '200px' : '200px';
-  const maxWidth = isCompact ? '240px' : undefined;
+  const maxWidth = isCompact ? '240px' : '300px'; // Ensure we never exceed thumbnail native size
 
   // Lazy loading state
   const [isInView, setIsInView] = useState(false);

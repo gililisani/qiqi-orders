@@ -107,10 +107,10 @@ export default function AssetDetailModal({
                   />
                 </div>
               </div>
-            ) : asset.current_version?.previewPath && accessToken ? (
+            ) : asset.current_version?.downloadPath && accessToken ? (
               <div className="w-full max-w-3xl">
                 <img
-                  src={ensureTokenUrl(asset.current_version.previewPath, accessToken)}
+                  src={ensureTokenUrl(asset.current_version.downloadPath, accessToken)}
                   alt={asset.title}
                   className="w-full h-auto max-h-[70vh] object-contain"
                 />
@@ -257,12 +257,12 @@ export default function AssetDetailModal({
               ) : null}
 
               {/* Preview button for non-video assets */}
-              {asset.asset_type !== 'video' && asset.current_version?.previewPath && accessToken ? (
+              {asset.asset_type !== 'video' && asset.current_version?.downloadPath && accessToken ? (
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    window.open(ensureTokenUrl(asset.current_version!.previewPath!, accessToken), '_blank');
+                    window.open(ensureTokenUrl(asset.current_version!.downloadPath!, accessToken), '_blank');
                   }}
                   className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition shadow-sm mb-3"
                 >
