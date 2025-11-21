@@ -2391,8 +2391,6 @@ export default function AdminDigitalAssetManagerPage() {
             assetSubtypes={assetSubtypes}
             products={products}
             productLines={productLines}
-            locales={locales}
-            allLocales={allLocales}
             campaigns={campaigns}
             isSaving={bulkSaving}
             accessToken={accessToken}
