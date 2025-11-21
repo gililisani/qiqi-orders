@@ -157,6 +157,31 @@ export default function TopNavbar() {
                 </div>
               </div>
             </div>
+
+            {/* Settings */}
+            <div className="relative" onMouseEnter={() => onEnter("settings")} onMouseLeave={onLeave}>
+              <button className="flex items-center gap-1 text-gray-700 hover:text-gray-900">
+                <span>Settings</span>
+                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.093l3.71-3.86a.75.75 0 011.08 1.04l-4.24 4.41a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd"/>
+                </svg>
+              </button>
+              <div 
+                className={`absolute left-0 top-full mt-2 w-56 transition-all duration-200 ${
+                  openMenu === "settings" ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
+                }`} 
+                onMouseEnter={() => onEnter("settings")} 
+                onMouseLeave={onLeave}
+              >
+                <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
+                  <a href="/admin/settings/product-lines" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Product Lines</a>
+                  <a href="/admin/settings/locales" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Locales</a>
+                  <a href="/admin/settings/asset-types" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Asset Types</a>
+                  <a href="/admin/settings/asset-subtypes" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Asset Sub-Types</a>
+                  <a href="/admin/settings/tags" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Tags</a>
+                </div>
+              </div>
+            </div>
           </nav>
 
           {/* Right: user + actions */}
@@ -233,6 +258,16 @@ export default function TopNavbar() {
                   <div className="my-1 border-t border-gray-200"></div>
                   <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam">Digital Asset Manager</a>
                   <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/campaigns">Campaigns</a>
+                </div>
+              </details>
+              <details>
+                <summary className="px-2 py-2 rounded hover:bg-gray-50 cursor-pointer">Settings</summary>
+                <div className="pl-4 py-1 grid">
+                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/settings/product-lines">Product Lines</a>
+                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/settings/locales">Locales</a>
+                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/settings/asset-types">Asset Types</a>
+                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/settings/asset-subtypes">Asset Sub-Types</a>
+                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/settings/tags">Tags</a>
                 </div>
               </details>
             </div>
