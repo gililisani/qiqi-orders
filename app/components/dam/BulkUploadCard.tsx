@@ -48,11 +48,8 @@ interface BulkUploadCardProps {
   globalDefaults: {
     productLine: string;
     campaignId: string | null;
-    selectedLocaleCodes: string[];
-    primaryLocale: string | null;
-    selectedTagSlugs: string[];
   };
-  getEffectiveValue: (file: BulkFile, field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedTagSlugs') => any;
+  getEffectiveValue: (file: BulkFile, field: 'productLine' | 'campaignId') => any;
   isUploading: boolean;
   accessToken?: string | null;
   onTagsChange?: (tags: Array<{ id: string; slug: string; label: string }>) => void;
@@ -106,8 +103,9 @@ export default function BulkUploadCard({
 
   const effectiveProductLine = getEffectiveValue(file, 'productLine') as string;
   const effectiveCampaignId = getEffectiveValue(file, 'campaignId') as string | null;
-  const effectiveLocales = getEffectiveValue(file, 'selectedLocaleCodes') as string[];
-  const effectiveTags = getEffectiveValue(file, 'selectedTagSlugs') as string[];
+  // Locales and tags are per-file only, no global defaults
+  const currentLocales = file.selectedLocaleCodes || [];
+  const currentTags = file.selectedTagSlugs || [];
 
   const toggleSelection = (list: string[], value: string): string[] => {
     if (list.includes(value)) {
@@ -117,11 +115,7 @@ export default function BulkUploadCard({
   };
 
   const handleLocaleToggle = (code: string) => {
-    // Initialize from effective value if file doesn't have an override yet
-    const hasOverride = file.overrides?.locales;
-    const currentLocales = hasOverride 
-      ? (file.selectedLocaleCodes || [])
-      : effectiveLocales;
+    // Locales are per-file only, no global sync
     const isSelected = currentLocales.includes(code);
     
     if (isSelected) {
@@ -165,14 +159,11 @@ export default function BulkUploadCard({
       const data = await response.json();
       
       // Add the new tag to this file's selectedTagSlugs
-      if (data.slug) {
-        const currentTags = effectiveTags;
-        if (!currentTags.includes(data.slug)) {
-          handlePerFileOverride('tags', [...currentTags, data.slug]);
-        }
+      if (data.slug && !currentTags.includes(data.slug)) {
+        handlePerFileOverride('tags', [...currentTags, data.slug]);
       }
       
-      // Update the global tags list
+      // Update the global tags list so it appears in the dropdown
       if (onTagsChange && data.tags) {
         onTagsChange(data.tags);
       }
@@ -358,7 +349,7 @@ export default function BulkUploadCard({
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Product Line (override)</label>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Product Line</label>
             <select
               value={effectiveProductLine}
               onChange={(e) => handlePerFileOverride('productLine', e.target.value)}
@@ -373,7 +364,7 @@ export default function BulkUploadCard({
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Campaign (override)</label>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Campaign</label>
             <select
               value={effectiveCampaignId || ''}
               onChange={(e) => handlePerFileOverride('campaignId', e.target.value || null)}
@@ -400,16 +391,16 @@ export default function BulkUploadCard({
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Tags (override)</label>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Tags</label>
             <div className="space-y-2">
               <div className="flex flex-wrap gap-1">
                 {tags.map((tag) => {
-                  const selected = effectiveTags.includes(tag.slug);
+                  const selected = currentTags.includes(tag.slug);
                   return (
                     <button
                       type="button"
                       key={tag.slug}
-                      onClick={() => handlePerFileOverride('tags', toggleSelection(effectiveTags, tag.slug))}
+                      onClick={() => handlePerFileOverride('tags', toggleSelection(currentTags, tag.slug))}
                       disabled={isUploading || file.status === 'uploading'}
                       className={`rounded-md border px-2 py-0.5 text-[10px] font-medium transition ${
                         selected
@@ -450,13 +441,10 @@ export default function BulkUploadCard({
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Locales (override)</label>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Locales</label>
             <div className="space-y-1">
               {locales.map((locale) => {
-                // Use file's actual selectedLocaleCodes for display, but show effective value initially
-                const fileLocales = file.selectedLocaleCodes || [];
-                const hasOverride = file.overrides?.locales;
-                const selected = hasOverride ? fileLocales.includes(locale.code) : effectiveLocales.includes(locale.code);
+                const selected = currentLocales.includes(locale.code);
                 return (
                   <div key={locale.code} className="flex items-center justify-between rounded-md border border-gray-200 px-2 py-1">
                     <label className="flex items-center gap-1.5 text-[10px] text-gray-700">

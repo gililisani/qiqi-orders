@@ -403,9 +403,6 @@ export default function AdminDigitalAssetManagerPage() {
   const [bulkGlobalDefaults, setBulkGlobalDefaults] = useState({
     productLine: '',
     campaignId: null as string | null,
-    selectedLocaleCodes: [] as string[],
-    primaryLocale: null as string | null,
-    selectedTagSlugs: [] as string[],
   });
   const [bulkUploading, setBulkUploading] = useState(false);
 
@@ -1717,12 +1714,10 @@ export default function AdminDigitalAssetManagerPage() {
     const results: Array<{ tempId: string; success: boolean; error?: string }> = [];
 
     // Helper to get effective value (global default if not overridden)
-    const getEffectiveValue = (bulkFile: typeof bulkFiles[0], field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedTagSlugs') => {
+    const getEffectiveValue = (bulkFile: typeof bulkFiles[0], field: 'productLine' | 'campaignId') => {
       const overrides = bulkFile.overrides || {};
       if (field === 'productLine' && overrides.productLine) return bulkFile.productLine;
       if (field === 'campaignId' && overrides.campaignId) return bulkFile.campaignId;
-      if (field === 'selectedLocaleCodes' && overrides.locales) return bulkFile.selectedLocaleCodes;
-      if (field === 'selectedTagSlugs' && overrides.tags) return bulkFile.selectedTagSlugs;
       return bulkGlobalDefaults[field];
     };
 
@@ -1744,8 +1739,9 @@ export default function AdminDigitalAssetManagerPage() {
         // Get effective values (use global defaults if not overridden)
         const effectiveProductLine = getEffectiveValue(bulkFile, 'productLine') as string;
         const effectiveCampaignId = getEffectiveValue(bulkFile, 'campaignId') as string | null;
-        const effectiveLocales = getEffectiveValue(bulkFile, 'selectedLocaleCodes') as string[];
-        const effectiveTags = getEffectiveValue(bulkFile, 'selectedTagSlugs') as string[];
+        // Locales and tags are per-file only (no global defaults)
+        const effectiveLocales = bulkFile.selectedLocaleCodes || [];
+        const effectiveTags = bulkFile.selectedTagSlugs || [];
         const effectivePrimaryLocale = bulkFile.primaryLocale || (effectiveLocales.length > 0 ? effectiveLocales[0] : null) || null;
         
         // Generate thumbnail if needed (images and PDFs)
@@ -2037,9 +2033,6 @@ export default function AdminDigitalAssetManagerPage() {
         setBulkGlobalDefaults({
           productLine: '',
           campaignId: null,
-          selectedLocaleCodes: [],
-          primaryLocale: null,
-          selectedTagSlugs: [],
         });
       }, 2000);
     } else {
@@ -2298,14 +2291,10 @@ export default function AdminDigitalAssetManagerPage() {
               <button
                 type="button"
                 onClick={() => {
-                  // Initialize global defaults with current locale
-                  const defaultLocale = locales.find(loc => loc.is_default) || locales[0];
+                  // Initialize global defaults (only Product Line and Campaign)
                   setBulkGlobalDefaults({
                     productLine: '',
                     campaignId: null,
-                    selectedLocaleCodes: defaultLocale ? [defaultLocale.code] : [],
-                    primaryLocale: defaultLocale ? defaultLocale.code : null,
-                    selectedTagSlugs: [],
                   });
                   setBulkFiles([]);
                   setSuccessMessage('');

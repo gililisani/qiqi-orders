@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { LocaleOption } from './types';
 import BulkUploadCard from './BulkUploadCard';
@@ -44,9 +44,6 @@ interface BulkUploadPanelProps {
   globalDefaults: {
     productLine: string;
     campaignId: string | null;
-    selectedLocaleCodes: string[];
-    primaryLocale: string | null;
-    selectedTagSlugs: string[];
   };
   onGlobalDefaultsChange: (defaults: BulkUploadPanelProps['globalDefaults']) => void;
   locales: LocaleOption[];
@@ -79,85 +76,6 @@ export default function BulkUploadPanel({
 }: BulkUploadPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const lastDefaultsRef = useRef<string>('');
-
-  // Create a stable key for global defaults to detect changes
-  const globalDefaultsKey = useMemo(() => JSON.stringify({
-    productLine: globalDefaults.productLine,
-    campaignId: globalDefaults.campaignId,
-    selectedLocaleCodes: [...globalDefaults.selectedLocaleCodes].sort(),
-    primaryLocale: globalDefaults.primaryLocale,
-    selectedTagSlugs: [...globalDefaults.selectedTagSlugs].sort(),
-  }), [globalDefaults.productLine, globalDefaults.campaignId, globalDefaults.primaryLocale, globalDefaults.selectedLocaleCodes.join(','), globalDefaults.selectedTagSlugs.join(',')]);
-
-  // Propagate global defaults to all files that don't have overrides
-  useEffect(() => {
-    if (files.length === 0) return;
-    
-    // Skip if defaults haven't changed
-    if (lastDefaultsRef.current === globalDefaultsKey) return;
-    lastDefaultsRef.current = globalDefaultsKey;
-    
-    const updatedFiles = files.map(file => {
-      const overrides = file.overrides || {};
-      const updates: Partial<BulkFile> = {};
-      
-      // Update productLine if not overridden
-      if (!overrides.productLine && file.productLine !== globalDefaults.productLine) {
-        updates.productLine = globalDefaults.productLine;
-      }
-      
-      // Update campaignId if not overridden
-      if (!overrides.campaignId && file.campaignId !== globalDefaults.campaignId) {
-        updates.campaignId = globalDefaults.campaignId;
-      }
-      
-      // Update locales if not overridden
-      if (!overrides.locales) {
-        const currentLocales = (file.selectedLocaleCodes || []).sort();
-        const globalLocales = (globalDefaults.selectedLocaleCodes || []).sort();
-        const localesMatch = currentLocales.length === globalLocales.length &&
-          currentLocales.every((loc, idx) => loc === globalLocales[idx]);
-        if (!localesMatch) {
-          updates.selectedLocaleCodes = [...globalDefaults.selectedLocaleCodes];
-          // Update primaryLocale if it's not in the new locales
-          if (globalDefaults.selectedLocaleCodes.length > 0) {
-            const newPrimary = globalDefaults.selectedLocaleCodes.includes(file.primaryLocale || '') 
-              ? file.primaryLocale 
-              : (globalDefaults.primaryLocale || globalDefaults.selectedLocaleCodes[0]);
-            updates.primaryLocale = newPrimary;
-          }
-        }
-      }
-      
-      // Update tags if not overridden
-      if (!overrides.tags) {
-        const currentTags = (file.selectedTagSlugs || []).sort();
-        const globalTags = (globalDefaults.selectedTagSlugs || []).sort();
-        const tagsMatch = currentTags.length === globalTags.length &&
-          currentTags.every((tag, idx) => tag === globalTags[idx]);
-        if (!tagsMatch) {
-          updates.selectedTagSlugs = [...globalDefaults.selectedTagSlugs];
-        }
-      }
-      
-      return Object.keys(updates).length > 0 ? { ...file, ...updates } : file;
-    });
-    
-    // Only update if there are actual changes
-    const hasChanges = updatedFiles.some((updated, index) => {
-      const original = files[index];
-      return updated.productLine !== original.productLine ||
-        updated.campaignId !== original.campaignId ||
-        JSON.stringify(updated.selectedLocaleCodes?.sort()) !== JSON.stringify(original.selectedLocaleCodes?.sort()) ||
-        updated.primaryLocale !== original.primaryLocale ||
-        JSON.stringify(updated.selectedTagSlugs?.sort()) !== JSON.stringify(original.selectedTagSlugs?.sort());
-    });
-    
-    if (hasChanges) {
-      onFilesChange(updatedFiles);
-    }
-  }, [globalDefaultsKey]); // Use a stable key to prevent infinite loops
 
   const inferAssetType = (fileName: string, mimeType: string): { type: string; typeId: string | null } => {
     const ext = fileName.toLowerCase().split('.').pop() || '';
@@ -251,6 +169,7 @@ export default function BulkUploadPanel({
         previewUrl = await generatePDFPreview(file);
       }
       
+      // Use global defaults ONLY at file creation time
       return {
         tempId: `bulk-${Date.now()}-${Math.random()}`,
         file,
@@ -261,19 +180,17 @@ export default function BulkUploadPanel({
         assetType: inferred.type,
         assetTypeId: inferred.typeId,
         assetSubtypeId: null,
-        productLine: globalDefaults.productLine,
+        productLine: globalDefaults.productLine, // Use global default at creation
         productName: '',
         sku: '',
-        selectedTagSlugs: [...globalDefaults.selectedTagSlugs],
-        selectedLocaleCodes: globalDefaults.selectedLocaleCodes.length > 0 
-          ? [...globalDefaults.selectedLocaleCodes] 
-          : (defaultLocale ? [defaultLocale.code] : []),
-        primaryLocale: globalDefaults.primaryLocale || (defaultLocale ? defaultLocale.code : null),
+        selectedTagSlugs: [], // Start empty - user sets per card
+        selectedLocaleCodes: defaultLocale ? [defaultLocale.code] : [], // Use default locale only
+        primaryLocale: defaultLocale ? defaultLocale.code : null,
         useTitleAsFilename: false,
-        campaignId: globalDefaults.campaignId,
+        campaignId: globalDefaults.campaignId, // Use global default at creation
         status: 'pending',
         previewUrl,
-        overrides: {},
+        overrides: {}, // No overrides initially
       };
     }));
     
@@ -334,12 +251,10 @@ export default function BulkUploadPanel({
     onFilesChange(files.filter(f => f.tempId !== tempId));
   };
 
-  const getEffectiveValue = (file: BulkFile, field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedTagSlugs') => {
+  const getEffectiveValue = (file: BulkFile, field: 'productLine' | 'campaignId') => {
     const overrides = file.overrides || {};
     if (field === 'productLine' && overrides.productLine) return file.productLine;
     if (field === 'campaignId' && overrides.campaignId) return file.campaignId;
-    if (field === 'selectedLocaleCodes' && overrides.locales) return file.selectedLocaleCodes;
-    if (field === 'selectedTagSlugs' && overrides.tags) return file.selectedTagSlugs;
     return globalDefaults[field];
   };
 
@@ -387,12 +302,8 @@ export default function BulkUploadPanel({
         <BulkUploadDefaults
           globalDefaults={globalDefaults}
           onGlobalDefaultsChange={onGlobalDefaultsChange}
-          locales={locales}
-          tags={tags}
           campaigns={campaigns}
           isUploading={isUploading}
-          accessToken={accessToken}
-          onTagsChange={onTagsChange}
         />
       )}
 
