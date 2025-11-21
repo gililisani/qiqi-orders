@@ -168,8 +168,16 @@ export default function BulkUploadCard({
 
   const handlePerFileOverride = (field: 'productLine' | 'locales' | 'tags' | 'campaignId' | 'sku', value: any) => {
     const overrides = { ...(file.overrides || {}), [field]: true };
-    onFieldChange(file.tempId, field as keyof BulkFile, value);
-    onFieldChange(file.tempId, 'overrides', overrides);
+    // Use atomic update if available, otherwise fall back to separate calls
+    if (onFieldsChange) {
+      onFieldsChange(file.tempId, {
+        [field]: value,
+        overrides: overrides,
+      });
+    } else {
+      onFieldChange(file.tempId, field as keyof BulkFile, value);
+      onFieldChange(file.tempId, 'overrides', overrides);
+    }
   };
 
   return (
@@ -336,7 +344,7 @@ export default function BulkUploadCard({
           <div>
             <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Product Line (override)</label>
             <select
-              value={file.productLine}
+              value={effectiveProductLine}
               onChange={(e) => handlePerFileOverride('productLine', e.target.value)}
               className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
               disabled={isUploading || file.status === 'uploading'}
@@ -351,7 +359,7 @@ export default function BulkUploadCard({
           <div>
             <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Campaign (override)</label>
             <select
-              value={file.campaignId || ''}
+              value={effectiveCampaignId || ''}
               onChange={(e) => handlePerFileOverride('campaignId', e.target.value || null)}
               className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
               disabled={isUploading || file.status === 'uploading'}

@@ -1986,7 +1986,7 @@ export default function AdminDigitalAssetManagerPage() {
           const headers = buildAuthHeaders(accessToken);
           const response = await fetch('/api/dam/assets', {
             method: 'POST',
-            headers: Object.keys(headers).length ? headers : undefined,
+            headers: headers,
             credentials: 'same-origin',
             body: formData,
           });
