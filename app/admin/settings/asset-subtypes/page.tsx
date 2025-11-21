@@ -17,6 +17,7 @@ interface AssetSubtype {
 interface AssetType {
   id: string;
   name: string;
+  active: boolean;
 }
 
 export default function AssetSubtypesPage() {
