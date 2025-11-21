@@ -75,12 +75,12 @@ export function getStaticDocumentThumbnail(mimeType: string | null | undefined):
   
   // Word documents
   if (mime.includes('word') || mime.includes('msword') || mime.includes('wordprocessingml')) {
-    return '/dam-icons/word-thumbnail.svg';
+    return '/dam-icons/microsoft-word.svg';
   }
   
   // Excel documents
   if (mime.includes('excel') || mime.includes('spreadsheet') || mime.includes('spreadsheetml') || mime === 'text/csv') {
-    return '/dam-icons/excel-thumbnail.svg';
+    return '/dam-icons/microsoft-excel.svg';
   }
   
   return null;
