@@ -257,12 +257,14 @@ export default function AssetDetailModal({
               ) : null}
 
               {/* Preview button for non-video assets */}
-              {asset.asset_type !== 'video' && asset.current_version?.downloadPath && accessToken ? (
+              {asset.asset_type !== 'video' && asset.current_version?.id && accessToken ? (
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    window.open(ensureTokenUrl(asset.current_version!.downloadPath!, accessToken), '_blank');
+                    // Use preview API route with original rendition (not thumbnail) for high-res preview
+                    const previewUrl = `/api/assets/${asset.id}/preview?version=${asset.current_version!.id}&rendition=original&token=${encodeURIComponent(accessToken)}`;
+                    window.open(previewUrl, '_blank');
                   }}
                   className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition shadow-sm mb-3"
                 >
