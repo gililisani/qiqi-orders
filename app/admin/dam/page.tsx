@@ -3533,7 +3533,6 @@ export default function AdminDigitalAssetManagerPage() {
               selectedLocaleCodes: asset.locales.map(l => l.code) || [],
               useTitleAsFilename: asset.use_title_as_filename ?? false,
               primaryLocale: asset.locales.find(l => l.is_default)?.code || asset.locales[0]?.code || null,
-              selectedRegionCodes: asset.regions.map(r => r.code) || [],
               vimeoVideoId: asset.vimeo_video_id || '',
               vimeoDownloadFormats: asset.vimeo_download_formats && asset.vimeo_download_formats.length > 0
                 ? asset.vimeo_download_formats
