@@ -44,6 +44,7 @@ interface BulkUploadCardProps {
   products: Array<{ id: number; item_name: string; sku: string }>;
   productLines: Array<{ code: string; name: string }>;
   locales: LocaleOption[];
+  allLocales?: LocaleOption[]; // All locales including inactive (for showing current values)
   tags: Array<{ id: string; slug: string; label: string }> | Array<{ slug: string; label: string }>;
   campaigns: Array<{ id: string; name: string }>;
   globalDefaults: {
