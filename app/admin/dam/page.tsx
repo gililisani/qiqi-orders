@@ -351,7 +351,6 @@ export default function AdminDigitalAssetManagerPage() {
     selectedTagSlugs: string[];
     selectedLocaleCodes: string[];
     primaryLocale: string | null;
-    selectedRegionCodes: string[];
     useTitleAsFilename: boolean;
     campaignId: string | null;
     status?: 'pending' | 'saving' | 'success' | 'error';
