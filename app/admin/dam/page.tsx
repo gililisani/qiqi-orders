@@ -1971,7 +1971,6 @@ export default function AdminDigitalAssetManagerPage() {
               code,
               primary: code === effectivePrimaryLocale,
             })),
-            regions: effectiveRegions,
             thumbnailData: thumbnailData || undefined,
             thumbnailPath: thumbnailPath || undefined,
             useTitleAsFilename: bulkFile.useTitleAsFilename,
