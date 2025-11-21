@@ -320,63 +320,90 @@ export default function BulkUploadCard({
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Tags (override)</label>
-            <select
-              multiple
-              value={file.selectedTagSlugs}
-              onChange={(e) => {
-                const selected = Array.from(e.target.selectedOptions, opt => opt.value);
-                handlePerFileOverride('tags', selected);
-              }}
-              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black min-h-[50px]"
-              disabled={isUploading || file.status === 'uploading'}
-            >
-              {tags.map(tag => (
-                <option key={tag.slug} value={tag.slug}>{tag.label}</option>
-              ))}
-            </select>
-            <p className="text-[10px] text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Tags (override)</label>
+            <div className="max-h-32 overflow-y-auto rounded-md border border-gray-300 bg-white p-2 space-y-1">
+              {tags.length === 0 ? (
+                <p className="text-[10px] text-gray-400 italic">No tags available</p>
+              ) : (
+                tags.map(tag => (
+                  <label key={tag.slug} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={effectiveTags.includes(tag.slug)}
+                      onChange={(e) => {
+                        const currentTags = effectiveTags;
+                        const newTags = e.target.checked
+                          ? [...currentTags, tag.slug]
+                          : currentTags.filter(s => s !== tag.slug);
+                        handlePerFileOverride('tags', newTags);
+                      }}
+                      className="h-3 w-3 rounded border-gray-300 text-black focus:ring-black focus:ring-1"
+                      disabled={isUploading || file.status === 'uploading'}
+                    />
+                    <span className="text-[10px] text-gray-700">{tag.label}</span>
+                  </label>
+                ))
+              )}
+            </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Locales (override)</label>
-            <select
-              multiple
-              value={file.selectedLocaleCodes}
-              onChange={(e) => {
-                const selected = Array.from(e.target.selectedOptions, opt => opt.value);
-                handlePerFileOverride('locales', selected);
-                if (selected.length > 0 && !selected.includes(file.primaryLocale || '')) {
-                  onFieldChange(file.tempId, 'primaryLocale', selected[0]);
-                }
-              }}
-              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black min-h-[50px]"
-              disabled={isUploading || file.status === 'uploading'}
-            >
-              {locales.map(loc => (
-                <option key={loc.code} value={loc.code}>{loc.label}</option>
-              ))}
-            </select>
-            <p className="text-[10px] text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Locales (override)</label>
+            <div className="max-h-32 overflow-y-auto rounded-md border border-gray-300 bg-white p-2 space-y-1">
+              {locales.length === 0 ? (
+                <p className="text-[10px] text-gray-400 italic">No locales available</p>
+              ) : (
+                locales.map(loc => (
+                  <label key={loc.code} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={effectiveLocales.includes(loc.code)}
+                      onChange={(e) => {
+                        const currentLocales = effectiveLocales;
+                        const newLocales = e.target.checked
+                          ? [...currentLocales, loc.code]
+                          : currentLocales.filter(c => c !== loc.code);
+                        handlePerFileOverride('locales', newLocales);
+                        if (newLocales.length > 0 && !newLocales.includes(file.primaryLocale || '')) {
+                          onFieldChange(file.tempId, 'primaryLocale', newLocales[0]);
+                        }
+                      }}
+                      className="h-3 w-3 rounded border-gray-300 text-black focus:ring-black focus:ring-1"
+                      disabled={isUploading || file.status === 'uploading'}
+                    />
+                    <span className="text-[10px] text-gray-700">{loc.label}</span>
+                  </label>
+                ))
+              )}
+            </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Regions (override)</label>
-            <select
-              multiple
-              value={file.selectedRegionCodes}
-              onChange={(e) => {
-                const selected = Array.from(e.target.selectedOptions, opt => opt.value);
-                handlePerFileOverride('regions', selected);
-              }}
-              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black min-h-[50px]"
-              disabled={isUploading || file.status === 'uploading'}
-            >
-              {regions.map(reg => (
-                <option key={reg.code} value={reg.code}>{reg.label}</option>
-              ))}
-            </select>
-            <p className="text-[10px] text-gray-400 mt-0.5">Ctrl/Cmd+click</p>
+            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Regions (override)</label>
+            <div className="max-h-32 overflow-y-auto rounded-md border border-gray-300 bg-white p-2 space-y-1">
+              {regions.length === 0 ? (
+                <p className="text-[10px] text-gray-400 italic">No regions available. Regions are optional.</p>
+              ) : (
+                regions.map(reg => (
+                  <label key={reg.code} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={effectiveRegions.includes(reg.code)}
+                      onChange={(e) => {
+                        const currentRegions = effectiveRegions;
+                        const newRegions = e.target.checked
+                          ? [...currentRegions, reg.code]
+                          : currentRegions.filter(c => c !== reg.code);
+                        handlePerFileOverride('regions', newRegions);
+                      }}
+                      className="h-3 w-3 rounded border-gray-300 text-black focus:ring-black focus:ring-1"
+                      disabled={isUploading || file.status === 'uploading'}
+                    />
+                    <span className="text-[10px] text-gray-700">{reg.label}</span>
+                  </label>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

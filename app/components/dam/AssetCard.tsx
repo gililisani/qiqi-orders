@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, memo } from 'react';
 import { PhotoIcon, EyeIcon, ArrowDownTrayIcon, TrashIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { AssetRecord } from './types';
-import { formatBytes, ensureTokenUrl, getFileTypeBadge } from './utils';
+import { formatBytes, ensureTokenUrl, getFileTypeBadge, getStaticDocumentThumbnail } from './utils';
 
 interface AssetCardProps {
   asset: AssetRecord;
@@ -118,30 +118,45 @@ const AssetCard = memo(function AssetCard({
               (e.target as HTMLImageElement).src = `https://i.vimeocdn.com/video/${asset.vimeo_video_id}_640.jpg`;
             }}
           />
-        ) : accessToken && asset.current_version?.previewPath ? (
-          <>
-            {isInView && (
+        ) : (() => {
+          // Check for static Word/Excel thumbnails first
+          const staticThumbnail = getStaticDocumentThumbnail(asset.current_version?.mime_type);
+          if (staticThumbnail) {
+            return (
               <img
-                src={ensureTokenUrl(asset.current_version.previewPath, accessToken)}
+                src={staticThumbnail}
                 alt={asset.title}
                 className="object-contain max-w-full max-h-full"
                 onLoad={() => setImageLoaded(true)}
-                onError={() => setImageLoaded(false)}
               />
-            )}
-            {!imageLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
-                <div className="w-full h-full bg-gray-200 animate-pulse flex items-center justify-center">
-                  <PhotoIcon className="h-8 w-8 text-gray-400" />
+            );
+          }
+          // Fall back to regular preview path
+          return accessToken && asset.current_version?.previewPath ? (
+            <>
+              {isInView && (
+                <img
+                  src={ensureTokenUrl(asset.current_version.previewPath, accessToken)}
+                  alt={asset.title}
+                  className="object-contain max-w-full max-h-full"
+                  onLoad={() => setImageLoaded(true)}
+                  onError={() => setImageLoaded(false)}
+                />
+              )}
+              {!imageLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+                  <div className="w-full h-full bg-gray-200 animate-pulse flex items-center justify-center">
+                    <PhotoIcon className="h-8 w-8 text-gray-400" />
+                  </div>
                 </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-gray-400">
-            <PhotoIcon className="h-12 w-12" />
-          </div>
-        )}
+              )}
+            </>
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-gray-400">
+              <PhotoIcon className="h-12 w-12" />
+            </div>
+          );
+        })()}
 
         {/* File Type/Resolution Badge */}
         {asset.current_version && (

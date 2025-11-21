@@ -1804,31 +1804,13 @@ export default function AdminDigitalAssetManagerPage() {
             console.error('PDF thumbnail generation error:', thumbError);
           }
         }
-        // Generate generic thumbnail for Word documents
-        else if (file.type.includes('word') || file.type.includes('msword') || file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx')) {
-          try {
-            const thumbnailResult = await generateDocumentThumbnail(file, 'word');
-            if (thumbnailResult) {
-              thumbnailData = thumbnailResult.thumbnailData;
-              thumbnailPath = thumbnailResult.thumbnailPath;
-              thumbnailMimeType = thumbnailResult.mimeType;
-            }
-          } catch (thumbError) {
-            console.error('Word thumbnail generation error:', thumbError);
-          }
-        }
-        // Generate generic thumbnail for Excel files
-        else if (file.type.includes('excel') || file.type.includes('spreadsheet') || file.name.toLowerCase().endsWith('.xls') || file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.csv')) {
-          try {
-            const thumbnailResult = await generateDocumentThumbnail(file, 'excel');
-            if (thumbnailResult) {
-              thumbnailData = thumbnailResult.thumbnailData;
-              thumbnailPath = thumbnailResult.thumbnailPath;
-              thumbnailMimeType = thumbnailResult.mimeType;
-            }
-          } catch (thumbError) {
-            console.error('Excel thumbnail generation error:', thumbError);
-          }
+        // Word and Excel documents use static thumbnails - skip thumbnail generation
+        // The static thumbnails will be displayed via getStaticDocumentThumbnail() in the UI
+        else if (
+          file.type.includes('word') || file.type.includes('msword') || file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx') ||
+          file.type.includes('excel') || file.type.includes('spreadsheet') || file.name.toLowerCase().endsWith('.xls') || file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.csv')
+        ) {
+          // No thumbnail generation needed - static thumbnails will be used
         }
 
         const useDirectStorageUpload = file.size > 5 * 1024 * 1024;

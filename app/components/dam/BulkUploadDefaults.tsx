@@ -82,90 +82,132 @@ export default function BulkUploadDefaults({
         )}
 
         {/* Locales */}
-        <div className="flex items-center gap-1.5">
-          <label className="text-xs font-medium text-gray-700 whitespace-nowrap">Locales *</label>
-          <select
-            multiple
-            value={globalDefaults.selectedLocaleCodes}
-            onChange={(e) => handleMultiSelectChange('selectedLocaleCodes', e)}
-            className="rounded-md border border-gray-300 px-2 py-0.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-6 min-w-[120px]"
-            disabled={isUploading}
-            size={1}
-          >
-            {locales.map(loc => (
-              <option key={loc.code} value={loc.code}>{loc.label}</option>
-            ))}
-          </select>
-          {globalDefaults.selectedLocaleCodes.length > 0 && (
-            <div className="flex gap-1 flex-wrap">
-              {globalDefaults.selectedLocaleCodes.map(code => {
-                const locale = locales.find(l => l.code === code);
-                return locale ? (
-                  <span key={code} className="inline-flex items-center rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
-                    {locale.label}
-                  </span>
-                ) : null;
-              })}
+        <div className="flex items-start gap-1.5">
+          <label className="text-xs font-medium text-gray-700 whitespace-nowrap pt-0.5">Locales *</label>
+          <div className="flex flex-col gap-1">
+            <div className="max-h-20 overflow-y-auto rounded-md border border-gray-300 bg-white p-1 space-y-0.5 min-w-[140px]">
+              {locales.length === 0 ? (
+                <p className="text-[10px] text-gray-400 italic px-1">No locales</p>
+              ) : (
+                locales.map(loc => (
+                  <label key={loc.code} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={globalDefaults.selectedLocaleCodes.includes(loc.code)}
+                      onChange={(e) => {
+                        const newLocales = e.target.checked
+                          ? [...globalDefaults.selectedLocaleCodes, loc.code]
+                          : globalDefaults.selectedLocaleCodes.filter(c => c !== loc.code);
+                        handleChange('selectedLocaleCodes', newLocales);
+                        if (newLocales.length > 0 && !newLocales.includes(globalDefaults.primaryLocale || '')) {
+                          handleChange('primaryLocale', newLocales[0]);
+                        }
+                      }}
+                      className="h-2.5 w-2.5 rounded border-gray-300 text-black focus:ring-black focus:ring-1"
+                      disabled={isUploading}
+                    />
+                    <span className="text-[10px] text-gray-700">{loc.label}</span>
+                  </label>
+                ))
+              )}
             </div>
-          )}
+            {globalDefaults.selectedLocaleCodes.length > 0 && (
+              <div className="flex gap-1 flex-wrap">
+                {globalDefaults.selectedLocaleCodes.map(code => {
+                  const locale = locales.find(l => l.code === code);
+                  return locale ? (
+                    <span key={code} className="inline-flex items-center rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
+                      {locale.label}
+                    </span>
+                  ) : null;
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Regions */}
-        <div className="flex items-center gap-1.5">
-          <label className="text-xs font-medium text-gray-700 whitespace-nowrap">Regions</label>
-          <select
-            multiple
-            value={globalDefaults.selectedRegionCodes}
-            onChange={(e) => handleMultiSelectChange('selectedRegionCodes', e)}
-            className="rounded-md border border-gray-300 px-2 py-0.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-6 min-w-[120px]"
-            disabled={isUploading}
-            size={1}
-          >
-            {regions.map(reg => (
-              <option key={reg.code} value={reg.code}>{reg.label}</option>
-            ))}
-          </select>
-          {globalDefaults.selectedRegionCodes.length > 0 && (
-            <div className="flex gap-1 flex-wrap">
-              {globalDefaults.selectedRegionCodes.map(code => {
-                const region = regions.find(r => r.code === code);
-                return region ? (
-                  <span key={code} className="inline-flex items-center rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
-                    {region.label}
-                  </span>
-                ) : null;
-              })}
+        <div className="flex items-start gap-1.5">
+          <label className="text-xs font-medium text-gray-700 whitespace-nowrap pt-0.5">Regions</label>
+          <div className="flex flex-col gap-1">
+            <div className="max-h-20 overflow-y-auto rounded-md border border-gray-300 bg-white p-1 space-y-0.5 min-w-[140px]">
+              {regions.length === 0 ? (
+                <p className="text-[10px] text-gray-400 italic px-1">No regions (optional)</p>
+              ) : (
+                regions.map(reg => (
+                  <label key={reg.code} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={globalDefaults.selectedRegionCodes.includes(reg.code)}
+                      onChange={(e) => {
+                        const newRegions = e.target.checked
+                          ? [...globalDefaults.selectedRegionCodes, reg.code]
+                          : globalDefaults.selectedRegionCodes.filter(c => c !== reg.code);
+                        handleChange('selectedRegionCodes', newRegions);
+                      }}
+                      className="h-2.5 w-2.5 rounded border-gray-300 text-black focus:ring-black focus:ring-1"
+                      disabled={isUploading}
+                    />
+                    <span className="text-[10px] text-gray-700">{reg.label}</span>
+                  </label>
+                ))
+              )}
             </div>
-          )}
+            {globalDefaults.selectedRegionCodes.length > 0 && (
+              <div className="flex gap-1 flex-wrap">
+                {globalDefaults.selectedRegionCodes.map(code => {
+                  const region = regions.find(r => r.code === code);
+                  return region ? (
+                    <span key={code} className="inline-flex items-center rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
+                      {region.label}
+                    </span>
+                  ) : null;
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tags */}
-        <div className="flex items-center gap-1.5">
-          <label className="text-xs font-medium text-gray-700 whitespace-nowrap">Tags</label>
-          <select
-            multiple
-            value={globalDefaults.selectedTagSlugs}
-            onChange={(e) => handleMultiSelectChange('selectedTagSlugs', e)}
-            className="rounded-md border border-gray-300 px-2 py-0.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-6 min-w-[120px]"
-            disabled={isUploading}
-            size={1}
-          >
-            {tags.map(tag => (
-              <option key={tag.slug} value={tag.slug}>{tag.label}</option>
-            ))}
-          </select>
-          {globalDefaults.selectedTagSlugs.length > 0 && (
-            <div className="flex gap-1 flex-wrap">
-              {globalDefaults.selectedTagSlugs.map(slug => {
-                const tag = tags.find(t => t.slug === slug);
-                return tag ? (
-                  <span key={slug} className="inline-flex items-center rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
-                    {tag.label}
-                  </span>
-                ) : null;
-              })}
+        <div className="flex items-start gap-1.5">
+          <label className="text-xs font-medium text-gray-700 whitespace-nowrap pt-0.5">Tags</label>
+          <div className="flex flex-col gap-1">
+            <div className="max-h-20 overflow-y-auto rounded-md border border-gray-300 bg-white p-1 space-y-0.5 min-w-[140px]">
+              {tags.length === 0 ? (
+                <p className="text-[10px] text-gray-400 italic px-1">No tags</p>
+              ) : (
+                tags.map(tag => (
+                  <label key={tag.slug} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={globalDefaults.selectedTagSlugs.includes(tag.slug)}
+                      onChange={(e) => {
+                        const newTags = e.target.checked
+                          ? [...globalDefaults.selectedTagSlugs, tag.slug]
+                          : globalDefaults.selectedTagSlugs.filter(s => s !== tag.slug);
+                        handleChange('selectedTagSlugs', newTags);
+                      }}
+                      className="h-2.5 w-2.5 rounded border-gray-300 text-black focus:ring-black focus:ring-1"
+                      disabled={isUploading}
+                    />
+                    <span className="text-[10px] text-gray-700">{tag.label}</span>
+                  </label>
+                ))
+              )}
             </div>
-          )}
+            {globalDefaults.selectedTagSlugs.length > 0 && (
+              <div className="flex gap-1 flex-wrap">
+                {globalDefaults.selectedTagSlugs.map(slug => {
+                  const tag = tags.find(t => t.slug === slug);
+                  return tag ? (
+                    <span key={slug} className="inline-flex items-center rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
+                      {tag.label}
+                    </span>
+                  ) : null;
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -67,6 +67,25 @@ export function buildAuthHeaders(token: string | null): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
 }
 
+// Get static thumbnail path for Word/Excel documents
+export function getStaticDocumentThumbnail(mimeType: string | null | undefined): string | null {
+  if (!mimeType) return null;
+  
+  const mime = mimeType.toLowerCase();
+  
+  // Word documents
+  if (mime.includes('word') || mime.includes('msword') || mime.includes('wordprocessingml')) {
+    return '/dam-icons/word-thumbnail.svg';
+  }
+  
+  // Excel documents
+  if (mime.includes('excel') || mime.includes('spreadsheet') || mime.includes('spreadsheetml') || mime === 'text/csv') {
+    return '/dam-icons/excel-thumbnail.svg';
+  }
+  
+  return null;
+}
+
 // Get friendly file type name from MIME type
 export function getFriendlyFileType(mimeType: string | null | undefined): string {
   if (!mimeType) return 'File';

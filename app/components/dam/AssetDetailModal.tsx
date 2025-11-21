@@ -2,7 +2,7 @@
 
 import { XMarkIcon, PhotoIcon, EyeIcon, ArrowDownTrayIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { AssetRecord, VimeoDownloadFormat } from './types';
-import { formatBytes, ensureTokenUrl, getFriendlyFileType } from './utils';
+import { formatBytes, ensureTokenUrl, getFriendlyFileType, getStaticDocumentThumbnail } from './utils';
 
 interface AssetDetailModalProps {
   asset: AssetRecord;
@@ -107,20 +107,36 @@ export default function AssetDetailModal({
                   />
                 </div>
               </div>
-            ) : asset.current_version?.downloadPath && accessToken ? (
-              <div className="w-full max-w-3xl">
-                <img
-                  src={ensureTokenUrl(asset.current_version.downloadPath, accessToken)}
-                  alt={asset.title}
-                  className="w-full h-auto max-h-[70vh] object-contain"
-                />
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-gray-400">
-                <PhotoIcon className="h-24 w-24 mb-4" />
-                <p className="text-sm">No preview available</p>
-              </div>
-            )}
+            ) : (() => {
+              // Check for static Word/Excel thumbnails first
+              const staticThumbnail = getStaticDocumentThumbnail(asset.current_version?.mime_type);
+              if (staticThumbnail) {
+                return (
+                  <div className="w-full max-w-3xl flex items-center justify-center">
+                    <img
+                      src={staticThumbnail}
+                      alt={asset.title}
+                      className="w-full h-auto max-h-[70vh] object-contain"
+                    />
+                  </div>
+                );
+              }
+              // Fall back to regular download path
+              return asset.current_version?.downloadPath && accessToken ? (
+                <div className="w-full max-w-3xl">
+                  <img
+                    src={ensureTokenUrl(asset.current_version.downloadPath, accessToken)}
+                    alt={asset.title}
+                    className="w-full h-auto max-h-[70vh] object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-gray-400">
+                  <PhotoIcon className="h-24 w-24 mb-4" />
+                  <p className="text-sm">No preview available</p>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Right Column - Metadata */}
