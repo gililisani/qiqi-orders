@@ -121,11 +121,12 @@ export default function AssetDetailModal({
                   </div>
                 );
               }
-              // Fall back to regular download path
-              return asset.current_version?.downloadPath && accessToken ? (
+              // For PDFs and other documents, prefer previewPath (thumbnail) if available, otherwise downloadPath
+              const previewUrl = asset.current_version?.previewPath || asset.current_version?.downloadPath;
+              return previewUrl && accessToken ? (
                 <div className="w-full max-w-3xl">
                   <img
-                    src={ensureTokenUrl(asset.current_version.downloadPath, accessToken)}
+                    src={ensureTokenUrl(previewUrl, accessToken)}
                     alt={asset.title}
                     className="w-full h-auto max-h-[70vh] object-contain"
                   />
