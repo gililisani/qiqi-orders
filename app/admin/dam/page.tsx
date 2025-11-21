@@ -1660,7 +1660,6 @@ export default function AdminDigitalAssetManagerPage() {
             code,
             primary: code === formState.primaryLocale,
           })),
-          regions: formState.selectedRegionCodes,
           thumbnailData: thumbnailData || undefined,
           thumbnailPath: thumbnailPath || undefined,
           useTitleAsFilename: formState.useTitleAsFilename,
