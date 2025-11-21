@@ -259,7 +259,7 @@ export default function BulkUploadPanel({
   };
 
   const canUpload = files.length > 0 && files.every(f => {
-    const effectiveLocales = getEffectiveValue(f, 'selectedLocaleCodes') as string[];
+    const effectiveLocales = f.selectedLocaleCodes || [];
     return f.title.trim() && 
       f.assetTypeId && 
       f.assetSubtypeId && 
