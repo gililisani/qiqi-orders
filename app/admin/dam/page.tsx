@@ -366,9 +366,6 @@ export default function AdminDigitalAssetManagerPage() {
   const [bulkEditGlobalDefaults, setBulkEditGlobalDefaults] = useState({
     productLine: '',
     campaignId: null as string | null,
-    selectedLocaleCodes: [] as string[],
-    primaryLocale: null as string | null,
-    selectedTagSlugs: [] as string[],
   });
   const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkFiles, setBulkFiles] = useState<Array<{
@@ -718,9 +715,6 @@ export default function AdminDigitalAssetManagerPage() {
       setBulkEditGlobalDefaults({
         productLine: first.productLine,
         campaignId: first.campaignId,
-        selectedLocaleCodes: first.selectedLocaleCodes,
-        primaryLocale: first.primaryLocale,
-        selectedTagSlugs: first.selectedTagSlugs,
       });
     }
     
@@ -747,12 +741,9 @@ export default function AdminDigitalAssetManagerPage() {
         const effectiveCampaignId = editAsset.overrides?.campaignId 
           ? editAsset.campaignId 
           : bulkEditGlobalDefaults.campaignId;
-        const effectiveLocales = editAsset.overrides?.locales 
-          ? editAsset.selectedLocaleCodes 
-          : bulkEditGlobalDefaults.selectedLocaleCodes;
-        const effectiveTags = editAsset.overrides?.tags 
-          ? editAsset.selectedTagSlugs 
-          : bulkEditGlobalDefaults.selectedTagSlugs;
+        // Locales and tags are per-asset only (no global defaults)
+        const effectiveLocales = editAsset.selectedLocaleCodes || [];
+        const effectiveTags = editAsset.selectedTagSlugs || [];
         const effectivePrimaryLocale = editAsset.primaryLocale || (effectiveLocales.length > 0 ? effectiveLocales[0] : null);
 
         const payload = {
@@ -2338,9 +2329,6 @@ export default function AdminDigitalAssetManagerPage() {
               setBulkEditGlobalDefaults({
                 productLine: '',
                 campaignId: null,
-                selectedLocaleCodes: [],
-                primaryLocale: null,
-                selectedTagSlugs: [],
               });
             }}
             onSave={handleBulkEditSave}
