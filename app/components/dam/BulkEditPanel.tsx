@@ -199,7 +199,6 @@ export default function BulkEditPanel({
                       selectedTagSlugs: asset.selectedTagSlugs,
                       selectedLocaleCodes: asset.selectedLocaleCodes,
                       primaryLocale: asset.primaryLocale,
-                      selectedRegionCodes: asset.selectedRegionCodes,
                       useTitleAsFilename: asset.useTitleAsFilename,
                       campaignId: asset.campaignId,
                       status: asset.status === 'saving' ? 'uploading' : asset.status,
