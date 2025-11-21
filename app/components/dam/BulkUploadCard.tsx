@@ -124,13 +124,35 @@ export default function BulkUploadCard({
       }
       const nextLocales = currentLocales.filter((item) => item !== code);
       const nextPrimary = file.primaryLocale === code ? nextLocales[0] ?? null : file.primaryLocale;
-      handlePerFileOverride('locales', nextLocales);
-      onFieldChange(file.tempId, 'primaryLocale', nextPrimary);
+      // Update selectedLocaleCodes directly (not 'locales')
+      const overrides = { ...(file.overrides || {}), locales: true };
+      if (onFieldsChange) {
+        onFieldsChange(file.tempId, {
+          selectedLocaleCodes: nextLocales,
+          primaryLocale: nextPrimary,
+          overrides: overrides,
+        });
+      } else {
+        onFieldChange(file.tempId, 'selectedLocaleCodes', nextLocales);
+        onFieldChange(file.tempId, 'primaryLocale', nextPrimary);
+        onFieldChange(file.tempId, 'overrides', overrides);
+      }
     } else {
       const newLocales = [...currentLocales, code];
-      handlePerFileOverride('locales', newLocales);
-      if (!file.primaryLocale) {
-        onFieldChange(file.tempId, 'primaryLocale', code);
+      // Update selectedLocaleCodes directly (not 'locales')
+      const overrides = { ...(file.overrides || {}), locales: true };
+      if (onFieldsChange) {
+        onFieldsChange(file.tempId, {
+          selectedLocaleCodes: newLocales,
+          primaryLocale: file.primaryLocale || code,
+          overrides: overrides,
+        });
+      } else {
+        onFieldChange(file.tempId, 'selectedLocaleCodes', newLocales);
+        if (!file.primaryLocale) {
+          onFieldChange(file.tempId, 'primaryLocale', code);
+        }
+        onFieldChange(file.tempId, 'overrides', overrides);
       }
     }
   };
@@ -175,14 +197,16 @@ export default function BulkUploadCard({
 
   const handlePerFileOverride = (field: 'productLine' | 'locales' | 'tags' | 'campaignId' | 'sku', value: any) => {
     const overrides = { ...(file.overrides || {}), [field]: true };
+    // Map field names to actual BulkFile property names
+    const actualField = field === 'locales' ? 'selectedLocaleCodes' : field === 'tags' ? 'selectedTagSlugs' : field;
     // Use atomic update if available, otherwise fall back to separate calls
     if (onFieldsChange) {
       onFieldsChange(file.tempId, {
-        [field]: value,
+        [actualField]: value,
         overrides: overrides,
       });
     } else {
-      onFieldChange(file.tempId, field as keyof BulkFile, value);
+      onFieldChange(file.tempId, actualField as keyof BulkFile, value);
       onFieldChange(file.tempId, 'overrides', overrides);
     }
   };
