@@ -72,6 +72,8 @@ export default function BulkUploadCard({
   globalDefaults,
   getEffectiveValue,
   isUploading,
+  accessToken,
+  onTagsChange,
 }: BulkUploadCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [newTagLabel, setNewTagLabel] = useState('');
