@@ -2305,7 +2305,6 @@ export default function AdminDigitalAssetManagerPage() {
                     campaignId: null,
                     selectedLocaleCodes: defaultLocale ? [defaultLocale.code] : [],
                     primaryLocale: defaultLocale ? defaultLocale.code : null,
-                    selectedRegionCodes: [],
                     selectedTagSlugs: [],
                   });
                   setBulkFiles([]);
