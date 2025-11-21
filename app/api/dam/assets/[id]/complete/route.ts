@@ -136,7 +136,12 @@ export async function POST(
           .update({ thumbnail_path: body.thumbnailPath })
           .eq('id', versionId);
 
-        // Create rendition record
+        // Extract MIME type from thumbnail path extension
+        const thumbExtension = body.thumbnailPath.endsWith('.webp') ? 'webp' : 
+                              (body.thumbnailPath.endsWith('.jpg') || body.thumbnailPath.endsWith('.jpeg') ? 'jpg' : 'webp');
+        const thumbMimeType = thumbExtension === 'webp' ? 'image/webp' : 'image/jpeg';
+
+        // Create rendition record with correct MIME type
         const { error: renditionError } = await supabaseAdmin
           .from('dam_asset_renditions')
           .insert({
@@ -145,7 +150,7 @@ export async function POST(
             kind: 'thumb',
             storage_bucket: 'dam-assets',
             storage_path: body.thumbnailPath,
-            mime_type: 'image/png',
+            mime_type: thumbMimeType,
             file_size: thumbFileSize,
             metadata: {},
             created_by: adminUserId,

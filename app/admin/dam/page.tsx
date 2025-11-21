@@ -957,7 +957,7 @@ export default function AdminDigitalAssetManagerPage() {
   };
 
   // Generate image thumbnail client-side (300x300px max, WebP format, quality 80%)
-  const generateImageThumbnail = async (file: File): Promise<{ thumbnailData: string; thumbnailPath: string } | null> => {
+  const generateImageThumbnail = async (file: File): Promise<{ thumbnailData: string; thumbnailPath: string; mimeType: string } | null> => {
     // Only process image files
     if (!file.type.startsWith('image/')) {
       return null;
@@ -974,8 +974,8 @@ export default function AdminDigitalAssetManagerPage() {
         img.src = imageUrl;
       });
 
-      // Calculate dimensions (max 300x300, maintain aspect ratio)
-      const maxSize = 300;
+      // Calculate dimensions (max 400x400, maintain aspect ratio) - increased for crisp display
+      const maxSize = 400;
       let width = img.width;
       let height = img.height;
       
@@ -1025,12 +1025,12 @@ export default function AdminDigitalAssetManagerPage() {
         return null;
       }
       
-      // Generate thumbnail path
+      // Generate thumbnail path with correct extension
       const timestamp = Date.now();
       const extension = mimeType === 'image/webp' ? 'webp' : 'jpg';
       const thumbnailPath = `temp-thumb-${timestamp}.${extension}`;
 
-      return { thumbnailData, thumbnailPath };
+      return { thumbnailData, thumbnailPath, mimeType };
     } catch (err) {
       console.error('Failed to generate image thumbnail:', err);
       return null; // Don't fail upload if thumbnail generation fails
@@ -1038,7 +1038,7 @@ export default function AdminDigitalAssetManagerPage() {
   };
 
   // Generate PDF thumbnail client-side
-  const generatePDFThumbnail = async (file: File): Promise<{ thumbnailData: string; thumbnailPath: string } | null> => {
+  const generatePDFThumbnail = async (file: File): Promise<{ thumbnailData: string; thumbnailPath: string; mimeType: string } | null> => {
     if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
       return null;
     }
@@ -1066,8 +1066,8 @@ export default function AdminDigitalAssetManagerPage() {
       
       const page = await pdf.getPage(1); // Get first page
 
-      // Render to canvas with optimized scale for thumbnails (reduced for smaller file size)
-      const scale = 1.2; // Reduced from 1.5 to 1.2 for smaller thumbnails
+      // Render to canvas with optimized scale for thumbnails (increased for crisp display)
+      const scale = 1.5; // Increased from 1.2 to 1.5 for ~400px thumbnails
       const viewport = page.getViewport({ scale });
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
@@ -1109,11 +1109,11 @@ export default function AdminDigitalAssetManagerPage() {
         return null;
       }
       
-      // Generate thumbnail path (will be stored in asset_renditions)
+      // Generate thumbnail path with correct extension
       const timestamp = Date.now();
       const thumbnailPath = `temp-thumb-${timestamp}.${extension}`;
 
-      return { thumbnailData, thumbnailPath };
+      return { thumbnailData, thumbnailPath, mimeType };
     } catch (err) {
       console.error('Failed to generate PDF thumbnail:', err);
       return null; // Don't fail upload if thumbnail generation fails
@@ -1291,6 +1291,7 @@ export default function AdminDigitalAssetManagerPage() {
       // Generate thumbnail if needed (images and PDFs) - don't block upload if it fails
       let thumbnailData: string | null = null;
       let thumbnailPath: string | null = null;
+      let thumbnailMimeType: string | null = null;
       
       // Generate image thumbnail for image files
       if (file.type.startsWith('image/')) {
@@ -1299,6 +1300,7 @@ export default function AdminDigitalAssetManagerPage() {
           if (thumbnailResult) {
             thumbnailData = thumbnailResult.thumbnailData;
             thumbnailPath = thumbnailResult.thumbnailPath;
+            thumbnailMimeType = thumbnailResult.mimeType;
           }
         } catch (thumbError) {
           console.error('Image thumbnail generation error (continuing without thumbnail):', thumbError);
@@ -1312,6 +1314,7 @@ export default function AdminDigitalAssetManagerPage() {
           if (thumbnailResult) {
             thumbnailData = thumbnailResult.thumbnailData;
             thumbnailPath = thumbnailResult.thumbnailPath;
+            thumbnailMimeType = thumbnailResult.mimeType;
           }
         } catch (thumbError) {
           console.error('PDF thumbnail generation error (continuing without thumbnail):', thumbError);
@@ -1509,19 +1512,18 @@ export default function AdminDigitalAssetManagerPage() {
 
         // Step 4: Upload thumbnail directly to storage if we have one
         let uploadedThumbnailPath: string | null = null;
-        if (thumbnailData && thumbnailPath) {
+        if (thumbnailData && thumbnailPath && thumbnailMimeType) {
           try {
-            // Determine MIME type and extension from thumbnailPath
-            const isWebP = thumbnailPath.endsWith('.webp');
-            const mimeType = isWebP ? 'image/webp' : (thumbnailPath.endsWith('.jpg') || thumbnailPath.endsWith('.jpeg') ? 'image/jpeg' : 'image/png');
-            const extension = isWebP ? 'webp' : (thumbnailPath.endsWith('.jpg') || thumbnailPath.endsWith('.jpeg') ? 'jpg' : 'png');
+            // Use MIME type from thumbnail generation (WebP or JPEG, never PNG)
+            const mimeType = thumbnailMimeType; // 'image/webp' or 'image/jpeg'
+            const extension = mimeType === 'image/webp' ? 'webp' : 'jpg';
             
             const finalThumbnailPath = `${assetId}/${Date.now()}-thumb.${extension}`;
             // Convert base64 to blob
             const thumbnailBytes = Uint8Array.from(atob(thumbnailData), (c) => c.charCodeAt(0));
             const thumbnailBlob = new Blob([thumbnailBytes], { type: mimeType });
             
-            // Upload thumbnail directly to Supabase Storage
+            // Upload thumbnail directly to Supabase Storage with correct content type
             const { error: thumbUploadError } = await supabase.storage
               .from('dam-assets')
               .upload(finalThumbnailPath, thumbnailBlob, {
@@ -1617,7 +1619,7 @@ export default function AdminDigitalAssetManagerPage() {
           })),
           regions: formState.selectedRegionCodes,
           thumbnailData: thumbnailData || undefined,
-          thumbnailPath: thumbnailPath || (thumbnailData ? `${Date.now()}-thumb.png` : undefined),
+          thumbnailPath: thumbnailPath || undefined,
           useTitleAsFilename: formState.useTitleAsFilename,
           campaignId: formState.campaignId || undefined,
         };
@@ -1707,6 +1709,7 @@ export default function AdminDigitalAssetManagerPage() {
         // Generate thumbnail if needed (images and PDFs)
         let thumbnailData: string | null = null;
         let thumbnailPath: string | null = null;
+        let thumbnailMimeType: string | null = null;
         
         // Generate image thumbnail for image files
         if (file.type.startsWith('image/')) {

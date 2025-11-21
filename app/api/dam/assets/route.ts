@@ -654,14 +654,19 @@ export async function POST(request: NextRequest) {
       if (insertVersionError) throw insertVersionError;
     }
 
-    // Handle thumbnail if provided (from client-side PDF thumbnail generation)
+    // Handle thumbnail if provided (from client-side thumbnail generation)
     if (payload.thumbnailPath && payload.thumbnailData && versionId) {
-      // Generate proper thumbnail path with asset ID
-      const finalThumbnailPath = `${assetId}/${Date.now()}-thumb.png`;
+      // Extract extension and MIME type from thumbnailPath (format: temp-thumb-{timestamp}.{webp|jpg})
+      const extension = payload.thumbnailPath.endsWith('.webp') ? 'webp' : 
+                       (payload.thumbnailPath.endsWith('.jpg') || payload.thumbnailPath.endsWith('.jpeg') ? 'jpg' : 'webp');
+      const mimeType = extension === 'webp' ? 'image/webp' : 'image/jpeg';
+      
+      // Generate proper thumbnail path with asset ID and correct extension
+      const finalThumbnailPath = `${assetId}/${Date.now()}-thumb.${extension}`;
       const thumbnailBytes = Uint8Array.from(atob(payload.thumbnailData), (c) => c.charCodeAt(0));
       await storage.putObject(finalThumbnailPath, thumbnailBytes, {
-        contentType: 'image/png',
-        originalFileName: 'thumb.png',
+        contentType: mimeType,
+        originalFileName: `thumb.${extension}`,
       });
 
       // Update version with thumbnail path
@@ -670,7 +675,7 @@ export async function POST(request: NextRequest) {
         .update({ thumbnail_path: finalThumbnailPath })
         .eq('id', versionId);
 
-      // Create rendition record
+      // Create rendition record with correct MIME type
       const { error: renditionError } = await supabaseAdmin
         .from('dam_asset_renditions')
         .insert({
@@ -679,7 +684,7 @@ export async function POST(request: NextRequest) {
           kind: 'thumb',
           storage_bucket: 'dam-assets',
           storage_path: finalThumbnailPath,
-          mime_type: 'image/png',
+          mime_type: mimeType,
           file_size: thumbnailBytes.length,
           metadata: {},
           created_by: adminUser.id,
