@@ -2421,12 +2421,16 @@ export default function AdminDigitalAssetManagerPage() {
             globalDefaults={bulkGlobalDefaults}
             onGlobalDefaultsChange={setBulkGlobalDefaults}
             locales={locales}
+            allLocales={allLocales}
             tags={tags}
             assetTypes={assetTypes}
             assetSubtypes={assetSubtypes}
             products={products}
+            productLines={productLines}
             campaigns={campaigns}
             isUploading={bulkUploading}
+            accessToken={accessToken}
+            onTagsChange={setTags}
           />
         )}
 
