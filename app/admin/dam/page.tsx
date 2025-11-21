@@ -1395,7 +1395,6 @@ export default function AdminDigitalAssetManagerPage() {
             code,
             primary: code === formState.primaryLocale,
           })),
-          regions: formState.selectedRegionCodes,
           fileName: file.name,
           fileType: file.type || 'application/octet-stream',
           fileSize: file.size,
