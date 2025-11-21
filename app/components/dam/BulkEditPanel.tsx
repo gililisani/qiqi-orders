@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { PencilIcon } from '@heroicons/react/24/outline';
 import { LocaleOption, RegionOption, AssetRecord } from './types';
 import { ensureTokenUrl } from './utils';
@@ -90,6 +90,86 @@ export default function BulkEditPanel({
   const handleRemoveAsset = (assetId: string) => {
     onAssetsChange(assets.filter(a => a.assetId !== assetId));
   };
+
+  const lastDefaultsRef = useRef<string>('');
+
+  // Create a stable key for global defaults to detect changes
+  const globalDefaultsKey = useMemo(() => JSON.stringify({
+    productLine: globalDefaults.productLine,
+    campaignId: globalDefaults.campaignId,
+    selectedLocaleCodes: [...globalDefaults.selectedLocaleCodes].sort(),
+    primaryLocale: globalDefaults.primaryLocale,
+    selectedTagSlugs: [...globalDefaults.selectedTagSlugs].sort(),
+  }), [globalDefaults.productLine, globalDefaults.campaignId, globalDefaults.primaryLocale, globalDefaults.selectedLocaleCodes.join(','), globalDefaults.selectedTagSlugs.join(',')]);
+
+  // Propagate global defaults to all assets that don't have overrides
+  useEffect(() => {
+    if (assets.length === 0) return;
+    
+    // Skip if defaults haven't changed
+    if (lastDefaultsRef.current === globalDefaultsKey) return;
+    lastDefaultsRef.current = globalDefaultsKey;
+    
+    const updatedAssets = assets.map(asset => {
+      const overrides = asset.overrides || {};
+      const updates: Partial<BulkEditFile> = {};
+      
+      // Update productLine if not overridden
+      if (!overrides.productLine && asset.productLine !== globalDefaults.productLine) {
+        updates.productLine = globalDefaults.productLine;
+      }
+      
+      // Update campaignId if not overridden
+      if (!overrides.campaignId && asset.campaignId !== globalDefaults.campaignId) {
+        updates.campaignId = globalDefaults.campaignId;
+      }
+      
+      // Update locales if not overridden
+      if (!overrides.locales) {
+        const currentLocales = (asset.selectedLocaleCodes || []).sort();
+        const globalLocales = (globalDefaults.selectedLocaleCodes || []).sort();
+        const localesMatch = currentLocales.length === globalLocales.length &&
+          currentLocales.every((loc, idx) => loc === globalLocales[idx]);
+        if (!localesMatch) {
+          updates.selectedLocaleCodes = [...globalDefaults.selectedLocaleCodes];
+          // Update primaryLocale if it's not in the new locales
+          if (globalDefaults.selectedLocaleCodes.length > 0) {
+            const newPrimary = globalDefaults.selectedLocaleCodes.includes(asset.primaryLocale || '') 
+              ? asset.primaryLocale 
+              : (globalDefaults.primaryLocale || globalDefaults.selectedLocaleCodes[0]);
+            updates.primaryLocale = newPrimary;
+          }
+        }
+      }
+      
+      // Update tags if not overridden
+      if (!overrides.tags) {
+        const currentTags = (asset.selectedTagSlugs || []).sort();
+        const globalTags = (globalDefaults.selectedTagSlugs || []).sort();
+        const tagsMatch = currentTags.length === globalTags.length &&
+          currentTags.every((tag, idx) => tag === globalTags[idx]);
+        if (!tagsMatch) {
+          updates.selectedTagSlugs = [...globalDefaults.selectedTagSlugs];
+        }
+      }
+      
+      return Object.keys(updates).length > 0 ? { ...asset, ...updates } : asset;
+    });
+    
+    // Only update if there are actual changes
+    const hasChanges = updatedAssets.some((updated, index) => {
+      const original = assets[index];
+      return updated.productLine !== original.productLine ||
+        updated.campaignId !== original.campaignId ||
+        JSON.stringify(updated.selectedLocaleCodes?.sort()) !== JSON.stringify(original.selectedLocaleCodes?.sort()) ||
+        updated.primaryLocale !== original.primaryLocale ||
+        JSON.stringify(updated.selectedTagSlugs?.sort()) !== JSON.stringify(original.selectedTagSlugs?.sort());
+    });
+    
+    if (hasChanges) {
+      onAssetsChange(updatedAssets);
+    }
+  }, [globalDefaultsKey]);
 
   const getEffectiveValue = (file: BulkEditFile, field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedTagSlugs') => {
     const overrides = file.overrides || {};

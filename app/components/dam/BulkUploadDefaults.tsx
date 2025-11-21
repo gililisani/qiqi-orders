@@ -65,6 +65,13 @@ export default function BulkUploadDefaults({
       }
 
       const data = await response.json();
+      
+      // Add the new tag to global defaults
+      if (data.slug && !globalDefaults.selectedTagSlugs.includes(data.slug)) {
+        handleChange('selectedTagSlugs', [...globalDefaults.selectedTagSlugs, data.slug]);
+      }
+      
+      // Update the global tags list
       if (onTagsChange && data.tags) {
         onTagsChange(data.tags);
       }

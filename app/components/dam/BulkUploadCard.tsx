@@ -117,17 +117,23 @@ export default function BulkUploadCard({
   };
 
   const handleLocaleToggle = (code: string) => {
-    const isSelected = effectiveLocales.includes(code);
+    // Initialize from effective value if file doesn't have an override yet
+    const hasOverride = file.overrides?.locales;
+    const currentLocales = hasOverride 
+      ? (file.selectedLocaleCodes || [])
+      : effectiveLocales;
+    const isSelected = currentLocales.includes(code);
+    
     if (isSelected) {
-      if (effectiveLocales.length === 1) {
+      if (currentLocales.length === 1) {
         return; // keep at least one locale
       }
-      const nextLocales = effectiveLocales.filter((item) => item !== code);
+      const nextLocales = currentLocales.filter((item) => item !== code);
       const nextPrimary = file.primaryLocale === code ? nextLocales[0] ?? null : file.primaryLocale;
       handlePerFileOverride('locales', nextLocales);
       onFieldChange(file.tempId, 'primaryLocale', nextPrimary);
     } else {
-      const newLocales = [...effectiveLocales, code];
+      const newLocales = [...currentLocales, code];
       handlePerFileOverride('locales', newLocales);
       if (!file.primaryLocale) {
         onFieldChange(file.tempId, 'primaryLocale', code);
@@ -157,6 +163,16 @@ export default function BulkUploadCard({
       }
 
       const data = await response.json();
+      
+      // Add the new tag to this file's selectedTagSlugs
+      if (data.slug) {
+        const currentTags = effectiveTags;
+        if (!currentTags.includes(data.slug)) {
+          handlePerFileOverride('tags', [...currentTags, data.slug]);
+        }
+      }
+      
+      // Update the global tags list
       if (onTagsChange && data.tags) {
         onTagsChange(data.tags);
       }
@@ -437,7 +453,10 @@ export default function BulkUploadCard({
             <label className="block text-[11px] font-semibold text-gray-700 mb-1">Locales (override)</label>
             <div className="space-y-1">
               {locales.map((locale) => {
-                const selected = effectiveLocales.includes(locale.code);
+                // Use file's actual selectedLocaleCodes for display, but show effective value initially
+                const fileLocales = file.selectedLocaleCodes || [];
+                const hasOverride = file.overrides?.locales;
+                const selected = hasOverride ? fileLocales.includes(locale.code) : effectiveLocales.includes(locale.code);
                 return (
                   <div key={locale.code} className="flex items-center justify-between rounded-md border border-gray-200 px-2 py-1">
                     <label className="flex items-center gap-1.5 text-[10px] text-gray-700">

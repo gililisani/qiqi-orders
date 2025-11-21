@@ -95,12 +95,39 @@ export async function POST(request: NextRequest) {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 
-      const { error: upsertError } = await supabaseAdmin
+      // Check if tag already exists
+      const { data: existingTag, error: checkError } = await supabaseAdmin
         .from('dam_tags')
-        .upsert({ slug, label: label.trim() });
+        .select('id, slug, label')
+        .eq('slug', slug)
+        .single();
 
-      if (upsertError) {
-        throw upsertError;
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 is "not found" which is fine, other errors are not
+        throw checkError;
+      }
+
+      // If tag exists, use it; otherwise insert new one
+      if (!existingTag) {
+        const { error: insertError } = await supabaseAdmin
+          .from('dam_tags')
+          .insert({ slug, label: label.trim() });
+
+        if (insertError) {
+          // If insert fails due to duplicate (race condition), fetch the existing tag
+          if (insertError.code === '23505') {
+            const { data: fetchedTag } = await supabaseAdmin
+              .from('dam_tags')
+              .select('id, slug, label')
+              .eq('slug', slug)
+              .single();
+            if (!fetchedTag) {
+              throw insertError;
+            }
+          } else {
+            throw insertError;
+          }
+        }
       }
 
       const { data: tagsData, error: tagsError } = await supabaseAdmin
