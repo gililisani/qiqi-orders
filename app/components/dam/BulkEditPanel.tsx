@@ -101,7 +101,7 @@ export default function BulkEditPanel({
   };
 
   // Wrapper function to convert BulkFile to BulkEditFile for getEffectiveValue
-  const getEffectiveValueWrapper = (file: any, field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedRegionCodes' | 'selectedTagSlugs') => {
+  const getEffectiveValueWrapper = (file: any, field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedTagSlugs') => {
     // Find the corresponding BulkEditFile by tempId
     const editFile = assets.find(a => a.assetId === file.tempId);
     if (!editFile) {
