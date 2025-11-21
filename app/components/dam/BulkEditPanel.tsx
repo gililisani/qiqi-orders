@@ -21,7 +21,6 @@ interface BulkEditFile {
   selectedTagSlugs: string[];
   selectedLocaleCodes: string[];
   primaryLocale: string | null;
-  selectedRegionCodes: string[];
   useTitleAsFilename: boolean;
   campaignId: string | null;
   status?: 'pending' | 'saving' | 'success' | 'error';
@@ -29,7 +28,6 @@ interface BulkEditFile {
   overrides?: {
     productLine?: boolean;
     locales?: boolean;
-    regions?: boolean;
     tags?: boolean;
     campaignId?: boolean;
     sku?: boolean;
@@ -46,12 +44,10 @@ interface BulkEditPanelProps {
     campaignId: string | null;
     selectedLocaleCodes: string[];
     primaryLocale: string | null;
-    selectedRegionCodes: string[];
     selectedTagSlugs: string[];
   };
   onGlobalDefaultsChange: (defaults: BulkEditPanelProps['globalDefaults']) => void;
   locales: LocaleOption[];
-  regions: RegionOption[];
   tags: Array<{ id: string; slug: string; label: string }> | Array<{ slug: string; label: string }>;
   assetTypes: Array<{ id: string; name: string; slug: string }>;
   assetSubtypes: Array<{ id: string; name: string; slug: string; asset_type_id: string }>;
@@ -59,6 +55,7 @@ interface BulkEditPanelProps {
   campaigns: Array<{ id: string; name: string }>;
   isSaving: boolean;
   accessToken: string | null;
+  onTagsChange?: (tags: Array<{ id: string; slug: string; label: string }>) => void;
 }
 
 export default function BulkEditPanel({
@@ -69,7 +66,6 @@ export default function BulkEditPanel({
   globalDefaults,
   onGlobalDefaultsChange,
   locales,
-  regions,
   tags,
   assetTypes,
   assetSubtypes,
@@ -77,6 +73,7 @@ export default function BulkEditPanel({
   campaigns,
   isSaving,
   accessToken,
+  onTagsChange,
 }: BulkEditPanelProps) {
   const handleAssetFieldChange = (assetId: string, field: keyof BulkEditFile, value: any) => {
     onAssetsChange(assets.map(a => 
@@ -94,12 +91,11 @@ export default function BulkEditPanel({
     onAssetsChange(assets.filter(a => a.assetId !== assetId));
   };
 
-  const getEffectiveValue = (file: BulkEditFile, field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedRegionCodes' | 'selectedTagSlugs') => {
+  const getEffectiveValue = (file: BulkEditFile, field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedTagSlugs') => {
     const overrides = file.overrides || {};
     if (field === 'productLine' && overrides.productLine) return file.productLine;
     if (field === 'campaignId' && overrides.campaignId) return file.campaignId;
     if (field === 'selectedLocaleCodes' && overrides.locales) return file.selectedLocaleCodes;
-    if (field === 'selectedRegionCodes' && overrides.regions) return file.selectedRegionCodes;
     if (field === 'selectedTagSlugs' && overrides.tags) return file.selectedTagSlugs;
     return globalDefaults[field];
   };
@@ -160,10 +156,11 @@ export default function BulkEditPanel({
           globalDefaults={globalDefaults}
           onGlobalDefaultsChange={onGlobalDefaultsChange}
           locales={locales}
-          regions={regions}
           tags={tags}
           campaigns={campaigns}
           isUploading={isSaving}
+          accessToken={accessToken}
+          onTagsChange={onTagsChange}
         />
       )}
 
@@ -219,12 +216,13 @@ export default function BulkEditPanel({
                   assetSubtypes={assetSubtypes}
                   products={products}
                   locales={locales}
-                  regions={regions}
                   tags={tags}
                   campaigns={campaigns}
                   globalDefaults={globalDefaults}
                   getEffectiveValue={getEffectiveValueWrapper}
                   isUploading={isSaving}
+                  accessToken={accessToken}
+                  onTagsChange={onTagsChange}
                   />
                 );
               })}

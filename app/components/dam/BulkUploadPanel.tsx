@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { ArrowUpTrayIcon } from '@heroicons/react/24/outline';
-import { LocaleOption, RegionOption } from './types';
+import { LocaleOption } from './types';
 import BulkUploadCard from './BulkUploadCard';
 import BulkUploadDefaults from './BulkUploadDefaults';
 
@@ -22,7 +22,6 @@ interface BulkFile {
   selectedTagSlugs: string[];
   selectedLocaleCodes: string[];
   primaryLocale: string | null;
-  selectedRegionCodes: string[];
   useTitleAsFilename: boolean;
   campaignId: string | null;
   status?: 'pending' | 'uploading' | 'success' | 'error';
@@ -31,7 +30,6 @@ interface BulkFile {
   overrides?: {
     productLine?: boolean;
     locales?: boolean;
-    regions?: boolean;
     tags?: boolean;
     campaignId?: boolean;
     sku?: boolean;
@@ -48,18 +46,18 @@ interface BulkUploadPanelProps {
     campaignId: string | null;
     selectedLocaleCodes: string[];
     primaryLocale: string | null;
-    selectedRegionCodes: string[];
     selectedTagSlugs: string[];
   };
   onGlobalDefaultsChange: (defaults: BulkUploadPanelProps['globalDefaults']) => void;
   locales: LocaleOption[];
-  regions: RegionOption[];
   tags: Array<{ id: string; slug: string; label: string }> | Array<{ slug: string; label: string }>;
   assetTypes: Array<{ id: string; name: string; slug: string }>;
   assetSubtypes: Array<{ id: string; name: string; slug: string; asset_type_id: string }>;
   products: Array<{ id: number; item_name: string; sku: string }>;
   campaigns: Array<{ id: string; name: string }>;
   isUploading: boolean;
+  accessToken?: string | null;
+  onTagsChange?: (tags: Array<{ id: string; slug: string; label: string }>) => void;
 }
 
 export default function BulkUploadPanel({
@@ -70,13 +68,14 @@ export default function BulkUploadPanel({
   globalDefaults,
   onGlobalDefaultsChange,
   locales,
-  regions,
   tags,
   assetTypes,
   assetSubtypes,
   products,
   campaigns,
   isUploading,
+  accessToken,
+  onTagsChange,
 }: BulkUploadPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -191,7 +190,6 @@ export default function BulkUploadPanel({
           ? [...globalDefaults.selectedLocaleCodes] 
           : (defaultLocale ? [defaultLocale.code] : []),
         primaryLocale: globalDefaults.primaryLocale || (defaultLocale ? defaultLocale.code : null),
-        selectedRegionCodes: [...globalDefaults.selectedRegionCodes],
         useTitleAsFilename: false,
         campaignId: globalDefaults.campaignId,
         status: 'pending',
@@ -257,12 +255,11 @@ export default function BulkUploadPanel({
     onFilesChange(files.filter(f => f.tempId !== tempId));
   };
 
-  const getEffectiveValue = (file: BulkFile, field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedRegionCodes' | 'selectedTagSlugs') => {
+  const getEffectiveValue = (file: BulkFile, field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedTagSlugs') => {
     const overrides = file.overrides || {};
     if (field === 'productLine' && overrides.productLine) return file.productLine;
     if (field === 'campaignId' && overrides.campaignId) return file.campaignId;
     if (field === 'selectedLocaleCodes' && overrides.locales) return file.selectedLocaleCodes;
-    if (field === 'selectedRegionCodes' && overrides.regions) return file.selectedRegionCodes;
     if (field === 'selectedTagSlugs' && overrides.tags) return file.selectedTagSlugs;
     return globalDefaults[field];
   };
@@ -312,10 +309,11 @@ export default function BulkUploadPanel({
           globalDefaults={globalDefaults}
           onGlobalDefaultsChange={onGlobalDefaultsChange}
           locales={locales}
-          regions={regions}
           tags={tags}
           campaigns={campaigns}
           isUploading={isUploading}
+          accessToken={accessToken}
+          onTagsChange={onTagsChange}
         />
       )}
 
@@ -368,12 +366,13 @@ export default function BulkUploadPanel({
                   assetSubtypes={assetSubtypes}
                   products={products}
                   locales={locales}
-                  regions={regions}
                   tags={tags}
                   campaigns={campaigns}
                   globalDefaults={globalDefaults}
                   getEffectiveValue={getEffectiveValue}
                   isUploading={isUploading}
+                  accessToken={accessToken}
+                  onTagsChange={onTagsChange}
                 />
               ))}
             </div>

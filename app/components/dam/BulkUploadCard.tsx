@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { TrashIcon, ChevronDownIcon, ChevronUpIcon, PhotoIcon, DocumentTextIcon, FilmIcon, MusicalNoteIcon } from '@heroicons/react/24/outline';
-import { LocaleOption, RegionOption } from './types';
+import { LocaleOption } from './types';
 
 interface BulkFile {
   tempId: string;
@@ -20,7 +20,6 @@ interface BulkFile {
   selectedTagSlugs: string[];
   selectedLocaleCodes: string[];
   primaryLocale: string | null;
-  selectedRegionCodes: string[];
   useTitleAsFilename: boolean;
   campaignId: string | null;
   status?: 'pending' | 'uploading' | 'success' | 'error';
@@ -29,7 +28,6 @@ interface BulkFile {
   overrides?: {
     productLine?: boolean;
     locales?: boolean;
-    regions?: boolean;
     tags?: boolean;
     campaignId?: boolean;
     sku?: boolean;
@@ -45,7 +43,6 @@ interface BulkUploadCardProps {
   assetSubtypes: Array<{ id: string; name: string; slug: string; asset_type_id: string }>;
   products: Array<{ id: number; item_name: string; sku: string }>;
   locales: LocaleOption[];
-  regions: RegionOption[];
   tags: Array<{ id: string; slug: string; label: string }> | Array<{ slug: string; label: string }>;
   campaigns: Array<{ id: string; name: string }>;
   globalDefaults: {
@@ -53,11 +50,12 @@ interface BulkUploadCardProps {
     campaignId: string | null;
     selectedLocaleCodes: string[];
     primaryLocale: string | null;
-    selectedRegionCodes: string[];
     selectedTagSlugs: string[];
   };
-  getEffectiveValue: (file: BulkFile, field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedRegionCodes' | 'selectedTagSlugs') => any;
+  getEffectiveValue: (file: BulkFile, field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedTagSlugs') => any;
   isUploading: boolean;
+  accessToken?: string | null;
+  onTagsChange?: (tags: Array<{ id: string; slug: string; label: string }>) => void;
 }
 
 export default function BulkUploadCard({
@@ -69,7 +67,6 @@ export default function BulkUploadCard({
   assetSubtypes,
   products,
   locales,
-  regions,
   tags,
   campaigns,
   globalDefaults,
@@ -77,6 +74,7 @@ export default function BulkUploadCard({
   isUploading,
 }: BulkUploadCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [newTagLabel, setNewTagLabel] = useState('');
 
   const getFileIcon = () => {
     if (file.assetType === 'image') return <PhotoIcon className="h-12 w-12 text-blue-500" />;
@@ -107,10 +105,66 @@ export default function BulkUploadCard({
   const effectiveProductLine = getEffectiveValue(file, 'productLine') as string;
   const effectiveCampaignId = getEffectiveValue(file, 'campaignId') as string | null;
   const effectiveLocales = getEffectiveValue(file, 'selectedLocaleCodes') as string[];
-  const effectiveRegions = getEffectiveValue(file, 'selectedRegionCodes') as string[];
   const effectiveTags = getEffectiveValue(file, 'selectedTagSlugs') as string[];
 
-  const handlePerFileOverride = (field: 'productLine' | 'locales' | 'regions' | 'tags' | 'campaignId' | 'sku', value: any) => {
+  const toggleSelection = (list: string[], value: string): string[] => {
+    if (list.includes(value)) {
+      return list.filter((item) => item !== value);
+    }
+    return [...list, value];
+  };
+
+  const handleLocaleToggle = (code: string) => {
+    const isSelected = effectiveLocales.includes(code);
+    if (isSelected) {
+      if (effectiveLocales.length === 1) {
+        return; // keep at least one locale
+      }
+      const nextLocales = effectiveLocales.filter((item) => item !== code);
+      const nextPrimary = file.primaryLocale === code ? nextLocales[0] ?? null : file.primaryLocale;
+      handlePerFileOverride('locales', nextLocales);
+      onFieldChange(file.tempId, 'primaryLocale', nextPrimary);
+    } else {
+      const newLocales = [...effectiveLocales, code];
+      handlePerFileOverride('locales', newLocales);
+      if (!file.primaryLocale) {
+        onFieldChange(file.tempId, 'primaryLocale', code);
+      }
+    }
+  };
+
+  const handleAddTag = async () => {
+    const trimmed = newTagLabel.trim();
+    if (!trimmed) return;
+
+    try {
+      if (!accessToken) return;
+      const response = await fetch('/api/dam/lookups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ action: 'add-tag', label: trimmed }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to add tag');
+      }
+
+      const data = await response.json();
+      if (onTagsChange && data.tags) {
+        onTagsChange(data.tags);
+      }
+      setNewTagLabel('');
+    } catch (err: any) {
+      alert('Failed to add tag: ' + err.message);
+    }
+  };
+
+  const handlePerFileOverride = (field: 'productLine' | 'locales' | 'tags' | 'campaignId' | 'sku', value: any) => {
     const overrides = { ...(file.overrides || {}), [field]: true };
     onFieldChange(file.tempId, field as keyof BulkFile, value);
     onFieldChange(file.tempId, 'overrides', overrides);
@@ -321,88 +375,87 @@ export default function BulkUploadCard({
 
           <div>
             <label className="block text-[11px] font-semibold text-gray-700 mb-1">Tags (override)</label>
-            <div className="max-h-32 overflow-y-auto rounded-md border border-gray-300 bg-white p-2 space-y-1">
-              {tags.length === 0 ? (
-                <p className="text-[10px] text-gray-400 italic">No tags available</p>
-              ) : (
-                tags.map(tag => (
-                  <label key={tag.slug} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
-                    <input
-                      type="checkbox"
-                      checked={effectiveTags.includes(tag.slug)}
-                      onChange={(e) => {
-                        const currentTags = effectiveTags;
-                        const newTags = e.target.checked
-                          ? [...currentTags, tag.slug]
-                          : currentTags.filter(s => s !== tag.slug);
-                        handlePerFileOverride('tags', newTags);
-                      }}
-                      className="h-3 w-3 rounded border-gray-300 text-black focus:ring-black focus:ring-1"
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1">
+                {tags.map((tag) => {
+                  const selected = effectiveTags.includes(tag.slug);
+                  return (
+                    <button
+                      type="button"
+                      key={tag.slug}
+                      onClick={() => handlePerFileOverride('tags', toggleSelection(effectiveTags, tag.slug))}
                       disabled={isUploading || file.status === 'uploading'}
-                    />
-                    <span className="text-[10px] text-gray-700">{tag.label}</span>
-                  </label>
-                ))
-              )}
+                      className={`rounded-md border px-2 py-0.5 text-[10px] font-medium transition ${
+                        selected
+                          ? 'border-black bg-black text-white'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {tag.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={newTagLabel}
+                  onChange={(event) => setNewTagLabel(event.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddTag();
+                    }
+                  }}
+                  className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-[10px] focus:border-black focus:outline-none h-6"
+                  placeholder="Add new tag"
+                  disabled={isUploading || file.status === 'uploading'}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddTag}
+                  disabled={isUploading || file.status === 'uploading'}
+                  className="rounded-md border border-gray-300 px-2 py-1 text-[10px] font-medium text-gray-700 hover:bg-gray-100 h-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add
+                </button>
+              </div>
             </div>
           </div>
 
           <div>
             <label className="block text-[11px] font-semibold text-gray-700 mb-1">Locales (override)</label>
-            <div className="max-h-32 overflow-y-auto rounded-md border border-gray-300 bg-white p-2 space-y-1">
-              {locales.length === 0 ? (
-                <p className="text-[10px] text-gray-400 italic">No locales available</p>
-              ) : (
-                locales.map(loc => (
-                  <label key={loc.code} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
-                    <input
-                      type="checkbox"
-                      checked={effectiveLocales.includes(loc.code)}
-                      onChange={(e) => {
-                        const currentLocales = effectiveLocales;
-                        const newLocales = e.target.checked
-                          ? [...currentLocales, loc.code]
-                          : currentLocales.filter(c => c !== loc.code);
-                        handlePerFileOverride('locales', newLocales);
-                        if (newLocales.length > 0 && !newLocales.includes(file.primaryLocale || '')) {
-                          onFieldChange(file.tempId, 'primaryLocale', newLocales[0]);
-                        }
-                      }}
-                      className="h-3 w-3 rounded border-gray-300 text-black focus:ring-black focus:ring-1"
-                      disabled={isUploading || file.status === 'uploading'}
-                    />
-                    <span className="text-[10px] text-gray-700">{loc.label}</span>
-                  </label>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Regions (override)</label>
-            <div className="max-h-32 overflow-y-auto rounded-md border border-gray-300 bg-white p-2 space-y-1">
-              {regions.length === 0 ? (
-                <p className="text-[10px] text-gray-400 italic">No regions available. Regions are optional.</p>
-              ) : (
-                regions.map(reg => (
-                  <label key={reg.code} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded">
-                    <input
-                      type="checkbox"
-                      checked={effectiveRegions.includes(reg.code)}
-                      onChange={(e) => {
-                        const currentRegions = effectiveRegions;
-                        const newRegions = e.target.checked
-                          ? [...currentRegions, reg.code]
-                          : currentRegions.filter(c => c !== reg.code);
-                        handlePerFileOverride('regions', newRegions);
-                      }}
-                      className="h-3 w-3 rounded border-gray-300 text-black focus:ring-black focus:ring-1"
-                      disabled={isUploading || file.status === 'uploading'}
-                    />
-                    <span className="text-[10px] text-gray-700">{reg.label}</span>
-                  </label>
-                ))
-              )}
+            <div className="space-y-1">
+              {locales.map((locale) => {
+                const selected = effectiveLocales.includes(locale.code);
+                return (
+                  <div key={locale.code} className="flex items-center justify-between rounded-md border border-gray-200 px-2 py-1">
+                    <label className="flex items-center gap-1.5 text-[10px] text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => handleLocaleToggle(locale.code)}
+                        className="h-3.5 w-3.5 rounded border-gray-300 text-black focus:ring-black"
+                        disabled={isUploading || file.status === 'uploading'}
+                      />
+                      <span>{locale.label}</span>
+                    </label>
+                    {selected && (
+                      <label className="flex items-center gap-1 text-[9px] text-gray-600">
+                        <input
+                          type="radio"
+                          name={`primary-locale-${file.tempId}`}
+                          checked={file.primaryLocale === locale.code}
+                          onChange={() => onFieldChange(file.tempId, 'primaryLocale', locale.code)}
+                          className="h-2.5 w-2.5"
+                          disabled={isUploading || file.status === 'uploading'}
+                        />
+                        Primary
+                      </label>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

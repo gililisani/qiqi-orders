@@ -56,7 +56,6 @@ interface UploadFormState {
   selectedTagSlugs: string[];
   selectedLocaleCodes: string[];
   primaryLocale: string | null;
-  selectedRegionCodes: string[];
   file: File | null;
   vimeoVideoId: string; // Vimeo video ID or URL (main video for preview)
   vimeoDownloadFormats: VimeoDownloadFormat[]; // Dynamic download formats
@@ -76,7 +75,6 @@ const defaultFormState: UploadFormState = {
   selectedTagSlugs: [],
   selectedLocaleCodes: [],
   primaryLocale: null,
-  selectedRegionCodes: [],
   file: null,
   vimeoVideoId: '',
   vimeoDownloadFormats: [],
@@ -332,7 +330,6 @@ export default function AdminDigitalAssetManagerPage() {
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
   const [hoveredAssetId, setHoveredAssetId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'compact' | 'comfortable'>('compact');
-  const [showRegions, setShowRegions] = useState(false);
   const [showVideoDownloadFormats, setShowVideoDownloadFormats] = useState(false);
   const [isEditingExistingAsset, setIsEditingExistingAsset] = useState(false);
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
@@ -362,7 +359,6 @@ export default function AdminDigitalAssetManagerPage() {
     overrides?: {
       productLine?: boolean;
       locales?: boolean;
-      regions?: boolean;
       tags?: boolean;
       campaignId?: boolean;
       sku?: boolean;
@@ -373,7 +369,6 @@ export default function AdminDigitalAssetManagerPage() {
     campaignId: null as string | null,
     selectedLocaleCodes: [] as string[],
     primaryLocale: null as string | null,
-    selectedRegionCodes: [] as string[],
     selectedTagSlugs: [] as string[],
   });
   const [bulkSaving, setBulkSaving] = useState(false);
@@ -393,7 +388,6 @@ export default function AdminDigitalAssetManagerPage() {
     selectedTagSlugs: string[];
     selectedLocaleCodes: string[];
     primaryLocale: string | null;
-    selectedRegionCodes: string[];
     useTitleAsFilename: boolean;
     campaignId: string | null;
     status?: 'pending' | 'uploading' | 'success' | 'error';
@@ -402,7 +396,6 @@ export default function AdminDigitalAssetManagerPage() {
     overrides?: {
       productLine?: boolean;
       locales?: boolean;
-      regions?: boolean;
       tags?: boolean;
       campaignId?: boolean;
       sku?: boolean;
@@ -413,7 +406,6 @@ export default function AdminDigitalAssetManagerPage() {
     campaignId: null as string | null,
     selectedLocaleCodes: [] as string[],
     primaryLocale: null as string | null,
-    selectedRegionCodes: [] as string[],
     selectedTagSlugs: [] as string[],
   });
   const [bulkUploading, setBulkUploading] = useState(false);
@@ -716,7 +708,6 @@ export default function AdminDigitalAssetManagerPage() {
       selectedTagSlugs: asset.tags || [],
       selectedLocaleCodes: asset.locales.map(l => l.code) || [],
       primaryLocale: asset.locales.find(l => l.is_default)?.code || asset.locales[0]?.code || null,
-      selectedRegionCodes: asset.regions.map(r => r.code) || [],
       useTitleAsFilename: asset.use_title_as_filename ?? false,
       campaignId: asset.campaign?.id || null,
       status: 'pending' as const,
@@ -733,7 +724,6 @@ export default function AdminDigitalAssetManagerPage() {
         campaignId: first.campaignId,
         selectedLocaleCodes: first.selectedLocaleCodes,
         primaryLocale: first.primaryLocale,
-        selectedRegionCodes: first.selectedRegionCodes,
         selectedTagSlugs: first.selectedTagSlugs,
       });
     }
@@ -764,9 +754,6 @@ export default function AdminDigitalAssetManagerPage() {
         const effectiveLocales = editAsset.overrides?.locales 
           ? editAsset.selectedLocaleCodes 
           : bulkEditGlobalDefaults.selectedLocaleCodes;
-        const effectiveRegions = editAsset.overrides?.regions 
-          ? editAsset.selectedRegionCodes 
-          : bulkEditGlobalDefaults.selectedRegionCodes;
         const effectiveTags = editAsset.overrides?.tags 
           ? editAsset.selectedTagSlugs 
           : bulkEditGlobalDefaults.selectedTagSlugs;
@@ -788,7 +775,6 @@ export default function AdminDigitalAssetManagerPage() {
             code,
             primary: code === effectivePrimaryLocale,
           })),
-          regions: effectiveRegions,
           useTitleAsFilename: editAsset.useTitleAsFilename,
           campaignId: effectiveCampaignId || undefined,
         };
@@ -1262,7 +1248,6 @@ export default function AdminDigitalAssetManagerPage() {
             code,
             primary: code === formState.primaryLocale,
           })),
-          regions: formState.selectedRegionCodes,
           useTitleAsFilename: formState.useTitleAsFilename,
           campaignId: formState.campaignId || undefined,
         };
@@ -1312,7 +1297,6 @@ export default function AdminDigitalAssetManagerPage() {
             code,
             primary: code === formState.primaryLocale,
           })),
-          regions: formState.selectedRegionCodes,
           useTitleAsFilename: formState.useTitleAsFilename,
           campaignId: formState.campaignId || undefined,
         };
@@ -1736,12 +1720,11 @@ export default function AdminDigitalAssetManagerPage() {
     const results: Array<{ tempId: string; success: boolean; error?: string }> = [];
 
     // Helper to get effective value (global default if not overridden)
-    const getEffectiveValue = (bulkFile: typeof bulkFiles[0], field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedRegionCodes' | 'selectedTagSlugs') => {
+    const getEffectiveValue = (bulkFile: typeof bulkFiles[0], field: 'productLine' | 'campaignId' | 'selectedLocaleCodes' | 'selectedTagSlugs') => {
       const overrides = bulkFile.overrides || {};
       if (field === 'productLine' && overrides.productLine) return bulkFile.productLine;
       if (field === 'campaignId' && overrides.campaignId) return bulkFile.campaignId;
       if (field === 'selectedLocaleCodes' && overrides.locales) return bulkFile.selectedLocaleCodes;
-      if (field === 'selectedRegionCodes' && overrides.regions) return bulkFile.selectedRegionCodes;
       if (field === 'selectedTagSlugs' && overrides.tags) return bulkFile.selectedTagSlugs;
       return bulkGlobalDefaults[field];
     };
@@ -1765,7 +1748,6 @@ export default function AdminDigitalAssetManagerPage() {
         const effectiveProductLine = getEffectiveValue(bulkFile, 'productLine') as string;
         const effectiveCampaignId = getEffectiveValue(bulkFile, 'campaignId') as string | null;
         const effectiveLocales = getEffectiveValue(bulkFile, 'selectedLocaleCodes') as string[];
-        const effectiveRegions = getEffectiveValue(bulkFile, 'selectedRegionCodes') as string[];
         const effectiveTags = getEffectiveValue(bulkFile, 'selectedTagSlugs') as string[];
         const effectivePrimaryLocale = bulkFile.primaryLocale || (effectiveLocales.length > 0 ? effectiveLocales[0] : null) || null;
         
@@ -1832,7 +1814,6 @@ export default function AdminDigitalAssetManagerPage() {
               code,
               primary: code === effectivePrimaryLocale,
             })),
-            regions: effectiveRegions,
             fileName: file.name,
             fileType: file.type || 'application/octet-stream',
             fileSize: file.size,
@@ -2062,7 +2043,6 @@ export default function AdminDigitalAssetManagerPage() {
           campaignId: null,
           selectedLocaleCodes: [],
           primaryLocale: null,
-          selectedRegionCodes: [],
           selectedTagSlugs: [],
         });
       }, 2000);
@@ -2376,7 +2356,6 @@ export default function AdminDigitalAssetManagerPage() {
                 campaignId: null,
                 selectedLocaleCodes: [],
                 primaryLocale: null,
-                selectedRegionCodes: [],
                 selectedTagSlugs: [],
               });
             }}
@@ -2384,7 +2363,6 @@ export default function AdminDigitalAssetManagerPage() {
             globalDefaults={bulkEditGlobalDefaults}
             onGlobalDefaultsChange={setBulkEditGlobalDefaults}
             locales={locales}
-            regions={regions}
             tags={tags}
             assetTypes={assetTypes}
             assetSubtypes={assetSubtypes}
@@ -2392,6 +2370,7 @@ export default function AdminDigitalAssetManagerPage() {
             campaigns={campaigns}
             isSaving={bulkSaving}
             accessToken={accessToken}
+            onTagsChange={setTags}
           />
         )}
 
@@ -2414,7 +2393,6 @@ export default function AdminDigitalAssetManagerPage() {
                 campaignId: null,
                 selectedLocaleCodes: [],
                 primaryLocale: null,
-                selectedRegionCodes: [],
                 selectedTagSlugs: [],
               });
             }}
@@ -2422,7 +2400,6 @@ export default function AdminDigitalAssetManagerPage() {
             globalDefaults={bulkGlobalDefaults}
             onGlobalDefaultsChange={setBulkGlobalDefaults}
             locales={locales}
-            regions={regions}
             tags={tags}
             assetTypes={assetTypes}
             assetSubtypes={assetSubtypes}
@@ -3127,9 +3104,9 @@ export default function AdminDigitalAssetManagerPage() {
 
                 <div className="border-t border-gray-100 mb-5"></div>
 
-                {/* Section 5: Locales & Regions */}
+                {/* Section 5: Locales */}
                 <div className="mb-5">
-                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Locales & Regions</h3>
+                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Locales</h3>
                   <div className="space-y-3">
                     <div>
                       <div className="flex items-center justify-between mb-2">
@@ -3205,48 +3182,6 @@ export default function AdminDigitalAssetManagerPage() {
                           );
                         })}
                       </div>
-                    </div>
-
-                    {/* Regions - Collapsible */}
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => setShowRegions(!showRegions)}
-                        className="flex items-center justify-between w-full text-xs font-medium text-gray-700 mb-2"
-                      >
-                        <span>Region Restrictions (Optional)</span>
-                        <svg
-                          className={`h-3 w-3 text-gray-500 transition-transform ${showRegions ? 'rotate-180' : ''}`}
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-                      {showRegions && (
-                        <div className="grid grid-cols-2 gap-1.5 pt-1">
-                          {regions.map((region) => {
-                            const selected = formState.selectedRegionCodes.includes(region.code);
-                            return (
-                              <label key={region.code} className="flex items-center gap-1.5 text-xs text-gray-700">
-                                <input
-                                  type="checkbox"
-                                  checked={selected}
-                                  onChange={() =>
-                                    setFormState((prev) => ({
-                                      ...prev,
-                                      selectedRegionCodes: toggleSelection(prev.selectedRegionCodes, region.code),
-                                    }))
-                                  }
-                                  className="h-3.5 w-3.5 rounded border-gray-300 text-black focus:ring-black"
-                                />
-                                <span>{region.label}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
