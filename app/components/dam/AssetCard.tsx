@@ -107,12 +107,12 @@ const AssetCard = memo(function AssetCard({
       )}
 
       {/* Thumbnail */}
-      <div ref={imgRef} className="relative bg-gray-100 overflow-hidden" style={{ height: thumbnailHeight }}>
+      <div ref={imgRef} className="relative flex items-center justify-center overflow-hidden bg-gray-50" style={{ height: thumbnailHeight }}>
         {asset.asset_type === 'video' && asset.vimeo_video_id ? (
           <img
             src={isInView ? `https://vumbnail.com/${asset.vimeo_video_id}.jpg` : ''}
             alt={asset.title}
-            className="h-full w-full object-cover"
+            className="object-contain max-w-full max-h-full"
             onLoad={() => setImageLoaded(true)}
             onError={(e) => {
               (e.target as HTMLImageElement).src = `https://i.vimeocdn.com/video/${asset.vimeo_video_id}_640.jpg`;
@@ -124,7 +124,7 @@ const AssetCard = memo(function AssetCard({
               <img
                 src={ensureTokenUrl(asset.current_version.previewPath, accessToken)}
                 alt={asset.title}
-                className="h-full w-full object-cover"
+                className="object-contain max-w-full max-h-full"
                 onLoad={() => setImageLoaded(true)}
                 onError={() => setImageLoaded(false)}
               />
