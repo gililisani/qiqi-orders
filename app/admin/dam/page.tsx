@@ -615,9 +615,13 @@ export default function AdminDigitalAssetManagerPage() {
       setPagination(payload.pagination || null);
       setCurrentPage(page);
       
-      // Extract unique product lines
-      const uniqueProductLines = [...new Set((payload.assets || []).map((a) => a.product_line).filter((pl: string | null | undefined): pl is string => Boolean(pl) && typeof pl === 'string'))];
-      setProductLines(uniqueProductLines);
+      // Extract unique product line codes for filter dropdown
+      const uniqueProductLineCodes: string[] = Array.from(new Set(
+        (payload.assets || [])
+          .map((a) => a.product_line)
+          .filter((pl: string | null | undefined): pl is string => Boolean(pl) && typeof pl === 'string')
+      ));
+      setProductLineFilterOptions(uniqueProductLineCodes);
     } catch (err: any) {
       console.error('Failed to load assets', err);
       setError(err.message || 'Failed to load assets');
