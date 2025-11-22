@@ -54,6 +54,11 @@ export default function SharedLayoutWrapper({
     return () => window.removeEventListener('resize', checkDesktop);
   }, []);
 
+  // Reset hover state when sidenavCollapsed changes (toggle button clicked)
+  React.useEffect(() => {
+    setIsHovering(false);
+  }, [sidenavCollapsed]);
+
   // Determine if this should show the full layout or not
   const isAuthPages = pathname.startsWith("/login") || pathname.startsWith("/reset-password");
   const isSimpleLayout = isAuthPages;
