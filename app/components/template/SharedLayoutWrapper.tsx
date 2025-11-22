@@ -53,7 +53,7 @@ export default function SharedLayoutWrapper({
         <div className="relative h-full">
           {/* Desktop: Grid layout with 2 columns */}
           <div className={`hidden xl:grid h-full transition-all duration-300 ${
-            sidenavCollapsed ? "grid-cols-[4rem_1fr]" : "grid-cols-[18rem_1fr]"
+            sidenavCollapsed ? "grid-cols-[5rem_1fr]" : "grid-cols-[19rem_1fr]"
           }`}>
             {/* Left Column: Sidebar */}
             <div className="h-full">
