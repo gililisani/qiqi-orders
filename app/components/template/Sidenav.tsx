@@ -73,12 +73,9 @@ export default function Sidenav({
   }, [sidenavCollapsed, openSidenav]);
 
   const handleMouseLeave = React.useCallback(() => {
-    // Only collapse on leave if collapsed and on desktop
-    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1280;
-    if (sidenavCollapsed && isDesktop && !openSidenav) {
-      setIsHovering(false);
-    }
-  }, [sidenavCollapsed, openSidenav]);
+    // Always reset hovering on leave
+    setIsHovering(false);
+  }, []);
 
   React.useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -336,7 +333,9 @@ export default function Sidenav({
   return (
     <div 
       className={`h-full ml-4 mb-4 transition-all duration-300 ease-in-out ${
-        isCollapsed ? "w-16 max-w-[4rem]" : "w-full max-w-[18rem]"
+        isCollapsed 
+          ? "w-16 max-w-[4rem]" 
+          : "w-[18rem] absolute left-0 top-0 z-50"
       }`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
