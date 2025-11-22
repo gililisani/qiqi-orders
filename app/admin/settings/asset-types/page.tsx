@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
+import { PencilIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface AssetType {
   id: string;
@@ -195,19 +196,22 @@ export default function AssetTypesPage() {
 
   if (loading) {
     return (
-      <div className="mt-8 mb-4 space-y-6">
-        <p>Loading asset types...</p>
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        <p className="text-gray-500">Loading asset types...</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-8 mb-4 space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold text-gray-900">Asset Types Settings</h2>
+    <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900">Asset Types Settings</h2>
+          <p className="text-sm text-gray-500 mt-1">Manage main asset type categories (Image, Video, Document, etc.)</p>
+        </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
+          className="bg-black text-white px-4 py-2 rounded-md hover:opacity-90 transition text-sm font-medium"
         >
           Add Asset Type
         </button>
@@ -267,107 +271,120 @@ export default function AssetTypesPage() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
           {error}
         </div>
       )}
 
-      <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slug</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assets</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {assetTypes.map((type) => (
-              <tr key={type.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {editingId === type.id ? (
-                    <input
-                      type="text"
-                      value={editForm.name}
-                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      className="w-full px-2 py-1 border border-gray-300 rounded"
-                    />
-                  ) : (
-                    <div className="text-sm font-medium text-gray-900">{type.name}</div>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {editingId === type.id ? (
-                    <input
-                      type="text"
-                      value={editForm.slug}
-                      onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
-                      className="w-full px-2 py-1 border border-gray-300 rounded"
-                    />
-                  ) : (
-                    <div className="text-sm text-gray-500">{type.slug}</div>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs rounded-full ${type.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {type.active ? 'Yes' : 'No'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{type.asset_count}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  {editingId === type.id ? (
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={handleSave}
-                        className="text-green-600 hover:text-green-900"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditingId(null)}
-                        className="text-gray-600 hover:text-gray-900"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => handleEdit(type)}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleToggleActive(type)}
-                        className={type.active ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'}
-                      >
-                        {type.active ? 'Deactivate' : 'Activate'}
-                      </button>
-                      {type.asset_count === 0 && (
-                        <button
-                          onClick={() => handleDelete(type)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {assetTypes.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          <p>No asset types found.</p>
+      <div className="bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-4 md:px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h3 className="text-sm font-semibold text-gray-900">Asset Types</h3>
+          <span className="text-xs text-gray-500">{assetTypes.length} {assetTypes.length === 1 ? 'item' : 'items'}</span>
         </div>
-      )}
+        {assetTypes.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <p className="text-sm">No asset types found.</p>
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Name</th>
+                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Slug</th>
+                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Active</th>
+                <th className="px-4 md:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Assets</th>
+                <th className="px-4 md:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {assetTypes.map((type) => (
+                <tr key={type.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
+                    {editingId === type.id ? (
+                      <input
+                        type="text"
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                      />
+                    ) : (
+                      <div className="text-sm font-medium text-gray-900">{type.name}</div>
+                    )}
+                  </td>
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
+                    {editingId === type.id ? (
+                      <input
+                        type="text"
+                        value={editForm.slug}
+                        onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                      />
+                    ) : (
+                      <div className="text-sm text-gray-500">{type.slug}</div>
+                    )}
+                  </td>
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                      type.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {type.active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right">
+                    <div className="text-sm text-gray-500">{type.asset_count}</div>
+                  </td>
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right">
+                    {editingId === type.id ? (
+                      <div className="flex justify-end items-center space-x-3">
+                        <button
+                          onClick={handleSave}
+                          className="inline-flex items-center text-sm text-gray-700 hover:text-gray-900 transition-colors"
+                        >
+                          <CheckIcon className="h-4 w-4 mr-1" />
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="inline-flex items-center text-sm text-gray-700 hover:text-gray-900 transition-colors"
+                        >
+                          <XMarkIcon className="h-4 w-4 mr-1" />
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-end items-center space-x-3">
+                        <button
+                          onClick={() => handleEdit(type)}
+                          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                          title="Edit"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleToggleActive(type)}
+                          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                          title={type.active ? 'Deactivate' : 'Activate'}
+                        >
+                          {type.active ? 'Deactivate' : 'Activate'}
+                        </button>
+                        {type.asset_count === 0 && (
+                          <button
+                            onClick={() => handleDelete(type)}
+                            className="inline-flex items-center text-sm text-red-600 hover:text-red-700 transition-colors"
+                            title="Delete"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }

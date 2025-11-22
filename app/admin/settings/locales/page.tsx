@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
+import { PencilIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface Locale {
   code: string;
@@ -194,19 +195,22 @@ export default function LocalesPage() {
 
   if (loading) {
     return (
-      <div className="mt-8 mb-4 space-y-6">
-        <p>Loading locales...</p>
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        <p className="text-gray-500">Loading locales...</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-8 mb-4 space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold text-gray-900">Locales Settings</h2>
+    <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900">Locales Settings</h2>
+          <p className="text-sm text-gray-500 mt-1">Manage language/locale options for assets</p>
+        </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
+          className="bg-black text-white px-4 py-2 rounded-md hover:opacity-90 transition text-sm font-medium"
         >
           Add Locale
         </button>
@@ -260,102 +264,117 @@ export default function LocalesPage() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
           {error}
         </div>
       )}
 
-      <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Default</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assets</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {locales.map((locale) => (
-              <tr key={locale.code} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{locale.code}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {editingCode === locale.code ? (
-                    <input
-                      type="text"
-                      value={editForm.label}
-                      onChange={(e) => setEditForm({ ...editForm, label: e.target.value })}
-                      className="w-full px-2 py-1 border border-gray-300 rounded"
-                    />
-                  ) : (
-                    <div className="text-sm text-gray-900">{locale.label}</div>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {locale.is_default && (
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">Yes</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs rounded-full ${locale.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {locale.active ? 'Yes' : 'No'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{locale.asset_count}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  {editingCode === locale.code ? (
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={handleSave}
-                        className="text-green-600 hover:text-green-900"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditingCode(null)}
-                        className="text-gray-600 hover:text-gray-900"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => handleEdit(locale)}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleToggleActive(locale)}
-                        className={locale.active ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'}
-                      >
-                        {locale.active ? 'Deactivate' : 'Activate'}
-                      </button>
-                      {locale.asset_count === 0 && (
-                        <button
-                          onClick={() => handleDelete(locale)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {locales.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          <p>No locales found.</p>
+      <div className="bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-4 md:px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h3 className="text-sm font-semibold text-gray-900">Locales</h3>
+          <span className="text-xs text-gray-500">{locales.length} {locales.length === 1 ? 'item' : 'items'}</span>
         </div>
-      )}
+        {locales.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <p className="text-sm">No locales found.</p>
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Code</th>
+                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Name</th>
+                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Default</th>
+                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Active</th>
+                <th className="px-4 md:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Assets</th>
+                <th className="px-4 md:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {locales.map((locale) => (
+                <tr key={locale.code} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{locale.code}</div>
+                  </td>
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
+                    {editingCode === locale.code ? (
+                      <input
+                        type="text"
+                        value={editForm.label}
+                        onChange={(e) => setEditForm({ ...editForm, label: e.target.value })}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                      />
+                    ) : (
+                      <div className="text-sm text-gray-900">{locale.label}</div>
+                    )}
+                  </td>
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
+                    {locale.is_default && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Default</span>
+                    )}
+                  </td>
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                      locale.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {locale.active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right">
+                    <div className="text-sm text-gray-500">{locale.asset_count}</div>
+                  </td>
+                  <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right">
+                    {editingCode === locale.code ? (
+                      <div className="flex justify-end items-center space-x-3">
+                        <button
+                          onClick={handleSave}
+                          className="inline-flex items-center text-sm text-gray-700 hover:text-gray-900 transition-colors"
+                        >
+                          <CheckIcon className="h-4 w-4 mr-1" />
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingCode(null)}
+                          className="inline-flex items-center text-sm text-gray-700 hover:text-gray-900 transition-colors"
+                        >
+                          <XMarkIcon className="h-4 w-4 mr-1" />
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-end items-center space-x-3">
+                        <button
+                          onClick={() => handleEdit(locale)}
+                          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                          title="Edit"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleToggleActive(locale)}
+                          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                          title={locale.active ? 'Deactivate' : 'Activate'}
+                        >
+                          {locale.active ? 'Deactivate' : 'Activate'}
+                        </button>
+                        {locale.asset_count === 0 && (
+                          <button
+                            onClick={() => handleDelete(locale)}
+                            className="inline-flex items-center text-sm text-red-600 hover:text-red-700 transition-colors"
+                            title="Delete"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
