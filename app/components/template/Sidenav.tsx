@@ -70,7 +70,8 @@ export default function Sidenav({
 
   const handleMouseEnter = React.useCallback(() => {
     // Only expand on hover if collapsed and on desktop (not mobile)
-    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1280;
+    // Add small buffer to prevent expansion near breakpoint
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1320;
     if (sidenavCollapsed && isDesktop && !openSidenav) {
       setIsHovering(true);
       onHoverChange?.(true);

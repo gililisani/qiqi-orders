@@ -34,6 +34,24 @@ export default function SharedLayoutWrapper({
   const { sidenavType, sidenavCollapsed, openSidenav } = controller;
   const pathname = usePathname();
   const [isHovering, setIsHovering] = React.useState(false);
+  const [isDesktop, setIsDesktop] = React.useState(false);
+
+  // Reset hover state when window resizes below desktop breakpoint
+  React.useEffect(() => {
+    const checkDesktop = () => {
+      const width = window.innerWidth;
+      const desktop = width >= 1280;
+      setIsDesktop(desktop);
+      // Reset hover state if we're not on desktop
+      if (!desktop) {
+        setIsHovering(false);
+      }
+    };
+    
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
 
   // Determine if this should show the full layout or not
   const isAuthPages = pathname.startsWith("/login") || pathname.startsWith("/reset-password");
@@ -54,7 +72,7 @@ export default function SharedLayoutWrapper({
         <div className="relative h-full w-full overflow-x-hidden">
           {/* Desktop: Grid layout with 2 columns */}
           <div className={`hidden xl:grid h-full transition-all duration-300 ${
-            (sidenavCollapsed && !isHovering) ? "grid-cols-[5rem_1fr]" : "grid-cols-[19rem_1fr]"
+            (sidenavCollapsed && !isHovering && isDesktop) ? "grid-cols-[5rem_1fr]" : "grid-cols-[19rem_1fr]"
           }`}>
             {/* Left Column: Sidebar */}
             <div className="h-full relative">
