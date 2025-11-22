@@ -66,22 +66,17 @@ export default function Sidenav({
 
   const handleMouseEnter = React.useCallback(() => {
     // Only expand on hover if collapsed and on desktop (not mobile)
-    if (sidenavCollapsed) {
-      // Check if we're on desktop by checking window width directly
-      const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1280;
-      if (isDesktop && !openSidenav) {
-        setIsHovering(true);
-      }
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1280;
+    if (sidenavCollapsed && isDesktop && !openSidenav) {
+      setIsHovering(true);
     }
   }, [sidenavCollapsed, openSidenav]);
 
   const handleMouseLeave = React.useCallback(() => {
     // Only collapse on leave if collapsed and on desktop
-    if (sidenavCollapsed) {
-      const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1280;
-      if (isDesktop && !openSidenav) {
-        setIsHovering(false);
-      }
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1280;
+    if (sidenavCollapsed && isDesktop && !openSidenav) {
+      setIsHovering(false);
     }
   }, [sidenavCollapsed, openSidenav]);
 
@@ -343,6 +338,8 @@ export default function Sidenav({
       className={`h-full ml-4 mb-4 transition-all duration-300 ease-in-out ${
         isCollapsed ? "w-16 max-w-[4rem]" : "w-full max-w-[18rem]"
       }`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <Card
         ref={sidenavRef}
@@ -355,8 +352,6 @@ export default function Sidenav({
         }
         shadow={false}
         variant="gradient"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
         className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
           sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
         } ${
