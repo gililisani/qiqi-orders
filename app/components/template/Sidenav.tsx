@@ -28,12 +28,14 @@ interface SidenavProps {
   brandImg?: string;
   brandName?: string;
   routes?: Route[];
+  onHoverChange?: (isHovering: boolean) => void;
 }
 
 export default function Sidenav({
   brandImg = "/QIQI-Logo.svg",
   brandName,
   routes = [],
+  onHoverChange,
 }: SidenavProps) {
   const pathname = usePathname();
   const [controller, dispatch] = useMaterialTailwindController();
@@ -69,13 +71,15 @@ export default function Sidenav({
     const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1280;
     if (sidenavCollapsed && isDesktop && !openSidenav) {
       setIsHovering(true);
+      onHoverChange?.(true);
     }
-  }, [sidenavCollapsed, openSidenav]);
+  }, [sidenavCollapsed, openSidenav, onHoverChange]);
 
   const handleMouseLeave = React.useCallback(() => {
     // Always reset hovering on leave
     setIsHovering(false);
-  }, []);
+    onHoverChange?.(false);
+  }, [onHoverChange]);
 
   React.useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -334,8 +338,8 @@ export default function Sidenav({
     <div 
       className={`h-[calc(100%-1rem)] ml-4 mb-4 transition-all duration-300 ease-in-out ${
         isCollapsed 
-          ? "w-16 max-w-[4rem] relative" 
-          : "w-[18rem] absolute left-0 top-0 z-50"
+          ? "w-16 max-w-[4rem]" 
+          : "w-full max-w-[18rem]"
       }`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

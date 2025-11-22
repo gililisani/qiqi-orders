@@ -33,6 +33,7 @@ export default function SharedLayoutWrapper({
   const [controller, dispatch] = useMaterialTailwindController();
   const { sidenavType, sidenavCollapsed, openSidenav } = controller;
   const pathname = usePathname();
+  const [isHovering, setIsHovering] = React.useState(false);
 
   // Determine if this should show the full layout or not
   const isAuthPages = pathname.startsWith("/login") || pathname.startsWith("/reset-password");
@@ -53,7 +54,7 @@ export default function SharedLayoutWrapper({
         <div className="relative h-full">
           {/* Desktop: Grid layout with 2 columns */}
           <div className={`hidden xl:grid h-full transition-all duration-300 ${
-            sidenavCollapsed ? "grid-cols-[5rem_1fr]" : "grid-cols-[19rem_1fr]"
+            (sidenavCollapsed && !isHovering) ? "grid-cols-[5rem_1fr]" : "grid-cols-[19rem_1fr]"
           }`}>
             {/* Left Column: Sidebar */}
             <div className="h-full relative">
@@ -61,6 +62,7 @@ export default function SharedLayoutWrapper({
                 routes={routes}
                 brandName={brandName}
                 brandImg={brandImg}
+                onHoverChange={setIsHovering}
               />
             </div>
             
