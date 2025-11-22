@@ -404,22 +404,18 @@ export default function Sidenav({
       </IconButton>
 
       {/* Toggle Collapse Button - Peeking out on right edge */}
-      <IconButton
-        ripple={false}
-        size="sm"
-        variant="text"
-        className="!absolute right-[-14px] top-[20px] z-50 hidden xl:flex items-center justify-center h-8 w-8 rounded-full bg-white shadow-lg border border-gray-200 hover:bg-gray-50 transition-all"
+      <button
+        type="button"
         onClick={() => setSidenavCollapsed(dispatch, !sidenavCollapsed)}
-        placeholder={undefined}
-        onPointerEnterCapture={undefined}
-        onPointerLeaveCapture={undefined}
+        className="absolute right-[-18px] top-[20px] z-50 hidden xl:flex items-center justify-center h-9 w-9 rounded-full bg-white shadow-xl border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all cursor-pointer group"
+        aria-label={sidenavCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         {sidenavCollapsed ? (
-          <ChevronRightIcon className="h-4 w-4 text-gray-900" />
+          <ChevronRightIcon className="h-5 w-5 text-gray-700 group-hover:text-gray-900 transition-colors" />
         ) : (
-          <ChevronLeftIcon className="h-4 w-4 text-gray-900" />
+          <ChevronLeftIcon className="h-5 w-5 text-gray-700 group-hover:text-gray-900 transition-colors" />
         )}
-      </IconButton>
+      </button>
 
       {/* Menu Items */}
       {renderMenuItems(routes)}
