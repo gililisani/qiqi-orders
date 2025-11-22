@@ -362,7 +362,7 @@ export default function Sidenav({
         openSidenav ? "left-4" : "-left-72"
       } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
         sidenavType === "dark" ? "!text-white" : "text-gray-900"
-      } xl:left-4 overflow-y-scroll`}
+      } xl:left-4 overflow-y-auto overflow-x-visible`}
       placeholder={undefined}
       onPointerEnterCapture={undefined}
       onPointerLeaveCapture={undefined}
@@ -407,13 +407,13 @@ export default function Sidenav({
       <button
         type="button"
         onClick={() => setSidenavCollapsed(dispatch, !sidenavCollapsed)}
-        className="absolute right-[-18px] top-[20px] z-50 hidden xl:flex items-center justify-center h-9 w-9 rounded-full bg-white shadow-xl border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all cursor-pointer group"
+        className="absolute right-[-12px] top-[20px] z-[60] hidden xl:flex items-center justify-center h-8 w-8 rounded-full bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all cursor-pointer shadow-sm"
         aria-label={sidenavCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         {sidenavCollapsed ? (
-          <ChevronRightIcon className="h-5 w-5 text-gray-700 group-hover:text-gray-900 transition-colors" />
+          <ChevronRightIcon className="h-4 w-4 text-gray-600" />
         ) : (
-          <ChevronLeftIcon className="h-5 w-5 text-gray-700 group-hover:text-gray-900 transition-colors" />
+          <ChevronLeftIcon className="h-4 w-4 text-gray-600" />
         )}
       </button>
 
