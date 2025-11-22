@@ -9,10 +9,10 @@ import { usePathname } from "next/navigation";
 import { Card, Typography, IconButton } from "@material-tailwind/react";
 
 // @heroicons/react
-import { ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 
 // Context
-import { useMaterialTailwindController, setOpenSidenav } from "@/app/context";
+import { useMaterialTailwindController, setOpenSidenav, setSidenavCollapsed } from "@/app/context";
 
 interface Route {
   name: string;
@@ -179,7 +179,15 @@ export default function Sidenav({
     };
     
     return (
-    <ul className={`flex flex-col gap-1 ${level === 0 ? "" : "mt-1"}`}>
+    <ul className={`flex flex-col gap-1 ${level === 0 ? "" : "mt-1"} ${
+      isCollapsed 
+        ? "" 
+        : level === 1 
+          ? "pl-6" 
+          : level >= 2 
+            ? "pl-10" 
+            : ""
+    }`}>
       {items.map(({ name, icon, pages, title, divider, external, path }, index) => {
         const key = `${name}-${index}`;
         const hasChildren = Array.isArray(pages) && pages.length > 0;
@@ -203,11 +211,11 @@ export default function Sidenav({
         const iconWrapperStyle: React.CSSProperties = isCollapsed 
           ? {
               position: 'absolute',
-              left: '12px', // px-3 (12px) + 4px offset = 16px from left edge, but we want 4px from center, so 12px
+              left: '50%',
               width: '20px',
               height: '20px',
               top: '50%',
-              transform: 'translateY(-50%)',
+              transform: 'translate(-50%, -50%)',
               // No transitions - instant position change
               transition: 'none',
               transitionProperty: 'none',
@@ -393,6 +401,24 @@ export default function Sidenav({
         onPointerLeaveCapture={undefined}
       >
         <XMarkIcon className="w-5 h-5" />
+      </IconButton>
+
+      {/* Toggle Collapse Button - Peeking out on right edge */}
+      <IconButton
+        ripple={false}
+        size="sm"
+        variant="text"
+        className="!absolute right-[-14px] top-[20px] z-50 hidden xl:flex items-center justify-center h-8 w-8 rounded-full bg-white shadow-lg border border-gray-200 hover:bg-gray-50 transition-all"
+        onClick={() => setSidenavCollapsed(dispatch, !sidenavCollapsed)}
+        placeholder={undefined}
+        onPointerEnterCapture={undefined}
+        onPointerLeaveCapture={undefined}
+      >
+        {sidenavCollapsed ? (
+          <ChevronRightIcon className="h-4 w-4 text-gray-900" />
+        ) : (
+          <ChevronLeftIcon className="h-4 w-4 text-gray-900" />
+        )}
       </IconButton>
 
       {/* Menu Items */}

@@ -27,14 +27,11 @@ import {
   HomeIcon,
   Bars3CenterLeftIcon,
 } from "@heroicons/react/24/solid";
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
-
 // @context
 import {
   useMaterialTailwindController,
   setOpenConfigurator,
   setOpenSidenav,
-  setSidenavCollapsed,
 } from "@/app/context";
 
 // Components
@@ -320,21 +317,6 @@ export function DashboardNavbar() {
     >
       <div className="!flex flex-col !justify-between gap-2 md:!flex-row md:items-center">
         <div className="capitalize flex items-center gap-2">
-          <IconButton
-            variant="text"
-            color="gray"
-            className="hidden xl:grid"
-            onClick={() => setSidenavCollapsed(dispatch, !sidenavCollapsed)}
-            placeholder={undefined}
-            onPointerEnterCapture={undefined}
-            onPointerLeaveCapture={undefined}
-          >
-            {sidenavCollapsed ? (
-              <ChevronRightIcon className="h-5 w-5 text-gray-900" />
-            ) : (
-              <ChevronLeftIcon className="h-5 w-5 text-gray-900" />
-            )}
-          </IconButton>
           {parseBreadcrumbs.length > 0 && (
              <Breadcrumbs
                className={`bg-transparent !p-0 transition-all ${
