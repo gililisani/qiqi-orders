@@ -56,7 +56,7 @@ export default function SharedLayoutWrapper({
             sidenavCollapsed ? "grid-cols-[4rem_1fr]" : "grid-cols-[18rem_1fr]"
           }`}>
             {/* Left Column: Sidebar */}
-            <div className="h-full">
+            <div className="h-full pl-4 pb-4">
               <Sidenav
                 routes={routes}
                 brandName={brandName}
