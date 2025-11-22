@@ -332,9 +332,9 @@ export default function Sidenav({
 
   return (
     <div 
-      className={`h-full ml-4 mb-4 transition-all duration-300 ease-in-out ${
+      className={`h-[calc(100%-1rem)] ml-4 mb-4 transition-all duration-300 ease-in-out ${
         isCollapsed 
-          ? "w-16 max-w-[4rem]" 
+          ? "w-16 max-w-[4rem] relative" 
           : "w-[18rem] absolute left-0 top-0 z-50"
       }`}
       onMouseEnter={handleMouseEnter}
