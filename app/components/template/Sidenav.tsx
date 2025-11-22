@@ -74,7 +74,22 @@ export default function Sidenav({
     }
   }, [openSidenav]);
 
-  const isCollapsed = sidenavCollapsed && !isHovering;
+  // On mobile, sidebar should never be collapsed when open
+  // openSidenav is only used on mobile, so if it's true, we're on mobile
+  // Also check window width as fallback
+  const [isMobileView, setIsMobileView] = React.useState(false);
+  
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobileView(window.innerWidth < 1280);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  // On mobile, never collapse. On desktop, use collapsed state with hover
+  const isCollapsed = (isMobileView || openSidenav) ? false : (sidenavCollapsed && !isHovering);
   const hoverBackgroundClass = sidenavType === "dark" ? "hover:bg-white/10" : "hover:bg-gray-100";
   
   // Map sidenavColor to gradient classes for active items
@@ -359,12 +374,12 @@ export default function Sidenav({
             ? "transparent"
             : "white"
         }
-        shadow={sidenavType !== "transparent"}
+        shadow={false}
         variant="gradient"
         className={`h-full transition-all duration-300 ease-in-out ${
           isCollapsed ? "w-16 max-w-[4rem]" : "w-full max-w-[18rem]"
-        } p-1.5 shadow-blue-gray-900/5 ${
-          sidenavType === "transparent" ? "shadow-none" : "shadow-xl"
+        } p-1.5 border border-gray-200 ${
+          sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
         } ${
           sidenavType === "dark" ? "!text-white" : "text-gray-900"
         } overflow-y-auto`}
@@ -372,26 +387,6 @@ export default function Sidenav({
         onPointerEnterCapture={undefined}
         onPointerLeaveCapture={undefined}
       >
-        {/* Logo */}
-        <Link
-          href={pathname.startsWith("/client") ? "/client" : "/admin"}
-          className="flex items-center justify-center h-20"
-        >
-          {isCollapsed ? (
-            <img 
-              src="/QIQI-Logo-cropped.svg" 
-              className={`h-9 w-auto ${sidenavType === "dark" ? "brightness-0 invert" : ""}`} 
-              alt="Qiqi logo" 
-            />
-          ) : (
-            <img 
-              src={brandImg} 
-              className={`h-12 w-auto ${sidenavType === "dark" ? "brightness-0 invert" : ""}`} 
-              alt="Qiqi logo" 
-            />
-          )}
-        </Link>
-
         {/* Close button */}
         <IconButton
           ripple={false}

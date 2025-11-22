@@ -50,13 +50,13 @@ export default function SharedLayoutWrapper({
       
       {/* Row 2: 2 Columns - Sidebar + Content */}
       {!isSimpleLayout ? (
-        <div className="relative">
+        <div className="relative h-full">
           {/* Desktop: Grid layout with 2 columns */}
-          <div className={`hidden xl:grid transition-all duration-300 ${
+          <div className={`hidden xl:grid h-full transition-all duration-300 ${
             sidenavCollapsed ? "grid-cols-[4rem_1fr]" : "grid-cols-[18rem_1fr]"
           }`}>
             {/* Left Column: Sidebar */}
-            <div>
+            <div className="h-full">
               <Sidenav
                 routes={routes}
                 brandName={brandName}
@@ -65,13 +65,13 @@ export default function SharedLayoutWrapper({
             </div>
             
             {/* Right Column: Content */}
-            <div className="p-4">
+            <div className="p-4 overflow-y-auto">
               {children}
             </div>
           </div>
           
           {/* Mobile: Overlay sidebar */}
-          <div className="xl:hidden">
+          <div className="xl:hidden h-full">
             {/* Sidebar overlay */}
             <div className={`fixed inset-y-0 left-0 z-40 transition-transform duration-300 ${
               openSidenav ? "translate-x-0" : "-translate-x-full"
