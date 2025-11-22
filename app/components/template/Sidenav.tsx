@@ -51,13 +51,13 @@ export default function Sidenav({
   };
 
   const handleMouseEnter = () => {
-    if (sidenavCollapsed) {
+    if (sidenavCollapsed && !isMobileView) {
       setIsHovering(true);
     }
   };
 
   const handleMouseLeave = () => {
-    if (sidenavCollapsed) {
+    if (sidenavCollapsed && !isMobileView) {
       setIsHovering(false);
     }
   };
@@ -331,7 +331,9 @@ export default function Sidenav({
 
   return (
     <div 
-      className="h-full ml-4 mb-4 transition-all duration-300 ease-in-out"
+      className={`h-full ml-4 mb-4 transition-all duration-300 ease-in-out ${
+        isCollapsed ? "w-16 max-w-[4rem]" : "w-full max-w-[18rem]"
+      }`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -346,9 +348,7 @@ export default function Sidenav({
         }
         shadow={false}
         variant="gradient"
-        className={`h-full transition-all duration-300 ease-in-out ${
-          isCollapsed ? "w-16 max-w-[4rem]" : "w-full max-w-[18rem]"
-        } p-1.5 border border-gray-200 ${
+        className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
           sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
         } ${
           sidenavType === "dark" ? "!text-white" : "text-gray-900"
