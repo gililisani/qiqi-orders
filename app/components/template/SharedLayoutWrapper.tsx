@@ -36,14 +36,15 @@ export default function SharedLayoutWrapper({
   const [isHovering, setIsHovering] = React.useState(false);
   const [isDesktop, setIsDesktop] = React.useState(false);
 
-  // Reset hover state when window resizes below desktop breakpoint
+  // Reset hover state when window resizes below desktop breakpoint or near breakpoint
   React.useEffect(() => {
     const checkDesktop = () => {
       const width = window.innerWidth;
       const desktop = width >= 1280;
       setIsDesktop(desktop);
-      // Reset hover state if we're not on desktop
-      if (!desktop) {
+      // Reset hover state if we're not on desktop OR if we're too close to breakpoint
+      // Add buffer to prevent expansion near breakpoint (1320px minimum for hover)
+      if (!desktop || width < 1320) {
         setIsHovering(false);
       }
     };
@@ -72,7 +73,7 @@ export default function SharedLayoutWrapper({
         <div className="relative h-full w-full overflow-x-hidden">
           {/* Desktop: Grid layout with 2 columns */}
           <div className={`hidden xl:grid h-full transition-all duration-300 ${
-            (sidenavCollapsed && !isHovering && isDesktop) ? "grid-cols-[5rem_1fr]" : "grid-cols-[19rem_1fr]"
+            (sidenavCollapsed && !isHovering) ? "grid-cols-[5rem_1fr]" : "grid-cols-[19rem_1fr]"
           }`}>
             {/* Left Column: Sidebar */}
             <div className="h-full relative">
