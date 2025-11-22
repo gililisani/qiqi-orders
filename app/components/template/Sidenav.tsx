@@ -150,10 +150,6 @@ export default function Sidenav({
     }
   }, [routes, isRouteActive]);
 
-  const getSpacingClasses = () => {
-    // Keep padding consistent to prevent movement during transition
-    return isCollapsed ? "px-3 justify-start" : "px-3 justify-start";
-  };
 
   const renderMenuItems = (items: Route[], level = 0) => {
     // Helper function to check if a route is the most specific active match
@@ -194,15 +190,7 @@ export default function Sidenav({
     };
     
     return (
-    <ul className={`flex flex-col gap-1 ${level === 0 ? "" : "mt-1"} ${
-      isCollapsed 
-        ? "" 
-        : level === 1 
-          ? "pl-6" 
-          : level >= 2 
-            ? "pl-10" 
-            : ""
-    }`}>
+    <ul className={`flex flex-col gap-1 ${level === 0 ? "" : "mt-1"}`}>
       {items.map(({ name, icon, pages, title, divider, external, path }, index) => {
         const key = `${name}-${index}`;
         const hasChildren = Array.isArray(pages) && pages.length > 0;
@@ -214,39 +202,20 @@ export default function Sidenav({
           "group relative flex items-center w-full min-h-[44px] rounded-lg transition-all duration-300 ease-in-out overflow-hidden text-inherit active:scale-[0.98]",
           // Only add hover class if item is not active (active items should keep gradient, hover can slightly darken it)
           isActiveLeaf ? "" : hoverBackgroundClass,
-          getSpacingClasses(),
-          // Keep gap at 0 when collapsed to prevent any layout shift
-          // When expanded, gap is needed for spacing between icon and text
-          isCollapsed ? "gap-0" : "gap-3",
+          "px-3 justify-start",
+          // Gap between icon and label - icons stay fixed, labels slide
+          "gap-3",
           "focus:outline-none focus-visible:outline-none",
         ];
         
-        // When collapsed, position icon absolutely to remove it from flex flow
-        // This prevents any layout shifts from gap changes or label position changes
-        const iconWrapperStyle: React.CSSProperties = isCollapsed 
-          ? {
-              position: 'absolute',
-              left: '50%',
-              width: '20px',
-              height: '20px',
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
-              // No transitions - instant position change
-              transition: 'none',
-              transitionProperty: 'none',
-              transitionDuration: '0s',
-              transitionDelay: '0s'
-            }
-          : {
-              marginLeft: '0px',
-              width: '20px',
-              height: '20px',
-              flexShrink: 0,
-              transition: 'none',
-              transitionProperty: 'none',
-              transitionDuration: '0s',
-              transitionDelay: '0s'
-            };
+        // Icons always stay in the same position - left-aligned with consistent padding
+        // Never use absolute positioning - icons are part of flex flow
+        const iconWrapperStyle: React.CSSProperties = {
+          width: '20px',
+          height: '20px',
+          flexShrink: 0,
+          transition: 'none',
+        };
 
         // Add active item classes if this is the active route
         if (isActiveLeaf) {
@@ -257,13 +226,14 @@ export default function Sidenav({
 
         const iconWrapperClasses = "flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit";
 
-        // When collapsed, use absolute positioning to remove label from flex flow completely
-        // This prevents label from affecting icon position during transition
+        // Labels slide in/out from the right while icons stay fixed
+        // When collapsed: labels are hidden but don't affect icon position
+        // When expanded: labels reveal from the right
         const labelClasses = [
-          "text-sm font-normal capitalize text-left overflow-hidden whitespace-nowrap transition-all duration-200",
+          "text-sm font-normal capitalize text-left overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out",
           isCollapsed 
-            ? "absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden" 
-            : "min-w-0 max-w-full opacity-100 flex-1",
+            ? "opacity-0 w-0 overflow-hidden pointer-events-none" 
+            : "opacity-100 min-w-0 max-w-full flex-1",
         ].join(" ");
 
         const chevronClasses = [
