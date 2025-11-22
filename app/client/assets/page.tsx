@@ -2,17 +2,19 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useSupabase } from '../../../lib/supabase-provider';
-import Card from '../../components/ui/Card';
+import AssetCard from '../../components/dam/AssetCard';
+import AssetDetailModal from '../../components/dam/AssetDetailModal';
+import { AssetRecord, LocaleOption, RegionOption } from '../../components/dam/types';
+import { formatBytes, ensureTokenUrl, buildAuthHeaders } from '../../components/dam/utils';
 import {
   ArrowPathIcon,
-  DocumentTextIcon,
-  FilmIcon,
-  MusicalNoteIcon,
-  PhotoIcon,
-  Squares2X2Icon,
-  ArrowDownTrayIcon,
+  MagnifyingGlassIcon,
   XMarkIcon,
-  Bars3Icon,
+  PhotoIcon,
+  FilmIcon,
+  DocumentTextIcon,
+  MusicalNoteIcon,
+  Squares2X2Icon,
 } from '@heroicons/react/24/outline';
 
 const assetTypeOptions: Array<{ value: string; label: string; icon: JSX.Element }> = [
@@ -20,80 +22,15 @@ const assetTypeOptions: Array<{ value: string; label: string; icon: JSX.Element 
   { value: 'video', label: 'Video', icon: <FilmIcon className="h-4 w-4" /> },
   { value: 'document', label: 'Document', icon: <DocumentTextIcon className="h-4 w-4" /> },
   { value: 'audio', label: 'Audio', icon: <MusicalNoteIcon className="h-4 w-4" /> },
+  { value: 'font', label: 'Font', icon: <DocumentTextIcon className="h-4 w-4" /> },
   { value: 'archive', label: 'Archive', icon: <Squares2X2Icon className="h-4 w-4" /> },
   { value: 'other', label: 'Other', icon: <Squares2X2Icon className="h-4 w-4" /> },
 ];
 
-interface LocaleOption {
-  code: string;
-  label: string;
-  is_default?: boolean;
-}
-
-interface RegionOption {
-  code: string;
-  label: string;
-}
-
-interface AssetVersion {
+interface TagOption {
   id: string;
-  version_number: number;
-  storage_path: string;
-  thumbnail_path?: string | null;
-  mime_type?: string | null;
-  file_size?: number | null;
-  processing_status: string;
-  created_at: string;
-  duration_seconds?: number | null;
-  width?: number | null;
-  height?: number | null;
-  downloadPath?: string | null;
-  previewPath?: string | null;
-}
-
-interface AssetRecord {
-  id: string;
-  title: string;
-  description?: string | null;
-  asset_type: string; // Legacy enum field
-  asset_type_id?: string | null; // New taxonomy Asset Type ID
-  asset_subtype_id?: string | null; // New taxonomy Asset Sub-Type ID
-  product_line?: string | null;
-  product_name?: string | null; // New Product Name field
-  sku?: string | null;
-  vimeo_video_id?: string | null;
-  vimeo_download_1080p?: string | null;
-  vimeo_download_720p?: string | null;
-  vimeo_download_480p?: string | null;
-  vimeo_download_360p?: string | null;
-  created_at: string;
-  current_version?: AssetVersion | null;
-  tags: string[];
-  audiences: string[];
-  locales: LocaleOption[];
-  regions: RegionOption[];
-}
-
-function formatBytes(bytes: number | null | undefined): string {
-  if (!bytes || bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100} ${sizes[i]}`;
-}
-
-function buildAuthHeaders(token: string | null): Record<string, string> {
-  if (!token) return {};
-  return { Authorization: `Bearer ${token}` };
-}
-
-function ensureTokenUrl(path: string | null | undefined, accessToken: string | null): string {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  const url = path.startsWith('/') ? path : `/${path}`;
-  if (!accessToken) return url;
-  const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}token=${encodeURIComponent(accessToken)}`;
+  slug: string;
+  label: string;
 }
 
 async function logDownload(
@@ -179,20 +116,25 @@ export default function ClientAssetsPage() {
 
   const [locales, setLocales] = useState<LocaleOption[]>([]);
   const [regions, setRegions] = useState<RegionOption[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
-  const [productLines, setProductLines] = useState<string[]>([]);
+  const [tags, setTags] = useState<TagOption[]>([]);
+  const [productLines, setProductLines] = useState<Array<{ code: string; name: string; slug: string }>>([]);
   const [assetTypes, setAssetTypes] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [assetSubtypes, setAssetSubtypes] = useState<Array<{ id: string; name: string; slug: string; asset_type_id: string }>>([]);
+  const [products, setProducts] = useState<Array<{ id: number; item_name: string; sku: string }>>([]);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>(''); // Legacy enum filter
-  const [assetTypeFilter, setAssetTypeFilter] = useState<string>(''); // New taxonomy Asset Type filter
-  const [assetSubtypeFilter, setAssetSubtypeFilter] = useState<string>(''); // New taxonomy Asset Sub-Type filter
+  const [assetTypeFilter, setAssetTypeFilter] = useState<string>('');
+  const [assetSubtypeFilter, setAssetSubtypeFilter] = useState<string>('');
   const [localeFilter, setLocaleFilter] = useState<string>('');
   const [regionFilter, setRegionFilter] = useState<string>('');
   const [tagFilter, setTagFilter] = useState<string>('');
   const [productLineFilter, setProductLineFilter] = useState<string>('');
-  const [productNameFilter, setProductNameFilter] = useState<string>(''); // New Product Name filter
+  const [productNameFilter, setProductNameFilter] = useState<string>('');
+  const [dateFromFilter, setDateFromFilter] = useState<string>('');
+  const [dateToFilter, setDateToFilter] = useState<string>('');
+  const [fileSizeMinFilter, setFileSizeMinFilter] = useState<string>('');
+  const [fileSizeMaxFilter, setFileSizeMaxFilter] = useState<string>('');
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pagination, setPagination] = useState<{
     page: number;
@@ -202,8 +144,10 @@ export default function ClientAssetsPage() {
     hasNextPage: boolean;
     hasPreviousPage: boolean;
   } | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
+  const [hoveredAssetId, setHoveredAssetId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'compact' | 'comfortable'>('compact');
+  const [downloadingFormats, setDownloadingFormats] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -229,15 +173,19 @@ export default function ClientAssetsPage() {
       const data = await response.json() as { 
         locales?: LocaleOption[]; 
         regions?: RegionOption[]; 
-        tags?: Array<{ label: string }>;
+        tags?: Array<{ id: string; slug: string; label: string }>;
         assetTypes?: Array<{ id: string; name: string; slug: string }>;
         assetSubtypes?: Array<{ id: string; name: string; slug: string; asset_type_id: string }>;
+        productLines?: Array<{ code: string; name: string; slug: string }>;
+        products?: Array<{ id: number; item_name: string; sku: string }>;
       };
       setLocales(data.locales || []);
       setRegions(data.regions || []);
-      setTags([...new Set((data.tags || []).map((t) => t.label))]);
+      setTags(data.tags || []);
       setAssetTypes(data.assetTypes || []);
       setAssetSubtypes(data.assetSubtypes || []);
+      setProductLines(data.productLines || []);
+      setProducts(data.products || []);
     } catch (err: any) {
       console.error('Failed to load lookups', err);
     }
@@ -251,7 +199,6 @@ export default function ClientAssetsPage() {
       const headers = buildAuthHeaders(token);
       const params = new URLSearchParams();
       if (search) params.append('q', search);
-      if (typeFilter) params.append('type', typeFilter);
       if (assetTypeFilter) params.append('assetType', assetTypeFilter);
       if (assetSubtypeFilter) params.append('assetSubtype', assetSubtypeFilter);
       if (productLineFilter) params.append('productLine', productLineFilter);
@@ -259,6 +206,10 @@ export default function ClientAssetsPage() {
       if (localeFilter) params.append('locale', localeFilter);
       if (regionFilter) params.append('region', regionFilter);
       if (tagFilter) params.append('tag', tagFilter);
+      if (dateFromFilter) params.append('dateFrom', dateFromFilter);
+      if (dateToFilter) params.append('dateTo', dateToFilter);
+      if (fileSizeMinFilter) params.append('fileSizeMin', fileSizeMinFilter);
+      if (fileSizeMaxFilter) params.append('fileSizeMax', fileSizeMaxFilter);
       params.append('page', page.toString());
       params.append('limit', '50');
 
@@ -278,10 +229,6 @@ export default function ClientAssetsPage() {
       setAssets(payload.assets || []);
       setPagination(payload.pagination || null);
       setCurrentPage(page);
-      
-      // Extract unique product lines
-      const uniqueProductLines = [...new Set((payload.assets || []).map((a) => a.product_line).filter((pl): pl is string => Boolean(pl)))];
-      setProductLines(uniqueProductLines);
     } catch (err: any) {
       console.error('Failed to load assets', err);
       setError(err.message || 'Failed to load assets');
@@ -298,522 +245,557 @@ export default function ClientAssetsPage() {
       setCurrentPage(1);
     }, 300);
     return () => clearTimeout(timeoutId);
-  }, [accessToken, searchTerm, typeFilter, assetTypeFilter, assetSubtypeFilter, localeFilter, regionFilter, tagFilter, productLineFilter, productNameFilter, fetchLookups]);
+  }, [accessToken, searchTerm, assetTypeFilter, assetSubtypeFilter, localeFilter, regionFilter, tagFilter, productLineFilter, productNameFilter, dateFromFilter, dateToFilter, fileSizeMinFilter, fileSizeMaxFilter, fetchLookups]);
 
   const filteredAssets = useMemo(() => {
     return assets; // Assets are already filtered by the API
   }, [assets]);
 
-  const renderAssetTypePill = (type: string) => {
-    const option = assetTypeOptions.find((opt) => opt.value === type);
-    if (!option) return null;
+  const renderAssetTypePill = (assetType: string, size: 'sm' | 'md' = 'md') => {
+    const option = assetTypeOptions.find((opt) => opt.value === assetType);
+    const sizeClasses = size === 'sm' 
+      ? 'text-[10px] px-1.5 py-0.5'
+      : 'text-xs px-2 py-1';
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-        {option.icon}
-        {option.label}
+      <span className={`inline-flex items-center gap-0.5 rounded-md bg-gray-100 ${sizeClasses} text-gray-700`}>
+        {option?.icon}
+        {option?.label ?? assetType}
       </span>
     );
+  };
+
+  const handleDownload = async (asset: AssetRecord, format?: string) => {
+    if (!accessToken) return;
+    
+    const downloadKey = format ? `asset-action-${asset.id}-${format}` : `asset-action-${asset.id}`;
+    setDownloadingFormats(prev => new Set(prev).add(downloadKey));
+
+    try {
+      if (asset.asset_type === 'video' && asset.vimeo_video_id) {
+        const formats = asset.vimeo_download_formats && asset.vimeo_download_formats.length > 0
+          ? asset.vimeo_download_formats.filter(f => f.url && f.url.trim() !== '')
+          : [
+              { resolution: '1080p', url: asset.vimeo_download_1080p || '' },
+              { resolution: '720p', url: asset.vimeo_download_720p || '' },
+              { resolution: '480p', url: asset.vimeo_download_480p || '' },
+              { resolution: '360p', url: asset.vimeo_download_360p || '' },
+            ].filter(f => f.url);
+        
+        const formatToDownload = format 
+          ? formats.find(f => f.resolution === format)
+          : formats[0];
+        
+        if (formatToDownload && formatToDownload.url) {
+          const filename = `${asset.title || 'video'}-${formatToDownload.resolution}.mp4`;
+          await triggerDownload(
+            formatToDownload.url,
+            filename,
+            asset.id,
+            `video-${formatToDownload.resolution}`,
+            accessToken
+          );
+        }
+      } else if (asset.current_version?.downloadPath) {
+        const downloadUrl = ensureTokenUrl(asset.current_version.downloadPath, accessToken);
+        const filename = `${asset.title || 'asset'}.${asset.current_version.mime_type?.split('/')[1] || 'bin'}`;
+        await triggerDownload(
+          downloadUrl,
+          filename,
+          asset.id,
+          'api',
+          accessToken
+        );
+      }
+    } catch (err: any) {
+      console.error('Download failed:', err);
+      setError(err.message || 'Download failed');
+    } finally {
+      setDownloadingFormats(prev => {
+        const next = new Set(prev);
+        next.delete(downloadKey);
+        return next;
+      });
+    }
+  };
+
+  const getActiveFilterChips = () => {
+    const chips: Array<{ label: string; onRemove: () => void }> = [];
+    
+    if (assetTypeFilter) {
+      const type = assetTypes.find(t => t.id === assetTypeFilter);
+      if (type) {
+        chips.push({
+          label: type.name,
+          onRemove: () => {
+            setAssetTypeFilter('');
+            setAssetSubtypeFilter('');
+          },
+        });
+      }
+    }
+    
+    if (assetSubtypeFilter) {
+      const subtype = assetSubtypes.find(s => s.id === assetSubtypeFilter);
+      if (subtype) {
+        chips.push({
+          label: subtype.name,
+          onRemove: () => setAssetSubtypeFilter(''),
+        });
+      }
+    }
+    
+    if (productLineFilter) {
+      const pl = productLines.find(p => p.code === productLineFilter);
+      chips.push({
+        label: pl?.name || productLineFilter,
+        onRemove: () => setProductLineFilter(''),
+      });
+    }
+    
+    if (productNameFilter) {
+      chips.push({
+        label: productNameFilter,
+        onRemove: () => setProductNameFilter(''),
+      });
+    }
+    
+    if (localeFilter) {
+      const locale = locales.find(l => l.code === localeFilter);
+      if (locale) {
+        chips.push({
+          label: locale.label,
+          onRemove: () => setLocaleFilter(''),
+        });
+      }
+    }
+    
+    if (regionFilter) {
+      const region = regions.find(r => r.code === regionFilter);
+      if (region) {
+        chips.push({
+          label: region.label,
+          onRemove: () => setRegionFilter(''),
+        });
+      }
+    }
+    
+    if (tagFilter) {
+      chips.push({
+        label: tagFilter,
+        onRemove: () => setTagFilter(''),
+      });
+    }
+    
+    return chips;
   };
 
   if (error && !loadingAssets) {
     return (
       <div className="mt-8 mb-4 space-y-6">
-        <Card>
-          <div className="p-6 text-center text-red-600">
-            <p>Error loading assets: {error}</p>
-          </div>
-        </Card>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+          <p>Error loading assets: {error}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mt-8 mb-4 space-y-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Asset Library</h1>
-        <p className="mt-1 text-sm text-gray-600">Browse and download available assets.</p>
-      </div>
-
-      {/* Filters */}
-      <Card className="mb-6">
-        <div className="p-4">
-          <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-1 flex-col gap-3 sm:flex-row">
+    <div className="relative min-h-screen bg-gray-50">
+      {/* Main Content - Full Width */}
+      <div className="w-full">
+        {/* Header with Search Bar */}
+        <div className="bg-white border-b border-gray-200 px-6 py-3">
+          <div className="flex items-center gap-3">
+            {/* Large Search Bar */}
+            <div className="flex-1 relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="search"
-                placeholder="Search by title, product line, or SKU"
+                placeholder="Search assets by title, tag, SKU, product…"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                className="w-full pl-9 pr-4 py-2 rounded-md border border-gray-300 focus:border-black focus:outline-none focus:ring-1 focus:ring-black/10 text-sm"
               />
-              <select
-                value={typeFilter}
-                onChange={(event) => setTypeFilter(event.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              >
-                <option value="">All types (legacy)</option>
-                {assetTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={assetTypeFilter}
-                onChange={(event) => {
-                  setAssetTypeFilter(event.target.value);
-                  setAssetSubtypeFilter(''); // Clear subtype when type changes
-                }}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              >
-                <option value="">All Asset Types</option>
-                {assetTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={assetSubtypeFilter}
-                onChange={(event) => setAssetSubtypeFilter(event.target.value)}
-                disabled={!assetTypeFilter}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                <option value="">All Sub-Types</option>
-                {assetSubtypes
-                  .filter((subtype) => subtype.asset_type_id === assetTypeFilter)
-                  .map((subtype) => (
-                    <option key={subtype.id} value={subtype.id}>
-                      {subtype.name}
-                    </option>
-                  ))}
-              </select>
-              <select
-                value={productLineFilter}
-                onChange={(event) => setProductLineFilter(event.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              >
-                <option value="">All product lines</option>
-                <option value="ProCtrl">ProCtrl</option>
-                <option value="SelfCtrl">SelfCtrl</option>
-                <option value="Both">Both</option>
-                <option value="None">None</option>
-                {productLines.filter(pl => !['ProCtrl', 'SelfCtrl', 'Both', 'None'].includes(pl)).map((pl) => (
-                  <option key={pl} value={pl}>
-                    {pl}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={productNameFilter}
-                onChange={(event) => setProductNameFilter(event.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              >
-                <option value="">All products</option>
-                <option value="Hair Controller">Hair Controller</option>
-                <option value="Curl Controller">Curl Controller</option>
-                <option value="Volume Controller">Volume Controller</option>
-                <option value="Texture Controller">Texture Controller</option>
-                <option value="Other">Other</option>
-              </select>
-              <select
-                value={localeFilter}
-                onChange={(event) => setLocaleFilter(event.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              >
-                <option value="">All locales</option>
-                {locales.map((locale) => (
-                  <option key={locale.code} value={locale.code}>
-                    {locale.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={regionFilter}
-                onChange={(event) => setRegionFilter(event.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              >
-                <option value="">All regions</option>
-                {regions.map((region) => (
-                  <option key={region.code} value={region.code}>
-                    {region.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={tagFilter}
-                onChange={(event) => setTagFilter(event.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              >
-                <option value="">All tags</option>
-                {tags.map((tag) => (
-                  <option key={tag} value={tag}>
-                    {tag}
-                  </option>
-                ))}
-              </select>
             </div>
-            <div className="flex items-center gap-2">
+            
+            {/* View Mode Toggle - Segmented Control */}
+            <div className="inline-flex items-center rounded-lg border border-gray-300 bg-gray-50 p-1">
               <button
                 type="button"
-                onClick={() => setViewMode('grid')}
-                className={`rounded-lg p-2 transition ${
-                  viewMode === 'grid' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                onClick={() => setViewMode('compact')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  viewMode === 'compact'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
                 }`}
-                title="Grid view"
               >
-                <Squares2X2Icon className="h-5 w-5" />
+                Compact
               </button>
               <button
                 type="button"
-                onClick={() => setViewMode('list')}
-                className={`rounded-lg p-2 transition ${
-                  viewMode === 'list' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                onClick={() => setViewMode('comfortable')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  viewMode === 'comfortable'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
                 }`}
-                title="List view"
               >
-                <Bars3Icon className="h-5 w-5" />
+                Comfortable
               </button>
             </div>
+            
+            {/* Refresh Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentPage(1);
+                fetchAssets(accessToken ?? '', undefined, 1);
+              }}
+              className="inline-flex items-center justify-center rounded-md border border-gray-300 w-9 h-9 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+            >
+              <ArrowPathIcon className="h-4 w-4" />
+            </button>
           </div>
         </div>
-      </Card>
 
-      {/* Asset Library */}
-      <Card>
-        {loadingAssets ? (
-          <div className="flex items-center justify-center py-12 text-gray-600">
-            <div className="flex items-center gap-3 text-sm">
-              <ArrowPathIcon className="h-5 w-5 animate-spin" />
-              Loading assets…
+        {/* Filter Row */}
+        <div className="bg-white border-b border-gray-200 px-6 py-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {/* Filter Dropdowns */}
+            <select
+              value={assetTypeFilter}
+              onChange={(event) => {
+                setAssetTypeFilter(event.target.value);
+                setAssetSubtypeFilter('');
+              }}
+              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
+            >
+              <option value="">Asset Type</option>
+              {assetTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={assetSubtypeFilter}
+              onChange={(event) => setAssetSubtypeFilter(event.target.value)}
+              disabled={!assetTypeFilter}
+              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed bg-white"
+            >
+              <option value="">Sub-Type</option>
+              {assetSubtypes
+                .filter((subtype) => subtype.asset_type_id === assetTypeFilter)
+                .map((subtype) => (
+                  <option key={subtype.id} value={subtype.id}>
+                    {subtype.name}
+                  </option>
+                ))}
+            </select>
+
+            <select
+              value={productLineFilter}
+              onChange={(event) => setProductLineFilter(event.target.value)}
+              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
+            >
+              <option value="">Product Line</option>
+              {productLines.map(pl => (
+                <option key={pl.code} value={pl.code}>{pl.name}</option>
+              ))}
+            </select>
+
+            <select
+              value={productNameFilter}
+              onChange={(event) => setProductNameFilter(event.target.value)}
+              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
+            >
+              <option value="">Product</option>
+              {products.map((product) => (
+                <option key={product.id} value={product.item_name}>
+                  {product.item_name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={localeFilter}
+              onChange={(event) => setLocaleFilter(event.target.value)}
+              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
+            >
+              <option value="">Locale</option>
+              {locales.map((locale) => (
+                <option key={locale.code} value={locale.code}>
+                  {locale.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={regionFilter}
+              onChange={(event) => setRegionFilter(event.target.value)}
+              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
+            >
+              <option value="">Region</option>
+              {regions.map((region) => (
+                <option key={region.code} value={region.code}>
+                  {region.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={tagFilter}
+              onChange={(event) => setTagFilter(event.target.value)}
+              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
+            >
+              <option value="">Tag</option>
+              {tags.map((tag) => (
+                <option key={tag.slug} value={tag.label}>
+                  {tag.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filter Chips */}
+          {getActiveFilterChips().length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5 pt-1.5 border-t border-gray-100">
+              {getActiveFilterChips().map((chip, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700"
+                >
+                  {chip.label}
+                  <button
+                    type="button"
+                    onClick={chip.onRemove}
+                    className="hover:text-gray-900"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
             </div>
-          </div>
-        ) : filteredAssets.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-6 py-12 text-center text-sm text-gray-600">
-            No assets found. Try adjusting your filters.
-          </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredAssets.map((asset) => (
-              <div
-                key={asset.id}
-                className="flex flex-col gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-gray-300 transition"
-                onClick={() => setSelectedAsset(asset)}
+          )}
+        </div>
+
+        {/* Asset Library - Full Width */}
+        <div className="px-6 py-4 border-t border-gray-100">
+          {/* Advanced Search Accordion */}
+          <div className="mb-4 rounded-lg border border-gray-200 bg-white">
+            <button
+              type="button"
+              onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+              className="w-full flex items-center justify-between p-4 text-left"
+            >
+              <h4 className="text-sm font-semibold text-gray-900">Advanced Search</h4>
+              <svg
+                className={`h-5 w-5 text-gray-500 transition-transform ${showAdvancedSearch ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
-                  {asset.asset_type === 'video' && asset.vimeo_video_id ? (
-                    <img
-                      src={`https://vumbnail.com/${asset.vimeo_video_id}.jpg`}
-                      alt={asset.title}
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://i.vimeocdn.com/video/${asset.vimeo_video_id}_640.jpg`;
-                      }}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showAdvancedSearch && (
+              <div className="px-4 pb-4 border-t border-gray-200">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 pt-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Date From</label>
+                    <input
+                      type="date"
+                      value={dateFromFilter}
+                      onChange={(event) => setDateFromFilter(event.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
                     />
-                  ) : accessToken && asset.current_version?.previewPath ? (
-                    <img
-                      src={ensureTokenUrl(asset.current_version.previewPath, accessToken)}
-                      alt={asset.title}
-                      className="h-full w-full object-cover"
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Date To</label>
+                    <input
+                      type="date"
+                      value={dateToFilter}
+                      onChange={(event) => setDateToFilter(event.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
                     />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-gray-400">
-                      <PhotoIcon className="h-12 w-12" />
-                    </div>
-                  )}
-                  {asset.current_version && (
-                    <span className="absolute bottom-2 right-2 rounded bg-white/90 px-2 py-1 text-[10px] font-medium text-gray-700">
-                      v{asset.current_version.version_number}
-                    </span>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="text-sm font-semibold text-gray-900">{asset.title}</h4>
-                    {renderAssetTypePill(asset.asset_type)}
                   </div>
-                  {asset.description && (
-                    <p className="text-xs text-gray-600 line-clamp-2">{asset.description}</p>
-                  )}
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
-                    {asset.sku && <span>SKU {asset.sku}</span>}
-                    {asset.product_line && <span>{asset.product_line}</span>}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Min File Size (MB)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={fileSizeMinFilter}
+                      onChange={(event) => setFileSizeMinFilter(event.target.value)}
+                      placeholder="0"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Max File Size (MB)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={fileSizeMaxFilter}
+                      onChange={(event) => setFileSizeMaxFilter(event.target.value)}
+                      placeholder="∞"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    />
                   </div>
                 </div>
+                {(dateFromFilter || dateToFilter || fileSizeMinFilter || fileSizeMaxFilter) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDateFromFilter('');
+                      setDateToFilter('');
+                      setFileSizeMinFilter('');
+                      setFileSizeMaxFilter('');
+                      setCurrentPage(1);
+                      fetchAssets(accessToken ?? '', searchTerm || undefined, 1);
+                    }}
+                    className="mt-3 text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Clear advanced filters
+                  </button>
+                )}
               </div>
-            ))}
+            )}
           </div>
-        ) : (
-          <div className="divide-y divide-gray-200">
-            {filteredAssets.map((asset) => (
-              <div
-                key={asset.id}
-                className="flex gap-4 p-4 cursor-pointer hover:bg-gray-50 transition"
-                onClick={() => setSelectedAsset(asset)}
-              >
-                <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
-                  {asset.asset_type === 'video' && asset.vimeo_video_id ? (
-                    <img
-                      src={`https://vumbnail.com/${asset.vimeo_video_id}.jpg`}
-                      alt={asset.title}
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://i.vimeocdn.com/video/${asset.vimeo_video_id}_640.jpg`;
-                      }}
-                    />
-                  ) : accessToken && asset.current_version?.previewPath ? (
-                    <img
-                      src={ensureTokenUrl(asset.current_version.previewPath, accessToken)}
-                      alt={asset.title}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-gray-400">
-                      <PhotoIcon className="h-8 w-8" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-1 flex-col justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-semibold text-gray-900">{asset.title}</h4>
-                        {renderAssetTypePill(asset.asset_type)}
-                      </div>
-                    </div>
-                    {asset.description && (
-                      <p className="text-xs text-gray-600 line-clamp-1">{asset.description}</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
-                      <span>Created {new Date(asset.created_at).toLocaleDateString()}</span>
-                      {asset.sku && <span>SKU {asset.sku}</span>}
-                      {asset.product_line && <span>{asset.product_line}</span>}
-                      {asset.current_version && (
-                        <span>Size: {formatBytes(asset.current_version.file_size) || '—'}</span>
-                      )}
-                    </div>
+
+          {/* Asset Grid */}
+          {loadingAssets ? (
+            // Skeleton loaders while loading (matching admin)
+            <div className={`grid gap-2 ${
+              viewMode === 'compact'
+                ? 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+                : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+            }`}>
+              {Array.from({ length: 12 }).map((_, index) => (
+                <div
+                  key={`skeleton-${index}`}
+                  className="bg-white rounded-md border border-gray-200 overflow-hidden shadow-sm"
+                  style={{ maxWidth: viewMode === 'compact' ? '240px' : undefined }}
+                >
+                  <div className="relative bg-gray-200 animate-pulse" style={{ height: viewMode === 'compact' ? '160px' : '200px' }} />
+                  <div className="p-2 space-y-1">
+                    <div className="h-3 bg-gray-200 rounded animate-pulse w-3/4" />
+                    <div className="h-2 bg-gray-200 rounded animate-pulse w-1/2" />
                   </div>
                 </div>
+              ))}
+            </div>
+          ) : filteredAssets.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-gray-200 bg-white px-6 py-12 text-center text-sm text-gray-600">
+              No assets found. Try adjusting your filters.
+            </div>
+          ) : (
+            <div className={`grid gap-2 ${
+              viewMode === 'compact'
+                ? 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+                : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+            }`}>
+              {filteredAssets.map((asset) => (
+                <AssetCard
+                  key={asset.id}
+                  asset={asset}
+                  viewMode={viewMode}
+                  accessToken={accessToken}
+                  hoveredAssetId={hoveredAssetId}
+                  onMouseEnter={setHoveredAssetId}
+                  onMouseLeave={() => setHoveredAssetId(null)}
+                  onClick={setSelectedAsset}
+                  isAdmin={false}
+                  onDownload={async (asset) => {
+                    if (!accessToken) return;
+                    const cardDownloadKey = `card-${asset.id}`;
+                    setDownloadingFormats(prev => new Set(prev).add(cardDownloadKey));
+                    try {
+                      if (asset.current_version?.downloadPath) {
+                        const downloadUrl = ensureTokenUrl(asset.current_version.downloadPath, accessToken);
+                        const filename = asset.current_version.originalFileName || `${asset.title || 'asset'}.${asset.current_version.mime_type?.split('/')[1] || 'bin'}`;
+                        await triggerDownload(
+                          downloadUrl,
+                          filename,
+                          asset.id,
+                          'api',
+                          accessToken
+                        );
+                      }
+                    } finally {
+                      setDownloadingFormats(prev => {
+                        const next = new Set(prev);
+                        next.delete(cardDownloadKey);
+                        return next;
+                      });
+                    }
+                  }}
+                  downloadingFormats={downloadingFormats}
+                  assetSubtypes={assetSubtypes}
+                  renderAssetTypePill={renderAssetTypePill}
+                />
+              ))}
+            </div>
+          )}
+          
+          {/* Pagination */}
+          {pagination && pagination.total > 0 && (
+            <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+              <div className="text-sm text-gray-700">
+                Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{' '}
+                <span className="font-medium">
+                  {Math.min(pagination.page * pagination.limit, pagination.total)}
+                </span>{' '}
+                of <span className="font-medium">{pagination.total}</span> assets
               </div>
-            ))}
-          </div>
-        )}
-        
-        {/* Pagination Controls */}
-        {pagination && pagination.totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
-            <div className="text-sm text-gray-700">
-              Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{' '}
-              <span className="font-medium">
-                {Math.min(pagination.page * pagination.limit, pagination.total)}
-              </span>{' '}
-              of <span className="font-medium">{pagination.total}</span> assets
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newPage = currentPage - 1;
+                    setCurrentPage(newPage);
+                    fetchAssets(accessToken ?? '', searchTerm || undefined, newPage);
+                  }}
+                  disabled={!pagination.hasPreviousPage}
+                  className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-700">
+                  Page {pagination.page} of {pagination.totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newPage = currentPage + 1;
+                    setCurrentPage(newPage);
+                    fetchAssets(accessToken ?? '', searchTerm || undefined, newPage);
+                  }}
+                  disabled={!pagination.hasNextPage}
+                  className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const newPage = currentPage - 1;
-                  setCurrentPage(newPage);
-                  fetchAssets(accessToken ?? '', searchTerm || undefined, newPage);
-                }}
-                disabled={!pagination.hasPreviousPage}
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-700">
-                Page {pagination.page} of {pagination.totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  const newPage = currentPage + 1;
-                  setCurrentPage(newPage);
-                  fetchAssets(accessToken ?? '', searchTerm || undefined, newPage);
-                }}
-                disabled={!pagination.hasNextPage}
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-      </Card>
+          )}
+        </div>
+      </div>
 
       {/* Asset Detail Modal */}
       {selectedAsset && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setSelectedAsset(null);
-            }
-          }}
-        >
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-lg shadow-xl">
-            <button
-              type="button"
-              onClick={() => setSelectedAsset(null)}
-              className="absolute top-4 right-4 z-10 rounded-full bg-white/90 p-2 text-gray-600 hover:bg-white hover:text-gray-900 transition"
-            >
-              <XMarkIcon className="h-5 w-5" />
-            </button>
-
-            <div className="p-6">
-              <div className="mb-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-2xl font-bold text-gray-900">{selectedAsset.title}</h2>
-                  {renderAssetTypePill(selectedAsset.asset_type)}
-                </div>
-                {selectedAsset.description && (
-                  <p className="text-gray-600">{selectedAsset.description}</p>
-                )}
-              </div>
-
-              {/* Preview */}
-              <div className="mb-6">
-                {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id ? (
-                  <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
-                    <iframe
-                      src={`https://player.vimeo.com/video/${selectedAsset.vimeo_video_id}?byline=0&title=0&portrait=0`}
-                      allow="autoplay; fullscreen; picture-in-picture"
-                      allowFullScreen
-                      className="h-full w-full border-0"
-                      title={selectedAsset.title || 'Video'}
-                    />
-                  </div>
-                ) : selectedAsset.current_version?.previewPath && accessToken ? (
-                  <div className="flex items-center justify-center rounded-lg border border-gray-200 bg-gray-50 p-8">
-                    <img
-                      src={ensureTokenUrl(selectedAsset.current_version.previewPath, accessToken)}
-                      alt={selectedAsset.title}
-                      className="max-h-96 max-w-full object-contain"
-                    />
-                  </div>
-                ) : null}
-              </div>
-
-              {/* Downloads */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Downloads</h3>
-                {selectedAsset.asset_type === 'video' && selectedAsset.vimeo_video_id ? (
-                  <>
-                    {[
-                      { quality: '1080p', url: selectedAsset.vimeo_download_1080p || null },
-                      { quality: '720p', url: selectedAsset.vimeo_download_720p || null },
-                      { quality: '480p', url: selectedAsset.vimeo_download_480p || null },
-                      { quality: '360p', url: selectedAsset.vimeo_download_360p || null },
-                    ]
-                      .filter((item) => item.url && typeof item.url === 'string' && item.url.trim() !== '')
-                      .map((item) => (
-                        <button
-                          key={item.quality}
-                          type="button"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            const filename = `${selectedAsset.title || 'video'}-${item.quality}.mp4`;
-                            await triggerDownload(
-                              item.url!,
-                              filename,
-                              selectedAsset.id,
-                              `video-${item.quality}`,
-                              accessToken
-                            );
-                          }}
-                          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition mr-2 mb-2"
-                        >
-                          <ArrowDownTrayIcon className="h-4 w-4" />
-                          Download {item.quality}
-                        </button>
-                      ))}
-                    {(!selectedAsset.vimeo_download_1080p || (typeof selectedAsset.vimeo_download_1080p === 'string' && selectedAsset.vimeo_download_1080p.trim() === '')) && 
-                     (!selectedAsset.vimeo_download_720p || (typeof selectedAsset.vimeo_download_720p === 'string' && selectedAsset.vimeo_download_720p.trim() === '')) && 
-                     (!selectedAsset.vimeo_download_480p || (typeof selectedAsset.vimeo_download_480p === 'string' && selectedAsset.vimeo_download_480p.trim() === '')) && 
-                     (!selectedAsset.vimeo_download_360p || (typeof selectedAsset.vimeo_download_360p === 'string' && selectedAsset.vimeo_download_360p.trim() === '')) && (
-                      <p className="text-sm text-gray-500 italic">
-                        No download URLs available for this video.
-                      </p>
-                    )}
-                  </>
-                ) : selectedAsset.current_version?.downloadPath ? (
-                  <button
-                    type="button"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (!accessToken) return;
-                      const downloadUrl = ensureTokenUrl(selectedAsset.current_version!.downloadPath!, accessToken);
-                      const filename = `${selectedAsset.title || 'asset'}.${selectedAsset.current_version!.mime_type?.split('/')[1] || 'bin'}`;
-                      await triggerDownload(
-                        downloadUrl,
-                        filename,
-                        selectedAsset.id,
-                        'api',
-                        accessToken
-                      );
-                    }}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-                  >
-                    <ArrowDownTrayIcon className="h-4 w-4" />
-                    Download
-                  </button>
-                ) : (
-                  <p className="text-sm text-gray-500">No download available</p>
-                )}
-              </div>
-
-              {/* Metadata */}
-              <div className="border-t border-gray-200 pt-6">
-                <dl className="grid grid-cols-2 gap-4 text-sm">
-                  {selectedAsset.sku && (
-                    <>
-                      <dt className="font-medium text-gray-700">SKU</dt>
-                      <dd className="text-gray-900">{selectedAsset.sku}</dd>
-                    </>
-                  )}
-                  {selectedAsset.product_line && (
-                    <>
-                      <dt className="font-medium text-gray-700">Product Line</dt>
-                      <dd className="text-gray-900">{selectedAsset.product_line}</dd>
-                    </>
-                  )}
-                  {selectedAsset.locales.length > 0 && (
-                    <>
-                      <dt className="font-medium text-gray-700">Locales</dt>
-                      <dd className="text-gray-900">{selectedAsset.locales.map((l) => l.label).join(', ')}</dd>
-                    </>
-                  )}
-                  {selectedAsset.regions.length > 0 && (
-                    <>
-                      <dt className="font-medium text-gray-700">Regions</dt>
-                      <dd className="text-gray-900">{selectedAsset.regions.map((r) => r.label).join(', ')}</dd>
-                    </>
-                  )}
-                  {selectedAsset.tags.length > 0 && (
-                    <>
-                      <dt className="font-medium text-gray-700">Tags</dt>
-                      <dd className="text-gray-900">{selectedAsset.tags.join(', ')}</dd>
-                    </>
-                  )}
-                  {selectedAsset.current_version && (
-                    <>
-                      <dt className="font-medium text-gray-700">File Size</dt>
-                      <dd className="text-gray-900">{formatBytes(selectedAsset.current_version.file_size)}</dd>
-                      <dt className="font-medium text-gray-700">Type</dt>
-                      <dd className="text-gray-900">{selectedAsset.current_version.mime_type || 'Unknown'}</dd>
-                    </>
-                  )}
-                  <dt className="font-medium text-gray-700">Created</dt>
-                  <dd className="text-gray-900">{new Date(selectedAsset.created_at).toLocaleString()}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AssetDetailModal
+          asset={selectedAsset}
+          accessToken={accessToken}
+          onClose={() => setSelectedAsset(null)}
+          onDownload={handleDownload}
+          downloadingFormats={downloadingFormats}
+          isAdmin={false}
+          renderAssetTypePill={renderAssetTypePill}
+        />
       )}
     </div>
   );
 }
-
