@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 export default function SettingsPage() {
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+    <div className="mt-8 mb-4 space-y-6">
       <div>
         <h2 className="text-2xl font-semibold text-gray-900">Settings / Taxonomy</h2>
         <p className="text-sm text-gray-500 mt-1">Manage taxonomy settings for your Digital Asset Manager.</p>

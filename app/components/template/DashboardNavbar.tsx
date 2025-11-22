@@ -86,6 +86,18 @@ export function DashboardNavbar() {
       'notes': 'Notes',
       'company': 'Your Company',
       'admins': 'Admins',
+      'settings': 'Settings',
+      'dam': 'DAM',
+      'sync-users': 'Sync Users',
+      'template-preview': 'Template Preview',
+      'design': 'Design',
+      'campaigns': 'Campaigns',
+      // Settings sub-routes
+      'asset-types': 'Asset Types',
+      'asset-subtypes': 'Asset Sub-Types',
+      'locales': 'Locales',
+      'product-lines': 'Product Lines',
+      'tags': 'Tags',
     };
     
     // Special pages
@@ -95,6 +107,10 @@ export function DashboardNavbar() {
       'import': 'Import',
       'bulk-upload': 'Bulk Upload',
       'create': 'Create',
+      'packing-slip': 'Packing Slip',
+      'sli-preview': 'SLI Preview',
+      'preview': 'Preview',
+      'reorder': 'Reorder',
     };
     
     let currentPath = basePath;
@@ -112,40 +128,28 @@ export function DashboardNavbar() {
         });
         currentPath = routePath;
         i++;
-        
-        // Check next segment
-        if (i < segments.length) {
-          const nextSeg = segments[i];
-          
-          // If it's a special page like 'new'
-          if (specialPages[nextSeg]) {
-            breadcrumbs.push({
-              label: specialPages[nextSeg],
-            });
-            break;
-          }
-          
-          // If it's an ID (UUID or number)
-          if (nextSeg && (nextSeg.length === 36 || !isNaN(Number(nextSeg)))) {
-            i++; // Skip the ID
-            // Check if there's 'edit' after the ID
-            if (i < segments.length && segments[i] === 'edit') {
-              // Will add 'Edit' later, but we need the item name first
-              // The page will set it via dynamic breadcrumbs
-              i++;
-            }
-            // The ID segment is handled - dynamic breadcrumbs will provide the name
-            break;
-          }
-        }
+        // Continue processing - don't break here to allow nested routes like /admin/settings/asset-types
+        continue;
       } else if (specialPages[segment]) {
         // Direct special page (shouldn't happen normally, but handle it)
         breadcrumbs.push({
           label: specialPages[segment],
         });
         break;
+      } else if (segment && (segment.length === 36 || !isNaN(Number(segment)))) {
+        // It's an ID (UUID or number) - skip it
+        i++;
+        // Check if there's 'edit' after the ID
+        if (i < segments.length && segments[i] === 'edit') {
+          breadcrumbs.push({
+            label: specialPages['edit'],
+          });
+          i++;
+        }
+        // The ID segment is handled - dynamic breadcrumbs will provide the name
+        break;
       } else {
-        // Unknown segment - skip
+        // Unknown segment - skip (might be a dynamic route we don't recognize)
         i++;
       }
     }
