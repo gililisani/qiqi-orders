@@ -78,11 +78,14 @@ export default function SharedLayoutWrapper({
             <div className={`fixed inset-y-0 left-0 z-40 transition-transform duration-300 ${
               openSidenav ? "translate-x-0" : "-translate-x-full"
             }`}>
-              <Sidenav
-                routes={routes}
-                brandName={brandName}
-                brandImg={brandImg}
-              />
+              <div className="h-full w-full">
+                <Sidenav
+                  routes={routes}
+                  brandName={brandName}
+                  brandImg={brandImg}
+                  isMobile={true}
+                />
+              </div>
             </div>
             
             {/* Mobile overlay backdrop */}

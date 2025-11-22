@@ -29,6 +29,7 @@ interface SidenavProps {
   brandName?: string;
   routes?: Route[];
   onHoverChange?: (isHovering: boolean) => void;
+  isMobile?: boolean;
 }
 
 export default function Sidenav({
@@ -36,6 +37,7 @@ export default function Sidenav({
   brandName,
   routes = [],
   onHoverChange,
+  isMobile = false,
 }: SidenavProps) {
   const pathname = usePathname();
   const [controller, dispatch] = useMaterialTailwindController();
@@ -336,10 +338,14 @@ export default function Sidenav({
 
   return (
     <div 
-      className={`h-[calc(100%-1rem)] ml-4 mb-4 transition-all duration-300 ease-in-out ${
-        isCollapsed 
-          ? "w-16 max-w-[4rem]" 
-          : "w-full max-w-[18rem]"
+      className={`transition-all duration-300 ease-in-out ${
+        isMobile 
+          ? "h-full w-full" 
+          : `h-[calc(100%-1rem)] ml-4 mb-4 ${
+              isCollapsed 
+                ? "w-16 max-w-[4rem]" 
+                : "w-full max-w-[18rem]"
+            }`
       }`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
