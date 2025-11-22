@@ -331,7 +331,7 @@ export default function Sidenav({
 
   return (
     <div 
-      className="h-full transition-all duration-300 ease-in-out"
+      className="h-full pl-4 pb-4 transition-all duration-300 ease-in-out"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
