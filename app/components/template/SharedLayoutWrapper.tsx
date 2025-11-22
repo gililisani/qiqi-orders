@@ -5,7 +5,7 @@ import Sidenav from "./Sidenav";
 import DashboardNavbar from "./DashboardNavbar";
 import Configurator from "./Configurator";
 import { usePathname } from "next/navigation";
-import { useMaterialTailwindController } from "@/app/context";
+import { useMaterialTailwindController, setOpenSidenav } from "@/app/context";
 
 interface Route {
   name: string;
@@ -30,8 +30,8 @@ export default function SharedLayoutWrapper({
   brandName,
   brandImg = "/QIQI-Logo.svg",
 }: SharedLayoutWrapperProps) {
-  const [controller] = useMaterialTailwindController();
-  const { sidenavType, sidenavCollapsed } = controller;
+  const [controller, dispatch] = useMaterialTailwindController();
+  const { sidenavType, sidenavCollapsed, openSidenav } = controller;
   const pathname = usePathname();
 
   // Determine if this should show the full layout or not
@@ -39,23 +39,69 @@ export default function SharedLayoutWrapper({
   const isSimpleLayout = isAuthPages;
 
   return (
-    <div className="min-h-screen bg-blue-gray-50/50">
+    <div className="min-h-screen bg-blue-gray-50/50 grid grid-rows-[auto_1fr]">
+      {/* Row 1: Navbar */}
       {!isSimpleLayout && (
-        <Sidenav
-          routes={routes}
-          brandName={brandName}
-          brandImg={brandImg}
-        />
+        <>
+          <DashboardNavbar />
+          <Configurator />
+        </>
       )}
-      <div className={`${isSimpleLayout ? "m-0" : "p-4"} ${!isSimpleLayout && (sidenavCollapsed ? "xl:ml-24" : "xl:ml-80")} ${!isSimpleLayout ? "transition-all duration-300" : ""}`}>
-        {!isSimpleLayout && (
-          <>
-            <DashboardNavbar />
-            <Configurator />
-          </>
-        )}
-        {children}
-      </div>
+      
+      {/* Row 2: 2 Columns - Sidebar + Content */}
+      {!isSimpleLayout ? (
+        <div className="relative">
+          {/* Desktop: Grid layout with 2 columns */}
+          <div className={`hidden xl:grid transition-all duration-300 ${
+            sidenavCollapsed ? "grid-cols-[4rem_1fr]" : "grid-cols-[18rem_1fr]"
+          }`}>
+            {/* Left Column: Sidebar */}
+            <div>
+              <Sidenav
+                routes={routes}
+                brandName={brandName}
+                brandImg={brandImg}
+              />
+            </div>
+            
+            {/* Right Column: Content */}
+            <div className="p-4">
+              {children}
+            </div>
+          </div>
+          
+          {/* Mobile: Overlay sidebar */}
+          <div className="xl:hidden">
+            {/* Sidebar overlay */}
+            <div className={`fixed inset-y-0 left-0 z-40 transition-transform duration-300 ${
+              openSidenav ? "translate-x-0" : "-translate-x-full"
+            }`}>
+              <Sidenav
+                routes={routes}
+                brandName={brandName}
+                brandImg={brandImg}
+              />
+            </div>
+            
+            {/* Mobile overlay backdrop */}
+            {openSidenav && (
+              <div 
+                className="fixed inset-0 bg-black bg-opacity-50 z-30"
+                onClick={() => setOpenSidenav(dispatch, false)}
+              />
+            )}
+            
+            {/* Content */}
+            <div className="p-4">
+              {children}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="m-0">
+          {children}
+        </div>
+      )}
     </div>
   );
 }

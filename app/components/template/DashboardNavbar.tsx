@@ -26,12 +26,15 @@ import {
   Bars3Icon,
   HomeIcon,
   Bars3CenterLeftIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "@heroicons/react/24/solid";
 // @context
 import {
   useMaterialTailwindController,
   setOpenConfigurator,
   setOpenSidenav,
+  setSidenavCollapsed,
 } from "@/app/context";
 
 // Components
@@ -317,6 +320,35 @@ export function DashboardNavbar() {
     >
       <div className="!flex flex-col !justify-between gap-2 md:!flex-row md:items-center">
         <div className="capitalize flex items-center gap-2">
+          {/* Toggle Button - Desktop Only */}
+          <IconButton
+            variant="text"
+            color="blue-gray"
+            className="hidden xl:flex"
+            onClick={() => setSidenavCollapsed(dispatch, !sidenavCollapsed)}
+            placeholder={undefined}
+            onPointerEnterCapture={undefined}
+            onPointerLeaveCapture={undefined}
+          >
+            {sidenavCollapsed ? (
+              <ChevronRightIcon className="h-5 w-5 text-gray-900" />
+            ) : (
+              <ChevronLeftIcon className="h-5 w-5 text-gray-900" />
+            )}
+          </IconButton>
+          
+          {/* Logo */}
+          <Link 
+            href={pathname.startsWith("/client") ? "/client" : "/admin"}
+            className="flex items-center"
+          >
+            <img 
+              src="/QIQI-Logo.svg" 
+              alt="Qiqi Logo" 
+              className="h-8 w-auto"
+            />
+          </Link>
+          
           {parseBreadcrumbs.length > 0 && (
              <Breadcrumbs
                className={`bg-transparent !p-0 transition-all ${

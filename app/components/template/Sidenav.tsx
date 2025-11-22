@@ -346,9 +346,7 @@ export default function Sidenav({
 
   return (
     <div 
-      className={`fixed top-4 z-50 transition-all duration-300 ease-in-out ${
-        openSidenav ? "left-4" : "-left-72"
-      } xl:left-4`}
+      className="h-full transition-all duration-300 ease-in-out"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -363,7 +361,7 @@ export default function Sidenav({
         }
         shadow={sidenavType !== "transparent"}
         variant="gradient"
-        className={`h-[calc(100vh-2rem)] transition-all duration-300 ease-in-out ${
+        className={`h-full transition-all duration-300 ease-in-out ${
           isCollapsed ? "w-16 max-w-[4rem]" : "w-full max-w-[18rem]"
         } p-1.5 shadow-blue-gray-900/5 ${
           sidenavType === "transparent" ? "shadow-none" : "shadow-xl"
@@ -411,22 +409,6 @@ export default function Sidenav({
         {/* Menu Items */}
         {renderMenuItems(routes)}
       </Card>
-
-      {/* Toggle Collapse Button - Peeking out on right edge */}
-      <button
-        type="button"
-        onClick={() => setSidenavCollapsed(dispatch, !sidenavCollapsed)}
-        className={`absolute top-[20px] z-[60] hidden xl:flex items-center justify-center h-8 w-8 rounded-full bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all cursor-pointer shadow-sm ${
-          isCollapsed ? "right-[-12px]" : "right-[-12px]"
-        }`}
-        aria-label={sidenavCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        {sidenavCollapsed ? (
-          <ChevronRightIcon className="h-4 w-4 text-gray-600" />
-        ) : (
-          <ChevronLeftIcon className="h-4 w-4 text-gray-600" />
-        )}
-      </button>
     </div>
   );
 }
