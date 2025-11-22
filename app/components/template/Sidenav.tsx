@@ -345,69 +345,80 @@ export default function Sidenav({
   };
 
   return (
-    <Card
-      ref={sidenavRef}
-      color={
-        sidenavType === "dark"
-          ? "gray"
-          : sidenavType === "transparent"
-          ? "transparent"
-          : "white"
-      }
-      shadow={sidenavType !== "transparent"}
-      variant="gradient"
-      className={`!fixed top-4 !z-50 h-[calc(100vh-2rem)] transition-all duration-300 ease-in-out ${
-        isCollapsed ? "w-16 max-w-[4rem]" : "w-full max-w-[18rem]"
-      } p-1.5 shadow-blue-gray-900/5 ${
+    <div 
+      className={`fixed top-4 z-50 transition-all duration-300 ease-in-out ${
         openSidenav ? "left-4" : "-left-72"
-      } ${sidenavType === "transparent" ? "shadow-none" : "shadow-xl"} ${
-        sidenavType === "dark" ? "!text-white" : "text-gray-900"
-      } xl:left-4 overflow-y-auto overflow-x-visible`}
-      placeholder={undefined}
-      onPointerEnterCapture={undefined}
-      onPointerLeaveCapture={undefined}
+      } xl:left-4`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Logo */}
-      <Link
-        href={pathname.startsWith("/client") ? "/client" : "/admin"}
-        className="flex items-center justify-center h-20"
-      >
-        {isCollapsed ? (
-          <img 
-            src="/QIQI-Logo-cropped.svg" 
-            className={`h-9 w-auto ${sidenavType === "dark" ? "brightness-0 invert" : ""}`} 
-            alt="Qiqi logo" 
-          />
-        ) : (
-          <img 
-            src={brandImg} 
-            className={`h-12 w-auto ${sidenavType === "dark" ? "brightness-0 invert" : ""}`} 
-            alt="Qiqi logo" 
-          />
-        )}
-      </Link>
-
-      {/* Close button */}
-      <IconButton
-        ripple={false}
-        size="sm"
-        variant="text"
-        className="!absolute top-1 right-1 block xl:hidden"
-        onClick={() => setOpenSidenav(dispatch, false)}
+      <Card
+        ref={sidenavRef}
+        color={
+          sidenavType === "dark"
+            ? "gray"
+            : sidenavType === "transparent"
+            ? "transparent"
+            : "white"
+        }
+        shadow={sidenavType !== "transparent"}
+        variant="gradient"
+        className={`h-[calc(100vh-2rem)] transition-all duration-300 ease-in-out ${
+          isCollapsed ? "w-16 max-w-[4rem]" : "w-full max-w-[18rem]"
+        } p-1.5 shadow-blue-gray-900/5 ${
+          sidenavType === "transparent" ? "shadow-none" : "shadow-xl"
+        } ${
+          sidenavType === "dark" ? "!text-white" : "text-gray-900"
+        } overflow-y-auto`}
         placeholder={undefined}
         onPointerEnterCapture={undefined}
         onPointerLeaveCapture={undefined}
       >
-        <XMarkIcon className="w-5 h-5" />
-      </IconButton>
+        {/* Logo */}
+        <Link
+          href={pathname.startsWith("/client") ? "/client" : "/admin"}
+          className="flex items-center justify-center h-20"
+        >
+          {isCollapsed ? (
+            <img 
+              src="/QIQI-Logo-cropped.svg" 
+              className={`h-9 w-auto ${sidenavType === "dark" ? "brightness-0 invert" : ""}`} 
+              alt="Qiqi logo" 
+            />
+          ) : (
+            <img 
+              src={brandImg} 
+              className={`h-12 w-auto ${sidenavType === "dark" ? "brightness-0 invert" : ""}`} 
+              alt="Qiqi logo" 
+            />
+          )}
+        </Link>
+
+        {/* Close button */}
+        <IconButton
+          ripple={false}
+          size="sm"
+          variant="text"
+          className="!absolute top-1 right-1 block xl:hidden"
+          onClick={() => setOpenSidenav(dispatch, false)}
+          placeholder={undefined}
+          onPointerEnterCapture={undefined}
+          onPointerLeaveCapture={undefined}
+        >
+          <XMarkIcon className="w-5 h-5" />
+        </IconButton>
+
+        {/* Menu Items */}
+        {renderMenuItems(routes)}
+      </Card>
 
       {/* Toggle Collapse Button - Peeking out on right edge */}
       <button
         type="button"
         onClick={() => setSidenavCollapsed(dispatch, !sidenavCollapsed)}
-        className="absolute right-[-12px] top-[20px] z-[60] hidden xl:flex items-center justify-center h-8 w-8 rounded-full bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all cursor-pointer shadow-sm"
+        className={`absolute top-[20px] z-[60] hidden xl:flex items-center justify-center h-8 w-8 rounded-full bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all cursor-pointer shadow-sm ${
+          isCollapsed ? "right-[-12px]" : "right-[-12px]"
+        }`}
         aria-label={sidenavCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         {sidenavCollapsed ? (
@@ -416,9 +427,6 @@ export default function Sidenav({
           <ChevronLeftIcon className="h-4 w-4 text-gray-600" />
         )}
       </button>
-
-      {/* Menu Items */}
-      {renderMenuItems(routes)}
-    </Card>
+    </div>
   );
 }
