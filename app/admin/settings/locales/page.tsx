@@ -195,14 +195,14 @@ export default function LocalesPage() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="mt-8 mb-4 space-y-6">
         <p className="text-gray-500">Loading locales...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+    <div className="mt-8 mb-4 space-y-6">
       <div className="flex justify-between items-start">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900">Locales Settings</h2>
