@@ -331,7 +331,9 @@ export default function Sidenav({
 
   return (
     <div 
-      className="h-full transition-all duration-300 ease-in-out"
+      className="h-full ml-4 mb-4 transition-all duration-300 ease-in-out"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <Card
         ref={sidenavRef}
@@ -344,9 +346,7 @@ export default function Sidenav({
         }
         shadow={false}
         variant="gradient"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        className={`h-full ml-4 mb-4 transition-all duration-300 ease-in-out ${
+        className={`h-full transition-all duration-300 ease-in-out ${
           isCollapsed ? "w-16 max-w-[4rem]" : "w-full max-w-[18rem]"
         } p-1.5 border border-gray-200 ${
           sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
