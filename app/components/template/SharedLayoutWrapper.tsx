@@ -40,7 +40,7 @@ export default function SharedLayoutWrapper({
   const isSimpleLayout = isAuthPages;
 
   return (
-    <div className="min-h-screen bg-blue-gray-50/50 grid grid-rows-[auto_1fr]">
+    <div className="min-h-screen bg-blue-gray-50/50 grid grid-rows-[auto_1fr] w-full overflow-x-hidden">
       {/* Row 1: Navbar */}
       {!isSimpleLayout && (
         <>
@@ -73,7 +73,7 @@ export default function SharedLayoutWrapper({
           </div>
           
           {/* Mobile: Overlay sidebar */}
-          <div className="xl:hidden h-full">
+          <div className="xl:hidden h-full w-full overflow-x-hidden">
             {/* Sidebar overlay */}
             <div className={`fixed inset-y-0 left-0 z-40 transition-transform duration-300 ${
               openSidenav ? "translate-x-0" : "-translate-x-full"
@@ -94,7 +94,7 @@ export default function SharedLayoutWrapper({
             )}
             
             {/* Content */}
-            <div className="p-4">
+            <div className="p-4 w-full max-w-full overflow-x-hidden">
               {children}
             </div>
           </div>
