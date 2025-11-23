@@ -138,20 +138,24 @@ export default function CompanyViewPage() {
 
         // Calculate current_progress dynamically for each target period
         const { calculateTargetPeriodProgress } = await import('../../../../lib/targetPeriods');
+        console.log('Calculating progress for', targetPeriodsData?.length || 0, 'target periods');
         const targetPeriodsWithProgress = await Promise.all(
           (targetPeriodsData || []).map(async (period) => {
+            console.log(`Calculating progress for period ${period.period_name} (${period.start_date} to ${period.end_date})`);
             const progress = await calculateTargetPeriodProgress(
               supabase,
               companyId,
               period.start_date,
               period.end_date
             );
+            console.log(`Progress calculated for ${period.period_name}:`, progress);
             return {
               ...period,
               current_progress: progress
             };
           })
         );
+        console.log('Final target periods with progress:', targetPeriodsWithProgress);
 
         // Combine all data
         const combinedData = {
