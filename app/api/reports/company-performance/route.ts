@@ -175,8 +175,9 @@ export async function GET(request: NextRequest) {
         stats.order_count > 0 ? stats.total_sales / stats.order_count : 0;
 
       // Get top 5 products by revenue
-      const topProducts = Array.from(stats.products.values())
-        .sort((a: { sku: string; name: string; quantity: number; revenue: number }, b: { sku: string; name: string; quantity: number; revenue: number }) => b.revenue - a.revenue)
+      type ProductStats = { sku: string; name: string; quantity: number; revenue: number };
+      const topProducts = Array.from(stats.products.values() as Iterable<ProductStats>)
+        .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 5)
         .map((p) => ({
           sku: p.sku,
