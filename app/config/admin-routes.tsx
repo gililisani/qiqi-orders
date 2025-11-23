@@ -8,6 +8,7 @@ import {
   CurrencyDollarIcon,
   MapPinIcon,
   Cog6ToothIcon,
+  ChartBarIcon,
 } from "@heroicons/react/24/solid";
 
 const text = {
@@ -68,6 +69,32 @@ export const adminRoutes = [
         icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>D</Typography>,
         name: "Digital Assets",
         path: "/admin/dam",
+      },
+    ],
+  },
+  {
+    name: "reports",
+    icon: <ChartBarIcon {...icon} />,
+    pages: [
+      {
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>G</Typography>,
+        name: "Company Goals",
+        path: "/admin/reports/company-goals",
+      },
+      {
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>S</Typography>,
+        name: "Sales",
+        path: "/admin/reports/sales",
+      },
+      {
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>P</Typography>,
+        name: "Company Performance",
+        path: "/admin/reports/company-performance",
+      },
+      {
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>P</Typography>,
+        name: "Product Sales",
+        path: "/admin/reports/product-sales",
       },
     ],
   },
