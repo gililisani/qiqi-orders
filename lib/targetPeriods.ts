@@ -11,6 +11,8 @@ export async function calculateTargetPeriodProgress(
   periodEndDate: string
 ): Promise<number> {
   try {
+    console.log(`[calculateTargetPeriodProgress] Starting calculation for company ${companyId}, period ${periodStartDate} to ${periodEndDate}`);
+    
     // Get all orders for this company that are currently Done
     const { data: doneOrders, error: ordersError } = await supabase
       .from('orders')
@@ -18,55 +20,52 @@ export async function calculateTargetPeriodProgress(
       .eq('company_id', companyId)
       .eq('status', 'Done');
 
+    let orderProgress = 0;
+
     if (ordersError) {
       console.error('Error fetching done orders:', ordersError);
-      return 0;
-    }
+      // Continue to historical sales even if orders query fails
+    } else if (doneOrders && doneOrders.length > 0) {
+      // Get order IDs
+      const orderIds = doneOrders.map(order => order.id);
 
-    if (!doneOrders || doneOrders.length === 0) {
-      return 0;
-    }
+      // Find when each order was marked Done from order_history
+      // We need to get the earliest Done date for each order
+      // Query all Done entries, then group by order_id to get earliest
+      const { data: doneHistoryEntries, error: historyError } = await supabase
+        .from('order_history')
+        .select('order_id, created_at')
+        .in('order_id', orderIds)
+        .eq('status_to', 'Done')
+        .order('created_at', { ascending: true });
 
-    // Get order IDs
-    const orderIds = doneOrders.map(order => order.id);
-
-    // Find when each order was marked Done from order_history
-    // We need to get the earliest Done date for each order
-    // Query all Done entries, then group by order_id to get earliest
-    const { data: doneHistoryEntries, error: historyError } = await supabase
-      .from('order_history')
-      .select('order_id, created_at')
-      .in('order_id', orderIds)
-      .eq('status_to', 'Done')
-      .order('created_at', { ascending: true });
-
-    if (historyError) {
-      console.error('Error fetching order history:', historyError);
-      return 0;
-    }
-
-    // Create a map of order_id -> done_date (earliest Done date)
-    // Only store the first (earliest) Done date for each order
-    const orderDoneDates = new Map<string, Date>();
-    if (doneHistoryEntries) {
-      for (const entry of doneHistoryEntries) {
-        if (!orderDoneDates.has(entry.order_id)) {
-          orderDoneDates.set(entry.order_id, new Date(entry.created_at));
+      if (historyError) {
+        console.error('Error fetching order history:', historyError);
+        // Continue to historical sales even if history query fails
+      } else {
+        // Create a map of order_id -> done_date (earliest Done date)
+        // Only store the first (earliest) Done date for each order
+        const orderDoneDates = new Map<string, Date>();
+        if (doneHistoryEntries) {
+          for (const entry of doneHistoryEntries) {
+            if (!orderDoneDates.has(entry.order_id)) {
+              orderDoneDates.set(entry.order_id, new Date(entry.created_at));
+            }
+          }
         }
-      }
-    }
 
-    // Filter orders that were marked Done within the target period date range
-    const periodStart = new Date(periodStartDate);
-    const periodEnd = new Date(periodEndDate);
-    // Set end date to end of day
-    periodEnd.setHours(23, 59, 59, 999);
+        // Filter orders that were marked Done within the target period date range
+        const periodStart = new Date(periodStartDate);
+        const periodEnd = new Date(periodEndDate);
+        // Set end date to end of day
+        periodEnd.setHours(23, 59, 59, 999);
 
-    let orderProgress = 0;
-    for (const order of doneOrders) {
-      const doneDate = orderDoneDates.get(order.id);
-      if (doneDate && doneDate >= periodStart && doneDate <= periodEnd) {
-        orderProgress += order.total_value || 0;
+        for (const order of doneOrders) {
+          const doneDate = orderDoneDates.get(order.id);
+          if (doneDate && doneDate >= periodStart && doneDate <= periodEnd) {
+            orderProgress += order.total_value || 0;
+          }
+        }
       }
     }
 
