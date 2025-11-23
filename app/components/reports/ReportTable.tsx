@@ -6,7 +6,7 @@ import Card from '../ui/Card';
 export interface ColumnDef {
   key: string;
   label: string;
-  format?: (value: any) => string | React.ReactNode;
+  format?: (value: any, row?: any) => string | React.ReactNode;
   sortable?: boolean;
   className?: string;
 }
@@ -82,7 +82,7 @@ export function ReportTable({
                 {columns.map((column) => {
                   const value = row[column.key];
                   const displayValue = column.format
-                    ? column.format(value)
+                    ? column.format(value, row)
                     : value ?? '';
 
                   return (

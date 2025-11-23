@@ -9,7 +9,7 @@ import * as XLSX from 'xlsx';
 export interface ColumnDef {
   key: string;
   label: string;
-  format?: (value: any) => string;
+  format?: (value: any, row?: any) => string;
 }
 
 /**
@@ -26,7 +26,7 @@ export function exportToExcel(
       const transformedRow: any = {};
       columns.forEach((col) => {
         const value = row[col.key];
-        transformedRow[col.label] = col.format ? col.format(value) : value ?? '';
+        transformedRow[col.label] = col.format ? col.format(value, row) : value ?? '';
       });
       return transformedRow;
     });
@@ -90,7 +90,7 @@ export function exportToCSV(
       return columns
         .map((col) => {
           const value = row[col.key];
-          const formattedValue = col.format ? col.format(value) : value ?? '';
+          const formattedValue = col.format ? col.format(value, row) : value ?? '';
           // Escape commas and quotes in CSV
           const stringValue = String(formattedValue);
           if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
