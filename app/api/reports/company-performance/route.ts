@@ -119,16 +119,19 @@ export async function GET(request: NextRequest) {
 
     // Initialize company stats
     companies.forEach((company) => {
+      const subsidiary = Array.isArray(company.subsidiary)
+        ? company.subsidiary[0]?.name
+        : (company.subsidiary as any)?.name;
+      const classData = Array.isArray(company.class)
+        ? company.class[0]?.name
+        : (company.class as any)?.name;
+      
       companyStats.set(company.id, {
         company_id: company.id,
         company_name: company.company_name,
         netsuite_number: company.netsuite_number,
-        subsidiary: Array.isArray(company.subsidiary)
-          ? company.subsidiary[0]?.name
-          : company.subsidiary?.name,
-        class: Array.isArray(company.class)
-          ? company.class[0]?.name
-          : company.class?.name,
+        subsidiary: subsidiary || 'N/A',
+        class: classData || 'N/A',
         total_sales: 0,
         order_count: 0,
         support_fund_used: 0,
