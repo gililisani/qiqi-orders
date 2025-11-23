@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { supabase } from '../../../../lib/supabaseClient';
 import { ReportFilters, FilterConfig } from '../../../components/reports/ReportFilters';
 import { ReportTable, ColumnDef } from '../../../components/reports/ReportTable';
-import { ExportButton, ColumnDef as ExportColumnDef } from '../../../components/reports/ExportButton';
+import { ExportButton } from '../../../components/reports/ExportButton';
+import { ColumnDef as ExportColumnDef } from '../../../../lib/reportExport';
 import OrderStatusBadge from '../../../components/ui/OrderStatusBadge';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 
