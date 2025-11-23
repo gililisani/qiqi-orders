@@ -46,6 +46,7 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
                   onChange={(e) => handleDateChange(filter.key, e.target.value)}
                   disabled={loading}
                   placeholder={filter.placeholder}
+                  crossOrigin={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
                 />
@@ -64,6 +65,7 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
                     onChange={(e) => handleDateChange(`${filter.key}_start`, e.target.value)}
                     disabled={loading}
                     placeholder={filter.placeholder}
+                    crossOrigin={undefined}
                     onPointerEnterCapture={undefined}
                     onPointerLeaveCapture={undefined}
                   />
@@ -76,6 +78,7 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
                     onChange={(e) => handleDateChange(`${filter.key}_end`, e.target.value)}
                     disabled={loading}
                     placeholder={filter.placeholder}
+                    crossOrigin={undefined}
                     onPointerEnterCapture={undefined}
                     onPointerLeaveCapture={undefined}
                   />
