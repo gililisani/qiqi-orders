@@ -85,8 +85,6 @@ export default function CompanyViewPage() {
 
     const fetchCompany = async () => {
       try {
-        console.log('Fetching company with ID:', companyId);
-        
         // Fetch company data
         const { data: companyData, error: companyError } = await supabase
           .from('companies')
@@ -138,24 +136,20 @@ export default function CompanyViewPage() {
 
         // Calculate current_progress dynamically for each target period
         const { calculateTargetPeriodProgress } = await import('../../../../lib/targetPeriods');
-        console.log('Calculating progress for', targetPeriodsData?.length || 0, 'target periods');
         const targetPeriodsWithProgress = await Promise.all(
           (targetPeriodsData || []).map(async (period) => {
-            console.log(`Calculating progress for period ${period.period_name} (${period.start_date} to ${period.end_date})`);
             const progress = await calculateTargetPeriodProgress(
               supabase,
               companyId,
               period.start_date,
               period.end_date
             );
-            console.log(`Progress calculated for ${period.period_name}:`, progress);
             return {
               ...period,
               current_progress: progress
             };
           })
         );
-        console.log('Final target periods with progress:', targetPeriodsWithProgress);
 
         // Combine all data
         const combinedData = {
@@ -166,7 +160,6 @@ export default function CompanyViewPage() {
 
         if (!isMounted) return;
 
-        console.log('Company query result:', { data: combinedData });
         setCompany(combinedData);
       } catch (err: any) {
         if (!isMounted) return;
@@ -177,7 +170,6 @@ export default function CompanyViewPage() {
 
     const fetchUsers = async () => {
       try {
-        console.log('Fetching clients for company:', companyId);
         const { data, error } = await supabase
           .from('clients')
           .select('*')
@@ -185,8 +177,6 @@ export default function CompanyViewPage() {
           .order('name', { ascending: true });
 
         if (!isMounted) return;
-
-        console.log('Clients query result:', { data, error });
 
         if (error) {
           console.error('Error fetching clients:', error);
@@ -512,13 +502,47 @@ export default function CompanyViewPage() {
                     ? Math.round((period.current_progress / period.target_amount) * 100)
                     : 0;
                   
+                  // Format dates
+                  const formatDate = (dateString: string) => {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    });
+                  };
+
+                  // Check if period is ended or calculate days remaining
+                  const endDate = new Date(period.end_date);
+                  endDate.setHours(23, 59, 59, 999);
+                  const now = new Date();
+                  const isEnded = now > endDate;
+                  
+                  const startDate = new Date(period.start_date);
+                  const daysRemaining = isEnded 
+                    ? 0 
+                    : Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                  const hasStarted = now >= startDate;
+                  
                   return (
                     <div key={period.id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <h3 className="font-medium text-gray-900">{period.period_name}</h3>
-                          <p className="text-sm text-gray-600">
-                            {period.start_date} - {period.end_date}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-gray-900">{period.period_name}</h3>
+                            {isEnded && (
+                              <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded">
+                                Ended
+                              </span>
+                            )}
+                            {!isEnded && hasStarted && (
+                              <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                                {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} to complete
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {formatDate(period.start_date)} - {formatDate(period.end_date)}
                           </p>
                         </div>
                         <div className="text-right">

@@ -11,8 +11,6 @@ export async function calculateTargetPeriodProgress(
   periodEndDate: string
 ): Promise<number> {
   try {
-    console.log(`[calculateTargetPeriodProgress] Starting calculation for company ${companyId}, period ${periodStartDate} to ${periodEndDate}`);
-    
     // Get all orders for this company that are currently Done
     const { data: doneOrders, error: ordersError } = await supabase
       .from('orders')
@@ -79,22 +77,14 @@ export async function calculateTargetPeriodProgress(
 
     if (historicalError) {
       console.error('Error fetching historical sales:', historicalError);
-      console.error('Query params:', { companyId, periodStartDate, periodEndDate });
       // Return order progress even if historical sales query fails
       return orderProgress;
     }
-
-    console.log(`Historical sales query for company ${companyId}, period ${periodStartDate} to ${periodEndDate}:`, {
-      found: historicalSales?.length || 0,
-      sales: historicalSales
-    });
 
     // Sum historical sales amounts
     const historicalProgress = (historicalSales || []).reduce((sum, sale) => {
       return sum + (parseFloat(sale.amount.toString()) || 0);
     }, 0);
-
-    console.log(`Progress calculation: orderProgress=${orderProgress}, historicalProgress=${historicalProgress}, total=${orderProgress + historicalProgress}`);
 
     // Return combined progress: orders + historical sales
     return orderProgress + historicalProgress;

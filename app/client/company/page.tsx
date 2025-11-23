@@ -404,36 +404,72 @@ export default function YourCompanyPage() {
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-500 mb-3">Annual Targets</label>
                   <div className="space-y-3">
-                    {targetPeriods.map((period) => (
-                      <div key={period.id} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{period.period_name}</p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {new Date(period.start_date).toLocaleDateString()} - {new Date(period.end_date).toLocaleDateString()}
-                            </p>
+                    {targetPeriods.map((period) => {
+                      // Format dates
+                      const formatDate = (dateString: string) => {
+                        const date = new Date(dateString);
+                        return date.toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        });
+                      };
+
+                      // Check if period is ended or calculate days remaining
+                      const endDate = new Date(period.end_date);
+                      endDate.setHours(23, 59, 59, 999);
+                      const now = new Date();
+                      const isEnded = now > endDate;
+                      
+                      const startDate = new Date(period.start_date);
+                      const daysRemaining = isEnded 
+                        ? 0 
+                        : Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                      const hasStarted = now >= startDate;
+
+                      return (
+                        <div key={period.id} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-gray-900">{period.period_name}</p>
+                                {isEnded && (
+                                  <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded">
+                                    Ended
+                                  </span>
+                                )}
+                                {!isEnded && hasStarted && (
+                                  <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                                    {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} to complete
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {formatDate(period.start_date)} - {formatDate(period.end_date)}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-semibold text-gray-900">
+                                {formatCurrency(period.target_amount)}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Progress: {formatCurrency(period.current_progress || 0)}
+                              </p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm font-semibold text-gray-900">
-                              {formatCurrency(period.target_amount)}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              Progress: {formatCurrency(period.current_progress || 0)}
-                            </p>
-                          </div>
+                          {period.target_amount > 0 && (
+                            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                              <div
+                                className="bg-blue-600 h-2 rounded-full"
+                                style={{
+                                  width: `${Math.min(100, ((period.current_progress || 0) / period.target_amount) * 100)}%`,
+                                }}
+                              ></div>
+                            </div>
+                          )}
                         </div>
-                        {period.target_amount > 0 && (
-                          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                            <div
-                              className="bg-blue-600 h-2 rounded-full"
-                              style={{
-                                width: `${Math.min(100, ((period.current_progress || 0) / period.target_amount) * 100)}%`,
-                              }}
-                            ></div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
