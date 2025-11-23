@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
 
       // Get top 5 products by revenue
       const topProducts = Array.from(stats.products.values())
-        .sort((a, b) => b.revenue - a.revenue)
+        .sort((a: { sku: string; name: string; quantity: number; revenue: number }, b: { sku: string; name: string; quantity: number; revenue: number }) => b.revenue - a.revenue)
         .slice(0, 5)
         .map((p) => ({
           sku: p.sku,
