@@ -35,7 +35,7 @@ export default function HistoricalSalesImportPage() {
   const [companies, setCompanies] = useState<Map<string, string>>(new Map()); // company_name -> id
 
   // Fetch all companies for name matching
-  const fetchCompanies = async () => {
+  const fetchCompanies = async (): Promise<Map<string, string> | null> => {
     try {
       const { data, error } = await supabase
         .from('companies')
@@ -45,11 +45,15 @@ export default function HistoricalSalesImportPage() {
 
       const companyMap = new Map<string, string>();
       data?.forEach((company) => {
-        companyMap.set(company.company_name.toLowerCase().trim(), company.id);
+        // Store normalized company name (lowercase + trimmed) -> id
+        const normalizedName = company.company_name.toLowerCase().trim();
+        companyMap.set(normalizedName, company.id);
       });
       setCompanies(companyMap);
+      return companyMap;
     } catch (error) {
       console.error('Error fetching companies:', error);
+      return null;
     }
   };
 
@@ -59,15 +63,17 @@ export default function HistoricalSalesImportPage() {
       setFile(selectedFile);
       setResult(null);
       
-      // Fetch companies first
-      await fetchCompanies();
+      // Fetch companies first and get the map directly
+      const companyMap = await fetchCompanies();
       
-      // Parse Excel file
-      parseExcelFile(selectedFile);
+      // Parse Excel file with the company map
+      if (companyMap) {
+        parseExcelFile(selectedFile, companyMap);
+      }
     }
   };
 
-  const parseExcelFile = async (file: File) => {
+  const parseExcelFile = async (file: File, companyMap: Map<string, string>) => {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
@@ -133,8 +139,9 @@ export default function HistoricalSalesImportPage() {
         const errors: string[] = [];
         const sales: Array<{ date: string; amount: number }> = [];
 
-        // Check if company exists
-        const companyId = companies.get(companyName.toLowerCase());
+        // Check if company exists - normalize the name (lowercase + trim) for lookup
+        const normalizedCompanyName = companyName.toLowerCase().trim();
+        const companyId = companyMap.get(normalizedCompanyName);
         if (!companyId) {
           errors.push(`Company "${companyName}" not found in system`);
         }
@@ -212,8 +219,16 @@ export default function HistoricalSalesImportPage() {
         created_by: string | null;
       }> = [];
 
+      // Re-fetch companies to ensure we have the latest data
+      const companyMap = await fetchCompanies();
+      if (!companyMap) {
+        throw new Error('Failed to fetch companies');
+      }
+
       for (const row of parsedData) {
-        const companyId = companies.get(row.companyName.toLowerCase());
+        // Normalize company name for lookup (lowercase + trim)
+        const normalizedCompanyName = row.companyName.toLowerCase().trim();
+        const companyId = companyMap.get(normalizedCompanyName);
         if (!companyId) {
           failedCount++;
           errors.push(`Company "${row.companyName}" not found`);
