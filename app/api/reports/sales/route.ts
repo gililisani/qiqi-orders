@@ -139,6 +139,18 @@ export async function GET(request: NextRequest) {
         ? order.order_items.length 
         : (order.order_items as any)?.length || 0;
 
+      const subsidiary = company?.subsidiary
+        ? Array.isArray(company.subsidiary)
+          ? company.subsidiary[0]?.name
+          : (company.subsidiary as any)?.name
+        : null;
+      
+      const classData = company?.class
+        ? Array.isArray(company.class)
+          ? company.class[0]?.name
+          : (company.class as any)?.name
+        : null;
+
       return {
         id: order.id,
         order_number: order.po_number || order.so_number || order.id.substring(0, 8),
@@ -148,8 +160,8 @@ export async function GET(request: NextRequest) {
         status: order.status,
         total_value: order.total_value || 0,
         items_count: itemsCount,
-        subsidiary: company?.subsidiary?.name || 'N/A',
-        class: company?.class?.name || 'N/A',
+        subsidiary: subsidiary || 'N/A',
+        class: classData || 'N/A',
         support_fund_used: order.support_fund_used || 0,
         credit_earned: order.credit_earned || 0,
       };
