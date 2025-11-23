@@ -62,15 +62,35 @@ export async function calculateTargetPeriodProgress(
     // Set end date to end of day
     periodEnd.setHours(23, 59, 59, 999);
 
-    let totalProgress = 0;
+    let orderProgress = 0;
     for (const order of doneOrders) {
       const doneDate = orderDoneDates.get(order.id);
       if (doneDate && doneDate >= periodStart && doneDate <= periodEnd) {
-        totalProgress += order.total_value || 0;
+        orderProgress += order.total_value || 0;
       }
     }
 
-    return totalProgress;
+    // Get historical sales for this company within the target period date range
+    const { data: historicalSales, error: historicalError } = await supabase
+      .from('historical_sales')
+      .select('amount, sale_date')
+      .eq('company_id', companyId)
+      .gte('sale_date', periodStartDate)
+      .lte('sale_date', periodEndDate);
+
+    if (historicalError) {
+      console.error('Error fetching historical sales:', historicalError);
+      // Return order progress even if historical sales query fails
+      return orderProgress;
+    }
+
+    // Sum historical sales amounts
+    const historicalProgress = (historicalSales || []).reduce((sum, sale) => {
+      return sum + (parseFloat(sale.amount.toString()) || 0);
+    }, 0);
+
+    // Return combined progress: orders + historical sales
+    return orderProgress + historicalProgress;
   } catch (error) {
     console.error('Error calculating target period progress:', error);
     return 0;

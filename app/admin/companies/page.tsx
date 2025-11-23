@@ -130,6 +130,12 @@ export default function CompaniesPage() {
               Import CSV
             </Link>
             <Link
+              href="/admin/companies/historical-sales-import"
+              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition"
+            >
+              Import Historical Sales
+            </Link>
+            <Link
               href="/admin/companies/new"
               className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
             >

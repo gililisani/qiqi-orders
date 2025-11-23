@@ -297,6 +297,7 @@ export default function CompanyViewPage() {
         <h2 className="text-2xl font-semibold text-gray-900">{company.company_name}</h2>
         <div className="flex gap-2">
           <Link href={`/admin/companies/${company.id}/notes`} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">Notes</Link>
+          <Link href={`/admin/companies/${company.id}/historical-sales`} className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition">Historical Sales</Link>
           <Link href={`/admin/companies/${company.id}/edit`} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Edit Company</Link>
           <Link href="/admin/companies" className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition">Back</Link>
         </div>
