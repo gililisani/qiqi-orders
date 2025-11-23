@@ -160,7 +160,8 @@ export default function HistoricalSalesImportPage() {
             }
           }
 
-          if (amount > 0) {
+          // Allow both positive (sales) and negative (credits/refunds) amounts
+          if (amount !== 0) {
             sales.push({
               date: dateHeaders[colIndex],
               amount: amount,
@@ -338,7 +339,7 @@ export default function HistoricalSalesImportPage() {
               <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
                 <li>Column A: Company names (must match existing companies)</li>
                 <li>Column B onward: Date headers (MM/DD/YYYY format, e.g., 01/01/2023 for January 2023)</li>
-                <li>Cell values: Dollar amounts (e.g., $30,000.00 or 30000)</li>
+                <li>Cell values: Dollar amounts (e.g., $30,000.00 or 30000). Use negative amounts for credits/refunds (e.g., -5000)</li>
               </ul>
             </div>
 

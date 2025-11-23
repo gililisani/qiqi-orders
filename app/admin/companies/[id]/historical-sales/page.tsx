@@ -135,8 +135,8 @@ export default function CompanyHistoricalSalesPage() {
     }
 
     const amount = parseFloat(formData.amount);
-    if (isNaN(amount) || amount <= 0) {
-      alert('Amount must be a positive number');
+    if (isNaN(amount)) {
+      alert('Amount must be a valid number');
       return;
     }
 
@@ -323,12 +323,21 @@ export default function CompanyHistoricalSalesPage() {
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   required
                   step="0.01"
-                  min="0"
                   placeholder={undefined}
                   onPointerEnterCapture={undefined}
                   onPointerLeaveCapture={undefined}
                   crossOrigin={undefined}
                 />
+                <Typography
+                  variant="small"
+                  color="gray"
+                  className="mt-1"
+                  placeholder={undefined}
+                  onPointerEnterCapture={undefined}
+                  onPointerLeaveCapture={undefined}
+                >
+                  Enter positive amount for sales or negative amount for credits/refunds
+                </Typography>
               </div>
               <div className="flex gap-2">
                 <Button
