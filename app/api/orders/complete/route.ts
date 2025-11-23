@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { recalculateCompanyTargetPeriods } from '../../../../lib/targetPeriods';
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,6 +73,14 @@ export async function POST(request: NextRequest) {
 
     if (historyError) {
       console.error('Error adding to order history:', historyError);
+    }
+
+    // Recalculate target periods for this company
+    try {
+      await recalculateCompanyTargetPeriods(supabase, order.company_id);
+    } catch (recalcError) {
+      // Log but don't fail the request if recalculation fails
+      console.error('Error recalculating target periods:', recalcError);
     }
 
     // Send completion notification

@@ -146,7 +146,25 @@ export default function YourCompanyPage() {
       .order('start_date', { ascending: true });
 
     if (error) throw error;
-    setTargetPeriods(data || []);
+
+    // Calculate current_progress dynamically for each target period
+    const { calculateTargetPeriodProgress } = await import('../../../lib/targetPeriods');
+    const targetPeriodsWithProgress = await Promise.all(
+      (data || []).map(async (period) => {
+        const progress = await calculateTargetPeriodProgress(
+          supabase,
+          companyId,
+          period.start_date,
+          period.end_date
+        );
+        return {
+          ...period,
+          current_progress: progress
+        };
+      })
+    );
+
+    setTargetPeriods(targetPeriodsWithProgress);
   };
 
   const fetchUsers = async (companyId: string) => {

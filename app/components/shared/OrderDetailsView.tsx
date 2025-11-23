@@ -597,6 +597,22 @@ export default function OrderDetailsView({
           `Status changed from ${oldStatus} to ${order.status}`
         );
         
+        // Recalculate target periods if status changed to/from Done
+        const statusChangedToDone = order.status === 'Done' && oldStatus !== 'Done';
+        const statusChangedFromDone = oldStatus === 'Done' && order.status !== 'Done';
+        if ((statusChangedToDone || statusChangedFromDone) && order.company_id) {
+          try {
+            await fetch('/api/target-periods/recalculate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ companyId: order.company_id }),
+            });
+          } catch (recalcError) {
+            // Log but don't throw - recalculation failure shouldn't block status change
+            console.error('Failed to recalculate target periods:', recalcError);
+          }
+        }
+        
         // Send automatic email notification for specific status changes
         try {
           let emailType = null;
