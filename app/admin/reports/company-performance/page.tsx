@@ -7,9 +7,12 @@ import { ReportFilters, FilterConfig } from '../../../components/reports/ReportF
 import { ReportTable, ColumnDef } from '../../../components/reports/ReportTable';
 import { ExportButton } from '../../../components/reports/ExportButton';
 import { ColumnDef as ExportColumnDef } from '../../../../lib/reportExport';
-import { BarChart } from '../../../components/reports/charts/BarChart';
-import { LineChart } from '../../../components/reports/charts/LineChart';
-import { PieChart } from '../../../components/reports/charts/PieChart';
+import dynamic from 'next/dynamic';
+
+// Dynamically import charts with SSR disabled (ApexCharts requires window)
+const BarChart = dynamic(() => import('../../../components/reports/charts/BarChart').then(mod => ({ default: mod.BarChart })), { ssr: false });
+const LineChart = dynamic(() => import('../../../components/reports/charts/LineChart').then(mod => ({ default: mod.LineChart })), { ssr: false });
+const PieChart = dynamic(() => import('../../../components/reports/charts/PieChart').then(mod => ({ default: mod.PieChart })), { ssr: false });
 import Card from '../../../components/ui/Card';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 
