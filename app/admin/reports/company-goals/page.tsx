@@ -201,19 +201,22 @@ export default function CompanyGoalsReportPage() {
       label: 'Progress',
       format: (value, row: CompanyGoalsData) => {
         const percentage = Math.min(Math.max(value, 0), 100);
-        // Calculate color: red (0%) to green (100%)
-        const red = percentage < 50 ? 255 : Math.round(255 * (1 - (percentage - 50) / 50));
-        const green = percentage > 50 ? 255 : Math.round(255 * (percentage / 50));
-        const color = `rgb(${red}, ${green}, 0)`;
+        
+        // Use system colors: red for low, yellow for medium, green for high
+        let barColor = 'bg-red-600';
+        if (percentage >= 66) {
+          barColor = 'bg-green-600';
+        } else if (percentage >= 33) {
+          barColor = 'bg-yellow-500';
+        }
         
         return (
           <div className="flex items-center gap-2">
             <div className="flex-1 bg-gray-200 rounded-full h-6 relative overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-300 flex items-center justify-center"
+                className={`h-full rounded-full transition-all duration-300 flex items-center justify-center ${barColor}`}
                 style={{
                   width: `${percentage}%`,
-                  backgroundColor: color,
                 }}
               >
                 {percentage > 10 && (
