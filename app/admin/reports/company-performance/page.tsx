@@ -4,39 +4,33 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../../../lib/supabaseClient';
 import { ReportFilters, FilterConfig } from '../../../components/reports/ReportFilters';
-import { ReportTable, ColumnDef } from '../../../components/reports/ReportTable';
-import { ExportButton } from '../../../components/reports/ExportButton';
-import { ColumnDef as ExportColumnDef } from '../../../../lib/reportExport';
 import dynamic from 'next/dynamic';
+import Card from '../../../components/ui/Card';
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 // Dynamically import charts with SSR disabled (ApexCharts requires window)
 const BarChart = dynamic(() => import('../../../components/reports/charts/BarChart').then(mod => ({ default: mod.BarChart })), { ssr: false });
 const LineChart = dynamic(() => import('../../../components/reports/charts/LineChart').then(mod => ({ default: mod.LineChart })), { ssr: false });
 const PieChart = dynamic(() => import('../../../components/reports/charts/PieChart').then(mod => ({ default: mod.PieChart })), { ssr: false });
-import Card from '../../../components/ui/Card';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 
-interface CompanyPerformanceData {
-  company_id: string;
-  company_name: string;
-  netsuite_number: string;
-  subsidiary: string;
-  class: string;
-  total_sales: number;
-  order_count: number;
-  average_order_value: number;
-  support_fund_used: number;
-  credit_earned: number;
-  top_products: Array<{
-    sku: string;
-    name: string;
-    quantity: number;
-    revenue: number;
-  }>;
+interface PerformancesData {
+  summary: {
+    totalSales: number;
+    totalSalesOrders: number;
+    totalOpenOrders: number;
+    totalOpenOrdersValue: number;
+    totalClients: number;
+    totalCreditEarned: number;
+    totalCreditUsed: number;
+  };
+  monthlySales: Array<{ month: string; sales: number }>;
+  dailySales: Array<{ date: string; sales: number }>;
+  topClients: Array<{ companyName: string; sales: number }>;
+  topProducts: Array<{ sku: string; name: string; sales: number }>;
 }
 
-export default function CompanyPerformanceReportPage() {
-  const [data, setData] = useState<CompanyPerformanceData[]>([]);
+export default function PerformancesReportPage() {
+  const [data, setData] = useState<PerformancesData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [companies, setCompanies] = useState<Array<{ value: string; label: string }>>([]);
@@ -49,6 +43,7 @@ export default function CompanyPerformanceReportPage() {
     subsidiaryIds: null as string[] | null,
     classIds: null as string[] | null,
   });
+  const [appliedFilters, setAppliedFilters] = useState(filters);
 
   // Fetch filter options
   useEffect(() => {
@@ -77,14 +72,10 @@ export default function CompanyPerformanceReportPage() {
     fetchFilterOptions();
   }, []);
 
-  // Fetch report data with debounce to prevent calls on every keystroke
+  // Fetch report data on mount and when appliedFilters change
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchData();
-    }, 500); // Wait 500ms after last change
-
-    return () => clearTimeout(timeoutId);
-  }, [filters]);
+    fetchData();
+  }, [appliedFilters]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -92,29 +83,29 @@ export default function CompanyPerformanceReportPage() {
 
     try {
       const params = new URLSearchParams();
-      if (filters.dateRange_start) params.append('startDate', filters.dateRange_start);
-      if (filters.dateRange_end) params.append('endDate', filters.dateRange_end);
-      if (filters.companyIds && filters.companyIds.length > 0) {
-        params.append('companyIds', filters.companyIds.join(','));
+      if (appliedFilters.dateRange_start) params.append('startDate', appliedFilters.dateRange_start);
+      if (appliedFilters.dateRange_end) params.append('endDate', appliedFilters.dateRange_end);
+      if (appliedFilters.companyIds && appliedFilters.companyIds.length > 0) {
+        params.append('companyIds', appliedFilters.companyIds.join(','));
       }
-      if (filters.subsidiaryIds && filters.subsidiaryIds.length > 0) {
-        params.append('subsidiaryIds', filters.subsidiaryIds.join(','));
+      if (appliedFilters.subsidiaryIds && appliedFilters.subsidiaryIds.length > 0) {
+        params.append('subsidiaryIds', appliedFilters.subsidiaryIds.join(','));
       }
-      if (filters.classIds && filters.classIds.length > 0) {
-        params.append('classIds', filters.classIds.join(','));
+      if (appliedFilters.classIds && appliedFilters.classIds.length > 0) {
+        params.append('classIds', appliedFilters.classIds.join(','));
       }
 
-      const response = await fetch(`/api/reports/company-performance?${params.toString()}`);
+      const response = await fetch(`/api/reports/performances?${params.toString()}`);
       const result = await response.json();
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to fetch report data');
       }
 
-      setData(result.data || []);
+      setData(result);
     } catch (err: any) {
       setError(err.message || 'An error occurred');
-      setData([]);
+      setData(null);
     } finally {
       setLoading(false);
     }
@@ -127,43 +118,24 @@ export default function CompanyPerformanceReportPage() {
     }));
   };
 
+  const handleSubmit = () => {
+    setAppliedFilters(filters);
+  };
+
+  const handleReset = () => {
+    const resetFilters = {
+      dateRange_start: null,
+      dateRange_end: null,
+      companyIds: null,
+      subsidiaryIds: null,
+      classIds: null,
+    };
+    setFilters(resetFilters);
+    setAppliedFilters(resetFilters);
+  };
+
   const formatCurrency = (amount: number) => {
     return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  // Prepare chart data
-  const top10Companies = data.slice(0, 10);
-  const barChartData = {
-    labels: top10Companies.map((d) => d.company_name),
-    series: [
-      {
-        name: 'Total Sales',
-        data: top10Companies.map((d) => d.total_sales),
-      },
-    ] as [{ name?: string; data: number[] }],
-  };
-
-  // For line chart, we'll show sales over time (simplified - showing by company order)
-  const lineChartData = {
-    labels: top10Companies.map((d) => d.company_name),
-    series: [
-      {
-        name: 'Total Sales',
-        data: top10Companies.map((d) => d.total_sales),
-      },
-    ] as { name?: string; data: number[] }[],
-  };
-
-  // Pie chart: Sales distribution by subsidiary
-  const subsidiarySales = new Map<string, number>();
-  data.forEach((d) => {
-    const sub = d.subsidiary || 'Unknown';
-    subsidiarySales.set(sub, (subsidiarySales.get(sub) || 0) + d.total_sales);
-  });
-
-  const pieChartData = {
-    labels: Array.from(subsidiarySales.keys()),
-    series: Array.from(subsidiarySales.values()),
   };
 
   const filterConfigs: FilterConfig[] = [
@@ -196,60 +168,30 @@ export default function CompanyPerformanceReportPage() {
     },
   ];
 
-  const columns: ColumnDef[] = [
-    {
-      key: 'company_name',
-      label: 'Company Name',
-    },
-    {
-      key: 'netsuite_number',
-      label: 'NetSuite #',
-    },
-    {
-      key: 'subsidiary',
-      label: 'Subsidiary',
-    },
-    {
-      key: 'class',
-      label: 'Class',
-    },
-    {
-      key: 'total_sales',
-      label: 'Total Sales',
-      format: (value) => formatCurrency(value),
-    },
-    {
-      key: 'order_count',
-      label: 'Order Count',
-    },
-    {
-      key: 'average_order_value',
-      label: 'Avg Order Value',
-      format: (value) => formatCurrency(value),
-    },
-    {
-      key: 'support_fund_used',
-      label: 'Support Funds Used',
-      format: (value) => formatCurrency(value),
-    },
-    {
-      key: 'credit_earned',
-      label: 'Credit Earned',
-      format: (value) => formatCurrency(value),
-    },
-  ];
+  // Prepare chart data
+  const monthlyChartData = data?.monthlySales || [];
+  const monthlyLabels = monthlyChartData.map(d => {
+    const [year, month] = d.month.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    return date.toLocaleDateString('en-US', { month: 'short' });
+  });
+  const monthlySeries = monthlyChartData.map(d => d.sales);
 
-  const exportColumns: ExportColumnDef[] = [
-    { key: 'company_name', label: 'Company Name' },
-    { key: 'netsuite_number', label: 'NetSuite Number' },
-    { key: 'subsidiary', label: 'Subsidiary' },
-    { key: 'class', label: 'Class' },
-    { key: 'total_sales', label: 'Total Sales', format: (value) => formatCurrency(value) },
-    { key: 'order_count', label: 'Order Count' },
-    { key: 'average_order_value', label: 'Average Order Value', format: (value) => formatCurrency(value) },
-    { key: 'support_fund_used', label: 'Support Funds Used', format: (value) => formatCurrency(value) },
-    { key: 'credit_earned', label: 'Credit Earned', format: (value) => formatCurrency(value) },
-  ];
+  const dailyChartData = data?.dailySales || [];
+  const dailyLabels = dailyChartData.map(d => {
+    const [year, month] = d.date.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    return date.toLocaleDateString('en-US', { month: 'short' });
+  });
+  const dailySeries = dailyChartData.map(d => d.sales);
+
+  const creditPieData = data ? [
+    { label: 'Earned', value: data.summary.totalCreditEarned },
+    { label: 'Used', value: data.summary.totalCreditUsed },
+  ] : [];
+
+  const topClientsData = data?.topClients || [];
+  const topProductsData = data?.topProducts || [];
 
   return (
     <div className="mt-8 mb-4 space-y-6">
@@ -259,31 +201,11 @@ export default function CompanyPerformanceReportPage() {
             <ArrowLeftIcon className="h-5 w-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Company Performance Report</h1>
+            <h1 className="text-2xl font-semibold text-gray-900">Performances</h1>
             <p className="text-sm text-gray-600 mt-1">
-              View sales trends, comparisons, and metrics by company with visualizations
+              View sales trends, comparisons, and metrics with visualizations
             </p>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <ExportButton
-            data={data}
-            columns={exportColumns}
-            filename="company-performance-report"
-            format="xlsx"
-            startDate={filters.dateRange_start || undefined}
-            endDate={filters.dateRange_end || undefined}
-            disabled={loading || data.length === 0}
-          />
-          <ExportButton
-            data={data}
-            columns={exportColumns}
-            filename="company-performance-report"
-            format="csv"
-            startDate={filters.dateRange_start || undefined}
-            endDate={filters.dateRange_end || undefined}
-            disabled={loading || data.length === 0}
-          />
         </div>
       </div>
 
@@ -292,57 +214,143 @@ export default function CompanyPerformanceReportPage() {
         values={filters}
         onChange={handleFilterChange}
         loading={loading}
+        onSubmit={handleSubmit}
+        onReset={handleReset}
+        showButtons={true}
       />
 
-      {/* Charts Section */}
-      {!loading && data.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card header={<h3 className="font-semibold">Sales by Company (Top 10)</h3>}>
-            <BarChart
-              height={350}
-              series={barChartData.series}
-              labels={barChartData.labels}
-              colors={['#3b82f6']}
-              options={{
-                xaxis: {
-                  categories: barChartData.labels,
-                },
-              }}
-            />
-          </Card>
-
-          <Card header={<h3 className="font-semibold">Sales Trends</h3>}>
-            <LineChart
-              height={350}
-              series={lineChartData.series}
-              colors={['#10b981']}
-              options={{
-                xaxis: {
-                  categories: lineChartData.labels,
-                },
-              }}
-            />
-          </Card>
-
-          <Card header={<h3 className="font-semibold">Sales Distribution by Subsidiary</h3>}>
-            <PieChart
-              height={350}
-              series={pieChartData.series}
-              labels={pieChartData.labels}
-              colors={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']}
-            />
-          </Card>
-        </div>
+      {error && (
+        <Card>
+          <div className="text-red-600 p-4">{error}</div>
+        </Card>
       )}
 
-      <ReportTable
-        columns={columns}
-        data={data}
-        loading={loading}
-        error={error}
-        emptyMessage="No companies found matching the selected filters"
-      />
+      {loading && (
+        <Card>
+          <div className="text-center p-8">Loading...</div>
+        </Card>
+      )}
+
+      {!loading && data && (
+        <>
+          {/* Summary Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card>
+              <div className="p-6">
+                <h3 className="text-sm font-medium text-gray-600 mb-2">Total Sales</h3>
+                <p className="text-3xl font-semibold text-gray-900">{formatCurrency(data.summary.totalSales)}</p>
+                <p className="text-sm text-gray-500 mt-2">{data.summary.totalSalesOrders} orders (Done)</p>
+              </div>
+            </Card>
+            <Card>
+              <div className="p-6">
+                <h3 className="text-sm font-medium text-gray-600 mb-2">Total Open Orders</h3>
+                <p className="text-3xl font-semibold text-gray-900">{formatCurrency(data.summary.totalOpenOrdersValue)}</p>
+                <p className="text-sm text-gray-500 mt-2">{data.summary.totalOpenOrders} orders (In Process + Ready)</p>
+              </div>
+            </Card>
+            <Card>
+              <div className="p-6">
+                <h3 className="text-sm font-medium text-gray-600 mb-2">Total Clients</h3>
+                <p className="text-3xl font-semibold text-gray-900">{data.summary.totalClients}</p>
+                <p className="text-sm text-gray-500 mt-2">in the system</p>
+              </div>
+            </Card>
+          </div>
+
+          {/* Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Month to Month Sales */}
+            <Card header={<h3 className="font-semibold">Month to Month Sales</h3>}>
+              <LineChart
+                height={350}
+                series={[{ name: 'Sales', data: monthlySeries }]}
+                colors={['#3b82f6']}
+                options={{
+                  xaxis: {
+                    categories: monthlyLabels,
+                  },
+                  yaxis: {
+                    labels: {
+                      formatter: (value: number) => `$${value.toLocaleString()}`,
+                    },
+                  },
+                }}
+              />
+            </Card>
+
+            {/* Daily Sales */}
+            <Card header={<h3 className="font-semibold">Daily Sales</h3>}>
+              <BarChart
+                height={350}
+                series={[{ name: 'Sales', data: dailySeries }]}
+                labels={dailyLabels}
+                colors={['#10b981']}
+                options={{
+                  xaxis: {
+                    categories: dailyLabels,
+                  },
+                  yaxis: {
+                    labels: {
+                      formatter: (value: number) => `$${value.toLocaleString()}`,
+                    },
+                  },
+                }}
+              />
+            </Card>
+
+            {/* Credit Pie Chart */}
+            <Card header={<h3 className="font-semibold">Credit Earned vs Used</h3>}>
+              <PieChart
+                height={350}
+                series={creditPieData.map(d => d.value)}
+                labels={creditPieData.map(d => d.label)}
+                colors={['#10b981', '#ef4444']}
+              />
+            </Card>
+
+            {/* Top 5 Clients */}
+            <Card header={<h3 className="font-semibold">Top 5 Clients</h3>}>
+              <BarChart
+                height={350}
+                series={[{ name: 'Sales', data: topClientsData.map(c => c.sales) }]}
+                labels={topClientsData.map(c => c.companyName)}
+                colors={['#8b5cf6']}
+                options={{
+                  xaxis: {
+                    categories: topClientsData.map(c => c.companyName),
+                  },
+                  yaxis: {
+                    labels: {
+                      formatter: (value: number) => `$${value.toLocaleString()}`,
+                    },
+                  },
+                }}
+              />
+            </Card>
+
+            {/* Top 10 Products */}
+            <Card header={<h3 className="font-semibold">Top 10 Products</h3>} className="lg:col-span-2">
+              <BarChart
+                height={350}
+                series={[{ name: 'Sales', data: topProductsData.map(p => p.sales) }]}
+                labels={topProductsData.map(p => p.name || p.sku)}
+                colors={['#f59e0b']}
+                options={{
+                  xaxis: {
+                    categories: topProductsData.map(p => p.name || p.sku),
+                  },
+                  yaxis: {
+                    labels: {
+                      formatter: (value: number) => `$${value.toLocaleString()}`,
+                    },
+                  },
+                }}
+              />
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 }
-

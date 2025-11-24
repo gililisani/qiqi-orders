@@ -88,7 +88,7 @@ export const adminRoutes = [
       },
       {
         icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>P</Typography>,
-        name: "Company Performance",
+        name: "Performances",
         path: "/admin/reports/company-performance",
       },
       {
