@@ -78,9 +78,14 @@ export const adminRoutes = [
         path: "/admin/dam",
       },
       {
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>C</Typography>,
+        name: "Campaigns",
+        path: "/admin/dam/campaigns",
+      },
+      {
         icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>S</Typography>,
         name: "Settings",
-        path: "/admin/dam/settings",
+        path: "/admin/settings",
       },
     ],
   },
