@@ -243,8 +243,6 @@ export default function CompanyGoalsReportPage() {
             columns={exportColumns}
             filename="company-goals-report"
             format="xlsx"
-            startDate={filters.dateRange_start || undefined}
-            endDate={filters.dateRange_end || undefined}
             disabled={loading || data.length === 0}
           />
           <ExportButton
@@ -252,8 +250,6 @@ export default function CompanyGoalsReportPage() {
             columns={exportColumns}
             filename="company-goals-report"
             format="csv"
-            startDate={filters.dateRange_start || undefined}
-            endDate={filters.dateRange_end || undefined}
             disabled={loading || data.length === 0}
           />
         </div>
