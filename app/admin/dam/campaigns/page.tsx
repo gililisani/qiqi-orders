@@ -8,6 +8,7 @@ import {
   PhotoIcon,
   CalendarIcon,
   TagIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import { ensureTokenUrl } from '../../../components/dam/utils';
 
@@ -34,6 +35,8 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true); // Start as true - we're checking session
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [newCampaign, setNewCampaign] = useState({
     name: '',
     description: '',
@@ -44,113 +47,8 @@ export default function CampaignsPage() {
 
   // Fetch campaigns directly from Supabase - RLS handles authentication automatically
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const fetchCampaigns = async () => {
-      try {
-        // Fetch campaigns directly - RLS policies ensure only admins can access
-        const { data: campaignsData, error: campaignsError } = await supabase
-          .from('campaigns')
-          .select(`
-            id,
-            name,
-            description,
-            thumbnail_asset_id,
-            product_line,
-            start_date,
-            end_date,
-            created_at,
-            updated_at
-          `)
-          .order('created_at', { ascending: false });
-
-        if (cancelled) return;
-
-        if (campaignsError) {
-          console.error('Failed to fetch campaigns:', campaignsError);
-          setCampaigns([]);
-          setLoading(false);
-          return;
-        }
-
-        // Fetch asset counts for each campaign
-        const campaignIds = (campaignsData || []).map((c: any) => c.id);
-        let countsByCampaign: Record<string, number> = {};
-        
-        if (campaignIds.length > 0) {
-          const { data: assetCounts } = await supabase
-            .from('campaign_assets')
-            .select('campaign_id')
-            .in('campaign_id', campaignIds);
-
-          if (assetCounts) {
-            countsByCampaign = assetCounts.reduce((acc: Record<string, number>, row: any) => {
-              acc[row.campaign_id] = (acc[row.campaign_id] || 0) + 1;
-              return acc;
-            }, {});
-          }
-        }
-
-        // Fetch thumbnail paths
-        const thumbnailAssetIds = (campaignsData || [])
-          .map((c: any) => c.thumbnail_asset_id)
-          .filter((id: any): id is string => Boolean(id));
-
-        let thumbnailPaths: Record<string, string | null> = {};
-        if (thumbnailAssetIds.length > 0) {
-          const { data: versions } = await supabase
-            .from('dam_asset_versions')
-            .select('asset_id, thumbnail_path')
-            .in('asset_id', thumbnailAssetIds)
-            .order('version_number', { ascending: false });
-
-          if (versions) {
-            const latestVersions = new Map<string, string | null>();
-            versions.forEach((v: any) => {
-              if (!latestVersions.has(v.asset_id)) {
-                latestVersions.set(v.asset_id, v.thumbnail_path);
-              }
-            });
-
-            campaignsData?.forEach((campaign: any) => {
-              if (campaign.thumbnail_asset_id) {
-                thumbnailPaths[campaign.id] = latestVersions.get(campaign.thumbnail_asset_id) || null;
-              }
-            });
-          }
-        }
-
-        if (!cancelled) {
-          const campaignsWithCounts = (campaignsData || []).map((campaign: any) => ({
-            ...campaign,
-            asset_count: countsByCampaign[campaign.id] || 0,
-            thumbnail_path: thumbnailPaths[campaign.id] || null,
-          }));
-          setCampaigns(campaignsWithCounts);
-        }
-      } catch (err: any) {
-        if (!cancelled) {
-          console.error('Failed to load campaigns', err);
-          setCampaigns([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
     fetchCampaigns();
-    
-    return () => {
-      cancelled = true;
-    };
-  }, [supabase]);
+  }, [fetchCampaigns]);
 
   const handleCreateCampaign = async () => {
     if (!newCampaign.name.trim()) {
@@ -187,6 +85,135 @@ export default function CampaignsPage() {
       alert(err.message || 'Failed to create campaign. Check console for details.');
     }
   };
+
+  const handleDeleteCampaign = async () => {
+    if (!campaignToDelete || !supabase) {
+      return;
+    }
+
+    setDeleting(true);
+
+    try {
+      // Step 1: Delete campaign_assets first (to avoid foreign key constraints)
+      const { error: assetsError } = await supabase
+        .from('campaign_assets')
+        .delete()
+        .eq('campaign_id', campaignToDelete.id);
+
+      if (assetsError) {
+        console.error('Failed to delete campaign assets:', assetsError);
+        // Continue with campaign deletion even if this fails
+      }
+
+      // Step 2: Delete the campaign
+      const { error: deleteError } = await supabase
+        .from('campaigns')
+        .delete()
+        .eq('id', campaignToDelete.id);
+
+      if (deleteError) throw deleteError;
+
+      // Step 3: Refresh campaigns list
+      setCampaignToDelete(null);
+      await fetchCampaigns();
+    } catch (err: any) {
+      console.error('Failed to delete campaign', err);
+      alert(err.message || 'Failed to delete campaign. Check console for details.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const fetchCampaigns = useCallback(async () => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Fetch campaigns directly - RLS policies ensure only admins can access
+      const { data: campaignsData, error: campaignsError } = await supabase
+        .from('campaigns')
+        .select(`
+          id,
+          name,
+          description,
+          thumbnail_asset_id,
+          product_line,
+          start_date,
+          end_date,
+          created_at,
+          updated_at
+        `)
+        .order('created_at', { ascending: false });
+
+      if (campaignsError) {
+        console.error('Failed to fetch campaigns:', campaignsError);
+        setCampaigns([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch asset counts for each campaign
+      const campaignIds = (campaignsData || []).map((c: any) => c.id);
+      let countsByCampaign: Record<string, number> = {};
+      
+      if (campaignIds.length > 0) {
+        const { data: assetCounts } = await supabase
+          .from('campaign_assets')
+          .select('campaign_id')
+          .in('campaign_id', campaignIds);
+
+        if (assetCounts) {
+          countsByCampaign = assetCounts.reduce((acc: Record<string, number>, row: any) => {
+            acc[row.campaign_id] = (acc[row.campaign_id] || 0) + 1;
+            return acc;
+          }, {});
+        }
+      }
+
+      // Fetch thumbnail paths
+      const thumbnailAssetIds = (campaignsData || [])
+        .map((c: any) => c.thumbnail_asset_id)
+        .filter((id: any): id is string => Boolean(id));
+
+      let thumbnailPaths: Record<string, string | null> = {};
+      if (thumbnailAssetIds.length > 0) {
+        const { data: versions } = await supabase
+          .from('dam_asset_versions')
+          .select('asset_id, thumbnail_path')
+          .in('asset_id', thumbnailAssetIds)
+          .order('version_number', { ascending: false });
+
+        if (versions) {
+          const latestVersions = new Map<string, string | null>();
+          versions.forEach((v: any) => {
+            if (!latestVersions.has(v.asset_id)) {
+              latestVersions.set(v.asset_id, v.thumbnail_path);
+            }
+          });
+
+          campaignsData?.forEach((campaign: any) => {
+            if (campaign.thumbnail_asset_id) {
+              thumbnailPaths[campaign.id] = latestVersions.get(campaign.thumbnail_asset_id) || null;
+            }
+          });
+        }
+      }
+
+      const campaignsWithCounts = (campaignsData || []).map((campaign: any) => ({
+        ...campaign,
+        asset_count: countsByCampaign[campaign.id] || 0,
+        thumbnail_path: thumbnailPaths[campaign.id] || null,
+      }));
+      setCampaigns(campaignsWithCounts);
+    } catch (err: any) {
+      console.error('Failed to load campaigns', err);
+      setCampaigns([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase]);
 
   const formatDateRange = (startDate?: string | null, endDate?: string | null) => {
     if (!startDate && !endDate) return null;
@@ -266,8 +293,20 @@ export default function CampaignsPage() {
                     <PhotoIcon className="h-12 w-12" />
                   </div>
                 )}
-                <div className="absolute top-2 right-2 rounded-md bg-black/70 px-2 py-1 text-xs font-medium text-white">
-                  {campaign.asset_count} {campaign.asset_count === 1 ? 'asset' : 'assets'}
+                <div className="absolute top-2 right-2 flex items-center gap-2">
+                  <div className="rounded-md bg-black/70 px-2 py-1 text-xs font-medium text-white">
+                    {campaign.asset_count} {campaign.asset_count === 1 ? 'asset' : 'assets'}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCampaignToDelete(campaign);
+                    }}
+                    className="rounded-md bg-red-600/90 p-1.5 text-white hover:bg-red-700 transition-colors"
+                    title="Delete campaign"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
 
@@ -298,6 +337,41 @@ export default function CampaignsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {campaignToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !deleting) {
+              setCampaignToDelete(null);
+            }
+          }}
+        >
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Delete Campaign</h2>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to delete <strong>{campaignToDelete.name}</strong>? This will remove all assets associated with this campaign. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setCampaignToDelete(null)}
+                disabled={deleting}
+                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteCampaign}
+                disabled={deleting}
+                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? 'Deleting...' : 'Delete Campaign'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
