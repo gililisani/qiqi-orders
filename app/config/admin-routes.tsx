@@ -9,6 +9,7 @@ import {
   MapPinIcon,
   Cog6ToothIcon,
   ChartBarIcon,
+  PhotoIcon,
 } from "@heroicons/react/24/solid";
 
 const text = {
@@ -65,10 +66,21 @@ export const adminRoutes = [
         name: "Categories",
         path: "/admin/categories",
       },
+    ],
+  },
+  {
+    name: "digitalAssets",
+    icon: <PhotoIcon {...icon} />,
+    pages: [
       {
-        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>D</Typography>,
-        name: "Digital Assets",
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>A</Typography>,
+        name: "Assets",
         path: "/admin/dam",
+      },
+      {
+        icon: <Typography className={text.className} placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>S</Typography>,
+        name: "Settings",
+        path: "/admin/dam/settings",
       },
     ],
   },
