@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input, Select, Option } from '../../components/MaterialTailwind';
 import Card from '../ui/Card';
 import { MultiSelect } from './MultiSelect';
@@ -21,6 +21,27 @@ interface ReportFiltersProps {
 }
 
 export function ReportFilters({ filters, values, onChange, loading }: ReportFiltersProps) {
+  // Local state for date inputs to prevent triggering fetchData on every keystroke
+  const [localDateValues, setLocalDateValues] = useState<Record<string, string>>({});
+
+  // Sync local state when values prop changes (from external updates)
+  useEffect(() => {
+    const newLocalValues: Record<string, string> = {};
+    filters.forEach((filter) => {
+      if (filter.type === 'date' && values[filter.key]) {
+        newLocalValues[filter.key] = formatDateForDisplay(values[filter.key]);
+      } else if (filter.type === 'dateRange') {
+        if (values[`${filter.key}_start`]) {
+          newLocalValues[`${filter.key}_start`] = formatDateForDisplay(values[`${filter.key}_start`]);
+        }
+        if (values[`${filter.key}_end`]) {
+          newLocalValues[`${filter.key}_end`] = formatDateForDisplay(values[`${filter.key}_end`]);
+        }
+      }
+    });
+    setLocalDateValues((prev) => ({ ...prev, ...newLocalValues }));
+  }, [values, filters]);
+
   // Convert YYYY-MM-DD (API format) to MM/DD/YYYY (display format)
   const formatDateForDisplay = (dateString: string | null): string => {
     if (!dateString) return '';
@@ -37,7 +58,7 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
 
   // Convert MM/DD/YYYY (display format) to YYYY-MM-DD (API format)
   const parseDateFromDisplay = (displayValue: string): string | null => {
-    if (!displayValue) return null;
+    if (!displayValue || displayValue.trim() === '') return null;
     // Handle MM/DD/YYYY format
     const parts = displayValue.split('/');
     if (parts.length === 3) {
@@ -55,7 +76,14 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
     return null;
   };
 
-  const handleDateChange = (key: string, displayValue: string) => {
+  // Handle date input change - only update local state (no fetchData trigger)
+  const handleDateInputChange = (key: string, value: string) => {
+    setLocalDateValues((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Handle date input blur - sync to parent filters (triggers fetchData)
+  const handleDateBlur = (key: string) => {
+    const displayValue = localDateValues[key] || '';
     const apiValue = parseDateFromDisplay(displayValue);
     onChange(key, apiValue);
   };
@@ -73,20 +101,24 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filters.map((filter) => {
           if (filter.type === 'date') {
+            const localValue = localDateValues[filter.key] ?? formatDateForDisplay(values[filter.key]);
             return (
               <div key={filter.key}>
                 <Input
                   type="text"
                   label={filter.label}
-                  value={formatDateForDisplay(values[filter.key])}
+                  value={localValue}
                   onChange={(e) => {
-                    e.preventDefault();
-                    handleDateChange(filter.key, e.target.value);
+                    handleDateInputChange(filter.key, e.target.value);
+                  }}
+                  onBlur={() => {
+                    handleDateBlur(filter.key);
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
                       e.stopPropagation();
+                      (e.target as HTMLInputElement).blur(); // Trigger blur to sync
                     }
                   }}
                   disabled={loading}
@@ -100,21 +132,28 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
           }
 
           if (filter.type === 'dateRange') {
+            const startKey = `${filter.key}_start`;
+            const endKey = `${filter.key}_end`;
+            const localStartValue = localDateValues[startKey] ?? formatDateForDisplay(values[startKey]);
+            const localEndValue = localDateValues[endKey] ?? formatDateForDisplay(values[endKey]);
             return (
               <React.Fragment key={filter.key}>
                 <div>
                   <Input
                     type="text"
                     label={`${filter.label} - Start`}
-                    value={formatDateForDisplay(values[`${filter.key}_start`])}
+                    value={localStartValue}
                     onChange={(e) => {
-                      e.preventDefault();
-                      handleDateChange(`${filter.key}_start`, e.target.value);
+                      handleDateInputChange(startKey, e.target.value);
+                    }}
+                    onBlur={() => {
+                      handleDateBlur(startKey);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
                         e.stopPropagation();
+                        (e.target as HTMLInputElement).blur(); // Trigger blur to sync
                       }
                     }}
                     disabled={loading}
@@ -128,15 +167,18 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
                   <Input
                     type="text"
                     label={`${filter.label} - End`}
-                    value={formatDateForDisplay(values[`${filter.key}_end`])}
+                    value={localEndValue}
                     onChange={(e) => {
-                      e.preventDefault();
-                      handleDateChange(`${filter.key}_end`, e.target.value);
+                      handleDateInputChange(endKey, e.target.value);
+                    }}
+                    onBlur={() => {
+                      handleDateBlur(endKey);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
                         e.stopPropagation();
+                        (e.target as HTMLInputElement).blur(); // Trigger blur to sync
                       }
                     }}
                     disabled={loading}
