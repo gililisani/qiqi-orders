@@ -21,27 +21,43 @@ interface ReportFiltersProps {
 }
 
 export function ReportFilters({ filters, values, onChange, loading }: ReportFiltersProps) {
-  const handleDateChange = (key: string, value: string) => {
-    onChange(key, value || null);
+  // Convert YYYY-MM-DD (API format) to MM/DD/YYYY (display format)
+  const formatDateForDisplay = (dateString: string | null): string => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString + 'T00:00:00'); // Add time to avoid timezone issues
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${month}/${day}/${year}`;
+    } catch {
+      return dateString;
+    }
   };
 
-  const handleDateInputChange = (key: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // Allow typing, don't validate until blur
-    onChange(key, value || null);
-  };
-
-  const handleDateBlur = (key: string, e: React.FocusEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // Validate date format on blur
-    if (value) {
-      const date = new Date(value);
-      if (!isNaN(date.getTime())) {
-        // Format as YYYY-MM-DD for date input
-        const formatted = date.toISOString().split('T')[0];
-        onChange(key, formatted);
+  // Convert MM/DD/YYYY (display format) to YYYY-MM-DD (API format)
+  const parseDateFromDisplay = (displayValue: string): string | null => {
+    if (!displayValue) return null;
+    // Handle MM/DD/YYYY format
+    const parts = displayValue.split('/');
+    if (parts.length === 3) {
+      const month = parts[0].padStart(2, '0');
+      const day = parts[1].padStart(2, '0');
+      const year = parts[2];
+      if (year.length === 4) {
+        return `${year}-${month}-${day}`;
       }
     }
+    // If already in YYYY-MM-DD format, return as is
+    if (displayValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return displayValue;
+    }
+    return null;
+  };
+
+  const handleDateChange = (key: string, displayValue: string) => {
+    const apiValue = parseDateFromDisplay(displayValue);
+    onChange(key, apiValue);
   };
 
   const handleSelectChange = (key: string, value: string | undefined) => {
@@ -59,18 +75,25 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
           if (filter.type === 'date') {
             return (
               <div key={filter.key}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {filter.label}
-                </label>
-                <input
+                <Input
                   type="text"
-                  value={values[filter.key] || ''}
-                  onChange={(e) => handleDateInputChange(filter.key, e)}
-                  onBlur={(e) => handleDateBlur(filter.key, e)}
-                  placeholder="YYYY-MM-DD"
-                  pattern="\d{4}-\d{2}-\d{2}"
+                  label={filter.label}
+                  value={formatDateForDisplay(values[filter.key])}
+                  onChange={(e) => {
+                    e.preventDefault();
+                    handleDateChange(filter.key, e.target.value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }
+                  }}
                   disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="MM/DD/YYYY"
+                  crossOrigin={undefined}
+                  onPointerEnterCapture={undefined}
+                  onPointerLeaveCapture={undefined}
                 />
               </div>
             );
@@ -80,33 +103,47 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
             return (
               <React.Fragment key={filter.key}>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {filter.label} - Start
-                  </label>
-                  <input
+                  <Input
                     type="text"
-                    value={values[`${filter.key}_start`] || ''}
-                    onChange={(e) => handleDateInputChange(`${filter.key}_start`, e)}
-                    onBlur={(e) => handleDateBlur(`${filter.key}_start`, e)}
-                    placeholder="YYYY-MM-DD"
-                    pattern="\d{4}-\d{2}-\d{2}"
+                    label={`${filter.label} - Start`}
+                    value={formatDateForDisplay(values[`${filter.key}_start`])}
+                    onChange={(e) => {
+                      e.preventDefault();
+                      handleDateChange(`${filter.key}_start`, e.target.value);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }}
                     disabled={loading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder="MM/DD/YYYY"
+                    crossOrigin={undefined}
+                    onPointerEnterCapture={undefined}
+                    onPointerLeaveCapture={undefined}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {filter.label} - End
-                  </label>
-                  <input
+                  <Input
                     type="text"
-                    value={values[`${filter.key}_end`] || ''}
-                    onChange={(e) => handleDateInputChange(`${filter.key}_end`, e)}
-                    onBlur={(e) => handleDateBlur(`${filter.key}_end`, e)}
-                    placeholder="YYYY-MM-DD"
-                    pattern="\d{4}-\d{2}-\d{2}"
+                    label={`${filter.label} - End`}
+                    value={formatDateForDisplay(values[`${filter.key}_end`])}
+                    onChange={(e) => {
+                      e.preventDefault();
+                      handleDateChange(`${filter.key}_end`, e.target.value);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }}
                     disabled={loading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder="MM/DD/YYYY"
+                    crossOrigin={undefined}
+                    onPointerEnterCapture={undefined}
+                    onPointerLeaveCapture={undefined}
                   />
                 </div>
               </React.Fragment>
@@ -116,22 +153,21 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
           if (filter.type === 'select') {
             return (
               <div key={filter.key}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {filter.label}
-                </label>
-                <select
+                <Select
+                  label={filter.label}
                   value={values[filter.key] || ''}
-                  onChange={(e) => handleSelectChange(filter.key, e.target.value)}
+                  onChange={(val) => handleSelectChange(filter.key, val)}
                   disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder={filter.placeholder}
+                  onPointerEnterCapture={undefined}
+                  onPointerLeaveCapture={undefined}
                 >
-                  <option value="">{filter.placeholder || 'Select...'}</option>
                   {filter.options?.map((option) => (
-                    <option key={option.value} value={option.value}>
+                    <Option key={option.value} value={option.value}>
                       {option.label}
-                    </option>
+                    </Option>
                   ))}
-                </select>
+                </Select>
               </div>
             );
           }
