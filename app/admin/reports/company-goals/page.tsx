@@ -31,12 +31,8 @@ export default function CompanyGoalsReportPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [companies, setCompanies] = useState<Array<{ value: string; label: string }>>([]);
-  const [targetPeriods, setTargetPeriods] = useState<Array<{ value: string; label: string }>>([]);
   const [filters, setFilters] = useState({
     companyIds: null as string[] | null,
-    targetPeriodId: null as string | null,
-    dateRange_start: null as string | null,
-    dateRange_end: null as string | null,
   });
 
   // Fetch companies and target periods for filters
@@ -98,15 +94,6 @@ export default function CompanyGoalsReportPage() {
       if (filters.companyIds && filters.companyIds.length > 0) {
         params.append('companyIds', filters.companyIds.join(','));
       }
-      if (filters.targetPeriodId) {
-        params.append('targetPeriodId', filters.targetPeriodId);
-      }
-      if (filters.dateRange_start) {
-        params.append('startDate', filters.dateRange_start);
-      }
-      if (filters.dateRange_end) {
-        params.append('endDate', filters.dateRange_end);
-      }
 
       const response = await fetch(`/api/reports/company-goals?${params.toString()}`);
       const result = await response.json();
@@ -151,19 +138,6 @@ export default function CompanyGoalsReportPage() {
       label: 'Company',
       options: companies,
       placeholder: 'Select companies',
-    },
-    {
-      type: 'select',
-      key: 'targetPeriodId',
-      label: 'Target Period',
-      options: targetPeriods,
-      placeholder: 'Select target period',
-    },
-    {
-      type: 'dateRange',
-      key: 'dateRange',
-      label: 'Date Range',
-      placeholder: 'Select date range',
     },
   ];
 
