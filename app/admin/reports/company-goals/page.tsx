@@ -200,12 +200,12 @@ export default function CompanyGoalsReportPage() {
       key: 'progress_percentage',
       label: 'Progress',
       format: (value, row: CompanyGoalsData) => {
-        const percentage = Math.min(Math.max(value, 0), 100);
+        const percentage = Math.max(value, 0); // Allow values above 100%
         
         return (
           <div className="space-y-1">
             <div className="text-sm font-medium text-gray-900 text-center">
-              {percentage}%
+              {percentage.toFixed(1)}%
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
