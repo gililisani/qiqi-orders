@@ -35,11 +35,10 @@ export default function CompanyGoalsReportPage() {
     companyIds: null as string[] | null,
   });
 
-  // Fetch companies and target periods for filters
+  // Fetch companies for filters
   useEffect(() => {
     const fetchFilterOptions = async () => {
       try {
-        // Fetch companies
         const { data: companiesData } = await supabase
           .from('companies')
           .select('id, company_name')
@@ -50,21 +49,6 @@ export default function CompanyGoalsReportPage() {
             companiesData.map((c) => ({
               value: c.id,
               label: c.company_name,
-            }))
-          );
-        }
-
-        // Fetch target periods
-        const { data: periodsData } = await supabase
-          .from('target_periods')
-          .select('id, period_name, start_date, end_date')
-          .order('start_date');
-
-        if (periodsData) {
-          setTargetPeriods(
-            periodsData.map((p) => ({
-              value: p.id,
-              label: `${p.period_name} (${p.start_date} - ${p.end_date})`,
             }))
           );
         }
