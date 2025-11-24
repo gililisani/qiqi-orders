@@ -198,8 +198,37 @@ export default function CompanyGoalsReportPage() {
     },
     {
       key: 'progress_percentage',
-      label: 'Progress %',
-      format: (value) => `${value}%`,
+      label: 'Progress',
+      format: (value, row: CompanyGoalsData) => {
+        const percentage = Math.min(Math.max(value, 0), 100);
+        // Calculate color: red (0%) to green (100%)
+        const red = percentage < 50 ? 255 : Math.round(255 * (1 - (percentage - 50) / 50));
+        const green = percentage > 50 ? 255 : Math.round(255 * (percentage / 50));
+        const color = `rgb(${red}, ${green}, 0)`;
+        
+        return (
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-gray-200 rounded-full h-6 relative overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-300 flex items-center justify-center"
+                style={{
+                  width: `${percentage}%`,
+                  backgroundColor: color,
+                }}
+              >
+                {percentage > 10 && (
+                  <span className="text-xs font-semibold text-white">{percentage}%</span>
+                )}
+              </div>
+              {percentage <= 10 && (
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-gray-700">
+                  {percentage}%
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      },
     },
     {
       key: 'status',
