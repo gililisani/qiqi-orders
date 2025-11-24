@@ -204,7 +204,7 @@ export default function CompanyGoalsReportPage() {
         
         return (
           <div className="space-y-1">
-            <div className="text-sm font-medium text-gray-900 text-right">
+            <div className="text-sm font-medium text-gray-900 text-center">
               {percentage}%
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
