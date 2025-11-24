@@ -46,7 +46,15 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
                 <input
                   type="date"
                   value={values[filter.key] || ''}
-                  onChange={(e) => handleDateChange(filter.key, e.target.value)}
+                  onChange={(e) => {
+                    e.preventDefault();
+                    handleDateChange(filter.key, e.target.value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                    }
+                  }}
                   disabled={loading}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
@@ -64,7 +72,15 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
                   <input
                     type="date"
                     value={values[`${filter.key}_start`] || ''}
-                    onChange={(e) => handleDateChange(`${filter.key}_start`, e.target.value)}
+                    onChange={(e) => {
+                      e.preventDefault();
+                      handleDateChange(`${filter.key}_start`, e.target.value);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                      }
+                    }}
                     disabled={loading}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
@@ -76,7 +92,15 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
                   <input
                     type="date"
                     value={values[`${filter.key}_end`] || ''}
-                    onChange={(e) => handleDateChange(`${filter.key}_end`, e.target.value)}
+                    onChange={(e) => {
+                      e.preventDefault();
+                      handleDateChange(`${filter.key}_end`, e.target.value);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                      }
+                    }}
                     disabled={loading}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
