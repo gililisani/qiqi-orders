@@ -174,11 +174,11 @@ export default function TopNavbar() {
                 onMouseLeave={onLeave}
               >
                 <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
-                  <a href="/admin/settings/product-lines" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Product Lines</a>
-                  <a href="/admin/settings/locales" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Locales</a>
-                  <a href="/admin/settings/asset-types" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Asset Types</a>
-                  <a href="/admin/settings/asset-subtypes" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Asset Sub-Types</a>
-                  <a href="/admin/settings/tags" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Tags</a>
+                  <a href="/admin/dam/settings/product-lines" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Product Lines</a>
+                  <a href="/admin/dam/settings/locales" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Locales</a>
+                  <a href="/admin/dam/settings/asset-types" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Asset Types</a>
+                  <a href="/admin/dam/settings/asset-subtypes" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Asset Sub-Types</a>
+                  <a href="/admin/dam/settings/tags" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Tags</a>
                 </div>
               </div>
             </div>
@@ -263,11 +263,11 @@ export default function TopNavbar() {
               <details>
                 <summary className="px-2 py-2 rounded hover:bg-gray-50 cursor-pointer">Settings</summary>
                 <div className="pl-4 py-1 grid">
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/settings/product-lines">Product Lines</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/settings/locales">Locales</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/settings/asset-types">Asset Types</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/settings/asset-subtypes">Asset Sub-Types</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/settings/tags">Tags</a>
+                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/product-lines">Product Lines</a>
+                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/locales">Locales</a>
+                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/asset-types">Asset Types</a>
+                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/asset-subtypes">Asset Sub-Types</a>
+                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/tags">Tags</a>
                 </div>
               </details>
             </div>

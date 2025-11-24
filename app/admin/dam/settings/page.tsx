@@ -12,7 +12,7 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Link
-          href="/admin/settings/product-lines"
+          href="/admin/dam/settings/product-lines"
           className="group relative bg-white rounded-md border border-gray-200 overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer p-6"
         >
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Product Lines</h3>
@@ -20,7 +20,7 @@ export default function SettingsPage() {
         </Link>
 
         <Link
-          href="/admin/settings/locales"
+          href="/admin/dam/settings/locales"
           className="group relative bg-white rounded-md border border-gray-200 overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer p-6"
         >
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Locales</h3>
@@ -28,7 +28,7 @@ export default function SettingsPage() {
         </Link>
 
         <Link
-          href="/admin/settings/asset-types"
+          href="/admin/dam/settings/asset-types"
           className="group relative bg-white rounded-md border border-gray-200 overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer p-6"
         >
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Asset Types</h3>
@@ -36,7 +36,7 @@ export default function SettingsPage() {
         </Link>
 
         <Link
-          href="/admin/settings/asset-subtypes"
+          href="/admin/dam/settings/asset-subtypes"
           className="group relative bg-white rounded-md border border-gray-200 overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer p-6"
         >
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Asset Sub-Types</h3>
@@ -44,7 +44,7 @@ export default function SettingsPage() {
         </Link>
 
         <Link
-          href="/admin/settings/tags"
+          href="/admin/dam/settings/tags"
           className="group relative bg-white rounded-md border border-gray-200 overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer p-6"
         >
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Tags</h3>
