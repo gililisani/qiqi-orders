@@ -58,6 +58,9 @@ export async function GET(request: NextRequest) {
       const companyIds = companyIdsParam.split(',').filter(Boolean);
       if (companyIds.length > 0) {
         companiesQuery = companiesQuery.in('id', companyIds);
+      } else {
+        // If companyIdsParam exists but is empty after filtering, return empty
+        return NextResponse.json({ data: [] });
       }
     }
 
