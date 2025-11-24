@@ -80,9 +80,13 @@ export default function CompanyGoalsReportPage() {
     fetchFilterOptions();
   }, []);
 
-  // Fetch report data
+  // Fetch report data with debounce to prevent calls on every keystroke
   useEffect(() => {
-    fetchData();
+    const timeoutId = setTimeout(() => {
+      fetchData();
+    }, 500); // Wait 500ms after last change
+
+    return () => clearTimeout(timeoutId);
   }, [filters]);
 
   const fetchData = async () => {
