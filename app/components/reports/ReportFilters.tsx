@@ -25,6 +25,25 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
     onChange(key, value || null);
   };
 
+  const handleDateInputChange = (key: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow typing, don't validate until blur
+    onChange(key, value || null);
+  };
+
+  const handleDateBlur = (key: string, e: React.FocusEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Validate date format on blur
+    if (value) {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        // Format as YYYY-MM-DD for date input
+        const formatted = date.toISOString().split('T')[0];
+        onChange(key, formatted);
+      }
+    }
+  };
+
   const handleSelectChange = (key: string, value: string | undefined) => {
     onChange(key, value || null);
   };
@@ -44,17 +63,12 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
                   {filter.label}
                 </label>
                 <input
-                  type="date"
+                  type="text"
                   value={values[filter.key] || ''}
-                  onChange={(e) => {
-                    e.preventDefault();
-                    handleDateChange(filter.key, e.target.value);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                    }
-                  }}
+                  onChange={(e) => handleDateInputChange(filter.key, e)}
+                  onBlur={(e) => handleDateBlur(filter.key, e)}
+                  placeholder="YYYY-MM-DD"
+                  pattern="\d{4}-\d{2}-\d{2}"
                   disabled={loading}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
@@ -70,17 +84,12 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
                     {filter.label} - Start
                   </label>
                   <input
-                    type="date"
+                    type="text"
                     value={values[`${filter.key}_start`] || ''}
-                    onChange={(e) => {
-                      e.preventDefault();
-                      handleDateChange(`${filter.key}_start`, e.target.value);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                      }
-                    }}
+                    onChange={(e) => handleDateInputChange(`${filter.key}_start`, e)}
+                    onBlur={(e) => handleDateBlur(`${filter.key}_start`, e)}
+                    placeholder="YYYY-MM-DD"
+                    pattern="\d{4}-\d{2}-\d{2}"
                     disabled={loading}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
@@ -90,17 +99,12 @@ export function ReportFilters({ filters, values, onChange, loading }: ReportFilt
                     {filter.label} - End
                   </label>
                   <input
-                    type="date"
+                    type="text"
                     value={values[`${filter.key}_end`] || ''}
-                    onChange={(e) => {
-                      e.preventDefault();
-                      handleDateChange(`${filter.key}_end`, e.target.value);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                      }
-                    }}
+                    onChange={(e) => handleDateInputChange(`${filter.key}_end`, e)}
+                    onBlur={(e) => handleDateBlur(`${filter.key}_end`, e)}
+                    placeholder="YYYY-MM-DD"
+                    pattern="\d{4}-\d{2}-\d{2}"
                     disabled={loading}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
