@@ -42,7 +42,6 @@ interface BulkEditPanelProps {
   onCancel: () => void;
   onSave: () => Promise<void>;
   globalDefaults: {
-    assetTypeId: string | null;
     assetSubtypeId: string | null;
     productLine: string;
     selectedTagSlugs: string[];
@@ -98,10 +97,9 @@ export default function BulkEditPanel({
     onAssetsChange(assets.filter(a => a.assetId !== assetId));
   };
 
-  const getEffectiveValue = (file: BulkEditFile, field: 'assetTypeId' | 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => {
+  const getEffectiveValue = (file: BulkEditFile, field: 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => {
     const overrides = file.overrides || {};
     // If field is overridden, use file's value
-    if (field === 'assetTypeId' && overrides.assetTypeId) return file.assetTypeId;
     if (field === 'assetSubtypeId' && overrides.assetSubtypeId) return file.assetSubtypeId;
     if (field === 'productLine' && overrides.productLine) return file.productLine;
     if (field === 'selectedTagSlugs' && overrides.tags) return file.selectedTagSlugs;
@@ -112,7 +110,7 @@ export default function BulkEditPanel({
   };
 
   // Wrapper function to convert BulkFile to BulkEditFile for getEffectiveValue
-  const getEffectiveValueWrapper = (file: any, field: 'assetTypeId' | 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => {
+  const getEffectiveValueWrapper = (file: any, field: 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => {
     // Find the corresponding BulkEditFile by tempId
     const editFile = assets.find(a => a.assetId === file.tempId);
     if (!editFile) {
@@ -166,7 +164,6 @@ export default function BulkEditPanel({
         <BulkUploadDefaults
           globalDefaults={globalDefaults}
           onGlobalDefaultsChange={onGlobalDefaultsChange}
-          assetTypes={assetTypes}
           assetSubtypes={assetSubtypes}
           campaigns={campaigns}
           productLines={productLines}

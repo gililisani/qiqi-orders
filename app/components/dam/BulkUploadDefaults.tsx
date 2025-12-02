@@ -4,7 +4,6 @@ import { LocaleOption } from './types';
 
 interface BulkUploadDefaultsProps {
   globalDefaults: {
-    assetTypeId: string | null;
     assetSubtypeId: string | null;
     productLine: string;
     selectedTagSlugs: string[];
@@ -12,7 +11,6 @@ interface BulkUploadDefaultsProps {
     campaignId: string | null;
   };
   onGlobalDefaultsChange: (defaults: BulkUploadDefaultsProps['globalDefaults']) => void;
-  assetTypes: Array<{ id: string; name: string; slug: string }>;
   assetSubtypes: Array<{ id: string; name: string; slug: string; asset_type_id: string }>;
   campaigns: Array<{ id: string; name: string }>;
   productLines: Array<{ code: string; name: string }>;
@@ -24,7 +22,6 @@ interface BulkUploadDefaultsProps {
 export default function BulkUploadDefaults({
   globalDefaults,
   onGlobalDefaultsChange,
-  assetTypes,
   assetSubtypes,
   campaigns,
   productLines,
@@ -55,7 +52,6 @@ export default function BulkUploadDefaults({
     }
   };
 
-  const availableSubtypes = assetSubtypes.filter(st => st.asset_type_id === globalDefaults.assetTypeId);
 
   return (
     <div className="bg-gray-50 border-b border-gray-200 px-4 py-2">
@@ -63,25 +59,6 @@ export default function BulkUploadDefaults({
         <p className="text-xs text-gray-500 italic">Global defaults apply only to newly added files</p>
         
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Type */}
-          <div className="flex items-center gap-1.5">
-            <label className="text-xs font-medium text-gray-700 whitespace-nowrap">Type</label>
-            <select
-              value={globalDefaults.assetTypeId || ''}
-              onChange={(e) => {
-                handleChange('assetTypeId', e.target.value || null);
-                handleChange('assetSubtypeId', null); // Reset subtype when type changes
-              }}
-              className="rounded-md border border-gray-300 px-2 py-0.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-6 min-w-[100px]"
-              disabled={isUploading}
-            >
-              <option value="">None</option>
-              {assetTypes.map(type => (
-                <option key={type.id} value={type.id}>{type.name}</option>
-              ))}
-            </select>
-          </div>
-
           {/* Sub-type */}
           <div className="flex items-center gap-1.5">
             <label className="text-xs font-medium text-gray-700 whitespace-nowrap">Sub-type</label>
@@ -89,10 +66,10 @@ export default function BulkUploadDefaults({
               value={globalDefaults.assetSubtypeId || ''}
               onChange={(e) => handleChange('assetSubtypeId', e.target.value || null)}
               className="rounded-md border border-gray-300 px-2 py-0.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-6 min-w-[100px]"
-              disabled={isUploading || !globalDefaults.assetTypeId}
+              disabled={isUploading}
             >
               <option value="">None</option>
-              {availableSubtypes.map(subtype => (
+              {assetSubtypes.map(subtype => (
                 <option key={subtype.id} value={subtype.id}>{subtype.name}</option>
               ))}
             </select>

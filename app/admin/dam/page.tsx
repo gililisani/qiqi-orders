@@ -371,7 +371,6 @@ export default function AdminDigitalAssetManagerPage() {
     };
   }>>([]);
   const [bulkEditGlobalDefaults, setBulkEditGlobalDefaults] = useState({
-    assetTypeId: null as string | null,
     assetSubtypeId: null as string | null,
     productLine: '',
     selectedTagSlugs: [] as string[],
@@ -411,7 +410,6 @@ export default function AdminDigitalAssetManagerPage() {
     };
   }>>([]);
   const [bulkGlobalDefaults, setBulkGlobalDefaults] = useState({
-    assetTypeId: null as string | null,
     assetSubtypeId: null as string | null,
     productLine: '',
     selectedTagSlugs: [] as string[],
@@ -775,7 +773,6 @@ export default function AdminDigitalAssetManagerPage() {
     if (bulkEditData.length > 0) {
       const first = bulkEditData[0];
       setBulkEditGlobalDefaults({
-        assetTypeId: first.assetTypeId,
         assetSubtypeId: first.assetSubtypeId,
         productLine: first.productLine,
         selectedTagSlugs: first.selectedTagSlugs || [],
@@ -801,9 +798,8 @@ export default function AdminDigitalAssetManagerPage() {
       
       // Update each asset
       const updatePromises = bulkEditAssets.map(async (editAsset) => {
-        const effectiveAssetTypeId = editAsset.overrides?.assetTypeId 
-          ? editAsset.assetTypeId 
-          : bulkEditGlobalDefaults.assetTypeId;
+        // Type is always from the asset (not from global defaults)
+        const effectiveAssetTypeId = editAsset.assetTypeId;
         const effectiveAssetSubtypeId = editAsset.overrides?.assetSubtypeId 
           ? editAsset.assetSubtypeId 
           : bulkEditGlobalDefaults.assetSubtypeId;
@@ -1793,18 +1789,16 @@ export default function AdminDigitalAssetManagerPage() {
     const results: Array<{ tempId: string; success: boolean; error?: string }> = [];
 
     // Helper to get effective value (global default if not overridden)
-    const getEffectiveValue = (bulkFile: typeof bulkFiles[0], field: 'assetTypeId' | 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => {
+    // Note: assetTypeId is always from the file (auto-detected), not from global defaults
+    const getEffectiveValue = (bulkFile: typeof bulkFiles[0], field: 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => {
       const overrides = bulkFile.overrides || {};
       // If field is overridden, use file's value
-      if (field === 'assetTypeId' && overrides.assetTypeId) return bulkFile.assetTypeId;
       if (field === 'assetSubtypeId' && overrides.assetSubtypeId) return bulkFile.assetSubtypeId;
       if (field === 'productLine' && overrides.productLine) return bulkFile.productLine;
       if (field === 'selectedTagSlugs' && overrides.tags) return bulkFile.selectedTagSlugs;
       if (field === 'selectedLocaleCodes' && overrides.locales) return bulkFile.selectedLocaleCodes;
       if (field === 'campaignId' && overrides.campaignId) return bulkFile.campaignId;
       // If not overridden, use global default
-      // For assetTypeId, if global default is not set, fall back to file's inferred type
-      if (field === 'assetTypeId' && !bulkGlobalDefaults.assetTypeId) return bulkFile.inferredAssetTypeId;
       return bulkGlobalDefaults[field];
     };
 
@@ -1824,7 +1818,8 @@ export default function AdminDigitalAssetManagerPage() {
         const file = bulkFile.file;
         
         // Get effective values (use global defaults if not overridden)
-        const effectiveAssetTypeId = getEffectiveValue(bulkFile, 'assetTypeId') as string | null;
+        // Type is always from the file (auto-detected), Sub-type uses global default if not overridden
+        const effectiveAssetTypeId = bulkFile.assetTypeId; // Always use file's type (auto-detected)
         const effectiveAssetSubtypeId = getEffectiveValue(bulkFile, 'assetSubtypeId') as string | null;
         const effectiveProductLine = getEffectiveValue(bulkFile, 'productLine') as string;
         const effectiveTags = getEffectiveValue(bulkFile, 'selectedTagSlugs') as string[];
@@ -2133,7 +2128,6 @@ export default function AdminDigitalAssetManagerPage() {
         setIsBulkUploadMode(false);
         const defaultLocale = locales.find(loc => loc.is_default) || locales[0];
         setBulkGlobalDefaults({
-          assetTypeId: null,
           assetSubtypeId: null,
           productLine: '',
           selectedTagSlugs: [],
@@ -2448,7 +2442,6 @@ export default function AdminDigitalAssetManagerPage() {
               setBulkEditAssets([]);
               const defaultLocale = locales.find(loc => loc.is_default) || locales[0];
               setBulkEditGlobalDefaults({
-                assetTypeId: null,
                 assetSubtypeId: null,
                 productLine: '',
                 selectedTagSlugs: [],

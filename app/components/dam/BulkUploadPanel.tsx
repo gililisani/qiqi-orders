@@ -44,7 +44,6 @@ interface BulkUploadPanelProps {
   onCancel: () => void;
   onUpload: () => Promise<void>;
   globalDefaults: {
-    assetTypeId: string | null;
     assetSubtypeId: string | null;
     productLine: string;
     selectedTagSlugs: string[];
@@ -180,9 +179,8 @@ export default function BulkUploadPanel({
       }
       
       // Use global defaults ONLY at file creation time
-      // For Type: Use global default if set, otherwise use inferred type (but don't mark as override)
-      // For other fields: Use global defaults
-      const initialAssetTypeId = globalDefaults.assetTypeId || inferred.typeId;
+      // Type is always auto-detected (inferred), Sub-type uses global default if set
+      const initialAssetTypeId = inferred.typeId; // Always use inferred type
       const initialAssetSubtypeId = globalDefaults.assetSubtypeId || null;
       const selectedAssetType = assetTypes.find(t => t.id === initialAssetTypeId);
       const slugToEnumMap: Record<string, string> = {
@@ -283,18 +281,15 @@ export default function BulkUploadPanel({
     onFilesChange(files.filter(f => f.tempId !== tempId));
   };
 
-  const getEffectiveValue = (file: BulkFile, field: 'assetTypeId' | 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => {
+  const getEffectiveValue = (file: BulkFile, field: 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => {
     const overrides = file.overrides || {};
     // If field is overridden, use file's value
-    if (field === 'assetTypeId' && overrides.assetTypeId) return file.assetTypeId;
     if (field === 'assetSubtypeId' && overrides.assetSubtypeId) return file.assetSubtypeId;
     if (field === 'productLine' && overrides.productLine) return file.productLine;
     if (field === 'selectedTagSlugs' && overrides.tags) return file.selectedTagSlugs;
     if (field === 'selectedLocaleCodes' && overrides.locales) return file.selectedLocaleCodes;
     if (field === 'campaignId' && overrides.campaignId) return file.campaignId;
     // If not overridden, use global default
-    // For assetTypeId, if global default is not set, fall back to file's inferred type
-    if (field === 'assetTypeId' && !globalDefaults.assetTypeId) return file.inferredAssetTypeId;
     return globalDefaults[field];
   };
 
@@ -342,7 +337,6 @@ export default function BulkUploadPanel({
         <BulkUploadDefaults
           globalDefaults={globalDefaults}
           onGlobalDefaultsChange={onGlobalDefaultsChange}
-          assetTypes={assetTypes}
           assetSubtypes={assetSubtypes}
           campaigns={campaigns}
           productLines={productLines}
