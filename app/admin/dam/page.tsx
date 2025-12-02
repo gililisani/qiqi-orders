@@ -2481,7 +2481,6 @@ export default function AdminDigitalAssetManagerPage() {
               setBulkFiles([]);
               const defaultLocale = locales.find(loc => loc.is_default) || locales[0];
               setBulkGlobalDefaults({
-                assetTypeId: null,
                 assetSubtypeId: null,
                 productLine: '',
                 selectedTagSlugs: [],
