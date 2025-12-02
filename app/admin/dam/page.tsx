@@ -371,7 +371,11 @@ export default function AdminDigitalAssetManagerPage() {
     };
   }>>([]);
   const [bulkEditGlobalDefaults, setBulkEditGlobalDefaults] = useState({
+    assetTypeId: null as string | null,
+    assetSubtypeId: null as string | null,
     productLine: '',
+    selectedTagSlugs: [] as string[],
+    selectedLocaleCodes: [] as string[],
     campaignId: null as string | null,
   });
   const [bulkSaving, setBulkSaving] = useState(false);
@@ -771,7 +775,11 @@ export default function AdminDigitalAssetManagerPage() {
     if (bulkEditData.length > 0) {
       const first = bulkEditData[0];
       setBulkEditGlobalDefaults({
+        assetTypeId: first.assetTypeId,
+        assetSubtypeId: first.assetSubtypeId,
         productLine: first.productLine,
+        selectedTagSlugs: first.selectedTagSlugs || [],
+        selectedLocaleCodes: first.selectedLocaleCodes || [],
         campaignId: first.campaignId,
       });
     }
@@ -793,24 +801,46 @@ export default function AdminDigitalAssetManagerPage() {
       
       // Update each asset
       const updatePromises = bulkEditAssets.map(async (editAsset) => {
+        const effectiveAssetTypeId = editAsset.overrides?.assetTypeId 
+          ? editAsset.assetTypeId 
+          : bulkEditGlobalDefaults.assetTypeId;
+        const effectiveAssetSubtypeId = editAsset.overrides?.assetSubtypeId 
+          ? editAsset.assetSubtypeId 
+          : bulkEditGlobalDefaults.assetSubtypeId;
         const effectiveProductLine = editAsset.overrides?.productLine 
           ? editAsset.productLine 
           : bulkEditGlobalDefaults.productLine;
+        const effectiveTags = editAsset.overrides?.tags 
+          ? editAsset.selectedTagSlugs 
+          : bulkEditGlobalDefaults.selectedTagSlugs;
+        const effectiveLocales = editAsset.overrides?.locales 
+          ? editAsset.selectedLocaleCodes 
+          : bulkEditGlobalDefaults.selectedLocaleCodes;
         const effectiveCampaignId = editAsset.overrides?.campaignId 
           ? editAsset.campaignId 
           : bulkEditGlobalDefaults.campaignId;
-        // Locales and tags are per-asset only (no global defaults)
-        const effectiveLocales = editAsset.selectedLocaleCodes || [];
-        const effectiveTags = editAsset.selectedTagSlugs || [];
         const effectivePrimaryLocale = editAsset.primaryLocale || (effectiveLocales.length > 0 ? effectiveLocales[0] : null);
+
+        // Determine asset type enum from assetTypeId
+        const selectedAssetType = assetTypes.find(t => t.id === effectiveAssetTypeId);
+        const slugToEnumMap: Record<string, string> = {
+          'image': 'image',
+          'video': 'video',
+          'document': 'document',
+          'artwork': 'document',
+          'audio': 'audio',
+          'packaging-regulatory': 'document',
+          'campaign': 'document',
+        };
+        const effectiveAssetType = selectedAssetType ? slugToEnumMap[selectedAssetType.slug] || 'other' : editAsset.assetType;
 
         const payload = {
           assetId: editAsset.assetId,
           title: editAsset.title.trim(),
           description: editAsset.description.trim() || undefined,
-          assetType: editAsset.assetType,
-          assetTypeId: editAsset.assetTypeId,
-          assetSubtypeId: editAsset.assetSubtypeId,
+          assetType: effectiveAssetType,
+          assetTypeId: effectiveAssetTypeId || undefined,
+          assetSubtypeId: effectiveAssetSubtypeId || undefined,
           productLine: effectiveProductLine.trim() || undefined,
           productName: editAsset.productName.trim() || undefined,
           sku: editAsset.sku.trim() || undefined,
@@ -2416,8 +2446,13 @@ export default function AdminDigitalAssetManagerPage() {
             onCancel={() => {
               setIsBulkEditMode(false);
               setBulkEditAssets([]);
+              const defaultLocale = locales.find(loc => loc.is_default) || locales[0];
               setBulkEditGlobalDefaults({
+                assetTypeId: null,
+                assetSubtypeId: null,
                 productLine: '',
+                selectedTagSlugs: [],
+                selectedLocaleCodes: defaultLocale ? [defaultLocale.code] : [],
                 campaignId: null,
               });
             }}

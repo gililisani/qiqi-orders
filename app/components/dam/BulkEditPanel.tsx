@@ -26,6 +26,8 @@ interface BulkEditFile {
   status?: 'pending' | 'saving' | 'success' | 'error';
   error?: string;
   overrides?: {
+    assetTypeId?: boolean;
+    assetSubtypeId?: boolean;
     productLine?: boolean;
     locales?: boolean;
     tags?: boolean;
@@ -40,7 +42,11 @@ interface BulkEditPanelProps {
   onCancel: () => void;
   onSave: () => Promise<void>;
   globalDefaults: {
+    assetTypeId: string | null;
+    assetSubtypeId: string | null;
     productLine: string;
+    selectedTagSlugs: string[];
+    selectedLocaleCodes: string[];
     campaignId: string | null;
   };
   onGlobalDefaultsChange: (defaults: BulkEditPanelProps['globalDefaults']) => void;
@@ -92,15 +98,21 @@ export default function BulkEditPanel({
     onAssetsChange(assets.filter(a => a.assetId !== assetId));
   };
 
-  const getEffectiveValue = (file: BulkEditFile, field: 'productLine' | 'campaignId') => {
+  const getEffectiveValue = (file: BulkEditFile, field: 'assetTypeId' | 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => {
     const overrides = file.overrides || {};
+    // If field is overridden, use file's value
+    if (field === 'assetTypeId' && overrides.assetTypeId) return file.assetTypeId;
+    if (field === 'assetSubtypeId' && overrides.assetSubtypeId) return file.assetSubtypeId;
     if (field === 'productLine' && overrides.productLine) return file.productLine;
+    if (field === 'selectedTagSlugs' && overrides.tags) return file.selectedTagSlugs;
+    if (field === 'selectedLocaleCodes' && overrides.locales) return file.selectedLocaleCodes;
     if (field === 'campaignId' && overrides.campaignId) return file.campaignId;
+    // If not overridden, use global default
     return globalDefaults[field];
   };
 
   // Wrapper function to convert BulkFile to BulkEditFile for getEffectiveValue
-  const getEffectiveValueWrapper = (file: any, field: 'productLine' | 'campaignId') => {
+  const getEffectiveValueWrapper = (file: any, field: 'assetTypeId' | 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => {
     // Find the corresponding BulkEditFile by tempId
     const editFile = assets.find(a => a.assetId === file.tempId);
     if (!editFile) {
@@ -154,8 +166,12 @@ export default function BulkEditPanel({
         <BulkUploadDefaults
           globalDefaults={globalDefaults}
           onGlobalDefaultsChange={onGlobalDefaultsChange}
+          assetTypes={assetTypes}
+          assetSubtypes={assetSubtypes}
           campaigns={campaigns}
           productLines={productLines}
+          tags={tags}
+          locales={locales}
           isUploading={isSaving}
         />
       )}
