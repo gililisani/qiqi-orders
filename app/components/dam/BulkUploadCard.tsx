@@ -50,14 +50,13 @@ interface BulkUploadCardProps {
   tags: Array<{ id: string; slug: string; label: string }> | Array<{ slug: string; label: string }>;
   campaigns: Array<{ id: string; name: string }>;
   globalDefaults: {
-    assetTypeId: string | null;
     assetSubtypeId: string | null;
     productLine: string;
     selectedTagSlugs: string[];
     selectedLocaleCodes: string[];
     campaignId: string | null;
   };
-  getEffectiveValue: (file: BulkFile, field: 'assetTypeId' | 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => any;
+  getEffectiveValue: (file: BulkFile, field: 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => any;
   isUploading: boolean;
   accessToken?: string | null;
   onTagsChange?: (tags: Array<{ id: string; slug: string; label: string }>) => void;
@@ -111,7 +110,8 @@ export default function BulkUploadCard({
     return getFileIcon();
   };
 
-  const effectiveAssetTypeId = getEffectiveValue(file, 'assetTypeId') as string | null;
+  // Type is always from the file (auto-detected), not from global defaults
+  const effectiveAssetTypeId = file.assetTypeId;
   const effectiveAssetSubtypeId = getEffectiveValue(file, 'assetSubtypeId') as string | null;
   const effectiveProductLine = getEffectiveValue(file, 'productLine') as string;
   const effectiveCampaignId = getEffectiveValue(file, 'campaignId') as string | null;
