@@ -361,6 +361,8 @@ export default function AdminDigitalAssetManagerPage() {
     status?: 'pending' | 'saving' | 'success' | 'error';
     error?: string;
     overrides?: {
+      assetTypeId?: boolean;
+      assetSubtypeId?: boolean;
       productLine?: boolean;
       locales?: boolean;
       tags?: boolean;
@@ -395,6 +397,8 @@ export default function AdminDigitalAssetManagerPage() {
     error?: string;
     previewUrl?: string | null;
     overrides?: {
+      assetTypeId?: boolean;
+      assetSubtypeId?: boolean;
       productLine?: boolean;
       locales?: boolean;
       tags?: boolean;
