@@ -26,6 +26,8 @@ interface BulkFile {
   error?: string;
   previewUrl?: string | null; // Thumbnail preview URL (object URL for images, data URL for PDFs)
   overrides?: {
+    assetTypeId?: boolean;
+    assetSubtypeId?: boolean;
     productLine?: boolean;
     locales?: boolean;
     tags?: boolean;
@@ -48,10 +50,14 @@ interface BulkUploadCardProps {
   tags: Array<{ id: string; slug: string; label: string }> | Array<{ slug: string; label: string }>;
   campaigns: Array<{ id: string; name: string }>;
   globalDefaults: {
+    assetTypeId: string | null;
+    assetSubtypeId: string | null;
     productLine: string;
+    selectedTagSlugs: string[];
+    selectedLocaleCodes: string[];
     campaignId: string | null;
   };
-  getEffectiveValue: (file: BulkFile, field: 'productLine' | 'campaignId') => any;
+  getEffectiveValue: (file: BulkFile, field: 'assetTypeId' | 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => any;
   isUploading: boolean;
   accessToken?: string | null;
   onTagsChange?: (tags: Array<{ id: string; slug: string; label: string }>) => void;
@@ -105,11 +111,15 @@ export default function BulkUploadCard({
     return getFileIcon();
   };
 
+  const effectiveAssetTypeId = getEffectiveValue(file, 'assetTypeId') as string | null;
+  const effectiveAssetSubtypeId = getEffectiveValue(file, 'assetSubtypeId') as string | null;
   const effectiveProductLine = getEffectiveValue(file, 'productLine') as string;
   const effectiveCampaignId = getEffectiveValue(file, 'campaignId') as string | null;
-  // Locales and tags are per-file only, no global defaults
-  const currentLocales = file.selectedLocaleCodes || [];
-  const currentTags = file.selectedTagSlugs || [];
+  const effectiveTags = getEffectiveValue(file, 'selectedTagSlugs') as string[];
+  const effectiveLocales = getEffectiveValue(file, 'selectedLocaleCodes') as string[];
+  // Use effective values (global defaults if not overridden)
+  const currentLocales = effectiveLocales;
+  const currentTags = effectiveTags;
 
   const toggleSelection = (list: string[], value: string): string[] => {
     if (list.includes(value)) {
@@ -199,7 +209,7 @@ export default function BulkUploadCard({
     }
   };
 
-  const handlePerFileOverride = (field: 'productLine' | 'locales' | 'tags' | 'campaignId' | 'sku', value: any) => {
+  const handlePerFileOverride = (field: 'assetTypeId' | 'assetSubtypeId' | 'productLine' | 'locales' | 'tags' | 'campaignId' | 'sku', value: any) => {
     const overrides = { ...(file.overrides || {}), [field]: true };
     // Map field names to actual BulkFile property names
     const actualField = field === 'locales' ? 'selectedLocaleCodes' : field === 'tags' ? 'selectedTagSlugs' : field;
@@ -264,7 +274,7 @@ export default function BulkUploadCard({
           <div>
             <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Type *</label>
             <select
-              value={file.assetTypeId || ''}
+              value={effectiveAssetTypeId || ''}
               onChange={(e) => {
                 const selectedTypeId = e.target.value || null;
                 const selectedType = assetTypes.find(t => t.id === selectedTypeId);
@@ -277,17 +287,20 @@ export default function BulkUploadCard({
                   'packaging-regulatory': 'document',
                   'campaign': 'document',
                 };
-                // Update all related fields atomically
+                // Update all related fields atomically and mark as overridden
+                const overrides = { ...(file.overrides || {}), assetTypeId: true, assetSubtypeId: true };
                 if (onFieldsChange) {
                   onFieldsChange(file.tempId, {
                     assetTypeId: selectedTypeId,
                     assetType: selectedType ? slugToEnumMap[selectedType.slug] || 'other' : 'other',
                     assetSubtypeId: null, // Reset subtype when type changes
+                    overrides: overrides,
                   });
                 } else {
                   onFieldChange(file.tempId, 'assetTypeId', selectedTypeId);
                   onFieldChange(file.tempId, 'assetType', selectedType ? slugToEnumMap[selectedType.slug] || 'other' : 'other');
                   onFieldChange(file.tempId, 'assetSubtypeId', null);
+                  onFieldChange(file.tempId, 'overrides', overrides);
                 }
               }}
               className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
@@ -303,14 +316,14 @@ export default function BulkUploadCard({
           <div>
             <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Sub-Type *</label>
             <select
-              value={file.assetSubtypeId || ''}
-              onChange={(e) => onFieldChange(file.tempId, 'assetSubtypeId', e.target.value || null)}
+              value={effectiveAssetSubtypeId || ''}
+              onChange={(e) => handlePerFileOverride('assetSubtypeId', e.target.value || null)}
               className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
-              disabled={isUploading || file.status === 'uploading' || !file.assetTypeId}
+              disabled={isUploading || file.status === 'uploading' || !effectiveAssetTypeId}
             >
               <option value="">Select</option>
               {assetSubtypes
-                .filter(st => st.asset_type_id === file.assetTypeId)
+                .filter(st => st.asset_type_id === effectiveAssetTypeId)
                 .map(subtype => (
                   <option key={subtype.id} value={subtype.id}>{subtype.name}</option>
                 ))}

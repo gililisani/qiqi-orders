@@ -42,7 +42,11 @@ interface BulkUploadPanelProps {
   onCancel: () => void;
   onUpload: () => Promise<void>;
   globalDefaults: {
+    assetTypeId: string | null;
+    assetSubtypeId: string | null;
     productLine: string;
+    selectedTagSlugs: string[];
+    selectedLocaleCodes: string[];
     campaignId: string | null;
   };
   onGlobalDefaultsChange: (defaults: BulkUploadPanelProps['globalDefaults']) => void;
@@ -174,6 +178,24 @@ export default function BulkUploadPanel({
       }
       
       // Use global defaults ONLY at file creation time
+      // For Type: Use global default if set, otherwise use inferred type (but don't mark as override)
+      // For other fields: Use global defaults
+      const initialAssetTypeId = globalDefaults.assetTypeId || inferred.typeId;
+      const initialAssetSubtypeId = globalDefaults.assetSubtypeId || null;
+      const selectedAssetType = assetTypes.find(t => t.id === initialAssetTypeId);
+      const slugToEnumMap: Record<string, string> = {
+        'image': 'image',
+        'video': 'video',
+        'document': 'document',
+        'artwork': 'document',
+        'audio': 'audio',
+        'packaging-regulatory': 'document',
+        'campaign': 'document',
+      };
+      const initialAssetTypeEnum = selectedAssetType 
+        ? slugToEnumMap[selectedAssetType.slug] || inferred.type
+        : inferred.type;
+      
       return {
         tempId: `bulk-${Date.now()}-${Math.random()}`,
         file,
@@ -181,15 +203,19 @@ export default function BulkUploadPanel({
         inferredAssetTypeId: inferred.typeId,
         title: baseTitle,
         description: '',
-        assetType: inferred.type,
-        assetTypeId: inferred.typeId,
-        assetSubtypeId: null,
+        assetType: initialAssetTypeEnum,
+        assetTypeId: initialAssetTypeId,
+        assetSubtypeId: initialAssetSubtypeId,
         productLine: globalDefaults.productLine, // Use global default at creation
         productName: '',
         sku: '',
-        selectedTagSlugs: [], // Start empty - user sets per card
-        selectedLocaleCodes: defaultLocale ? [defaultLocale.code] : [], // Use default locale only
-        primaryLocale: defaultLocale ? defaultLocale.code : null,
+        selectedTagSlugs: globalDefaults.selectedTagSlugs || [], // Use global default
+        selectedLocaleCodes: globalDefaults.selectedLocaleCodes.length > 0 
+          ? globalDefaults.selectedLocaleCodes 
+          : (defaultLocale ? [defaultLocale.code] : []), // Use global default or fallback to default locale
+        primaryLocale: globalDefaults.selectedLocaleCodes.length > 0 
+          ? globalDefaults.selectedLocaleCodes[0] 
+          : (defaultLocale ? defaultLocale.code : null),
         useTitleAsFilename: false,
         campaignId: globalDefaults.campaignId, // Use global default at creation
         status: 'pending',
@@ -199,7 +225,7 @@ export default function BulkUploadPanel({
     }));
     
     onFilesChange([...files, ...newFiles]);
-  }, [files, globalDefaults, locales, onFilesChange, assetTypes]);
+  }, [files, globalDefaults, locales, onFilesChange, assetTypes, assetSubtypes]);
 
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || []);
@@ -255,10 +281,18 @@ export default function BulkUploadPanel({
     onFilesChange(files.filter(f => f.tempId !== tempId));
   };
 
-  const getEffectiveValue = (file: BulkFile, field: 'productLine' | 'campaignId') => {
+  const getEffectiveValue = (file: BulkFile, field: 'assetTypeId' | 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => {
     const overrides = file.overrides || {};
+    // If field is overridden, use file's value
+    if (field === 'assetTypeId' && overrides.assetTypeId) return file.assetTypeId;
+    if (field === 'assetSubtypeId' && overrides.assetSubtypeId) return file.assetSubtypeId;
     if (field === 'productLine' && overrides.productLine) return file.productLine;
+    if (field === 'selectedTagSlugs' && overrides.tags) return file.selectedTagSlugs;
+    if (field === 'selectedLocaleCodes' && overrides.locales) return file.selectedLocaleCodes;
     if (field === 'campaignId' && overrides.campaignId) return file.campaignId;
+    // If not overridden, use global default
+    // For assetTypeId, if global default is not set, fall back to file's inferred type
+    if (field === 'assetTypeId' && !globalDefaults.assetTypeId) return file.inferredAssetTypeId;
     return globalDefaults[field];
   };
 
@@ -306,8 +340,12 @@ export default function BulkUploadPanel({
         <BulkUploadDefaults
           globalDefaults={globalDefaults}
           onGlobalDefaultsChange={onGlobalDefaultsChange}
+          assetTypes={assetTypes}
+          assetSubtypes={assetSubtypes}
           campaigns={campaigns}
           productLines={productLines}
+          tags={tags}
+          locales={locales}
           isUploading={isUploading}
         />
       )}

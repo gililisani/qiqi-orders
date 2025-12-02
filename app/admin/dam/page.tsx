@@ -403,7 +403,11 @@ export default function AdminDigitalAssetManagerPage() {
     };
   }>>([]);
   const [bulkGlobalDefaults, setBulkGlobalDefaults] = useState({
+    assetTypeId: null as string | null,
+    assetSubtypeId: null as string | null,
     productLine: '',
+    selectedTagSlugs: [] as string[],
+    selectedLocaleCodes: [] as string[],
     campaignId: null as string | null,
   });
   const [bulkUploading, setBulkUploading] = useState(false);
@@ -1755,10 +1759,18 @@ export default function AdminDigitalAssetManagerPage() {
     const results: Array<{ tempId: string; success: boolean; error?: string }> = [];
 
     // Helper to get effective value (global default if not overridden)
-    const getEffectiveValue = (bulkFile: typeof bulkFiles[0], field: 'productLine' | 'campaignId') => {
+    const getEffectiveValue = (bulkFile: typeof bulkFiles[0], field: 'assetTypeId' | 'assetSubtypeId' | 'productLine' | 'selectedTagSlugs' | 'selectedLocaleCodes' | 'campaignId') => {
       const overrides = bulkFile.overrides || {};
+      // If field is overridden, use file's value
+      if (field === 'assetTypeId' && overrides.assetTypeId) return bulkFile.assetTypeId;
+      if (field === 'assetSubtypeId' && overrides.assetSubtypeId) return bulkFile.assetSubtypeId;
       if (field === 'productLine' && overrides.productLine) return bulkFile.productLine;
+      if (field === 'selectedTagSlugs' && overrides.tags) return bulkFile.selectedTagSlugs;
+      if (field === 'selectedLocaleCodes' && overrides.locales) return bulkFile.selectedLocaleCodes;
       if (field === 'campaignId' && overrides.campaignId) return bulkFile.campaignId;
+      // If not overridden, use global default
+      // For assetTypeId, if global default is not set, fall back to file's inferred type
+      if (field === 'assetTypeId' && !bulkGlobalDefaults.assetTypeId) return bulkFile.inferredAssetTypeId;
       return bulkGlobalDefaults[field];
     };
 
@@ -1778,12 +1790,26 @@ export default function AdminDigitalAssetManagerPage() {
         const file = bulkFile.file;
         
         // Get effective values (use global defaults if not overridden)
+        const effectiveAssetTypeId = getEffectiveValue(bulkFile, 'assetTypeId') as string | null;
+        const effectiveAssetSubtypeId = getEffectiveValue(bulkFile, 'assetSubtypeId') as string | null;
         const effectiveProductLine = getEffectiveValue(bulkFile, 'productLine') as string;
+        const effectiveTags = getEffectiveValue(bulkFile, 'selectedTagSlugs') as string[];
+        const effectiveLocales = getEffectiveValue(bulkFile, 'selectedLocaleCodes') as string[];
         const effectiveCampaignId = getEffectiveValue(bulkFile, 'campaignId') as string | null;
-        // Locales and tags are per-file only (no global defaults)
-        const effectiveLocales = bulkFile.selectedLocaleCodes || [];
-        const effectiveTags = bulkFile.selectedTagSlugs || [];
         const effectivePrimaryLocale = bulkFile.primaryLocale || (effectiveLocales.length > 0 ? effectiveLocales[0] : null) || null;
+        
+        // Determine asset type enum from assetTypeId
+        const selectedAssetType = assetTypes.find(t => t.id === effectiveAssetTypeId);
+        const slugToEnumMap: Record<string, string> = {
+          'image': 'image',
+          'video': 'video',
+          'document': 'document',
+          'artwork': 'document',
+          'audio': 'audio',
+          'packaging-regulatory': 'document',
+          'campaign': 'document',
+        };
+        const effectiveAssetType = selectedAssetType ? slugToEnumMap[selectedAssetType.slug] || 'other' : bulkFile.assetType;
         
         // Generate thumbnail if needed (images and PDFs)
         let thumbnailData: string | null = null;
@@ -1836,9 +1862,9 @@ export default function AdminDigitalAssetManagerPage() {
           const payload = {
             title: bulkFile.title.trim(),
             description: bulkFile.description.trim() || undefined,
-            assetType: bulkFile.assetType,
-            assetTypeId: bulkFile.assetTypeId,
-            assetSubtypeId: bulkFile.assetSubtypeId,
+            assetType: effectiveAssetType,
+            assetTypeId: effectiveAssetTypeId || undefined,
+            assetSubtypeId: effectiveAssetSubtypeId || undefined,
             productLine: effectiveProductLine.trim() || undefined,
             productName: bulkFile.productName.trim() || undefined,
             sku: bulkFile.sku.trim() || undefined,
@@ -1996,9 +2022,9 @@ export default function AdminDigitalAssetManagerPage() {
           const payload = {
             title: bulkFile.title.trim(),
             description: bulkFile.description.trim() || undefined,
-            assetType: bulkFile.assetType,
-            assetTypeId: bulkFile.assetTypeId,
-            assetSubtypeId: bulkFile.assetSubtypeId,
+            assetType: effectiveAssetType,
+            assetTypeId: effectiveAssetTypeId || undefined,
+            assetSubtypeId: effectiveAssetSubtypeId || undefined,
             productLine: effectiveProductLine.trim() || undefined,
             productName: bulkFile.productName.trim() || undefined,
             sku: bulkFile.sku.trim() || undefined,
@@ -2332,9 +2358,14 @@ export default function AdminDigitalAssetManagerPage() {
               <button
                 type="button"
                 onClick={() => {
-                  // Initialize global defaults (only Product Line and Campaign)
+                  // Initialize global defaults
+                  const defaultLocale = locales.find(loc => loc.is_default) || locales[0];
                   setBulkGlobalDefaults({
+                    assetTypeId: null,
+                    assetSubtypeId: null,
                     productLine: '',
+                    selectedTagSlugs: [],
+                    selectedLocaleCodes: defaultLocale ? [defaultLocale.code] : [],
                     campaignId: null,
                   });
                   setBulkFiles([]);
@@ -2412,8 +2443,13 @@ export default function AdminDigitalAssetManagerPage() {
               });
               setIsBulkUploadMode(false);
               setBulkFiles([]);
+              const defaultLocale = locales.find(loc => loc.is_default) || locales[0];
               setBulkGlobalDefaults({
+                assetTypeId: null,
+                assetSubtypeId: null,
                 productLine: '',
+                selectedTagSlugs: [],
+                selectedLocaleCodes: defaultLocale ? [defaultLocale.code] : [],
                 campaignId: null,
               });
             }}
