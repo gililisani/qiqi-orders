@@ -106,6 +106,16 @@ export default function BulkEditPanel({
     if (field === 'selectedLocaleCodes' && overrides.locales) return file.selectedLocaleCodes;
     if (field === 'campaignId' && overrides.campaignId) return file.campaignId;
     // If not overridden, use global default
+    // For assetSubtypeId, only apply if the file's Type matches the subtype's parent type
+    if (field === 'assetSubtypeId' && globalDefaults.assetSubtypeId) {
+      const globalSubtype = assetSubtypes.find(st => st.id === globalDefaults.assetSubtypeId);
+      // Only apply if file's Type matches the subtype's parent type
+      if (globalSubtype && file.assetTypeId === globalSubtype.asset_type_id) {
+        return globalDefaults.assetSubtypeId;
+      }
+      // If types don't match, return null (no global default applied)
+      return null;
+    }
     return globalDefaults[field];
   };
 
@@ -164,6 +174,7 @@ export default function BulkEditPanel({
         <BulkUploadDefaults
           globalDefaults={globalDefaults}
           onGlobalDefaultsChange={onGlobalDefaultsChange}
+          assetTypes={assetTypes}
           assetSubtypes={assetSubtypes}
           campaigns={campaigns}
           productLines={productLines}

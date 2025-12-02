@@ -11,6 +11,7 @@ interface BulkUploadDefaultsProps {
     campaignId: string | null;
   };
   onGlobalDefaultsChange: (defaults: BulkUploadDefaultsProps['globalDefaults']) => void;
+  assetTypes: Array<{ id: string; name: string; slug: string }>;
   assetSubtypes: Array<{ id: string; name: string; slug: string; asset_type_id: string }>;
   campaigns: Array<{ id: string; name: string }>;
   productLines: Array<{ code: string; name: string }>;
@@ -22,6 +23,7 @@ interface BulkUploadDefaultsProps {
 export default function BulkUploadDefaults({
   globalDefaults,
   onGlobalDefaultsChange,
+  assetTypes,
   assetSubtypes,
   campaigns,
   productLines,
@@ -65,13 +67,22 @@ export default function BulkUploadDefaults({
             <select
               value={globalDefaults.assetSubtypeId || ''}
               onChange={(e) => handleChange('assetSubtypeId', e.target.value || null)}
-              className="rounded-md border border-gray-300 px-2 py-0.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-6 min-w-[100px]"
+              className="rounded-md border border-gray-300 px-2 py-0.5 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-6 min-w-[120px]"
               disabled={isUploading}
+              title="Sub-type will only apply to files matching the subtype's parent type"
             >
               <option value="">None</option>
-              {assetSubtypes.map(subtype => (
-                <option key={subtype.id} value={subtype.id}>{subtype.name}</option>
-              ))}
+              {assetTypes.map(type => {
+                const typeSubtypes = assetSubtypes.filter(st => st.asset_type_id === type.id);
+                if (typeSubtypes.length === 0) return null;
+                return (
+                  <optgroup key={type.id} label={type.name}>
+                    {typeSubtypes.map(subtype => (
+                      <option key={subtype.id} value={subtype.id}>{subtype.name}</option>
+                    ))}
+                  </optgroup>
+                );
+              })}
             </select>
           </div>
 

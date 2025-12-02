@@ -179,9 +179,16 @@ export default function BulkUploadPanel({
       }
       
       // Use global defaults ONLY at file creation time
-      // Type is always auto-detected (inferred), Sub-type uses global default if set
+      // Type is always auto-detected (inferred), Sub-type uses global default if set AND types match
       const initialAssetTypeId = inferred.typeId; // Always use inferred type
-      const initialAssetSubtypeId = globalDefaults.assetSubtypeId || null;
+      // Only apply global subtype if the file's type matches the subtype's parent type
+      let initialAssetSubtypeId = null;
+      if (globalDefaults.assetSubtypeId) {
+        const globalSubtype = assetSubtypes.find(st => st.id === globalDefaults.assetSubtypeId);
+        if (globalSubtype && initialAssetTypeId === globalSubtype.asset_type_id) {
+          initialAssetSubtypeId = globalDefaults.assetSubtypeId;
+        }
+      }
       const selectedAssetType = assetTypes.find(t => t.id === initialAssetTypeId);
       const slugToEnumMap: Record<string, string> = {
         'image': 'image',
@@ -290,6 +297,16 @@ export default function BulkUploadPanel({
     if (field === 'selectedLocaleCodes' && overrides.locales) return file.selectedLocaleCodes;
     if (field === 'campaignId' && overrides.campaignId) return file.campaignId;
     // If not overridden, use global default
+    // For assetSubtypeId, only apply if the file's Type matches the subtype's parent type
+    if (field === 'assetSubtypeId' && globalDefaults.assetSubtypeId) {
+      const globalSubtype = assetSubtypes.find(st => st.id === globalDefaults.assetSubtypeId);
+      // Only apply if file's Type matches the subtype's parent type
+      if (globalSubtype && file.assetTypeId === globalSubtype.asset_type_id) {
+        return globalDefaults.assetSubtypeId;
+      }
+      // If types don't match, return null (no global default applied)
+      return null;
+    }
     return globalDefaults[field];
   };
 

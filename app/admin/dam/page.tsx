@@ -1799,6 +1799,16 @@ export default function AdminDigitalAssetManagerPage() {
       if (field === 'selectedLocaleCodes' && overrides.locales) return bulkFile.selectedLocaleCodes;
       if (field === 'campaignId' && overrides.campaignId) return bulkFile.campaignId;
       // If not overridden, use global default
+      // For assetSubtypeId, only apply if the file's Type matches the subtype's parent type
+      if (field === 'assetSubtypeId' && bulkGlobalDefaults.assetSubtypeId) {
+        const globalSubtype = assetSubtypes.find(st => st.id === bulkGlobalDefaults.assetSubtypeId);
+        // Only apply if file's Type matches the subtype's parent type
+        if (globalSubtype && bulkFile.assetTypeId === globalSubtype.asset_type_id) {
+          return bulkGlobalDefaults.assetSubtypeId;
+        }
+        // If types don't match, return null (no global default applied)
+        return null;
+      }
       return bulkGlobalDefaults[field];
     };
 
