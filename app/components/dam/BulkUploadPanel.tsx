@@ -28,6 +28,8 @@ interface BulkFile {
   error?: string;
   previewUrl?: string | null; // Thumbnail preview URL (object URL for images, data URL for PDFs)
   overrides?: {
+    assetTypeId?: boolean;
+    assetSubtypeId?: boolean;
     productLine?: boolean;
     locales?: boolean;
     tags?: boolean;
