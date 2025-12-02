@@ -354,6 +354,7 @@ export default function BulkUploadPanel({
         <BulkUploadDefaults
           globalDefaults={globalDefaults}
           onGlobalDefaultsChange={onGlobalDefaultsChange}
+          assetTypes={assetTypes}
           assetSubtypes={assetSubtypes}
           campaigns={campaigns}
           productLines={productLines}
