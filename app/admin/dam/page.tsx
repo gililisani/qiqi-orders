@@ -2101,8 +2101,13 @@ export default function AdminDigitalAssetManagerPage() {
         });
         setBulkFiles([]);
         setIsBulkUploadMode(false);
+        const defaultLocale = locales.find(loc => loc.is_default) || locales[0];
         setBulkGlobalDefaults({
+          assetTypeId: null,
+          assetSubtypeId: null,
           productLine: '',
+          selectedTagSlugs: [],
+          selectedLocaleCodes: defaultLocale ? [defaultLocale.code] : [],
           campaignId: null,
         });
       }, 2000);
