@@ -62,17 +62,20 @@
 
 /* Nested indentation handled via inner wrapper so visibility and indent can animate independently */
 
-.labelIndentBase {
+/* Inner wrapper that carries icon + label so they indent together */
+.navItemInnerBase {
   display: inline-flex;
+  align-items: center;
+  min-width: 0;
   transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-.labelIndented {
+.navItemInnerIndented {
   transform: translateX(16px);
 }
 
 /* In compact mode, nested items lose their indent smoothly */
-.sidebarCompact .labelIndentBase {
+.sidebarCompact .navItemInnerBase {
   transform: translateX(0);
 }
 

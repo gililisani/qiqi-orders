@@ -301,17 +301,8 @@ export default function Sidenav({
 
         const itemClasses = itemBaseClasses.join(" ");
 
-        const renderLabel = (text: string, currentLevel: number) => (
-          <span className={labelVisibilityClasses}>
-            <span
-              className={[
-                styles.labelIndentBase,
-                currentLevel > 0 ? styles.labelIndented : "",
-              ].join(" ")}
-            >
-              {text}
-            </span>
-          </span>
+        const renderLabel = (text: string) => (
+          <span className={labelVisibilityClasses}>{text}</span>
         );
 
         const toggleAccordion = () => {
@@ -344,8 +335,17 @@ export default function Sidenav({
                 // Tooltip in compact mode
                 title={isPresentationCompact ? name : undefined}
               >
-                <span className={iconWrapperClasses} style={iconWrapperStyle}>{icon}</span>
-                {renderLabel(name, level)}
+                <span
+                  className={[
+                    styles.navItemInnerBase,
+                    level > 0 ? styles.navItemInnerIndented : "",
+                  ].join(" ")}
+                >
+                  <span className={iconWrapperClasses} style={iconWrapperStyle}>
+                    {icon}
+                  </span>
+                  {renderLabel(name)}
+                </span>
                 <ChevronDownIcon className={chevronClasses} />
               </button>
 
@@ -374,8 +374,17 @@ export default function Sidenav({
                 className={itemClasses}
                 title={isPresentationCompact ? name : undefined}
               >
-                <span className={iconWrapperClasses} style={iconWrapperStyle}>{icon}</span>
-                {renderLabel(name, level)}
+                <span
+                  className={[
+                    styles.navItemInnerBase,
+                    level > 0 ? styles.navItemInnerIndented : "",
+                  ].join(" ")}
+                >
+                  <span className={iconWrapperClasses} style={iconWrapperStyle}>
+                    {icon}
+                  </span>
+                  {renderLabel(name)}
+                </span>
               </a>
               {divider && <hr className="my-2 border-blue-gray-50" />}
             </li>
@@ -390,8 +399,17 @@ export default function Sidenav({
                 className={itemClasses}
                 title={isPresentationCompact ? name : undefined}
               >
-                <span className={iconWrapperClasses} style={iconWrapperStyle}>{icon}</span>
-                {renderLabel(name, level)}
+                <span
+                  className={[
+                    styles.navItemInnerBase,
+                    level > 0 ? styles.navItemInnerIndented : "",
+                  ].join(" ")}
+                >
+                  <span className={iconWrapperClasses} style={iconWrapperStyle}>
+                    {icon}
+                  </span>
+                  {renderLabel(name)}
+                </span>
               </Link>
               {divider && <hr className="my-2 border-blue-gray-50" />}
             </li>
