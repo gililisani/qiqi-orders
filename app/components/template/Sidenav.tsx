@@ -339,6 +339,7 @@ export default function Sidenav({
                   className={[
                     styles.navItemInnerBase,
                     level > 0 ? styles.navItemInnerIndented : "",
+                    !isPresentationCompact ? styles.navItemInnerSpaced : "",
                   ].join(" ")}
                 >
                   <span className={iconWrapperClasses} style={iconWrapperStyle}>
@@ -378,6 +379,7 @@ export default function Sidenav({
                   className={[
                     styles.navItemInnerBase,
                     level > 0 ? styles.navItemInnerIndented : "",
+                    !isPresentationCompact ? styles.navItemInnerSpaced : "",
                   ].join(" ")}
                 >
                   <span className={iconWrapperClasses} style={iconWrapperStyle}>
@@ -403,6 +405,7 @@ export default function Sidenav({
                   className={[
                     styles.navItemInnerBase,
                     level > 0 ? styles.navItemInnerIndented : "",
+                    !isPresentationCompact ? styles.navItemInnerSpaced : "",
                   ].join(" ")}
                 >
                   <span className={iconWrapperClasses} style={iconWrapperStyle}>

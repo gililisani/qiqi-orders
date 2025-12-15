@@ -74,6 +74,10 @@
   transform: translateX(16px);
 }
 
+.navItemInnerSpaced {
+  gap: 0.75rem; /* Comfortable space between icon and label in expanded mode */
+}
+
 /* In compact mode, nested items lose their indent smoothly */
 .sidebarCompact .navItemInnerBase {
   transform: translateX(0);
