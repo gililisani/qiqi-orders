@@ -14,6 +14,9 @@ import { ChevronDownIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from "@
 // Context
 import { useMaterialTailwindController, setOpenSidenav, setSidenavCollapsed } from "@/app/context";
 
+// Styles
+import styles from "./Sidenav.module.css";
+
 interface Route {
   name: string;
   icon?: React.ReactNode;
@@ -48,7 +51,15 @@ export default function Sidenav({
   const [openSubCollapse, setOpenSubCollapse] = React.useState<string | null>(null);
   const [isHovering, setIsHovering] = React.useState(false);
 
+  // Gmail-like collapse model
+  const [isExpanded, setIsExpanded] = React.useState<boolean>(() => !sidenavCollapsed);
+  const [presentation, setPresentation] = React.useState<"full" | "compact">(
+    !sidenavCollapsed ? "full" : "compact",
+  );
+  const [isAnimating, setIsAnimating] = React.useState(false);
+
   const sidenavRef = React.useRef<HTMLDivElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   // On mobile, sidebar should never be collapsed when open
   // openSidenav is only used on mobile, so if it's true, we're on mobile
@@ -60,8 +71,8 @@ export default function Sidenav({
       setIsMobileView(window.innerWidth < 1280);
     };
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   const handleClickOutside = () => {
@@ -71,7 +82,7 @@ export default function Sidenav({
   const handleMouseEnter = React.useCallback(() => {
     // Only expand on hover if collapsed and on desktop (not mobile)
     // Add small buffer to prevent expansion near breakpoint
-    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1320;
+    const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1320;
     if (sidenavCollapsed && isDesktop && !openSidenav) {
       setIsHovering(true);
       onHoverChange?.(true);
@@ -96,8 +107,47 @@ export default function Sidenav({
     }
   }, [openSidenav]);
   
-  // On mobile, never collapse. On desktop, use collapsed state with hover
-  const isCollapsed = (isMobileView || openSidenav) ? false : (sidenavCollapsed && !isHovering);
+  // Sync Gmail-style animation model with controller state
+  React.useEffect(() => {
+    const targetExpanded = !sidenavCollapsed;
+    if (targetExpanded === isExpanded) return;
+
+    // Guard against spamming during animation – ignore rapid flips
+    if (isAnimating) return;
+
+    setIsAnimating(true);
+
+    if (targetExpanded) {
+      // Rail -> Full: start width expansion but keep compact presentation
+      setIsExpanded(true);
+      setPresentation("compact");
+    } else {
+      // Full -> Rail: start width shrink but keep full presentation
+      setIsExpanded(false);
+      setPresentation("full");
+    }
+  }, [sidenavCollapsed, isExpanded, isAnimating]);
+
+  const handleTransitionEnd = (event: React.TransitionEvent<HTMLDivElement>) => {
+    if (!isAnimating) return;
+
+    // Only react to width / flex-basis related transitions
+    if (
+      event.propertyName !== "width" &&
+      event.propertyName !== "flex-basis" &&
+      event.propertyName !== "max-width"
+    ) {
+      return;
+    }
+
+    setIsAnimating(false);
+    // When the width animation completes, swap presentation
+    setPresentation(isExpanded ? "full" : "compact");
+  };
+
+  // On mobile, never collapse. On desktop, use Gmail-like presentation state with hover
+  const isCollapsed =
+    isMobileView || openSidenav ? false : presentation === "compact" && !isHovering;
   const hoverBackgroundClass = sidenavType === "dark" ? "hover:bg-white/10" : "hover:bg-gray-100";
   
   // Map sidenavColor to gradient classes for active items
@@ -118,6 +168,7 @@ export default function Sidenav({
   };
   
   const activeItemClass = getActiveItemClasses();
+  const isPresentationCompact = presentation === "compact";
 
   const isRouteActive = React.useMemo(() => {
     const check = (route: Route): boolean => {
@@ -237,11 +288,9 @@ export default function Sidenav({
         // Labels slide in/out from the right while icons stay fixed
         // When collapsed: labels are hidden but don't affect icon position
         // When expanded: labels reveal from the right
-        const labelClasses = [
-          "text-sm font-normal capitalize text-left overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out",
-          isCollapsed 
-            ? "opacity-0 w-0 overflow-hidden pointer-events-none" 
-            : "opacity-100 min-w-0 max-w-full flex-1",
+        const labelVisibilityClasses = [
+          styles.labelVisibility,
+          isPresentationCompact ? styles.labelHidden : styles.labelVisible,
         ].join(" ");
 
         const chevronClasses = [
@@ -252,7 +301,18 @@ export default function Sidenav({
 
         const itemClasses = itemBaseClasses.join(" ");
 
-        const renderLabel = (text: string) => <span className={labelClasses}>{text}</span>;
+        const renderLabel = (text: string, currentLevel: number) => (
+          <span className={labelVisibilityClasses}>
+            <span
+              className={[
+                styles.labelIndentBase,
+                currentLevel > 0 ? styles.labelIndented : "",
+              ].join(" ")}
+            >
+              {text}
+            </span>
+          </span>
+        );
 
         const toggleAccordion = () => {
           const toggle = level === 0 ? setOpenCollapse : setOpenSubCollapse;
@@ -281,9 +341,11 @@ export default function Sidenav({
                 type="button"
                 onClick={toggleAccordion}
                 className={itemClasses}
+                // Tooltip in compact mode
+                title={isPresentationCompact ? name : undefined}
               >
                 <span className={iconWrapperClasses} style={iconWrapperStyle}>{icon}</span>
-                {renderLabel(name)}
+                {renderLabel(name, level)}
                 <ChevronDownIcon className={chevronClasses} />
               </button>
 
@@ -310,9 +372,10 @@ export default function Sidenav({
                 target="_blank"
                 rel="noopener noreferrer"
                 className={itemClasses}
+                title={isPresentationCompact ? name : undefined}
               >
                 <span className={iconWrapperClasses} style={iconWrapperStyle}>{icon}</span>
-                {renderLabel(name)}
+                {renderLabel(name, level)}
               </a>
               {divider && <hr className="my-2 border-blue-gray-50" />}
             </li>
@@ -322,9 +385,13 @@ export default function Sidenav({
         if (path) {
           return (
             <li key={key} className="text-inherit">
-              <Link href={path} className={itemClasses}>
+              <Link
+                href={path}
+                className={itemClasses}
+                title={isPresentationCompact ? name : undefined}
+              >
                 <span className={iconWrapperClasses} style={iconWrapperStyle}>{icon}</span>
-                {renderLabel(name)}
+                {renderLabel(name, level)}
               </Link>
               {divider && <hr className="my-2 border-blue-gray-50" />}
             </li>
@@ -339,17 +406,18 @@ export default function Sidenav({
 
   return (
     <div 
-      className={`transition-all duration-300 ease-in-out ${
-        isMobile 
-          ? "h-full w-full" 
-          : `h-[calc(100%-1rem)] ml-4 mb-4 ${
-              isCollapsed 
-                ? "w-16 max-w-[4rem]" 
-                : "w-full max-w-[18rem]"
-            }`
-      }`}
+      ref={containerRef}
+      className={[
+        isMobile ? "h-full w-full" : "h-[calc(100%-1rem)] ml-4 mb-4",
+        styles.sidebarContainer,
+        isMobile ? styles.sidebarMobile : styles.sidebarDesktop,
+        isExpanded ? styles.sidebarExpanded : styles.sidebarCollapsed,
+        presentation === "compact" ? styles.sidebarCompact : styles.sidebarFull,
+        isAnimating ? styles.sidebarAnimating : "",
+      ].join(" ")}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onTransitionEnd={handleTransitionEnd}
     >
       <Card
         ref={sidenavRef}
