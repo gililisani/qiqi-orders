@@ -172,8 +172,6 @@ export default function Sidenav({
   };
   
   const activeItemClass = getActiveItemClasses();
-  
-  const activeItemClass = getActiveItemClasses();
   const isPresentationCompact = presentation === "compact";
   
   // Helper to determine if we should use compact presentation
