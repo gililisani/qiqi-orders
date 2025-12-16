@@ -106,6 +106,19 @@
   pointer-events: auto;
 }
 
+/* State-based classes for portal-rendered overlay (when not using hover selector) */
+.sidebarOverlayCardOpen {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebarOverlayCardClosed {
+  transform: translateX(-184px);
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Portal wrapper - positions the overlay correctly and provides constant z-index */
 .sidebarOverlayPortalWrapper {
   position: fixed;

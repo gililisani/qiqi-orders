@@ -488,7 +488,7 @@ export default function Sidenav({
                   sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
                 } ${
                   sidenavType === "dark" ? "!text-white" : "text-gray-900"
-                } overflow-y-auto ${styles.sidebarOverlayCard}`}
+                } overflow-y-auto ${styles.sidebarOverlayCard} ${isPeekOpen ? styles.sidebarOverlayCardOpen : styles.sidebarOverlayCardClosed}`}
                 placeholder={undefined}
                 onPointerEnterCapture={undefined}
                 onPointerLeaveCapture={undefined}
