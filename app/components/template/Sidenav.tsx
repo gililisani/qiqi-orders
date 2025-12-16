@@ -81,11 +81,17 @@ export default function Sidenav({
 
   // Hover overlay state (separate from button click state)
   const [isHoverOverlay, setIsHoverOverlay] = React.useState(false);
+  const [overlayTop, setOverlayTop] = React.useState(0);
 
   const handleMouseEnter = React.useCallback(() => {
     // Show overlay on hover when collapsed (doesn't push content)
     const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1320;
     if (sidenavCollapsed && isDesktop && !openSidenav) {
+      // Calculate the sidebar container's top position for overlay positioning
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setOverlayTop(rect.top);
+      }
       setIsHoverOverlay(true);
       setIsHovering(true);
       onHoverChange?.(true);
@@ -452,7 +458,7 @@ export default function Sidenav({
       onMouseLeave={handleMouseLeave}
       onTransitionEnd={handleTransitionEnd}
     >
-      {/* Single sidebar panel */}
+      {/* Single sidebar panel - becomes overlay on hover when collapsed */}
       <Card
         ref={sidenavRef}
         color={
@@ -468,7 +474,11 @@ export default function Sidenav({
           sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
         } ${
           sidenavType === "dark" ? "!text-white" : "text-gray-900"
-        } overflow-y-auto`}
+        } overflow-y-auto ${isHoverOverlay ? styles.cardHoverOverlay : ""}`}
+        style={isHoverOverlay ? { 
+          top: `${overlayTop}px`,
+          height: `calc(100vh - ${overlayTop}px)`
+        } : undefined}
         placeholder={undefined}
         onPointerEnterCapture={undefined}
         onPointerLeaveCapture={undefined}
@@ -490,34 +500,6 @@ export default function Sidenav({
         {/* Menu Items */}
         {renderMenuItems(routes)}
       </Card>
-      
-      {/* Hover overlay - appears on top of content when collapsed and hovered */}
-      {isHoverOverlay && !isMobileView && (
-        <div className={styles.hoverOverlay}>
-          <Card
-            color={
-              sidenavType === "dark"
-                ? "gray"
-                : sidenavType === "transparent"
-                ? "transparent"
-                : "white"
-            }
-            shadow={false}
-            variant="gradient"
-            className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
-              sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
-            } ${
-              sidenavType === "dark" ? "!text-white" : "text-gray-900"
-            } overflow-y-auto`}
-            placeholder={undefined}
-            onPointerEnterCapture={undefined}
-            onPointerLeaveCapture={undefined}
-          >
-            {/* Menu Items */}
-            {renderMenuItems(routes)}
-          </Card>
-        </div>
-      )}
     </div>
   );
 }

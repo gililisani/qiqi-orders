@@ -86,12 +86,10 @@
   transform: translateX(0);
 }
 
-/* Hover overlay - appears on top of content when collapsed and hovered */
-.hoverOverlay {
+/* When hovered and collapsed, Card becomes overlay on top of content */
+.cardHoverOverlay {
   position: fixed;
   left: 0;
-  top: 0;
-  bottom: 0;
   width: 256px;
   z-index: 9999;
   pointer-events: auto;
