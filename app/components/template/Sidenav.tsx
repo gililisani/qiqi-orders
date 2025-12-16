@@ -94,7 +94,7 @@ export default function Sidenav({
     // If collapsed, expand on hover (same as button click)
     if (sidenavCollapsed) {
       setSidenavCollapsed(dispatch, false);
-      setIsHovering(true);
+      setIsHovering(true); // Track that expansion was via hover
       onHoverChange?.(true);
     }
   }, [sidenavCollapsed, openSidenav, dispatch, onHoverChange]);
@@ -103,7 +103,8 @@ export default function Sidenav({
     const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1320;
     if (!isDesktop || openSidenav) return;
     
-    // If expanded (and was expanded via hover), collapse after delay
+    // Only collapse if currently expanded AND expansion was via hover
+    // If expanded via button click (isHovering === false), do nothing
     if (!sidenavCollapsed && isHovering) {
       // Clear any existing timeout
       if (collapseTimeoutRef.current) {
@@ -119,6 +120,15 @@ export default function Sidenav({
       }, 120); // 120ms delay
     }
   }, [sidenavCollapsed, isHovering, openSidenav, dispatch, onHoverChange]);
+  
+  // Reset isHovering when sidenavCollapsed changes via button click
+  React.useEffect(() => {
+    // If collapsed via button (not hover), reset isHovering
+    if (sidenavCollapsed && isHovering) {
+      setIsHovering(false);
+      onHoverChange?.(false);
+    }
+  }, [sidenavCollapsed, isHovering, onHoverChange]);
   
   // Cleanup timeout on unmount
   React.useEffect(() => {
