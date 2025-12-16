@@ -151,17 +151,17 @@ export default function Sidenav({
   }, [openSidenav]);
   
   // Sync width animation with controller state
-  // Labels/chevrons are controlled directly by sidenavCollapsed (no delayed state flip)
+  // isExpanded must toggle immediately when sidenavCollapsed changes (at START of collapse/expand)
+  // This ensures submenu indent animates immediately, not after any delay
   React.useEffect(() => {
     const targetExpanded = !sidenavCollapsed;
     if (targetExpanded === isExpanded) return;
 
-    // Guard against spamming during animation – ignore rapid flips
-    if (isAnimating) return;
-
-    setIsAnimating(true);
+    // Set isExpanded immediately - no delays, no animation gating
     setIsExpanded(targetExpanded);
-  }, [sidenavCollapsed, isExpanded, isAnimating]);
+    // Mark animation as starting (for CSS transition class)
+    setIsAnimating(true);
+  }, [sidenavCollapsed, isExpanded]);
 
   const handleTransitionEnd = (event: React.TransitionEvent<HTMLDivElement>) => {
     if (!isAnimating) return;
