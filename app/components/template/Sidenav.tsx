@@ -175,7 +175,8 @@ export default function Sidenav({
   };
   
   const activeItemClass = getActiveItemClasses();
-  const isPresentationCompact = presentation === "compact";
+  // When hover overlay is active, show full presentation (expanded view)
+  const isPresentationCompact = isHoverOverlay ? false : presentation === "compact";
   
   // Helper to determine if we should use compact presentation
   const shouldUseCompact = (forceFull: boolean) => forceFull ? false : isPresentationCompact;
