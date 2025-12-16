@@ -169,6 +169,9 @@ export default function Sidenav({
   
   const activeItemClass = getActiveItemClasses();
   const isPresentationCompact = presentation === "compact";
+  
+  // Helper to determine if we should use compact presentation
+  const shouldUseCompact = (forceFull: boolean) => forceFull ? false : isPresentationCompact;
 
   const isRouteActive = React.useMemo(() => {
     const check = (route: Route): boolean => {
@@ -210,7 +213,7 @@ export default function Sidenav({
   }, [routes, isRouteActive]);
 
 
-  const renderMenuItems = (items: Route[], level = 0) => {
+  const renderMenuItems = (items: Route[], level = 0, forceFullPresentation = false) => {
     // Helper function to check if a route is the most specific active match
     // This prevents parent routes from being highlighted when a child route matches
     const isMostSpecificActive = (routePath: string | undefined, routePages: Route[] | undefined): boolean => {
@@ -288,15 +291,16 @@ export default function Sidenav({
         // Labels slide in/out from the right while icons stay fixed
         // When collapsed: labels are hidden but don't affect icon position
         // When expanded: labels reveal from the right
+        const useCompact = shouldUseCompact(forceFullPresentation);
         const labelVisibilityClasses = [
           styles.labelVisibility,
-          isPresentationCompact ? styles.labelHidden : styles.labelVisible,
+          useCompact ? styles.labelHidden : styles.labelVisible,
         ].join(" ");
 
         const chevronClasses = [
           "flex-shrink-0 h-3 w-3 transition-transform duration-300",
           isOpen ? "rotate-180" : "",
-          isCollapsed ? "opacity-0 invisible" : "ml-auto opacity-100",
+          useCompact ? "opacity-0 invisible" : "ml-auto opacity-100",
         ].join(" ");
 
         const itemClasses = itemBaseClasses.join(" ");
@@ -333,13 +337,13 @@ export default function Sidenav({
                 onClick={toggleAccordion}
                 className={itemClasses}
                 // Tooltip in compact mode
-                title={isPresentationCompact ? name : undefined}
+                title={useCompact ? name : undefined}
               >
                 <span
                   className={[
                     styles.navItemInnerBase,
                     level > 0 ? styles.navItemInnerIndented : "",
-                    !isPresentationCompact ? styles.navItemInnerSpaced : "",
+                    !useCompact ? styles.navItemInnerSpaced : "",
                   ].join(" ")}
                 >
                   <span className={iconWrapperClasses} style={iconWrapperStyle}>
@@ -356,7 +360,7 @@ export default function Sidenav({
                 }`}
               >
                 <div className="overflow-hidden">
-                  {pages && renderMenuItems(pages, level + 1)}
+                  {pages && renderMenuItems(pages, level + 1, forceFullPresentation)}
                 </div>
               </div>
 
@@ -373,13 +377,13 @@ export default function Sidenav({
                 target="_blank"
                 rel="noopener noreferrer"
                 className={itemClasses}
-                title={isPresentationCompact ? name : undefined}
+                title={useCompact ? name : undefined}
               >
                 <span
                   className={[
                     styles.navItemInnerBase,
                     level > 0 ? styles.navItemInnerIndented : "",
-                    !isPresentationCompact ? styles.navItemInnerSpaced : "",
+                    !useCompact ? styles.navItemInnerSpaced : "",
                   ].join(" ")}
                 >
                   <span className={iconWrapperClasses} style={iconWrapperStyle}>
@@ -399,13 +403,13 @@ export default function Sidenav({
               <Link
                 href={path}
                 className={itemClasses}
-                title={isPresentationCompact ? name : undefined}
+                title={useCompact ? name : undefined}
               >
                 <span
                   className={[
                     styles.navItemInnerBase,
                     level > 0 ? styles.navItemInnerIndented : "",
-                    !isPresentationCompact ? styles.navItemInnerSpaced : "",
+                    !useCompact ? styles.navItemInnerSpaced : "",
                   ].join(" ")}
                 >
                   <span className={iconWrapperClasses} style={iconWrapperStyle}>
@@ -456,7 +460,7 @@ export default function Sidenav({
           sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
         } ${
           sidenavType === "dark" ? "!text-white" : "text-gray-900"
-        } overflow-y-auto`}
+        } overflow-y-auto ${styles.railContentHidden}`}
         placeholder={undefined}
         onPointerEnterCapture={undefined}
         onPointerLeaveCapture={undefined}
@@ -501,8 +505,8 @@ export default function Sidenav({
             onPointerEnterCapture={undefined}
             onPointerLeaveCapture={undefined}
           >
-            {/* Menu Items in peek */}
-            {renderMenuItems(routes)}
+            {/* Menu Items in peek - always render in full presentation */}
+            {renderMenuItems(routes, 0, true)}
           </Card>
         </div>
       )}
