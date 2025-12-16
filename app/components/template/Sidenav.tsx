@@ -200,12 +200,12 @@ export default function Sidenav({
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       // Find the navbar element and measure its height
-      const navbar = document.querySelector("nav");
+      const navbar = document.querySelector("nav") as HTMLElement | null;
       if (navbar) {
         setHeaderHeight(navbar.offsetHeight);
       } else {
         // Fallback: check for common navbar classes
-        const navElement = document.querySelector('[class*="navbar"], [class*="Navbar"]');
+        const navElement = document.querySelector('[class*="navbar"], [class*="Navbar"]') as HTMLElement | null;
         if (navElement) {
           setHeaderHeight(navElement.offsetHeight);
         }
