@@ -207,9 +207,9 @@ export default function Sidenav({
   // On mobile or when hover-expanded, force labels visible
   const shouldShowLabels = !sidenavCollapsed || isHovering || isMobileView || openSidenav;
   
-  // Visual expanded state for submenu indentation (must animate with sidebar width, not label visibility)
-  // Indent must be controlled by sidebar expanded state, not by labels
-  const isVisuallyExpanded = !sidenavCollapsed || isHovering;
+  // Submenu indent MUST be driven by isExpanded (the state that controls width animation)
+  // This ensures indent animates in sync with sidebar width transition, not label visibility
+  const isVisuallyExpanded = isExpanded || isHovering;
 
   const isRouteActive = React.useMemo(() => {
     const check = (route: Route): boolean => {
