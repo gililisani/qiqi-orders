@@ -52,10 +52,9 @@ export default function Sidenav({
   const [isHovering, setIsHovering] = React.useState(false);
 
   // Gmail-like collapse model
+  // Only track expanded state and animation for width transitions
+  // Label visibility is controlled directly by sidenavCollapsed (no delayed state flip)
   const [isExpanded, setIsExpanded] = React.useState<boolean>(() => !sidenavCollapsed);
-  const [presentation, setPresentation] = React.useState<"full" | "compact">(
-    !sidenavCollapsed ? "full" : "compact",
-  );
   const [isAnimating, setIsAnimating] = React.useState(false);
 
   const sidenavRef = React.useRef<HTMLDivElement>(null);
@@ -151,7 +150,8 @@ export default function Sidenav({
     }
   }, [openSidenav]);
   
-  // Sync Gmail-style animation model with controller state
+  // Sync width animation with controller state
+  // Labels/chevrons are controlled directly by sidenavCollapsed (no delayed state flip)
   React.useEffect(() => {
     const targetExpanded = !sidenavCollapsed;
     if (targetExpanded === isExpanded) return;
@@ -160,16 +160,7 @@ export default function Sidenav({
     if (isAnimating) return;
 
     setIsAnimating(true);
-
-    if (targetExpanded) {
-      // Rail -> Full: start width expansion AND immediately show labels
-      setIsExpanded(true);
-      setPresentation("full"); // Show labels immediately on expand
-    } else {
-      // Full -> Rail: start width shrink but keep full presentation (labels hide after transition)
-      setIsExpanded(false);
-      setPresentation("full");
-    }
+    setIsExpanded(targetExpanded);
   }, [sidenavCollapsed, isExpanded, isAnimating]);
 
   const handleTransitionEnd = (event: React.TransitionEvent<HTMLDivElement>) => {
@@ -184,17 +175,13 @@ export default function Sidenav({
       return;
     }
 
+    // Only mark animation as complete - NO state flip that causes layout changes
     setIsAnimating(false);
-    // When the width animation completes, only update presentation on collapse
-    // On expand, presentation is already "full" (set immediately)
-    if (!isExpanded) {
-      setPresentation("compact");
-    }
   };
 
-  // On mobile, never collapse. On desktop, use Gmail-like presentation state with hover
+  // On mobile, never collapse. On desktop, use sidenavCollapsed directly (no delayed state flip)
   const isCollapsed =
-    isMobileView || openSidenav ? false : presentation === "compact" && !isHovering;
+    isMobileView || openSidenav ? false : sidenavCollapsed && !isHovering;
   const hoverBackgroundClass = sidenavType === "dark" ? "hover:bg-white/10" : "hover:bg-gray-100";
   
   // Map sidenavColor to gradient classes for active items
@@ -215,10 +202,10 @@ export default function Sidenav({
   };
   
   const activeItemClass = getActiveItemClasses();
-  const isPresentationCompact = presentation === "compact";
   
-  // Helper to determine if we should use compact presentation
-  const shouldUseCompact = (forceFull: boolean) => forceFull ? false : isPresentationCompact;
+  // Use sidenavCollapsed directly for label/chevron visibility (no delayed state flip)
+  // On mobile or when hover-expanded, force labels visible
+  const shouldShowLabels = !sidenavCollapsed || isHovering || isMobileView || openSidenav;
 
   const isRouteActive = React.useMemo(() => {
     const check = (route: Route): boolean => {
@@ -336,18 +323,16 @@ export default function Sidenav({
         const iconWrapperClasses = "flex-shrink-0 flex items-center justify-center h-5 w-5 text-inherit";
 
         // Labels slide in/out from the right while icons stay fixed
-        // When collapsed: labels are hidden but don't affect icon position
-        // When expanded: labels reveal from the right
-        const useCompact = isPresentationCompact;
+        // Visibility controlled directly by sidenavCollapsed (no delayed state flip)
         const labelVisibilityClasses = [
           styles.labelVisibility,
-          useCompact ? styles.labelHidden : styles.labelVisible,
+          shouldShowLabels ? styles.labelVisible : styles.labelHidden,
         ].join(" ");
 
         const chevronClasses = [
           "flex-shrink-0 h-3 w-3 transition-transform duration-300",
           isOpen ? "rotate-180" : "",
-          useCompact ? "opacity-0 invisible" : "ml-auto opacity-100",
+          shouldShowLabels ? "ml-auto opacity-100" : "opacity-0 invisible",
         ].join(" ");
 
         const itemClasses = itemBaseClasses.join(" ");
@@ -383,14 +368,14 @@ export default function Sidenav({
                 type="button"
                 onClick={toggleAccordion}
                 className={itemClasses}
-                // Tooltip in compact mode
-                title={useCompact ? name : undefined}
+                // Tooltip when collapsed
+                title={!shouldShowLabels ? name : undefined}
               >
                 <span
                   className={[
                     styles.navItemInnerBase,
-                    level > 0 ? styles.navItemInnerIndented : "",
-                    !useCompact ? styles.navItemInnerSpaced : "",
+                    level > 0 && shouldShowLabels ? styles.navItemInnerIndented : "",
+                    shouldShowLabels ? styles.navItemInnerSpaced : "",
                   ].join(" ")}
                 >
                   <span className={iconWrapperClasses} style={iconWrapperStyle}>
@@ -424,13 +409,13 @@ export default function Sidenav({
                 target="_blank"
                 rel="noopener noreferrer"
                 className={itemClasses}
-                title={useCompact ? name : undefined}
+                title={!shouldShowLabels ? name : undefined}
               >
                 <span
                   className={[
                     styles.navItemInnerBase,
-                    level > 0 ? styles.navItemInnerIndented : "",
-                    !useCompact ? styles.navItemInnerSpaced : "",
+                    level > 0 && shouldShowLabels ? styles.navItemInnerIndented : "",
+                    shouldShowLabels ? styles.navItemInnerSpaced : "",
                   ].join(" ")}
                 >
                   <span className={iconWrapperClasses} style={iconWrapperStyle}>
@@ -450,13 +435,13 @@ export default function Sidenav({
               <Link
                 href={path}
                 className={itemClasses}
-                title={useCompact ? name : undefined}
+                title={!shouldShowLabels ? name : undefined}
               >
                 <span
                   className={[
                     styles.navItemInnerBase,
-                    level > 0 ? styles.navItemInnerIndented : "",
-                    !useCompact ? styles.navItemInnerSpaced : "",
+                    level > 0 && shouldShowLabels ? styles.navItemInnerIndented : "",
+                    shouldShowLabels ? styles.navItemInnerSpaced : "",
                   ].join(" ")}
                 >
                   <span className={iconWrapperClasses} style={iconWrapperStyle}>
@@ -484,7 +469,7 @@ export default function Sidenav({
         styles.sidebarContainer,
         isMobile ? styles.sidebarMobile : styles.sidebarDesktop,
         isExpanded ? styles.sidebarExpanded : styles.sidebarCollapsed,
-        isPresentationCompact ? styles.sidebarCompact : styles.sidebarFull,
+        sidenavCollapsed && !isHovering ? styles.sidebarCompact : styles.sidebarFull,
         isAnimating ? styles.sidebarAnimating : "",
       ].join(" ")}
       onMouseEnter={handleMouseEnter}
