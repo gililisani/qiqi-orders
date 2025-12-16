@@ -86,8 +86,8 @@
   transform: translateX(0);
 }
 
-/* When hovered and collapsed, Card becomes overlay on top of content */
-.cardHoverOverlay {
+/* Hover overlay wrapper - positions the overlay correctly */
+.hoverOverlayWrapper {
   position: fixed;
   left: 0;
   width: 256px;

@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -60,6 +61,11 @@ export default function Sidenav({
 
   const sidenavRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = React.useState(false);
+  
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // On mobile, sidebar should never be collapsed when open
   // openSidenav is only used on mobile, so if it's true, we're on mobile
@@ -82,15 +88,17 @@ export default function Sidenav({
   // Hover overlay state (separate from button click state)
   const [isHoverOverlay, setIsHoverOverlay] = React.useState(false);
   const [overlayTop, setOverlayTop] = React.useState(0);
+  const [overlayHeight, setOverlayHeight] = React.useState(0);
 
   const handleMouseEnter = React.useCallback(() => {
     // Show overlay on hover when collapsed (doesn't push content)
     const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1320;
     if (sidenavCollapsed && isDesktop && !openSidenav) {
-      // Calculate the sidebar container's top position for overlay positioning
+      // Calculate the sidebar container's position for overlay positioning
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         setOverlayTop(rect.top);
+        setOverlayHeight(rect.height);
       }
       setIsHoverOverlay(true);
       setIsHovering(true);
@@ -458,7 +466,7 @@ export default function Sidenav({
       onMouseLeave={handleMouseLeave}
       onTransitionEnd={handleTransitionEnd}
     >
-      {/* Single sidebar panel - becomes overlay on hover when collapsed */}
+      {/* Single sidebar panel - stays in normal flow for button click animations */}
       <Card
         ref={sidenavRef}
         color={
@@ -474,11 +482,7 @@ export default function Sidenav({
           sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
         } ${
           sidenavType === "dark" ? "!text-white" : "text-gray-900"
-        } overflow-y-auto ${isHoverOverlay ? styles.cardHoverOverlay : ""}`}
-        style={isHoverOverlay ? { 
-          top: `${overlayTop}px`,
-          height: `calc(100vh - ${overlayTop}px)`
-        } : undefined}
+        } overflow-y-auto`}
         placeholder={undefined}
         onPointerEnterCapture={undefined}
         onPointerLeaveCapture={undefined}
@@ -500,6 +504,66 @@ export default function Sidenav({
         {/* Menu Items */}
         {renderMenuItems(routes)}
       </Card>
+      
+      {/* Hover overlay - same Card structure via portal, uses same animation system */}
+      {mounted && isHoverOverlay && !isMobileView && createPortal(
+        <div
+          className={styles.hoverOverlayWrapper}
+          style={{
+            top: `${overlayTop}px`,
+            height: `${overlayHeight}px`,
+          }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div
+            className={[
+              styles.sidebarContainer,
+              styles.sidebarDesktop,
+              styles.sidebarExpanded,
+              styles.sidebarFull,
+            ].join(" ")}
+          >
+            <Card
+              color={
+                sidenavType === "dark"
+                  ? "gray"
+                  : sidenavType === "transparent"
+                  ? "transparent"
+                  : "white"
+              }
+              shadow={false}
+              variant="gradient"
+              className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
+                sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
+              } ${
+                sidenavType === "dark" ? "!text-white" : "text-gray-900"
+              } overflow-y-auto`}
+              placeholder={undefined}
+              onPointerEnterCapture={undefined}
+              onPointerLeaveCapture={undefined}
+            >
+              {/* Close button */}
+              <IconButton
+                ripple={false}
+                size="sm"
+                variant="text"
+                className="!absolute top-1 right-1 block xl:hidden"
+                onClick={() => setOpenSidenav(dispatch, false)}
+                placeholder={undefined}
+                onPointerEnterCapture={undefined}
+                onPointerLeaveCapture={undefined}
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </IconButton>
+
+              {/* Menu Items - uses same renderMenuItems with full presentation */}
+              {renderMenuItems(routes)}
+            </Card>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
