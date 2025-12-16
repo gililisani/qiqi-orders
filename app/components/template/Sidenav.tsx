@@ -464,78 +464,94 @@ export default function Sidenav({
       onMouseLeave={handleMouseLeave}
       onTransitionEnd={handleTransitionEnd}
     >
-      {/* Single sidebar panel - becomes overlay when peek is open */}
-      <Card
-        ref={sidenavRef}
-        color={
-          sidenavType === "dark"
-            ? "gray"
-            : sidenavType === "transparent"
-            ? "transparent"
-            : "white"
-        }
-        shadow={false}
-        variant="gradient"
-        className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
-          sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
-        } ${
-          sidenavType === "dark" ? "!text-white" : "text-gray-900"
-        } overflow-y-auto ${isOverlayMode ? styles.sidebarOverlayCard : ""}`}
-        placeholder={undefined}
-        onPointerEnterCapture={undefined}
-        onPointerLeaveCapture={undefined}
-      >
-        {/* Close button */}
-        <IconButton
-          ripple={false}
-          size="sm"
-          variant="text"
-          className="!absolute top-1 right-1 block xl:hidden"
-          onClick={() => setOpenSidenav(dispatch, false)}
+      {/* Single sidebar panel - rendered via portal when in overlay mode to fix z-index */}
+      {mounted && isOverlayMode ? (
+        createPortal(
+          <div
+            className={styles.sidebarOverlayPortalWrapper}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <div className={styles.sidebarOverlayPortal}>
+              <Card
+                ref={sidenavRef}
+                color={
+                  sidenavType === "dark"
+                    ? "gray"
+                    : sidenavType === "transparent"
+                    ? "transparent"
+                    : "white"
+                }
+                shadow={false}
+                variant="gradient"
+                className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
+                  sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
+                } ${
+                  sidenavType === "dark" ? "!text-white" : "text-gray-900"
+                } overflow-y-auto ${styles.sidebarOverlayCard}`}
+                placeholder={undefined}
+                onPointerEnterCapture={undefined}
+                onPointerLeaveCapture={undefined}
+              >
+                {/* Close button */}
+                <IconButton
+                  ripple={false}
+                  size="sm"
+                  variant="text"
+                  className="!absolute top-1 right-1 block xl:hidden"
+                  onClick={() => setOpenSidenav(dispatch, false)}
+                  placeholder={undefined}
+                  onPointerEnterCapture={undefined}
+                  onPointerLeaveCapture={undefined}
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </IconButton>
+
+                {/* Menu Items - uses isVisuallyExpanded for presentation */}
+                {renderMenuItems(routes)}
+              </Card>
+            </div>
+          </div>,
+          document.body
+        )
+      ) : (
+        <Card
+          ref={sidenavRef}
+          color={
+            sidenavType === "dark"
+              ? "gray"
+              : sidenavType === "transparent"
+              ? "transparent"
+              : "white"
+          }
+          shadow={false}
+          variant="gradient"
+          className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
+            sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
+          } ${
+            sidenavType === "dark" ? "!text-white" : "text-gray-900"
+          } overflow-y-auto`}
           placeholder={undefined}
           onPointerEnterCapture={undefined}
           onPointerLeaveCapture={undefined}
         >
-          <XMarkIcon className="w-5 h-5" />
-        </IconButton>
+          {/* Close button */}
+          <IconButton
+            ripple={false}
+            size="sm"
+            variant="text"
+            className="!absolute top-1 right-1 block xl:hidden"
+            onClick={() => setOpenSidenav(dispatch, false)}
+            placeholder={undefined}
+            onPointerEnterCapture={undefined}
+            onPointerLeaveCapture={undefined}
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </IconButton>
 
-        {/* Menu Items - uses isVisuallyExpanded for presentation */}
-        {renderMenuItems(routes)}
-      </Card>
-      
-      {/* Portal wrapper for overlay mode to fix z-index stacking context */}
-      {mounted && isOverlayMode && createPortal(
-        <div
-          className={styles.sidebarOverlayPortalWrapper}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div className={styles.sidebarOverlayPortal}>
-            <Card
-              color={
-                sidenavType === "dark"
-                  ? "gray"
-                  : sidenavType === "transparent"
-                  ? "transparent"
-                  : "white"
-              }
-              shadow={false}
-              variant="gradient"
-              className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
-                sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
-              } ${
-                sidenavType === "dark" ? "!text-white" : "text-gray-900"
-              } overflow-y-auto ${styles.sidebarOverlayCard}`}
-              placeholder={undefined}
-              onPointerEnterCapture={undefined}
-              onPointerLeaveCapture={undefined}
-            >
-              {/* Menu Items - uses isVisuallyExpanded for presentation */}
-              {renderMenuItems(routes)}
-            </Card>
-          </div>
-        </div>,
-        document.body
+          {/* Menu Items - uses isVisuallyExpanded for presentation */}
+          {renderMenuItems(routes)}
+        </Card>
       )}
     </div>
   );

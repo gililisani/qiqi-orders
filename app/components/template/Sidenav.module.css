@@ -125,6 +125,11 @@
   pointer-events: auto; /* Re-enable pointer events for the overlay content */
 }
 
+/* Apply the same overlay card styles when rendered via portal */
+.sidebarOverlayPortal .sidebarOverlayCard {
+  /* Same transform/opacity logic as the original, but now in portal for z-index fix */
+}
+
 /* In compact mode (not visually expanded), nested items lose their indent smoothly */
 .sidebarCompact .navItemInnerBase {
   transform: translateX(0);
