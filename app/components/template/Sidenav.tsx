@@ -64,7 +64,6 @@ export default function Sidenav({
 
   const sidenavRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const overlayRef = React.useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = React.useState(false);
   
   // Mount check for portal
@@ -193,25 +192,6 @@ export default function Sidenav({
   
   // Overlay mode: when collapsed but peek is open, sidebar becomes overlay
   const isOverlayMode = !isExpanded && isPeekOpen && !isMobileView;
-  
-  // Get header height for overlay positioning (navbar is typically ~64px, but we'll measure)
-  const [headerHeight, setHeaderHeight] = React.useState(64);
-  
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      // Find the navbar element and measure its height
-      const navbar = document.querySelector("nav") as HTMLElement | null;
-      if (navbar) {
-        setHeaderHeight(navbar.offsetHeight);
-      } else {
-        // Fallback: check for common navbar classes
-        const navElement = document.querySelector('[class*="navbar"], [class*="Navbar"]') as HTMLElement | null;
-        if (navElement) {
-          setHeaderHeight(navElement.offsetHeight);
-        }
-      }
-    }
-  }, []);
 
   const isRouteActive = React.useMemo(() => {
     const check = (route: Route): boolean => {
@@ -523,40 +503,37 @@ export default function Sidenav({
         {renderMenuItems(routes)}
       </Card>
       
-      {/* Hover overlay portal - always mounted when collapsed, rendered to document.body to avoid stacking context issues */}
-      {mounted && !isMobileView && sidenavCollapsed && createPortal(
+      {/* Portal wrapper for overlay mode to fix z-index stacking context */}
+      {mounted && isOverlayMode && createPortal(
         <div
-          ref={overlayRef}
-          className={`${styles.sidebarOverlayPortal} ${isPeekOpen ? styles.sidebarOverlayOpen : styles.sidebarOverlayClosed}`}
-          style={{
-            top: `${headerHeight}px`,
-            height: `calc(100vh - ${headerHeight}px)`,
-          }}
+          className={styles.sidebarOverlayPortalWrapper}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
-          <Card
-            color={
-              sidenavType === "dark"
-                ? "gray"
-                : sidenavType === "transparent"
-                ? "transparent"
-                : "white"
-            }
-            shadow={false}
-            variant="gradient"
-            className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
-              sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
-            } ${
-              sidenavType === "dark" ? "!text-white" : "text-gray-900"
-            } overflow-y-auto`}
-            placeholder={undefined}
-            onPointerEnterCapture={undefined}
-            onPointerLeaveCapture={undefined}
-          >
-            {/* Menu Items - uses isVisuallyExpanded for presentation */}
-            {renderMenuItems(routes)}
-          </Card>
+          <div className={styles.sidebarOverlayPortal}>
+            <Card
+              color={
+                sidenavType === "dark"
+                  ? "gray"
+                  : sidenavType === "transparent"
+                  ? "transparent"
+                  : "white"
+              }
+              shadow={false}
+              variant="gradient"
+              className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
+                sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
+              } ${
+                sidenavType === "dark" ? "!text-white" : "text-gray-900"
+              } overflow-y-auto ${styles.sidebarOverlayCard}`}
+              placeholder={undefined}
+              onPointerEnterCapture={undefined}
+              onPointerLeaveCapture={undefined}
+            >
+              {/* Menu Items - uses isVisuallyExpanded for presentation */}
+              {renderMenuItems(routes)}
+            </Card>
+          </div>
         </div>,
         document.body
       )}

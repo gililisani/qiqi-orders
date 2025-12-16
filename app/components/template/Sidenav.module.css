@@ -106,28 +106,23 @@
   pointer-events: auto;
 }
 
-/* Portal-based overlay (rendered to document.body to avoid stacking context issues) */
-.sidebarOverlayPortal {
+/* Portal wrapper - positions the overlay correctly and provides constant z-index */
+.sidebarOverlayPortalWrapper {
   position: fixed;
   left: 0;
-  width: 256px;
+  top: 0;
+  bottom: 0;
   z-index: 9999; /* Constant high z-index in ALL states (open and closed) */
-  will-change: transform;
-  transition:
-    transform 200ms cubic-bezier(0.2, 0, 0, 1),
-    opacity 160ms cubic-bezier(0.2, 0, 0, 1);
+  pointer-events: none; /* Let hover events pass through to the overlay inside */
 }
 
-.sidebarOverlayOpen {
-  transform: translateX(0);
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.sidebarOverlayClosed {
-  transform: translateX(-184px);
-  opacity: 0;
-  pointer-events: none;
+.sidebarOverlayPortal {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 256px;
+  pointer-events: auto; /* Re-enable pointer events for the overlay content */
 }
 
 /* In compact mode (not visually expanded), nested items lose their indent smoothly */
