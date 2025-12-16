@@ -2,7 +2,6 @@
 "use client";
 
 import React from "react";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -58,18 +57,9 @@ export default function Sidenav({
     !sidenavCollapsed ? "full" : "compact",
   );
   const [isAnimating, setIsAnimating] = React.useState(false);
-  
-  // Peek state: hover-open when collapsed (temporary visual expansion)
-  const [isPeekOpen, setIsPeekOpen] = React.useState(false);
 
   const sidenavRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = React.useState(false);
-  
-  // Mount check for portal
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // On mobile, sidebar should never be collapsed when open
   // openSidenav is only used on mobile, so if it's true, we're on mobile
@@ -90,22 +80,24 @@ export default function Sidenav({
   };
 
   const handleMouseEnter = React.useCallback(() => {
-    // Only expand on hover if collapsed and on desktop (not mobile)
-    // Add small buffer to prevent expansion near breakpoint
+    // Simulate button click: expand on hover when collapsed
     const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1320;
     if (sidenavCollapsed && isDesktop && !openSidenav) {
+      setSidenavCollapsed(dispatch, false);
       setIsHovering(true);
-      setIsPeekOpen(true);
       onHoverChange?.(true);
     }
-  }, [sidenavCollapsed, openSidenav, onHoverChange]);
+  }, [sidenavCollapsed, openSidenav, dispatch, onHoverChange]);
 
   const handleMouseLeave = React.useCallback(() => {
-    // Always reset hovering on leave
-    setIsHovering(false);
-    setIsPeekOpen(false);
-    onHoverChange?.(false);
-  }, [onHoverChange]);
+    // Simulate button click: collapse on hover leave when expanded
+    const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1320;
+    if (!sidenavCollapsed && isDesktop && !openSidenav) {
+      setSidenavCollapsed(dispatch, true);
+      setIsHovering(false);
+      onHoverChange?.(false);
+    }
+  }, [sidenavCollapsed, openSidenav, dispatch, onHoverChange]);
 
   React.useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -181,17 +173,11 @@ export default function Sidenav({
   
   const activeItemClass = getActiveItemClasses();
   
-  // Compute visual expansion state: expanded via click OR peek via hover
-  const isVisuallyExpanded = isExpanded || isPeekOpen;
-  
-  // Presentation: use full when visually expanded, compact otherwise
-  const isPresentationCompact = !isVisuallyExpanded;
+  const activeItemClass = getActiveItemClasses();
+  const isPresentationCompact = presentation === "compact";
   
   // Helper to determine if we should use compact presentation
   const shouldUseCompact = (forceFull: boolean) => forceFull ? false : isPresentationCompact;
-  
-  // Overlay mode: when collapsed but peek is open, sidebar becomes overlay
-  const isOverlayMode = !isExpanded && isPeekOpen && !isMobileView;
 
   const isRouteActive = React.useMemo(() => {
     const check = (route: Route): boolean => {
@@ -464,95 +450,44 @@ export default function Sidenav({
       onMouseLeave={handleMouseLeave}
       onTransitionEnd={handleTransitionEnd}
     >
-      {/* Single sidebar panel - rendered via portal when in overlay mode to fix z-index */}
-      {mounted && isOverlayMode ? (
-        createPortal(
-          <div
-            className={styles.sidebarOverlayPortalWrapper}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            <div className={styles.sidebarOverlayPortal}>
-              <Card
-                ref={sidenavRef}
-                color={
-                  sidenavType === "dark"
-                    ? "gray"
-                    : sidenavType === "transparent"
-                    ? "transparent"
-                    : "white"
-                }
-                shadow={false}
-                variant="gradient"
-                className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
-                  sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
-                } ${
-                  sidenavType === "dark" ? "!text-white" : "text-gray-900"
-                } overflow-y-auto ${styles.sidebarOverlayCard} ${isPeekOpen ? styles.sidebarOverlayCardOpen : styles.sidebarOverlayCardClosed}`}
-                placeholder={undefined}
-                onPointerEnterCapture={undefined}
-                onPointerLeaveCapture={undefined}
-              >
-                {/* Close button */}
-                <IconButton
-                  ripple={false}
-                  size="sm"
-                  variant="text"
-                  className="!absolute top-1 right-1 block xl:hidden"
-                  onClick={() => setOpenSidenav(dispatch, false)}
-                  placeholder={undefined}
-                  onPointerEnterCapture={undefined}
-                  onPointerLeaveCapture={undefined}
-                >
-                  <XMarkIcon className="w-5 h-5" />
-                </IconButton>
-
-                {/* Menu Items - uses isVisuallyExpanded for presentation */}
-                {renderMenuItems(routes)}
-              </Card>
-            </div>
-          </div>,
-          document.body
-        )
-      ) : (
-        <Card
-          ref={sidenavRef}
-          color={
-            sidenavType === "dark"
-              ? "gray"
-              : sidenavType === "transparent"
-              ? "transparent"
-              : "white"
-          }
-          shadow={false}
-          variant="gradient"
-          className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
-            sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
-          } ${
-            sidenavType === "dark" ? "!text-white" : "text-gray-900"
-          } overflow-y-auto`}
+      {/* Single sidebar panel */}
+      <Card
+        ref={sidenavRef}
+        color={
+          sidenavType === "dark"
+            ? "gray"
+            : sidenavType === "transparent"
+            ? "transparent"
+            : "white"
+        }
+        shadow={false}
+        variant="gradient"
+        className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
+          sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
+        } ${
+          sidenavType === "dark" ? "!text-white" : "text-gray-900"
+        } overflow-y-auto`}
+        placeholder={undefined}
+        onPointerEnterCapture={undefined}
+        onPointerLeaveCapture={undefined}
+      >
+        {/* Close button */}
+        <IconButton
+          ripple={false}
+          size="sm"
+          variant="text"
+          className="!absolute top-1 right-1 block xl:hidden"
+          onClick={() => setOpenSidenav(dispatch, false)}
           placeholder={undefined}
           onPointerEnterCapture={undefined}
           onPointerLeaveCapture={undefined}
         >
-          {/* Close button */}
-          <IconButton
-            ripple={false}
-            size="sm"
-            variant="text"
-            className="!absolute top-1 right-1 block xl:hidden"
-            onClick={() => setOpenSidenav(dispatch, false)}
-            placeholder={undefined}
-            onPointerEnterCapture={undefined}
-            onPointerLeaveCapture={undefined}
-          >
-            <XMarkIcon className="w-5 h-5" />
-          </IconButton>
+          <XMarkIcon className="w-5 h-5" />
+        </IconButton>
 
-          {/* Menu Items - uses isVisuallyExpanded for presentation */}
-          {renderMenuItems(routes)}
-        </Card>
-      )}
+        {/* Menu Items */}
+        {renderMenuItems(routes)}
+      </Card>
     </div>
   );
 }
