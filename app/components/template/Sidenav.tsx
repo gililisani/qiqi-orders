@@ -162,11 +162,11 @@ export default function Sidenav({
     setIsAnimating(true);
 
     if (targetExpanded) {
-      // Rail -> Full: start width expansion but keep compact presentation
+      // Rail -> Full: start width expansion AND immediately show labels
       setIsExpanded(true);
-      setPresentation("compact");
+      setPresentation("full"); // Show labels immediately on expand
     } else {
-      // Full -> Rail: start width shrink but keep full presentation
+      // Full -> Rail: start width shrink but keep full presentation (labels hide after transition)
       setIsExpanded(false);
       setPresentation("full");
     }
@@ -185,8 +185,11 @@ export default function Sidenav({
     }
 
     setIsAnimating(false);
-    // When the width animation completes, swap presentation
-    setPresentation(isExpanded ? "full" : "compact");
+    // When the width animation completes, only update presentation on collapse
+    // On expand, presentation is already "full" (set immediately)
+    if (!isExpanded) {
+      setPresentation("compact");
+    }
   };
 
   // On mobile, never collapse. On desktop, use Gmail-like presentation state with hover
