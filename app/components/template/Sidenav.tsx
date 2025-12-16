@@ -157,6 +157,11 @@ export default function Sidenav({
     const targetExpanded = !sidenavCollapsed;
     if (targetExpanded === isExpanded) return;
 
+    // When collapse begins, immediately clear hover state so it cannot keep indent ON during collapse
+    if (sidenavCollapsed) {
+      setIsHovering(false);
+    }
+
     // Set isExpanded immediately - no delays, no animation gating
     setIsExpanded(targetExpanded);
     // Mark animation as starting (for CSS transition class)
@@ -207,9 +212,10 @@ export default function Sidenav({
   // On mobile or when hover-expanded, force labels visible
   const shouldShowLabels = !sidenavCollapsed || isHovering || isMobileView || openSidenav;
   
-  // Submenu indent MUST be driven by isExpanded (the state that controls width animation)
-  // This ensures indent animates in sync with sidebar width transition, not label visibility
-  const isVisuallyExpanded = isExpanded || isHovering;
+  // Submenu indent MUST be driven by visual expansion state
+  // Hover only affects indent when in peek mode (collapsed + hovering), not during collapse animation
+  const isPeekOpen = sidenavCollapsed && isHovering;
+  const isVisuallyExpanded = !sidenavCollapsed || isPeekOpen;
 
   const isRouteActive = React.useMemo(() => {
     const check = (route: Route): boolean => {
