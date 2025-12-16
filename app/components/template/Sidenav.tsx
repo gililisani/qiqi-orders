@@ -440,6 +440,7 @@ export default function Sidenav({
       onMouseLeave={handleMouseLeave}
       onTransitionEnd={handleTransitionEnd}
     >
+      {/* Persistent rail (72px when collapsed) */}
       <Card
         ref={sidenavRef}
         color={
@@ -477,6 +478,34 @@ export default function Sidenav({
         {/* Menu Items */}
         {renderMenuItems(routes)}
       </Card>
+
+      {/* Peek overlay - appears on hover in compact (collapsed) mode, overlays content */}
+      {!isMobileView && sidenavCollapsed && (
+        <div className={styles.peekPanel}>
+          <Card
+            color={
+              sidenavType === "dark"
+                ? "gray"
+                : sidenavType === "transparent"
+                ? "transparent"
+                : "white"
+            }
+            shadow={false}
+            variant="gradient"
+            className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
+              sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
+            } ${
+              sidenavType === "dark" ? "!text-white" : "text-gray-900"
+            } overflow-y-auto`}
+            placeholder={undefined}
+            onPointerEnterCapture={undefined}
+            onPointerLeaveCapture={undefined}
+          >
+            {/* Menu Items in peek */}
+            {renderMenuItems(routes)}
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

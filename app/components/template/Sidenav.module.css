@@ -5,6 +5,8 @@
   width: var(--sidebar-width, 256px);
   max-width: var(--sidebar-width, 256px);
   flex-basis: var(--sidebar-width, 256px);
+  position: relative;
+  overflow: visible;
 }
 
 .sidebarDesktop {
@@ -76,6 +78,32 @@
 
 .navItemInnerSpaced {
   gap: 0.75rem; /* Comfortable space between icon and label in expanded mode */
+}
+
+/* Peek overlay panel for collapsed (compact) mode */
+
+.peekPanel {
+  position: absolute;
+  top: 0;
+  left: 72px; /* rail width */
+  width: 256px;
+  height: 100%;
+  z-index: 40;
+  opacity: 0;
+  transform: translateX(-4px);
+  pointer-events: none;
+  transition:
+    opacity 160ms cubic-bezier(0.2, 0, 0, 1),
+    transform 160ms cubic-bezier(0.2, 0, 0, 1);
+
+  /* Temporary debug visual */
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.sidebarCompact:hover .peekPanel {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
 }
 
 /* In compact mode, nested items lose their indent smoothly */
