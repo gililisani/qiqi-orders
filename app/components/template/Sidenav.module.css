@@ -72,7 +72,9 @@
   display: inline-flex;
   align-items: center;
   min-width: 0;
-  transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+  /* Submenu indent transition: matches sidebar width transition timing exactly */
+  transition: transform 260ms cubic-bezier(0.2, 0, 0, 1);
+  transition-delay: 0ms; /* No delay - must animate immediately with sidebar width */
 }
 
 .navItemInnerIndented {
@@ -83,11 +85,8 @@
   gap: 0.75rem; /* Comfortable space between icon and label in expanded mode */
 }
 
-
-/* In compact mode (not visually expanded), nested items lose their indent smoothly */
-.sidebarCompact .navItemInnerBase {
-  transform: translateX(0);
-}
+/* NOTE: Removed .sidebarCompact override - indent is now controlled by isVisuallyExpanded state */
+/* Indent animates smoothly during entire sidebar width transition, not tied to label visibility */
 
 
 

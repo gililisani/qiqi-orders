@@ -206,6 +206,10 @@ export default function Sidenav({
   // Use sidenavCollapsed directly for label/chevron visibility (no delayed state flip)
   // On mobile or when hover-expanded, force labels visible
   const shouldShowLabels = !sidenavCollapsed || isHovering || isMobileView || openSidenav;
+  
+  // Visual expanded state for submenu indentation (must animate with sidebar width, not label visibility)
+  // Indent must be controlled by sidebar expanded state, not by labels
+  const isVisuallyExpanded = !sidenavCollapsed || isHovering;
 
   const isRouteActive = React.useMemo(() => {
     const check = (route: Route): boolean => {
@@ -374,7 +378,7 @@ export default function Sidenav({
                 <span
                   className={[
                     styles.navItemInnerBase,
-                    level > 0 && shouldShowLabels ? styles.navItemInnerIndented : "",
+                    level > 0 && isVisuallyExpanded ? styles.navItemInnerIndented : "",
                     shouldShowLabels ? styles.navItemInnerSpaced : "",
                   ].join(" ")}
                 >
@@ -414,7 +418,7 @@ export default function Sidenav({
                 <span
                   className={[
                     styles.navItemInnerBase,
-                    level > 0 && shouldShowLabels ? styles.navItemInnerIndented : "",
+                    level > 0 && isVisuallyExpanded ? styles.navItemInnerIndented : "",
                     shouldShowLabels ? styles.navItemInnerSpaced : "",
                   ].join(" ")}
                 >
@@ -440,7 +444,7 @@ export default function Sidenav({
                 <span
                   className={[
                     styles.navItemInnerBase,
-                    level > 0 && shouldShowLabels ? styles.navItemInnerIndented : "",
+                    level > 0 && isVisuallyExpanded ? styles.navItemInnerIndented : "",
                     shouldShowLabels ? styles.navItemInnerSpaced : "",
                   ].join(" ")}
                 >
