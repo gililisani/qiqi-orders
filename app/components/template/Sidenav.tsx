@@ -57,6 +57,9 @@ export default function Sidenav({
     !sidenavCollapsed ? "full" : "compact",
   );
   const [isAnimating, setIsAnimating] = React.useState(false);
+  
+  // Peek state: hover-open when collapsed (temporary visual expansion)
+  const [isPeekOpen, setIsPeekOpen] = React.useState(false);
 
   const sidenavRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -85,6 +88,7 @@ export default function Sidenav({
     const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1320;
     if (sidenavCollapsed && isDesktop && !openSidenav) {
       setIsHovering(true);
+      setIsPeekOpen(true);
       onHoverChange?.(true);
     }
   }, [sidenavCollapsed, openSidenav, onHoverChange]);
@@ -92,6 +96,7 @@ export default function Sidenav({
   const handleMouseLeave = React.useCallback(() => {
     // Always reset hovering on leave
     setIsHovering(false);
+    setIsPeekOpen(false);
     onHoverChange?.(false);
   }, [onHoverChange]);
 
@@ -168,10 +173,18 @@ export default function Sidenav({
   };
   
   const activeItemClass = getActiveItemClasses();
-  const isPresentationCompact = presentation === "compact";
+  
+  // Compute visual expansion state: expanded via click OR peek via hover
+  const isVisuallyExpanded = isExpanded || isPeekOpen;
+  
+  // Presentation: use full when visually expanded, compact otherwise
+  const isPresentationCompact = !isVisuallyExpanded;
   
   // Helper to determine if we should use compact presentation
   const shouldUseCompact = (forceFull: boolean) => forceFull ? false : isPresentationCompact;
+  
+  // Overlay mode: when collapsed but peek is open, sidebar becomes overlay
+  const isOverlayMode = !isExpanded && isPeekOpen && !isMobileView;
 
   const isRouteActive = React.useMemo(() => {
     const check = (route: Route): boolean => {
@@ -213,7 +226,7 @@ export default function Sidenav({
   }, [routes, isRouteActive]);
 
 
-  const renderMenuItems = (items: Route[], level = 0, forceFullPresentation = false) => {
+  const renderMenuItems = (items: Route[], level = 0) => {
     // Helper function to check if a route is the most specific active match
     // This prevents parent routes from being highlighted when a child route matches
     const isMostSpecificActive = (routePath: string | undefined, routePages: Route[] | undefined): boolean => {
@@ -291,7 +304,7 @@ export default function Sidenav({
         // Labels slide in/out from the right while icons stay fixed
         // When collapsed: labels are hidden but don't affect icon position
         // When expanded: labels reveal from the right
-        const useCompact = shouldUseCompact(forceFullPresentation);
+        const useCompact = isPresentationCompact;
         const labelVisibilityClasses = [
           styles.labelVisibility,
           useCompact ? styles.labelHidden : styles.labelVisible,
@@ -360,7 +373,7 @@ export default function Sidenav({
                 }`}
               >
                 <div className="overflow-hidden">
-                  {pages && renderMenuItems(pages, level + 1, forceFullPresentation)}
+                  {pages && renderMenuItems(pages, level + 1)}
                 </div>
               </div>
 
@@ -437,14 +450,14 @@ export default function Sidenav({
         styles.sidebarContainer,
         isMobile ? styles.sidebarMobile : styles.sidebarDesktop,
         isExpanded ? styles.sidebarExpanded : styles.sidebarCollapsed,
-        presentation === "compact" ? styles.sidebarCompact : styles.sidebarFull,
+        isPresentationCompact ? styles.sidebarCompact : styles.sidebarFull,
         isAnimating ? styles.sidebarAnimating : "",
       ].join(" ")}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTransitionEnd={handleTransitionEnd}
     >
-      {/* Persistent rail (72px when collapsed) */}
+      {/* Single sidebar panel - becomes overlay when peek is open */}
       <Card
         ref={sidenavRef}
         color={
@@ -460,7 +473,7 @@ export default function Sidenav({
           sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
         } ${
           sidenavType === "dark" ? "!text-white" : "text-gray-900"
-        } overflow-y-auto ${styles.railContentHidden}`}
+        } overflow-y-auto ${isOverlayMode ? styles.sidebarOverlayCard : ""}`}
         placeholder={undefined}
         onPointerEnterCapture={undefined}
         onPointerLeaveCapture={undefined}
@@ -479,37 +492,9 @@ export default function Sidenav({
           <XMarkIcon className="w-5 h-5" />
         </IconButton>
 
-        {/* Menu Items */}
+        {/* Menu Items - uses isVisuallyExpanded for presentation */}
         {renderMenuItems(routes)}
       </Card>
-
-      {/* Peek overlay - appears on hover in compact (collapsed) mode, overlays content */}
-      {!isMobileView && sidenavCollapsed && (
-        <div className={styles.peekPanel}>
-          <Card
-            color={
-              sidenavType === "dark"
-                ? "gray"
-                : sidenavType === "transparent"
-                ? "transparent"
-                : "white"
-            }
-            shadow={false}
-            variant="gradient"
-            className={`h-full w-full transition-all duration-300 ease-in-out p-1.5 border border-gray-200 ${
-              sidenavType === "transparent" ? "shadow-none border-none" : "shadow-sm"
-            } ${
-              sidenavType === "dark" ? "!text-white" : "text-gray-900"
-            } overflow-y-auto`}
-            placeholder={undefined}
-            onPointerEnterCapture={undefined}
-            onPointerLeaveCapture={undefined}
-          >
-            {/* Menu Items in peek - always render in full presentation */}
-            {renderMenuItems(routes, 0, true)}
-          </Card>
-        </div>
-      )}
     </div>
   );
 }

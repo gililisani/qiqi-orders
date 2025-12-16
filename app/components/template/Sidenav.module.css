@@ -80,36 +80,25 @@
   gap: 0.75rem; /* Comfortable space between icon and label in expanded mode */
 }
 
-/* Peek overlay panel for collapsed (compact) mode */
-
-.peekPanel {
-  position: absolute;
+/* Overlay mode: when collapsed but peek is open, the Card inside becomes overlay */
+.sidebarOverlayCard {
+  position: fixed;
+  left: 0;
   top: 0;
-  left: 0; /* Cover the rail area */
+  bottom: 0;
   width: 256px;
-  height: 100%;
   z-index: 40;
-  opacity: 0;
-  transform: translateX(-4px);
-  pointer-events: none;
-  transition:
-    opacity 160ms cubic-bezier(0.2, 0, 0, 1),
-    transform 160ms cubic-bezier(0.2, 0, 0, 1);
+  /* Transform animation: slide from -184px (256-72) to 0 */
+  transform: translateX(-184px);
+  transition: transform 260ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-.sidebarCompact:hover .peekPanel {
-  opacity: 1;
+/* When container is hovered (or has hover), slide overlay in */
+.sidebarContainer:hover .sidebarOverlayCard {
   transform: translateX(0);
-  pointer-events: auto;
 }
 
-/* Hide rail nav content when peek is open to prevent duplication */
-.sidebarCompact:hover .railContentHidden {
-  visibility: hidden;
-  pointer-events: none;
-}
-
-/* In compact mode, nested items lose their indent smoothly */
+/* In compact mode (not visually expanded), nested items lose their indent smoothly */
 .sidebarCompact .navItemInnerBase {
   transform: translateX(0);
 }
