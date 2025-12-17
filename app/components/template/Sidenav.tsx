@@ -132,11 +132,14 @@ export default function Sidenav({
     }
   }, [sidenavCollapsed, isHovering, onHoverChange]);
   
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   React.useEffect(() => {
     return () => {
       if (collapseTimeoutRef.current) {
         clearTimeout(collapseTimeoutRef.current);
+      }
+      if (collapseGuardTimeoutRef.current) {
+        clearTimeout(collapseGuardTimeoutRef.current);
       }
     };
   }, []);
