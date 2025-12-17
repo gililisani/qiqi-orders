@@ -56,10 +56,13 @@ export default function Sidenav({
   // Label visibility is controlled directly by sidenavCollapsed (no delayed state flip)
   const [isExpanded, setIsExpanded] = React.useState<boolean>(() => !sidenavCollapsed);
   const [isAnimating, setIsAnimating] = React.useState(false);
+  // Transient guard to prevent hover from keeping indent enabled during collapse animation
+  const [isCollapsing, setIsCollapsing] = React.useState(false);
 
   const sidenavRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const collapseTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const collapseGuardTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // On mobile, sidebar should never be collapsed when open
   // openSidenav is only used on mobile, so if it's true, we're on mobile
@@ -157,9 +160,28 @@ export default function Sidenav({
     const targetExpanded = !sidenavCollapsed;
     if (targetExpanded === isExpanded) return;
 
-    // When collapse begins, immediately clear hover state so it cannot keep indent ON during collapse
+    // When collapse begins, set collapse guard and force hover off immediately
     if (sidenavCollapsed) {
-      setIsHovering(false);
+      setIsCollapsing(true);
+      setIsHovering(false); // Force hover off immediately so it cannot keep indent ON
+      
+      // Clear any existing timeout
+      if (collapseGuardTimeoutRef.current) {
+        clearTimeout(collapseGuardTimeoutRef.current);
+      }
+      
+      // Clear collapse guard after width transition completes (260ms matches sidebar width transition)
+      collapseGuardTimeoutRef.current = setTimeout(() => {
+        setIsCollapsing(false);
+        collapseGuardTimeoutRef.current = null;
+      }, 260);
+    } else {
+      // When expanding, clear collapse guard immediately
+      setIsCollapsing(false);
+      if (collapseGuardTimeoutRef.current) {
+        clearTimeout(collapseGuardTimeoutRef.current);
+        collapseGuardTimeoutRef.current = null;
+      }
     }
 
     // Set isExpanded immediately - no delays, no animation gating
@@ -213,8 +235,9 @@ export default function Sidenav({
   const shouldShowLabels = !sidenavCollapsed || isHovering || isMobileView || openSidenav;
   
   // Submenu indent MUST be driven by visual expansion state
-  // Hover only affects indent when in peek mode (collapsed + hovering), not during collapse animation
-  const isPeekOpen = sidenavCollapsed && isHovering;
+  // Hover only affects indent when in peek mode (collapsed + hovering), NOT during collapse animation
+  // isCollapsing guard prevents hover from keeping indent enabled during collapse
+  const isPeekOpen = sidenavCollapsed && isHovering && !isCollapsing;
   const isVisuallyExpanded = !sidenavCollapsed || isPeekOpen;
 
   const isRouteActive = React.useMemo(() => {
