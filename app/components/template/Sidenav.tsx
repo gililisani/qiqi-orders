@@ -145,17 +145,20 @@ export default function Sidenav({
     };
   }, []);
 
+  // Click-outside handler: Only close menu when clicking outside the sidebar
+  // Do NOT close when clicking accordion buttons (items with children but no path)
   React.useEffect(() => {
     const handleClick = (event: MouseEvent) => {
       if (sidenavRef.current && !sidenavRef.current.contains(event.target as Node)) {
         handleClickOutside();
       }
     };
-    if (openSidenav) {
+    // Only attach click-outside handler on mobile when menu is open
+    if (openSidenav && !isDesktop) {
       document.addEventListener("mousedown", handleClick);
       return () => document.removeEventListener("mousedown", handleClick);
     }
-  }, [openSidenav]);
+  }, [openSidenav, isDesktop]);
   
   // Sync width animation with controller state
   // On mobile (< lg): Force expanded state, disable collapse
@@ -454,6 +457,14 @@ export default function Sidenav({
         }
 
         if (external && path) {
+          // Handler to close mobile menu when clicking an external link
+          const handleExternalLinkClick = () => {
+            // Only close menu on mobile when clicking actual link items (not accordions)
+            if (!isDesktop && openSidenav) {
+              setOpenSidenav(dispatch, false);
+            }
+          };
+
           return (
             <li key={key} className="text-inherit">
               <a
@@ -462,6 +473,7 @@ export default function Sidenav({
                 rel="noopener noreferrer"
                 className={itemClasses}
                 title={!shouldShowLabels ? name : undefined}
+                onClick={handleExternalLinkClick}
               >
                 <span
                   className={[
@@ -482,12 +494,21 @@ export default function Sidenav({
         }
 
         if (path) {
+          // Handler to close mobile menu when clicking a link item
+          const handleLinkClick = () => {
+            // Only close menu on mobile when clicking actual link items (not accordions)
+            if (!isDesktop && openSidenav) {
+              setOpenSidenav(dispatch, false);
+            }
+          };
+
           return (
             <li key={key} className="text-inherit">
               <Link
                 href={path}
                 className={itemClasses}
                 title={!shouldShowLabels ? name : undefined}
+                onClick={handleLinkClick}
               >
                 <span
                   className={[
