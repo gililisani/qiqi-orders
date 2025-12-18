@@ -64,27 +64,29 @@ export default function Sidenav({
   const collapseTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const collapseGuardTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  // On mobile, sidebar should never be collapsed when open
-  // openSidenav is only used on mobile, so if it's true, we're on mobile
-  // Also check window width as fallback
-  const [isMobileView, setIsMobileView] = React.useState(false);
+  // Responsive breakpoint: lg = 1024px (Tailwind lg breakpoint)
+  // Desktop (>= lg): supports expanded/collapsed/hover
+  // Mobile/Tablet (< lg): always expanded, no collapse, no hover, overlay drawer only
+  const [isDesktop, setIsDesktop] = React.useState(false);
   
   React.useEffect(() => {
-    const checkMobile = () => {
-      setIsMobileView(window.innerWidth < 1280);
+    const checkBreakpoint = () => {
+      // lg breakpoint = 1024px
+      const desktop = typeof window !== "undefined" && window.innerWidth >= 1024;
+      setIsDesktop(desktop);
     };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    checkBreakpoint();
+    window.addEventListener("resize", checkBreakpoint);
+    return () => window.removeEventListener("resize", checkBreakpoint);
   }, []);
 
   const handleClickOutside = () => {
     setOpenSidenav(dispatch, false);
   };
 
-  // Gmail-style hover expand/collapse: reuse same setSidenavCollapsed as button
+  // Gmail-style hover expand/collapse: ONLY on desktop (>= lg breakpoint)
+  // Mobile/Tablet: hover is disabled entirely
   const handleMouseEnter = React.useCallback(() => {
-    const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1320;
     if (!isDesktop || openSidenav) return;
     
     // Cancel any pending collapse
@@ -102,7 +104,6 @@ export default function Sidenav({
   }, [sidenavCollapsed, openSidenav, dispatch, onHoverChange]);
 
   const handleMouseLeave = React.useCallback(() => {
-    const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1320;
     if (!isDesktop || openSidenav) return;
     
     // Only collapse if currently expanded AND expansion was via hover
@@ -157,9 +158,25 @@ export default function Sidenav({
   }, [openSidenav]);
   
   // Sync width animation with controller state
-  // isExpanded must toggle immediately when sidenavCollapsed changes (at START of collapse/expand)
-  // This ensures submenu indent animates immediately, not after any delay
+  // On mobile (< lg): Force expanded state, disable collapse
+  // On desktop (>= lg): Normal expand/collapse behavior
   React.useEffect(() => {
+    // Mobile: Always force expanded, no collapse allowed
+    if (!isDesktop) {
+      if (!isExpanded) {
+        setIsExpanded(true);
+      }
+      // Clear any collapse-related state on mobile
+      setIsCollapsing(false);
+      setIsHovering(false);
+      if (collapseGuardTimeoutRef.current) {
+        clearTimeout(collapseGuardTimeoutRef.current);
+        collapseGuardTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    // Desktop: Normal expand/collapse behavior
     const targetExpanded = !sidenavCollapsed;
     if (targetExpanded === isExpanded) return;
 
@@ -191,7 +208,7 @@ export default function Sidenav({
     setIsExpanded(targetExpanded);
     // Mark animation as starting (for CSS transition class)
     setIsAnimating(true);
-  }, [sidenavCollapsed, isExpanded]);
+  }, [sidenavCollapsed, isExpanded, isDesktop]);
 
   const handleTransitionEnd = (event: React.TransitionEvent<HTMLDivElement>) => {
     if (!isAnimating) return;
@@ -209,9 +226,9 @@ export default function Sidenav({
     setIsAnimating(false);
   };
 
-  // On mobile, never collapse. On desktop, use sidenavCollapsed directly (no delayed state flip)
-  const isCollapsed =
-    isMobileView || openSidenav ? false : sidenavCollapsed && !isHovering;
+  // On mobile (< lg): Never collapsed, always expanded
+  // On desktop (>= lg): Use sidenavCollapsed state
+  const isCollapsed = !isDesktop ? false : sidenavCollapsed && !isHovering;
   const hoverBackgroundClass = sidenavType === "dark" ? "hover:bg-white/10" : "hover:bg-gray-100";
   
   // Map sidenavColor to gradient classes for active items
@@ -233,9 +250,8 @@ export default function Sidenav({
   
   const activeItemClass = getActiveItemClasses();
   
-  // Use sidenavCollapsed directly for label/chevron visibility (no delayed state flip)
-  // On mobile or when hover-expanded, force labels visible
-  const shouldShowLabels = !sidenavCollapsed || isHovering || isMobileView || openSidenav;
+  // Label visibility: On mobile always visible, on desktop based on expanded/collapsed state
+  const shouldShowLabels = !isDesktop || !sidenavCollapsed || isHovering || openSidenav;
   
   // Submenu indent MUST be driven by visual expansion state
   // Hover only affects indent when in peek mode (collapsed + hovering), NOT during collapse animation
@@ -504,13 +520,18 @@ export default function Sidenav({
         isMobile ? "h-full w-full" : "h-[calc(100%-1rem)] ml-4 mb-4",
         styles.sidebarContainer,
         isMobile ? styles.sidebarMobile : styles.sidebarDesktop,
-        isExpanded ? styles.sidebarExpanded : styles.sidebarCollapsed,
-        sidenavCollapsed && !isHovering ? styles.sidebarCompact : styles.sidebarFull,
-        isAnimating ? styles.sidebarAnimating : "",
+        // On mobile: Always expanded. On desktop: Use isExpanded state
+        (!isDesktop || isExpanded) ? styles.sidebarExpanded : styles.sidebarCollapsed,
+        // On mobile: Never compact. On desktop: Use collapsed state
+        (!isDesktop || (sidenavCollapsed && !isHovering)) ? "" : styles.sidebarFull,
+        (!isDesktop || (sidenavCollapsed && !isHovering)) ? styles.sidebarCompact : "",
+        // Animation only on desktop
+        (isDesktop && isAnimating) ? styles.sidebarAnimating : "",
       ].join(" ")}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onTransitionEnd={handleTransitionEnd}
+      // Hover handlers ONLY on desktop (>= lg breakpoint)
+      onMouseEnter={isDesktop ? handleMouseEnter : undefined}
+      onMouseLeave={isDesktop ? handleMouseLeave : undefined}
+      onTransitionEnd={isDesktop ? handleTransitionEnd : undefined}
     >
       {/* Single sidebar panel - stays in normal flow for button click animations */}
       <Card
