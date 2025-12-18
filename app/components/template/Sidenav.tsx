@@ -523,8 +523,7 @@ export default function Sidenav({
         // On mobile: Always expanded. On desktop: Use isExpanded state
         (!isDesktop || isExpanded) ? styles.sidebarExpanded : styles.sidebarCollapsed,
         // On mobile: Never compact. On desktop: Use collapsed state
-        (!isDesktop || (sidenavCollapsed && !isHovering)) ? "" : styles.sidebarFull,
-        (!isDesktop || (sidenavCollapsed && !isHovering)) ? styles.sidebarCompact : "",
+        (!isDesktop || (sidenavCollapsed && !isHovering)) ? styles.sidebarCompact : styles.sidebarFull,
         // Animation only on desktop
         (isDesktop && isAnimating) ? styles.sidebarAnimating : "",
       ].join(" ")}
