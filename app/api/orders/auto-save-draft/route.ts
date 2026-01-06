@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     const supportFundSubtotal = (supportFundItems || []).reduce((sum: number, item: any) => sum + (item.total_price || 0), 0);
     
     // Calculate support fund percent
-    const rawSf = companyData?.support_fund;
+    const rawSf = companyData?.support_fund as any;
     const supportFundPercent = Array.isArray(rawSf)
       ? (rawSf[0]?.percent || 0)
       : (rawSf?.percent || 0);
