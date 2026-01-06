@@ -1225,31 +1225,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     }
   }, [orderItems, supportFundItems, isNewMode]);
 
-  // Auto-save draft on page close/unload
-  React.useEffect(() => {
-    if (!hasUnsavedChanges || !isNewMode) return;
-    if (orderItems.length === 0 && supportFundItems.length === 0) return;
-
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Only auto-save if there are unsaved changes and items
-      if (hasUnsavedChanges && (orderItems.length > 0 || supportFundItems.length > 0)) {
-        // Trigger auto-save (non-blocking)
-        autoSaveDraft().catch(err => console.error('Auto-save on page close failed:', err));
-        
-        // Show browser warning
-        e.preventDefault();
-        e.returnValue = '';
-        return '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [hasUnsavedChanges, orderItems, supportFundItems, isNewMode, autoSaveDraft]);
-
   // Helper function to auto-save draft (used by multiple handlers)
   const autoSaveDraft = React.useCallback(async () => {
     if (!isNewMode) return false;
@@ -1317,6 +1292,31 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       return false;
     }
   }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, saving, company, order, supabase]);
+
+  // Auto-save draft on page close/unload
+  React.useEffect(() => {
+    if (!hasUnsavedChanges || !isNewMode) return;
+    if (orderItems.length === 0 && supportFundItems.length === 0) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Only auto-save if there are unsaved changes and items
+      if (hasUnsavedChanges && (orderItems.length > 0 || supportFundItems.length > 0)) {
+        // Trigger auto-save (non-blocking)
+        autoSaveDraft().catch(err => console.error('Auto-save on page close failed:', err));
+        
+        // Show browser warning
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges, orderItems, supportFundItems, isNewMode, autoSaveDraft]);
 
   // Auto-save draft on blur (when user switches tabs/windows)
   React.useEffect(() => {
