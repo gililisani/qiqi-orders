@@ -15,10 +15,30 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Handle both JSON and Blob (from sendBeacon)
+    let body: any;
+    const contentType = request.headers.get('content-type');
+    
+    if (contentType?.includes('application/json')) {
+      body = await request.json();
+    } else {
+      // Handle Blob from sendBeacon
+      const blob = await request.blob();
+      const text = await blob.text();
+      body = JSON.parse(text);
+    }
+    
     const { orderData, orderItems, supportFundItems } = body;
+    
+    console.log('📥 Auto-save draft request received', {
+      companyId: orderData?.company_id,
+      userId: orderData?.user_id,
+      orderItemsCount: orderItems?.length || 0,
+      supportFundItemsCount: supportFundItems?.length || 0
+    });
 
     if (!orderData || !orderData.company_id || !orderData.user_id) {
+      console.error('❌ Missing required order data', { orderData });
       return NextResponse.json(
         { error: 'Missing required order data' },
         { status: 400 }
@@ -144,12 +164,13 @@ export async function POST(request: NextRequest) {
 
     if (totalsError) throw totalsError;
 
+    console.log('✅ Draft auto-saved successfully', { orderId });
     return NextResponse.json({
       success: true,
       orderId
     });
   } catch (error: any) {
-    console.error('Error auto-saving draft:', error);
+    console.error('❌ Error auto-saving draft:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to auto-save draft' },
       { status: 500 }

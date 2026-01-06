@@ -1319,10 +1319,34 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
   // Synchronous save function for beforeunload (can't use async)
   const syncSaveDraft = React.useCallback(() => {
-    if (!isNewMode) return;
-    if (!hasUnsavedChanges) return;
-    if (orderItems.length === 0 && supportFundItems.length === 0) return;
-    if (!userIdRef.current || !companyIdRef.current) return;
+    console.log('🔄 syncSaveDraft called', {
+      isNewMode,
+      hasUnsavedChanges,
+      orderItemsCount: orderItems.length,
+      supportFundItemsCount: supportFundItems.length,
+      userId: userIdRef.current,
+      companyId: companyIdRef.current
+    });
+
+    if (!isNewMode) {
+      console.log('❌ Not in new mode, skipping save');
+      return;
+    }
+    if (!hasUnsavedChanges) {
+      console.log('❌ No unsaved changes, skipping save');
+      return;
+    }
+    if (orderItems.length === 0 && supportFundItems.length === 0) {
+      console.log('❌ No items, skipping save');
+      return;
+    }
+    if (!userIdRef.current || !companyIdRef.current) {
+      console.error('❌ Missing user or company ID', {
+        userId: userIdRef.current,
+        companyId: companyIdRef.current
+      });
+      return;
+    }
 
     // Generate PO number if not provided
     let poNumber = (order && order.po_number) || null;
@@ -1335,39 +1359,55 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       poNumber = generatedPO;
     }
 
-    // Use fetch with keepalive for reliable save on page close
-    // This will complete even if the page closes
+    const payload = {
+      orderData: {
+        company_id: companyIdRef.current,
+        user_id: userIdRef.current,
+        po_number: poNumber,
+        status: 'Draft'
+      },
+      orderItems: orderItems.map((item, index) => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        case_qty: item.case_qty || 0,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        is_support_fund_item: false,
+        sort_order: index
+      })),
+      supportFundItems: supportFundItems.map((item, index) => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        case_qty: item.case_qty || 0,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        is_support_fund_item: true,
+        sort_order: orderItems.length + index
+      }))
+    };
+
+    const payloadString = JSON.stringify(payload);
+    console.log('📤 Attempting to save draft', { payloadSize: payloadString.length });
+
+    // Try sendBeacon first (more reliable for page close), fallback to fetch with keepalive
+    if (navigator.sendBeacon && payloadString.length < 64000) {
+      const blob = new Blob([payloadString], { type: 'application/json' });
+      const sent = navigator.sendBeacon('/api/orders/auto-save-draft', blob);
+      console.log(sent ? '✅ Draft sent via sendBeacon' : '❌ sendBeacon failed, trying fetch');
+      if (sent) return;
+    }
+
+    // Fallback to fetch with keepalive
     fetch('/api/orders/auto-save-draft', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        orderData: {
-          company_id: companyIdRef.current,
-          user_id: userIdRef.current,
-          po_number: poNumber,
-          status: 'Draft'
-        },
-        orderItems: orderItems.map((item, index) => ({
-          product_id: item.product_id,
-          quantity: item.quantity,
-          case_qty: item.case_qty || 0,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-          is_support_fund_item: false,
-          sort_order: index
-        })),
-        supportFundItems: supportFundItems.map((item, index) => ({
-          product_id: item.product_id,
-          quantity: item.quantity,
-          case_qty: item.case_qty || 0,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-          is_support_fund_item: true,
-          sort_order: orderItems.length + index
-        }))
-      }),
+      body: payloadString,
       keepalive: true // Critical: ensures request completes even if page closes
-    }).catch(err => console.error('Sync save failed:', err));
+    }).then(() => {
+      console.log('✅ Draft sent via fetch with keepalive');
+    }).catch(err => {
+      console.error('❌ Sync save failed:', err);
+    });
   }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, order]);
 
   // Auto-save draft on page close/unload
@@ -1376,6 +1416,14 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     if (orderItems.length === 0 && supportFundItems.length === 0) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      console.log('🔄 beforeunload triggered', {
+        hasUnsavedChanges,
+        orderItemsCount: orderItems.length,
+        supportFundItemsCount: supportFundItems.length,
+        userId: userIdRef.current,
+        companyId: companyIdRef.current
+      });
+
       // Only auto-save if there are unsaved changes and items
       if (hasUnsavedChanges && (orderItems.length > 0 || supportFundItems.length > 0)) {
         // Use synchronous save for page close (can't await async in beforeunload)
@@ -1401,15 +1449,33 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     if (!hasUnsavedChanges) return;
     if (orderItems.length === 0 && supportFundItems.length === 0) return;
 
+    // Capture current values for cleanup
+    const currentOrderItems = orderItems;
+    const currentSupportFundItems = supportFundItems;
+    const currentHasUnsavedChanges = hasUnsavedChanges;
+    const currentCompany = company;
+    const currentOrder = order;
+
     // Save draft when component unmounts (user navigates away)
     return () => {
       // This cleanup runs when component unmounts (navigation away)
-      if (hasUnsavedChanges && (orderItems.length > 0 || supportFundItems.length > 0)) {
-        console.log('Auto-saving draft on navigation away...');
-        autoSaveDraft().catch(err => console.error('Auto-save on navigation failed:', err));
+      if (currentHasUnsavedChanges && (currentOrderItems.length > 0 || currentSupportFundItems.length > 0)) {
+        console.log('🔄 Auto-saving draft on navigation away...', {
+          orderItemsCount: currentOrderItems.length,
+          supportFundItemsCount: currentSupportFundItems.length
+        });
+        autoSaveDraft().then(success => {
+          if (success) {
+            console.log('✅ Draft saved on navigation');
+          } else {
+            console.log('❌ Draft save failed on navigation');
+          }
+        }).catch(err => {
+          console.error('❌ Auto-save on navigation failed:', err);
+        });
       }
     };
-  }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, autoSaveDraft]);
+  }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, autoSaveDraft, company, order]);
 
   // Auto-save draft on blur (when user switches tabs/windows)
   React.useEffect(() => {
