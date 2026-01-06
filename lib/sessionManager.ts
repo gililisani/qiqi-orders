@@ -66,6 +66,12 @@ export async function enforceSessionTimeout(
   if (result.shouldLogout) {
     console.log('Session timeout:', result.reason);
     
+    // Dispatch event to allow components to save drafts before session expiration
+    window.dispatchEvent(new CustomEvent('before-logout'));
+    
+    // Small delay to allow draft save to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     // Sign out the user
     await supabase.auth.signOut();
     

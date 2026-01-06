@@ -57,6 +57,12 @@ export default function TopNavbar() {
 
   const handleLogout = async () => {
     try {
+      // Dispatch event to allow components to save drafts before logout
+      window.dispatchEvent(new CustomEvent('before-logout'));
+      
+      // Small delay to allow draft save to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       await supabase.auth.signOut();
       window.location.href = '/';
     } catch (error) {

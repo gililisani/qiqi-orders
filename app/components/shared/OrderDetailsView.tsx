@@ -1052,6 +1052,16 @@ export default function OrderDetailsView({
             </Link>
           )}
           
+          {/* Client: Edit & Complete button (only if status is Draft) */}
+          {role === 'client' && order?.status === 'Draft' && (
+            <Link
+              href={editUrl}
+              className="bg-green-600 text-white px-4 py-2 hover:bg-green-700 transition text-sm"
+            >
+              Edit & Complete
+            </Link>
+          )}
+          
           {/* Admin: Edit Order button (always available) */}
           {role === 'admin' && (
             <Link

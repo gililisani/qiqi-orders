@@ -486,9 +486,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           throw new Error('Order not found or access denied');
         }
 
-        // Check if user can edit this order (only Open status)
-        if (orderCheck.status !== 'Open') {
-          setError('You can only edit orders with "Open" status');
+        // Check if user can edit this order (Open or Draft status)
+        if (orderCheck.status !== 'Open' && orderCheck.status !== 'Draft') {
+          setError('You can only edit orders with "Open" or "Draft" status');
           // Loading handled by AdminLayout
           return;
         }
@@ -1225,16 +1225,21 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     }
   }, [orderItems, supportFundItems, isNewMode]);
 
-  // Handle page leave warning
+  // Auto-save draft on page close/unload
   React.useEffect(() => {
     if (!hasUnsavedChanges || !isNewMode) return;
+    if (orderItems.length === 0 && supportFundItems.length === 0) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Only show warning if there are unsaved changes
+      // Only auto-save if there are unsaved changes and items
       if (hasUnsavedChanges && (orderItems.length > 0 || supportFundItems.length > 0)) {
+        // Trigger auto-save (non-blocking)
+        autoSaveDraft().catch(err => console.error('Auto-save on page close failed:', err));
+        
+        // Show browser warning
         e.preventDefault();
-        e.returnValue = 'You have unsaved changes. Click "Save as Draft" button before leaving to preserve your work.';
-        return e.returnValue;
+        e.returnValue = '';
+        return '';
       }
     };
 
@@ -1243,7 +1248,75 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [hasUnsavedChanges, orderItems, supportFundItems, isNewMode]);
+  }, [hasUnsavedChanges, orderItems, supportFundItems, isNewMode, autoSaveDraft]);
+
+  // Helper function to auto-save draft (used by multiple handlers)
+  const autoSaveDraft = React.useCallback(async () => {
+    if (!isNewMode) return false;
+    if (!hasUnsavedChanges) return false;
+    if (orderItems.length === 0 && supportFundItems.length === 0) return false;
+    if (saving) return false;
+    if (!company) return false;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+
+      // Generate PO number if not provided
+      let poNumber = (order && order.po_number) || null;
+      if (!poNumber || poNumber.trim() === '') {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let generatedPO = '';
+        for (let i = 0; i < 6; i++) {
+          generatedPO += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        poNumber = generatedPO;
+      }
+
+      // Use API endpoint for reliable save
+      const response = await fetch('/api/orders/auto-save-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderData: {
+            company_id: company.id,
+            user_id: user.id,
+            po_number: poNumber,
+            status: 'Draft'
+          },
+          orderItems: orderItems.map((item, index) => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            case_qty: item.case_qty || 0,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+            is_support_fund_item: false,
+            sort_order: index
+          })),
+          supportFundItems: supportFundItems.map((item, index) => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            case_qty: item.case_qty || 0,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+            is_support_fund_item: true,
+            sort_order: orderItems.length + index
+          }))
+        }),
+        keepalive: true
+      });
+
+      if (response.ok) {
+        console.log('Draft auto-saved successfully');
+        setHasUnsavedChanges(false);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+      return false;
+    }
+  }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, saving, company, order, supabase]);
 
   // Auto-save draft on blur (when user switches tabs/windows)
   React.useEffect(() => {
@@ -1258,14 +1331,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       if (document.hidden && !saving) {
         // Delay auto-save slightly to avoid saving during quick tab switches
         autoSaveTimeout = setTimeout(async () => {
-          try {
-            console.log('Auto-saving draft on tab blur...');
-            await performSave(true); // Save as draft
-            console.log('Draft auto-saved successfully');
-          } catch (error) {
-            // Silent failure - don't interrupt user
-            console.error('Auto-save failed (silent):', error);
-          }
+          await autoSaveDraft();
         }, 1000); // 1 second delay
       } else if (!document.hidden) {
         // User came back - cancel pending auto-save
@@ -1283,7 +1349,34 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         clearTimeout(autoSaveTimeout);
       }
     };
-  }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, saving]);
+  }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, saving, autoSaveDraft]);
+
+  // Auto-save draft on logout/session expiration
+  React.useEffect(() => {
+    if (!isNewMode) return;
+    if (!hasUnsavedChanges) return;
+    if (orderItems.length === 0 && supportFundItems.length === 0) return;
+
+    // Listen for custom before-logout event
+    const handleBeforeLogout = async () => {
+      await autoSaveDraft();
+    };
+
+    // Listen for auth state changes (logout detection)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        // User is being logged out - try to save draft
+        autoSaveDraft();
+      }
+    });
+
+    window.addEventListener('before-logout', handleBeforeLogout);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('before-logout', handleBeforeLogout);
+    };
+  }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, autoSaveDraft, supabase]);
 
   // Let AdminLayout handle loading - no separate loading state needed
 

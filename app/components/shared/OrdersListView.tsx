@@ -103,12 +103,15 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
         setClientsMap(new Map());
         setCompaniesMap(new Map());
       } else {
-        // admin
+        // admin - always show Draft orders regardless of status filter
         let query = supabase
           .from('orders')
           .select('*', { count: 'exact' });
 
-        if (statusFilter) query = query.eq('status', statusFilter);
+        if (statusFilter) {
+          // Always include Draft orders in admin view, even when filtering by other statuses
+          query = query.in('status', [statusFilter, 'Draft']);
+        }
         if (searchTerm) query = query.or(`id.ilike.%${searchTerm}%,po_number.ilike.%${searchTerm}%`);
 
         const from = (currentPage - 1) * ordersPerPage;

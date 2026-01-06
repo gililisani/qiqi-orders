@@ -87,6 +87,12 @@ export function useAuth(requiredRole?: UserRole) {
   };
 
   const logout = async () => {
+    // Dispatch event to allow components to save drafts before logout
+    window.dispatchEvent(new CustomEvent('before-logout'));
+    
+    // Small delay to allow draft save to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     await supabase.auth.signOut();
     router.push('/');
   };
