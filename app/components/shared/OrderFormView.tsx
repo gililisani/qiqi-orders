@@ -1363,7 +1363,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     };
 
     // Listen for auth state changes (logout detection)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string) => {
       if (event === 'SIGNED_OUT') {
         // User is being logged out - try to save draft
         autoSaveDraft();
