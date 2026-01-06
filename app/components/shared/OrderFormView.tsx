@@ -344,6 +344,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
   const [showSupportFundReminder, setShowSupportFundReminder] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const userIdRef = useRef<string | null>(null);
+  const companyIdRef = useRef<string | null>(null);
 
   const isEditMode = !!orderId;
   const isNewMode = !orderId;
@@ -410,6 +412,28 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       }
     }
   };
+
+  // Store user ID for synchronous access in beforeunload
+  useEffect(() => {
+    const storeUserData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          userIdRef.current = user.id;
+        }
+      } catch (error) {
+        console.error('Error storing user data:', error);
+      }
+    };
+    storeUserData();
+  }, [supabase]);
+
+  // Store company ID when company changes
+  useEffect(() => {
+    if (company) {
+      companyIdRef.current = company.id;
+    }
+  }, [company]);
 
   useEffect(() => {
     if (isEditMode && orderId) {
@@ -1293,6 +1317,59 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     }
   }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, saving, company, order, supabase]);
 
+  // Synchronous save function for beforeunload (can't use async)
+  const syncSaveDraft = React.useCallback(() => {
+    if (!isNewMode) return;
+    if (!hasUnsavedChanges) return;
+    if (orderItems.length === 0 && supportFundItems.length === 0) return;
+    if (!userIdRef.current || !companyIdRef.current) return;
+
+    // Generate PO number if not provided
+    let poNumber = (order && order.po_number) || null;
+    if (!poNumber || poNumber.trim() === '') {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let generatedPO = '';
+      for (let i = 0; i < 6; i++) {
+        generatedPO += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      poNumber = generatedPO;
+    }
+
+    // Use fetch with keepalive for reliable save on page close
+    // This will complete even if the page closes
+    fetch('/api/orders/auto-save-draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderData: {
+          company_id: companyIdRef.current,
+          user_id: userIdRef.current,
+          po_number: poNumber,
+          status: 'Draft'
+        },
+        orderItems: orderItems.map((item, index) => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          case_qty: item.case_qty || 0,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          is_support_fund_item: false,
+          sort_order: index
+        })),
+        supportFundItems: supportFundItems.map((item, index) => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          case_qty: item.case_qty || 0,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          is_support_fund_item: true,
+          sort_order: orderItems.length + index
+        }))
+      }),
+      keepalive: true // Critical: ensures request completes even if page closes
+    }).catch(err => console.error('Sync save failed:', err));
+  }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, order]);
+
   // Auto-save draft on page close/unload
   React.useEffect(() => {
     if (!hasUnsavedChanges || !isNewMode) return;
@@ -1301,8 +1378,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       // Only auto-save if there are unsaved changes and items
       if (hasUnsavedChanges && (orderItems.length > 0 || supportFundItems.length > 0)) {
-        // Trigger auto-save (non-blocking)
-        autoSaveDraft().catch(err => console.error('Auto-save on page close failed:', err));
+        // Use synchronous save for page close (can't await async in beforeunload)
+        syncSaveDraft();
         
         // Show browser warning
         e.preventDefault();
@@ -1316,7 +1393,23 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [hasUnsavedChanges, orderItems, supportFundItems, isNewMode, autoSaveDraft]);
+  }, [hasUnsavedChanges, orderItems, supportFundItems, isNewMode, syncSaveDraft]);
+
+  // Auto-save draft on navigation away (Next.js client-side routing)
+  React.useEffect(() => {
+    if (!isNewMode) return;
+    if (!hasUnsavedChanges) return;
+    if (orderItems.length === 0 && supportFundItems.length === 0) return;
+
+    // Save draft when component unmounts (user navigates away)
+    return () => {
+      // This cleanup runs when component unmounts (navigation away)
+      if (hasUnsavedChanges && (orderItems.length > 0 || supportFundItems.length > 0)) {
+        console.log('Auto-saving draft on navigation away...');
+        autoSaveDraft().catch(err => console.error('Auto-save on navigation failed:', err));
+      }
+    };
+  }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, autoSaveDraft]);
 
   // Auto-save draft on blur (when user switches tabs/windows)
   React.useEffect(() => {
