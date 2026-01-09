@@ -346,6 +346,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const userIdRef = useRef<string | null>(null);
   const companyIdRef = useRef<string | null>(null);
+  const lastSaveTimeRef = useRef<number>(0);
+  const isSavingRef = useRef<boolean>(false);
 
   const isEditMode = !!orderId;
   const isNewMode = !orderId;
@@ -1254,8 +1256,18 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     if (!isNewMode) return false;
     if (!hasUnsavedChanges) return false;
     if (orderItems.length === 0 && supportFundItems.length === 0) return false;
-    if (saving) return false;
+    if (saving || isSavingRef.current) return false;
     if (!company) return false;
+
+    // Prevent saving too frequently (at least 5 seconds between saves)
+    const now = Date.now();
+    if (now - lastSaveTimeRef.current < 5000) {
+      console.log('⏸️ Auto-save skipped - too soon since last save');
+      return false;
+    }
+
+    isSavingRef.current = true;
+    lastSaveTimeRef.current = now;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -1306,19 +1318,34 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       });
 
       if (response.ok) {
-        console.log('Draft auto-saved successfully');
+        console.log('✅ Draft auto-saved successfully');
         setHasUnsavedChanges(false);
+        isSavingRef.current = false;
         return true;
       }
+      isSavingRef.current = false;
       return false;
     } catch (error) {
-      console.error('Auto-save failed:', error);
+      console.error('❌ Auto-save failed:', error);
+      isSavingRef.current = false;
       return false;
     }
   }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, saving, company, order, supabase]);
 
   // Synchronous save function for beforeunload (can't use async)
   const syncSaveDraft = React.useCallback(() => {
+    // Prevent saving too frequently (at least 5 seconds between saves)
+    const now = Date.now();
+    if (now - lastSaveTimeRef.current < 5000) {
+      console.log('⏸️ Sync save skipped - too soon since last save');
+      return;
+    }
+
+    if (isSavingRef.current) {
+      console.log('⏸️ Sync save skipped - save already in progress');
+      return;
+    }
+
     console.log('🔄 syncSaveDraft called', {
       isNewMode,
       hasUnsavedChanges,
@@ -1347,6 +1374,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       });
       return;
     }
+
+    lastSaveTimeRef.current = now;
+    isSavingRef.current = true;
 
     // Generate PO number if not provided
     let poNumber = (order && order.po_number) || null;
@@ -1394,7 +1424,10 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       const blob = new Blob([payloadString], { type: 'application/json' });
       const sent = navigator.sendBeacon('/api/orders/auto-save-draft', blob);
       console.log(sent ? '✅ Draft sent via sendBeacon' : '❌ sendBeacon failed, trying fetch');
-      if (sent) return;
+      if (sent) {
+        isSavingRef.current = false;
+        return;
+      }
     }
 
     // Fallback to fetch with keepalive
@@ -1405,8 +1438,10 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       keepalive: true // Critical: ensures request completes even if page closes
     }).then(() => {
       console.log('✅ Draft sent via fetch with keepalive');
+      isSavingRef.current = false;
     }).catch(err => {
       console.error('❌ Sync save failed:', err);
+      isSavingRef.current = false;
     });
   }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, order]);
 
@@ -1484,15 +1519,21 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     if (orderItems.length === 0 && supportFundItems.length === 0) return; // Must have items
 
     let autoSaveTimeout: NodeJS.Timeout;
+    let wasHidden = false;
 
     const handleVisibilityChange = () => {
       // When tab becomes hidden (user switches away)
-      if (document.hidden && !saving) {
+      if (document.hidden && !saving && !wasHidden) {
+        wasHidden = true;
         // Delay auto-save slightly to avoid saving during quick tab switches
         autoSaveTimeout = setTimeout(async () => {
-          await autoSaveDraft();
-        }, 1000); // 1 second delay
+          // Double-check tab is still hidden before saving
+          if (document.hidden) {
+            await autoSaveDraft();
+          }
+        }, 2000); // 2 second delay to avoid rapid saves
       } else if (!document.hidden) {
+        wasHidden = false;
         // User came back - cancel pending auto-save
         if (autoSaveTimeout) {
           clearTimeout(autoSaveTimeout);
