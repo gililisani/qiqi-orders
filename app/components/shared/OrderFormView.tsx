@@ -346,7 +346,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const userIdRef = useRef<string | null>(null);
   const companyIdRef = useRef<string | null>(null);
-  const lastSaveTimeRef = useRef<number>(0);
   const isSavingRef = useRef<boolean>(false);
 
   const isEditMode = !!orderId;
@@ -1251,7 +1250,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     }
   }, [orderItems, supportFundItems, isNewMode]);
 
-  // Helper function to auto-save draft (used by multiple handlers)
+  // Helper function to auto-save draft (used by beforeunload and logout handlers only)
   const autoSaveDraft = React.useCallback(async () => {
     if (!isNewMode) return false;
     if (!hasUnsavedChanges) return false;
@@ -1259,15 +1258,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     if (saving || isSavingRef.current) return false;
     if (!company) return false;
 
-    // Prevent saving too frequently (at least 5 seconds between saves)
-    const now = Date.now();
-    if (now - lastSaveTimeRef.current < 5000) {
-      console.log('⏸️ Auto-save skipped - too soon since last save');
-      return false;
-    }
-
     isSavingRef.current = true;
-    lastSaveTimeRef.current = now;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -1334,13 +1325,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
   // Synchronous save function for beforeunload (can't use async)
   const syncSaveDraft = React.useCallback(() => {
-    // Prevent saving too frequently (at least 5 seconds between saves)
-    const now = Date.now();
-    if (now - lastSaveTimeRef.current < 5000) {
-      console.log('⏸️ Sync save skipped - too soon since last save');
-      return;
-    }
-
     if (isSavingRef.current) {
       console.log('⏸️ Sync save skipped - save already in progress');
       return;
@@ -1375,7 +1359,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       return;
     }
 
-    lastSaveTimeRef.current = now;
     isSavingRef.current = true;
 
     // Generate PO number if not provided
@@ -1478,78 +1461,9 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     };
   }, [hasUnsavedChanges, orderItems, supportFundItems, isNewMode, syncSaveDraft]);
 
-  // Auto-save draft on navigation away (Next.js client-side routing)
-  React.useEffect(() => {
-    if (!isNewMode) return;
-    if (!hasUnsavedChanges) return;
-    if (orderItems.length === 0 && supportFundItems.length === 0) return;
+  // REMOVED: Auto-save on navigation - drafts should only save on page close or manual save
 
-    // Capture current values for cleanup
-    const currentOrderItems = orderItems;
-    const currentSupportFundItems = supportFundItems;
-    const currentHasUnsavedChanges = hasUnsavedChanges;
-    const currentCompany = company;
-    const currentOrder = order;
-
-    // Save draft when component unmounts (user navigates away)
-    return () => {
-      // This cleanup runs when component unmounts (navigation away)
-      if (currentHasUnsavedChanges && (currentOrderItems.length > 0 || currentSupportFundItems.length > 0)) {
-        console.log('🔄 Auto-saving draft on navigation away...', {
-          orderItemsCount: currentOrderItems.length,
-          supportFundItemsCount: currentSupportFundItems.length
-        });
-        autoSaveDraft().then(success => {
-          if (success) {
-            console.log('✅ Draft saved on navigation');
-          } else {
-            console.log('❌ Draft save failed on navigation');
-          }
-        }).catch(err => {
-          console.error('❌ Auto-save on navigation failed:', err);
-        });
-      }
-    };
-  }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, autoSaveDraft, company, order]);
-
-  // Auto-save draft on blur (when user switches tabs/windows)
-  React.useEffect(() => {
-    if (!isNewMode) return; // Only for new orders
-    if (!hasUnsavedChanges) return; // Only if there are unsaved changes
-    if (orderItems.length === 0 && supportFundItems.length === 0) return; // Must have items
-
-    let autoSaveTimeout: NodeJS.Timeout;
-    let wasHidden = false;
-
-    const handleVisibilityChange = () => {
-      // When tab becomes hidden (user switches away)
-      if (document.hidden && !saving && !wasHidden) {
-        wasHidden = true;
-        // Delay auto-save slightly to avoid saving during quick tab switches
-        autoSaveTimeout = setTimeout(async () => {
-          // Double-check tab is still hidden before saving
-          if (document.hidden) {
-            await autoSaveDraft();
-          }
-        }, 2000); // 2 second delay to avoid rapid saves
-      } else if (!document.hidden) {
-        wasHidden = false;
-        // User came back - cancel pending auto-save
-        if (autoSaveTimeout) {
-          clearTimeout(autoSaveTimeout);
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (autoSaveTimeout) {
-        clearTimeout(autoSaveTimeout);
-      }
-    };
-  }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, saving, autoSaveDraft]);
+  // REMOVED: Auto-save on tab switch - drafts should only save on page close or manual save
 
   // Auto-save draft on logout/session expiration
   React.useEffect(() => {
