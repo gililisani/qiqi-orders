@@ -118,7 +118,38 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
           .eq('company_id', clientData.company_id);
 
         if (statusFilter) query = query.eq('status', statusFilter);
-        if (searchTerm) query = query.or(`id.ilike.%${searchTerm}%,po_number.ilike.%${searchTerm}%`);
+        
+        // Search by date, amount, or PO number
+        if (searchTerm) {
+          // Check if search term looks like a date first
+          const dateMatch = searchTerm.match(/\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|\d{2}-\d{2}-\d{4}/);
+          
+          if (dateMatch) {
+            // Date search: filter by date range
+            let dateStr = dateMatch[0];
+            // Normalize date format
+            if (dateStr.includes('/')) {
+              const [month, day, year] = dateStr.split('/');
+              dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            } else if (dateStr.includes('-') && dateStr.length === 10 && dateStr.split('-')[0].length === 2) {
+              const [month, day, year] = dateStr.split('-');
+              dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+            query = query.gte('created_at', `${dateStr}T00:00:00`)
+                        .lte('created_at', `${dateStr}T23:59:59`);
+          } else {
+            // Check if numeric (amount search)
+            const numericValue = parseFloat(searchTerm.replace(/[^0-9.-]/g, ''));
+            if (!isNaN(numericValue) && numericValue > 0) {
+              // Amount search: filter by total_value (within small range for rounding)
+              query = query.gte('total_value', numericValue - 0.01)
+                          .lte('total_value', numericValue + 0.01);
+            } else {
+              // PO number search: default fallback
+              query = query.ilike('po_number', `%${searchTerm}%`);
+            }
+          }
+        }
 
         const from = (currentPage - 1) * ordersPerPage;
         const to = from + ordersPerPage - 1;
@@ -145,7 +176,51 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
           // Always include Draft orders in admin view, even when filtering by other statuses
           query = query.in('status', [statusFilter, 'Draft']);
         }
-        if (searchTerm) query = query.or(`id.ilike.%${searchTerm}%,po_number.ilike.%${searchTerm}%`);
+        
+        // Enhanced search: company name, date, amount, or PO number
+        if (searchTerm) {
+          // Check if search term looks like a date first (most specific)
+          const dateMatch = searchTerm.match(/\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|\d{2}-\d{2}-\d{4}/);
+          
+          if (dateMatch) {
+            // Date search: filter by date range
+            let dateStr = dateMatch[0];
+            // Normalize date format
+            if (dateStr.includes('/')) {
+              const [month, day, year] = dateStr.split('/');
+              dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            } else if (dateStr.includes('-') && dateStr.length === 10 && dateStr.split('-')[0].length === 2) {
+              const [month, day, year] = dateStr.split('-');
+              dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+            query = query.gte('created_at', `${dateStr}T00:00:00`)
+                        .lte('created_at', `${dateStr}T23:59:59`);
+          } else {
+            // Check if search term matches a company name
+            const { data: matchingCompanies } = await supabase
+              .from('companies')
+              .select('id')
+              .ilike('company_name', `%${searchTerm}%`);
+            
+            const matchingCompanyIds = matchingCompanies?.map(c => c.id) || [];
+            
+            if (matchingCompanyIds.length > 0) {
+              // Company name search: filter by company_id
+              query = query.in('company_id', matchingCompanyIds);
+            } else {
+              // Check if numeric (amount search)
+              const numericValue = parseFloat(searchTerm.replace(/[^0-9.-]/g, ''));
+              if (!isNaN(numericValue) && numericValue > 0) {
+                // Amount search: filter by total_value (within small range for rounding)
+                query = query.gte('total_value', numericValue - 0.01)
+                            .lte('total_value', numericValue + 0.01);
+              } else {
+                // PO number search: default fallback
+                query = query.ilike('po_number', `%${searchTerm}%`);
+              }
+            }
+          }
+        }
 
         const from = (currentPage - 1) * ordersPerPage;
         const to = from + ordersPerPage - 1;
