@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../ui/Card';
 import { Spinner, Typography } from '../MaterialTailwind';
@@ -36,10 +36,12 @@ const statusBadge = (status: string) => <OrderStatusBadge status={status} />;
 
 export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: OrdersListViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { supabase } = useSupabase();
   const [orders, setOrders] = useState<Order[]>([]);
   const [clientsMap, setClientsMap] = useState<Map<string, ClientLite>>(new Map());
   const [companiesMap, setCompaniesMap] = useState<Map<string, CompanyLite>>(new Map());
+  const [filteredCompanyName, setFilteredCompanyName] = useState<string | null>(null);
   // Loading handled by AdminLayout
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,11 +51,37 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
   const [creatingInNetSuite, setCreatingInNetSuite] = useState<string | null>(null);
   const [completingOrder, setCompletingOrder] = useState<string | null>(null);
   const ordersPerPage = 10;
+  
+  // Get company_id from URL query parameter
+  const companyIdFilter = searchParams?.get('company_id') || null;
+
+  // Fetch company name when filtering by company
+  useEffect(() => {
+    const fetchFilteredCompany = async () => {
+      if (companyIdFilter && role === 'admin') {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('company_name')
+          .eq('id', companyIdFilter)
+          .single();
+        
+        if (!error && data) {
+          setFilteredCompanyName(data.company_name);
+        } else {
+          setFilteredCompanyName(null);
+        }
+      } else {
+        setFilteredCompanyName(null);
+      }
+    };
+    
+    fetchFilteredCompany();
+  }, [companyIdFilter, role, supabase]);
 
   useEffect(() => {
     fetchOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role, currentPage, statusFilter]);
+  }, [role, currentPage, statusFilter, companyIdFilter]);
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -108,6 +136,11 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
           .from('orders')
           .select('*', { count: 'exact' });
 
+        // Filter by company_id if provided in URL
+        if (companyIdFilter) {
+          query = query.eq('company_id', companyIdFilter);
+        }
+
         if (statusFilter) {
           // Always include Draft orders in admin view, even when filtering by other statuses
           query = query.in('status', [statusFilter, 'Draft']);
@@ -140,6 +173,11 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
           setClientsMap(cMap);
           setCompaniesMap(coMap);
           setOrders(ordersData || []);
+          
+          // Update filtered company name if available in companiesMap
+          if (companyIdFilter && coMap.has(companyIdFilter)) {
+            setFilteredCompanyName(coMap.get(companyIdFilter)?.company_name || null);
+          }
         } else {
           setClientsMap(new Map());
           setCompaniesMap(new Map());
@@ -260,7 +298,23 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
 
   return (
     <div className="mt-8 mb-4 space-y-6">
-      <h2 className="text-2xl font-semibold text-gray-900">Orders</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold text-gray-900">Orders</h2>
+        {companyIdFilter && filteredCompanyName && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Filtered by:</span>
+            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+              {filteredCompanyName}
+            </span>
+            <Link 
+              href="/admin/orders" 
+              className="text-sm text-gray-600 hover:text-gray-900 underline"
+            >
+              Clear filter
+            </Link>
+          </div>
+        )}
+      </div>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center">
