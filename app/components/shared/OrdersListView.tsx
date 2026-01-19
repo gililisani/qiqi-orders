@@ -202,7 +202,7 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
               .select('id')
               .ilike('company_name', `%${searchTerm}%`);
             
-            const matchingCompanyIds = matchingCompanies?.map(c => c.id) || [];
+            const matchingCompanyIds = matchingCompanies?.map((c: { id: string }) => c.id) || [];
             
             if (matchingCompanyIds.length > 0) {
               // Company name search: filter by company_id
