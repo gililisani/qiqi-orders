@@ -63,18 +63,21 @@ export default function OrderDocumentsView({ orderId, role, onUploadComplete }: 
     }
   };
 
-  const getDocumentUrl = async (document: OrderDocument) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from('order-documents')
-        .createSignedUrl(document.file_path, 3600); // 1 hour expiry
-
-      if (error) throw error;
-      return data.signedUrl;
-    } catch (err: any) {
-      console.error('Error getting document URL:', err);
-      throw err;
+  const getDocumentUrl = async (document: OrderDocument): Promise<string> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
     }
+    const res = await fetch(
+      `/api/orders/${orderId}/documents/${document.id}/signed-url`,
+      { headers: { Authorization: `Bearer ${session.access_token}` } }
+    );
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to get document URL');
+    }
+    const { url } = await res.json();
+    return url;
   };
 
   const handleViewDocument = async (document: OrderDocument) => {
