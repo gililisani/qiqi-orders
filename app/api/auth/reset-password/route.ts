@@ -50,40 +50,31 @@ export async function POST(request: NextRequest) {
     });
     if (!limited.ok) return limited.response;
 
-    // Check if user exists (to prevent email enumeration)
-    const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-    
-    if (listError) {
-      console.error('Error checking users:', listError);
-      // Don't reveal if user exists or not for security
-      return NextResponse.json({
-        success: true,
-        message: 'If an account with that email exists, a password reset link has been sent.'
-      });
-    }
-
-    const userExists = authUsers.users.some(
-      (user) => user.email?.toLowerCase() === normalizedEmail
-    );
-    
-    if (!userExists) {
-      // Don't reveal if user exists or not for security
-      return NextResponse.json({
-        success: true,
-        message: 'If an account with that email exists, a password reset link has been sent.'
-      });
-    }
-
-    // Generate password reset link using Supabase admin API
+    // Generate recovery link by email. Do NOT use listUsers() to "check" existence: it is paginated
+    // and only returns the first page by default, so many real users are never found and no email
+    // is sent (nothing hits Microsoft message trace). Unknown addresses return user_not_found.
     const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
       email: normalizedEmail,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/confirm-password-reset`
-      }
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/confirm-password-reset`,
+      },
     });
 
     if (resetError) {
+      const code = resetError.code ?? '';
+      const msg = (resetError.message ?? '').toLowerCase();
+      if (
+        code === 'user_not_found' ||
+        code === 'identity_not_found' ||
+        msg.includes('user not found') ||
+        msg.includes('no user')
+      ) {
+        return NextResponse.json({
+          success: true,
+          message: 'If an account with that email exists, a password reset link has been sent.',
+        });
+      }
       console.error('Failed to generate reset link:', resetError);
       return NextResponse.json(
         { error: 'Failed to generate password reset link. Please try again later.' },
@@ -91,9 +82,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user name for the email (try to get from clients or admins table)
-    let userName = normalizedEmail.split('@')[0]; // Fallback to email prefix
-    
+    if (!resetData?.properties?.action_link) {
+      console.error('generateLink returned no action_link');
+      return NextResponse.json(
+        { error: 'Failed to generate password reset link. Please try again later.' },
+        { status: 500 }
+      );
+    }
+
+    // Get user name for the email (auth metadata, then clients / admins)
+    const meta = resetData.user?.user_metadata as Record<string, unknown> | undefined;
+    let userName =
+      (typeof meta?.full_name === 'string' && meta.full_name) ||
+      (typeof meta?.name === 'string' && meta.name) ||
+      normalizedEmail.split('@')[0];
+
     try {
       const { data: clientData } = await supabaseAdmin
         .from('clients')
@@ -124,7 +127,7 @@ export async function POST(request: NextRequest) {
     const emailTemplate = passwordResetEmailTemplate({
       userName: userName,
       userEmail: normalizedEmail,
-      resetLink: resetData.properties.action_link, // The magic link from Supabase
+      resetLink: resetData.properties.action_link,
       siteUrl: siteUrl
     });
 
