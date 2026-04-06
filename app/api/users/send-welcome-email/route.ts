@@ -1,47 +1,152 @@
 /**
- * API Route: Send Welcome Email to New Users
+ * API Route: Resend welcome / password-setup email (admin)
  *
  * POST /api/users/send-welcome-email
+ * Body: { userId: string }
  *
- * Sends a welcome email with temporary password to newly created users.
+ * Sends the same style of welcome email as user creation: password setup link from Supabase,
+ * not plaintext passwords. Recipient address and identity come only from Auth + DB records.
  * Auth: admin only.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 import { sendMail } from '../../../../lib/emailService';
-import { welcomeUserTemplate } from '../../../../lib/emailTemplates';
+import { welcomeEmailTemplate } from '../../../../lib/emailTemplates';
 
 export async function POST(request: NextRequest) {
   try {
     await requireAdmin(request);
 
     const body = await request.json();
-    const { userName, userEmail, temporaryPassword, companyName } = body;
+    const userId = typeof body?.userId === 'string' ? body.userId.trim() : '';
 
-    // Validate input
-    if (!userName || !userEmail || !temporaryPassword || !companyName) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Missing required fields: userName, userEmail, temporaryPassword, companyName' },
+        { error: 'Missing required field: userId' },
         { status: 400 }
       );
     }
 
-    // Get site URL
+    const supabaseAdmin = createServiceRoleClient();
+
+    const { data: authLookup, error: authLookupError } =
+      await supabaseAdmin.auth.admin.getUserById(userId);
+
+    if (authLookupError) {
+      console.error('[send-welcome-email] getUserById:', authLookupError);
+      return NextResponse.json(
+        { error: `Failed to load user: ${authLookupError.message}` },
+        { status: 500 }
+      );
+    }
+
+    if (!authLookup?.user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const authUser = authLookup.user;
+    const canonicalEmail = authUser.email?.trim();
+
+    if (!canonicalEmail) {
+      return NextResponse.json(
+        { error: 'User has no email address in Auth; cannot send welcome email' },
+        { status: 400 }
+      );
+    }
+
+    // Welcome flow is for client portal accounts only (row in `clients`)
+    const { data: clientRow, error: clientError } = await supabaseAdmin
+      .from('clients')
+      .select('id, name, email, company_id, enabled')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (clientError) {
+      console.error('[send-welcome-email] clients lookup:', clientError);
+      return NextResponse.json({ error: 'Failed to load client profile' }, { status: 500 });
+    }
+
+    if (!clientRow) {
+      return NextResponse.json(
+        {
+          error:
+            'No client profile for this user. Welcome email is only for company client accounts.',
+        },
+        { status: 404 }
+      );
+    }
+
+    if (clientRow.enabled === false) {
+      return NextResponse.json(
+        { error: 'User is disabled; enable the account before sending a welcome email.' },
+        { status: 400 }
+      );
+    }
+
+    // Align with "new user" semantics: never logged in successfully
+    if (authUser.last_sign_in_at) {
+      return NextResponse.json(
+        {
+          error:
+            'This user has already signed in. Use “Send password reset” instead of welcome email.',
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      clientRow.email &&
+      clientRow.email.toLowerCase() !== canonicalEmail.toLowerCase()
+    ) {
+      console.warn('[send-welcome-email] clients.email differs from Auth email; using Auth email', {
+        userId,
+      });
+    }
+
+    const displayName =
+      clientRow.name?.trim() ||
+      (typeof authUser.user_metadata?.full_name === 'string'
+        ? authUser.user_metadata.full_name
+        : '') ||
+      canonicalEmail.split('@')[0];
+
+    const { data: companyData } = await supabaseAdmin
+      .from('companies')
+      .select('company_name')
+      .eq('id', clientRow.company_id)
+      .maybeSingle();
+
+    const companyName = companyData?.company_name?.trim() || 'Your Company';
+
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-    // Generate welcome email
-    const emailTemplate = welcomeUserTemplate({
-      userName,
-      userEmail,
-      temporaryPassword,
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email: canonicalEmail,
+      options: {
+        redirectTo: `${siteUrl}/confirm-password-reset`,
+      },
+    });
+
+    if (linkError || !linkData?.properties?.action_link) {
+      console.error('[send-welcome-email] generateLink:', linkError);
+      return NextResponse.json(
+        { error: linkError?.message || 'Failed to generate password setup link' },
+        { status: 500 }
+      );
+    }
+
+    const emailTemplate = welcomeEmailTemplate({
+      userName: displayName,
+      userEmail: canonicalEmail,
       companyName,
+      setupLink: linkData.properties.action_link,
       siteUrl,
     });
 
-    // Send email via Microsoft Graph API
     const result = await sendMail({
-      to: userEmail,
+      to: canonicalEmail,
       subject: emailTemplate.subject,
       html: emailTemplate.html,
     });
