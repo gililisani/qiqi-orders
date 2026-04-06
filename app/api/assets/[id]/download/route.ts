@@ -1,67 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { createStorage } from '../../../../../platform/storage';
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-function createSupabaseAdminClient() {
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
-
-async function ensureAuthenticated(request: NextRequest) {
-  const tokenFromHeader = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? null;
-  const tokenFromQuery = request.nextUrl.searchParams.get('token');
-  const accessToken = tokenFromHeader || tokenFromQuery;
-
-  if (!accessToken) {
-    throw NextResponse.json({ error: 'Not authorized' }, { status: 401 });
-  }
-
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
-  });
-
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    throw NextResponse.json({ error: 'Not authorized' }, { status: 401 });
-  }
-
-  // Check if user is admin or client
-  const adminClient = createSupabaseAdminClient();
-  const [adminResult, clientResult] = await Promise.all([
-    adminClient.from('admins').select('id').eq('id', user.id).eq('enabled', true).maybeSingle(),
-    adminClient.from('clients').select('id').eq('id', user.id).eq('enabled', true).maybeSingle(),
-  ]);
-
-  if (adminResult.error && clientResult.error) {
-    throw NextResponse.json({ error: 'Not authorized' }, { status: 403 });
-  }
-
-  if (!adminResult.data && !clientResult.data) {
-    throw NextResponse.json({ error: 'Not authorized' }, { status: 403 });
-  }
-
-  return adminClient;
-}
+import { createServiceRoleClient, requireAnyRole } from '../../../../../platform/auth/guards';
+import { assertDamAssetDeliveryEntitlement } from '../../../../../platform/auth/damAssetAccess';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const supabaseAdmin = await ensureAuthenticated(request);
+    const user = await requireAnyRole(request, ['admin', 'client']);
+    const supabaseAdmin = createServiceRoleClient();
+    const isAdmin = user.roles.includes('admin');
 
     const versionId = request.nextUrl.searchParams.get('version');
     const rendition = request.nextUrl.searchParams.get('rendition');
@@ -87,6 +33,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // Fetch asset separately to avoid relationship ambiguity
     // Try to get use_title_as_filename, but handle gracefully if column doesn't exist
     let useTitleAsFilename = false;
+    let validatedAsset: { id: string; is_archived: boolean } | null = null;
     try {
       const { data: asset, error: assetError } = await supabaseAdmin
         .from('dam_assets')
@@ -110,6 +57,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         return NextResponse.json({ error: 'Asset archived' }, { status: 410 });
       }
       
+      validatedAsset = { id: asset.id, is_archived: asset.is_archived };
       useTitleAsFilename = (asset as any).use_title_as_filename ?? false;
     } catch (err: any) {
       // If column doesn't exist, try without it
@@ -135,8 +83,18 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         return NextResponse.json({ error: 'Asset archived' }, { status: 410 });
       }
       
+      validatedAsset = { id: asset.id, is_archived: asset.is_archived };
       useTitleAsFilename = false; // Default to false if column doesn't exist
     }
+
+    const entitlement = await assertDamAssetDeliveryEntitlement(
+      supabaseAdmin,
+      { userId: user.id, isAdmin },
+      validatedAsset!,
+      params.id,
+      { id: version.id, asset_id: version.asset_id }
+    );
+    if (entitlement) return entitlement;
     
     // Re-fetch asset for title (we already validated existence and archived status above)
     const { data: asset, error: assetTitleError } = await supabaseAdmin
@@ -193,7 +151,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       throw new Error(`Failed to generate signed URL: ${storageError.message}`);
     }
   } catch (err: any) {
-    if (err instanceof NextResponse) return err;
+    if (err instanceof Response) return err;
     console.error('Download route error', err);
     return NextResponse.json({ error: err.message || 'Failed to generate download link' }, { status: 500 });
   }

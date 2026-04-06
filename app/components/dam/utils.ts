@@ -39,27 +39,25 @@ export function formatBytes(bytes: number | null | undefined): string {
   return `${value.toFixed(value >= 10 || value < 1 ? 0 : 1)} ${units[exponent]}`;
 }
 
-export function ensureTokenUrl(path: string | null | undefined, accessToken: string | null): string {
+/**
+ * Builds a same-origin URL for `/api/assets/...` preview/download routes.
+ * Auth uses the Supabase session cookie (refreshed via middleware); we intentionally
+ * do not append JWTs as `?token=` query parameters (referrer / log leakage).
+ *
+ * @param _accessToken Kept for call-site compatibility; not embedded in the returned URL.
+ */
+export function ensureTokenUrl(path: string | null | undefined, _accessToken: string | null): string {
   if (!path) return '';
   if (path.startsWith('http')) return path;
-  
-  // Create cache key from path and token
-  const cacheKey = `${path}:${accessToken || 'no-token'}`;
-  
-  // Check cache first
+
+  const url = path.startsWith('/') ? path : `/${path}`;
+  const cacheKey = url;
+
   const cached = getCachedUrl(cacheKey);
   if (cached) return cached;
-  
-  // Generate URL
-  const url = path.startsWith('/') ? path : `/${path}`;
-  const finalUrl = !accessToken 
-    ? url 
-    : `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(accessToken)}`;
-  
-  // Cache the URL
-  setCachedUrl(cacheKey, finalUrl);
-  
-  return finalUrl;
+
+  setCachedUrl(cacheKey, url);
+  return url;
 }
 
 export function buildAuthHeaders(token: string | null): Record<string, string> {

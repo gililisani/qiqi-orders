@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
 import { fetchWithAuth } from '../lib/fetchWithAuth';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   Input,
@@ -31,11 +30,18 @@ export default function LoginPage() {
         
         if (user) {
           console.log('User already logged in:', user.id);
-          // User is already logged in, redirect based on role
           const profileResponse = await fetchWithAuth(`/api/user-profile?userId=${user.id}`);
-          const profileData = await profileResponse.json();
+          const profileData = await profileResponse.json().catch(() => ({}));
 
-          if (profileData.success && profileData.user?.role?.toLowerCase() === 'admin') {
+          if (!profileResponse.ok || !profileData.success || !profileData.user) {
+            await supabase.auth.signOut();
+            setErrorMsg('Your session could not be verified. Please sign in again.');
+            setLoading(false);
+            return;
+          }
+
+          const role = profileData.user.role;
+          if (typeof role === 'string' && role.toLowerCase() === 'admin') {
             router.push('/admin');
           } else {
             router.push('/client');
@@ -69,31 +75,25 @@ export default function LoginPage() {
       }
 
       const { user } = data;
-      console.log('User authenticated:', user?.id);
+      if (!user) {
+        setErrorMsg('Sign-in succeeded but no user was returned. Please try again.');
+        return;
+      }
+      console.log('User authenticated:', user.id);
 
-      // Step 2: Check if user exists in users table using API route
-      const isSuperAdmin = user.email === 'gili@qiqiglobal.com';
-      const userRole = isSuperAdmin ? 'Admin' : 'Client';
-      
-      const profileResponse = await fetchWithAuth('/api/user-profile', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          email: user.email,
-          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          role: userRole
-        })
-      });
-
-      const profileData = await profileResponse.json();
+      // Step 2: Resolve portal role from admins/clients via GET (POST is admin-only; clients must not depend on it.)
+      const profileResponse = await fetchWithAuth(`/api/user-profile?userId=${user.id}`);
+      const profileData = await profileResponse.json().catch(() => ({}));
       console.log('Profile API response:', profileData);
 
-      if (!profileData.success) {
-        console.error('Error with user profile:', profileData.error);
-        setErrorMsg(`Failed to create user profile: ${profileData.error}. Please contact support.`);
+      if (!profileResponse.ok || !profileData.success || !profileData.user) {
+        console.error('Error with user profile:', profileData.error ?? profileResponse.status);
+        await supabase.auth.signOut();
+        setErrorMsg(
+          typeof profileData.error === 'string'
+            ? profileData.error
+            : 'Your account is not set up for this portal. Please contact support.'
+        );
         return;
       }
 

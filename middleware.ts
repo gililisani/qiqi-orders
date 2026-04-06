@@ -31,6 +31,7 @@ export const config = {
     '/client/:path*',
     '/api/admin/:path*',
     '/api/orders/:path*',
-    '/api/users/:path*'
+    '/api/users/:path*',
+    '/api/assets/:path*',
   ]
 };

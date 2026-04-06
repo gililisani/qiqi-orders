@@ -280,7 +280,7 @@ export default function AssetDetailModal({
                   onClick={(e) => {
                     e.stopPropagation();
                     // Use preview API route with original rendition (not thumbnail) for high-res preview
-                    const previewUrl = `/api/assets/${asset.id}/preview?version=${asset.current_version!.id}&rendition=original&token=${encodeURIComponent(accessToken)}`;
+                    const previewUrl = `/api/assets/${asset.id}/preview?version=${asset.current_version!.id}&rendition=original`;
                     window.open(previewUrl, '_blank');
                   }}
                   className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition shadow-sm mb-3"
