@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createServiceRoleClient, requireAnyRole } from '../../../platform/auth/guards';
 
 // Initialize Supabase client with service role
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -16,9 +17,10 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function DELETE(request: NextRequest) {
   try {
+    const user = await requireAnyRole(request, ['admin', 'client']);
+
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('orderId');
-    const userRole = searchParams.get('userRole');
 
     // Validate input
     if (!orderId) {
@@ -28,12 +30,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
-    // Fetch order to check status
+    // Fetch order to check status and ownership
     const { data: order, error: fetchError } = await supabase
       .from('orders')
-      .select('status')
+      .select('status, company_id, user_id')
       .eq('id', orderId)
       .single();
 
@@ -42,6 +44,23 @@ export async function DELETE(request: NextRequest) {
         { error: 'Order not found' },
         { status: 404 }
       );
+    }
+
+    // Authorization: admin can delete any allowed-status order; client can delete only within their company (and their own drafts)
+    if (!user.roles.includes('admin')) {
+      const { data: clientRow, error: clientError } = await supabase
+        .from('clients')
+        .select('company_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (clientError) throw clientError;
+      if (!clientRow || clientRow.company_id !== order.company_id) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
+      // Preserve safe behavior: clients can only delete their own Draft orders
+      if (order.status === 'Draft' && order.user_id !== user.id) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
     }
 
     // Only allow deletion of Cancelled or Draft orders

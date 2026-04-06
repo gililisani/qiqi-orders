@@ -12,12 +12,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendMail } from '../../../../lib/emailService';
 import { passwordResetEmailTemplate, welcomeEmailTemplate } from '../../../../lib/emailTemplates';
+import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAdmin(request);
+
     const body = await request.json();
     const { userId, userEmail, userName, companyId, companyName } = body;
 
@@ -29,13 +32,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create Supabase admin client
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
+    const supabaseAdmin = createServiceRoleClient();
 
     // Check if this is a new user (never set their password)
     // New users: last_sign_in_at is null (they've never successfully logged in)

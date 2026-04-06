@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function DELETE(request: NextRequest) {
   try {
+    await requireAdmin(request);
+
     const { userId } = await request.json();
 
     // Validate input
@@ -16,13 +19,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Create Supabase admin client with service role key
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
+    const supabaseAdmin = createServiceRoleClient();
 
     // Step 1: Nullify user_id in orders table (keep orders, remove user reference)
     const { error: ordersError } = await supabaseAdmin

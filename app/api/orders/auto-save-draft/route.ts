@@ -9,12 +9,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createServiceRoleClient, requireClient } from '../../../platform/auth/guards';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
+    const clientUser = await requireClient(request);
+
     // Handle both JSON and Blob (from sendBeacon)
     let body: any;
     const contentType = request.headers.get('content-type');
@@ -37,7 +40,7 @@ export async function POST(request: NextRequest) {
       supportFundItemsCount: supportFundItems?.length || 0
     });
 
-    if (!orderData || !orderData.company_id || !orderData.user_id) {
+    if (!orderData || !orderData.company_id) {
       console.error('❌ Missing required order data', { orderData });
       return NextResponse.json(
         { error: 'Missing required order data' },
@@ -45,15 +48,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Enforce ownership: ignore any user_id supplied by the client
+    const requestedCompanyId = orderData.company_id;
+    const supabase = createServiceRoleClient();
+
+    const { data: clientRow, error: clientRowError } = await supabase
+      .from('clients')
+      .select('company_id')
+      .eq('id', clientUser.id)
+      .maybeSingle();
+    if (clientRowError) throw clientRowError;
+    if (!clientRow || clientRow.company_id !== requestedCompanyId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
 
     // Check if draft order already exists for this user/company
     // Look for most recent draft order created by this user
     const { data: existingDraft, error: checkError } = await supabase
       .from('orders')
       .select('id')
-      .eq('company_id', orderData.company_id)
-      .eq('user_id', orderData.user_id)
+      .eq('company_id', requestedCompanyId)
+      .eq('user_id', clientUser.id)
       .eq('status', 'Draft')
       .order('created_at', { ascending: false })
       .limit(1)
@@ -86,8 +101,8 @@ export async function POST(request: NextRequest) {
       const { data: newOrder, error: createError } = await supabase
         .from('orders')
         .insert({
-          company_id: orderData.company_id,
-          user_id: orderData.user_id,
+          company_id: requestedCompanyId,
+          user_id: clientUser.id,
           po_number: orderData.po_number || null,
           status: 'Draft'
         })

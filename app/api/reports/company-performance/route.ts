@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createServiceRoleClient, requireAdmin } from '../../../platform/auth/guards';
 
 /**
  * API endpoint for Company Performance Report
@@ -8,6 +9,7 @@ import { createClient } from '@supabase/supabase-js';
  */
 export async function GET(request: NextRequest) {
   try {
+    await requireAdmin(request);
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
@@ -15,17 +17,7 @@ export async function GET(request: NextRequest) {
     const subsidiaryIdsParam = searchParams.get('subsidiaryIds');
     const classIdsParam = searchParams.get('classIds');
 
-    // Initialize Supabase client with service role
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const supabase = createServiceRoleClient();
 
     // Build base query for companies
     let companiesQuery = supabase

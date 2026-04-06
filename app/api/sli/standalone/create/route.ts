@@ -1,19 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
+import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 
 export async function POST(request: NextRequest) {
   try {
+    const adminUser = await requireAdmin(request);
     // Parse request body
     const body = await request.json();
     const {
@@ -45,24 +35,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'At least one product is required' }, { status: 400 });
     }
 
-    // Get user from cookies (for created_by field)
-    const cookieStore = cookies();
-    const allCookies = cookieStore.getAll();
-    
-    // Find the Supabase auth token cookie
-    const authCookie = allCookies.find(cookie => 
-      cookie.name.includes('auth-token') || cookie.name.includes('sb-')
-    );
-    
-    let userId = null;
-    if (authCookie) {
-      try {
-        const { data: { user } } = await supabaseAdmin.auth.getUser(authCookie.value);
-        userId = user?.id || null;
-      } catch (err) {
-        console.error('Error getting user from cookie:', err);
-      }
-    }
+    const userId = adminUser.id;
+
+    const supabaseAdmin = createServiceRoleClient();
 
     // Generate SLI number
     const { data: sliNumberResult, error: sliNumberError } = await supabaseAdmin

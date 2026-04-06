@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -10,13 +11,8 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
  */
 export async function GET(request: NextRequest) {
   try {
-    // Create Supabase admin client
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
+    await requireAdmin(request);
+    const supabaseAdmin = createServiceRoleClient();
 
     // Get all auth users
     const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
@@ -93,6 +89,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    await requireAdmin(request);
     const { action, userIds } = await request.json();
 
     console.log('[sync-check] POST request:', { action, userIds });
@@ -105,12 +102,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
+    const supabaseAdmin = createServiceRoleClient();
 
     const results: {
       success: string[];
@@ -120,10 +112,29 @@ export async function POST(request: NextRequest) {
       failed: []
     };
 
-    // Delete each orphaned auth user
+    // Delete each orphaned auth user (server re-validates orphaned status)
     for (const userId of userIds) {
       try {
         console.log('[sync-check] Deleting orphaned auth user:', userId);
+
+        // Re-check: only delete if user is truly orphaned (exists in auth but not in clients/admins)
+        const { data: adminRow, error: adminRowError } = await supabaseAdmin
+          .from('admins')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+        if (adminRowError) throw adminRowError;
+        const { data: clientRow, error: clientRowError } = await supabaseAdmin
+          .from('clients')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+        if (clientRowError) throw clientRowError;
+
+        if (adminRow || clientRow) {
+          results.failed.push({ userId, error: 'User is not orphaned (exists in admins/clients)' });
+          continue;
+        }
         
         // Step 1: Nullify user references in orders and history tables
         await supabaseAdmin.from('orders').update({ user_id: null }).eq('user_id', userId);

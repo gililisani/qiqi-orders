@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
+import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+// Do not keep a module-level service-role client; create per-request
 
 // GET - Fetch standalone SLI
 export async function GET(
@@ -17,7 +8,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    await requireAdmin(request);
     const sliId = params.id;
+    const supabaseAdmin = createServiceRoleClient();
 
     const { data: sli, error: sliError } = await supabaseAdmin
       .from('standalone_slis')
@@ -45,8 +38,10 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    await requireAdmin(request);
     const sliId = params.id;
     const body = await request.json();
+    const supabaseAdmin = createServiceRoleClient();
     
     const {
       company_id,
@@ -127,7 +122,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    await requireAdmin(request);
     const sliId = params.id;
+    const supabaseAdmin = createServiceRoleClient();
 
     const { error: deleteError } = await supabaseAdmin
       .from('standalone_slis')

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createNetSuiteAPI, NetSuiteProduct } from '../../../../../lib/netsuite';
 import { createClient } from '@supabase/supabase-js';
+import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAdmin(request);
     // Initialize NetSuite API
     const netsuite = createNetSuiteAPI();
     
@@ -16,11 +18,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize Supabase client
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceRoleClient();
 
     // Fetch products from NetSuite
     const netsuiteProducts = await netsuite.getProducts(1000, 0);
@@ -136,6 +134,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    await requireAdmin(request);
     const netsuite = createNetSuiteAPI();
     const isConnected = await netsuite.testConnection();
     

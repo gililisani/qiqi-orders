@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { calculateTargetPeriodProgress } from '../../../../lib/targetPeriods';
+import { createServiceRoleClient, requireAdmin } from '../../../platform/auth/guards';
 
 /**
  * API endpoint for Company Annual Goals Progress Report
@@ -9,23 +10,14 @@ import { calculateTargetPeriodProgress } from '../../../../lib/targetPeriods';
  */
 export async function GET(request: NextRequest) {
   try {
+    await requireAdmin(request);
     const { searchParams } = new URL(request.url);
     const companyIdsParam = searchParams.get('companyIds');
     const targetPeriodId = searchParams.get('targetPeriodId');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    // Initialize Supabase client with service role
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const supabase = createServiceRoleClient();
 
     // Build query for target periods
     let targetPeriodsQuery = supabase

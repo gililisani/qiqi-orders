@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendMail } from '../../../../lib/emailService';
 import { welcomeEmailTemplate } from '../../../../lib/emailTemplates';
+import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -14,6 +15,9 @@ export async function POST(request: NextRequest) {
   };
 
   try {
+    // AuthN/AuthZ: admin-only user provisioning
+    await requireAdmin(request);
+
     const { name, email, companyId, enabled } = await request.json();
 
     // Validate input
@@ -38,12 +42,18 @@ export async function POST(request: NextRequest) {
     console.log('[USER_CREATE] Starting user creation:', { ...logContext, email, companyId, name });
 
     // Create Supabase admin client with service role key
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
+    const supabaseAdmin = createServiceRoleClient();
+
+    // Validate company exists (prevents creating users tied to arbitrary IDs)
+    const { data: companyExists, error: companyExistsError } = await supabaseAdmin
+      .from('companies')
+      .select('id')
+      .eq('id', companyId)
+      .maybeSingle();
+    if (companyExistsError) throw companyExistsError;
+    if (!companyExists) {
+      return NextResponse.json({ error: 'Company not found' }, { status: 400 });
+    }
 
     // Generate a secure random password that user will never see
     const randomPassword = Array.from(crypto.getRandomValues(new Uint8Array(32)))

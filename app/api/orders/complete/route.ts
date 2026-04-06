@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { recalculateCompanyTargetPeriods } from '../../../../lib/targetPeriods';
+import { createServiceRoleClient, requireAdmin } from '../../../platform/auth/guards';
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAdmin(request);
     const { orderId, trackingNumber, notes } = await request.json();
 
     if (!orderId) {
@@ -13,11 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize Supabase client
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceRoleClient();
 
     // Get order details
     const { data: order, error: orderError } = await supabase
@@ -120,6 +118,7 @@ export async function POST(request: NextRequest) {
 // GET endpoint to check if an order can be completed
 export async function GET(request: NextRequest) {
   try {
+    await requireAdmin(request);
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('orderId');
 
@@ -130,10 +129,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceRoleClient();
 
     // Get order details
     const { data: order, error: orderError } = await supabase

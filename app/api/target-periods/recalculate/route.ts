@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { recalculateCompanyTargetPeriods } from '../../../../lib/targetPeriods';
+import { createServiceRoleClient, requireAdmin } from '../../../platform/auth/guards';
 
 /**
  * API endpoint to recalculate target periods for a company
@@ -8,6 +9,7 @@ import { recalculateCompanyTargetPeriods } from '../../../../lib/targetPeriods';
  */
 export async function POST(request: NextRequest) {
   try {
+    await requireAdmin(request);
     const { companyId } = await request.json();
 
     if (!companyId) {
@@ -17,11 +19,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize Supabase client
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceRoleClient();
 
     // Recalculate target periods
     await recalculateCompanyTargetPeriods(supabase, companyId);

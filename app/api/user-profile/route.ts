@@ -1,22 +1,23 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { createServiceRoleClient, requireAdmin, requireAuthenticatedUser } from '../../../platform/auth/guards';
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, email, name, role } = await request.json();
-    console.log('User profile API - POST request:', { userId, email, name, role });
+    /**
+     * This route is used by the app to fetch a profile after login.
+     * Previously it would auto-create an admin if the user didn't exist — that is a privilege-escalation vulnerability.
+     *
+     * New behavior:
+     * - **Admins** may upsert profiles intentionally (explicit, admin-only).
+     * - **Non-admins** can only fetch their own profile via GET.
+     */
+    await requireAdmin(request);
+    const { userId, email, name } = await request.json();
+    if (!userId || !email || !name) {
+      return NextResponse.json({ error: 'Missing required fields: userId, email, name' }, { status: 400 });
+    }
 
-    // Use service role to bypass RLS
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+    const supabase = createServiceRoleClient();
 
     console.log('Checking if user exists in admins...');
     const { data: existingAdmin, error: adminCheckError } = await supabase
@@ -54,26 +55,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log('User not found in either table, creating new admin...');
-    const { data: newAdmin, error: insertError } = await supabase
-      .from('admins')
-      .insert([{ id: userId, email: email, name: name, enabled: true }])
-      .select()
-      .single();
-
-    console.log('Admin creation result:', { newAdmin, insertError });
-
-    if (insertError) {
-      console.error('Error creating admin:', insertError);
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
-    }
-
-    console.log('Admin created successfully');
-    return NextResponse.json({ 
-      success: true, 
-      user: { ...newAdmin, role: 'Admin' }, 
-      isNew: true 
-    });
+    // No auto-provisioning here; provisioning should be done via explicit admin tools/routes.
+    return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
 
   } catch (error) {
     console.error('User profile API error:', error);
@@ -93,17 +76,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
     }
 
-    // Use service role to bypass RLS
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+    const requester = await requireAuthenticatedUser(request);
+    if (!requester.roles.includes('admin') && requester.id !== userId) {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    }
+
+    const supabase = createServiceRoleClient();
 
     console.log('Looking up user profile in admins...');
     const { data: admin, error: adminError } = await supabase

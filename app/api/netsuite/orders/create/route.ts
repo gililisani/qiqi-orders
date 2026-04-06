@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createNetSuiteAPI, NetSuiteSalesOrder } from '../../../../../lib/netsuite';
 import { createClient } from '@supabase/supabase-js';
+import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAdmin(request);
     const { orderId } = await request.json();
 
     if (!orderId) {
@@ -13,11 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize Supabase client
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceRoleClient();
 
     // Get order details from Supabase
     const { data: order, error: orderError } = await supabase
@@ -149,6 +147,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    await requireAdmin(request);
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('orderId');
 
@@ -159,11 +158,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Initialize Supabase client
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceRoleClient();
 
     // Get order details
     const { data: order, error: orderError } = await supabase
