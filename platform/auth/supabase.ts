@@ -17,8 +17,33 @@ function extractToken(request: NextRequest): string | null {
     const match = header.match(/^Bearer\s+(.*)$/i);
     if (match) return match[1];
   }
-  const cookieToken = request.cookies.get('sb-access-token');
-  return cookieToken?.value ?? null;
+
+  // Legacy cookie name (some setups)
+  const legacy = request.cookies.get('sb-access-token')?.value ?? null;
+  if (legacy) return legacy;
+
+  // Supabase SSR cookie format: `sb-<project-ref>-auth-token` (JSON with access_token)
+  // We avoid hardcoding the project ref by scanning cookies.
+  for (const cookie of request.cookies.getAll()) {
+    if (!cookie.name.startsWith('sb-')) continue;
+    if (!cookie.name.endsWith('-auth-token')) continue;
+    const raw = cookie.value;
+    if (!raw) continue;
+
+    // Cookie is typically a JSON string (sometimes URL-encoded).
+    const candidates = [raw, decodeURIComponent(raw)];
+    for (const c of candidates) {
+      try {
+        const parsed = JSON.parse(c) as any;
+        const token = typeof parsed?.access_token === 'string' ? parsed.access_token : null;
+        if (token) return token;
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  return null;
 }
 
 function createSupabaseAnonClient(token: string) {

@@ -58,7 +58,9 @@ export async function POST(request: NextRequest) {
     // No auto-provisioning here; provisioning should be done via explicit admin tools/routes.
     return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
 
-  } catch (error) {
+  } catch (error: any) {
+    // Auth helpers throw Response objects for 401/403. Return them as-is.
+    if (error instanceof Response) return error;
     console.error('User profile API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
@@ -120,7 +122,8 @@ export async function GET(request: NextRequest) {
     console.log('User not found in either table');
     return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
 
-  } catch (error) {
+  } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('User profile API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error' 
