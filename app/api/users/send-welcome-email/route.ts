@@ -1,17 +1,21 @@
 /**
  * API Route: Send Welcome Email to New Users
- * 
+ *
  * POST /api/users/send-welcome-email
- * 
+ *
  * Sends a welcome email with temporary password to newly created users.
+ * Auth: admin only.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '../../../../platform/auth/guards';
 import { sendMail } from '../../../../lib/emailService';
 import { welcomeUserTemplate } from '../../../../lib/emailTemplates';
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAdmin(request);
+
     const body = await request.json();
     const { userName, userEmail, temporaryPassword, companyName } = body;
 
@@ -43,10 +47,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: result.error }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
       messageId: result.messageId,
     });
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error sending welcome email:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to send welcome email' },
@@ -62,4 +64,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

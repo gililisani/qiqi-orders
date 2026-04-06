@@ -1,31 +1,32 @@
 /**
  * API Route: Send Order Notification to Internal Team
- * 
+ *
  * POST /api/orders/send-notification
- * 
+ *
  * Sends email notification to orders@qiqiglobal.com when new orders are created
+ * Auth: admin (any order) or client (only their company's orders).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServiceRoleClient, requireAnyRole } from '../../../../platform/auth/guards';
+import { assertOrderAccess } from '../../../../platform/auth/orderAccess';
 import { sendMail } from '../../../../lib/emailService';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await requireAnyRole(request, ['admin', 'client']);
+
     const body = await request.json();
     const { orderId } = body;
 
     if (!orderId) {
-      return NextResponse.json(
-        { error: 'Missing required field: orderId' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing required field: orderId' }, { status: 400 });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
+
+    const access = await assertOrderAccess(supabase, user, orderId);
+    if (!access.ok) return access.response;
 
     // Fetch order details
     const { data: order, error: orderError } = await supabase
@@ -79,14 +80,18 @@ export async function POST(request: NextRequest) {
     const totalValue = order.total_value || 0;
     const itemCount = orderItems?.length || 0;
 
-    const itemsList = orderItems?.map((item: any) => 
-      `<tr>
+    const itemsList =
+      orderItems
+        ?.map(
+          (item: any) =>
+            `<tr>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.product?.item_name || 'Unknown'}</td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.product?.sku || 'N/A'}</td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.total_price.toFixed(2)}</td>
       </tr>`
-    ).join('') || '';
+        )
+        .join('') || '';
 
     const emailHtml = `
 <!DOCTYPE html>
@@ -180,18 +185,15 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       console.error('[send-notification] Failed:', result.error);
-      return NextResponse.json(
-        { error: result.error },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: result.error }, { status: 500 });
     }
 
     return NextResponse.json({
       success: true,
       message: 'Notification sent successfully',
     });
-
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('[send-notification] Error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to send notification' },
@@ -199,4 +201,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

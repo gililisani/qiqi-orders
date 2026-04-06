@@ -12,6 +12,7 @@ import OrderHistoryView from './OrderHistoryView';
 import OrderStatusBadge from '../ui/OrderStatusBadge';
 import { formatCurrency, formatQuantity } from '../../../lib/formatters';
 import CreateSLIModal from '../modals/CreateSLIModal';
+import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 
 interface Order {
   id: string;
@@ -625,7 +626,7 @@ export default function OrderDetailsView({
           }
 
           if (emailType) {
-            await fetch('/api/orders/send-email', {
+            await fetchWithAuth('/api/orders/send-email', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -798,7 +799,7 @@ export default function OrderDetailsView({
     
     setSendingNotification(true);
     try {
-      const response = await fetch('/api/orders/notifications', {
+      const response = await fetchWithAuth('/api/orders/notifications', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -831,7 +832,7 @@ export default function OrderDetailsView({
     
     setSendingNotification(true);
     try {
-      const response = await fetch('/api/orders/send-email', {
+      const response = await fetchWithAuth('/api/orders/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

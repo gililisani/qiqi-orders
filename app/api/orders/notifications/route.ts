@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServiceRoleClient, requireAnyRole, requireAuthenticatedUser } from '../../../../platform/auth/guards';
+import { assertOrderAccess } from '../../../../platform/auth/orderAccess';
 
 interface NotificationData {
   orderId: string;
@@ -10,6 +11,8 @@ interface NotificationData {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await requireAnyRole(request, ['admin', 'client']);
+
     const { orderId, type, recipientEmail, customMessage }: NotificationData = await request.json();
 
     if (!orderId || !type) {
@@ -19,16 +22,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize Supabase client
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceRoleClient();
+
+    const access = await assertOrderAccess(supabase, user, orderId);
+    if (!access.ok) return access.response;
 
     // Get order details with client and company information
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select(`
+      .select(
+        `
         *,
         client:clients(name, email),
         company:companies(
@@ -39,24 +42,22 @@ export async function POST(request: NextRequest) {
           *,
           product:Products(item_name, sku)
         )
-      `)
+      `
+      )
       .eq('id', orderId)
       .single();
 
     if (orderError || !order) {
-      return NextResponse.json(
-        { error: 'Order not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    // Determine recipient email
-    const toEmail = recipientEmail || order.client?.email;
+    // Clients cannot override recipient (prevents arbitrary email send); admins may
+    const toEmail = user.roles.includes('admin')
+      ? recipientEmail || order.client?.email
+      : order.client?.email;
+
     if (!toEmail) {
-      return NextResponse.json(
-        { error: 'No recipient email found' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No recipient email found' }, { status: 400 });
     }
 
     // Generate notification content based on type
@@ -68,44 +69,41 @@ export async function POST(request: NextRequest) {
         subject = `Order Confirmation - ${order.id.substring(0, 8)}`;
         htmlContent = generateOrderConfirmationEmail(order);
         break;
-      
+
       case 'status_change':
         subject = `Order Status Update - ${order.id.substring(0, 8)}`;
         htmlContent = generateStatusChangeEmail(order, customMessage);
         break;
-      
+
       case 'netsuite_sync':
         subject = `Order Processing Update - ${order.id.substring(0, 8)}`;
         htmlContent = generateNetSuiteSyncEmail(order);
         break;
-      
+
       case 'completion':
         subject = `Order Completed - ${order.id.substring(0, 8)}`;
         htmlContent = generateCompletionEmail(order);
         break;
-      
+
       default:
-        return NextResponse.json(
-          { error: 'Invalid notification type' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Invalid notification type' }, { status: 400 });
     }
 
     // TODO: Integrate with email service (SendGrid, AWS SES, etc.)
     // For now, we'll log the notification and store it in the database
-    
+
     // Store notification in order history (if table exists)
     try {
-      const { error: historyError } = await supabase
-        .from('order_history')
-        .insert([{
+      const { error: historyError } = await supabase.from('order_history').insert([
+        {
           order_id: orderId,
           status_from: null,
           status_to: order.status,
           notes: `${type} notification sent to ${toEmail}${customMessage ? ': ' + customMessage : ''}`,
           changed_by_name: 'System',
-          changed_by_role: 'system'
-        }]);
+          changed_by_role: 'system',
+        },
+      ]);
 
       if (historyError && historyError.code !== 'PGRST205') {
         console.error('Error storing notification history:', historyError);
@@ -120,7 +118,7 @@ export async function POST(request: NextRequest) {
       subject,
       type,
       orderId,
-      htmlContent: htmlContent.substring(0, 200) + '...'
+      htmlContent: htmlContent.substring(0, 200) + '...',
     });
 
     return NextResponse.json({
@@ -128,10 +126,10 @@ export async function POST(request: NextRequest) {
       message: 'Notification sent successfully',
       recipient: toEmail,
       type,
-      orderId
+      orderId,
     });
-
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Notification error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to send notification' },
@@ -141,9 +139,13 @@ export async function POST(request: NextRequest) {
 }
 
 function generateOrderConfirmationEmail(order: any): string {
-  const itemsList = order.order_items?.map((item: any) => 
-    `<li>${item.product?.item_name || 'Unknown Product'} (${item.product?.sku || 'N/A'}) - Qty: ${item.quantity} - $${item.total_price?.toFixed(2) || '0.00'}</li>`
-  ).join('') || '';
+  const itemsList =
+    order.order_items
+      ?.map(
+        (item: any) =>
+          `<li>${item.product?.item_name || 'Unknown Product'} (${item.product?.sku || 'N/A'}) - Qty: ${item.quantity} - $${item.total_price?.toFixed(2) || '0.00'}</li>`
+      )
+      .join('') || '';
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -200,11 +202,15 @@ function generateStatusChangeEmail(order: any, customMessage?: string): string {
           <p><strong>Order Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</p>
         </div>
         
-        ${customMessage ? `
+        ${
+          customMessage
+            ? `
           <div style="margin: 20px 0; padding: 15px; background-color: #fff3cd; border-radius: 5px; border-left: 4px solid #ffc107;">
             <p style="margin: 0;"><strong>Note:</strong> ${customMessage}</p>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
         
         <div style="margin-top: 30px; text-align: center;">
           <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://your-domain.com'}/client/orders/${order.id}" 
@@ -286,20 +292,19 @@ function generateCompletionEmail(order: any): string {
 // GET endpoint to retrieve notification history for an order
 export async function GET(request: NextRequest) {
   try {
+    const requester = await requireAuthenticatedUser(request);
+
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('orderId');
 
     if (!orderId) {
-      return NextResponse.json(
-        { error: 'Order ID is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceRoleClient();
+
+    const access = await assertOrderAccess(supabase, requester, orderId);
+    if (!access.ok) return access.response;
 
     // Get notification history from order_history table (if it exists)
     let history = [];
@@ -311,12 +316,9 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false });
 
       if (error && error.code !== 'PGRST205') {
-        return NextResponse.json(
-          { error: 'Failed to fetch notification history' },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to fetch notification history' }, { status: 500 });
       }
-      
+
       history = historyData || [];
     } catch (err) {
       console.log('Order history table not available, returning empty history');
@@ -326,10 +328,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       orderId,
-      history: history || []
+      history: history || [],
     });
-
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error fetching notification history:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to fetch notification history' },

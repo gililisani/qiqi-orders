@@ -112,12 +112,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send notification about NetSuite sync
+    // Send notification about NetSuite sync (forward admin session)
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/orders/notifications`, {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+      const authHeader = request.headers.get('authorization');
+      await fetch(`${baseUrl}/api/orders/notifications`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(authHeader ? { Authorization: authHeader } : {}),
         },
         body: JSON.stringify({
           orderId: orderId,

@@ -8,6 +8,7 @@ import { Spinner, Typography } from '../MaterialTailwind';
 import Link from 'next/link';
 import Image from 'next/image';
 import { addOrderHistoryEntry } from '../../../lib/orderHistory';
+import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 
 // CategoryAccordion Component
 interface CategoryAccordionProps {
@@ -1045,7 +1046,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           setTimeout(async () => {
             try {
               // Send email to client
-              await fetch('/api/orders/send-email', {
+              await fetchWithAuth('/api/orders/send-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1055,7 +1056,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
               });
 
               // Send notification email to orders@qiqiglobal.com
-              await fetch('/api/orders/send-notification', {
+              await fetchWithAuth('/api/orders/send-notification', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1168,7 +1169,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         // Send order updated email notification (fire and forget)
         setTimeout(async () => {
           try {
-            await fetch('/api/orders/send-email', {
+            await fetchWithAuth('/api/orders/send-email', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

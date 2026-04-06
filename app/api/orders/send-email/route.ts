@@ -1,13 +1,15 @@
 /**
  * API Route: Send Order Email
- * 
+ *
  * POST /api/orders/send-email
- * 
+ *
  * Sends automated or custom email notifications for orders via Microsoft Graph API.
+ * Auth: admin (any order) or client (only their company's orders).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServiceRoleClient, requireAnyRole } from '../../../../platform/auth/guards';
+import { assertOrderAccess } from '../../../../platform/auth/orderAccess';
 import { sendMail } from '../../../../lib/emailService';
 import {
   orderCreatedTemplate,
@@ -18,12 +20,10 @@ import {
   orderUpdatedTemplate,
 } from '../../../../lib/emailTemplates';
 
-// Initialize Supabase client with service role (for server-side operations)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
 export async function POST(request: NextRequest) {
   try {
+    const user = await requireAnyRole(request, ['admin', 'client']);
+
     const body = await request.json();
     const { orderId, emailType, customMessage } = body;
 
@@ -44,8 +44,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch order details from database
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
+
+    const access = await assertOrderAccess(supabase, user, orderId);
+    if (!access.ok) return access.response;
 
     console.log('[send-email] Fetching order:', orderId);
 
@@ -92,16 +94,16 @@ export async function POST(request: NextRequest) {
       `)
       .eq('order_id', orderId);
 
-    console.log('[send-email] Fetched data:', { 
-      order: !!order, 
-      company: !!company, 
+    console.log('[send-email] Fetched data:', {
+      order: !!order,
+      company: !!company,
       client: !!client,
-      itemsCount: orderItems?.length 
+      itemsCount: orderItems?.length,
     });
 
     // Prepare email data
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    
+
     const emailData = {
       poNumber: order.po_number || `Order-${order.id.substring(0, 8)}`,
       orderId: order.id,
@@ -120,23 +122,23 @@ export async function POST(request: NextRequest) {
 
     // Get recipient email - try client first, then company contact emails
     let recipientEmail = client?.email;
-    
+
     if (!recipientEmail) {
       // No client user - try company contact emails
       recipientEmail = company?.ship_to_contact_email || company?.company_email;
-      
+
       if (!recipientEmail) {
         console.log('[send-email] No recipient email found for order:', orderId, '- skipping email (not an error)');
         return NextResponse.json(
-          { 
-            success: true, 
+          {
+            success: true,
             skipped: true,
-            message: 'No recipient email configured - email not sent' 
+            message: 'No recipient email configured - email not sent',
           },
           { status: 200 }
         );
       }
-      
+
       console.log('[send-email] No client user, using company email:', recipientEmail);
     }
 
@@ -163,10 +165,7 @@ export async function POST(request: NextRequest) {
         emailTemplate = orderUpdatedTemplate(emailData);
         break;
       default:
-        return NextResponse.json(
-          { error: 'Invalid email type' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Invalid email type' }, { status: 400 });
     }
 
     // Send email
@@ -177,10 +176,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: result.error }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -189,6 +185,7 @@ export async function POST(request: NextRequest) {
       messageId: result.messageId,
     });
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error sending email:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to send email' },
