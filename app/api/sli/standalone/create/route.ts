@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
 
 export async function POST(request: NextRequest) {
   try {

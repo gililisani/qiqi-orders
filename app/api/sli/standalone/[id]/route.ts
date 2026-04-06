@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
 // Do not keep a module-level service-role client; create per-request
 
 // GET - Fetch standalone SLI

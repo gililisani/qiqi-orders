@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createNetSuiteAPI, NetSuiteSalesOrder } from '../../../../../lib/netsuite';
 import { createClient } from '@supabase/supabase-js';
-import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
 
 export async function POST(request: NextRequest) {
   try {

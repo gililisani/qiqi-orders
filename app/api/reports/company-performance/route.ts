@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createServiceRoleClient, requireAdmin } from '../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 
 /**
  * API endpoint for Company Performance Report

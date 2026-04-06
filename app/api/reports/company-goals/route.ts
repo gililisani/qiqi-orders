@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { calculateTargetPeriodProgress } from '../../../../lib/targetPeriods';
-import { createServiceRoleClient, requireAdmin } from '../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 
 /**
  * API endpoint for Company Annual Goals Progress Report

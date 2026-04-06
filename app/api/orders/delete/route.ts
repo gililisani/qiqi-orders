@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createServiceRoleClient, requireAnyRole } from '../../../platform/auth/guards';
+import { createServiceRoleClient, requireAnyRole } from '../../../../platform/auth/guards';
 
 // Initialize Supabase client with service role
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
