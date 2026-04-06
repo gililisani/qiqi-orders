@@ -14,6 +14,7 @@ import { passwordResetEmailTemplate, welcomeEmailTemplate } from '../../../../li
 import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 import {
   SEND_RESET_LINK_RATE,
+  SEND_RESET_LINK_ACTOR_GLOBAL_RATE,
   enforceRateLimit,
   normalizeEmailForRateLimit,
 } from '../../../../platform/rateLimit';
@@ -43,6 +44,13 @@ export async function POST(request: NextRequest) {
       windowSeconds: SEND_RESET_LINK_RATE.windowSeconds,
     });
     if (!limited.ok) return limited.response;
+
+    const globalLimit = await enforceRateLimit(supabaseAdmin, {
+      key: `send-reset-link:actor:${admin.id}:global`,
+      limit: SEND_RESET_LINK_ACTOR_GLOBAL_RATE.limit,
+      windowSeconds: SEND_RESET_LINK_ACTOR_GLOBAL_RATE.windowSeconds,
+    });
+    if (!globalLimit.ok) return globalLimit.response;
 
     // Check if this is a new user (never set their password)
     // New users: last_sign_in_at is null (they've never successfully logged in)

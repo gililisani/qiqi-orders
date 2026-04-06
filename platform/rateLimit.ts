@@ -13,9 +13,21 @@ export const SEND_ORDER_EMAIL_RATE = {
   windowSeconds: 3600,
 } as const;
 
+/** Order email: global per actor (fan-out abuse). */
+export const SEND_ORDER_EMAIL_ACTOR_GLOBAL_RATE = {
+  limit: 50,
+  windowSeconds: 3600,
+} as const;
+
 /** Admin-triggered password reset/setup: per actor + target email. */
 export const SEND_RESET_LINK_RATE = {
   limit: 5,
+  windowSeconds: 3600,
+} as const;
+
+/** Admin reset-link: global per actor (fan-out abuse). */
+export const SEND_RESET_LINK_ACTOR_GLOBAL_RATE = {
+  limit: 20,
   windowSeconds: 3600,
 } as const;
 
@@ -25,9 +37,21 @@ export const SEND_WELCOME_EMAIL_RATE = {
   windowSeconds: 3600,
 } as const;
 
+/** Admin welcome-email: global per actor (fan-out abuse). */
+export const SEND_WELCOME_EMAIL_ACTOR_GLOBAL_RATE = {
+  limit: 10,
+  windowSeconds: 3600,
+} as const;
+
 /** Internal-team notification email: per actor + order. */
 export const SEND_ORDER_NOTIFICATION_RATE = {
   limit: 10,
+  windowSeconds: 3600,
+} as const;
+
+/** Order internal notification: global per actor (fan-out abuse). */
+export const SEND_ORDER_NOTIFICATION_ACTOR_GLOBAL_RATE = {
+  limit: 30,
   windowSeconds: 3600,
 } as const;
 

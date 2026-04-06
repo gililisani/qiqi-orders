@@ -12,6 +12,7 @@ import { createServiceRoleClient, requireAnyRole } from '../../../../platform/au
 import { assertOrderAccess } from '../../../../platform/auth/orderAccess';
 import {
   SEND_ORDER_EMAIL_RATE,
+  SEND_ORDER_EMAIL_ACTOR_GLOBAL_RATE,
   enforceRateLimit,
   normalizeEmailForRateLimit,
 } from '../../../../platform/rateLimit';
@@ -154,6 +155,13 @@ export async function POST(request: NextRequest) {
       windowSeconds: SEND_ORDER_EMAIL_RATE.windowSeconds,
     });
     if (!sendRate.ok) return sendRate.response;
+
+    const globalRate = await enforceRateLimit(supabase, {
+      key: `send-email:actor:${user.id}:global`,
+      limit: SEND_ORDER_EMAIL_ACTOR_GLOBAL_RATE.limit,
+      windowSeconds: SEND_ORDER_EMAIL_ACTOR_GLOBAL_RATE.windowSeconds,
+    });
+    if (!globalRate.ok) return globalRate.response;
 
     // Select appropriate email template
     let emailTemplate: { subject: string; html: string };

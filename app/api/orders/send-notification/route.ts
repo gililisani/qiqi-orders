@@ -12,7 +12,11 @@ import { escapeHtml } from '../../../../lib/htmlEscape';
 import { createServiceRoleClient, requireAnyRole } from '../../../../platform/auth/guards';
 import { assertOrderAccess } from '../../../../platform/auth/orderAccess';
 import { sendMail } from '../../../../lib/emailService';
-import { SEND_ORDER_NOTIFICATION_RATE, enforceRateLimit } from '../../../../platform/rateLimit';
+import {
+  SEND_ORDER_NOTIFICATION_RATE,
+  SEND_ORDER_NOTIFICATION_ACTOR_GLOBAL_RATE,
+  enforceRateLimit,
+} from '../../../../platform/rateLimit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,6 +40,13 @@ export async function POST(request: NextRequest) {
       windowSeconds: SEND_ORDER_NOTIFICATION_RATE.windowSeconds,
     });
     if (!limited.ok) return limited.response;
+
+    const globalLimit = await enforceRateLimit(supabase, {
+      key: `send-notification:actor:${user.id}:global`,
+      limit: SEND_ORDER_NOTIFICATION_ACTOR_GLOBAL_RATE.limit,
+      windowSeconds: SEND_ORDER_NOTIFICATION_ACTOR_GLOBAL_RATE.windowSeconds,
+    });
+    if (!globalLimit.ok) return globalLimit.response;
 
     // Fetch order details
     const { data: order, error: orderError } = await supabase

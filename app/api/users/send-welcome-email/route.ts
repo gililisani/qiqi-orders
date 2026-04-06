@@ -15,6 +15,7 @@ import { sendMail } from '../../../../lib/emailService';
 import { welcomeEmailTemplate } from '../../../../lib/emailTemplates';
 import {
   SEND_WELCOME_EMAIL_RATE,
+  SEND_WELCOME_EMAIL_ACTOR_GLOBAL_RATE,
   enforceRateLimit,
   normalizeEmailForRateLimit,
 } from '../../../../platform/rateLimit';
@@ -67,6 +68,13 @@ export async function POST(request: NextRequest) {
       windowSeconds: SEND_WELCOME_EMAIL_RATE.windowSeconds,
     });
     if (!limited.ok) return limited.response;
+
+    const globalLimit = await enforceRateLimit(supabaseAdmin, {
+      key: `send-welcome-email:actor:${admin.id}:global`,
+      limit: SEND_WELCOME_EMAIL_ACTOR_GLOBAL_RATE.limit,
+      windowSeconds: SEND_WELCOME_EMAIL_ACTOR_GLOBAL_RATE.windowSeconds,
+    });
+    if (!globalLimit.ok) return globalLimit.response;
 
     // Welcome flow is for client portal accounts only (row in `clients`)
     const { data: clientRow, error: clientError } = await supabaseAdmin
