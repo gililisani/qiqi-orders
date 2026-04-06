@@ -19,17 +19,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceRoleClient();
 
-    console.log('Checking if user exists in admins...');
     const { data: existingAdmin, error: adminCheckError } = await supabase
       .from('admins')
       .select('id, name, email, enabled')
       .eq('id', userId)
       .single();
 
-    console.log('Admin check result:', { existingAdmin, adminCheckError });
-
     if (existingAdmin) {
-      console.log('User is admin, returning profile');
       return NextResponse.json({ 
         success: true, 
         user: { ...existingAdmin, role: 'Admin' }, 
@@ -37,17 +33,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log('Checking if user exists in clients...');
     const { data: existingClient, error: clientCheckError } = await supabase
       .from('clients')
       .select('id, name, email, enabled, company_id')
       .eq('id', userId)
       .single();
 
-    console.log('Client check result:', { existingClient, clientCheckError });
-
     if (existingClient) {
-      console.log('User is client, returning profile');
       return NextResponse.json({ 
         success: true, 
         user: { ...existingClient, role: 'Client' }, 
@@ -72,8 +64,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-    console.log('User profile API - GET request for userId:', userId);
-
     if (!userId) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
     }
@@ -85,41 +75,32 @@ export async function GET(request: NextRequest) {
 
     const supabase = createServiceRoleClient();
 
-    console.log('Looking up user profile in admins...');
     const { data: admin, error: adminError } = await supabase
       .from('admins')
       .select('id, name, email, enabled')
       .eq('id', userId)
       .single();
 
-    console.log('Admin lookup result:', { admin, adminError });
-
     if (admin) {
-      console.log('User found as admin');
       return NextResponse.json({ 
         success: true, 
         user: { ...admin, role: 'Admin' } 
       });
     }
 
-    console.log('Looking up user profile in clients...');
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .select('id, name, email, enabled, company_id')
       .eq('id', userId)
       .single();
 
-    console.log('Client lookup result:', { client, clientError });
-
     if (client) {
-      console.log('User found as client');
       return NextResponse.json({ 
         success: true, 
         user: { ...client, role: 'Client' } 
       });
     }
 
-    console.log('User not found in either table');
     return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
 
   } catch (error: any) {

@@ -81,9 +81,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       });
       return NextResponse.redirect(signedUrl, { status: 302 });
     } catch (storageError: any) {
-      console.error('Storage error:', storageError);
-      console.error('Target path:', targetPath);
-      console.error('Version:', JSON.stringify(version, null, 2));
+      console.error('Storage error generating preview URL', {
+        message: storageError?.message,
+        targetPath,
+        versionId: version.id,
+        assetId: version.asset_id,
+      });
       throw new Error(`Failed to generate signed URL: ${storageError.message}`);
     }
   } catch (err: any) {

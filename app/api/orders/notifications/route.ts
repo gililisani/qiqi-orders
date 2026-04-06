@@ -110,17 +110,8 @@ export async function POST(request: NextRequest) {
         console.error('Error storing notification history:', historyError);
       }
     } catch (err) {
-      console.log('Order history table not available, skipping history storage');
+      // Optional history table; safe to ignore in production.
     }
-
-    // Log for development (replace with actual email service)
-    console.log('EMAIL NOTIFICATION:', {
-      to: toEmail,
-      subject,
-      type,
-      orderId,
-      htmlContent: htmlContent.substring(0, 200) + '...',
-    });
 
     return NextResponse.json({
       success: true,
