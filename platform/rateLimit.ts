@@ -82,6 +82,10 @@ type ConsumeResult = {
 /**
  * Fixed-window rate limit via Postgres RPC `consume_rate_limit`.
  * Requires migration `20260407120000_api_rate_limits.sql`.
+ *
+ * If the RPC is missing (migration not applied) or misconfigured, we **fail open**
+ * by default so core flows (e.g. order emails) keep working. Set
+ * `RATE_LIMIT_STRICT=true` to return 503 instead when rate limiting cannot run.
  */
 export async function enforceRateLimit(
   supabase: SupabaseClient,
@@ -91,6 +95,7 @@ export async function enforceRateLimit(
     windowSeconds: number;
   }
 ): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
+  const strict = process.env.RATE_LIMIT_STRICT === 'true';
   const key = options.key.slice(0, 512);
 
   const { data, error } = await supabase.rpc('consume_rate_limit', {
@@ -101,25 +106,35 @@ export async function enforceRateLimit(
 
   if (error) {
     console.error('[rateLimit] consume_rate_limit RPC failed', error.message);
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: 'Service temporarily unavailable. Please try again later.' },
-        { status: 503 }
-      ),
-    };
+    if (strict) {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { error: 'Service temporarily unavailable. Please try again later.' },
+          { status: 503 }
+        ),
+      };
+    }
+    console.warn(
+      '[rateLimit] Rate limit skipped (RPC error). Apply supabase/migrations/20260407120000_api_rate_limits.sql or set RATE_LIMIT_STRICT=true to hard-fail.'
+    );
+    return { ok: true };
   }
 
   const row = data as ConsumeResult | null;
   if (!row || typeof row.allowed !== 'boolean') {
     console.error('[rateLimit] unexpected RPC payload');
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: 'Service temporarily unavailable. Please try again later.' },
-        { status: 503 }
-      ),
-    };
+    if (strict) {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { error: 'Service temporarily unavailable. Please try again later.' },
+          { status: 503 }
+        ),
+      };
+    }
+    console.warn('[rateLimit] Rate limit skipped (unexpected RPC payload)');
+    return { ok: true };
   }
 
   if (!row.allowed) {
