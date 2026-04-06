@@ -8,9 +8,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { sendMail } from '../../../../lib/emailService';
 import { passwordResetEmailTemplate } from '../../../../lib/emailTemplates';
+import { createServiceRoleClient } from '../../../../platform/auth/guards';
+import {
+  RESET_PASSWORD_RATE,
+  enforceRateLimit,
+  getClientIp,
+  normalizeEmailForRateLimit,
+} from '../../../../platform/rateLimit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,11 +31,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create Supabase admin client with service role key
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       console.error('Missing Supabase environment variables');
       return NextResponse.json(
         { error: 'Server configuration error' },
@@ -37,12 +39,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
+    const supabaseAdmin = createServiceRoleClient();
+
+    const normalizedEmail = normalizeEmailForRateLimit(email);
+    const rateKey = `reset-password:ip:${getClientIp(request)}:email:${normalizedEmail}`;
+    const limited = await enforceRateLimit(supabaseAdmin, {
+      key: rateKey,
+      limit: RESET_PASSWORD_RATE.limit,
+      windowSeconds: RESET_PASSWORD_RATE.windowSeconds,
     });
+    if (!limited.ok) return limited.response;
 
     // Check if user exists (to prevent email enumeration)
     const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
@@ -56,7 +62,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const userExists = authUsers.users.some(user => user.email?.toLowerCase() === email.toLowerCase());
+    const userExists = authUsers.users.some(
+      (user) => user.email?.toLowerCase() === normalizedEmail
+    );
     
     if (!userExists) {
       // Don't reveal if user exists or not for security
@@ -69,7 +77,7 @@ export async function POST(request: NextRequest) {
     // Generate password reset link using Supabase admin API
     const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
-      email: email,
+      email: normalizedEmail,
       options: {
         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/confirm-password-reset`
       }
@@ -84,13 +92,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user name for the email (try to get from clients or admins table)
-    let userName = email.split('@')[0]; // Fallback to email prefix
+    let userName = normalizedEmail.split('@')[0]; // Fallback to email prefix
     
     try {
       const { data: clientData } = await supabaseAdmin
         .from('clients')
         .select('name')
-        .eq('email', email)
+        .eq('email', normalizedEmail)
         .single();
       
       if (clientData?.name) {
@@ -99,7 +107,7 @@ export async function POST(request: NextRequest) {
         const { data: adminData } = await supabaseAdmin
           .from('admins')
           .select('name')
-          .eq('email', email)
+          .eq('email', normalizedEmail)
           .single();
         
         if (adminData?.name) {
@@ -115,13 +123,13 @@ export async function POST(request: NextRequest) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     const emailTemplate = passwordResetEmailTemplate({
       userName: userName,
-      userEmail: email,
+      userEmail: normalizedEmail,
       resetLink: resetData.properties.action_link, // The magic link from Supabase
       siteUrl: siteUrl
     });
 
     const emailResult = await sendMail({
-      to: email,
+      to: normalizedEmail,
       subject: emailTemplate.subject,
       html: emailTemplate.html
     });

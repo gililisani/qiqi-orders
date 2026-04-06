@@ -10,6 +10,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAnyRole } from '../../../../platform/auth/guards';
 import { assertOrderAccess } from '../../../../platform/auth/orderAccess';
+import {
+  SEND_ORDER_EMAIL_RATE,
+  enforceRateLimit,
+  normalizeEmailForRateLimit,
+} from '../../../../platform/rateLimit';
 import { sendMail } from '../../../../lib/emailService';
 import {
   orderCreatedTemplate,
@@ -141,6 +146,14 @@ export async function POST(request: NextRequest) {
 
       console.log('[send-email] No client user, using company email:', recipientEmail);
     }
+
+    const recipientKey = normalizeEmailForRateLimit(recipientEmail);
+    const sendRate = await enforceRateLimit(supabase, {
+      key: `send-email:actor:${user.id}:order:${orderId}:recipient:${recipientKey}`,
+      limit: SEND_ORDER_EMAIL_RATE.limit,
+      windowSeconds: SEND_ORDER_EMAIL_RATE.windowSeconds,
+    });
+    if (!sendRate.ok) return sendRate.response;
 
     // Select appropriate email template
     let emailTemplate: { subject: string; html: string };
