@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
+import { fetchWithAuth } from '../../lib/fetchWithAuth';
 import SharedLayoutWrapper from '../components/template/SharedLayoutWrapper';
 import { clientRoutes } from '../config/client-routes';
 
@@ -24,7 +25,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     // Use the server-side profile resolver (avoids .single() 406 loops and keeps role logic consistent)
     try {
-      const res = await fetch(`/api/user-profile?userId=${user.id}`, { credentials: 'include' });
+      const res = await fetchWithAuth(`/api/user-profile?userId=${user.id}`);
       const data = await res.json().catch(() => ({}));
       const role = typeof data?.user?.role === 'string' ? data.user.role : null;
       if (!res.ok || !data?.success || role?.toLowerCase() !== 'client') {

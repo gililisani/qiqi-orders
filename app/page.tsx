@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
+import { fetchWithAuth } from '../lib/fetchWithAuth';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -31,7 +32,7 @@ export default function LoginPage() {
         if (user) {
           console.log('User already logged in:', user.id);
           // User is already logged in, redirect based on role
-          const profileResponse = await fetch(`/api/user-profile?userId=${user.id}`);
+          const profileResponse = await fetchWithAuth(`/api/user-profile?userId=${user.id}`);
           const profileData = await profileResponse.json();
 
           if (profileData.success && profileData.user?.role?.toLowerCase() === 'admin') {
@@ -74,7 +75,7 @@ export default function LoginPage() {
       const isSuperAdmin = user.email === 'gili@qiqiglobal.com';
       const userRole = isSuperAdmin ? 'Admin' : 'Client';
       
-      const profileResponse = await fetch('/api/user-profile', {
+      const profileResponse = await fetchWithAuth('/api/user-profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

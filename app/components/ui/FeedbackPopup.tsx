@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 
 type FeedbackView = 'choice' | 'issue' | 'idea' | 'success';
 
@@ -36,7 +37,7 @@ export default function FeedbackPopup({ isOpen, onClose, buttonRef }: FeedbackPo
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const response = await fetch(`/api/user-profile?userId=${user.id}`);
+        const response = await fetchWithAuth(`/api/user-profile?userId=${user.id}`);
         const data = await response.json();
         if (data.success && data.user?.name) {
           setUserName(data.user.name);

@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { supabase } from "../../../lib/supabaseClient";
+import { fetchWithAuth } from "../../../lib/fetchWithAuth";
 import FeedbackPopup from "./FeedbackPopup";
 
 export default function TopNavbar() {
@@ -36,7 +37,7 @@ export default function TopNavbar() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const response = await fetch(`/api/user-profile?userId=${user.id}`);
+          const response = await fetchWithAuth(`/api/user-profile?userId=${user.id}`);
           const data = await response.json();
           if (data.success && data.user?.name) {
             setUserName(data.user.name);

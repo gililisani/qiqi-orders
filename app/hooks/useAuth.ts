@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import { handleApiError } from '../../lib/error-handler';
+import { fetchWithAuth } from '../../lib/fetchWithAuth';
 
 export type UserRole = 'Admin' | 'Client';
 
@@ -40,7 +41,7 @@ export function useAuth(requiredRole?: UserRole) {
       }
 
       // Get user profile using API route
-      const profileResponse = await fetch(`/api/user-profile?userId=${authUser.id}`);
+      const profileResponse = await fetchWithAuth(`/api/user-profile?userId=${authUser.id}`);
       const profileData = await profileResponse.json();
 
       if (!profileData.success || !profileData.user) {
