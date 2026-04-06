@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
       message: 'Target periods recalculated successfully',
     });
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error recalculating target periods:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to recalculate target periods' },

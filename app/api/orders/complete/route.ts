@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Order completion error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to complete order' },
@@ -167,6 +168,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error checking order completion status:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to check order status' },

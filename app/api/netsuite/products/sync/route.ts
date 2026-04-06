@@ -124,6 +124,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('NetSuite sync error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to sync products from NetSuite' },
@@ -143,6 +144,7 @@ export async function GET(request: NextRequest) {
       message: isConnected ? 'NetSuite connection successful' : 'NetSuite connection failed'
     });
   } catch (error: any) {
+    if (error instanceof Response) return error;
     return NextResponse.json(
       { error: error.message || 'Failed to test NetSuite connection' },
       { status: 500 }

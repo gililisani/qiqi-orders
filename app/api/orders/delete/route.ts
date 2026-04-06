@@ -110,6 +110,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Order deleted successfully',
     });
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error in delete order API:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to delete order' },

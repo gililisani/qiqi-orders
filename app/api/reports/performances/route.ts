@@ -223,6 +223,7 @@ export async function GET(request: NextRequest) {
       topProducts,
     });
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error in performances report:', error);
     return NextResponse.json(
       { error: error.message || 'Internal server error' },

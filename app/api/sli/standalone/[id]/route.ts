@@ -27,6 +27,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, sli });
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error fetching standalone SLI:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
@@ -111,6 +112,7 @@ export async function PUT(
     });
 
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Standalone SLI update error:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
@@ -142,6 +144,7 @@ export async function DELETE(
     });
 
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Standalone SLI deletion error:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }

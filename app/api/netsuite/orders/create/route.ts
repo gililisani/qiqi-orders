@@ -140,6 +140,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('NetSuite order creation error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to create order in NetSuite' },
@@ -185,6 +186,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error checking NetSuite order status:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to check order status' },

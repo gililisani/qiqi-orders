@@ -75,6 +75,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       skipped: body.assetIds.length - newAssetIds.length,
     });
   } catch (err: any) {
+    if (err instanceof Response) return err;
     console.error('Add assets to campaign failed', err);
     return NextResponse.json({ error: err.message || 'Failed to add assets to campaign' }, { status: 500 });
   }

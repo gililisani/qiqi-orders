@@ -37,6 +37,7 @@ export async function GET(
     });
 
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error generating SLI HTML:', error);
     return NextResponse.json({ error: error.message || 'Failed to generate SLI HTML' }, { status: 500 });
   }

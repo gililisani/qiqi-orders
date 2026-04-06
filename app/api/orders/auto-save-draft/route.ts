@@ -185,6 +185,7 @@ export async function POST(request: NextRequest) {
       orderId
     });
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('❌ Error auto-saving draft:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to auto-save draft' },

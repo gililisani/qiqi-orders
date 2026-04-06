@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error checking user sync:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to check user sync' },
@@ -166,6 +167,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error cleaning up orphaned users:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to clean up orphaned users' },

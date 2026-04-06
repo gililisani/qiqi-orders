@@ -163,6 +163,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: results });
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error in product-sales report:', error);
     return NextResponse.json(
       { error: error.message || 'Internal server error' },

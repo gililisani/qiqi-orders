@@ -330,6 +330,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
+    if (err instanceof Response) return err;
     console.error('Campaign deletion failed', err);
     return NextResponse.json({ error: err.message || 'Failed to delete campaign' }, { status: 500 });
   }
@@ -366,6 +367,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     return NextResponse.json({ campaign });
   } catch (err: any) {
+    if (err instanceof Response) return err;
     console.error('Campaign update failed', err);
     return NextResponse.json({ error: err.message || 'Failed to update campaign' }, { status: 500 });
   }

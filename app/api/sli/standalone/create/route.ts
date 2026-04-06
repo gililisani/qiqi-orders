@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Standalone SLI creation error:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }

@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
       isNewUser: isNewUser
     });
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error in send-reset-link API:', error);
     return NextResponse.json(
       { error: error.message || 'An unexpected error occurred' },

@@ -68,6 +68,7 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error deleting user:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to delete user' },

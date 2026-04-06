@@ -13,6 +13,7 @@ export async function GET(
     
     return NextResponse.json(data);
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error fetching SLI data:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

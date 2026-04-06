@@ -189,6 +189,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error instanceof Response) return error;
     const duration = Date.now() - startTime;
     console.error('[USER_CREATE] ERROR - User creation failed:', { 
       ...logContext, 

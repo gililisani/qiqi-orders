@@ -41,6 +41,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
+    if (err instanceof Response) return err;
     console.error('Remove asset from campaign failed', err);
     return NextResponse.json({ error: err.message || 'Failed to remove asset from campaign' }, { status: 500 });
   }
