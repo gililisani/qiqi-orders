@@ -13,6 +13,24 @@ export const SEND_ORDER_EMAIL_RATE = {
   windowSeconds: 3600,
 } as const;
 
+/** Admin-triggered password reset/setup: per actor + target email. */
+export const SEND_RESET_LINK_RATE = {
+  limit: 5,
+  windowSeconds: 3600,
+} as const;
+
+/** Admin-triggered welcome email resend: per actor + target user. */
+export const SEND_WELCOME_EMAIL_RATE = {
+  limit: 3,
+  windowSeconds: 3600,
+} as const;
+
+/** Internal-team notification email: per actor + order. */
+export const SEND_ORDER_NOTIFICATION_RATE = {
+  limit: 10,
+  windowSeconds: 3600,
+} as const;
+
 export function getClientIp(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for');
   if (forwarded) {

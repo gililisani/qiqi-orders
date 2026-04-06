@@ -13,10 +13,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 import { sendMail } from '../../../../lib/emailService';
 import { welcomeEmailTemplate } from '../../../../lib/emailTemplates';
+import {
+  SEND_WELCOME_EMAIL_RATE,
+  enforceRateLimit,
+  normalizeEmailForRateLimit,
+} from '../../../../platform/rateLimit';
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    const admin = await requireAdmin(request);
 
     const body = await request.json();
     const userId = typeof body?.userId === 'string' ? body.userId.trim() : '';
@@ -54,6 +59,14 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Limit per actor + target user/email to avoid welcome-email spam.
+    const limited = await enforceRateLimit(supabaseAdmin, {
+      key: `send-welcome-email:actor:${admin.id}:user:${userId}:email:${normalizeEmailForRateLimit(canonicalEmail)}`,
+      limit: SEND_WELCOME_EMAIL_RATE.limit,
+      windowSeconds: SEND_WELCOME_EMAIL_RATE.windowSeconds,
+    });
+    if (!limited.ok) return limited.response;
 
     // Welcome flow is for client portal accounts only (row in `clients`)
     const { data: clientRow, error: clientError } = await supabaseAdmin

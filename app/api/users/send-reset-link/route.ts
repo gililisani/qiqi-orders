@@ -9,17 +9,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { sendMail } from '../../../../lib/emailService';
 import { passwordResetEmailTemplate, welcomeEmailTemplate } from '../../../../lib/emailTemplates';
 import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import {
+  SEND_RESET_LINK_RATE,
+  enforceRateLimit,
+  normalizeEmailForRateLimit,
+} from '../../../../platform/rateLimit';
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    const admin = await requireAdmin(request);
 
     const body = await request.json();
     const { userId, userEmail, userName, companyId, companyName } = body;
@@ -33,6 +34,15 @@ export async function POST(request: NextRequest) {
     }
 
     const supabaseAdmin = createServiceRoleClient();
+    const normalizedEmail = normalizeEmailForRateLimit(userEmail);
+
+    // Limit per actor + target email to prevent spamming reset/setup links.
+    const limited = await enforceRateLimit(supabaseAdmin, {
+      key: `send-reset-link:actor:${admin.id}:email:${normalizedEmail}`,
+      limit: SEND_RESET_LINK_RATE.limit,
+      windowSeconds: SEND_RESET_LINK_RATE.windowSeconds,
+    });
+    if (!limited.ok) return limited.response;
 
     // Check if this is a new user (never set their password)
     // New users: last_sign_in_at is null (they've never successfully logged in)
@@ -53,7 +63,7 @@ export async function POST(request: NextRequest) {
     // Supabase uses 'recovery' type for both new user setup and password reset
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
-      email: userEmail,
+      email: normalizedEmail,
       options: {
         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/confirm-password-reset`
       }
@@ -68,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user name if not provided
-    let displayName = userName || userEmail.split('@')[0];
+    let displayName = userName || normalizedEmail.split('@')[0];
     
     // Get company name if not provided and needed
     let companyDisplayName = companyName;
@@ -90,7 +100,7 @@ export async function POST(request: NextRequest) {
       // New user: send welcome email with "Set Your Password"
       emailTemplate = welcomeEmailTemplate({
         userName: displayName,
-        userEmail: userEmail,
+        userEmail: normalizedEmail,
         companyName: companyDisplayName || 'Your Company',
         setupLink: linkData.properties.action_link,
         siteUrl: siteUrl
@@ -99,14 +109,14 @@ export async function POST(request: NextRequest) {
       // Existing user: send password reset email
       emailTemplate = passwordResetEmailTemplate({
         userName: displayName,
-        userEmail: userEmail,
+        userEmail: normalizedEmail,
         resetLink: linkData.properties.action_link,
         siteUrl: siteUrl
       });
     }
 
     const emailResult = await sendMail({
-      to: userEmail,
+      to: normalizedEmail,
       subject: emailTemplate.subject,
       html: emailTemplate.html
     });
