@@ -22,14 +22,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       return;
     }
 
-    // Check if user is in clients table
-    const { data: clientProfile } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('id', user.id)
-      .single();
-
-    if (!clientProfile) {
+    // Use the server-side profile resolver (avoids .single() 406 loops and keeps role logic consistent)
+    try {
+      const res = await fetch(`/api/user-profile?userId=${user.id}`, { credentials: 'include' });
+      const data = await res.json().catch(() => ({}));
+      const role = typeof data?.user?.role === 'string' ? data.user.role : null;
+      if (!res.ok || !data?.success || role?.toLowerCase() !== 'client') {
+        router.push('/');
+        return;
+      }
+    } catch {
       router.push('/');
       return;
     }

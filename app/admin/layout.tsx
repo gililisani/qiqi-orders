@@ -22,14 +22,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    // Check if user is in admins table
-    const { data: adminProfile } = await supabase
-      .from('admins')
-      .select('id')
-      .eq('id', user.id)
-      .single();
-
-    if (!adminProfile) {
+    // Use the server-side profile resolver (avoids .single() 406 loops and keeps role logic consistent)
+    try {
+      const res = await fetch(`/api/user-profile?userId=${user.id}`, { credentials: 'include' });
+      const data = await res.json().catch(() => ({}));
+      const role = typeof data?.user?.role === 'string' ? data.user.role : null;
+      if (!res.ok || !data?.success || role?.toLowerCase() !== 'admin') {
+        router.push('/');
+        return;
+      }
+    } catch {
       router.push('/');
       return;
     }
