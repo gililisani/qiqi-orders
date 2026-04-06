@@ -348,6 +348,8 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const userIdRef = useRef<string | null>(null);
   const companyIdRef = useRef<string | null>(null);
   const isSavingRef = useRef<boolean>(false);
+  /** Prevents double submit: React state `saving` updates async, so rapid clicks could run performSave twice. */
+  const performSaveInFlightRef = useRef<boolean>(false);
 
   const isEditMode = !!orderId;
   const isNewMode = !orderId;
@@ -908,6 +910,10 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   };
 
   const performSave = async (asDraft: boolean = false) => {
+    if (performSaveInFlightRef.current) {
+      return;
+    }
+    performSaveInFlightRef.current = true;
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -1196,6 +1202,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       if (error.hint) console.error('Error hint:', error.hint);
       setError(error instanceof Error ? error.message : 'Failed to save order');
     } finally {
+      performSaveInFlightRef.current = false;
       setSaving(false);
     }
   };

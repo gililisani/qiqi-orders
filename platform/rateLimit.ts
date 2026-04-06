@@ -43,9 +43,9 @@ export const SEND_WELCOME_EMAIL_ACTOR_GLOBAL_RATE = {
   windowSeconds: 3600,
 } as const;
 
-/** Internal-team notification email: per actor + order. */
+/** Internal-team notification email: per actor + order (one alert per order per window). */
 export const SEND_ORDER_NOTIFICATION_RATE = {
-  limit: 10,
+  limit: 1,
   windowSeconds: 3600,
 } as const;
 
