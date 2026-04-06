@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { escapeHtml } from '../../../../lib/htmlEscape';
 import { createServiceRoleClient, requireAnyRole } from '../../../../platform/auth/guards';
 import { assertOrderAccess } from '../../../../platform/auth/orderAccess';
 import { sendMail } from '../../../../lib/emailService';
@@ -85,9 +86,9 @@ export async function POST(request: NextRequest) {
         ?.map(
           (item: any) =>
             `<tr>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.product?.item_name || 'Unknown'}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.product?.sku || 'N/A'}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(item.product?.item_name || 'Unknown')}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${escapeHtml(item.product?.sku || 'N/A')}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${escapeHtml(item.quantity)}</td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.total_price.toFixed(2)}</td>
       </tr>`
         )
@@ -120,15 +121,15 @@ export async function POST(request: NextRequest) {
                 <table width="100%" cellpadding="8" cellspacing="0">
                   <tr>
                     <td style="font-weight: 600; color: #6b7280; font-size: 14px;">PO Number:</td>
-                    <td style="color: #111827; font-size: 14px; font-weight: 600;">${poNumber}</td>
+                    <td style="color: #111827; font-size: 14px; font-weight: 600;">${escapeHtml(poNumber)}</td>
                   </tr>
                   <tr>
                     <td style="font-weight: 600; color: #6b7280; font-size: 14px;">Company:</td>
-                    <td style="color: #111827; font-size: 14px;">${companyName}</td>
+                    <td style="color: #111827; font-size: 14px;">${escapeHtml(companyName)}</td>
                   </tr>
                   <tr>
                     <td style="font-weight: 600; color: #6b7280; font-size: 14px;">Created By:</td>
-                    <td style="color: #111827; font-size: 14px;">${clientName} (${clientEmail})</td>
+                    <td style="color: #111827; font-size: 14px;">${escapeHtml(clientName)} (${escapeHtml(clientEmail)})</td>
                   </tr>
                   <tr>
                     <td style="font-weight: 600; color: #6b7280; font-size: 14px;">Total Value:</td>
@@ -157,7 +158,7 @@ export async function POST(request: NextRequest) {
               </table>
 
               <div style="margin: 30px 0; text-align: center;">
-                <a href="${siteUrl}/admin/orders/${order.id}" 
+                <a href="${escapeHtml(`${siteUrl}/admin/orders/${order.id}`)}" 
                    style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
                   View Order in Admin Panel
                 </a>
@@ -179,7 +180,7 @@ export async function POST(request: NextRequest) {
     // Send email to orders@qiqiglobal.com
     const result = await sendMail({
       to: 'orders@qiqiglobal.com',
-      subject: `🔔 New Order: ${poNumber} - ${companyName}`,
+      subject: `🔔 New Order: ${escapeHtml(poNumber)} - ${escapeHtml(companyName)}`,
       html: emailHtml,
     });
 

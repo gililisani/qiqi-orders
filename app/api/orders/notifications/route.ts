@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { escapeHtml } from '../../../../lib/htmlEscape';
 import { createServiceRoleClient, requireAnyRole, requireAuthenticatedUser } from '../../../../platform/auth/guards';
 import { assertOrderAccess } from '../../../../platform/auth/orderAccess';
 
@@ -143,7 +144,7 @@ function generateOrderConfirmationEmail(order: any): string {
     order.order_items
       ?.map(
         (item: any) =>
-          `<li>${item.product?.item_name || 'Unknown Product'} (${item.product?.sku || 'N/A'}) - Qty: ${item.quantity} - $${item.total_price?.toFixed(2) || '0.00'}</li>`
+          `<li>${escapeHtml(item.product?.item_name || 'Unknown Product')} (${escapeHtml(item.product?.sku || 'N/A')}) - Qty: ${escapeHtml(item.quantity)} - $${item.total_price?.toFixed(2) || '0.00'}</li>`
       )
       .join('') || '';
 
@@ -158,12 +159,12 @@ function generateOrderConfirmationEmail(order: any): string {
         
         <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
           <h3 style="margin-top: 0; color: #333;">Order Details</h3>
-          <p><strong>Order ID:</strong> ${order.id}</p>
-          <p><strong>Company:</strong> ${order.company?.company_name || 'N/A'}</p>
-          <p><strong>Status:</strong> ${order.status}</p>
+          <p><strong>Order ID:</strong> ${escapeHtml(order.id)}</p>
+          <p><strong>Company:</strong> ${escapeHtml(order.company?.company_name || 'N/A')}</p>
+          <p><strong>Status:</strong> ${escapeHtml(order.status)}</p>
           <p><strong>Total Value:</strong> $${order.total_value?.toFixed(2) || '0.00'}</p>
           <p><strong>Support Fund Used:</strong> $${order.support_fund_used?.toFixed(2) || '0.00'}</p>
-          <p><strong>Order Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</p>
+          <p><strong>Order Date:</strong> ${escapeHtml(new Date(order.created_at).toLocaleDateString())}</p>
         </div>
         
         <h3 style="color: #333;">Items Ordered</h3>
@@ -186,6 +187,8 @@ function generateOrderConfirmationEmail(order: any): string {
 }
 
 function generateStatusChangeEmail(order: any, customMessage?: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://your-domain.com';
+  const orderLink = `${baseUrl.replace(/\/$/, '')}/client/orders/${order.id}`;
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <div style="background-color: #f8f9fa; padding: 20px; text-align: center;">
@@ -196,24 +199,24 @@ function generateStatusChangeEmail(order: any, customMessage?: string): string {
         <h2 style="color: #333;">Your order status has been updated</h2>
         
         <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Order ID:</strong> ${order.id}</p>
-          <p><strong>Company:</strong> ${order.company?.company_name || 'N/A'}</p>
-          <p><strong>Current Status:</strong> <span style="color: #28a745; font-weight: bold;">${order.status}</span></p>
-          <p><strong>Order Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</p>
+          <p><strong>Order ID:</strong> ${escapeHtml(order.id)}</p>
+          <p><strong>Company:</strong> ${escapeHtml(order.company?.company_name || 'N/A')}</p>
+          <p><strong>Current Status:</strong> <span style="color: #28a745; font-weight: bold;">${escapeHtml(order.status)}</span></p>
+          <p><strong>Order Date:</strong> ${escapeHtml(new Date(order.created_at).toLocaleDateString())}</p>
         </div>
         
         ${
           customMessage
             ? `
           <div style="margin: 20px 0; padding: 15px; background-color: #fff3cd; border-radius: 5px; border-left: 4px solid #ffc107;">
-            <p style="margin: 0;"><strong>Note:</strong> ${customMessage}</p>
+            <p style="margin: 0;"><strong>Note:</strong> ${escapeHtml(customMessage)}</p>
           </div>
         `
             : ''
         }
         
         <div style="margin-top: 30px; text-align: center;">
-          <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://your-domain.com'}/client/orders/${order.id}" 
+          <a href="${escapeHtml(orderLink)}" 
              style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
             View Order Details
           </a>
@@ -242,9 +245,9 @@ function generateNetSuiteSyncEmail(order: any): string {
         </div>
         
         <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Order ID:</strong> ${order.id}</p>
-          <p><strong>Company:</strong> ${order.company?.company_name || 'N/A'}</p>
-          <p><strong>NetSuite Order ID:</strong> ${order.netsuite_sales_order_id || 'Processing...'}</p>
+          <p><strong>Order ID:</strong> ${escapeHtml(order.id)}</p>
+          <p><strong>Company:</strong> ${escapeHtml(order.company?.company_name || 'N/A')}</p>
+          <p><strong>NetSuite Order ID:</strong> ${escapeHtml(order.netsuite_sales_order_id ?? 'Processing...')}</p>
           <p><strong>Total Value:</strong> $${order.total_value?.toFixed(2) || '0.00'}</p>
         </div>
         
@@ -273,9 +276,9 @@ function generateCompletionEmail(order: any): string {
         </div>
         
         <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Order ID:</strong> ${order.id}</p>
-          <p><strong>Company:</strong> ${order.company?.company_name || 'N/A'}</p>
-          <p><strong>Completion Date:</strong> ${new Date().toLocaleDateString()}</p>
+          <p><strong>Order ID:</strong> ${escapeHtml(order.id)}</p>
+          <p><strong>Company:</strong> ${escapeHtml(order.company?.company_name || 'N/A')}</p>
+          <p><strong>Completion Date:</strong> ${escapeHtml(new Date().toLocaleDateString())}</p>
           <p><strong>Total Value:</strong> $${order.total_value?.toFixed(2) || '0.00'}</p>
         </div>
         

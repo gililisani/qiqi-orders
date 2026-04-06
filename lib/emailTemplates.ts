@@ -5,6 +5,7 @@
  */
 
 import { formatCurrency, formatQuantity } from './formatters';
+import { escapeHtml } from './htmlEscape';
 
 interface OrderEmailData {
   poNumber: string; // Use PO number as the main order identifier
@@ -69,8 +70,8 @@ export function orderCreatedTemplate(data: OrderEmailData): { subject: string; h
     ?.map(
       (item) => `
         <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.productName}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(item.productName)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${escapeHtml(item.quantity)}</td>
           <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         </tr>
       `
@@ -81,16 +82,16 @@ export function orderCreatedTemplate(data: OrderEmailData): { subject: string; h
     <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Confirmation</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Your order <strong>${data.poNumber}</strong> has been successfully created and is being processed.
+      Your order <strong>${escapeHtml(data.poNumber)}</strong> has been successfully created and is being processed.
     </p>
     
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
       <tr>
         <td>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${data.companyName}</p>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> ${data.status}</p>
-          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${data.poNumber}</p>` : ''}
-          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${data.soNumber}</p>` : ''}
+          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${escapeHtml(data.companyName)}</p>
+          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> ${escapeHtml(data.status)}</p>
+          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${escapeHtml(data.poNumber)}</p>` : ''}
+          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${escapeHtml(data.soNumber)}</p>` : ''}
         </td>
       </tr>
     </table>
@@ -128,7 +129,7 @@ export function orderCreatedTemplate(data: OrderEmailData): { subject: string; h
     }
     
     <div style="margin: 30px 0; text-align: center;">
-      <a href="${data.siteUrl}/client/orders/${data.orderId}" 
+      <a href="${escapeHtml(`${data.siteUrl}/client/orders/${data.orderId}`)}" 
          style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
         View Order Details
       </a>
@@ -153,16 +154,16 @@ export function orderInProcessTemplate(data: OrderEmailData): { subject: string;
     <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order In Process</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Great news! Your order <strong>${data.poNumber}</strong> is now being processed.
+      Great news! Your order <strong>${escapeHtml(data.poNumber)}</strong> is now being processed.
     </p>
     
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
       <tr>
         <td>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${data.companyName}</p>
+          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${escapeHtml(data.companyName)}</p>
             <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #000000;">In Process</span></p>
-          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${data.poNumber}</p>` : ''}
-          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${data.soNumber}</p>` : ''}
+          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${escapeHtml(data.poNumber)}</p>` : ''}
+          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${escapeHtml(data.soNumber)}</p>` : ''}
         </td>
       </tr>
     </table>
@@ -172,7 +173,7 @@ export function orderInProcessTemplate(data: OrderEmailData): { subject: string;
     </p>
     
     <div style="margin: 30px 0; text-align: center;">
-      <a href="${data.siteUrl}/client/orders/${data.orderId}" 
+      <a href="${escapeHtml(`${data.siteUrl}/client/orders/${data.orderId}`)}" 
          style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
         Track Order Status
       </a>
@@ -180,7 +181,7 @@ export function orderInProcessTemplate(data: OrderEmailData): { subject: string;
   `;
 
   return {
-    subject: `Your order ${data.soNumber || data.poNumber} is being processed`,
+    subject: `Your order ${escapeHtml(data.soNumber || data.poNumber)} is being processed`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -193,16 +194,16 @@ export function orderReadyTemplate(data: OrderEmailData): { subject: string; htm
     <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Ready!</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Excellent news! Your order <strong>${data.soNumber || data.poNumber}</strong> is now ready for pickup. You may Edit and/or Print your packing slip.
+      Excellent news! Your order <strong>${escapeHtml(data.soNumber || data.poNumber)}</strong> is now ready for pickup. You may Edit and/or Print your packing slip.
     </p>
     
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
       <tr>
         <td>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${data.companyName}</p>
+          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${escapeHtml(data.companyName)}</p>
             <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #000000;">Ready</span></p>
-          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${data.poNumber}</p>` : ''}
-          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${data.soNumber}</p>` : ''}
+          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${escapeHtml(data.poNumber)}</p>` : ''}
+          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${escapeHtml(data.soNumber)}</p>` : ''}
         </td>
       </tr>
     </table>
@@ -212,7 +213,7 @@ export function orderReadyTemplate(data: OrderEmailData): { subject: string; htm
     </p>
     
     <div style="margin: 30px 0; text-align: center;">
-      <a href="${data.siteUrl}/client/orders/${data.orderId}" 
+      <a href="${escapeHtml(`${data.siteUrl}/client/orders/${data.orderId}`)}" 
          style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
         View Order Details
       </a>
@@ -220,7 +221,7 @@ export function orderReadyTemplate(data: OrderEmailData): { subject: string; htm
   `;
 
   return {
-    subject: `Order ${data.soNumber || data.poNumber} is ready for pickup!`,
+    subject: `Order ${escapeHtml(data.soNumber || data.poNumber)} is ready for pickup!`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -233,16 +234,16 @@ export function orderCancelledTemplate(data: OrderEmailData): { subject: string;
     <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Cancelled</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Your order <strong>${data.poNumber}</strong> has been cancelled.
+      Your order <strong>${escapeHtml(data.poNumber)}</strong> has been cancelled.
     </p>
     
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
       <tr>
         <td>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${data.companyName}</p>
+          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${escapeHtml(data.companyName)}</p>
             <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #000000;">Cancelled</span></p>
-          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${data.poNumber}</p>` : ''}
-          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${data.soNumber}</p>` : ''}
+          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${escapeHtml(data.poNumber)}</p>` : ''}
+          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${escapeHtml(data.soNumber)}</p>` : ''}
         </td>
       </tr>
     </table>
@@ -252,7 +253,7 @@ export function orderCancelledTemplate(data: OrderEmailData): { subject: string;
     </p>
     
     <div style="margin: 30px 0; text-align: center;">
-      <a href="${data.siteUrl}/client/orders/${data.orderId}" 
+      <a href="${escapeHtml(`${data.siteUrl}/client/orders/${data.orderId}`)}" 
          style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
         View Order Details
       </a>
@@ -260,7 +261,7 @@ export function orderCancelledTemplate(data: OrderEmailData): { subject: string;
   `;
 
   return {
-    subject: `Order ${data.soNumber || data.poNumber} has been cancelled`,
+    subject: `Order ${escapeHtml(data.soNumber || data.poNumber)} has been cancelled`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -279,19 +280,19 @@ export function welcomeUserTemplate(data: {
     <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Welcome to Qiqi Partners Portal</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Hello <strong>${data.userName}</strong>,
+      Hello <strong>${escapeHtml(data.userName)}</strong>,
     </p>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Your account has been created for <strong>${data.companyName}</strong>. You can now access the Qiqi Partners Portal to manage your orders.
+      Your account has been created for <strong>${escapeHtml(data.companyName)}</strong>. You can now access the Qiqi Partners Portal to manage your orders.
     </p>
     
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
       <tr>
         <td>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Login Email:</strong> ${data.userEmail}</p>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Temporary Password:</strong> <code style="background: #ffffff; padding: 4px 8px; border-radius: 4px; border: 1px solid #e5e7eb;">${data.temporaryPassword}</code></p>
-          <p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>Portal URL:</strong> <a href="${data.siteUrl}" style="color: #000000;">${data.siteUrl}</a></p>
+          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Login Email:</strong> ${escapeHtml(data.userEmail)}</p>
+          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Temporary Password:</strong> <code style="background: #ffffff; padding: 4px 8px; border-radius: 4px; border: 1px solid #e5e7eb;">${escapeHtml(data.temporaryPassword)}</code></p>
+          <p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>Portal URL:</strong> <a href="${escapeHtml(data.siteUrl)}" style="color: #000000;">${escapeHtml(data.siteUrl)}</a></p>
         </td>
       </tr>
     </table>
@@ -303,7 +304,7 @@ export function welcomeUserTemplate(data: {
     </div>
     
     <div style="margin: 30px 0; text-align: center;">
-      <a href="${data.siteUrl}" 
+      <a href="${escapeHtml(data.siteUrl)}" 
          style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
         Login to Portal
       </a>
@@ -328,16 +329,16 @@ export function customUpdateTemplate(data: OrderEmailData): { subject: string; h
     <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Update</h2>
     
     <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      We have an update regarding your order <strong>${data.poNumber}</strong>.
+      We have an update regarding your order <strong>${escapeHtml(data.poNumber)}</strong>.
     </p>
     
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
       <tr>
         <td>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${data.companyName}</p>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> ${data.status}</p>
-          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${data.poNumber}</p>` : ''}
-          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${data.soNumber}</p>` : ''}
+          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${escapeHtml(data.companyName)}</p>
+          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> ${escapeHtml(data.status)}</p>
+          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${escapeHtml(data.poNumber)}</p>` : ''}
+          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${escapeHtml(data.soNumber)}</p>` : ''}
         </td>
       </tr>
     </table>
@@ -347,7 +348,7 @@ export function customUpdateTemplate(data: OrderEmailData): { subject: string; h
         ? `
     <div style="margin: 20px 0; padding: 20px; background-color: #f8f9fa; border-left: 4px solid #000000; border-radius: 6px;">
       <p style="margin: 0; color: #374151; font-size: 16px; line-height: 1.6;">
-        ${data.customMessage}
+        ${escapeHtml(data.customMessage)}
       </p>
     </div>
     `
@@ -355,7 +356,7 @@ export function customUpdateTemplate(data: OrderEmailData): { subject: string; h
     }
     
     <div style="margin: 30px 0; text-align: center;">
-      <a href="${data.siteUrl}/client/orders/${data.orderId}" 
+      <a href="${escapeHtml(`${data.siteUrl}/client/orders/${data.orderId}`)}" 
          style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
         View Order Details
       </a>
@@ -367,7 +368,7 @@ export function customUpdateTemplate(data: OrderEmailData): { subject: string; h
   `;
 
   return {
-    subject: `Order Update - ${data.poNumber}`,
+    subject: `Order Update - ${escapeHtml(data.poNumber)}`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -388,11 +389,11 @@ export function welcomeEmailTemplate(data: {
     </h1>
     
     <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Hi <strong>${data.userName}</strong>,
+      Hi <strong>${escapeHtml(data.userName)}</strong>,
     </p>
     
     <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Your account has been created for <strong>${data.companyName}</strong>. You're now ready to start placing orders through our Partners Hub.
+      Your account has been created for <strong>${escapeHtml(data.companyName)}</strong>. You're now ready to start placing orders through our Partners Hub.
     </p>
     
     <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 4px;">
@@ -400,7 +401,7 @@ export function welcomeEmailTemplate(data: {
         📧 Your Login Email:
       </p>
       <p style="margin: 0; color: #1e3a8a; font-family: monospace; font-size: 15px;">
-        ${data.userEmail}
+        ${escapeHtml(data.userEmail)}
       </p>
     </div>
     
@@ -413,7 +414,7 @@ export function welcomeEmailTemplate(data: {
     </p>
     
     <div style="margin: 30px 0; text-align: center;">
-      <a href="${data.setupLink}" 
+      <a href="${escapeHtml(data.setupLink)}" 
          style="display: inline-block; padding: 16px 40px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
         Set My Password →
       </a>
@@ -442,7 +443,7 @@ export function welcomeEmailTemplate(data: {
       </ol>
       <p style="margin: 12px 0 0; color: #92400e; font-size: 13px; line-height: 1.5;">
         <strong>Alternative:</strong> If the link still doesn't work, copy and paste this entire link into your browser:<br/>
-        <a href="${data.setupLink}" style="color: #1e40af; word-break: break-all; font-size: 12px; font-family: monospace;">${data.setupLink}</a>
+        <a href="${escapeHtml(data.setupLink)}" style="color: #1e40af; word-break: break-all; font-size: 12px; font-family: monospace;">${escapeHtml(data.setupLink)}</a>
       </p>
     </div>
     
@@ -483,7 +484,7 @@ export function passwordResetEmailTemplate(data: {
     </h1>
     
     <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Hi <strong>${data.userName}</strong>,
+      Hi <strong>${escapeHtml(data.userName)}</strong>,
     </p>
     
     <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
@@ -495,7 +496,7 @@ export function passwordResetEmailTemplate(data: {
         📧 Your Account Email:
       </p>
       <p style="margin: 0; color: #1e3a8a; font-family: monospace; font-size: 15px;">
-        ${data.userEmail}
+        ${escapeHtml(data.userEmail)}
       </p>
     </div>
     
@@ -508,7 +509,7 @@ export function passwordResetEmailTemplate(data: {
     </p>
     
     <div style="margin: 30px 0; text-align: center;">
-      <a href="${data.resetLink}" 
+      <a href="${escapeHtml(data.resetLink)}" 
          style="display: inline-block; padding: 16px 40px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
         Reset My Password →
       </a>
@@ -537,7 +538,7 @@ export function passwordResetEmailTemplate(data: {
       </ol>
       <p style="margin: 12px 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
         <strong>Full link:</strong><br>
-        <a href="${data.resetLink}" style="color: #3b82f6; word-break: break-all; font-size: 12px; font-family: monospace;">${data.resetLink}</a>
+        <a href="${escapeHtml(data.resetLink)}" style="color: #3b82f6; word-break: break-all; font-size: 12px; font-family: monospace;">${escapeHtml(data.resetLink)}</a>
       </p>
     </div>
     
@@ -572,31 +573,31 @@ export function orderUpdatedTemplate(data: OrderEmailData) {
       
       <div style="margin: 0 0 12px;">
         <span style="color: #6b7280; font-size: 14px; font-weight: 600;">Order Number:</span>
-        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${data.poNumber}</span>
+        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${escapeHtml(data.poNumber)}</span>
       </div>
       
       <div style="margin: 0 0 12px;">
         <span style="color: #6b7280; font-size: 14px; font-weight: 600;">Status:</span>
-        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${data.status}</span>
+        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${escapeHtml(data.status)}</span>
       </div>
       
       ${data.totalAmount ? `
       <div style="margin: 0 0 12px;">
         <span style="color: #6b7280; font-size: 14px; font-weight: 600;">Total Value:</span>
-        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${formatCurrency(data.totalAmount)}</span>
+        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${escapeHtml(formatCurrency(data.totalAmount))}</span>
       </div>
       ` : ''}
       
       ${data.soNumber ? `
       <div style="margin: 0 0 12px;">
         <span style="color: #6b7280; font-size: 14px; font-weight: 600;">SO Number:</span>
-        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${data.soNumber}</span>
+        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${escapeHtml(data.soNumber)}</span>
       </div>
       ` : ''}
     </div>
     
     <div style="margin: 30px 0; text-align: center;">
-      <a href="${data.siteUrl}/client/orders/${data.orderId}" 
+      <a href="${escapeHtml(`${data.siteUrl}/client/orders/${data.orderId}`)}" 
          style="display: inline-block; padding: 16px 40px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
         View Updated Order →
       </a>
@@ -608,7 +609,7 @@ export function orderUpdatedTemplate(data: OrderEmailData) {
   `;
 
   return {
-    subject: `Order ${data.poNumber} Updated - Qiqi Partners Hub`,
+    subject: `Order ${escapeHtml(data.poNumber)} Updated - Qiqi Partners Hub`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
