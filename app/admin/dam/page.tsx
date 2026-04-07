@@ -339,6 +339,7 @@ export default function AdminDigitalAssetManagerPage() {
   const [fileSizeMaxFilter, setFileSizeMaxFilter] = useState<string>('');
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(25);
   const [pagination, setPagination] = useState<{
     page: number;
     limit: number;
@@ -638,7 +639,7 @@ export default function AdminDigitalAssetManagerPage() {
         params.set('fileSizeMax', Math.floor(bytes).toString());
       }
       params.set('page', page.toString());
-      params.set('limit', '25'); // Reduced from 50 to 25 for better performance
+      params.set('limit', pageSize.toString());
       
       const url = `/api/dam/assets?${params.toString()}`;
       const response = await fetch(url, {
@@ -963,12 +964,33 @@ export default function AdminDigitalAssetManagerPage() {
     tagFilter,
     productLineFilter,
     productNameFilter,
+    pageSize,
     // advanced filters
     dateFromFilter,
     dateToFilter,
     fileSizeMinFilter,
     fileSizeMaxFilter,
   ]);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem('dam_admin_page_size');
+      const parsed = raw ? parseInt(raw, 10) : NaN;
+      if (parsed === 25 || parsed === 50 || parsed === 100) {
+        setPageSize(parsed);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('dam_admin_page_size', String(pageSize));
+    } catch {
+      // ignore
+    }
+  }, [pageSize]);
 
   // Auto-refresh removed - no background processing
 
@@ -2972,6 +2994,24 @@ export default function AdminDigitalAssetManagerPage() {
                 of <span className="font-medium">{pagination.total}</span> assets
               </div>
               <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 pr-2">
+                  <span className="text-sm text-gray-700">Page size</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      const next = parseInt(e.target.value, 10);
+                      if (next === 25 || next === 50 || next === 100) {
+                        setPageSize(next);
+                        setCurrentPage(1);
+                      }
+                    }}
+                    className="rounded-md border border-gray-300 bg-white px-2 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
                 <button
                   type="button"
                   onClick={() => {

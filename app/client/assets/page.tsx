@@ -160,6 +160,7 @@ export default function ClientAssetsPage() {
   const [fileSizeMaxFilter, setFileSizeMaxFilter] = useState<string>('');
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(25);
   const [pagination, setPagination] = useState<{
     page: number;
     limit: number;
@@ -235,7 +236,7 @@ export default function ClientAssetsPage() {
       if (fileSizeMinFilter) params.append('fileSizeMin', fileSizeMinFilter);
       if (fileSizeMaxFilter) params.append('fileSizeMax', fileSizeMaxFilter);
       params.append('page', page.toString());
-      params.append('limit', '50');
+      params.append('limit', pageSize.toString());
 
       const url = `/api/dam/assets/client?${params.toString()}`;
       const response = await fetch(url, {
@@ -280,7 +281,27 @@ export default function ClientAssetsPage() {
       setCurrentPage(1);
     }, 300);
     return () => clearTimeout(timeoutId);
-  }, [accessToken, searchTerm, assetTypeFilter, assetSubtypeFilter, localeFilter, regionFilter, tagFilter, productLineFilter, productNameFilter, dateFromFilter, dateToFilter, fileSizeMinFilter, fileSizeMaxFilter, fetchLookups]);
+  }, [accessToken, searchTerm, assetTypeFilter, assetSubtypeFilter, localeFilter, regionFilter, tagFilter, productLineFilter, productNameFilter, pageSize, dateFromFilter, dateToFilter, fileSizeMinFilter, fileSizeMaxFilter, fetchLookups]);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem('dam_client_page_size');
+      const parsed = raw ? parseInt(raw, 10) : NaN;
+      if (parsed === 25 || parsed === 50 || parsed === 100) {
+        setPageSize(parsed);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('dam_client_page_size', String(pageSize));
+    } catch {
+      // ignore
+    }
+  }, [pageSize]);
 
   const filteredAssets = useMemo(() => {
     return assets; // Assets are already filtered by the API
@@ -788,6 +809,24 @@ export default function ClientAssetsPage() {
                 of <span className="font-medium">{pagination.total}</span> assets
               </div>
               <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 pr-2">
+                  <span className="text-sm text-gray-700">Page size</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      const next = parseInt(e.target.value, 10);
+                      if (next === 25 || next === 50 || next === 100) {
+                        setPageSize(next);
+                        setCurrentPage(1);
+                      }
+                    }}
+                    className="rounded-md border border-gray-300 bg-white px-2 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
