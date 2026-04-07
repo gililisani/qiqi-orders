@@ -80,24 +80,27 @@ export async function resolveSignedAssetUrl(
   if (apiPath.startsWith('http')) return apiPath;
   if (!accessToken) return '';
 
-  const url = apiPath.startsWith('/') ? apiPath : `/${apiPath}`;
+  const rawUrl = apiPath.startsWith('/') ? apiPath : `/${apiPath}`;
+  const url = rawUrl.includes('?') ? `${rawUrl}&format=json` : `${rawUrl}?format=json`;
   const cacheKey = `signed:${url}`;
   const cached = getCachedUrl(cacheKey);
   if (cached) return cached;
 
   const res = await fetch(url, {
     method: 'GET',
-    headers: buildAuthHeaders(accessToken),
+    headers: {
+      ...buildAuthHeaders(accessToken),
+      Accept: 'application/json',
+    },
     credentials: 'same-origin',
-    redirect: 'manual',
   });
 
-  // Successful preview/download routes redirect to a signed URL.
-  if (res.status === 302 || res.status === 301 || res.status === 307 || res.status === 308) {
-    const location = res.headers.get('Location') || res.headers.get('location') || '';
-    if (location) {
-      setCachedUrl(cacheKey, location);
-      return location;
+  if (res.ok) {
+    const data = (await res.json().catch(() => null)) as { url?: string } | null;
+    const signed = typeof data?.url === 'string' ? data.url : '';
+    if (signed) {
+      setCachedUrl(cacheKey, signed);
+      return signed;
     }
   }
 

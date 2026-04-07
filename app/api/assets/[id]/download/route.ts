@@ -143,6 +143,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         expiresIn: 5 * 60,
         downloadName,
       });
+      const wantsJson =
+        request.nextUrl.searchParams.get('format') === 'json' ||
+        (request.headers.get('accept') ?? '').includes('application/json');
+      if (wantsJson) {
+        return NextResponse.json({ url: signedUrl, expiresIn: 5 * 60 }, { status: 200 });
+      }
       return NextResponse.redirect(signedUrl, { status: 302 });
     } catch (storageError: any) {
       console.error('Storage error generating download URL', {
