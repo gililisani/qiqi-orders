@@ -294,11 +294,17 @@ export default function AssetDetailModal({
               {asset.asset_type !== 'video' && asset.current_version?.id && accessToken ? (
                 <button
                   type="button"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    // Use preview API route with original rendition (not thumbnail) for high-res preview
-                    const previewUrl = `/api/assets/${asset.id}/preview?version=${asset.current_version!.id}&rendition=original`;
-                    window.open(previewUrl, '_blank');
+                    // Protected API route cannot be opened directly (no Bearer header on navigation).
+                    // Resolve to signed URL first, then open the signed URL.
+                    const apiUrl = `/api/assets/${asset.id}/preview?version=${asset.current_version!.id}&rendition=original`;
+                    const signed = await resolveSignedAssetUrl(apiUrl, accessToken);
+                    if (!signed) {
+                      alert('Preview unavailable. Please try again.');
+                      return;
+                    }
+                    window.open(signed, '_blank', 'noopener,noreferrer');
                   }}
                   className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition shadow-sm mb-3"
                 >

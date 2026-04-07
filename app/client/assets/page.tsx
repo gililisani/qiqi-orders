@@ -5,7 +5,7 @@ import { useSupabase } from '../../../lib/supabase-provider';
 import AssetCard from '../../components/dam/AssetCard';
 import AssetDetailModal from '../../components/dam/AssetDetailModal';
 import { AssetRecord, LocaleOption, RegionOption } from '../../components/dam/types';
-import { formatBytes, ensureTokenUrl, buildAuthHeaders } from '../../components/dam/utils';
+import { formatBytes, ensureTokenUrl, buildAuthHeaders, resolveSignedAssetUrl } from '../../components/dam/utils';
 import {
   ArrowPathIcon,
   MagnifyingGlassIcon,
@@ -296,7 +296,8 @@ export default function ClientAssetsPage() {
           );
         }
       } else if (asset.current_version?.downloadPath) {
-        const downloadUrl = ensureTokenUrl(asset.current_version.downloadPath, accessToken);
+        const downloadUrl = await resolveSignedAssetUrl(asset.current_version.downloadPath, accessToken);
+        if (!downloadUrl) throw new Error('Download link unavailable. Please try again.');
         const filename = `${asset.title || 'asset'}.${asset.current_version.mime_type?.split('/')[1] || 'bin'}`;
         await triggerDownload(
           downloadUrl,
@@ -714,7 +715,8 @@ export default function ClientAssetsPage() {
                     setDownloadingFormats(prev => new Set(prev).add(cardDownloadKey));
                     try {
                       if (asset.current_version?.downloadPath) {
-                        const downloadUrl = ensureTokenUrl(asset.current_version.downloadPath, accessToken);
+                        const downloadUrl = await resolveSignedAssetUrl(asset.current_version.downloadPath, accessToken);
+                        if (!downloadUrl) throw new Error('Download link unavailable. Please try again.');
                         const filename = asset.current_version.originalFileName || `${asset.title || 'asset'}.${asset.current_version.mime_type?.split('/')[1] || 'bin'}`;
                         await triggerDownload(
                           downloadUrl,
