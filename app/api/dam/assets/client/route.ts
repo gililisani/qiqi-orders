@@ -55,60 +55,6 @@ export async function GET(request: NextRequest) {
     const clientUser = await auth.requireRole(request, 'client');
 
     const supabaseAdmin = createSupabaseAdminClient();
-
-    // Resolve client entitlement context (same effective model as preview/download)
-    const { data: clientRow, error: clientErr } = await supabaseAdmin
-      .from('clients')
-      .select('company_id')
-      .eq('id', clientUser.id)
-      .eq('enabled', true)
-      .maybeSingle();
-    if (clientErr) throw clientErr;
-    if (!clientRow?.company_id) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
-    const companyId = clientRow.company_id;
-
-    const [{ data: territoryRows, error: terrErr }, { data: companyRow, error: companyErr }] =
-      await Promise.all([
-        supabaseAdmin.from('company_territories').select('country_code').eq('company_id', companyId),
-        supabaseAdmin.from('companies').select('ship_to_country').eq('id', companyId).maybeSingle(),
-      ]);
-    if (terrErr) throw terrErr;
-    if (companyErr) throw companyErr;
-
-    const companyCodes = new Set(
-      (territoryRows ?? [])
-        .map((t) => String(t.country_code ?? '').trim().toUpperCase())
-        .filter(Boolean)
-    );
-    const ship = String(companyRow?.ship_to_country ?? '').trim().toUpperCase();
-    if (ship.length === 2) companyCodes.add(ship);
-
-    const companyCodeList = Array.from(companyCodes);
-    // Locale constraint is only enforced when locale codes encode a country subtag (e.g., en-US).
-    // At list level we approximate this by allowing:
-    // - locales without a subtag (e.g., "en") OR
-    // - locales ending with -XX or _XX where XX is in companyCodes.
-    const localeSuffixPatterns = companyCodeList.flatMap((cc) => [`%-${cc}`, `%_${cc}`]);
-
-    // Audience is optional/gradual: only enforce if the company has mappings.
-    const { data: companyAudienceRows, error: caErr } = await supabaseAdmin
-      .from('company_dam_audiences')
-      .select('audience_id')
-      .eq('company_id', companyId);
-    // If relation doesn't exist in some environments, treat as no audience enforcement (consistent with delivery helper).
-    const missingRelation =
-      (caErr as any)?.code === '42P01' ||
-      String((caErr as any)?.message ?? '').toLowerCase().includes('does not exist') ||
-      String((caErr as any)?.message ?? '').toLowerCase().includes('schema cache');
-    if (caErr && !missingRelation) throw caErr;
-    const allowedAudienceIds =
-      !caErr && (companyAudienceRows?.length ?? 0) > 0
-        ? (companyAudienceRows ?? [])
-            .map((r) => String((r as any).audience_id ?? '').trim())
-            .filter(Boolean)
-        : [];
     
     // Get search and filter query parameters
     const searchParams = request.nextUrl.searchParams;
@@ -123,265 +69,117 @@ export async function GET(request: NextRequest) {
     const tagFilter = searchParams.get('tag') || '';
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
-    const offset = (page - 1) * limit;
 
-    // Build query with entitlement filtering applied BEFORE pagination (so paging/count stay correct).
-    let assetsQuery = supabaseAdmin
-      .from('dam_assets')
-      .select(
-        `
-        id,
-        title,
-        description,
-        asset_type,
-        asset_type_id,
-        asset_subtype_id,
-        product_line,
-        product_name,
-        sku,
-        vimeo_video_id,
-        vimeo_download_1080p,
-        vimeo_download_720p,
-        vimeo_download_480p,
-        vimeo_download_360p,
-        created_at,
-        search_tags,
-        dam_asset_region_map!left(region_code),
-        dam_asset_locale_map!left(locale_code),
-        dam_asset_audience_map!left(audience_id)
-      `,
-        { count: 'exact' }
-      )
-      .eq('is_archived', false); // Only show non-archived assets
-
-    // --- Region entitlement (if asset has region rows, require overlap; else allow) ---
-    if (companyCodeList.length > 0) {
-      assetsQuery = assetsQuery.or(
-        `dam_asset_region_map.region_code.in.(${companyCodeList.join(',')}),dam_asset_region_map.asset_id.is.null`
-      );
-    } else {
-      // Company has no known geography codes; only allow assets that are NOT region-restricted.
-      assetsQuery = assetsQuery.or(`dam_asset_region_map.asset_id.is.null`);
-    }
-
-    // --- Locale entitlement (allow no-subtag locales or locales matching company codes; allow assets with no locale rows) ---
-    if (localeSuffixPatterns.length > 0) {
-      // note: `dam_asset_locale_map.locale_code` stores locale code strings (not necessarily joined to dam_locales)
-      const suffixOr = localeSuffixPatterns.map((p) => `dam_asset_locale_map.locale_code.ilike.${p}`).join(',');
-      assetsQuery = assetsQuery.or(
-        `${suffixOr},dam_asset_locale_map.asset_id.is.null,dam_asset_locale_map.locale_code.not.ilike.%-%`
-      );
-      // Also treat underscore variants as "has subtag" similarly; if it has an underscore, but no dash, allow via patterns.
-    } else {
-      assetsQuery = assetsQuery.or(
-        `dam_asset_locale_map.asset_id.is.null,dam_asset_locale_map.locale_code.not.ilike.%-%`
-      );
-    }
-
-    // --- Audience entitlement (only if company has allowed audiences configured) ---
-    if (allowedAudienceIds.length > 0) {
-      assetsQuery = assetsQuery.or(
-        `dam_asset_audience_map.audience_id.in.(${allowedAudienceIds.join(',')}),dam_asset_audience_map.asset_id.is.null`
-      );
-    }
-
-    // Apply filters
-    if (searchQuery.trim()) {
-      const searchTerm = `%${searchQuery.trim()}%`;
-      assetsQuery = assetsQuery.or(
-        `title.ilike.${searchTerm},description.ilike.${searchTerm},product_line.ilike.${searchTerm},product_name.ilike.${searchTerm},sku.ilike.${searchTerm}`
-      );
-    }
-
-    if (typeFilter) {
-      assetsQuery = assetsQuery.eq('asset_type', typeFilter);
-    }
-
-    if (assetTypeFilter) {
-      assetsQuery = assetsQuery.eq('asset_type_id', assetTypeFilter);
-    }
-
-    if (assetSubtypeFilter) {
-      assetsQuery = assetsQuery.eq('asset_subtype_id', assetSubtypeFilter);
-    }
-
-    if (productLineFilter) {
-      assetsQuery = assetsQuery.ilike('product_line', `%${productLineFilter}%`);
-    }
-
-    if (productNameFilter) {
-      assetsQuery = assetsQuery.ilike('product_name', `%${productNameFilter}%`);
-    }
-
-    const { data: assetsData, error, count } = await assetsQuery
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (error) throw error;
-
-    if (!assetsData || assetsData.length === 0) {
-      return NextResponse.json({ 
-        assets: [],
-        pagination: {
-          page,
-          limit,
-          total: 0,
-          totalPages: 0,
-          hasNextPage: false,
-          hasPreviousPage: false,
-        }
-      });
-    }
-
-    const pageAssetIds = assetsData.map((a: any) => a.id);
-
-    // Batch-fetch latest versions (avoid N+1).
-    const { data: versionsData, error: versionsError } = await supabaseAdmin
-      .from('dam_asset_versions')
-      .select(
-        'id, asset_id, version_number, storage_path, thumbnail_path, mime_type, file_size, processing_status, created_at, metadata, extracted_text, duration_seconds, width, height'
-      )
-      .in('asset_id', pageAssetIds)
-      .order('version_number', { ascending: false });
-    if (versionsError) throw versionsError;
-
-    const versionsByAsset = new Map<string, any>();
-    for (const v of versionsData ?? []) {
-      if (!versionsByAsset.has((v as any).asset_id)) {
-        versionsByAsset.set((v as any).asset_id, v);
+    const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc(
+      'list_client_dam_assets_entitled',
+      {
+        p_user_id: clientUser.id,
+        p_q: searchQuery,
+        p_type: typeFilter,
+        p_asset_type_id: assetTypeFilter || null,
+        p_asset_subtype_id: assetSubtypeFilter || null,
+        p_product_line: productLineFilter,
+        p_product_name: productNameFilter,
+        p_locale_code: localeFilter,
+        p_region_code: regionFilter,
+        p_tag: tagFilter,
+        p_page: page,
+        p_limit: limit,
       }
-    }
+    );
+    if (rpcError) throw rpcError;
 
-    // Filter by extracted_text if search query provided
-    let filteredAssets = assetsData;
-    if (searchQuery.trim()) {
-      const lowerSearchQuery = searchQuery.trim().toLowerCase();
-      const metadataMatchedIds = new Set(assetsData.map((a) => a.id));
-      const textMatchedIds = new Set<string>();
-      for (const [assetId, version] of versionsByAsset.entries()) {
-        if (version?.extracted_text?.toLowerCase().includes(lowerSearchQuery)) {
-          textMatchedIds.add(assetId);
-        }
-      }
-      filteredAssets = assetsData.filter((asset) => {
-        return metadataMatchedIds.has(asset.id) || textMatchedIds.has(asset.id);
-      });
-    }
+    const payload = (rpcData ?? { assets: [], total: 0 }) as any;
+    const assetsRows = Array.isArray(payload.assets) ? payload.assets : [];
+    const total = typeof payload.total === 'number' ? payload.total : 0;
 
-    // Fetch tags/audiences/locales/regions for only this page (avoid wide scans).
-    const { data: tagsData, error: tagsError } = await supabaseAdmin
-      .from('dam_asset_tag_map')
-      .select('asset_id, tag:dam_tags(slug, label)')
-      .in('asset_id', pageAssetIds);
+    const pageAssetIds = assetsRows.map((r: any) => r.id).filter(Boolean);
+
+    // Preserve current response shape: hydrate tags/audiences/locales/regions for this page.
+    const [{ data: tagsData, error: tagsError }, { data: audiencesData, error: audiencesError }, { data: localesData, error: localesError }, { data: regionsData, error: regionsError }] =
+      await Promise.all([
+        supabaseAdmin
+          .from('dam_asset_tag_map')
+          .select('asset_id, tag:dam_tags(slug, label)')
+          .in('asset_id', pageAssetIds),
+        supabaseAdmin
+          .from('dam_asset_audience_map')
+          .select('asset_id, audience:dam_audiences(code, label)')
+          .in('asset_id', pageAssetIds),
+        supabaseAdmin
+          .from('dam_asset_locale_map')
+          .select('asset_id, locale:dam_locales(code,label,is_default)')
+          .in('asset_id', pageAssetIds),
+        supabaseAdmin
+          .from('dam_asset_region_map')
+          .select('asset_id, region:dam_regions(code,label)')
+          .in('asset_id', pageAssetIds),
+      ]);
     if (tagsError) throw tagsError;
-
-    const tagsByAsset = tagsData?.reduce((acc: Record<string, string[]>, row) => {
-      const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
-      const tagEntry = Array.isArray(row.tag) ? row.tag[0] : row.tag;
-      if (tagEntry?.label) arr.push(tagEntry.label);
-      return acc;
-    }, {}) ?? {};
-
-    const { data: audiencesData, error: audiencesError } = await supabaseAdmin
-      .from('dam_asset_audience_map')
-      .select('asset_id, audience:dam_audiences(code, label)')
-      .in('asset_id', pageAssetIds);
     if (audiencesError) throw audiencesError;
-
-    const audiencesByAsset = audiencesData?.reduce((acc: Record<string, string[]>, row) => {
-      const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
-      const audienceEntry = Array.isArray(row.audience) ? row.audience[0] : row.audience;
-      if (audienceEntry?.label) arr.push(audienceEntry.label);
-      return acc;
-    }, {}) ?? {};
-
-    const { data: localesData, error: localesError } = await supabaseAdmin
-      .from('dam_asset_locale_map')
-      .select('asset_id, locale:dam_locales(code,label,is_default)')
-      .in('asset_id', pageAssetIds);
     if (localesError) throw localesError;
-
-    const localesByAsset = localesData?.reduce((acc: Record<string, LocaleOption[]>, row) => {
-      const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
-      const localeEntry = Array.isArray(row.locale) ? row.locale[0] : row.locale;
-      if (localeEntry?.code) {
-        arr.push({
-          code: localeEntry.code,
-          label: localeEntry.label,
-          is_default: localeEntry.is_default,
-        });
-      }
-      return acc;
-    }, {}) ?? {};
-
-    const { data: regionsData, error: regionsError } = await supabaseAdmin
-      .from('dam_asset_region_map')
-      .select('asset_id, region:dam_regions(code,label)')
-      .in('asset_id', pageAssetIds);
     if (regionsError) throw regionsError;
 
-    const regionsByAsset = regionsData?.reduce((acc: Record<string, RegionOption[]>, row) => {
-      const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
-      const regionEntry = Array.isArray(row.region) ? row.region[0] : row.region;
-      if (regionEntry?.code) {
-        arr.push({
-          code: regionEntry.code,
-          label: regionEntry.label,
-        });
-      }
-      return acc;
-    }, {}) ?? {};
+    const tagsByAsset =
+      tagsData?.reduce((acc: Record<string, string[]>, row: any) => {
+        const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
+        const tagEntry = Array.isArray(row.tag) ? row.tag[0] : row.tag;
+        if (tagEntry?.label) arr.push(tagEntry.label);
+        return acc;
+      }, {}) ?? {};
 
-    // Apply client-side filters (locale, region, tag)
-    filteredAssets = filteredAssets.filter((asset) => {
-      // Filter by locale
-      if (localeFilter) {
-        const assetLocales = localesByAsset[asset.id] || [];
-        if (!assetLocales.some((l) => l.code === localeFilter)) {
-          return false;
+    const audiencesByAsset =
+      audiencesData?.reduce((acc: Record<string, string[]>, row: any) => {
+        const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
+        const audienceEntry = Array.isArray(row.audience) ? row.audience[0] : row.audience;
+        if (audienceEntry?.label) arr.push(audienceEntry.label);
+        return acc;
+      }, {}) ?? {};
+
+    const localesByAsset =
+      localesData?.reduce((acc: Record<string, LocaleOption[]>, row: any) => {
+        const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
+        const localeEntry = Array.isArray(row.locale) ? row.locale[0] : row.locale;
+        if (localeEntry?.code) {
+          arr.push({
+            code: localeEntry.code,
+            label: localeEntry.label,
+            is_default: localeEntry.is_default,
+          });
         }
-      }
+        return acc;
+      }, {}) ?? {};
 
-      // Filter by region
-      if (regionFilter) {
-        const assetRegions = regionsByAsset[asset.id] || [];
-        if (!assetRegions.some((r) => r.code === regionFilter)) {
-          return false;
+    const regionsByAsset =
+      regionsData?.reduce((acc: Record<string, RegionOption[]>, row: any) => {
+        const arr = acc[row.asset_id] || (acc[row.asset_id] = []);
+        const regionEntry = Array.isArray(row.region) ? row.region[0] : row.region;
+        if (regionEntry?.code) {
+          arr.push({
+            code: regionEntry.code,
+            label: regionEntry.label,
+          });
         }
-      }
+        return acc;
+      }, {}) ?? {};
 
-      // Filter by tag
-      if (tagFilter) {
-        const assetTags = tagsByAsset[asset.id] || [];
-        if (!assetTags.some((t) => t.toLowerCase().includes(tagFilter.toLowerCase()))) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    const assets = filteredAssets.map((record: any) => {
-      const currentVersionRaw = versionsByAsset.get(record.id) ?? null;
-      const currentVersion = currentVersionRaw
+    const assets = assetsRows.map((record: any) => {
+      const cv = record.current_version && record.current_version.id ? record.current_version : null;
+      const currentVersion = cv
         ? {
-            id: currentVersionRaw.id,
-            version_number: currentVersionRaw.version_number,
-            storage_path: currentVersionRaw.storage_path,
-            thumbnail_path: currentVersionRaw.thumbnail_path,
-            mime_type: currentVersionRaw.mime_type,
-            file_size: currentVersionRaw.file_size,
-            processing_status: currentVersionRaw.processing_status || 'complete',
-            created_at: currentVersionRaw.created_at,
-            duration_seconds: currentVersionRaw.duration_seconds,
-            width: currentVersionRaw.width,
-            height: currentVersionRaw.height,
-            downloadPath: buildDownloadPath(record.id, currentVersionRaw.id, 'original'),
-            previewPath: buildPreviewPath(
-              record.id,
-              currentVersionRaw.id,
-              currentVersionRaw.thumbnail_path ? 'thumbnail' : 'original'
-            ),
+            id: cv.id,
+            version_number: cv.version_number,
+            storage_path: cv.storage_path,
+            thumbnail_path: cv.thumbnail_path,
+            mime_type: cv.mime_type,
+            file_size: cv.file_size,
+            processing_status: cv.processing_status || 'complete',
+            created_at: cv.created_at,
+            duration_seconds: cv.duration_seconds,
+            width: cv.width,
+            height: cv.height,
+            downloadPath: buildDownloadPath(record.id, cv.id, 'original'),
+            previewPath: buildPreviewPath(record.id, cv.id, cv.thumbnail_path ? 'thumbnail' : 'original'),
           }
         : null;
 
@@ -409,13 +207,13 @@ export async function GET(request: NextRequest) {
       } as any;
     });
 
-    const totalPages = count ? Math.ceil(count / limit) : 1;
+    const totalPages = total ? Math.ceil(total / limit) : 1;
     return NextResponse.json({ 
       assets,
       pagination: {
         page,
         limit,
-        total: count || 0,
+        total: total || 0,
         totalPages,
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1,
