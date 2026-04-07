@@ -1,8 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { XMarkIcon, PhotoIcon, EyeIcon, ArrowDownTrayIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { AssetRecord, VimeoDownloadFormat } from './types';
-import { formatBytes, ensureTokenUrl, getFriendlyFileType, getStaticDocumentThumbnail } from './utils';
+import { formatBytes, getFriendlyFileType, getStaticDocumentThumbnail, resolveSignedAssetUrl } from './utils';
 
 interface AssetDetailModalProps {
   asset: AssetRecord;
@@ -51,6 +52,24 @@ export default function AssetDetailModal({
   resolutionOptions = DEFAULT_RESOLUTION_OPTIONS,
   renderAssetTypePill,
 }: AssetDetailModalProps) {
+  const [resolvedPreviewUrl, setResolvedPreviewUrl] = useState<string>('');
+
+  const previewApiPath = asset.current_version?.previewPath || asset.current_version?.downloadPath || null;
+
+  useEffect(() => {
+    let active = true;
+    async function run() {
+      if (!accessToken) return;
+      if (!previewApiPath) return;
+      const signed = await resolveSignedAssetUrl(previewApiPath, accessToken);
+      if (!active) return;
+      setResolvedPreviewUrl(signed);
+    }
+    run();
+    return () => {
+      active = false;
+    };
+  }, [accessToken, previewApiPath]);
   const getValidVideoFormats = (): VimeoDownloadFormat[] => {
     const formats: VimeoDownloadFormat[] = [];
     
@@ -121,12 +140,10 @@ export default function AssetDetailModal({
                   </div>
                 );
               }
-              // For PDFs and other documents, prefer previewPath (thumbnail) if available, otherwise downloadPath
-              const previewUrl = asset.current_version?.previewPath || asset.current_version?.downloadPath;
-              return previewUrl && accessToken ? (
+              return previewApiPath && accessToken && resolvedPreviewUrl ? (
                 <div className="w-full max-w-3xl">
                   <img
-                    src={ensureTokenUrl(previewUrl, accessToken)}
+                    src={resolvedPreviewUrl}
                     alt={asset.title}
                     className="w-full h-auto max-h-[70vh] object-contain"
                   />

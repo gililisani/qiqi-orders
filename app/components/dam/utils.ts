@@ -65,6 +65,46 @@ export function buildAuthHeaders(token: string | null): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
 }
 
+/**
+ * Resolve a protected `/api/assets/...` URL into a short-lived signed URL by
+ * following the server-side 302 redirect with an Authorization header.
+ *
+ * This is required for <img src> and direct downloads because browsers do not
+ * attach Bearer headers on normal navigations.
+ */
+export async function resolveSignedAssetUrl(
+  apiPath: string | null | undefined,
+  accessToken: string | null
+): Promise<string> {
+  if (!apiPath) return '';
+  if (apiPath.startsWith('http')) return apiPath;
+  if (!accessToken) return '';
+
+  const url = apiPath.startsWith('/') ? apiPath : `/${apiPath}`;
+  const cacheKey = `signed:${url}`;
+  const cached = getCachedUrl(cacheKey);
+  if (cached) return cached;
+
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: buildAuthHeaders(accessToken),
+    credentials: 'same-origin',
+    redirect: 'manual',
+  });
+
+  // Successful preview/download routes redirect to a signed URL.
+  if (res.status === 302 || res.status === 301 || res.status === 307 || res.status === 308) {
+    const location = res.headers.get('Location') || res.headers.get('location') || '';
+    if (location) {
+      setCachedUrl(cacheKey, location);
+      return location;
+    }
+  }
+
+  // If server returned JSON error, don't cache; return empty string so callers can show fallback.
+  return '';
+}
+
 // Get static thumbnail path for Word/Excel documents
 export function getStaticDocumentThumbnail(mimeType: string | null | undefined): string | null {
   if (!mimeType) return null;

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, memo } from 'react';
 import { PhotoIcon, EyeIcon, ArrowDownTrayIcon, TrashIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { AssetRecord } from './types';
-import { formatBytes, ensureTokenUrl, getFileTypeBadge, getStaticDocumentThumbnail } from './utils';
+import { formatBytes, getFileTypeBadge, getStaticDocumentThumbnail, resolveSignedAssetUrl } from './utils';
 
 interface AssetCardProps {
   asset: AssetRecord;
@@ -56,6 +56,7 @@ const AssetCard = memo(function AssetCard({
   // Lazy loading state
   const [isInView, setIsInView] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [resolvedThumbUrl, setResolvedThumbUrl] = useState<string>('');
   const imgRef = useRef<HTMLDivElement>(null);
 
   // Intersection Observer for lazy loading
@@ -80,6 +81,23 @@ const AssetCard = memo(function AssetCard({
       observer.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function run() {
+      if (!isInView) return;
+      if (!accessToken) return;
+      const path = asset.current_version?.previewPath;
+      if (!path) return;
+      const signed = await resolveSignedAssetUrl(path, accessToken);
+      if (!active) return;
+      setResolvedThumbUrl(signed);
+    }
+    run();
+    return () => {
+      active = false;
+    };
+  }, [isInView, accessToken, asset.current_version?.previewPath]);
 
   return (
     <div
@@ -136,9 +154,9 @@ const AssetCard = memo(function AssetCard({
           // Fall back to regular preview path
           return accessToken && asset.current_version?.previewPath ? (
             <>
-              {isInView && (
+              {isInView && resolvedThumbUrl && (
                 <img
-                  src={ensureTokenUrl(asset.current_version.previewPath, accessToken)}
+                  src={resolvedThumbUrl}
                   alt={asset.title}
                   className="object-contain max-w-full max-h-full"
                   onLoad={() => setImageLoaded(true)}
