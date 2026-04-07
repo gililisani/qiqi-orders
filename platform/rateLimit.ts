@@ -7,6 +7,25 @@ export const RESET_PASSWORD_RATE = {
   windowSeconds: 3600,
 } as const;
 
+/**
+ * Password-reset OTP verification + password update:
+ * public endpoint; defend against brute force / guessing / flooding.
+ */
+export const VERIFY_OTP_IP_RATE = {
+  limit: 20,
+  windowSeconds: 900, // 15 minutes
+} as const;
+
+export const VERIFY_OTP_EMAIL_RATE = {
+  limit: 10,
+  windowSeconds: 900, // 15 minutes
+} as const;
+
+export const VERIFY_OTP_TOKEN_RATE = {
+  limit: 5,
+  windowSeconds: 900, // 15 minutes
+} as const;
+
 /** Order marketing/status email: per actor + order + recipient (abuse: spamming customer inboxes). */
 export const SEND_ORDER_EMAIL_RATE = {
   limit: 30,
