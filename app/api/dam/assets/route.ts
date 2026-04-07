@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get('dateTo') || '';
     const fileSizeMin = searchParams.get('fileSizeMin') ? parseInt(searchParams.get('fileSizeMin')!) : null;
     const fileSizeMax = searchParams.get('fileSizeMax') ? parseInt(searchParams.get('fileSizeMax')!) : null;
+    const assetTypeId = searchParams.get('assetType')?.trim() || '';
 
     // Build query with optional full-text search
     // Note: vimeo_download_formats is selected separately to avoid errors if column doesn't exist yet
@@ -116,6 +117,10 @@ export async function GET(request: NextRequest) {
       const endDate = new Date(dateTo);
       endDate.setDate(endDate.getDate() + 1);
       assetsQuery = assetsQuery.lt('created_at', endDate.toISOString());
+    }
+
+    if (assetTypeId) {
+      assetsQuery = assetsQuery.eq('asset_type_id', assetTypeId);
     }
 
     const { data: assetsData, error, count } = await assetsQuery
