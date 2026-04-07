@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useSupabase } from '../../../lib/supabase-provider';
 import Card from '../../components/ui/Card';
 import {
@@ -338,6 +338,8 @@ export default function AdminDigitalAssetManagerPage() {
   const [showVideoDownloadFormats, setShowVideoDownloadFormats] = useState(false);
   const [isEditingExistingAsset, setIsEditingExistingAsset] = useState(false);
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
+  /** After first mount, search/filter changes clear stale list + show loading before debounced fetch (avoids applying new filters to old page slice). */
+  const listingQueryEffectReadyRef = useRef(false);
   
   // Bulk upload state
   const [isBulkUploadMode, setIsBulkUploadMode] = useState(false);
@@ -904,9 +906,16 @@ export default function AdminDigitalAssetManagerPage() {
   // Fetch assets when search term or filters change (debounced)
   useEffect(() => {
     if (!accessToken) return;
+    if (listingQueryEffectReadyRef.current) {
+      setCurrentPage(1);
+      setLoadingAssets(true);
+      setAssets([]);
+      setPagination(null);
+    } else {
+      listingQueryEffectReadyRef.current = true;
+    }
     const timeoutId = setTimeout(() => {
       fetchAssets(accessToken, searchTerm || undefined, 1);
-      setCurrentPage(1);
     }, 300); // Debounce search by 300ms
     return () => clearTimeout(timeoutId);
   }, [
