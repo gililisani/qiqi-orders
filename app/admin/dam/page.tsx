@@ -593,6 +593,15 @@ export default function AdminDigitalAssetManagerPage() {
       const headers = buildAuthHeaders(token);
       const params = new URLSearchParams();
       if (search) params.set('q', search);
+      // Listing filters (must be included in request URL so pagination reflects filtered set)
+      if (typeFilter) params.set('type', typeFilter);
+      if (assetTypeFilter) params.set('assetType', assetTypeFilter);
+      if (assetSubtypeFilter) params.set('assetSubtype', assetSubtypeFilter);
+      if (productLineFilter) params.set('productLine', productLineFilter);
+      if (productNameFilter) params.set('productName', productNameFilter);
+      if (localeFilter) params.set('locale', localeFilter);
+      if (regionFilter) params.set('region', regionFilter);
+      if (tagFilter) params.set('tag', tagFilter);
       if (dateFromFilter) params.set('dateFrom', dateFromFilter);
       if (dateToFilter) params.set('dateTo', dateToFilter);
       if (fileSizeMinFilter) {
@@ -900,7 +909,24 @@ export default function AdminDigitalAssetManagerPage() {
       setCurrentPage(1);
     }, 300); // Debounce search by 300ms
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, dateFromFilter, dateToFilter, fileSizeMinFilter, fileSizeMaxFilter, accessToken]);
+  }, [
+    accessToken,
+    searchTerm,
+    // listing filters
+    typeFilter,
+    assetTypeFilter,
+    assetSubtypeFilter,
+    localeFilter,
+    regionFilter,
+    tagFilter,
+    productLineFilter,
+    productNameFilter,
+    // advanced filters
+    dateFromFilter,
+    dateToFilter,
+    fileSizeMinFilter,
+    fileSizeMaxFilter,
+  ]);
 
   // Auto-refresh removed - no background processing
 
