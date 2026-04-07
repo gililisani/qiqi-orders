@@ -140,28 +140,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    async function fetchLatestVersion(assetId: string) {
-      const { data, error: versionError } = await supabaseAdmin
-        .from('dam_asset_versions')
-        .select(
-          'id, asset_id, version_number, storage_path, thumbnail_path, mime_type, file_size, processing_status, created_at, metadata, extracted_text, duration_seconds, width, height'
-        )
-        .eq('asset_id', assetId)
-        .order('version_number', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (versionError) {
-        throw versionError;
-      }
-      return data ?? null;
-    }
+    const pageAssetIds = (assetsData ?? []).map((a: any) => a.id).filter(Boolean);
 
     const versionsByAsset = new Map<string, any>();
-    for (const asset of assetsData) {
-      const version = await fetchLatestVersion(asset.id);
-      if (version) {
-        versionsByAsset.set(asset.id, version);
+    // Performance: avoid N+1 per-asset version lookups by fetching all versions for the page,
+    // ordered so the first row per asset_id is the latest version.
+    const { data: versionsData, error: versionsError } = await supabaseAdmin
+      .from('dam_asset_versions')
+      .select(
+        'id, asset_id, version_number, storage_path, thumbnail_path, mime_type, file_size, processing_status, created_at, metadata, extracted_text, duration_seconds, width, height'
+      )
+      .in('asset_id', pageAssetIds)
+      .order('asset_id', { ascending: true })
+      .order('version_number', { ascending: false });
+    if (versionsError) throw versionsError;
+
+    for (const v of versionsData ?? []) {
+      if (!versionsByAsset.has(v.asset_id)) {
+        versionsByAsset.set(v.asset_id, v);
       }
     }
 
@@ -203,7 +199,8 @@ export async function GET(request: NextRequest) {
 
     const { data: tagsData, error: tagsError } = await supabaseAdmin
       .from('dam_asset_tag_map')
-      .select('asset_id, tag:dam_tags(label)');
+      .select('asset_id, tag:dam_tags(label)')
+      .in('asset_id', pageAssetIds);
     if (tagsError) throw tagsError;
 
     const tagsByAsset = tagsData?.reduce((acc: Record<string, string[]>, row) => {
@@ -218,7 +215,8 @@ export async function GET(request: NextRequest) {
 
     const { data: localesData, error: localesError } = await supabaseAdmin
       .from('dam_asset_locale_map')
-      .select('asset_id, locale:dam_locales(code,label,is_default)');
+      .select('asset_id, locale:dam_locales(code,label,is_default)')
+      .in('asset_id', pageAssetIds);
     if (localesError) throw localesError;
 
     const localesByAsset = localesData?.reduce((acc: Record<string, LocaleOption[]>, row) => {
@@ -236,7 +234,8 @@ export async function GET(request: NextRequest) {
 
     const { data: regionsData, error: regionsError } = await supabaseAdmin
       .from('dam_asset_region_map')
-      .select('asset_id, region:dam_regions(code,label)');
+      .select('asset_id, region:dam_regions(code,label)')
+      .in('asset_id', pageAssetIds);
     if (regionsError) throw regionsError;
 
     const regionsByAsset = regionsData?.reduce((acc: Record<string, RegionOption[]>, row) => {
