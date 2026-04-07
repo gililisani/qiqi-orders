@@ -108,6 +108,51 @@ export async function resolveSignedAssetUrl(
   return '';
 }
 
+/**
+ * Batch-resolve a list of protected preview API paths into signed URLs.
+ * This reduces per-card request waterfalls; results are also primed into the same cache
+ * used by `resolveSignedAssetUrl` so existing card code can benefit without refactors.
+ */
+export async function resolveSignedPreviewUrlsBatch(
+  apiPaths: Array<string | null | undefined>,
+  accessToken: string | null
+): Promise<Record<string, string>> {
+  if (!accessToken) return {};
+
+  const rawPaths = apiPaths
+    .filter((p): p is string => typeof p === 'string' && p.length > 0)
+    .map((p) => (p.startsWith('/') ? p : `/${p}`))
+    .filter((p) => !p.startsWith('http'));
+
+  const uniquePaths = Array.from(new Set(rawPaths)).slice(0, 100);
+  if (uniquePaths.length === 0) return {};
+
+  const res = await fetch('/api/assets/preview/resolve-batch', {
+    method: 'POST',
+    headers: {
+      ...buildAuthHeaders(accessToken),
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ paths: uniquePaths }),
+  });
+
+  if (!res.ok) return {};
+  const data = (await res.json().catch(() => null)) as { urls?: Record<string, string> } | null;
+  const urls = data?.urls && typeof data.urls === 'object' ? data.urls : {};
+
+  // Prime cache using the same key scheme as `resolveSignedAssetUrl`.
+  for (const [path, signed] of Object.entries(urls)) {
+    if (!signed) continue;
+    const urlWithFormat = path.includes('?') ? `${path}&format=json` : `${path}?format=json`;
+    const cacheKey = `signed:${urlWithFormat}`;
+    setCachedUrl(cacheKey, signed);
+  }
+
+  return urls;
+}
+
 // Get static thumbnail path for Word/Excel documents
 export function getStaticDocumentThumbnail(mimeType: string | null | undefined): string | null {
   if (!mimeType) return null;

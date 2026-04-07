@@ -24,7 +24,7 @@ import AssetDetailModal from '../../components/dam/AssetDetailModal';
 import BulkUploadPanel from '../../components/dam/BulkUploadPanel';
 import BulkEditPanel from '../../components/dam/BulkEditPanel';
 import { AssetRecord, LocaleOption, RegionOption, AssetVersion, VimeoDownloadFormat } from '../../components/dam/types';
-import { formatBytes, ensureTokenUrl, getFileTypeBadge, buildAuthHeaders, resolveSignedAssetUrl } from '../../components/dam/utils';
+import { formatBytes, ensureTokenUrl, getFileTypeBadge, buildAuthHeaders, resolveSignedAssetUrl, resolveSignedPreviewUrlsBatch } from '../../components/dam/utils';
 
 const assetTypeOptions: Array<{ value: string; label: string; icon: JSX.Element }> = [
   { value: 'image', label: 'Image', icon: <PhotoIcon className="h-4 w-4" /> },
@@ -656,6 +656,17 @@ export default function AdminDigitalAssetManagerPage() {
       setAssets(payload.assets || []);
       setPagination(payload.pagination || null);
       setCurrentPage(page);
+
+      // Performance: pre-resolve signed thumbnail URLs for this page in a single request,
+      // priming the cache used by AssetCard to avoid per-card waterfall fetches.
+      try {
+        const previewPaths = (payload.assets ?? [])
+          .map((a: any) => a?.current_version?.previewPath)
+          .filter(Boolean);
+        void resolveSignedPreviewUrlsBatch(previewPaths, token);
+      } catch {
+        // Best-effort only.
+      }
       
       // Extract unique product line codes for filter dropdown
       const uniqueProductLineCodes: string[] = Array.from(new Set(

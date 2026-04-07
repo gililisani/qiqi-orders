@@ -5,7 +5,7 @@ import { useSupabase } from '../../../lib/supabase-provider';
 import AssetCard from '../../components/dam/AssetCard';
 import AssetDetailModal from '../../components/dam/AssetDetailModal';
 import { AssetRecord, LocaleOption, RegionOption } from '../../components/dam/types';
-import { formatBytes, ensureTokenUrl, buildAuthHeaders, resolveSignedAssetUrl } from '../../components/dam/utils';
+import { formatBytes, ensureTokenUrl, buildAuthHeaders, resolveSignedAssetUrl, resolveSignedPreviewUrlsBatch } from '../../components/dam/utils';
 import {
   ArrowPathIcon,
   MagnifyingGlassIcon,
@@ -253,6 +253,17 @@ export default function ClientAssetsPage() {
       setAssets(payload.assets || []);
       setPagination(payload.pagination || null);
       setCurrentPage(page);
+
+      // Performance: pre-resolve signed thumbnail URLs for this page in a single request,
+      // priming the cache used by AssetCard to avoid per-card waterfall fetches.
+      try {
+        const previewPaths = (payload.assets ?? [])
+          .map((a: any) => a?.current_version?.previewPath)
+          .filter(Boolean);
+        void resolveSignedPreviewUrlsBatch(previewPaths, token);
+      } catch {
+        // Best-effort only.
+      }
     } catch (err: any) {
       console.error('Failed to load assets', err);
       setError(err.message || 'Failed to load assets');
