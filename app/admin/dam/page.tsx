@@ -24,7 +24,7 @@ import AssetDetailModal from '../../components/dam/AssetDetailModal';
 import BulkUploadPanel from '../../components/dam/BulkUploadPanel';
 import BulkEditPanel from '../../components/dam/BulkEditPanel';
 import { AssetRecord, LocaleOption, RegionOption, AssetVersion, VimeoDownloadFormat } from '../../components/dam/types';
-import { formatBytes, ensureTokenUrl, getFileTypeBadge, buildAuthHeaders } from '../../components/dam/utils';
+import { formatBytes, ensureTokenUrl, getFileTypeBadge, buildAuthHeaders, resolveSignedAssetUrl } from '../../components/dam/utils';
 
 const assetTypeOptions: Array<{ value: string; label: string; icon: JSX.Element }> = [
   { value: 'image', label: 'Image', icon: <PhotoIcon className="h-4 w-4" /> },
@@ -178,6 +178,27 @@ async function triggerDownload(
     logDownload(assetId, url, downloadMethod, accessToken).catch(err => {
       console.error('Failed to log download:', err);
     });
+
+    // Signed storage URLs are typically cross-origin. Trying `fetch()->blob` or an `<a download>`
+    // is fragile in Chrome and can surface "File wasn't available on site".
+    // Prefer direct navigation/open for cross-origin signed URLs.
+    try {
+      const u = new URL(url, window.location.href);
+      if (u.origin !== window.location.origin) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        if (onDownloadStart) onDownloadStart();
+        link.click();
+        document.body.removeChild(link);
+        if (onDownloadComplete) setTimeout(() => onDownloadComplete(), 100);
+        return;
+      }
+    } catch {
+      // ignore URL parse errors and continue with existing flow
+    }
     
     // Try to fetch and download as blob (works for direct file URLs)
     try {
@@ -2898,32 +2919,42 @@ export default function AdminDigitalAssetManagerPage() {
                       if (!accessToken) return;
                       const cardDownloadKey = `card-${asset.id}`;
                       setDownloadingFormats(prev => new Set(prev).add(cardDownloadKey));
-                      const downloadUrl = ensureTokenUrl(asset.current_version!.downloadPath!, accessToken);
-                      // Determine filename: use title if checkbox is checked, otherwise use original filename
-                      let downloadFilename: string | null = null;
-                      if (asset.use_title_as_filename && asset.title && asset.current_version?.mime_type) {
-                        const ext = asset.current_version.mime_type.split('/')[1] || 'bin';
-                        downloadFilename = `${asset.title}.${ext}`;
-                      } else if (asset.current_version?.originalFileName) {
-                        downloadFilename = asset.current_version.originalFileName;
+                      try {
+                        const signedUrl = await resolveSignedAssetUrl(asset.current_version!.downloadPath!, accessToken);
+                        if (!signedUrl) throw new Error('Download link unavailable. Please try again.');
+                        // Determine filename: use title if checkbox is checked, otherwise use original filename
+                        let downloadFilename: string | null = null;
+                        if (asset.use_title_as_filename && asset.title && asset.current_version?.mime_type) {
+                          const ext = asset.current_version.mime_type.split('/')[1] || 'bin';
+                          downloadFilename = `${asset.title}.${ext}`;
+                        } else if (asset.current_version?.originalFileName) {
+                          downloadFilename = asset.current_version.originalFileName;
+                        }
+                        await triggerDownload(
+                          signedUrl,
+                          downloadFilename,
+                          asset.id,
+                          'api',
+                          accessToken,
+                          () => setDownloadingFormats(prev => {
+                            const next = new Set(prev);
+                            next.delete(cardDownloadKey);
+                            return next;
+                          }),
+                          () => setDownloadingFormats(prev => {
+                            const next = new Set(prev);
+                            next.delete(cardDownloadKey);
+                            return next;
+                          })
+                        );
+                      } finally {
+                        // ensure spinner clears even on errors
+                        setDownloadingFormats(prev => {
+                          const next = new Set(prev);
+                          next.delete(cardDownloadKey);
+                          return next;
+                        });
                       }
-                      await triggerDownload(
-                        downloadUrl,
-                        downloadFilename,
-                        asset.id,
-                        'api',
-                        accessToken,
-                        () => setDownloadingFormats(prev => {
-                          const next = new Set(prev);
-                          next.delete(cardDownloadKey);
-                          return next;
-                        }),
-                        () => setDownloadingFormats(prev => {
-                          const next = new Set(prev);
-                          next.delete(cardDownloadKey);
-                          return next;
-                        })
-                      );
                     }}
                     onDelete={handleDeleteAsset}
                     downloadingFormats={downloadingFormats}
@@ -3678,32 +3709,42 @@ export default function AdminDigitalAssetManagerPage() {
               // Regular asset download
               const downloadKey = `asset-action-${asset.id}`;
               setDownloadingFormats(prev => new Set(prev).add(downloadKey));
-              const downloadUrl = ensureTokenUrl(asset.current_version.downloadPath, accessToken);
-              // Determine filename: use title if checkbox is checked, otherwise use original filename
-              let downloadFilename: string | null = null;
-              if (asset.use_title_as_filename && asset.title && asset.current_version.mime_type) {
-                const ext = asset.current_version.mime_type.split('/')[1] || 'bin';
-                downloadFilename = `${asset.title}.${ext}`;
-              } else if (asset.current_version.originalFileName) {
-                downloadFilename = asset.current_version.originalFileName;
+              try {
+                const signedUrl = await resolveSignedAssetUrl(asset.current_version.downloadPath, accessToken);
+                if (!signedUrl) throw new Error('Download link unavailable. Please try again.');
+                // Determine filename: use title if checkbox is checked, otherwise use original filename
+                let downloadFilename: string | null = null;
+                if (asset.use_title_as_filename && asset.title && asset.current_version.mime_type) {
+                  const ext = asset.current_version.mime_type.split('/')[1] || 'bin';
+                  downloadFilename = `${asset.title}.${ext}`;
+                } else if (asset.current_version.originalFileName) {
+                  downloadFilename = asset.current_version.originalFileName;
+                }
+                await triggerDownload(
+                  signedUrl,
+                  downloadFilename,
+                  asset.id,
+                  'api',
+                  accessToken,
+                  () => setDownloadingFormats(prev => {
+                    const next = new Set(prev);
+                    next.delete(downloadKey);
+                    return next;
+                  }),
+                  () => setDownloadingFormats(prev => {
+                    const next = new Set(prev);
+                    next.delete(downloadKey);
+                    return next;
+                  })
+                );
+              } finally {
+                // ensure spinner clears even on errors
+                setDownloadingFormats(prev => {
+                  const next = new Set(prev);
+                  next.delete(downloadKey);
+                  return next;
+                });
               }
-              await triggerDownload(
-                downloadUrl,
-                downloadFilename,
-                asset.id,
-                'api',
-                accessToken,
-                () => setDownloadingFormats(prev => {
-                  const next = new Set(prev);
-                  next.delete(downloadKey);
-                  return next;
-                }),
-                () => setDownloadingFormats(prev => {
-                  const next = new Set(prev);
-                  next.delete(downloadKey);
-                  return next;
-                })
-              );
             }
           }}
           downloadingFormats={downloadingFormats}
