@@ -61,6 +61,7 @@ interface UploadFormState {
   vimeoDownloadFormats: VimeoDownloadFormat[]; // Dynamic download formats
   useTitleAsFilename: boolean; // Override file name with title
   campaignId: string | null; // Campaign ID (optional)
+  isArchived: boolean;
 }
 
 const defaultFormState: UploadFormState = {
@@ -80,6 +81,7 @@ const defaultFormState: UploadFormState = {
   vimeoDownloadFormats: [],
   useTitleAsFilename: false, // Default: keep original filename
   campaignId: null, // Default: no campaign
+  isArchived: false,
 };
 
 // Product name options (static list)
@@ -879,6 +881,7 @@ export default function AdminDigitalAssetManagerPage() {
           assetType: effectiveAssetType,
           assetTypeId: effectiveAssetTypeId || undefined,
           assetSubtypeId: effectiveAssetSubtypeId || undefined,
+          // Archive is intentionally not part of bulk edit.
           productLine: effectiveProductLine.trim() || undefined,
           productName: editAsset.productName.trim() || undefined,
           sku: editAsset.sku.trim() || undefined,
@@ -1374,6 +1377,7 @@ export default function AdminDigitalAssetManagerPage() {
           assetType: formState.assetType,
           assetTypeId: formState.assetTypeId,
           assetSubtypeId: formState.assetSubtypeId,
+          isArchived: isEditingExistingAsset ? formState.isArchived : undefined,
           productLine: formState.productLine.trim() || undefined,
           productName: formState.productName.trim() || undefined,
           sku: formState.sku.trim() || undefined,
@@ -1425,6 +1429,7 @@ export default function AdminDigitalAssetManagerPage() {
           assetType: formState.assetType,
           assetTypeId: formState.assetTypeId,
           assetSubtypeId: formState.assetSubtypeId,
+          isArchived: formState.isArchived,
           productLine: formState.productLine.trim() || undefined,
           productName: formState.productName.trim() || undefined,
           sku: formState.sku.trim() || undefined,
@@ -3628,6 +3633,22 @@ export default function AdminDigitalAssetManagerPage() {
                               </label>
                             </div>
                           )}
+
+                          {/* Archive toggle (admin-only) */}
+                          {isEditingExistingAsset && (
+                            <div className="mt-2.5 flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id="isArchived"
+                                checked={formState.isArchived}
+                                onChange={(e) => setFormState((prev) => ({ ...prev, isArchived: e.target.checked }))}
+                                className="h-3.5 w-3.5 rounded border-gray-300 text-black focus:ring-black"
+                              />
+                              <label htmlFor="isArchived" className="text-xs text-gray-700 cursor-pointer">
+                                Archive asset (hide from clients)
+                              </label>
+                            </div>
+                          )}
                           {isRegulatoryType && (
                             <p className="mt-1.5 text-[10px] text-amber-600">
                               ⚠ For regulatory assets, Product selection is recommended.
@@ -3781,6 +3802,7 @@ export default function AdminDigitalAssetManagerPage() {
               selectedTagSlugs: asset.tags || [],
               selectedLocaleCodes: asset.locales.map(l => l.code) || [],
               useTitleAsFilename: asset.use_title_as_filename ?? false,
+              isArchived: Boolean((asset as any).is_archived),
               primaryLocale: asset.locales.find(l => l.is_default)?.code || asset.locales[0]?.code || null,
               vimeoVideoId: asset.vimeo_video_id || '',
               vimeoDownloadFormats: asset.vimeo_download_formats && asset.vimeo_download_formats.length > 0
