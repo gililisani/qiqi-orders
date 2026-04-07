@@ -457,7 +457,6 @@ export default function AdminDigitalAssetManagerPage() {
   useEffect(() => {
     if (!accessToken) return;
     fetchLookups(accessToken);
-    fetchAssets(accessToken);
     
     // Restore active uploads from localStorage
     const storedUploads = localStorage.getItem('dam_active_uploads');
