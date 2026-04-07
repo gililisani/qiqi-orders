@@ -69,6 +69,12 @@ export async function GET(request: NextRequest) {
     const fileSizeMin = searchParams.get('fileSizeMin') ? parseInt(searchParams.get('fileSizeMin')!) : null;
     const fileSizeMax = searchParams.get('fileSizeMax') ? parseInt(searchParams.get('fileSizeMax')!) : null;
     const assetTypeId = searchParams.get('assetType')?.trim() || '';
+    const assetSubtypeId = searchParams.get('assetSubtype')?.trim() || '';
+    const localeCode = searchParams.get('locale')?.trim() || '';
+    const regionCode = searchParams.get('region')?.trim() || '';
+    const tagLabel = searchParams.get('tag')?.trim() || '';
+    const productLine = searchParams.get('productLine')?.trim() || '';
+    const productName = searchParams.get('productName')?.trim() || '';
 
     // Build query with optional full-text search
     // Note: vimeo_download_formats is selected separately to avoid errors if column doesn't exist yet
@@ -80,6 +86,7 @@ export async function GET(request: NextRequest) {
         id,
         title,
         description,
+        is_archived,
         asset_type,
         asset_type_id,
         asset_subtype_id,
@@ -121,6 +128,97 @@ export async function GET(request: NextRequest) {
 
     if (assetTypeId) {
       assetsQuery = assetsQuery.eq('asset_type_id', assetTypeId);
+    }
+    if (assetSubtypeId) {
+      assetsQuery = assetsQuery.eq('asset_subtype_id', assetSubtypeId);
+    }
+    if (productLine) {
+      assetsQuery = assetsQuery.ilike('product_line', `%${productLine}%`);
+    }
+    if (productName) {
+      assetsQuery = assetsQuery.ilike('product_name', `%${productName}%`);
+    }
+
+    // Filters based on mapping tables (locale/region/tag). Apply server-side BEFORE pagination.
+    // This adds a small number of extra queries but avoids N+1 patterns and keeps pagination totals consistent.
+    const uniqueIds = (ids: string[]): string[] => Array.from(new Set(ids));
+    const intersectIds = (a: string[] | null, b: string[]): string[] => {
+      const next = uniqueIds(b);
+      if (a === null) return next;
+      const set = new Set(next);
+      return a.filter((id) => set.has(id));
+    };
+
+    let filteredIds: string[] | null = null;
+
+    if (localeCode) {
+      const { data: localeRows, error: localeFilterError } = await supabaseAdmin
+        .from('dam_asset_locale_map')
+        .select('asset_id')
+        .eq('locale_code', localeCode);
+      if (localeFilterError) throw localeFilterError;
+      filteredIds = intersectIds(
+        filteredIds,
+        (localeRows ?? []).map((r: any) => r.asset_id).filter(Boolean)
+      );
+    }
+
+    if (regionCode) {
+      const { data: regionRows, error: regionFilterError } = await supabaseAdmin
+        .from('dam_asset_region_map')
+        .select('asset_id')
+        .eq('region_code', regionCode);
+      if (regionFilterError) throw regionFilterError;
+      filteredIds = intersectIds(
+        filteredIds,
+        (regionRows ?? []).map((r: any) => r.asset_id).filter(Boolean)
+      );
+    }
+
+    if (tagLabel) {
+      const { data: tagRows, error: tagLookupError } = await supabaseAdmin
+        .from('dam_tags')
+        .select('id')
+        .eq('label', tagLabel);
+      if (tagLookupError) throw tagLookupError;
+      const tagIds = (tagRows ?? []).map((r: any) => r.id).filter(Boolean);
+      if (tagIds.length === 0) {
+        filteredIds = [];
+      } else {
+        const { data: tagMapRows, error: tagMapError } = await supabaseAdmin
+          .from('dam_asset_tag_map')
+          .select('asset_id')
+          .in('tag_id', tagIds);
+        if (tagMapError) throw tagMapError;
+        filteredIds = intersectIds(
+          filteredIds,
+          (tagMapRows ?? []).map((r: any) => r.asset_id).filter(Boolean)
+        );
+      }
+    }
+
+    if (filteredIds !== null) {
+      if (filteredIds.length === 0) {
+        return NextResponse.json(
+          {
+            assets: [],
+            pagination: {
+              page,
+              limit,
+              total: 0,
+              totalPages: 1,
+              hasNextPage: false,
+              hasPreviousPage: page > 1,
+            },
+          },
+          {
+            headers: {
+              'Cache-Control': 'private, max-age=60',
+            },
+          }
+        );
+      }
+      assetsQuery = assetsQuery.in('id', filteredIds);
     }
 
     const { data: assetsData, error, count } = await assetsQuery

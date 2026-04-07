@@ -618,7 +618,6 @@ export default function AdminDigitalAssetManagerPage() {
       const params = new URLSearchParams();
       if (search) params.set('q', search);
       // Listing filters (must be included in request URL so pagination reflects filtered set)
-      if (typeFilter) params.set('type', typeFilter);
       if (assetTypeFilter) params.set('assetType', assetTypeFilter);
       if (assetSubtypeFilter) params.set('assetSubtype', assetSubtypeFilter);
       if (productLineFilter) params.set('productLine', productLineFilter);
@@ -974,30 +973,9 @@ export default function AdminDigitalAssetManagerPage() {
   // Auto-refresh removed - no background processing
 
   const filteredAssets = useMemo(() => {
-    // Assets are already filtered by search on the server
-    // Apply client-side filters for type, locale, region, tag, product line, and new taxonomy fields
-    return assets.filter((asset) => {
-      const matchesType = typeFilter ? asset.asset_type === typeFilter : true;
-      const matchesAssetType = assetTypeFilter ? asset.asset_type_id === assetTypeFilter : true;
-      const matchesAssetSubtype = assetSubtypeFilter ? asset.asset_subtype_id === assetSubtypeFilter : true;
-      const matchesLocale = localeFilter
-        ? asset.locales.some((locale) => locale.code === localeFilter)
-        : true;
-      const matchesRegion = regionFilter
-        ? asset.regions.some((region) => region.code === regionFilter)
-        : true;
-      const matchesTag = tagFilter
-        ? asset.tags.some((tag) => tag.toLowerCase().includes(tagFilter.toLowerCase()))
-        : true;
-      const matchesProductLine = productLineFilter
-        ? asset.product_line?.toLowerCase().includes(productLineFilter.toLowerCase())
-        : true;
-      const matchesProductName = productNameFilter
-        ? asset.product_name?.toLowerCase().includes(productNameFilter.toLowerCase())
-        : true;
-      return matchesType && matchesAssetType && matchesAssetSubtype && matchesLocale && matchesRegion && matchesTag && matchesProductLine && matchesProductName;
-    });
-  }, [assets, typeFilter, assetTypeFilter, assetSubtypeFilter, localeFilter, regionFilter, tagFilter, productLineFilter, productNameFilter]);
+    // Admin list is filtered server-side; do not re-filter in the UI.
+    return assets;
+  }, [assets]);
 
   const toggleSelection = (list: string[], value: string): string[] => {
     if (list.includes(value)) {
