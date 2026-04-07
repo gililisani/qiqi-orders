@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createStorage } from '../../../../../platform/storage';
 import { createAuth } from '../../../../../platform/auth';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -56,6 +55,60 @@ export async function GET(request: NextRequest) {
     const clientUser = await auth.requireRole(request, 'client');
 
     const supabaseAdmin = createSupabaseAdminClient();
+
+    // Resolve client entitlement context (same effective model as preview/download)
+    const { data: clientRow, error: clientErr } = await supabaseAdmin
+      .from('clients')
+      .select('company_id')
+      .eq('id', clientUser.id)
+      .eq('enabled', true)
+      .maybeSingle();
+    if (clientErr) throw clientErr;
+    if (!clientRow?.company_id) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+    const companyId = clientRow.company_id;
+
+    const [{ data: territoryRows, error: terrErr }, { data: companyRow, error: companyErr }] =
+      await Promise.all([
+        supabaseAdmin.from('company_territories').select('country_code').eq('company_id', companyId),
+        supabaseAdmin.from('companies').select('ship_to_country').eq('id', companyId).maybeSingle(),
+      ]);
+    if (terrErr) throw terrErr;
+    if (companyErr) throw companyErr;
+
+    const companyCodes = new Set(
+      (territoryRows ?? [])
+        .map((t) => String(t.country_code ?? '').trim().toUpperCase())
+        .filter(Boolean)
+    );
+    const ship = String(companyRow?.ship_to_country ?? '').trim().toUpperCase();
+    if (ship.length === 2) companyCodes.add(ship);
+
+    const companyCodeList = Array.from(companyCodes);
+    // Locale constraint is only enforced when locale codes encode a country subtag (e.g., en-US).
+    // At list level we approximate this by allowing:
+    // - locales without a subtag (e.g., "en") OR
+    // - locales ending with -XX or _XX where XX is in companyCodes.
+    const localeSuffixPatterns = companyCodeList.flatMap((cc) => [`%-${cc}`, `%_${cc}`]);
+
+    // Audience is optional/gradual: only enforce if the company has mappings.
+    const { data: companyAudienceRows, error: caErr } = await supabaseAdmin
+      .from('company_dam_audiences')
+      .select('audience_id')
+      .eq('company_id', companyId);
+    // If relation doesn't exist in some environments, treat as no audience enforcement (consistent with delivery helper).
+    const missingRelation =
+      (caErr as any)?.code === '42P01' ||
+      String((caErr as any)?.message ?? '').toLowerCase().includes('does not exist') ||
+      String((caErr as any)?.message ?? '').toLowerCase().includes('schema cache');
+    if (caErr && !missingRelation) throw caErr;
+    const allowedAudienceIds =
+      !caErr && (companyAudienceRows?.length ?? 0) > 0
+        ? (companyAudienceRows ?? [])
+            .map((r) => String((r as any).audience_id ?? '').trim())
+            .filter(Boolean)
+        : [];
     
     // Get search and filter query parameters
     const searchParams = request.nextUrl.searchParams;
@@ -72,7 +125,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = (page - 1) * limit;
 
-    // Build query with optional full-text search
+    // Build query with entitlement filtering applied BEFORE pagination (so paging/count stay correct).
     let assetsQuery = supabaseAdmin
       .from('dam_assets')
       .select(
@@ -92,11 +145,45 @@ export async function GET(request: NextRequest) {
         vimeo_download_480p,
         vimeo_download_360p,
         created_at,
-        search_tags
+        search_tags,
+        dam_asset_region_map!left(region_code),
+        dam_asset_locale_map!left(locale_code),
+        dam_asset_audience_map!left(audience_id)
       `,
         { count: 'exact' }
       )
       .eq('is_archived', false); // Only show non-archived assets
+
+    // --- Region entitlement (if asset has region rows, require overlap; else allow) ---
+    if (companyCodeList.length > 0) {
+      assetsQuery = assetsQuery.or(
+        `dam_asset_region_map.region_code.in.(${companyCodeList.join(',')}),dam_asset_region_map.asset_id.is.null`
+      );
+    } else {
+      // Company has no known geography codes; only allow assets that are NOT region-restricted.
+      assetsQuery = assetsQuery.or(`dam_asset_region_map.asset_id.is.null`);
+    }
+
+    // --- Locale entitlement (allow no-subtag locales or locales matching company codes; allow assets with no locale rows) ---
+    if (localeSuffixPatterns.length > 0) {
+      // note: `dam_asset_locale_map.locale_code` stores locale code strings (not necessarily joined to dam_locales)
+      const suffixOr = localeSuffixPatterns.map((p) => `dam_asset_locale_map.locale_code.ilike.${p}`).join(',');
+      assetsQuery = assetsQuery.or(
+        `${suffixOr},dam_asset_locale_map.asset_id.is.null,dam_asset_locale_map.locale_code.not.ilike.%-%`
+      );
+      // Also treat underscore variants as "has subtag" similarly; if it has an underscore, but no dash, allow via patterns.
+    } else {
+      assetsQuery = assetsQuery.or(
+        `dam_asset_locale_map.asset_id.is.null,dam_asset_locale_map.locale_code.not.ilike.%-%`
+      );
+    }
+
+    // --- Audience entitlement (only if company has allowed audiences configured) ---
+    if (allowedAudienceIds.length > 0) {
+      assetsQuery = assetsQuery.or(
+        `dam_asset_audience_map.audience_id.in.(${allowedAudienceIds.join(',')}),dam_asset_audience_map.asset_id.is.null`
+      );
+    }
 
     // Apply filters
     if (searchQuery.trim()) {
@@ -146,28 +233,22 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    async function fetchLatestVersion(assetId: string) {
-      const { data, error: versionError } = await supabaseAdmin
-        .from('dam_asset_versions')
-        .select(
-          'id, asset_id, version_number, storage_path, thumbnail_path, mime_type, file_size, processing_status, created_at, metadata, extracted_text, duration_seconds, width, height'
-        )
-        .eq('asset_id', assetId)
-        .order('version_number', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    const pageAssetIds = assetsData.map((a: any) => a.id);
 
-      if (versionError) {
-        throw versionError;
-      }
-      return data ?? null;
-    }
+    // Batch-fetch latest versions (avoid N+1).
+    const { data: versionsData, error: versionsError } = await supabaseAdmin
+      .from('dam_asset_versions')
+      .select(
+        'id, asset_id, version_number, storage_path, thumbnail_path, mime_type, file_size, processing_status, created_at, metadata, extracted_text, duration_seconds, width, height'
+      )
+      .in('asset_id', pageAssetIds)
+      .order('version_number', { ascending: false });
+    if (versionsError) throw versionsError;
 
     const versionsByAsset = new Map<string, any>();
-    for (const asset of assetsData) {
-      const version = await fetchLatestVersion(asset.id);
-      if (version) {
-        versionsByAsset.set(asset.id, version);
+    for (const v of versionsData ?? []) {
+      if (!versionsByAsset.has((v as any).asset_id)) {
+        versionsByAsset.set((v as any).asset_id, v);
       }
     }
 
@@ -187,10 +268,11 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Fetch tags, audiences, locales, regions
+    // Fetch tags/audiences/locales/regions for only this page (avoid wide scans).
     const { data: tagsData, error: tagsError } = await supabaseAdmin
       .from('dam_asset_tag_map')
-      .select('asset_id, tag:dam_tags(slug, label)');
+      .select('asset_id, tag:dam_tags(slug, label)')
+      .in('asset_id', pageAssetIds);
     if (tagsError) throw tagsError;
 
     const tagsByAsset = tagsData?.reduce((acc: Record<string, string[]>, row) => {
@@ -202,7 +284,8 @@ export async function GET(request: NextRequest) {
 
     const { data: audiencesData, error: audiencesError } = await supabaseAdmin
       .from('dam_asset_audience_map')
-      .select('asset_id, audience:dam_audiences(code, label)');
+      .select('asset_id, audience:dam_audiences(code, label)')
+      .in('asset_id', pageAssetIds);
     if (audiencesError) throw audiencesError;
 
     const audiencesByAsset = audiencesData?.reduce((acc: Record<string, string[]>, row) => {
@@ -214,7 +297,8 @@ export async function GET(request: NextRequest) {
 
     const { data: localesData, error: localesError } = await supabaseAdmin
       .from('dam_asset_locale_map')
-      .select('asset_id, locale:dam_locales(code,label,is_default)');
+      .select('asset_id, locale:dam_locales(code,label,is_default)')
+      .in('asset_id', pageAssetIds);
     if (localesError) throw localesError;
 
     const localesByAsset = localesData?.reduce((acc: Record<string, LocaleOption[]>, row) => {
@@ -232,7 +316,8 @@ export async function GET(request: NextRequest) {
 
     const { data: regionsData, error: regionsError } = await supabaseAdmin
       .from('dam_asset_region_map')
-      .select('asset_id, region:dam_regions(code,label)');
+      .select('asset_id, region:dam_regions(code,label)')
+      .in('asset_id', pageAssetIds);
     if (regionsError) throw regionsError;
 
     const regionsByAsset = regionsData?.reduce((acc: Record<string, RegionOption[]>, row) => {
