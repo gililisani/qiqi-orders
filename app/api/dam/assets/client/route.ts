@@ -70,14 +70,28 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
 
+    // Filter regression fix:
+    // The client UI sends `assetType` as a *base type slug* (image/video/document/...)
+    // while the entitlement RPC expects either `p_type` (base type) or UUID ids for taxonomy.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const assetTypeIsUuid = UUID_RE.test(assetTypeFilter);
+    const assetSubtypeIsUuid = UUID_RE.test(assetSubtypeFilter);
+
+    const effectiveType =
+      typeFilter ||
+      (!assetTypeIsUuid && assetTypeFilter ? assetTypeFilter : '');
+
+    const effectiveAssetTypeId = assetTypeIsUuid ? assetTypeFilter : null;
+    const effectiveAssetSubtypeId = assetSubtypeIsUuid ? assetSubtypeFilter : null;
+
     const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc(
       'list_client_dam_assets_entitled',
       {
         p_user_id: clientUser.id,
         p_q: searchQuery,
-        p_type: typeFilter,
-        p_asset_type_id: assetTypeFilter || null,
-        p_asset_subtype_id: assetSubtypeFilter || null,
+        p_type: effectiveType,
+        p_asset_type_id: effectiveAssetTypeId,
+        p_asset_subtype_id: effectiveAssetSubtypeId,
         p_product_line: productLineFilter,
         p_product_name: productNameFilter,
         p_locale_code: localeFilter,
@@ -91,7 +105,12 @@ export async function GET(request: NextRequest) {
 
     const payload = (rpcData ?? { assets: [], total: 0 }) as any;
     const assetsRows = Array.isArray(payload.assets) ? payload.assets : [];
-    const total = typeof payload.total === 'number' ? payload.total : 0;
+    const total =
+      typeof payload.total === 'number'
+        ? payload.total
+        : typeof payload.total === 'string' && payload.total.trim() !== ''
+          ? Number.parseInt(payload.total, 10)
+          : 0;
 
     const pageAssetIds = assetsRows.map((r: any) => r.id).filter(Boolean);
 
