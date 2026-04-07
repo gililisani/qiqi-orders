@@ -69,8 +69,6 @@ async function triggerDownload(
   accessToken: string | null
 ): Promise<void> {
   try {
-    await logDownload(assetId, url, downloadMethod, accessToken);
-
     // Signed storage URLs are typically cross-origin. Attempting to force a download via
     // `fetch() -> blob -> <a download>` is fragile (CORS + large files) and can lead to
     // Chrome showing "File wasn't available on site". For cross-origin URLs, prefer
@@ -78,12 +76,24 @@ async function triggerDownload(
     try {
       const u = new URL(url, window.location.href);
       if (u.origin !== window.location.origin) {
-        window.open(url, '_blank', 'noopener,noreferrer');
+        // Important: do this before any await to preserve browser "user gesture".
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Best-effort logging; do not block download.
+        void logDownload(assetId, url, downloadMethod, accessToken);
         return;
       }
     } catch {
       // ignore URL parse errors and continue with existing flow
     }
+
+    await logDownload(assetId, url, downloadMethod, accessToken);
     
     try {
       const response = await fetch(url, {
