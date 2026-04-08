@@ -259,20 +259,23 @@ export function useOrderFormController(params: {
           }
 
           // Send order updated email notification (fire and forget)
-          setTimeout(async () => {
-            try {
-              await fetchWithAuth('/api/orders/send-email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  orderId: orderId,
-                  emailType: 'updated',
-                }),
-              });
-            } catch (emailError) {
-              console.error('Failed to send order updated email:', emailError);
-            }
-          }, 1000); // 1 second delay to ensure DB commit
+          // IMPORTANT: do not email when saving as Draft (Draft -> Draft, or Open -> Draft).
+          if (newStatus !== 'Draft') {
+            setTimeout(async () => {
+              try {
+                await fetchWithAuth('/api/orders/send-email', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    orderId: orderId,
+                    emailType: 'updated',
+                  }),
+                });
+              } catch (emailError) {
+                console.error('Failed to send order updated email:', emailError);
+              }
+            }, 1000); // 1 second delay to ensure DB commit
+          }
 
           // Clear unsaved changes flag
           setHasUnsavedChanges(false);

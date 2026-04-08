@@ -987,7 +987,7 @@ export default function OrderDetailsView({
     try {
       setSaving(true);
       
-      const response = await fetch(`/api/orders/delete?orderId=${orderId}&userRole=${role}`, {
+      const response = await fetchWithAuth(`/api/orders/delete?orderId=${orderId}`, {
         method: 'DELETE',
       });
 
