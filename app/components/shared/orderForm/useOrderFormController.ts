@@ -20,11 +20,7 @@ export function useOrderFormController(params: {
   orderItems: any[];
   supportFundItems: any[];
   saving: boolean;
-  hasUnsavedChanges: boolean;
-  isSavingRef: React.MutableRefObject<boolean>;
   performSaveInFlightRef: React.MutableRefObject<boolean>;
-  userIdRef: React.MutableRefObject<any>;
-  companyIdRef: React.MutableRefObject<any>;
   setSaving: (v: boolean) => void;
   setError: (v: any) => void;
   setHasUnsavedChanges: (v: boolean) => void;
@@ -35,8 +31,6 @@ export function useOrderFormController(params: {
   performSave: (asDraft?: boolean) => Promise<void>;
   handleSave: () => Promise<void>;
   handleSaveAsDraft: () => Promise<void>;
-  autoSaveDraft: () => Promise<boolean>;
-  syncSaveDraft: () => void;
 } {
   const {
     supabase,
@@ -49,11 +43,7 @@ export function useOrderFormController(params: {
     orderItems,
     supportFundItems,
     saving,
-    hasUnsavedChanges,
-    isSavingRef,
     performSaveInFlightRef,
-    userIdRef,
-    companyIdRef,
     setSaving,
     setError,
     setHasUnsavedChanges,
@@ -364,134 +354,6 @@ export function useOrderFormController(params: {
     }
   }, [performSave, setError, setSaving]);
 
-  // Helper function to auto-save draft (used by beforeunload and logout handlers only)
-  const autoSaveDraft = React.useCallback(async () => {
-    if (!isNewMode) return false;
-    if (!hasUnsavedChanges) return false;
-    if (orderItems.length === 0 && supportFundItems.length === 0) return false;
-    if (saving || isSavingRef.current) return false;
-    if (!company) return false;
-
-    isSavingRef.current = true;
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return false;
-
-      const poNumber = generatePoNumber((order && order.po_number) || null);
-
-      // Use API endpoint for reliable save
-      const response = await fetch('/api/orders/auto-save-draft', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          buildAutoSaveDraftBody({
-            companyId: company.id,
-            userId: user.id,
-            poNumber,
-            orderItems: orderItems as any,
-            supportFundItems: supportFundItems as any,
-          })
-        ),
-        keepalive: true,
-      });
-
-      if (response.ok) {
-        console.log('✅ Draft auto-saved successfully');
-        setHasUnsavedChanges(false);
-        isSavingRef.current = false;
-        return true;
-      }
-      isSavingRef.current = false;
-      return false;
-    } catch (error) {
-      console.error('❌ Auto-save failed:', error);
-      isSavingRef.current = false;
-      return false;
-    }
-  }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, saving, company, order, supabase, isSavingRef, setHasUnsavedChanges]);
-
-  // Synchronous save function for beforeunload (can't use async)
-  const syncSaveDraft = React.useCallback(() => {
-    if (isSavingRef.current) {
-      console.log('⏸️ Sync save skipped - save already in progress');
-      return;
-    }
-
-    console.log('🔄 syncSaveDraft called', {
-      isNewMode,
-      hasUnsavedChanges,
-      orderItemsCount: orderItems.length,
-      supportFundItemsCount: supportFundItems.length,
-      userId: userIdRef.current,
-      companyId: companyIdRef.current,
-    });
-
-    if (!isNewMode) {
-      console.log('❌ Not in new mode, skipping save');
-      return;
-    }
-    if (!hasUnsavedChanges) {
-      console.log('❌ No unsaved changes, skipping save');
-      return;
-    }
-    if (orderItems.length === 0 && supportFundItems.length === 0) {
-      console.log('❌ No items, skipping save');
-      return;
-    }
-    if (!userIdRef.current || !companyIdRef.current) {
-      console.error('❌ Missing user or company ID', {
-        userId: userIdRef.current,
-        companyId: companyIdRef.current,
-      });
-      return;
-    }
-
-    isSavingRef.current = true;
-
-    const poNumber = generatePoNumber((order && order.po_number) || null);
-
-    const payload = buildAutoSaveDraftBody({
-      companyId: companyIdRef.current,
-      userId: userIdRef.current,
-      poNumber,
-      orderItems: orderItems as any,
-      supportFundItems: supportFundItems as any,
-    });
-
-    const payloadString = JSON.stringify(payload);
-    console.log('📤 Attempting to save draft', { payloadSize: payloadString.length });
-
-    // Try sendBeacon first (more reliable for page close), fallback to fetch with keepalive
-    if (navigator.sendBeacon && payloadString.length < 64000) {
-      const blob = new Blob([payloadString], { type: 'application/json' });
-      const sent = navigator.sendBeacon('/api/orders/auto-save-draft', blob);
-      console.log(sent ? '✅ Draft sent via sendBeacon' : '❌ sendBeacon failed, trying fetch');
-      if (sent) {
-        isSavingRef.current = false;
-        return;
-      }
-    }
-
-    // Fallback to fetch with keepalive
-    fetch('/api/orders/auto-save-draft', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: payloadString,
-      keepalive: true, // Critical: ensures request completes even if page closes
-    })
-      .then(() => {
-        console.log('✅ Draft sent via fetch with keepalive');
-        isSavingRef.current = false;
-      })
-      .catch((err) => {
-        console.error('❌ Sync save failed:', err);
-        isSavingRef.current = false;
-      });
-  }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, order, isSavingRef, userIdRef, companyIdRef]);
-
-  return { performSave, handleSave, handleSaveAsDraft, autoSaveDraft, syncSaveDraft };
+  return { performSave, handleSave, handleSaveAsDraft };
 }
 

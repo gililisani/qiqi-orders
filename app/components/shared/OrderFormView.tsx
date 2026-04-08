@@ -353,9 +353,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
   const [showSupportFundReminder, setShowSupportFundReminder] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const userIdRef = useRef<string | null>(null);
-  const companyIdRef = useRef<string | null>(null);
-  const isSavingRef = useRef<boolean>(false);
   /** Prevents double submit: React state `saving` updates async, so rapid clicks could run performSave twice. */
   const performSaveInFlightRef = useRef<boolean>(false);
 
@@ -425,27 +422,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     }
   };
 
-  // Store user ID for synchronous access in beforeunload
-  useEffect(() => {
-    const storeUserData = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          userIdRef.current = user.id;
-        }
-      } catch (error) {
-        console.error('Error storing user data:', error);
-      }
-    };
-    storeUserData();
-  }, [supabase]);
-
-  // Store company ID when company changes
-  useEffect(() => {
-    if (company) {
-      companyIdRef.current = company.id;
-    }
-  }, [company]);
+  // Removed: storing user/company IDs for implicit autosave (implicit autosave removed)
 
   useEffect(() => {
     if (isEditMode && orderId) {
@@ -910,8 +887,6 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     performSave,
     handleSave,
     handleSaveAsDraft,
-    autoSaveDraft,
-    syncSaveDraft,
   } = useOrderFormController({
     supabase,
     router,
@@ -923,11 +898,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     orderItems,
     supportFundItems,
     saving,
-    hasUnsavedChanges,
-    isSavingRef,
     performSaveInFlightRef,
-    userIdRef,
-    companyIdRef,
     setSaving,
     setError,
     setHasUnsavedChanges,
@@ -966,15 +937,10 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
         hasUnsavedChanges,
         orderItemsCount: orderItems.length,
         supportFundItemsCount: supportFundItems.length,
-        userId: userIdRef.current,
-        companyId: companyIdRef.current
       });
 
-      // Only auto-save if there are unsaved changes and items
+      // Only warn if there are unsaved changes and items.
       if (hasUnsavedChanges && (orderItems.length > 0 || supportFundItems.length > 0)) {
-        // Use synchronous save for page close (can't await async in beforeunload)
-        syncSaveDraft();
-        
         // Show browser warning
         e.preventDefault();
         e.returnValue = '';
@@ -987,38 +953,13 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [hasUnsavedChanges, orderItems, supportFundItems, isNewMode, syncSaveDraft]);
+  }, [hasUnsavedChanges, orderItems, supportFundItems, isNewMode]);
 
   // REMOVED: Auto-save on navigation - drafts should only save on page close or manual save
 
   // REMOVED: Auto-save on tab switch - drafts should only save on page close or manual save
 
-  // Auto-save draft on logout/session expiration
-  React.useEffect(() => {
-    if (!isNewMode) return;
-    if (!hasUnsavedChanges) return;
-    if (orderItems.length === 0 && supportFundItems.length === 0) return;
-
-    // Listen for custom before-logout event
-    const handleBeforeLogout = async () => {
-      await autoSaveDraft();
-    };
-
-    // Listen for auth state changes (logout detection)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string) => {
-      if (event === 'SIGNED_OUT') {
-        // User is being logged out - try to save draft
-        autoSaveDraft();
-      }
-    });
-
-    window.addEventListener('before-logout', handleBeforeLogout);
-
-    return () => {
-      subscription.unsubscribe();
-      window.removeEventListener('before-logout', handleBeforeLogout);
-    };
-  }, [isNewMode, hasUnsavedChanges, orderItems, supportFundItems, autoSaveDraft, supabase]);
+  // Removed: auto-save draft on logout/session expiration (unreliable implicit save)
 
   // Let AdminLayout handle loading - no separate loading state needed
 
