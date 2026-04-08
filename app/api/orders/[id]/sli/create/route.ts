@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { createServiceRoleClient, requireAuthenticatedUser } from '../../../../../../platform/auth/guards';
 
 export async function POST(
   request: NextRequest,
@@ -21,24 +18,17 @@ export async function POST(
       checkbox_states
     } = await request.json();
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
+    const supabaseAdmin = createServiceRoleClient();
+
+    // Get current user (admin). Preserve legacy 401 payload.
+    let user: { id: string };
+    try {
+      user = await requireAuthenticatedUser(request);
+    } catch (err: any) {
+      if (err instanceof Response && err.status === 401) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
-    });
-
-    // Get current user (admin)
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      throw err;
     }
 
     // Verify user is admin
