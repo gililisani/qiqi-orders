@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { createAuth } from '../../../../../../../platform/auth';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { createServiceRoleClient, requireAuthenticatedUser } from '../../../../../../../platform/auth/guards';
 
 export async function GET(
   request: NextRequest,
@@ -17,15 +13,9 @@ export async function GET(
       return NextResponse.json({ error: 'Missing orderId or docId' }, { status: 400 });
     }
 
-    const auth = createAuth();
-    const user = await auth.getUserFromRequest(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
+    const user = await requireAuthenticatedUser(request);
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const supabase = createServiceRoleClient();
 
     const { data: order, error: orderError } = await supabase
       .from('orders')
