@@ -9,6 +9,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { addOrderHistoryEntry } from '../../../lib/orderHistory';
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
+import {
+  buildAutoSaveDraftBody,
+  buildOrderItemsInsertData,
+  buildOrderItemsUpdateData,
+  generatePoNumber,
+} from './orderForm/orderPayload';
+import { validatePerformSave } from './orderForm/orderValidation';
 
 // CategoryAccordion Component
 interface CategoryAccordionProps {
@@ -919,27 +926,19 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
+      const validationError = validatePerformSave({
+        company,
+        orderItemsCount: orderItems.length,
+        supportFundItemsCount: supportFundItems.length,
+      });
+      if (validationError) throw new Error(validationError);
+      // Keep explicit guard for type narrowing (and to preserve original structure).
       if (!company) {
         throw new Error('No company selected');
       }
 
-      // Check if order has at least one product
-      if (orderItems.length === 0 && supportFundItems.length === 0) {
-        throw new Error('Order must contain at least one product');
-      }
-
       if (isNewMode) {
-        // Generate PO number if not provided
-        let poNumber = (order && order.po_number) || null;
-        if (!poNumber || poNumber.trim() === '') {
-          // Generate 6-character alphanumeric PO number
-          const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-          let generatedPO = '';
-          for (let i = 0; i < 6; i++) {
-            generatedPO += chars.charAt(Math.floor(Math.random() * chars.length));
-          }
-          poNumber = generatedPO;
-        }
+        const poNumber = generatePoNumber((order && order.po_number) || null);
 
         // Log order creation details for debugging
         console.log('Creating order with details:', {
@@ -970,30 +969,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
           company_id: newOrder.company_id
         });
 
-        // Insert order items
-        const regularItemsData = orderItems.map((item, index) => ({
-          order_id: newOrder.id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          case_qty: item.case_qty || 0,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-          is_support_fund_item: false,
-          sort_order: index
-        }));
-
-        const supportFundItemsData = supportFundItems.map((item, index) => ({
-          order_id: newOrder.id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          case_qty: item.case_qty || 0,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-          is_support_fund_item: true,
-          sort_order: orderItems.length + index
-        }));
-
-        const allItemsData = [...regularItemsData, ...supportFundItemsData];
+        const allItemsData = buildOrderItemsInsertData(newOrder.id, orderItems, supportFundItems);
 
         if (allItemsData.length > 0) {
           const { error: insertError } = await supabase
@@ -1114,30 +1090,7 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
         if (deleteError) throw deleteError;
 
-        // Insert updated order items
-        const regularItemsData = orderItems.map((item, index) => ({
-          order_id: orderId,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          case_qty: item.case_qty,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-          is_support_fund_item: false,
-          sort_order: index
-        }));
-
-        const supportFundItemsData = supportFundItems.map((item, index) => ({
-          order_id: orderId,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          case_qty: item.case_qty,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-          is_support_fund_item: true,
-          sort_order: orderItems.length + index
-        }));
-
-        const allItemsData = [...regularItemsData, ...supportFundItemsData];
+        const allItemsData = buildOrderItemsUpdateData(orderId, orderItems, supportFundItems);
 
         if (allItemsData.length > 0) {
           const { error: insertError } = await supabase
@@ -1272,47 +1225,21 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
 
-      // Generate PO number if not provided
-      let poNumber = (order && order.po_number) || null;
-      if (!poNumber || poNumber.trim() === '') {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let generatedPO = '';
-        for (let i = 0; i < 6; i++) {
-          generatedPO += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        poNumber = generatedPO;
-      }
+      const poNumber = generatePoNumber((order && order.po_number) || null);
 
       // Use API endpoint for reliable save
       const response = await fetch('/api/orders/auto-save-draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderData: {
-            company_id: company.id,
-            user_id: user.id,
-            po_number: poNumber,
-            status: 'Draft'
-          },
-          orderItems: orderItems.map((item, index) => ({
-            product_id: item.product_id,
-            quantity: item.quantity,
-            case_qty: item.case_qty || 0,
-            unit_price: item.unit_price,
-            total_price: item.total_price,
-            is_support_fund_item: false,
-            sort_order: index
-          })),
-          supportFundItems: supportFundItems.map((item, index) => ({
-            product_id: item.product_id,
-            quantity: item.quantity,
-            case_qty: item.case_qty || 0,
-            unit_price: item.unit_price,
-            total_price: item.total_price,
-            is_support_fund_item: true,
-            sort_order: orderItems.length + index
-          }))
-        }),
+        body: JSON.stringify(
+          buildAutoSaveDraftBody({
+            companyId: company.id,
+            userId: user.id,
+            poNumber,
+            orderItems,
+            supportFundItems,
+          })
+        ),
         keepalive: true
       });
 
@@ -1369,43 +1296,15 @@ export default function OrderFormView({ role, orderId, backUrl }: OrderFormViewP
 
     isSavingRef.current = true;
 
-    // Generate PO number if not provided
-    let poNumber = (order && order.po_number) || null;
-    if (!poNumber || poNumber.trim() === '') {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let generatedPO = '';
-      for (let i = 0; i < 6; i++) {
-        generatedPO += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      poNumber = generatedPO;
-    }
+    const poNumber = generatePoNumber((order && order.po_number) || null);
 
-    const payload = {
-      orderData: {
-        company_id: companyIdRef.current,
-        user_id: userIdRef.current,
-        po_number: poNumber,
-        status: 'Draft'
-      },
-      orderItems: orderItems.map((item, index) => ({
-        product_id: item.product_id,
-        quantity: item.quantity,
-        case_qty: item.case_qty || 0,
-        unit_price: item.unit_price,
-        total_price: item.total_price,
-        is_support_fund_item: false,
-        sort_order: index
-      })),
-      supportFundItems: supportFundItems.map((item, index) => ({
-        product_id: item.product_id,
-        quantity: item.quantity,
-        case_qty: item.case_qty || 0,
-        unit_price: item.unit_price,
-        total_price: item.total_price,
-        is_support_fund_item: true,
-        sort_order: orderItems.length + index
-      }))
-    };
+    const payload = buildAutoSaveDraftBody({
+      companyId: companyIdRef.current,
+      userId: userIdRef.current,
+      poNumber,
+      orderItems,
+      supportFundItems,
+    });
 
     const payloadString = JSON.stringify(payload);
     console.log('📤 Attempting to save draft', { payloadSize: payloadString.length });
