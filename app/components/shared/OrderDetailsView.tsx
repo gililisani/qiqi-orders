@@ -13,6 +13,13 @@ import OrderStatusBadge from '../ui/OrderStatusBadge';
 import { formatCurrency, formatQuantity } from '../../../lib/formatters';
 import CreateSLIModal from '../modals/CreateSLIModal';
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
+import {
+  build3PLExportPayload,
+  build3PLFilename,
+  getActualRecipientEmail as getActualRecipientEmailUtil,
+  getStatusChangeEmailType,
+  validateRequiredFieldsForStatus,
+} from './orderDetails/orderDetailsUtils';
 
 interface Order {
   id: string;
@@ -145,21 +152,15 @@ export default function OrderDetailsView({
   const [sliLoading, setSliLoading] = useState(false);
   
   // Calculate actual recipient email (matches API logic)
-  const getActualRecipientEmail = (): string => {
-    if (!order) return 'No email configured';
-    
-    // Check if user_id is a client (not admin)
-    // If user_id exists and client.email is NOT an admin email, use it
-    const isAdminCreated = order.client?.email?.endsWith('@qiqiglobal.com') || false;
-    
-    if (order.client?.email && !isAdminCreated) {
-      return order.client.email;
-    }
-    
-    // Otherwise use company fallback emails
-    return order.company?.ship_to_contact_email || 
-           order.company?.company_email || 
-           'No email configured (email will be skipped)';
+  const getActualRecipientEmail = (): string => getActualRecipientEmailUtil(order);
+  // Validation function to check required fields based on status
+  const validateRequiredFields = (status: string) => {
+    return validateRequiredFieldsForStatus({
+      status,
+      adminSoNumber,
+      adminInvoiceNumber,
+      adminNumberOfPallets,
+    });
   };
 
   const handleDocumentUploadComplete = () => {
@@ -532,28 +533,6 @@ export default function OrderDetailsView({
     }
   };
 
-  // Validation function to check required fields based on status
-  const validateRequiredFields = (status: string) => {
-    const errors = [];
-    
-    if (status === 'In Process' || status === 'Ready' || status === 'Done') {
-      if (!adminSoNumber || adminSoNumber.trim() === '') {
-        errors.push('so_number');
-      }
-    }
-    
-    if (status === 'Ready' || status === 'Done') {
-      if (!adminInvoiceNumber || adminInvoiceNumber.trim() === '') {
-        errors.push('invoice_number');
-      }
-      if (!adminNumberOfPallets || adminNumberOfPallets.trim() === '') {
-        errors.push('number_of_pallets');
-      }
-    }
-    
-    return errors;
-  };
-
   // Admin-specific functions
   const handleSaveAdminOrderRefs = async () => {
     if (!order) return;
@@ -616,14 +595,7 @@ export default function OrderDetailsView({
         
         // Send automatic email notification for specific status changes
         try {
-          let emailType = null;
-          if (order.status === 'In Process') {
-            emailType = 'in_process';
-          } else if (order.status === 'Ready') {
-            emailType = 'ready';
-          } else if (order.status === 'Cancelled') {
-            emailType = 'cancelled';
-          }
+          const emailType = getStatusChangeEmailType(order.status);
 
           if (emailType) {
             await fetchWithAuth('/api/orders/send-email', {
@@ -944,20 +916,13 @@ export default function OrderDetailsView({
       if (!items?.length) throw new Error('No order items found');
 
       // Build order object for export
-      const orderFor3PL = {
-        id: orderData.id,
-        so_number: orderData.so_number,
-        created_at: orderData.created_at,
-        company: company,
-        order_items: items
-      };
+      const orderFor3PL = build3PLExportPayload({ orderData, company, items });
 
       // Generate XLSX
       const xlsxBuffer = generate3PLXLSX(orderFor3PL);
       
       // Download
-      const soNumber = orderData.so_number || orderData.id.substring(0, 6);
-      const filename = `3PL_Order_${soNumber}.xlsx`;
+      const filename = build3PLFilename(orderData);
       download3PLXLSX(xlsxBuffer, filename);
       
     } catch (err: any) {
