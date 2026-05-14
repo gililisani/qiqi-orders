@@ -6,6 +6,40 @@ import { createAuth } from '../../../../../platform/auth';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+const ALLOWED_ASSET_TYPES = new Set(['image', 'video', 'document', 'audio', 'other']);
+const MIME_PATTERN = /^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/i;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const MAX_TITLE = 500;
+const MAX_DESCRIPTION = 5000;
+const MAX_FILENAME = 255;
+const MAX_MIME = 255;
+const MAX_TAG_LEN = 200;
+const MAX_ARRAY = 100;
+
+function asString(v: unknown): string | null {
+  return typeof v === 'string' ? v : null;
+}
+
+/** Strip path separators, control chars, and trim. */
+function sanitizeFileName(input: string): string {
+  return input
+    .replace(/[\\/]/g, '_')
+    .replace(/\.\.+/g, '_')
+    .replace(/[\x00-\x1f\x7f]/g, '')
+    .trim()
+    .slice(0, MAX_FILENAME);
+}
+
+function sanitizeStringArray(input: unknown, maxLen = MAX_TAG_LEN): string[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .filter((v): v is string => typeof v === 'string')
+    .map((v) => v.trim())
+    .filter((v) => v.length > 0 && v.length <= maxLen)
+    .slice(0, MAX_ARRAY);
+}
+
 function createSupabaseAdminClient() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
@@ -28,35 +62,79 @@ export async function POST(request: NextRequest) {
     const supabaseAdmin = createSupabaseAdminClient();
     const body = await request.json();
 
-    if (!body.title || !body.assetType || !body.fileName || !body.fileType) {
-      console.error('Missing required fields:', {
-        title: !!body.title,
-        assetType: !!body.assetType,
-        fileName: !!body.fileName,
-        fileType: !!body.fileType,
-      });
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    const titleRaw = asString(body.title)?.trim();
+    const assetTypeRaw = asString(body.assetType)?.trim().toLowerCase();
+    const fileNameRaw = asString(body.fileName);
+    const fileTypeRaw = asString(body.fileType)?.trim();
+
+    if (!titleRaw || !assetTypeRaw || !fileNameRaw || !fileTypeRaw) {
+      return NextResponse.json({ error: 'Missing required fields: title, assetType, fileName, fileType' }, { status: 400 });
     }
 
-    const assetId: string = body.assetId || randomUUID();
-    const tagsInput: string[] = Array.isArray(body.tags) ? body.tags : [];
-    const audiencesInput: string[] = Array.isArray(body.audiences) ? body.audiences : [];
+    if (titleRaw.length > MAX_TITLE) {
+      return NextResponse.json({ error: 'Title exceeds maximum length' }, { status: 400 });
+    }
+
+    if (!ALLOWED_ASSET_TYPES.has(assetTypeRaw)) {
+      return NextResponse.json({ error: 'Invalid assetType' }, { status: 400 });
+    }
+
+    const fileName = sanitizeFileName(fileNameRaw);
+    if (!fileName) {
+      return NextResponse.json({ error: 'Invalid fileName' }, { status: 400 });
+    }
+
+    if (fileTypeRaw.length > MAX_MIME || !MIME_PATTERN.test(fileTypeRaw)) {
+      return NextResponse.json({ error: 'Invalid fileType (must be a MIME type)' }, { status: 400 });
+    }
+
+    const descriptionRaw = asString(body.description);
+    if (descriptionRaw && descriptionRaw.length > MAX_DESCRIPTION) {
+      return NextResponse.json({ error: 'Description exceeds maximum length' }, { status: 400 });
+    }
+
+    const incomingAssetId = asString(body.assetId);
+    if (incomingAssetId && !UUID_PATTERN.test(incomingAssetId)) {
+      return NextResponse.json({ error: 'Invalid assetId' }, { status: 400 });
+    }
+    const assetTypeIdRaw = asString(body.assetTypeId);
+    if (assetTypeIdRaw && !UUID_PATTERN.test(assetTypeIdRaw)) {
+      return NextResponse.json({ error: 'Invalid assetTypeId' }, { status: 400 });
+    }
+    const assetSubtypeIdRaw = asString(body.assetSubtypeId);
+    if (assetSubtypeIdRaw && !UUID_PATTERN.test(assetSubtypeIdRaw)) {
+      return NextResponse.json({ error: 'Invalid assetSubtypeId' }, { status: 400 });
+    }
+    const campaignIdRaw = asString(body.campaignId);
+    if (campaignIdRaw && !UUID_PATTERN.test(campaignIdRaw)) {
+      return NextResponse.json({ error: 'Invalid campaignId' }, { status: 400 });
+    }
+
+    const assetId: string = incomingAssetId || randomUUID();
+    const tagsInput = sanitizeStringArray(body.tags);
+    const audiencesInput = sanitizeStringArray(body.audiences);
+    const regionsInput = sanitizeStringArray(body.regions);
+
     const localesInput: Array<{ code: string; primary?: boolean }> = Array.isArray(body.locales)
       ? body.locales
+          .filter((l: any) => l && typeof l.code === 'string')
+          .map((l: any) => ({
+            code: String(l.code).trim().slice(0, MAX_TAG_LEN),
+            primary: Boolean(l.primary),
+          }))
+          .filter((l: { code: string }) => l.code.length > 0)
+          .slice(0, MAX_ARRAY)
       : [];
-    const regionsInput: string[] = Array.isArray(body.regions) ? body.regions : [];
 
     // Sync asset_type enum with asset_type_id if provided
-    let syncedAssetType = body.assetType;
-    if (body.assetTypeId) {
-      // Get the slug from asset_type_id to sync with enum
+    let syncedAssetType = assetTypeRaw;
+    if (assetTypeIdRaw) {
       const { data: assetTypeData } = await supabaseAdmin
         .from('dam_asset_types')
         .select('slug')
-        .eq('id', body.assetTypeId)
+        .eq('id', assetTypeIdRaw)
         .single();
       if (assetTypeData) {
-        // Map taxonomy slugs to enum values
         const slugToEnumMap: Record<string, string> = {
           'image': 'image',
           'video': 'video',
@@ -66,59 +144,59 @@ export async function POST(request: NextRequest) {
           'packaging-regulatory': 'document',
           'campaign': 'document',
         };
-        syncedAssetType = slugToEnumMap[assetTypeData.slug] || body.assetType || 'other';
+        syncedAssetType = slugToEnumMap[assetTypeData.slug] || assetTypeRaw || 'other';
       }
     }
 
-    if (!body.assetId) {
+    const productLine = asString(body.productLine)?.trim().slice(0, MAX_TAG_LEN) || null;
+    const productName = asString(body.productName)?.trim().slice(0, MAX_TAG_LEN) || null;
+    const sku = asString(body.sku)?.trim().slice(0, MAX_TAG_LEN) || null;
+
+    if (!incomingAssetId) {
       const insertData: any = {
         id: assetId,
-        title: body.title,
-        description: body.description ?? null,
+        title: titleRaw,
+        description: descriptionRaw ?? null,
         asset_type: syncedAssetType,
-        asset_type_id: body.assetTypeId ?? null,
-        asset_subtype_id: body.assetSubtypeId ?? null,
-        product_line: body.productLine ?? null,
-        product_name: body.productName ?? null,
-        sku: body.sku ?? null,
+        asset_type_id: assetTypeIdRaw ?? null,
+        asset_subtype_id: assetSubtypeIdRaw ?? null,
+        product_line: productLine,
+        product_name: productName,
+        sku,
         search_tags: tagsInput,
         created_by: adminUser.id,
         updated_by: adminUser.id,
       };
-      
-      // Only include use_title_as_filename if column exists (will be added after migration)
-      if (body.useTitleAsFilename !== undefined) {
-        insertData.use_title_as_filename = body.useTitleAsFilename;
-      }
-      
-      const { error: insertAssetError } = await supabaseAdmin.from('dam_assets').insert(insertData);
 
+      if (body.useTitleAsFilename !== undefined) {
+        insertData.use_title_as_filename = Boolean(body.useTitleAsFilename);
+      }
+
+      const { error: insertAssetError } = await supabaseAdmin.from('dam_assets').insert(insertData);
       if (insertAssetError) throw insertAssetError;
     } else {
       const updateData: any = {
-        title: body.title,
-        description: body.description ?? null,
+        title: titleRaw,
+        description: descriptionRaw ?? null,
         asset_type: syncedAssetType,
-        asset_type_id: body.assetTypeId ?? null,
-        asset_subtype_id: body.assetSubtypeId ?? null,
-        product_line: body.productLine ?? null,
-        product_name: body.productName ?? null,
-        sku: body.sku ?? null,
+        asset_type_id: assetTypeIdRaw ?? null,
+        asset_subtype_id: assetSubtypeIdRaw ?? null,
+        product_line: productLine,
+        product_name: productName,
+        sku,
         search_tags: tagsInput,
         updated_by: adminUser.id,
         updated_at: new Date().toISOString(),
       };
-      
-      // Only include use_title_as_filename if provided (column may not exist yet)
+
       if (body.useTitleAsFilename !== undefined) {
-        updateData.use_title_as_filename = body.useTitleAsFilename;
+        updateData.use_title_as_filename = Boolean(body.useTitleAsFilename);
       }
-      
+
       const { error: updateAssetError } = await supabaseAdmin
         .from('dam_assets')
         .update(updateData)
         .eq('id', assetId);
-
       if (updateAssetError) throw updateAssetError;
     }
 
@@ -172,22 +250,18 @@ export async function POST(request: NextRequest) {
       if (regionError) throw regionError;
     }
 
-    // Handle campaign linking
-    if (body.campaignId) {
-      // Remove existing campaign link for this asset
+    if (campaignIdRaw) {
       await supabaseAdmin.from('campaign_assets').delete().eq('asset_id', assetId);
-      // Add new campaign link
       const { error: campaignError } = await supabaseAdmin
         .from('campaign_assets')
-        .insert({ campaign_id: body.campaignId, asset_id: assetId });
+        .insert({ campaign_id: campaignIdRaw, asset_id: assetId });
       if (campaignError) {
         console.error('Failed to link asset to campaign:', campaignError);
-        // Don't fail the entire upload if campaign linking fails
       }
     }
 
-    // Generate storage path
-    const storagePath = `${assetId}/${Date.now()}-${body.fileName}`;
+    // Storage path uses the sanitized filename.
+    const storagePath = `${assetId}/${Date.now()}-${fileName}`;
 
     return NextResponse.json({ assetId, storagePath }, { status: 200 });
   } catch (err: any) {
