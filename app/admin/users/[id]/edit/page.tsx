@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
 import Link from 'next/link';
 
 interface FormData {
@@ -192,7 +193,7 @@ export default function EditUserPage() {
       setLoading(true);
       
       // Call the API route to delete user (server-side with admin privileges)
-      const response = await fetch('/api/users/delete', {
+      const response = await fetchWithAuth('/api/users/delete', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })

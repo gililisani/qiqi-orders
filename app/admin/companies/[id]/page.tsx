@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import Card from '../../../components/ui/Card';
 import Link from 'next/link';
 
@@ -233,7 +234,7 @@ export default function CompanyViewPage() {
       setUserError(''); // Clear previous errors
       
       // Call the API route to delete user (server-side with admin privileges)
-      const response = await fetch('/api/users/delete', {
+      const response = await fetchWithAuth('/api/users/delete', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })
