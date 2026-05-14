@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import { ReportFilters, FilterConfig } from '../../../components/reports/ReportFilters';
 import { ReportTable, ColumnDef } from '../../../components/reports/ReportTable';
 import { ExportButton } from '../../../components/reports/ExportButton';
@@ -84,7 +85,7 @@ export default function ProductSalesReportPage() {
         params.append('categoryIds', filters.categoryIds.join(','));
       }
 
-      const response = await fetch(`/api/reports/product-sales?${params.toString()}`);
+      const response = await fetchWithAuth(`/api/reports/product-sales?${params.toString()}`);
       const result = await response.json();
 
       if (!response.ok) {

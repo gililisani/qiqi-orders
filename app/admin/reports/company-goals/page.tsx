@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import { ReportFilters, FilterConfig } from '../../../components/reports/ReportFilters';
 import { ReportTable, ColumnDef } from '../../../components/reports/ReportTable';
 import { ExportButton } from '../../../components/reports/ExportButton';
@@ -79,7 +80,7 @@ export default function CompanyGoalsReportPage() {
         params.append('companyIds', filters.companyIds.join(','));
       }
 
-      const response = await fetch(`/api/reports/company-goals?${params.toString()}`);
+      const response = await fetchWithAuth(`/api/reports/company-goals?${params.toString()}`);
       const result = await response.json();
 
       if (!response.ok) {
