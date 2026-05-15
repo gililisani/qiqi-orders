@@ -476,8 +476,14 @@ export default function OrdersListView({ role, newOrderUrl, viewOrderUrl }: Orde
                   {role === 'admin' ? (
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-gray-800">{clientsMap.get(order.user_id || '')?.name || 'N/A'}</span>
-                        <span className="text-xs text-gray-500">{clientsMap.get(order.user_id || '')?.email || 'N/A'}</span>
+                        <span className="text-sm font-semibold text-gray-800">
+                          {clientsMap.get(order.user_id || '')?.name
+                            || (order.user_id ? 'Qiqi' : 'N/A')}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {clientsMap.get(order.user_id || '')?.email
+                            || (order.user_id ? '' : 'N/A')}
+                        </span>
                       </div>
                     </td>
                   ) : null}

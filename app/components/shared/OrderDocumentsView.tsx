@@ -126,7 +126,7 @@ export default function OrderDocumentsView({ orderId, role, onUploadComplete }: 
 
       // Get user profile for name
       const { data: profile } = await supabase
-        .from('admin_public_profiles')
+        .from('admins')
         .select('name')
         .eq('id', user.id)
         .single();

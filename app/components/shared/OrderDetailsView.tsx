@@ -183,7 +183,7 @@ export default function OrderDetailsView({
 
       if (role === 'admin') {
         const { data: adminProfile } = await supabase
-          .from('admin_public_profiles')
+          .from('admins')
           .select('name')
           .eq('id', user.id)
           .single();

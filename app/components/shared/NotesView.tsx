@@ -176,7 +176,7 @@ export default function NotesView({
         const creatorIds = [...new Set(notesData.map((note: Note) => note.created_by))];
         
         const { data: adminsData } = await supabase
-          .from('admin_public_profiles')
+          .from('admins')
           .select('id, name')
           .in('id', creatorIds);
 
@@ -208,7 +208,7 @@ export default function NotesView({
             const replyCreatorIds = [...new Set(repliesData.map((reply: NoteReply) => reply.created_by))];
             
             const { data: replyAdminsData } = await supabase
-              .from('admin_public_profiles')
+              .from('admins')
               .select('id, name')
               .in('id', replyCreatorIds);
 
@@ -522,7 +522,12 @@ export default function NotesView({
                       <div className="flex items-center space-x-1">
                         <UserIcon className="h-4 w-4" />
                         <span>
-                          {note.created_by_admin?.name ? `Created by ${note.created_by_admin.name}` : 'Created'} {formatDate(note.created_at)}
+                          {note.created_by_admin?.name
+                            ? `Created by ${note.created_by_admin.name}`
+                            : userRole === 'client'
+                              ? 'Created by Qiqi'
+                              : 'Created'}{' '}
+                          {formatDate(note.created_at)}
                         </span>
                       </div>
                     </div>
