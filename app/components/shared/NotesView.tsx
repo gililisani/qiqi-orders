@@ -176,7 +176,7 @@ export default function NotesView({
         const creatorIds = [...new Set(notesData.map((note: Note) => note.created_by))];
         
         const { data: adminsData } = await supabase
-          .from('admins')
+          .from('admin_public_profiles')
           .select('id, name')
           .in('id', creatorIds);
 
@@ -208,7 +208,7 @@ export default function NotesView({
             const replyCreatorIds = [...new Set(repliesData.map((reply: NoteReply) => reply.created_by))];
             
             const { data: replyAdminsData } = await supabase
-              .from('admins')
+              .from('admin_public_profiles')
               .select('id, name')
               .in('id', replyCreatorIds);
 

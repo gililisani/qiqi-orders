@@ -90,7 +90,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
 
       // Get user profile for name
       const { data: profile } = await supabase
-        .from('admins')
+        .from('admin_public_profiles')
         .select('name')
         .eq('id', user.id)
         .single();
