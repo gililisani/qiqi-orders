@@ -124,7 +124,7 @@ export default function OrderDetailsView({
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
   const [error, setError] = useState('');
-  const [currentUserName, setCurrentUserName] = useState<string>('');
+  const [creatorName, setCreatorName] = useState<string>('');
   const [showPackingSlipForm, setShowPackingSlipForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [packingSlipData, setPackingSlipData] = useState({
@@ -227,7 +227,6 @@ export default function OrderDetailsView({
 
   useEffect(() => {
     if (orderId) {
-      fetchCurrentUser();
       fetchOrder();
       fetchOrderItems();
       if (role === 'admin') {
@@ -237,25 +236,32 @@ export default function OrderDetailsView({
     }
   }, [orderId, role]);
 
-  const fetchCurrentUser = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const table = role === 'admin' ? 'admins' : 'clients';
-      const { data: userData, error } = await supabase
-        .from(table)
-        .select('name')
-        .eq('id', user.id)
-        .single();
-
-      if (!error && userData?.name) {
-        setCurrentUserName(userData.name);
+  // Resolve the order CREATOR's display name (not the viewer's).
+  // - If user_id is a client we can read (same company), show their name.
+  // - If user_id is set but not in clients (admin-created), show "Qiqi".
+  // - If user_id is null (creator account deleted), leave blank.
+  useEffect(() => {
+    let cancelled = false;
+    const resolve = async () => {
+      if (!order) return;
+      const userId = (order as any).user_id;
+      if (!userId) {
+        if (!cancelled) setCreatorName('');
+        return;
       }
-    } catch (err) {
-      console.error('Error fetching current user:', err);
-    }
-  };
+      const { data: clientRow } = await supabase
+        .from('clients')
+        .select('name')
+        .eq('id', userId)
+        .maybeSingle();
+      if (cancelled) return;
+      setCreatorName(clientRow?.name || 'Qiqi');
+    };
+    resolve();
+    return () => {
+      cancelled = true;
+    };
+  }, [order]);
 
   const fetchOrder = async () => {
     try {
@@ -914,7 +920,7 @@ export default function OrderDetailsView({
               <label className="text-sm font-medium text-gray-500">Created</label>
               <p className="text-sm text-gray-600">
                 {new Date(order.created_at).toLocaleString()}
-                {currentUserName && ` by ${currentUserName}`}
+                {creatorName && ` by ${creatorName}`}
               </p>
             </div>
           </div>
