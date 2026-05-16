@@ -38,7 +38,27 @@ export async function POST(request: NextRequest) {
     }
 
     const ns = createNetSuiteAPI();
-    const result = await ns.createInvoiceFromSO(order.netsuite_so_id);
+    let result;
+    try {
+      result = await ns.createInvoiceFromSO(order.netsuite_so_id);
+    } catch (e: any) {
+      // If the SO no longer exists in NS (e.g. deleted manually), clear the stale
+      // link so the admin can push the order to NetSuite again.
+      if (e?.message?.includes('NetSuite 404')) {
+        await supabase
+          .from('orders')
+          .update({ netsuite_so_id: null, so_number: null })
+          .eq('id', orderId);
+        return NextResponse.json(
+          {
+            error:
+              'The Sales Order no longer exists in NetSuite. The link has been cleared — refresh the page and click "Push to NetSuite" to recreate it.',
+          },
+          { status: 410 }
+        );
+      }
+      throw e;
+    }
 
     await supabase
       .from('orders')

@@ -28,7 +28,30 @@ export async function POST(request: NextRequest) {
     }
 
     const ns = createNetSuiteAPI();
-    const result = await ns.getInvoiceDetails(order.netsuite_invoice_id);
+    let result;
+    try {
+      result = await ns.getInvoiceDetails(order.netsuite_invoice_id);
+    } catch (e: any) {
+      if (e?.message?.includes('NetSuite 404')) {
+        await supabase
+          .from('orders')
+          .update({
+            netsuite_invoice_id: null,
+            invoice_number: null,
+            netsuite_invoice_date: null,
+            netsuite_invoice_status: null,
+          })
+          .eq('id', orderId);
+        return NextResponse.json(
+          {
+            error:
+              'The invoice no longer exists in NetSuite. The link has been cleared.',
+          },
+          { status: 410 }
+        );
+      }
+      throw e;
+    }
 
     await supabase
       .from('orders')

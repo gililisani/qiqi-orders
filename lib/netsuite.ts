@@ -389,17 +389,29 @@ export class NetSuiteAPI {
   }
 
   // ---------------------------------------------------------------------------
-  // Delete a NetSuite Sales Order by internal ID
+  // Delete a NetSuite Sales Order by internal ID.
+  // Idempotent: 404 (already gone) is treated as success.
   // ---------------------------------------------------------------------------
   async deleteSalesOrder(nsSOId: string): Promise<void> {
-    await this.request(`/record/v1/salesOrder/${nsSOId}`, 'DELETE');
+    try {
+      await this.request(`/record/v1/salesOrder/${nsSOId}`, 'DELETE');
+    } catch (e: any) {
+      if (e?.message?.includes('NetSuite 404')) return;
+      throw e;
+    }
   }
 
   // ---------------------------------------------------------------------------
-  // Delete a NetSuite Invoice by internal ID
+  // Delete a NetSuite Invoice by internal ID.
+  // Idempotent: 404 (already gone) is treated as success.
   // ---------------------------------------------------------------------------
   async deleteInvoice(nsInvoiceId: string): Promise<void> {
-    await this.request(`/record/v1/invoice/${nsInvoiceId}`, 'DELETE');
+    try {
+      await this.request(`/record/v1/invoice/${nsInvoiceId}`, 'DELETE');
+    } catch (e: any) {
+      if (e?.message?.includes('NetSuite 404')) return;
+      throw e;
+    }
   }
 
   // ---------------------------------------------------------------------------
