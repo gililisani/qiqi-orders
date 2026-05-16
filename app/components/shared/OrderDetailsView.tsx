@@ -749,12 +749,12 @@ export default function OrderDetailsView({
                   {nsLoading === 'sync-invoice' ? 'Syncing...' : 'Sync Invoice'}
                 </button>
               )}
-              {nsError && (
-                <span className="text-red-600 text-xs self-center max-w-xs truncate" title={nsError}>
-                  NS error: {nsError}
-                </span>
-              )}
             </>
+          )}
+          {role === 'admin' && nsError && (
+            <div className="basis-full bg-red-50 border border-red-300 text-red-800 px-3 py-2 rounded text-xs font-mono whitespace-pre-wrap break-all">
+              NetSuite error: {nsError}
+            </div>
           )}
 
           {/* Admin: Download 3PL XLSX button (only show when status is In Process+ and SO number exists) */}

@@ -141,13 +141,14 @@ export class NetSuiteAPI {
   // ---------------------------------------------------------------------------
   async resolveItemIdsBySku(skus: string[]): Promise<Map<string, string>> {
     const escaped = skus.map(s => `'${s.replace(/'/g, "''")}'`).join(', ');
-    const rows = await this.suiteQL<{ id: string; custitem_qiqi_sku: string }>(
-      `SELECT id, custitem_qiqi_sku FROM item WHERE custitem_qiqi_sku IN (${escaped})`
+    // itemId is NetSuite's standard SKU field (matches what the CSV import uses)
+    const rows = await this.suiteQL<{ id: string; itemid: string }>(
+      `SELECT id, itemid FROM item WHERE itemid IN (${escaped})`
     );
     const map = new Map<string, string>();
     for (const row of rows) {
-      if (row.custitem_qiqi_sku && row.id) {
-        map.set(row.custitem_qiqi_sku, String(row.id));
+      if (row.itemid && row.id) {
+        map.set(row.itemid, String(row.id));
       }
     }
     return map;
@@ -226,7 +227,7 @@ export class NetSuiteAPI {
     if (order.support_fund_used && order.support_fund_used > 0) {
       // Look up "Partner Discount" item ID
       const discountRows = await this.suiteQL<{ id: string }>(
-        `SELECT id FROM item WHERE itemId = 'Partner Discount'`
+        `SELECT id FROM item WHERE itemid = 'Partner Discount'`
       );
       if (discountRows.length > 0) {
         lineItems.push({
@@ -376,17 +377,17 @@ export class NetSuiteAPI {
       location: string;
       quantityonhand: string;
       quantityavailable: string;
-      custitem_qiqi_sku: string;
+      itemid: string;
     }>(
-      `SELECT il.item, il.location, il.quantityonhand, il.quantityavailable, i.custitem_qiqi_sku
+      `SELECT il.item, il.location, il.quantityonhand, il.quantityavailable, i.itemid
        FROM inventoryBalance il
        JOIN item i ON i.id = il.item
        WHERE il.location = ${locationNsId}
-       AND i.custitem_qiqi_sku IS NOT NULL`
+       AND i.itemid IS NOT NULL`
     );
 
     return rows.map(r => ({
-      sku: r.custitem_qiqi_sku,
+      sku: r.itemid,
       locationId: String(r.location),
       quantityOnHand: parseFloat(r.quantityonhand) || 0,
       quantityAvailable: parseFloat(r.quantityavailable) || 0,
