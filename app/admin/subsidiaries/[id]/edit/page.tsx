@@ -7,6 +7,7 @@ import Link from 'next/link';
 
 interface FormData {
   name: string;
+  netsuite_id: string;
   ship_from_address: string;
   company_address: string;
   phone: string;
@@ -24,6 +25,7 @@ export default function EditSubsidiaryPage() {
   const [error, setError] = useState('');
   const [formData, setFormData] = useState<FormData>({
     name: '',
+    netsuite_id: '',
     ship_from_address: '',
     company_address: '',
     phone: '',
@@ -63,6 +65,7 @@ export default function EditSubsidiaryPage() {
 
       setFormData({
         name: data.name || '',
+        netsuite_id: data.netsuite_id || '',
         ship_from_address: data.ship_from_address || '',
         company_address: data.company_address || '',
         phone: data.phone || '',
@@ -86,6 +89,7 @@ export default function EditSubsidiaryPage() {
         .from('subsidiaries')
         .update({
           name: formData.name,
+          netsuite_id: formData.netsuite_id || null,
           ship_from_address: formData.ship_from_address,
           company_address: formData.company_address,
           phone: formData.phone,
@@ -153,6 +157,20 @@ export default function EditSubsidiaryPage() {
               value={formData.name}
               onChange={handleChange}
               required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              NetSuite Internal ID
+            </label>
+            <input
+              type="text"
+              name="netsuite_id"
+              value={formData.netsuite_id}
+              onChange={handleChange}
+              placeholder="e.g. 3 (from Setup → Company → Subsidiaries, Internal ID column)"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
             />
           </div>

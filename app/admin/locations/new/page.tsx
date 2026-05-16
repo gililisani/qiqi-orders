@@ -7,6 +7,7 @@ import Link from 'next/link';
 interface FormData {
   location_name: string;
   country: string;
+  netsuite_id: string;
 }
 
 export default function NewLocationPage() {
@@ -14,7 +15,8 @@ export default function NewLocationPage() {
   const [error, setError] = useState('');
   const [formData, setFormData] = useState<FormData>({
     location_name: '',
-    country: ''
+    country: '',
+    netsuite_id: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,7 +29,8 @@ export default function NewLocationPage() {
         .from('Locations')
         .insert([{
           location_name: formData.location_name,
-          country: formData.country || null
+          country: formData.country || null,
+          netsuite_id: formData.netsuite_id || null
         }]);
 
       if (error) throw error;
@@ -91,6 +94,20 @@ export default function NewLocationPage() {
                 name="country"
                 value={formData.country}
                 onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                NetSuite Internal ID
+              </label>
+              <input
+                type="text"
+                name="netsuite_id"
+                value={formData.netsuite_id}
+                onChange={handleChange}
+                placeholder="e.g. 5 (from Setup → Company → Locations, Internal ID column)"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               />
             </div>

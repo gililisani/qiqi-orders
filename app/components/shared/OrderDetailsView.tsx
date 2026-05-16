@@ -224,6 +224,8 @@ export default function OrderDetailsView({
   const [savingAdminFields, setSavingAdminFields] = useState<boolean>(false);
   const [editOrderInfoMode, setEditOrderInfoMode] = useState<boolean>(false);
   const [originalStatus, setOriginalStatus] = useState<string>('');
+  const [nsLoading, setNsLoading] = useState<string | null>(null); // 'push-so' | 'create-invoice' | 'sync-invoice'
+  const [nsError, setNsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (orderId) {
@@ -612,6 +614,25 @@ export default function OrderDetailsView({
 
   // `handleDownload3PLXLSX` moved into controller
 
+  const handleNsAction = async (action: 'push-so' | 'create-invoice' | 'sync-invoice') => {
+    setNsLoading(action);
+    setNsError(null);
+    try {
+      const res = await fetchWithAuth(`/api/netsuite/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+      await fetchOrder();
+    } catch (err: any) {
+      setNsError(err.message);
+    } finally {
+      setNsLoading(null);
+    }
+  };
+
   // `handleDeleteOrder` moved into controller
 
 
@@ -698,6 +719,42 @@ export default function OrderDetailsView({
             >
               Download CSV
             </button>
+          )}
+
+          {/* Admin: NetSuite buttons */}
+          {role === 'admin' && order?.status !== 'Draft' && (
+            <>
+              {!(order as any)?.netsuite_so_id ? (
+                <button
+                  onClick={() => handleNsAction('push-so')}
+                  disabled={nsLoading === 'push-so'}
+                  className="bg-orange-600 text-white px-4 py-2 hover:bg-orange-700 transition disabled:opacity-50 text-sm"
+                >
+                  {nsLoading === 'push-so' ? 'Pushing...' : 'Push to NetSuite'}
+                </button>
+              ) : !(order as any)?.netsuite_invoice_id ? (
+                <button
+                  onClick={() => handleNsAction('create-invoice')}
+                  disabled={nsLoading === 'create-invoice'}
+                  className="bg-orange-600 text-white px-4 py-2 hover:bg-orange-700 transition disabled:opacity-50 text-sm"
+                >
+                  {nsLoading === 'create-invoice' ? 'Creating...' : 'Create NS Invoice'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleNsAction('sync-invoice')}
+                  disabled={nsLoading === 'sync-invoice'}
+                  className="bg-orange-500 text-white px-4 py-2 hover:bg-orange-600 transition disabled:opacity-50 text-sm"
+                >
+                  {nsLoading === 'sync-invoice' ? 'Syncing...' : 'Sync Invoice'}
+                </button>
+              )}
+              {nsError && (
+                <span className="text-red-600 text-xs self-center max-w-xs truncate" title={nsError}>
+                  NS error: {nsError}
+                </span>
+              )}
+            </>
           )}
 
           {/* Admin: Download 3PL XLSX button (only show when status is In Process+ and SO number exists) */}

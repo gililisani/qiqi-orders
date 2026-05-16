@@ -8,6 +8,7 @@ import Link from 'next/link';
 interface FormData {
   company_name: string;
   netsuite_number: string;
+  netsuite_internal_id: string;
   support_fund_id: string;
   subsidiary_id: string;
   class_id: string;
@@ -87,6 +88,7 @@ export default function EditCompanyPage() {
   const [formData, setFormData] = useState<FormData>({
     company_name: '',
     netsuite_number: '',
+    netsuite_internal_id: '',
     support_fund_id: '',
     subsidiary_id: '',
     class_id: '',
@@ -180,6 +182,7 @@ export default function EditCompanyPage() {
       setFormData({
         company_name: data.company_name || '',
         netsuite_number: data.netsuite_number || '',
+        netsuite_internal_id: data.netsuite_internal_id || '',
         support_fund_id: data.support_fund_id || '',
         subsidiary_id: data.subsidiary_id || '',
         class_id: data.class_id || '',
@@ -268,6 +271,7 @@ export default function EditCompanyPage() {
         .update({
           company_name: formData.company_name,
           netsuite_number: formData.netsuite_number,
+          netsuite_internal_id: formData.netsuite_internal_id || null,
           support_fund_id: formData.support_fund_id || null,
           subsidiary_id: formData.subsidiary_id || null,
           class_id: formData.class_id || null,
@@ -688,6 +692,20 @@ export default function EditCompanyPage() {
                 value={formData.netsuite_number}
                 onChange={handleChange}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                NetSuite Internal ID
+              </label>
+              <input
+                type="text"
+                name="netsuite_internal_id"
+                value={formData.netsuite_internal_id}
+                onChange={handleChange}
+                placeholder="e.g. 2023 (from Lists → Relationships → Customers)"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               />
             </div>

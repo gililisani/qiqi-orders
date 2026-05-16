@@ -14,41 +14,19 @@ export default function NetSuitePage() {
   }, []);
 
   const checkConnection = async () => {
+    setConnectionStatus('checking');
     try {
-      const response = await fetch('/api/netsuite/products/sync');
+      const { fetchWithAuth } = await import('../../../lib/fetchWithAuth');
+      const response = await fetchWithAuth('/api/netsuite/test-connection');
       const data = await response.json();
       setConnectionStatus(data.connected ? 'connected' : 'disconnected');
-    } catch (error) {
+    } catch {
       setConnectionStatus('disconnected');
     }
   };
 
-  const syncProducts = async () => {
-    setSyncInProgress(true);
-    setSyncResults(null);
-    
-    try {
-      const response = await fetch('/api/netsuite/products/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      const data = await response.json();
-      setSyncResults(data);
-      setLastSync(new Date().toLocaleString());
-      
-      if (data.success) {
-        // Refresh the page to show updated products
-        window.location.reload();
-      }
-    } catch (error) {
-      setSyncResults({ error: 'Failed to sync products' });
-    } finally {
-      setSyncInProgress(false);
-    }
-  };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const syncProducts = async () => {};
 
   return (
     <div className="mt-8 mb-4 space-y-6">
@@ -85,47 +63,18 @@ export default function NetSuitePage() {
           </div>
         </div>
 
-        {/* Product Sync */}
+        {/* Inventory Sync */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Product Synchronization</h2>
-          <p className="text-gray-600 mb-4">
-            Sync products from NetSuite to your local database. This will update existing products and add new ones.
+          <h2 className="text-lg font-semibold mb-2">Inventory Sync</h2>
+          <p className="text-gray-600 mb-4 text-sm">
+            Pull current inventory levels from NetSuite by location and view them in the Hub.
           </p>
-          
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={syncProducts}
-              disabled={syncInProgress || connectionStatus === 'disconnected'}
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
-            >
-              {syncInProgress ? 'Syncing...' : 'Sync Products from NetSuite'}
-            </button>
-            
-            {lastSync && (
-              <span className="text-sm text-gray-500">
-                Last sync: {lastSync}
-              </span>
-            )}
-          </div>
-
-          {syncResults && (
-            <div className={`mt-4 p-4 rounded ${
-              syncResults.success ? 'bg-green-100 border border-green-400 text-green-700' :
-              'bg-red-100 border border-red-400 text-red-700'
-            }`}>
-              <h3 className="font-semibold mb-2">
-                {syncResults.success ? 'Sync Completed' : 'Sync Failed'}
-              </h3>
-              <p className="text-sm">{syncResults.message}</p>
-              {syncResults.results && (
-                <div className="mt-2 text-sm">
-                  <p>Created: {syncResults.results.created}</p>
-                  <p>Updated: {syncResults.results.updated}</p>
-                  <p>Errors: {syncResults.results.errors}</p>
-                </div>
-              )}
-            </div>
-          )}
+          <Link
+            href="/admin/inventory"
+            className="inline-block bg-black text-white px-4 py-2 rounded hover:opacity-90 transition text-sm"
+          >
+            Go to Inventory Sync →
+          </Link>
         </div>
 
         {/* Configuration Help */}
