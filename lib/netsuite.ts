@@ -187,9 +187,12 @@ export class NetSuiteAPI {
       );
     }
 
-    // Resolve item internal IDs by SKU
-    const regularItems = order.order_items.filter(i => !i.is_support_fund_item);
-    const skus = regularItems.map(i => i.product.sku);
+    // Resolve item internal IDs by SKU — include ALL items (regular + support-fund-tab
+    // items) since they share SKUs and must be merged into single NS lines, matching
+    // the CSV export logic. The support fund discount is applied as a separate
+    // negative "Partner Discount" line below.
+    const allItems = order.order_items;
+    const skus = Array.from(new Set(allItems.map(i => i.product.sku)));
     const skuToId = await this.resolveItemIdsBySku(skus);
 
     const missingSkus = skus.filter(s => !skuToId.has(s));
@@ -199,9 +202,9 @@ export class NetSuiteAPI {
       );
     }
 
-    // Consolidate duplicate SKUs (same as CSV export)
+    // Consolidate duplicate SKUs by (sku, unit_price) — same as CSV export
     const consolidated = new Map<string, { nsItemId: string; quantity: number; rate: number }>();
-    for (const item of regularItems) {
+    for (const item of allItems) {
       const key = `${item.product.sku}_${item.unit_price}`;
       if (consolidated.has(key)) {
         consolidated.get(key)!.quantity += item.quantity;
@@ -223,20 +226,22 @@ export class NetSuiteAPI {
       });
     }
 
-    // Support fund discount line
+    // Support fund discount line — single negative-rate line, matches CSV export
     if (order.support_fund_used && order.support_fund_used > 0) {
-      // Look up "Partner Discount" item ID
       const discountRows = await this.suiteQL<{ id: string }>(
         `SELECT id FROM item WHERE itemid = 'Partner Discount'`
       );
-      if (discountRows.length > 0) {
-        lineItems.push({
-          item: { id: String(discountRows[0].id) },
-          quantity: 1,
-          rate: -order.support_fund_used,
-          description: 'Distributor Support Fund',
-        });
+      if (discountRows.length === 0) {
+        throw new Error(
+          'Order uses support funds but no item named "Partner Discount" exists in NetSuite. Create it as a Discount or Other Charge item.'
+        );
       }
+      lineItems.push({
+        item: { id: String(discountRows[0].id) },
+        quantity: 1,
+        rate: -order.support_fund_used,
+        description: 'Distributor Support Fund',
+      });
     }
 
     const subsidiaryName = company.subsidiary.name;
