@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 export default function NetSuitePage() {
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [syncInProgress, setSyncInProgress] = useState(false);
   const [syncResults, setSyncResults] = useState<any>(null);
@@ -15,13 +16,16 @@ export default function NetSuitePage() {
 
   const checkConnection = async () => {
     setConnectionStatus('checking');
+    setConnectionError(null);
     try {
       const { fetchWithAuth } = await import('../../../lib/fetchWithAuth');
       const response = await fetchWithAuth('/api/netsuite/test-connection');
       const data = await response.json();
       setConnectionStatus(data.connected ? 'connected' : 'disconnected');
-    } catch {
+      if (!data.connected && data.error) setConnectionError(data.error);
+    } catch (err: any) {
       setConnectionStatus('disconnected');
+      setConnectionError(err?.message || 'Network error');
     }
   };
 
@@ -61,6 +65,11 @@ export default function NetSuitePage() {
               Refresh
             </button>
           </div>
+          {connectionError && (
+            <div className="mt-3 bg-red-50 border border-red-300 text-red-800 px-3 py-2 rounded text-xs font-mono whitespace-pre-wrap break-all">
+              {connectionError}
+            </div>
+          )}
         </div>
 
         {/* Inventory Sync */}
