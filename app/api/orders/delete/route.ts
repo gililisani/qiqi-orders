@@ -8,12 +8,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { createServiceRoleClient, requireAnyRole } from '../../../../platform/auth/guards';
-
-// Initialize Supabase client with service role
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { createNetSuiteAPI } from '../../../../lib/netsuite';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -22,32 +18,28 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('orderId');
 
-    // Validate input
     if (!orderId) {
-      return NextResponse.json(
-        { error: 'Order ID is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
     }
 
     const supabase = createServiceRoleClient();
 
-    // Fetch order to check status and ownership
+    // Fetch order including NetSuite linkage
     const { data: order, error: fetchError } = await supabase
       .from('orders')
-      .select('status, company_id, user_id')
+      .select('status, company_id, user_id, netsuite_so_id, netsuite_invoice_id')
       .eq('id', orderId)
       .single();
 
     if (fetchError || !order) {
-      return NextResponse.json(
-        { error: 'Order not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    // Authorization: admin can delete any allowed-status order; client can delete only within their company (and their own drafts)
-    if (!user.roles.includes('admin')) {
+    const isAdmin = user.roles.includes('admin');
+    const hasNsLink = !!(order.netsuite_so_id || order.netsuite_invoice_id);
+
+    // Authorization
+    if (!isAdmin) {
       const { data: clientRow, error: clientError } = await supabase
         .from('clients')
         .select('company_id')
@@ -57,18 +49,68 @@ export async function DELETE(request: NextRequest) {
       if (!clientRow || clientRow.company_id !== order.company_id) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
-      // Preserve safe behavior: clients can only delete their own Draft orders
       if (order.status === 'Draft' && order.user_id !== user.id) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
+      // Clients can only ever delete their own Draft orders, never NS-linked ones
+      if (hasNsLink || order.status !== 'Draft') {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
     }
 
-    // Only allow deletion of Cancelled or Draft orders
-    if (order.status !== 'Cancelled' && order.status !== 'Draft') {
-      return NextResponse.json(
-        { error: `Cannot delete order with status "${order.status}". Only Cancelled or Draft orders can be deleted.` },
-        { status: 403 }
-      );
+    // Status rules:
+    // - Without NS link: must be Cancelled or Draft (legacy behavior)
+    // - With NS link: admin can delete any status, but NS records must come down too,
+    //   and a Customer Payment in NS blocks deletion entirely.
+    if (!hasNsLink) {
+      if (order.status !== 'Cancelled' && order.status !== 'Draft') {
+        return NextResponse.json(
+          { error: `Cannot delete order with status "${order.status}". Only Cancelled or Draft orders can be deleted.` },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Admin-only beyond this point
+      if (!isAdmin) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
+
+      const ns = createNetSuiteAPI();
+
+      // Block if the invoice has any Customer Payment applied
+      if (order.netsuite_invoice_id) {
+        const paymentIds = await ns.getInvoicePayments(order.netsuite_invoice_id);
+        if (paymentIds.length > 0) {
+          return NextResponse.json(
+            {
+              error: `Cannot delete: NetSuite invoice ${order.netsuite_invoice_id} has ${paymentIds.length} payment(s) applied. Reverse the payment in NetSuite first.`,
+            },
+            { status: 409 }
+          );
+        }
+
+        // Delete invoice in NS
+        try {
+          await ns.deleteInvoice(order.netsuite_invoice_id);
+        } catch (e: any) {
+          return NextResponse.json(
+            { error: `Failed to delete NetSuite invoice: ${e.message}` },
+            { status: 500 }
+          );
+        }
+      }
+
+      // Delete SO in NS
+      if (order.netsuite_so_id) {
+        try {
+          await ns.deleteSalesOrder(order.netsuite_so_id);
+        } catch (e: any) {
+          return NextResponse.json(
+            { error: `Failed to delete NetSuite Sales Order: ${e.message}` },
+            { status: 500 }
+          );
+        }
+      }
     }
 
     // Delete related records in order (to avoid foreign key constraints)

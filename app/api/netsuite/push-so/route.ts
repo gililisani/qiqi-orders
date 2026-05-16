@@ -56,12 +56,13 @@ export async function POST(request: NextRequest) {
     const ns = createNetSuiteAPI();
     const { nsSOId, soNumber } = await ns.pushOrderToNetSuite(order as any);
 
-    // Write SO ID and SO number back to the Hub order
+    // Write SO ID + number back, and advance status to "In Process"
     const { error: updateError } = await supabase
       .from('orders')
       .update({
         netsuite_so_id: nsSOId,
         so_number: soNumber,
+        status: 'In Process',
       })
       .eq('id', orderId);
 
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
     await supabase.from('order_history').insert([{
       order_id: orderId,
       status_from: order.status,
-      status_to: order.status,
+      status_to: 'In Process',
       notes: `NetSuite Sales Order created: ${soNumber}`,
       changed_by_name: 'System',
       changed_by_role: 'admin',

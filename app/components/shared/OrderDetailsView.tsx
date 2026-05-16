@@ -797,9 +797,12 @@ export default function OrderDetailsView({
             </>
           )}
           
-          {/* Delete button for Cancelled orders (Admin only) or Draft orders (Both) */}
-          {/* Use originalStatus (saved status) instead of order.status (UI state) */}
-          {((role === 'admin' && originalStatus === 'Cancelled') || originalStatus === 'Draft') && (
+          {/* Delete button:
+              - Admin can delete any NetSuite-linked order (the API will cascade NS deletes,
+                and block if a Customer Payment is applied in NS)
+              - Admin can also delete Cancelled orders without NS link
+              - Both roles can delete Draft orders (legacy behavior) */}
+          {((role === 'admin' && ((order as any)?.netsuite_so_id || (order as any)?.netsuite_invoice_id || originalStatus === 'Cancelled')) || originalStatus === 'Draft') && (
             <button
               onClick={handleDeleteOrder}
               disabled={saving}
@@ -872,11 +875,19 @@ export default function OrderDetailsView({
                           : 'bg-gray-100 text-gray-800'
                       }`}
                     >
-                      {statusOptions.map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
+                      {statusOptions
+                        .filter(option => {
+                          // Once a NetSuite SO exists, can't roll back to Open or Cancel
+                          if ((order as any)?.netsuite_so_id && (option.value === 'Open' || option.value === 'Cancelled')) {
+                            return option.value === order.status;
+                          }
+                          return true;
+                        })
+                        .map(option => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
                     </select>
                   ) : (
                     <OrderStatusBadge status={order.status} />

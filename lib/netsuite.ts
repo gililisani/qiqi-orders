@@ -374,6 +374,35 @@ export class NetSuiteAPI {
   }
 
   // ---------------------------------------------------------------------------
+  // Check if an invoice has any payments applied (Customer Payments)
+  // Returns the list of payment internal IDs, empty array if none.
+  // ---------------------------------------------------------------------------
+  async getInvoicePayments(nsInvoiceId: string): Promise<string[]> {
+    const rows = await this.suiteQL<{ id: string }>(
+      `SELECT DISTINCT t.id
+       FROM transaction t
+       JOIN nexttransactionlink ntl ON ntl.nextdoc = t.id
+       WHERE ntl.previousdoc = ${nsInvoiceId}
+       AND t.type = 'CustPymt'`
+    );
+    return rows.map(r => String(r.id));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Delete a NetSuite Sales Order by internal ID
+  // ---------------------------------------------------------------------------
+  async deleteSalesOrder(nsSOId: string): Promise<void> {
+    await this.request(`/record/v1/salesOrder/${nsSOId}`, 'DELETE');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Delete a NetSuite Invoice by internal ID
+  // ---------------------------------------------------------------------------
+  async deleteInvoice(nsInvoiceId: string): Promise<void> {
+    await this.request(`/record/v1/invoice/${nsInvoiceId}`, 'DELETE');
+  }
+
+  // ---------------------------------------------------------------------------
   // Inventory sync — returns on-hand quantities by location
   // locationNsId: the NS internal ID of the location (from Locations.netsuite_id)
   // ---------------------------------------------------------------------------

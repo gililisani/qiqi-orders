@@ -47,13 +47,14 @@ export async function POST(request: NextRequest) {
         invoice_number: result.invoiceNumber,
         netsuite_invoice_date: result.invoiceDate,
         netsuite_invoice_status: result.status,
+        status: 'Ready',
       })
       .eq('id', orderId);
 
     await supabase.from('order_history').insert([{
       order_id: orderId,
       status_from: order.status,
-      status_to: order.status,
+      status_to: 'Ready',
       notes: `NetSuite Invoice created: ${result.invoiceNumber}`,
       changed_by_name: 'System',
       changed_by_role: 'admin',

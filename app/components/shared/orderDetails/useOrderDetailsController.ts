@@ -498,21 +498,34 @@ export function useOrderDetailsController(params: {
   }, [orderId, role, supabase]);
 
   const handleDeleteOrder = useCallback(async () => {
-    // Use originalStatus (saved status) to check deletion eligibility
-    if (originalStatus !== 'Cancelled' && originalStatus !== 'Draft') {
-      alert('Only Cancelled or Draft orders can be deleted.');
-      return;
-    }
+    const nsSoId = (order as any)?.netsuite_so_id as string | null;
+    const nsInvoiceId = (order as any)?.netsuite_invoice_id as string | null;
+    const hasNsLink = !!(nsSoId || nsInvoiceId);
 
-    // Only admins can delete Cancelled orders; both can delete Draft
-    if (originalStatus === 'Cancelled' && role !== 'admin') {
-      alert('Only admins can delete cancelled orders.');
-      return;
-    }
-
-    const confirmMessage = `Are you sure you want to delete this ${originalStatus} order? This action cannot be undone.`;
-    if (!confirm(confirmMessage)) {
-      return;
+    if (hasNsLink) {
+      if (role !== 'admin') {
+        alert('Only admins can delete NetSuite-linked orders.');
+        return;
+      }
+      const parts: string[] = [];
+      if (nsInvoiceId) parts.push(`NetSuite Invoice (ID ${nsInvoiceId})`);
+      if (nsSoId) parts.push(`NetSuite Sales Order (ID ${nsSoId})`);
+      const confirmMessage =
+        `This order is linked to NetSuite. Deleting it will also delete the following from NetSuite:\n\n` +
+        parts.map(p => `  • ${p}`).join('\n') +
+        `\n\nIf the invoice has any payment applied in NetSuite, deletion will be blocked.\n\nProceed?`;
+      if (!confirm(confirmMessage)) return;
+    } else {
+      if (originalStatus !== 'Cancelled' && originalStatus !== 'Draft') {
+        alert('Only Cancelled or Draft orders can be deleted.');
+        return;
+      }
+      if (originalStatus === 'Cancelled' && role !== 'admin') {
+        alert('Only admins can delete cancelled orders.');
+        return;
+      }
+      const confirmMessage = `Are you sure you want to delete this ${originalStatus} order? This action cannot be undone.`;
+      if (!confirm(confirmMessage)) return;
     }
 
     try {
@@ -537,7 +550,7 @@ export function useOrderDetailsController(params: {
     } finally {
       setSaving(false);
     }
-  }, [backUrl, orderId, originalStatus, role, setSaving]);
+  }, [backUrl, order, orderId, originalStatus, role, setSaving]);
 
   return {
     handleCreatePackingSlip,
