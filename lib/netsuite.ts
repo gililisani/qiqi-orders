@@ -228,12 +228,14 @@ export class NetSuiteAPI {
 
     // Support fund discount line — single negative-rate line, matches CSV export
     if (order.support_fund_used && order.support_fund_used > 0) {
-      const discountRows = await this.suiteQL<{ id: string }>(
-        `SELECT id FROM item WHERE itemid = 'Partner Discount'`
+      // Case-insensitive search across all item types (item, discountitem, otherchargeitem...)
+      const discountRows = await this.suiteQL<{ id: string; itemid: string }>(
+        `SELECT id, itemid FROM item WHERE LOWER(itemid) = 'partner discount'`
       );
       if (discountRows.length === 0) {
         throw new Error(
-          'Order uses support funds but no item named "Partner Discount" exists in NetSuite. Create it as a Discount or Other Charge item.'
+          'Order uses support funds but no item named "Partner Discount" was found in NetSuite via SuiteQL. ' +
+          'The item may exist but be invisible to the integration role — check the role has permission to view Discount Items (Lists → Items).'
         );
       }
       lineItems.push({
