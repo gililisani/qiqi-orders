@@ -1,6 +1,9 @@
 import { useCallback } from 'react';
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import { build3PLExportPayload, build3PLFilename, getStatusChangeEmailType } from './orderDetailsUtils';
+import { useConfirm } from '../../ui/ConfirmProvider';
+import { useToast } from '../../ui/ToastProvider';
+import { salesOrderUrl, invoiceUrl } from '../../../../lib/netsuiteUrls';
 
 export function useOrderDetailsController(params: {
   supabase: any;
@@ -95,6 +98,9 @@ export function useOrderDetailsController(params: {
     createAutomaticPackingSlip,
     sendNotification,
   } = params;
+
+  const confirm = useConfirm();
+  const toast = useToast();
 
   const handleCreatePackingSlip = useCallback(async () => {
     try {
@@ -389,16 +395,16 @@ export function useOrderDetailsController(params: {
       if (data.success) {
         setShowSendEmailModal(false);
         setCustomEmailMessage('');
-        alert('Email sent successfully!');
+        toast.success('Email sent.');
       } else {
-        alert(`Failed to send email: ${data.error}`);
+        toast.error(`Failed to send email: ${data.error}`);
       }
     } catch (err: any) {
-      alert(`Error sending email: ${err.message}`);
+      toast.error(`Error sending email: ${err.message}`);
     } finally {
       setSendingNotification(false);
     }
-  }, [customEmailMessage, order, setCustomEmailMessage, setSendingNotification, setShowSendEmailModal]);
+  }, [customEmailMessage, order, setCustomEmailMessage, setSendingNotification, setShowSendEmailModal, toast]);
 
   const handleDownloadCSV = useCallback(async () => {
     try {
@@ -444,9 +450,9 @@ export function useOrderDetailsController(params: {
       downloadCSV(csvContent, filename);
     } catch (err) {
       console.error('CSV error', err);
-      alert('Failed to export CSV.');
+      toast.error('Failed to export CSV.');
     }
-  }, [orderId, role, supabase]);
+  }, [orderId, role, supabase, toast]);
 
   const handleDownload3PLXLSX = useCallback(async () => {
     try {
@@ -493,40 +499,68 @@ export function useOrderDetailsController(params: {
       download3PLXLSX(xlsxBuffer, filename);
     } catch (err: any) {
       console.error('3PL XLSX error:', err);
-      alert(`Failed to export 3PL XLSX: ${err.message}`);
+      toast.error(`Failed to export 3PL XLSX: ${err.message}`);
     }
-  }, [orderId, role, supabase]);
+  }, [orderId, role, supabase, toast]);
 
   const handleDeleteOrder = useCallback(async () => {
     const nsSoId = (order as any)?.netsuite_so_id as string | null;
     const nsInvoiceId = (order as any)?.netsuite_invoice_id as string | null;
+    const nsSoNumber = (order as any)?.so_number as string | null;
+    const nsInvoiceNumber = (order as any)?.invoice_number as string | null;
     const hasNsLink = !!(nsSoId || nsInvoiceId);
+
+    let proceed: boolean;
 
     if (hasNsLink) {
       if (role !== 'admin') {
-        alert('Only admins can delete NetSuite-linked orders.');
+        toast.error('Only admins can delete NetSuite-linked orders.');
         return;
       }
-      const parts: string[] = [];
-      if (nsInvoiceId) parts.push(`NetSuite Invoice (ID ${nsInvoiceId})`);
-      if (nsSoId) parts.push(`NetSuite Sales Order (ID ${nsSoId})`);
-      const confirmMessage =
-        `This order is linked to NetSuite. Deleting it will also delete the following from NetSuite:\n\n` +
-        parts.map(p => `  • ${p}`).join('\n') +
-        `\n\nIf the invoice has any payment applied in NetSuite, deletion will be blocked.\n\nProceed?`;
-      if (!confirm(confirmMessage)) return;
+      const bullets: Array<{ label: string; href?: string }> = [];
+      if (nsInvoiceId) {
+        const url = invoiceUrl(nsInvoiceId);
+        bullets.push({
+          label: `NetSuite Invoice ${nsInvoiceNumber || `(ID ${nsInvoiceId})`}`,
+          href: url || undefined,
+        });
+      }
+      if (nsSoId) {
+        const url = salesOrderUrl(nsSoId);
+        bullets.push({
+          label: `NetSuite Sales Order ${nsSoNumber || `(ID ${nsSoId})`}`,
+          href: url || undefined,
+        });
+      }
+
+      proceed = await confirm({
+        title: 'Delete order and NetSuite records?',
+        description: 'This order is linked to NetSuite. Deleting it will also delete the following records from NetSuite:',
+        bullets,
+        warning: 'If the invoice has any payment applied in NetSuite, deletion will be blocked and you\'ll need to reverse the payment first.',
+        confirmLabel: 'Delete from Hub + NetSuite',
+        cancelLabel: 'Cancel',
+        variant: 'danger',
+        requireExplicitConfirm: true,
+      });
     } else {
       if (originalStatus !== 'Cancelled' && originalStatus !== 'Draft') {
-        alert('Only Cancelled or Draft orders can be deleted.');
+        toast.error('Only Cancelled or Draft orders can be deleted.');
         return;
       }
       if (originalStatus === 'Cancelled' && role !== 'admin') {
-        alert('Only admins can delete cancelled orders.');
+        toast.error('Only admins can delete cancelled orders.');
         return;
       }
-      const confirmMessage = `Are you sure you want to delete this ${originalStatus} order? This action cannot be undone.`;
-      if (!confirm(confirmMessage)) return;
+      proceed = await confirm({
+        title: `Delete ${originalStatus} order?`,
+        description: 'This action cannot be undone.',
+        confirmLabel: 'Delete Order',
+        variant: 'danger',
+      });
     }
+
+    if (!proceed) return;
 
     try {
       setSaving(true);
@@ -541,16 +575,15 @@ export function useOrderDetailsController(params: {
         throw new Error(result.error || 'Failed to delete order');
       }
 
-      alert('Order deleted successfully');
-      // Redirect to orders list
+      toast.success('Order deleted.');
       window.location.href = backUrl;
     } catch (err: any) {
       console.error('Error deleting order:', err);
-      alert(err.message || 'Failed to delete order');
+      toast.error(err.message || 'Failed to delete order');
     } finally {
       setSaving(false);
     }
-  }, [backUrl, order, orderId, originalStatus, role, setSaving]);
+  }, [backUrl, confirm, order, orderId, originalStatus, role, setSaving, toast]);
 
   return {
     handleCreatePackingSlip,

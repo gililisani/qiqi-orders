@@ -4,6 +4,8 @@ import { Inter } from 'next/font/google';
 import { createServerSupabase } from '../lib/supabase-server';
 import { SupabaseProvider } from '../lib/supabase-provider';
 import MaterialThemeProvider from './components/ThemeProvider';
+import ToastProvider from './components/ui/ToastProvider';
+import ConfirmProvider from './components/ui/ConfirmProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -35,7 +37,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={inter.className}>
         <SupabaseProvider session={session}>
           <MaterialThemeProvider>
-            {children}
+            <ToastProvider>
+              <ConfirmProvider>
+                {children}
+              </ConfirmProvider>
+            </ToastProvider>
           </MaterialThemeProvider>
         </SupabaseProvider>
       </body>

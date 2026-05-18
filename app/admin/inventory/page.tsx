@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
+import { useToast } from '../../components/ui/ToastProvider';
 
 interface Location {
   id: string;
@@ -18,11 +19,10 @@ interface InventoryItem {
 }
 
 export default function InventorySyncPage() {
+  const toast = useToast();
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const [syncError, setSyncError] = useState<string | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loadingInventory, setLoadingInventory] = useState(false);
 
@@ -50,8 +50,6 @@ export default function InventorySyncPage() {
 
   const handleLocationChange = (id: string) => {
     setSelectedLocationId(id);
-    setSyncMessage(null);
-    setSyncError(null);
     setInventory([]);
     if (id) loadInventory(id);
   };
@@ -59,8 +57,6 @@ export default function InventorySyncPage() {
   const handleSync = async () => {
     if (!selectedLocationId) return;
     setSyncing(true);
-    setSyncMessage(null);
-    setSyncError(null);
     try {
       const res = await fetchWithAuth('/api/netsuite/sync-inventory', {
         method: 'POST',
@@ -69,10 +65,10 @@ export default function InventorySyncPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
-      setSyncMessage(data.message);
+      toast.success(data.message || 'Inventory synced from NetSuite.');
       await loadInventory(selectedLocationId);
     } catch (err: any) {
-      setSyncError(err.message);
+      toast.error(err.message);
     } finally {
       setSyncing(false);
     }
@@ -115,17 +111,6 @@ export default function InventorySyncPage() {
           {syncing ? 'Syncing from NetSuite...' : 'Sync Now'}
         </button>
       </div>
-
-      {syncMessage && (
-        <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded mb-4 text-sm">
-          {syncMessage}
-        </div>
-      )}
-      {syncError && (
-        <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded mb-4 text-sm">
-          {syncError}
-        </div>
-      )}
 
       {selectedLocationId && (
         <div>

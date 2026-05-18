@@ -13,6 +13,8 @@ import OrderStatusBadge from '../ui/OrderStatusBadge';
 import { formatCurrency, formatQuantity } from '../../../lib/formatters';
 import CreateSLIModal from '../modals/CreateSLIModal';
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
+import { useToast } from '../ui/ToastProvider';
+import { salesOrderUrl, invoiceUrl } from '../../../lib/netsuiteUrls';
 import {
   getActualRecipientEmail as getActualRecipientEmailUtil,
   validateRequiredFieldsForStatus,
@@ -120,6 +122,7 @@ export default function OrderDetailsView({
   packingSlipUrl
 }: OrderDetailsViewProps) {
   const { supabase } = useSupabase();
+  const toast = useToast();
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
@@ -225,7 +228,6 @@ export default function OrderDetailsView({
   const [editOrderInfoMode, setEditOrderInfoMode] = useState<boolean>(false);
   const [originalStatus, setOriginalStatus] = useState<string>('');
   const [nsLoading, setNsLoading] = useState<string | null>(null); // 'push-so' | 'create-invoice' | 'sync-invoice'
-  const [nsError, setNsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (orderId) {
@@ -616,7 +618,6 @@ export default function OrderDetailsView({
 
   const handleNsAction = async (action: 'push-so' | 'create-invoice' | 'sync-invoice') => {
     setNsLoading(action);
-    setNsError(null);
     try {
       const res = await fetchWithAuth(`/api/netsuite/${action}`, {
         method: 'POST',
@@ -625,9 +626,26 @@ export default function OrderDetailsView({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+
+      if (action === 'push-so') {
+        const url = salesOrderUrl(data.nsSOId);
+        toast.success(
+          `Sales Order ${data.soNumber} created in NetSuite. Status moved to "In Process".`,
+          url ? { href: { url, label: 'View in NetSuite' } } : undefined
+        );
+      } else if (action === 'create-invoice') {
+        const url = invoiceUrl(data.nsInvoiceId);
+        toast.success(
+          `Invoice ${data.invoiceNumber} created in NetSuite. Status moved to "Ready".`,
+          url ? { href: { url, label: 'View in NetSuite' } } : undefined
+        );
+      } else {
+        toast.success(`Invoice synced from NetSuite (status: ${data.status}).`);
+      }
+
       await fetchOrder();
     } catch (err: any) {
-      setNsError(err.message);
+      toast.error(err.message || 'NetSuite request failed.');
     } finally {
       setNsLoading(null);
     }
@@ -750,11 +768,6 @@ export default function OrderDetailsView({
                 </button>
               )}
             </>
-          )}
-          {role === 'admin' && nsError && (
-            <div className="basis-full bg-red-50 border border-red-300 text-red-800 px-3 py-2 rounded text-xs font-mono whitespace-pre-wrap break-all">
-              NetSuite error: {nsError}
-            </div>
           )}
 
           {/* Admin: Download 3PL XLSX button (only show when status is In Process+ and SO number exists) */}
