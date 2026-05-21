@@ -1,16 +1,18 @@
 # ABC P3rman3nt brand font
 
-Drop the brand font files in this directory. Expected filenames (referenced
-from `app/globals.css` via `@font-face`):
+Drop the brand font files in this directory. Expected filenames
+(referenced from `app/globals.css` via `@font-face`):
 
-- `ABCP3rman3nt-Regular.woff2`  (weight 400)
-- `ABCP3rman3nt-Medium.woff2`   (weight 500)
-- `ABCP3rman3nt-Bold.woff2`     (weight 700)
+- `ABCP3rman3nt-Book.woff2`  →  used for weights 400–600 (body, medium, semibold)
+- `ABCP3rman3nt-Bold.woff2`  →  used for weights 700+ (headings, emphasis)
 
-If you have different weights or filenames, either rename the files to match
-or update the `@font-face` blocks in `app/globals.css` accordingly.
+If your files are `.otf` or `.ttf`, convert them to `.woff2` at
+[transfonter.org](https://transfonter.org/) (free, runs in the browser, no upload to any server).
 
-Until these files are present, the UI falls back to Inter (loaded from Google
-Fonts in the same stylesheet).
+If your file naming differs (e.g. `ABC-P3rman3nt-Book.woff2` with hyphens
+or spaces), either rename to match the above or update the @font-face
+blocks in `app/globals.css`.
+
+Until these files are present, the UI falls back to Inter automatically.
 
 Note: these files are licensed assets — do not redistribute outside this repo.

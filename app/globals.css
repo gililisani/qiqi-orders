@@ -11,24 +11,20 @@
  * Until they're uploaded, --font-display falls back to Inter (loaded above).
  * ----------------------------------------------------------------------------
  */
+/* ABC P3rman3nt — Qiqi has Book + Bold only.
+   Browsers will synthesize medium/semibold weights from these two, which
+   is fine for a brand-led design where headings are bold and body is book. */
 @font-face {
   font-family: 'ABC P3rman3nt';
-  src: url('/fonts/abc-p3rman3nt/ABCP3rman3nt-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'ABC P3rman3nt';
-  src: url('/fonts/abc-p3rman3nt/ABCP3rman3nt-Medium.woff2') format('woff2');
-  font-weight: 500;
+  src: url('/fonts/abc-p3rman3nt/ABCP3rman3nt-Book.woff2') format('woff2');
+  font-weight: 400 600;   /* covers font-normal, medium, semibold */
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'ABC P3rman3nt';
   src: url('/fonts/abc-p3rman3nt/ABCP3rman3nt-Bold.woff2') format('woff2');
-  font-weight: 700;
+  font-weight: 700 900;   /* covers font-bold and heavier */
   font-style: normal;
   font-display: swap;
 }
