@@ -147,7 +147,7 @@ export default function EditUserPage() {
     setResetLinkMessage(null);
 
     try {
-      const response = await fetch('/api/users/send-reset-link', {
+      const response = await fetchWithAuth('/api/users/send-reset-link', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

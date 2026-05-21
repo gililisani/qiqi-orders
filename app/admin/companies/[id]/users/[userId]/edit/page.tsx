@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../../../../lib/fetchWithAuth';
 import Link from 'next/link';
 
 interface FormData {
@@ -138,7 +139,7 @@ export default function EditUserPage() {
     setResetLinkMessage(null);
 
     try {
-      const response = await fetch('/api/users/send-reset-link', {
+      const response = await fetchWithAuth('/api/users/send-reset-link', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
