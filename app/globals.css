@@ -1,10 +1,97 @@
 @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css");
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Background color will be handled by layout containers */
+/* ----------------------------------------------------------------------------
+ * Qiqi Brand Font: ABC P3rman3nt
+ * Files should be placed at /public/fonts/abc-p3rman3nt/
+ * Until they're uploaded, --font-display falls back to Inter (loaded above).
+ * ----------------------------------------------------------------------------
+ */
+@font-face {
+  font-family: 'ABC P3rman3nt';
+  src: url('/fonts/abc-p3rman3nt/ABCP3rman3nt-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'ABC P3rman3nt';
+  src: url('/fonts/abc-p3rman3nt/ABCP3rman3nt-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'ABC P3rman3nt';
+  src: url('/fonts/abc-p3rman3nt/ABCP3rman3nt-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ----------------------------------------------------------------------------
+ * Design tokens — single source of truth for colors used by Qiqi primitives.
+ * All values are HSL triples so Tailwind can wrap them in hsl(var(--token)).
+ * ----------------------------------------------------------------------------
+ */
+@layer base {
+  :root {
+    /* Fonts */
+    --font-display: 'ABC P3rman3nt';
+    --font-serif: 'Newsreader';
+
+    /* Surfaces (almost-white page, true-white cards, very subtle borders) */
+    --background:           0 0% 99%;       /* #FCFCFC */
+    --foreground:           0 0% 7%;        /* near-black text */
+    --card:                 0 0% 100%;      /* #FFFFFF */
+    --card-foreground:      0 0% 7%;
+    --popover:              0 0% 100%;
+    --popover-foreground:   0 0% 7%;
+
+    /* Primary = brand black (used for default buttons, headings) */
+    --primary:              0 0% 0%;
+    --primary-foreground:   0 0% 100%;
+
+    /* Secondary = neutral light surface for chips/cards */
+    --secondary:            0 0% 96%;       /* #F5F5F5 */
+    --secondary-foreground: 0 0% 9%;
+
+    /* Muted = dim text, dividers, placeholders */
+    --muted:                0 0% 96%;
+    --muted-foreground:     208 5% 38%;     /* approximation of Gunmetal */
+
+    /* Accent = Periwinkle, used sparingly for active states + focus */
+    --accent:               243 67% 62%;    /* #605CE1 Periwinkle */
+    --accent-foreground:    0 0% 100%;
+
+    /* Destructive = Magenta */
+    --destructive:          328 100% 59%;   /* #FF2C9E Magenta */
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders & rings */
+    --border:               0 0% 91%;       /* #E8E8E8 hairline */
+    --input:                0 0% 91%;
+    --ring:                 243 67% 62%;    /* Periwinkle focus ring */
+
+    /* Radius scale */
+    --radius: 6px;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  html, body {
+    font-family: var(--font-display), 'Inter', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
 
 @layer utilities {
   /* Custom utilities only - remove redundant ones that Tailwind already provides */
