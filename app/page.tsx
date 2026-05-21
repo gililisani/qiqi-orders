@@ -219,7 +219,15 @@ export default function LoginPage() {
               )}
             </Button>
 
-            <div className="flex items-center justify-end gap-2 mt-6">
+            <div className="flex items-center justify-between gap-2 mt-6">
+              <Typography
+                variant="small"
+                className="!font-medium text-gray-900"
+              >
+                <Link href="/login/code" className="hover:underline">
+                  Sign in with email code
+                </Link>
+              </Typography>
               <Typography
                 variant="small"
                 className="!font-medium text-gray-900"

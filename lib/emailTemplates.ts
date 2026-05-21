@@ -554,6 +554,60 @@ export function passwordResetEmailTemplate(data: {
 }
 
 /**
+ * One-time login code email — for clients who want to log in without their password.
+ * Code is 6 digits, valid for 10 minutes. The user types the code into the Hub,
+ * we never send a clickable login link in the email (avoids link-scanner consumption).
+ */
+export function loginCodeEmailTemplate(data: {
+  userName: string;
+  userEmail: string;
+  code: string;
+  siteUrl: string;
+}): { subject: string; html: string } {
+  const content = `
+    <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: #111827;">
+      Your Login Code
+    </h1>
+
+    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
+      Hi <strong>${escapeHtml(data.userName)}</strong>,
+    </p>
+
+    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
+      Use the code below to sign in to the Qiqi Partners Hub. This code is valid for <strong>10 minutes</strong>.
+    </p>
+
+    <div style="margin: 32px 0; text-align: center;">
+      <div style="display: inline-block; padding: 24px 40px; background-color: #f3f4f6; border: 2px solid #111827; border-radius: 8px;">
+        <p style="margin: 0 0 4px; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Your code</p>
+        <p style="margin: 0; color: #111827; font-size: 36px; font-weight: 700; font-family: 'Courier New', monospace; letter-spacing: 8px;">
+          ${escapeHtml(data.code)}
+        </p>
+      </div>
+    </div>
+
+    <p style="margin: 0 0 16px; color: #374151; font-size: 14px; line-height: 1.6;">
+      Return to the Hub and enter this code on the "Sign in with code" screen.
+    </p>
+
+    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.5;">
+        If you didn't request this code, you can safely ignore this email. The code will expire on its own.
+      </p>
+    </div>
+
+    <p style="margin: 24px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+      Questions? Contact your administrator.
+    </p>
+  `;
+
+  return {
+    subject: `Your Qiqi Partners Hub login code: ${data.code}`,
+    html: emailWrapper(content, data.siteUrl),
+  };
+}
+
+/**
  * Order Updated Email Template
  */
 export function orderUpdatedTemplate(data: OrderEmailData) {

@@ -49,6 +49,30 @@ export const SEND_ORDER_NOTIFICATION_RATE = {
   windowSeconds: 3600,
 } as const;
 
+/** Set-password: per token (anti-brute-force on the long random token). */
+export const SET_PASSWORD_PER_TOKEN_RATE = {
+  limit: 10,
+  windowSeconds: 600,
+} as const;
+
+/** Request login code: per target email (anti-spam, prevents email bombing). */
+export const REQUEST_LOGIN_CODE_PER_EMAIL_RATE = {
+  limit: 3,
+  windowSeconds: 600,
+} as const;
+
+/** Request login code: per client IP (anti-enumeration). */
+export const REQUEST_LOGIN_CODE_PER_IP_RATE = {
+  limit: 10,
+  windowSeconds: 600,
+} as const;
+
+/** Verify login code: per client IP (anti-brute-force on the 6-digit code). */
+export const VERIFY_LOGIN_CODE_PER_IP_RATE = {
+  limit: 20,
+  windowSeconds: 600,
+} as const;
+
 /** Order internal notification: global per actor (fan-out abuse). */
 export const SEND_ORDER_NOTIFICATION_ACTOR_GLOBAL_RATE = {
   limit: 30,

@@ -1,14 +1,21 @@
 /**
  * API Route: Send Password Setup/Reset Link to User (Admin)
- * 
+ *
  * POST /api/users/send-reset-link
- * 
- * Admin can send a password setup link (for new users) or reset link (for existing users) to any user.
- * Supabase uses 'recovery' type for both scenarios, but we use appropriate email templates.
- * This is useful when editing users or when a user needs a new setup/reset link.
+ *
+ * Generates a long random token, stores it in password_setup_tokens with a
+ * 24-hour expiry, and emails the user a link to /set-password?token=...
+ *
+ * IMPORTANT: This intentionally does NOT use Supabase's built-in magic-link
+ * /recovery flow. Those tokens are single-use and get burned by corporate
+ * email link-scanners (Microsoft Defender Safe Links, Mimecast, etc.) before
+ * the user ever clicks. Our own token is only consumed when the user submits
+ * the password form, not on URL load — scanners can hit the landing page
+ * without invalidating anything.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { sendMail } from '../../../../lib/emailService';
 import { passwordResetEmailTemplate, welcomeEmailTemplate } from '../../../../lib/emailTemplates';
 import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
@@ -19,6 +26,8 @@ import {
   normalizeEmailForRateLimit,
 } from '../../../../platform/rateLimit';
 
+const TOKEN_TTL_HOURS = 24;
+
 export async function POST(request: NextRequest) {
   try {
     const admin = await requireAdmin(request);
@@ -26,7 +35,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { userId, userEmail, userName, companyId, companyName } = body;
 
-    // Validate input
     if (!userId || !userEmail) {
       return NextResponse.json(
         { error: 'Missing required fields: userId and userEmail' },
@@ -37,7 +45,6 @@ export async function POST(request: NextRequest) {
     const supabaseAdmin = createServiceRoleClient();
     const normalizedEmail = normalizeEmailForRateLimit(userEmail);
 
-    // Limit per actor + target email to prevent spamming reset/setup links.
     const limited = await enforceRateLimit(supabaseAdmin, {
       key: `send-reset-link:actor:${admin.id}:email:${normalizedEmail}`,
       limit: SEND_RESET_LINK_RATE.limit,
@@ -52,43 +59,49 @@ export async function POST(request: NextRequest) {
     });
     if (!globalLimit.ok) return globalLimit.response;
 
-    // Check if this is a new user (never set their password)
-    // New users: last_sign_in_at is null (they've never successfully logged in)
-    // Existing users: last_sign_in_at has a value (they've logged in before)
+    // Determine whether this is a new user (welcome flow) or an existing user (reset flow)
     const { data: authUser, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
-    
-    if (userError) {
-      console.error('Failed to fetch user:', userError);
+    if (userError || !authUser?.user) {
+      console.error('[send-reset-link] failed to fetch user:', userError);
       return NextResponse.json(
-        { error: `Failed to fetch user: ${userError.message}` },
+        { error: `Failed to fetch user: ${userError?.message || 'unknown'}` },
         { status: 500 }
       );
     }
-
     const isNewUser = !authUser.user.last_sign_in_at;
 
-    // Generate password setup/reset link using Supabase admin API
-    // Supabase uses 'recovery' type for both new user setup and password reset
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'recovery',
-      email: normalizedEmail,
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/confirm-password-reset`
-      }
-    });
+    // Invalidate any previous unused tokens for this user — only the freshest
+    // link should ever work, so old emails in the inbox become inert.
+    await supabaseAdmin
+      .from('password_setup_tokens')
+      .update({ used_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .is('used_at', null);
 
-    if (linkError) {
-      console.error('Failed to generate link:', linkError);
+    // Generate a fresh long random token (256 bits, URL-safe)
+    const token = crypto.randomBytes(32).toString('base64url');
+    const expiresAt = new Date(Date.now() + TOKEN_TTL_HOURS * 60 * 60 * 1000).toISOString();
+
+    const { error: insertError } = await supabaseAdmin
+      .from('password_setup_tokens')
+      .insert({
+        token,
+        user_id: userId,
+        expires_at: expiresAt,
+        created_by: admin.id,
+      });
+
+    if (insertError) {
+      console.error('[send-reset-link] failed to insert token:', insertError);
       return NextResponse.json(
-        { error: `Failed to generate password link: ${linkError.message}` },
+        { error: `Failed to create password setup token: ${insertError.message}` },
         { status: 500 }
       );
     }
 
-    // Get user name if not provided
-    let displayName = userName || normalizedEmail.split('@')[0];
-    
-    // Get company name if not provided and needed
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const setupLink = `${siteUrl}/set-password?token=${token}`;
+
     let companyDisplayName = companyName;
     if (isNewUser && !companyDisplayName && companyId) {
       const { data: companyData } = await supabaseAdmin
@@ -96,41 +109,36 @@ export async function POST(request: NextRequest) {
         .select('company_name')
         .eq('id', companyId)
         .single();
-      
       companyDisplayName = companyData?.company_name || 'Your Company';
     }
 
-    // Send appropriate email based on whether user is new or existing
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    let emailTemplate;
-    
-    if (isNewUser) {
-      // New user: send welcome email with "Set Your Password"
-      emailTemplate = welcomeEmailTemplate({
-        userName: displayName,
-        userEmail: normalizedEmail,
-        companyName: companyDisplayName || 'Your Company',
-        setupLink: linkData.properties.action_link,
-        siteUrl: siteUrl
-      });
-    } else {
-      // Existing user: send password reset email
-      emailTemplate = passwordResetEmailTemplate({
-        userName: displayName,
-        userEmail: normalizedEmail,
-        resetLink: linkData.properties.action_link,
-        siteUrl: siteUrl
-      });
-    }
+    const displayName = userName || normalizedEmail.split('@')[0];
+
+    const emailTemplate = isNewUser
+      ? welcomeEmailTemplate({
+          userName: displayName,
+          userEmail: normalizedEmail,
+          companyName: companyDisplayName || 'Your Company',
+          setupLink,
+          siteUrl,
+        })
+      : passwordResetEmailTemplate({
+          userName: displayName,
+          userEmail: normalizedEmail,
+          resetLink: setupLink,
+          siteUrl,
+        });
 
     const emailResult = await sendMail({
       to: normalizedEmail,
       subject: emailTemplate.subject,
-      html: emailTemplate.html
+      html: emailTemplate.html,
     });
 
     if (!emailResult.success) {
-      console.error('Failed to send email:', emailResult.error);
+      console.error('[send-reset-link] sendMail failed:', emailResult.error);
+      // Best-effort: drop the token we just created so a failed-email link can't be used later
+      await supabaseAdmin.from('password_setup_tokens').delete().eq('token', token);
       return NextResponse.json(
         { error: `Failed to send email: ${emailResult.error}` },
         { status: 500 }
@@ -139,19 +147,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: isNewUser 
-        ? 'Password setup link sent successfully' 
+      message: isNewUser
+        ? 'Password setup link sent successfully'
         : 'Password reset link sent successfully',
       messageId: emailResult.messageId,
-      isNewUser: isNewUser
+      isNewUser,
     });
   } catch (error: any) {
     if (error instanceof Response) return error;
-    console.error('Error in send-reset-link API:', error);
+    console.error('[send-reset-link] error:', error);
     return NextResponse.json(
       { error: error.message || 'An unexpected error occurred' },
       { status: 500 }
     );
   }
 }
-
