@@ -57,23 +57,11 @@ export async function POST(request: NextRequest) {
     });
     if (!ipLimit.ok) return ipLimit.response;
 
-    // Look up auth user by email
-    const { data: userRow } = await supabaseAdmin
-      .schema('auth')
-      .from('users')
-      .select('id, email')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (!userRow) {
-      return NextResponse.json({ error: 'Invalid code.' }, { status: 400 });
-    }
-
-    // Confirm the account is an enabled client
+    // Look up via clients table (auth schema isn't exposed through the JS client).
     const { data: clientRow } = await supabaseAdmin
       .from('clients')
-      .select('id, enabled')
-      .eq('id', userRow.id)
+      .select('id, enabled, email')
+      .eq('email', email)
       .eq('enabled', true)
       .maybeSingle();
 
@@ -85,7 +73,7 @@ export async function POST(request: NextRequest) {
     const { data: codeRow, error: codeError } = await supabaseAdmin
       .from('login_codes')
       .select('id, code_hash, expires_at, used_at, attempts')
-      .eq('user_id', userRow.id)
+      .eq('user_id', clientRow.id)
       .is('used_at', null)
       .order('created_at', { ascending: false })
       .limit(1)

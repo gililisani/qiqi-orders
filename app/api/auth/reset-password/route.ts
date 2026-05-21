@@ -53,25 +53,36 @@ export async function POST(request: NextRequest) {
     });
     if (!limited.ok) return limited.response;
 
-    // Look up the user by email. Use the auth schema directly — listUsers()
-    // is paginated and would silently skip most accounts.
-    const { data: userRow } = await supabaseAdmin
-      .schema('auth')
-      .from('users')
-      .select('id, email')
+    // Look up the user by email via clients OR admins (auth schema isn't
+    // exposed to the JS client). Both tables use auth user IDs as primary key.
+    const { data: clientHit } = await supabaseAdmin
+      .from('clients')
+      .select('id')
       .eq('email', normalizedEmail)
       .maybeSingle();
 
+    let userId: string | null = (clientHit?.id as string | undefined) ?? null;
+
+    if (!userId) {
+      const { data: adminHit } = await supabaseAdmin
+        .from('admins')
+        .select('id')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+      userId = (adminHit?.id as string | undefined) ?? null;
+    }
+
     // Whether or not the user exists, return the same generic success
     // message to prevent email enumeration.
-    if (!userRow) {
+    if (!userId) {
+      console.log('[reset-password] no user for email (not sending):', normalizedEmail);
       return NextResponse.json(GENERIC_SUCCESS);
     }
 
     let setupLink: { url: string; token: string };
     try {
       setupLink = await createPasswordSetupLink(supabaseAdmin, {
-        userId: userRow.id as string,
+        userId,
         createdBy: null,
       });
     } catch (linkErr: any) {

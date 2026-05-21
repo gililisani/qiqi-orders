@@ -72,45 +72,29 @@ export async function POST(request: NextRequest) {
     });
     if (!emailLimit.ok) return emailLimit.response;
 
-    // Look up the auth user by email. Don't reveal whether they exist.
-    const { data: usersList, error: listError } = await supabaseAdmin.auth.admin.listUsers({
-      page: 1,
-      perPage: 1,
-    });
-    // Note: listUsers doesn't support email filter directly; use admin.getUserByEmail-equivalent.
-    // We'll do it via the database instead.
-    if (listError) {
-      console.error('[request-login-code] listUsers error:', listError);
-    }
-
-    // Direct lookup by email — auth.users is accessible via admin client
-    const { data: userRow, error: userLookupError } = await supabaseAdmin
-      .schema('auth')
-      .from('users')
-      .select('id, email')
+    // Look up via the clients table (public schema). The auth schema isn't
+    // exposed through the JS client by default, so we can't hit auth.users
+    // directly. clients.id is the auth user id and clients.email is the
+    // canonical email for client users.
+    const { data: clientRow, error: clientLookupError } = await supabaseAdmin
+      .from('clients')
+      .select('id, name, enabled, email')
       .eq('email', email)
+      .eq('enabled', true)
       .maybeSingle();
 
-    // Verify user is a CLIENT (and enabled). If not, silently succeed.
-    let clientUserId: string | null = null;
-    if (!userLookupError && userRow) {
-      const { data: clientRow } = await supabaseAdmin
-        .from('clients')
-        .select('id, enabled, name')
-        .eq('id', userRow.id)
-        .eq('enabled', true)
-        .maybeSingle();
-      if (clientRow) {
-        clientUserId = userRow.id as string;
-      }
+    if (clientLookupError) {
+      console.error('[request-login-code] clients lookup error:', clientLookupError);
     }
 
-    // Whether we found a client or not, return success.
-    if (!clientUserId) {
-      // Pretend we sent it. This is intentional — prevents leaking which emails
-      // belong to clients.
+    if (!clientRow) {
+      // Log the miss server-side (helps debug), but return generic success
+      // to the caller so we don't leak which emails belong to clients.
+      console.log('[request-login-code] no enabled client for email (not sending code):', email);
       return NextResponse.json({ success: true });
     }
+
+    const clientUserId = clientRow.id as string;
 
     // Invalidate any previous unused codes for this user — only the newest works
     await supabaseAdmin
@@ -136,13 +120,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Could not generate code.' }, { status: 500 });
     }
 
-    // Look up display name from clients table for friendlier email
-    const { data: clientNameRow } = await supabaseAdmin
-      .from('clients')
-      .select('name')
-      .eq('id', clientUserId)
-      .maybeSingle();
-    const displayName = clientNameRow?.name || email.split('@')[0];
+    const displayName = clientRow.name || email.split('@')[0];
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     const template = loginCodeEmailTemplate({
@@ -159,7 +137,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      console.error('[request-login-code] sendMail failed:', result.error);
+      console.error('[request-login-code] sendMail failed for', email, ':', result.error);
       // Roll back the code so it can't be used (best-effort)
       await supabaseAdmin
         .from('login_codes')
@@ -169,6 +147,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Could not send code email.' }, { status: 500 });
     }
 
+    console.log('[request-login-code] code sent to', email);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('[request-login-code] error:', error);
