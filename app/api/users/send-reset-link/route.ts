@@ -15,18 +15,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
 import { sendMail } from '../../../../lib/emailService';
 import { passwordResetEmailTemplate, welcomeEmailTemplate } from '../../../../lib/emailTemplates';
 import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createPasswordSetupLink, deletePasswordSetupToken } from '../../../../lib/passwordSetupTokens';
 import {
   SEND_RESET_LINK_RATE,
   SEND_RESET_LINK_ACTOR_GLOBAL_RATE,
   enforceRateLimit,
   normalizeEmailForRateLimit,
 } from '../../../../platform/rateLimit';
-
-const TOKEN_TTL_HOURS = 24;
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,37 +68,21 @@ export async function POST(request: NextRequest) {
     }
     const isNewUser = !authUser.user.last_sign_in_at;
 
-    // Invalidate any previous unused tokens for this user — only the freshest
-    // link should ever work, so old emails in the inbox become inert.
-    await supabaseAdmin
-      .from('password_setup_tokens')
-      .update({ used_at: new Date().toISOString() })
-      .eq('user_id', userId)
-      .is('used_at', null);
-
-    // Generate a fresh long random token (256 bits, URL-safe)
-    const token = crypto.randomBytes(32).toString('base64url');
-    const expiresAt = new Date(Date.now() + TOKEN_TTL_HOURS * 60 * 60 * 1000).toISOString();
-
-    const { error: insertError } = await supabaseAdmin
-      .from('password_setup_tokens')
-      .insert({
-        token,
-        user_id: userId,
-        expires_at: expiresAt,
-        created_by: admin.id,
+    let setupLink: { url: string; token: string };
+    try {
+      setupLink = await createPasswordSetupLink(supabaseAdmin, {
+        userId,
+        createdBy: admin.id,
       });
-
-    if (insertError) {
-      console.error('[send-reset-link] failed to insert token:', insertError);
+    } catch (linkErr: any) {
+      console.error('[send-reset-link] createPasswordSetupLink:', linkErr);
       return NextResponse.json(
-        { error: `Failed to create password setup token: ${insertError.message}` },
+        { error: linkErr?.message || 'Failed to create password setup token.' },
         { status: 500 }
       );
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    const setupLink = `${siteUrl}/set-password?token=${token}`;
 
     let companyDisplayName = companyName;
     if (isNewUser && !companyDisplayName && companyId) {
@@ -119,13 +101,13 @@ export async function POST(request: NextRequest) {
           userName: displayName,
           userEmail: normalizedEmail,
           companyName: companyDisplayName || 'Your Company',
-          setupLink,
+          setupLink: setupLink.url,
           siteUrl,
         })
       : passwordResetEmailTemplate({
           userName: displayName,
           userEmail: normalizedEmail,
-          resetLink: setupLink,
+          resetLink: setupLink.url,
           siteUrl,
         });
 
@@ -137,8 +119,7 @@ export async function POST(request: NextRequest) {
 
     if (!emailResult.success) {
       console.error('[send-reset-link] sendMail failed:', emailResult.error);
-      // Best-effort: drop the token we just created so a failed-email link can't be used later
-      await supabaseAdmin.from('password_setup_tokens').delete().eq('token', token);
+      await deletePasswordSetupToken(supabaseAdmin, setupLink.token);
       return NextResponse.json(
         { error: `Failed to send email: ${emailResult.error}` },
         { status: 500 }

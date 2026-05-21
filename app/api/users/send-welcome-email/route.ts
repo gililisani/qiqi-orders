@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 import { sendMail } from '../../../../lib/emailService';
 import { welcomeEmailTemplate } from '../../../../lib/emailTemplates';
+import { createPasswordSetupLink, deletePasswordSetupToken } from '../../../../lib/passwordSetupTokens';
 import {
   SEND_WELCOME_EMAIL_RATE,
   SEND_WELCOME_EMAIL_ACTOR_GLOBAL_RATE,
@@ -142,18 +143,16 @@ export async function POST(request: NextRequest) {
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'recovery',
-      email: canonicalEmail,
-      options: {
-        redirectTo: `${siteUrl}/confirm-password-reset`,
-      },
-    });
-
-    if (linkError || !linkData?.properties?.action_link) {
-      console.error('[send-welcome-email] generateLink:', linkError);
+    let setupLink: { url: string; token: string };
+    try {
+      setupLink = await createPasswordSetupLink(supabaseAdmin, {
+        userId,
+        createdBy: admin.id,
+      });
+    } catch (linkErr: any) {
+      console.error('[send-welcome-email] createPasswordSetupLink:', linkErr);
       return NextResponse.json(
-        { error: linkError?.message || 'Failed to generate password setup link' },
+        { error: linkErr?.message || 'Failed to generate password setup link' },
         { status: 500 }
       );
     }
@@ -162,7 +161,7 @@ export async function POST(request: NextRequest) {
       userName: displayName,
       userEmail: canonicalEmail,
       companyName,
-      setupLink: linkData.properties.action_link,
+      setupLink: setupLink.url,
       siteUrl,
     });
 
@@ -173,6 +172,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
+      await deletePasswordSetupToken(supabaseAdmin, setupLink.token);
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendMail } from '../../../../lib/emailService';
 import { welcomeEmailTemplate } from '../../../../lib/emailTemplates';
 import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createPasswordSetupLink, deletePasswordSetupToken } from '../../../../lib/passwordSetupTokens';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -27,8 +28,10 @@ export async function POST(request: NextRequest) {
     }
   };
 
+  let setupToken: string | null = null;
+
   try {
-    await requireAdmin(request);
+    const admin = await requireAdmin(request);
 
     const { name, email, companyId, enabled } = await request.json();
 
@@ -93,17 +96,17 @@ export async function POST(request: NextRequest) {
     }
     profileCreated = true;
 
-    // Generate password setup link.
-    const { data: setupData, error: setupError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/confirm-password-reset`
-      }
-    });
-
-    if (setupError || !setupData?.properties?.action_link) {
-      console.error('[USER_CREATE] Setup link failed:', { ...logContext, error: setupError?.message });
+    // Generate password setup link via OUR token system (not Supabase magic link,
+    // which gets pre-consumed by corporate email scanners).
+    let setupLink: { url: string };
+    try {
+      setupLink = await createPasswordSetupLink(supabaseAdmin, {
+        userId: authUserId,
+        createdBy: admin.id,
+      });
+      setupToken = setupLink.url.split('token=')[1] || null;
+    } catch (linkErr: any) {
+      console.error('[USER_CREATE] Setup link failed:', { ...logContext, error: linkErr?.message });
       await rollback('setup_link_failed');
       return NextResponse.json(
         { error: 'Failed to generate password setup link. User was not created.' },
@@ -123,7 +126,7 @@ export async function POST(request: NextRequest) {
       userName: name,
       userEmail: email,
       companyName: companyData?.company_name || 'Your Company',
-      setupLink: setupData.properties.action_link,
+      setupLink: setupLink.url,
       siteUrl,
     });
 
@@ -135,6 +138,7 @@ export async function POST(request: NextRequest) {
 
     if (!emailResult.success) {
       console.error('[USER_CREATE] Welcome email failed:', { ...logContext, error: emailResult.error });
+      if (setupToken) await deletePasswordSetupToken(supabaseAdmin, setupToken);
       await rollback('welcome_email_failed');
       return NextResponse.json(
         { error: 'Failed to send welcome email. User was not created. Please retry.' },
