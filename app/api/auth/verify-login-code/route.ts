@@ -149,9 +149,15 @@ export async function POST(request: NextRequest) {
       email,
     });
 
-    if (linkError || !linkData?.properties?.hashed_token) {
-      console.error('[verify-login-code] generateLink failed:', linkError);
-      return NextResponse.json({ error: 'Could not create session.' }, { status: 500 });
+    if (linkError) {
+      console.error('[verify-login-code] generateLink failed:', linkError.message, linkError);
+      return NextResponse.json({ error: 'Could not create session (generateLink).' }, { status: 500 });
+    }
+
+    const emailOtp = linkData?.properties?.email_otp;
+    if (!emailOtp) {
+      console.error('[verify-login-code] generateLink returned no email_otp:', linkData?.properties);
+      return NextResponse.json({ error: 'Could not create session (no OTP).' }, { status: 500 });
     }
 
     const supabasePublic = createClient(
@@ -160,15 +166,24 @@ export async function POST(request: NextRequest) {
       { auth: { persistSession: false, autoRefreshToken: false } }
     );
 
+    // verifyOtp with email+token+type:'email' is the documented path for redeeming
+    // the OTP returned alongside a magic link.
     const { data: otpData, error: otpError } = await supabasePublic.auth.verifyOtp({
-      type: 'magiclink',
       email,
-      token_hash: linkData.properties.hashed_token,
+      token: emailOtp,
+      type: 'email',
     });
 
-    if (otpError || !otpData?.session) {
-      console.error('[verify-login-code] verifyOtp failed:', otpError);
-      return NextResponse.json({ error: 'Could not create session.' }, { status: 500 });
+    if (otpError) {
+      console.error('[verify-login-code] verifyOtp failed:', otpError.message, otpError);
+      return NextResponse.json(
+        { error: `Could not create session: ${otpError.message}` },
+        { status: 500 }
+      );
+    }
+    if (!otpData?.session) {
+      console.error('[verify-login-code] verifyOtp returned no session:', otpData);
+      return NextResponse.json({ error: 'Could not create session (no session returned).' }, { status: 500 });
     }
 
     return NextResponse.json({
