@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import Link from 'next/link';
 
 interface FormData {
@@ -38,11 +39,10 @@ export default function NewAdminPage() {
       }
 
       // Call the server-side API route to create the admin
-      const response = await fetch('/api/admin/create', {
+      const response = await fetchWithAuth('/api/admin/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           name: formData.name,

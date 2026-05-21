@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
 import { PencilIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface AssetType {
@@ -35,7 +36,7 @@ export default function AssetTypesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/asset-types', {
+      const response = await fetchWithAuth('/api/admin/asset-types', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -71,7 +72,7 @@ export default function AssetTypesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/asset-types', {
+      const response = await fetchWithAuth('/api/admin/asset-types', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -103,7 +104,7 @@ export default function AssetTypesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/asset-types', {
+      const response = await fetchWithAuth('/api/admin/asset-types', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -139,7 +140,7 @@ export default function AssetTypesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/asset-types', {
+      const response = await fetchWithAuth('/api/admin/asset-types', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -176,7 +177,7 @@ export default function AssetTypesPage() {
         return;
       }
 
-      const response = await fetch(`/api/admin/asset-types?id=${type.id}`, {
+      const response = await fetchWithAuth(`/api/admin/asset-types?id=${type.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

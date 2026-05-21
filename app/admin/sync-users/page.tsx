@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 
 interface SyncData {
   summary: {
@@ -41,7 +42,7 @@ export default function SyncUsersPage() {
     setSuccess('');
 
     try {
-      const response = await fetch('/api/users/sync-check');
+      const response = await fetchWithAuth('/api/users/sync-check');
       const result = await response.json();
 
       if (!response.ok) {
@@ -68,7 +69,7 @@ export default function SyncUsersPage() {
     try {
       const userIds = data.orphanedAuthUsers.map(u => u.id);
       
-      const response = await fetch('/api/users/sync-check', {
+      const response = await fetchWithAuth('/api/users/sync-check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

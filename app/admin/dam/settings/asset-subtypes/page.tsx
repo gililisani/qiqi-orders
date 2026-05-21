@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
 import { PencilIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface AssetSubtype {
@@ -49,7 +50,7 @@ export default function AssetSubtypesPage() {
       }
 
       // Fetch subtypes
-      const subtypesResponse = await fetch('/api/admin/asset-subtypes', {
+      const subtypesResponse = await fetchWithAuth('/api/admin/asset-subtypes', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -64,7 +65,7 @@ export default function AssetSubtypesPage() {
       setSubtypes(subtypesData.assetSubtypes || []);
 
       // Fetch asset types for dropdown
-      const typesResponse = await fetch('/api/admin/asset-types', {
+      const typesResponse = await fetchWithAuth('/api/admin/asset-types', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -95,7 +96,7 @@ export default function AssetSubtypesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/asset-subtypes', {
+      const response = await fetchWithAuth('/api/admin/asset-subtypes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -141,7 +142,7 @@ export default function AssetSubtypesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/asset-subtypes', {
+      const response = await fetchWithAuth('/api/admin/asset-subtypes', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -173,7 +174,7 @@ export default function AssetSubtypesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/asset-subtypes', {
+      const response = await fetchWithAuth('/api/admin/asset-subtypes', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -208,7 +209,7 @@ export default function AssetSubtypesPage() {
         return;
       }
 
-      const response = await fetch(`/api/admin/asset-subtypes?id=${subtype.id}`, {
+      const response = await fetchWithAuth(`/api/admin/asset-subtypes?id=${subtype.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

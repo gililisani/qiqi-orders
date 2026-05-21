@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
 import { PencilIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface Locale {
@@ -34,7 +35,7 @@ export default function LocalesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/locales', {
+      const response = await fetchWithAuth('/api/admin/locales', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -70,7 +71,7 @@ export default function LocalesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/locales', {
+      const response = await fetchWithAuth('/api/admin/locales', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +103,7 @@ export default function LocalesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/locales', {
+      const response = await fetchWithAuth('/api/admin/locales', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -138,7 +139,7 @@ export default function LocalesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/locales', {
+      const response = await fetchWithAuth('/api/admin/locales', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -175,7 +176,7 @@ export default function LocalesPage() {
         return;
       }
 
-      const response = await fetch(`/api/admin/locales?code=${locale.code}`, {
+      const response = await fetchWithAuth(`/api/admin/locales?code=${locale.code}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

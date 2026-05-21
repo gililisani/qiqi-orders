@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
 import { PencilIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface ProductLine {
@@ -36,7 +37,7 @@ export default function ProductLinesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/product-lines', {
+      const response = await fetchWithAuth('/api/admin/product-lines', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -72,7 +73,7 @@ export default function ProductLinesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/product-lines', {
+      const response = await fetchWithAuth('/api/admin/product-lines', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -104,7 +105,7 @@ export default function ProductLinesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/product-lines', {
+      const response = await fetchWithAuth('/api/admin/product-lines', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -140,7 +141,7 @@ export default function ProductLinesPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/product-lines', {
+      const response = await fetchWithAuth('/api/admin/product-lines', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -177,7 +178,7 @@ export default function ProductLinesPage() {
         return;
       }
 
-      const response = await fetch(`/api/admin/product-lines?id=${pl.id}`, {
+      const response = await fetchWithAuth(`/api/admin/product-lines?id=${pl.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

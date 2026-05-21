@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
 import { PencilIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface Tag {
@@ -74,7 +75,7 @@ export default function TagsPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/tags', {
+      const response = await fetchWithAuth('/api/admin/tags', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -111,7 +112,7 @@ export default function TagsPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/tags', {
+      const response = await fetchWithAuth('/api/admin/tags', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -151,7 +152,7 @@ export default function TagsPage() {
         return;
       }
 
-      const response = await fetch(`/api/admin/tags?id=${tag.id}`, {
+      const response = await fetchWithAuth(`/api/admin/tags?id=${tag.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

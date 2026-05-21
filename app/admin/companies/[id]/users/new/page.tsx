@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../../../lib/fetchWithAuth';
 import Link from 'next/link';
 
 interface FormData {
@@ -52,7 +53,7 @@ export default function NewUserPage() {
 
     try {
       // Call the API route to create user (server-side with admin privileges)
-      const response = await fetch('/api/users/create', {
+      const response = await fetchWithAuth('/api/users/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
