@@ -73,6 +73,12 @@ export const VERIFY_LOGIN_CODE_PER_IP_RATE = {
   windowSeconds: 600,
 } as const;
 
+/** Check user role: per client IP (slows email enumeration on the login page). */
+export const CHECK_USER_PER_IP_RATE = {
+  limit: 30,
+  windowSeconds: 600,
+} as const;
+
 /** Order internal notification: global per actor (fan-out abuse). */
 export const SEND_ORDER_NOTIFICATION_ACTOR_GLOBAL_RATE = {
   limit: 30,
