@@ -367,11 +367,11 @@ export default function AdminOrdersListView() {
               <TableHeader>
                 <TableRow>
                   <TableHead>PO Number</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Company</TableHead>
+                  <TableHead className="hidden md:table-cell">Client</TableHead>
+                  <TableHead className="hidden md:table-cell">Company</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="hidden md:table-cell">Support fund</TableHead>
+                  <TableHead className="hidden lg:table-cell">Support fund</TableHead>
                   <TableHead className="hidden lg:table-cell">Created</TableHead>
                   <TableHead className="w-12" />
                 </TableRow>
@@ -388,8 +388,18 @@ export default function AdminOrdersListView() {
                     >
                       <TableCell className="font-mono text-sm">
                         {order.po_number || order.id.substring(0, 6)}
+                        {/* On mobile only, show company + client stacked under the PO so
+                            the user still sees who the order belongs to without a separate column. */}
+                        <div className="md:hidden mt-1 font-sans space-y-0.5">
+                          {company?.company_name && (
+                            <div className="text-xs text-foreground truncate">{company.company_name}</div>
+                          )}
+                          {client?.name && (
+                            <div className="text-[11px] text-muted-foreground truncate">{client.name}</div>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <div className="flex flex-col">
                           <span className="text-sm">
                             {client?.name || (order.user_id ? 'Qiqi' : '—')}
@@ -399,7 +409,7 @@ export default function AdminOrdersListView() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <div className="flex flex-col">
                           <span className="text-sm">
                             {company?.company_name || '—'}

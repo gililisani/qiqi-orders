@@ -107,14 +107,18 @@
   @apply !border-0 !border-r-0;
 }
 
+/* FullCalendar overrides — must be scoped to .fc-theme-standard so they
+   don't leak onto every <tr>/<th>/<td> on the entire site. The previous
+   form `.fc-theme-standard thead, tr, th { ... }` applied to all `tr` and
+   `th` elements globally because commas separate independent selectors. */
 .fc-theme-standard thead,
-tr,
-th {
+.fc-theme-standard tr,
+.fc-theme-standard th {
   @apply !border-l-0 !border-r-0;
 }
 
 .fc-theme-standard td,
-th {
+.fc-theme-standard th {
   @apply !text-sm !text-blue-gray-500;
 }
 

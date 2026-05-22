@@ -63,11 +63,10 @@ TableRow.displayName = 'TableRow';
 
 const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    // Explicit black to defeat any inherited muted color from the table cell defaults.
     <th
       ref={ref}
       className={cn(
-        'h-10 px-4 text-left align-middle font-semibold text-black text-xs uppercase tracking-wider',
+        'h-10 px-4 text-left align-middle font-semibold text-foreground text-xs uppercase tracking-wider',
         '[&:has([role=checkbox])]:pr-0',
         className
       )}
