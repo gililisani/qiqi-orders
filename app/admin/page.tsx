@@ -1,371 +1,311 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabaseClient';
+/**
+ * Admin Dashboard.
+ *
+ * Stats tiles up top + recent orders table. Stats reflect the actual
+ * order workflow stages (Today / Open / In Process / Ready) so admins
+ * can see at a glance what needs attention.
+ */
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { generateNetSuiteCSV, downloadCSV, OrderForExport } from '../../lib/csvExport';
+import { useRouter } from 'next/navigation';
 import {
-  Card,
-  CardBody,
-  CardHeader,
-  Typography,
-  Button,
-  Spinner,
-} from '@material-tailwind/react';
-import OrderStatusBadge from '../components/ui/OrderStatusBadge';
-import SimpleStatisticsCard from '../components/ui/SimpleStatisticsCard';
+  ArrowRight,
+  Inbox,
+  Plus,
+  Download,
+  Eye,
+  MoreHorizontal,
+} from 'lucide-react';
 
-const defaultProps = {
-  placeholder: undefined,
-  onPointerEnterCapture: undefined,
-  onPointerLeaveCapture: undefined,
-};
+import { supabase } from '../../lib/supabaseClient';
 
-interface Order {
+import { PageHeader } from '../components/qq/page-header';
+import { Card, CardContent } from '../components/qq/card';
+import { Button } from '../components/qq/button';
+import { StatusBadge } from '../components/qq/status-badge';
+import { EmptyState } from '../components/qq/empty-state';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '../components/qq/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../components/qq/dropdown-menu';
+import { useToast } from '../components/ui/ToastProvider';
+
+interface RecentOrder {
   id: string;
   created_at: string;
   total_value: number;
   status: string;
   po_number: string;
-  companies: {
-    company_name: string;
-  }[] | null;
+  company_id: string | null;
+  companies: { company_name: string }[] | { company_name: string } | null;
 }
 
 interface DashboardStats {
-  todayOrders: number;
-  todayOrdersValue: number;
-  openOrders: number;
-  inProcessOrders: number;
+  todayCount: number;
+  todayValue: number;
+  open: number;
+  inProcess: number;
+  ready: number;
+}
+
+const ZERO_STATS: DashboardStats = {
+  todayCount: 0,
+  todayValue: 0,
+  open: 0,
+  inProcess: 0,
+  ready: 0,
+};
+
+function formatCurrency(amount: number): string {
+  return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+function companyNameOf(order: RecentOrder): string {
+  const c = order.companies;
+  if (!c) return '—';
+  if (Array.isArray(c)) return c[0]?.company_name || '—';
+  return c.company_name || '—';
 }
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [stats, setStats] = useState<DashboardStats>({
-    todayOrders: 0,
-    todayOrdersValue: 0,
-    openOrders: 0,
-    inProcessOrders: 0
-  });
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const toast = useToast();
+  const [stats, setStats] = useState<DashboardStats>(ZERO_STATS);
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Format currency helper
-  const formatCurrency = (amount: number) => {
-    return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  // CSV download function
-  const handleDownloadCSV = async (orderId: string) => {
-    try {
-      // Fetch complete order data with all relationships
-      const { data: orderData, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          company:companies(
-            company_name,
-            netsuite_number,
-            class:classes(name),
-            subsidiary:subsidiaries(name),
-            location:Locations(location_name)
-          ),
-          order_items(
-            quantity,
-            unit_price,
-            total_price,
-            product:Products(sku, item_name, netsuite_name)
-          )
-        `)
-        .eq('id', orderId)
-        .single();
-
-      if (error) throw error;
-
-      // Validate required data
-      if (!orderData.company) {
-        throw new Error('Company data not found for this order');
-      }
-      if (!orderData.order_items || orderData.order_items.length === 0) {
-        throw new Error('No order items found for this order');
-      }
-
-      // Validate order items have required product data
-      for (const item of orderData.order_items) {
-        if (!item.product) {
-          throw new Error('Product data missing for order item');
-        }
-        if (!item.product.sku) {
-          throw new Error('Product SKU missing for order item');
-        }
-      }
-
-      // Generate CSV
-      const csvContent = generateNetSuiteCSV(orderData as OrderForExport);
-      
-      // Create filename with PO number and date
-      const orderDate = new Date(orderData.created_at);
-      const dateStr = orderDate.toISOString().split('T')[0];
-      const poNumber = orderData.po_number || orderData.id.substring(0, 6);
-      const filename = `Order_${poNumber}_${dateStr}.csv`;
-      
-      // Download CSV
-      downloadCSV(csvContent, filename);
-    } catch (err: any) {
-      console.error('Error exporting CSV:', err);
-      alert('Failed to export CSV. Please try again.');
-    }
-  };
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
+  async function fetchDashboardData() {
+    setLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
 
-      // Fetch all orders with company data
       const { data: orders, error } = await supabase
         .from('orders')
-        .select(`
-          id,
-          created_at,
-          total_value,
-          status,
-          po_number,
-          company_id,
-          companies(company_name)
-        `)
+        .select(`id, created_at, total_value, status, po_number, company_id, companies(company_name)`)
         .order('created_at', { ascending: false });
-
       if (error) throw error;
 
-      // Use orders directly since they already have the correct structure
-      const transformedOrders = orders || [];
+      const all = (orders || []) as unknown as RecentOrder[];
 
-      // Calculate stats
-      const todayOrders = transformedOrders.filter(order => 
-        order.created_at.split('T')[0] === today
-      );
-      
-      const openOrders = transformedOrders.filter(order => order.status === 'Open');
-      const inProcessOrders = transformedOrders.filter(order => order.status === 'In Process');
-
-      const todayOrdersValue = todayOrders.reduce((sum, order) => sum + (order.total_value || 0), 0);
+      const todays = all.filter((o) => o.created_at.split('T')[0] === today);
+      const todayValue = todays.reduce((sum, o) => sum + (o.total_value || 0), 0);
 
       setStats({
-        todayOrders: todayOrders.length,
-        todayOrdersValue,
-        openOrders: openOrders.length,
-        inProcessOrders: inProcessOrders.length
+        todayCount: todays.length,
+        todayValue,
+        open: all.filter((o) => o.status === 'Open').length,
+        inProcess: all.filter((o) => o.status === 'In Process').length,
+        ready: all.filter((o) => o.status === 'Ready').length,
       });
 
-      // Get recent 5 orders
-      setRecentOrders(transformedOrders.slice(0, 5));
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      setRecentOrders(all.slice(0, 5));
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      toast.error('Could not load dashboard data.');
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center gap-4">
-            <Spinner className="h-12 w-12" onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
-            <Typography variant="h6" color="blue-gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-              Loading dashboard...
-            </Typography>
-          </div>
-        </div>
-    );
+  async function handleDownloadCSV(orderId: string) {
+    try {
+      const { generateNetSuiteCSV, downloadCSV } = await import('../../lib/csvExport');
+      const { data: orderData, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          company:companies(company_name, netsuite_number, class:classes(name), subsidiary:subsidiaries(name), location:Locations(location_name)),
+          order_items(quantity, unit_price, total_price, product:Products(sku, item_name, netsuite_name))
+        `)
+        .eq('id', orderId)
+        .single();
+      if (error) throw error;
+      if (!orderData?.company) throw new Error('Company not found.');
+      if (!orderData.order_items?.length) throw new Error('No order items found.');
+      const csv = generateNetSuiteCSV(orderData as any);
+      const date = new Date(orderData.created_at).toISOString().split('T')[0];
+      const po = orderData.po_number || orderData.id.substring(0, 6);
+      downloadCSV(csv, `Order_${po}_${date}.csv`);
+      toast.success('CSV downloaded.');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to export CSV.');
+    }
   }
 
   return (
-    <div className="mt-8 mb-4 space-y-6">
-        <Typography variant="h2" color="blue-gray" className="mb-6" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-          Dashboard Overview
-        </Typography>
-        
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6">
-          {/* Today's Orders */}
-          <SimpleStatisticsCard
-            title="Today's Orders"
-            value={stats.todayOrders}
-            description={formatCurrency(stats.todayOrdersValue) + " total value"}
-          />
+    <div className="px-6 py-8">
+      <PageHeader
+        title="Dashboard"
+        description="Quick overview of order activity."
+        actions={
+          <Link href="/admin/orders/new">
+            <Button size="sm">
+              <Plus className="h-4 w-4" />
+              New order
+            </Button>
+          </Link>
+        }
+      />
 
-          {/* Open Orders */}
-          <SimpleStatisticsCard
-            title="Open Orders"
-            value={stats.openOrders}
-            description="Orders awaiting processing"
-          />
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <Stat
+          label="Today"
+          value={loading ? '—' : String(stats.todayCount)}
+          delta={loading ? undefined : formatCurrency(stats.todayValue) + ' total'}
+        />
+        <Stat
+          label="Open"
+          value={loading ? '—' : String(stats.open)}
+          delta={loading ? undefined : 'Awaiting push to NetSuite'}
+        />
+        <Stat
+          label="In Process"
+          value={loading ? '—' : String(stats.inProcess)}
+          delta={loading ? undefined : 'Pushed, awaiting invoice'}
+        />
+        <Stat
+          label="Ready"
+          value={loading ? '—' : String(stats.ready)}
+          delta={loading ? undefined : 'Invoice created'}
+        />
+      </div>
 
-          {/* In Process Orders */}
-          <SimpleStatisticsCard
-            title="In Process"
-            value={stats.inProcessOrders}
-            description="Orders being processed"
-          />
+      {/* Recent orders */}
+      <Card>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border">
+          <h2 className="text-sm font-semibold">Recent orders</h2>
+          <Link href="/admin/orders">
+            <Button variant="ghost" size="sm">
+              View all
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
 
-        {/* Recent Orders */}
-        <Card className="border border-blue-gray-100 shadow-sm" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-          <CardHeader floated={false} shadow={false} className="rounded-none" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-            <div className="flex items-center justify-between">
-              <Typography variant="h5" color="blue-gray" {...defaultProps}>
-                Recent Orders
-              </Typography>
-              <Link href="/admin/orders">
-                <Button variant="text" size="sm" className="flex items-center gap-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  View All
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    stroke="currentColor"
-                    className="h-4 w-4"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
-                    />
-                  </svg>
+        {loading ? (
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
+            Loading recent orders…
+          </CardContent>
+        ) : recentOrders.length === 0 ? (
+          <EmptyState
+            icon={<Inbox />}
+            title="No orders yet"
+            description="When distributors place orders, they'll show up here."
+            action={
+              <Link href="/admin/orders/new">
+                <Button size="sm">
+                  <Plus className="h-4 w-4" />
+                  New order
                 </Button>
               </Link>
-            </div>
-          </CardHeader>
-          <CardBody className="overflow-x-scroll px-0 pt-0 pb-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-            {recentOrders.length > 0 ? (
-              <table className="w-full min-w-[640px] table-auto">
-                <thead>
-                  <tr>
-                    {["PO Number", "Company", "Status", "Total", "Date", "Actions"].map((el) => (
-                      <th
-                        key={el}
-                        className="border-b border-blue-gray-50 py-3 px-5 text-left"
-                      >
-                        <Typography
-                          variant="small"
-                          className="text-[11px] font-bold uppercase text-blue-gray-400"
-                          placeholder={undefined}
-                          onPointerEnterCapture={undefined}
-                          onPointerLeaveCapture={undefined}
-                        >
-                          {el}
-                        </Typography>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentOrders.map((order, index) => {
-                    const className = `py-3 px-5 ${
-                      index === recentOrders.length - 1
-                        ? ""
-                        : "border-b border-blue-gray-50"
-                    }`;
-                    
-                    return (
-                      <tr 
-                        key={order.id}
-                        onClick={() => router.push(`/admin/orders/${order.id}`)}
-                        className="hover:bg-gray-50 cursor-pointer"
-                      >
-                        <td className={className}>
-                          <Typography
-                            variant="small"
-                            color="blue-gray"
-                            className="font-semibold"
-                            placeholder={undefined}
-                            onPointerEnterCapture={undefined}
-                            onPointerLeaveCapture={undefined}
-                          >
-                            {order.po_number || 'N/A'}
-                          </Typography>
-                        </td>
-                        <td className={className}>
-                          <Typography
-                            variant="small"
-                            color="blue-gray"
-                            className="font-semibold"
-                            placeholder={undefined}
-                            onPointerEnterCapture={undefined}
-                            onPointerLeaveCapture={undefined}
-                          >
-                            {(() => {
-                              const companies = order.companies;
-                              if (!companies) return 'N/A';
-                              const companyName = Array.isArray(companies) 
-                                ? companies[0]?.company_name 
-                                : (companies as any).company_name;
-                              return companyName || 'N/A';
-                            })()}
-                          </Typography>
-                        </td>
-                        <td className={className}>
-                          <OrderStatusBadge status={order.status} />
-                        </td>
-                        <td className={className}>
-                          <Typography className="text-xs font-semibold text-blue-gray-600" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                            {formatCurrency(order.total_value || 0)}
-                          </Typography>
-                        </td>
-                        <td className={className}>
-                          <Typography className="text-xs font-semibold text-blue-gray-600" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                            {new Date(order.created_at).toLocaleDateString()}
-                          </Typography>
-                        </td>
-                        <td className={className} onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center gap-3">
-                            <Link href={`/admin/orders/${order.id}`}>
-                              <Typography
-                                as="a"
-                                className="text-xs font-semibold text-blue-gray-600 cursor-pointer hover:text-blue-500"
-                                placeholder={undefined}
-                                onPointerEnterCapture={undefined}
-                                onPointerLeaveCapture={undefined}
-                              >
-                                View
-                              </Typography>
-                            </Link>
-                            <Typography
-                              as="button"
-                              onClick={() => handleDownloadCSV(order.id)}
-                              className="text-xs font-semibold text-blue-gray-600 cursor-pointer hover:text-blue-500"
-                              placeholder={undefined}
-                              onPointerEnterCapture={undefined}
-                              onPointerLeaveCapture={undefined}
-                            >
-                              CSV
-                            </Typography>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            ) : (
-              <div className="py-12 text-center">
-                <Typography variant="h6" color="blue-gray" className="mb-2" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  No orders found
-                </Typography>
-                <Typography variant="small" color="gray" placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
-                  Orders will appear here once they are created.
-                </Typography>
-              </div>
-            )}
-          </CardBody>
-        </Card>
-      </div>
+            }
+            className="border-0 shadow-none"
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>
+                  <span className="md:hidden">Order</span>
+                  <span className="hidden md:inline">PO Number</span>
+                </TableHead>
+                <TableHead className="hidden md:table-cell">Company</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="hidden lg:table-cell">Date</TableHead>
+                <TableHead className="w-12" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentOrders.map((order) => (
+                <TableRow
+                  key={order.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/admin/orders/${order.id}`)}
+                >
+                  <TableCell className="font-mono text-sm">
+                    <div className="max-w-[160px] sm:max-w-none">
+                      <div className="truncate">{order.po_number || order.id.substring(0, 6)}</div>
+                      <div className="md:hidden mt-1 font-sans">
+                        <div className="text-xs text-foreground truncate">{companyNameOf(order)}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-sm">
+                    {companyNameOf(order)}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={order.status} />
+                  </TableCell>
+                  <TableCell
+                    className={`text-right font-mono text-sm ${
+                      order.status === 'Cancelled' ? 'text-muted-foreground line-through' : ''
+                    }`}
+                  >
+                    ${(order.total_value || 0).toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                    {new Date(order.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label="Row actions">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => router.push(`/admin/orders/${order.id}`)}>
+                          <Eye className="h-4 w-4 mr-2" /> View
+                        </DropdownMenuItem>
+                        {order.status !== 'Draft' && (
+                          <DropdownMenuItem onClick={() => handleDownloadCSV(order.id)}>
+                            <Download className="h-4 w-4 mr-2" /> Download CSV
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Stat tile
+// -----------------------------------------------------------------------------
+function Stat({ label, value, delta }: { label: string; value: string; delta?: string }) {
+  return (
+    <Card className="p-4">
+      <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+      {delta && <p className="mt-1 text-xs text-muted-foreground truncate">{delta}</p>}
+    </Card>
   );
 }
