@@ -139,7 +139,7 @@ function SetPasswordForm() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               <FormField label="New password" helper="At least 6 characters.">
                 <Input
                   type="password"

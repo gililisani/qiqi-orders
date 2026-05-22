@@ -270,7 +270,7 @@ export default function LoginPage() {
                   </p>
                 </div>
 
-                <form onSubmit={handleEmailContinue} className="space-y-4">
+                <form onSubmit={handleEmailContinue} className="space-y-4" noValidate>
                   <FormField label="Email">
                     <Input
                       type="email"
@@ -327,7 +327,7 @@ export default function LoginPage() {
                   </>
                 )}
 
-                <form onSubmit={handlePasswordLogin} className="space-y-4">
+                <form onSubmit={handlePasswordLogin} className="space-y-4" noValidate>
                   <FormField label="Password">
                     <div className="relative">
                       <Input
@@ -392,7 +392,7 @@ export default function LoginPage() {
                   </Alert>
                 )}
 
-                <form onSubmit={handleVerifyCode} className="space-y-4">
+                <form onSubmit={handleVerifyCode} className="space-y-4" noValidate>
                   <input
                     type="text"
                     inputMode="numeric"
