@@ -1,170 +1,122 @@
 'use client';
 
+/**
+ * Request a password reset link.
+ * Always shows generic success regardless of whether the email is registered
+ * (anti-enumeration). The actual lookup + email send happens in
+ * /api/auth/reset-password.
+ */
+
 import { useState } from 'react';
 import Link from 'next/link';
-import {
-  Input,
-  Button,
-  Typography,
-  Alert,
-  Spinner,
-} from '../components/MaterialTailwind';
+import { CheckCircle2 } from 'lucide-react';
+
+import { Button } from '../components/qq/button';
+import { Input } from '../components/qq/input';
+import { Card, CardContent } from '../components/qq/card';
+import { FormField } from '../components/qq/form-field';
+import { Alert, AlertDescription } from '../components/qq/alert';
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Send password reset link via API (uses custom email service, not Supabase)
-  const handleSendResetLink = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setSuccess(false);
-    setIsSubmitting(true);
-
+    setSubmitting(true);
     try {
-      const response = await fetch('/api/auth/reset-password', {
+      const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
         setError(data.error || 'Failed to send reset link. Please try again.');
-      } else {
-        setSuccess(true);
+        return;
       }
-    } catch (err: any) {
+      setSuccess(true);
+    } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <section className="flex items-center justify-center h-full min-h-screen bg-blue-gray-50/50">
-      {/* Centered Reset Password Form */}
-      <div className="w-full max-w-md px-8">
+    <main className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+      <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-6">
-            <img src="/QIQI-Logo.svg" alt="Qiqi Logo" className="h-16 w-auto" />
-          </div>
-          <h1 className="text-3xl font-bold text-blue-gray-900 mb-4">
-            Partners Hub
-          </h1>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/QIQI-Logo.svg" alt="Qiqi" className="h-10 w-auto mx-auto mb-3" />
+          <h1 className="text-base font-medium text-muted-foreground">Partners Hub</h1>
         </div>
 
-        {/* White Block Design */}
-        <div className="bg-white rounded-xl border border-blue-gray-100 shadow-sm p-8">
-          {success ? (
-            <>
-              <div className="text-center mb-6">
-                <div className="text-green-600 text-5xl mb-4">✓</div>
-                <Typography variant="h4" className="!font-bold mb-2">
-                  Check Your Email
-                </Typography>
-                <Typography className="text-base !font-normal !text-blue-gray-500">
-                  We've sent a password reset link to <strong>{email}</strong>
-                </Typography>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <Typography variant="small" className="!font-normal !text-blue-800">
-                  <strong>Next steps:</strong>
-                  <br />
-                  1. Check your email inbox (and spam folder)
-                  <br />
-                  2. Click the "Reset My Password" button in the email
-                  <br />
-                  3. Set your new password
-                </Typography>
-              </div>
-
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <Typography variant="small" className="!font-normal !text-yellow-800">
-                  <strong>Note:</strong> The reset link will expire in 24 hours. If you don't see the email, check your spam folder or contact your administrator.
-                </Typography>
-              </div>
-
-              <div className="flex items-center justify-center gap-2 mt-6">
-                <Typography
-                  variant="small"
-                  className="!font-medium text-gray-900"
+        <Card>
+          <CardContent className="pt-6">
+            {success ? (
+              <div className="text-center">
+                <CheckCircle2 className="h-10 w-10 mx-auto text-emerald-600 mb-4" />
+                <h2 className="text-xl font-semibold tracking-tight">Check your email</h2>
+                <p className="text-sm text-muted-foreground mt-2">
+                  If an account exists for <span className="text-foreground">{email}</span>, a reset link is on the way.
+                </p>
+                <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
+                  The link expires in 24 hours. Check your spam folder if you don't see it within a few minutes.
+                </p>
+                <Link
+                  href="/"
+                  className="inline-block mt-6 text-sm text-foreground hover:underline"
                 >
-                  <Link href="/" className="hover:underline">
-                    ← Back to Sign In
-                  </Link>
-                </Typography>
+                  ← Back to sign in
+                </Link>
               </div>
-            </>
-          ) : (
-            <>
-              <div className="text-center mb-6">
-                <Typography variant="h4" className="!font-bold mb-2">
-                  Reset Password
-                </Typography>
-                <Typography className="text-base !font-normal !text-blue-gray-500">
-                  Enter your email address and we'll send you a password reset link.
-                </Typography>
-              </div>
-
-              <form onSubmit={handleSendResetLink} className="mb-2">
+            ) : (
+              <>
                 <div className="mb-6">
-                  <Input
-                    label="Your email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder={undefined}
-                    onPointerEnterCapture={undefined}
-                    onPointerLeaveCapture={undefined}
-                    crossOrigin={undefined}
-                  />
+                  <h2 className="text-xl font-semibold tracking-tight">Reset password</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Enter your email and we'll send you a link to reset your password.
+                  </p>
                 </div>
 
-                {error && (
-                  <Alert color="red" className="mb-4">
-                    {error}
-                  </Alert>
-                )}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <FormField label="Email">
+                    <Input
+                      type="email"
+                      autoComplete="email"
+                      autoFocus
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                    />
+                  </FormField>
 
-                <Button
-                  className="mt-6"
-                  fullWidth
-                  type="submit"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <div className="flex items-center gap-2">
-                      <Spinner className="h-4 w-4" />
-                      Sending...
-                    </div>
-                  ) : (
-                    'Send Reset Link'
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
                   )}
-                </Button>
 
-                <div className="flex items-center justify-center gap-2 mt-6">
-                  <Typography
-                    variant="small"
-                    className="!font-medium text-gray-900"
-                  >
-                    <Link href="/" className="hover:underline">
-                      ← Back to Sign In
+                  <Button type="submit" className="w-full" loading={submitting}>
+                    {submitting ? 'Sending…' : 'Send reset link'}
+                  </Button>
+
+                  <div className="text-center pt-1">
+                    <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                      ← Back to sign in
                     </Link>
-                  </Typography>
-                </div>
-              </form>
-            </>
-          )}
-        </div>
+                  </div>
+                </form>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    </section>
+    </main>
   );
 }
