@@ -366,7 +366,13 @@ export default function AdminOrdersListView() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>PO Number</TableHead>
+                  <TableHead>
+                    {/* Same column holds different content on mobile vs desktop, so the label
+                        adapts: "Order" (PO + Company + Client stacked) on mobile, plain
+                        "PO Number" on md+ where Client and Company live in their own columns. */}
+                    <span className="md:hidden">Order</span>
+                    <span className="hidden md:inline">PO Number</span>
+                  </TableHead>
                   <TableHead className="hidden md:table-cell">Client</TableHead>
                   <TableHead className="hidden md:table-cell">Company</TableHead>
                   <TableHead>Status</TableHead>
@@ -387,16 +393,24 @@ export default function AdminOrdersListView() {
                       onClick={() => router.push(`/admin/orders/${order.id}`)}
                     >
                       <TableCell className="font-mono text-sm">
-                        {order.po_number || order.id.substring(0, 6)}
-                        {/* On mobile only, show company + client stacked under the PO so
-                            the user still sees who the order belongs to without a separate column. */}
-                        <div className="md:hidden mt-1 font-sans space-y-0.5">
-                          {company?.company_name && (
-                            <div className="text-xs text-foreground truncate">{company.company_name}</div>
-                          )}
-                          {client?.name && (
-                            <div className="text-[11px] text-muted-foreground truncate">{client.name}</div>
-                          )}
+                        {/* Constrain mobile width so a long company name truncates inside
+                            the cell instead of pushing the table off-screen. */}
+                        <div className="max-w-[160px] sm:max-w-none">
+                          <div className="truncate">{order.po_number || order.id.substring(0, 6)}</div>
+                          {/* Mobile-only stacked context: NS number, company, client */}
+                          <div className="md:hidden mt-1 font-sans space-y-0.5">
+                            {company?.netsuite_number && (
+                              <div className="text-[11px] text-muted-foreground font-mono truncate">
+                                NS {company.netsuite_number}
+                              </div>
+                            )}
+                            {company?.company_name && (
+                              <div className="text-xs text-foreground truncate">{company.company_name}</div>
+                            )}
+                            {client?.name && (
+                              <div className="text-[11px] text-muted-foreground truncate">{client.name}</div>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">

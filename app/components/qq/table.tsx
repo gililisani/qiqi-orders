@@ -66,7 +66,8 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
     <th
       ref={ref}
       className={cn(
-        'h-10 px-4 text-left align-middle font-semibold text-foreground text-xs uppercase tracking-wider',
+        // Tighter horizontal padding on mobile so 4 cells comfortably fit a phone screen.
+        'h-10 px-2 sm:px-4 text-left align-middle font-semibold text-foreground text-xs uppercase tracking-wider',
         '[&:has([role=checkbox])]:pr-0',
         className
       )}
@@ -80,7 +81,11 @@ const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<
   ({ className, ...props }, ref) => (
     <td
       ref={ref}
-      className={cn('p-4 align-middle [&:has([role=checkbox])]:pr-0', className)}
+      className={cn(
+        // Tighter padding on mobile; full padding on sm+.
+        'px-2 sm:px-4 py-3 sm:py-4 align-middle [&:has([role=checkbox])]:pr-0',
+        className
+      )}
       {...props}
     />
   )
