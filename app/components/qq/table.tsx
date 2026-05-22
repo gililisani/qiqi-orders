@@ -14,14 +14,27 @@ Table.displayName = 'Table';
 
 const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
   ({ className, ...props }, ref) => (
-    <thead ref={ref} className={cn('[&_tr]:border-b border-border', className)} {...props} />
+    // Light-gray background, no hover on header rows.
+    <thead
+      ref={ref}
+      className={cn('bg-secondary [&_tr]:border-b border-border', className)}
+      {...props}
+    />
   )
 );
 TableHeader.displayName = 'TableHeader';
 
 const TableBody = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
   ({ className, ...props }, ref) => (
-    <tbody ref={ref} className={cn('[&_tr:last-child]:border-0', className)} {...props} />
+    // Hover effect lives on body rows only (so header stays static).
+    <tbody
+      ref={ref}
+      className={cn(
+        '[&_tr:last-child]:border-0 [&_tr]:transition-colors [&_tr:hover]:bg-secondary/50',
+        className
+      )}
+      {...props}
+    />
   )
 );
 TableBody.displayName = 'TableBody';
@@ -35,10 +48,11 @@ TableFooter.displayName = 'TableFooter';
 
 const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTMLTableRowElement>>(
   ({ className, ...props }, ref) => (
+    // No hover here — applied via TableBody so header rows stay static.
     <tr
       ref={ref}
       className={cn(
-        'border-b border-border transition-colors hover:bg-secondary/50 data-[state=selected]:bg-secondary',
+        'border-b border-border data-[state=selected]:bg-secondary',
         className
       )}
       {...props}
@@ -49,10 +63,11 @@ TableRow.displayName = 'TableRow';
 
 const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
+    // Black text, uppercase, on the light-gray TableHeader background.
     <th
       ref={ref}
       className={cn(
-        'h-10 px-4 text-left align-middle font-medium text-muted-foreground text-xs uppercase tracking-wider',
+        'h-10 px-4 text-left align-middle font-semibold text-foreground text-xs uppercase tracking-wider',
         '[&:has([role=checkbox])]:pr-0',
         className
       )}

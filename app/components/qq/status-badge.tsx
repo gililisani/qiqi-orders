@@ -24,12 +24,16 @@ export type OrderStatus =
   | 'Done'
   | 'Cancelled';
 
+// Note: explicit hex values are used for emerald/sky/amber because Material Tailwind's
+// `withMT()` wrapper sometimes strips colors that aren't referenced elsewhere from the
+// JIT output. Using arbitrary-value classes (`bg-[#...]`) bypasses that and guarantees
+// the styles render.
 const STATUS_STYLES: Record<OrderStatus, string> = {
   Draft:        'bg-secondary text-muted-foreground border-border',
   Open:         'bg-brand-periwinkle/15 text-brand-periwinkle border-brand-periwinkle/30',
-  'In Process': 'bg-amber-50 text-amber-800 border-amber-200',
-  Ready:        'bg-emerald-50 text-emerald-700 border-emerald-200',
-  Done:         'bg-emerald-600 text-white border-emerald-600',
+  'In Process': 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]',
+  Ready:        'bg-[#DBEAFE] text-[#1D4ED8] border-[#BFDBFE]',
+  Done:         'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]',
   Cancelled:    'bg-brand-magenta/15 text-brand-magenta border-brand-magenta/40',
 };
 
