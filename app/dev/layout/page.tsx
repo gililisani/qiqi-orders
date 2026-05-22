@@ -10,7 +10,6 @@
  */
 
 import { useState } from 'react';
-import Link from 'next/link';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -23,8 +22,6 @@ import {
   Search,
   Plus,
   Bell,
-  ChevronsLeft,
-  ChevronsRight,
 } from 'lucide-react';
 
 import { AppShell } from '../../components/qq/app-shell';
@@ -73,8 +70,12 @@ export default function LayoutPreviewPage() {
   return (
     <>
       <AppShell
-        // Inline sidebar for lg+ — Sidebar component carries the collapse state.
-        sidebar={<Sidebar collapsed={collapsed}>{sidebarContent}</Sidebar>}
+        // Inline sidebar for lg+ — Sidebar carries collapse state AND toggle.
+        sidebar={
+          <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)}>
+            {sidebarContent}
+          </Sidebar>
+        }
         topbar={
           <Topbar
             onToggleSidebar={() => setMobileOpen(true)}
@@ -88,19 +89,6 @@ export default function LayoutPreviewPage() {
             }
             right={
               <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="hidden lg:inline-flex"
-                  onClick={() => setCollapsed((c) => !c)}
-                  aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                >
-                  {collapsed ? (
-                    <ChevronsRight className="h-4 w-4" />
-                  ) : (
-                    <ChevronsLeft className="h-4 w-4" />
-                  )}
-                </Button>
                 <Button variant="ghost" size="icon" aria-label="Notifications">
                   <Bell className="h-4 w-4" />
                 </Button>
@@ -154,16 +142,8 @@ export default function LayoutPreviewPage() {
 function SidebarContent() {
   return (
     <>
-      <Sidebar.Header>
-        <Link href="#" className="flex items-center gap-2 px-1">
-          <div className="h-6 w-6 rounded bg-brand-black flex items-center justify-center text-white text-[10px] font-bold">
-            Q
-          </div>
-          <span className="font-semibold text-sm text-foreground truncate">
-            Partners Hub
-          </span>
-        </Link>
-      </Sidebar.Header>
+      <Sidebar.Brand title="Partners Hub" />
+      <Sidebar.CollapsedToggle />
 
       <Sidebar.Nav>
         <Sidebar.Group>
@@ -224,7 +204,7 @@ function FakeOrdersPage({
   setPageSize: (n: number) => void;
 }) {
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="px-6 py-8">
       <PageHeader
         title="Orders"
         description="Manage incoming orders from your distributors."
