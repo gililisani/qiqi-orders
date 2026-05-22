@@ -66,15 +66,15 @@ export function Pagination({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center justify-between gap-3 py-2',
+        'flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2',
         className
       )}
     >
       <div className="text-sm text-muted-foreground">{summary}</div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap">
         {showPageSize && (
-          <div className="flex items-center gap-2 mr-3 text-sm">
+          <div className="hidden md:flex items-center gap-2 mr-3 text-sm">
             <span className="text-muted-foreground">Show</span>
             <select
               value={pageSize}
@@ -100,23 +100,26 @@ export function Pagination({
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        {pages.map((p, i) =>
-          p === 'ellipsis' ? (
-            <span key={`ellipsis-${i}`} className="px-2 text-muted-foreground">
-              <MoreHorizontal className="h-4 w-4" />
-            </span>
-          ) : (
-            <Button
-              key={p}
-              variant={p === page ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => onPageChange(p)}
-              className="min-w-[36px] px-2"
-            >
-              {p}
-            </Button>
-          )
-        )}
+        {/* Page numbers are dense — hide them on small screens, prev/next is enough */}
+        <div className="hidden sm:flex items-center gap-1">
+          {pages.map((p, i) =>
+            p === 'ellipsis' ? (
+              <span key={`ellipsis-${i}`} className="px-2 text-muted-foreground">
+                <MoreHorizontal className="h-4 w-4" />
+              </span>
+            ) : (
+              <Button
+                key={p}
+                variant={p === page ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => onPageChange(p)}
+                className="min-w-[36px] px-2"
+              >
+                {p}
+              </Button>
+            )
+          )}
+        </div>
 
         <Button
           variant="outline"

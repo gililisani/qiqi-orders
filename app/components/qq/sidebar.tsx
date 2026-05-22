@@ -24,7 +24,6 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import {
   Tooltip,
@@ -66,89 +65,10 @@ export function Sidebar({ collapsed = false, onToggle, className, children }: Si
 }
 
 // ----------------------------------------------------------------------------
-// Brand block — logo + title + toggle. Logo stays the same size in both states;
-// only the title text and the layout adjust.
-// ----------------------------------------------------------------------------
-interface BrandProps {
-  /** Image path for the small "Q" / app icon shown in both states. */
-  logoSrc?: string;
-  /** Inline JSX (e.g. svg) shown when no logoSrc is provided. */
-  logo?: React.ReactNode;
-  title: string;
-  href?: string;
-}
-
-Sidebar.Brand = function SidebarBrand({ logoSrc, logo, title, href = '#' }: BrandProps) {
-  const { collapsed, onToggle } = React.useContext(SidebarContext);
-
-  const logoEl =
-    logo ||
-    (logoSrc ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={logoSrc} alt={title} className="h-7 w-7 object-contain flex-shrink-0" />
-    ) : (
-      <div className="h-7 w-7 rounded bg-foreground text-background flex items-center justify-center text-[11px] font-bold flex-shrink-0">
-        Q
-      </div>
-    ));
-
-  return (
-    <div
-      className={cn(
-        'h-14 border-b border-border flex items-center gap-2',
-        collapsed ? 'px-2 justify-center' : 'px-3 justify-between'
-      )}
-    >
-      {/* Logo + title — title hides when collapsed, logo stays same size */}
-      <Link
-        href={href}
-        className={cn('flex items-center gap-2 min-w-0', collapsed && 'justify-center')}
-      >
-        {logoEl}
-        {!collapsed && (
-          <span className="text-sm font-semibold text-foreground truncate">{title}</span>
-        )}
-      </Link>
-
-      {/* Toggle — always present; pushed right when expanded, stacks to the right of logo when collapsed */}
-      {onToggle && !collapsed && (
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-label="Collapse sidebar"
-          className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex-shrink-0"
-        >
-          <ChevronsLeft className="h-4 w-4" />
-        </button>
-      )}
-      {/* When collapsed, the toggle floats below as a small protrusion (see CollapsedToggle) */}
-    </div>
-  );
-};
-
-/**
- * When the sidebar is collapsed, render this just below the brand block to
- * give the user an "expand" affordance. Renders nothing when expanded.
- */
-Sidebar.CollapsedToggle = function CollapsedToggle() {
-  const { collapsed, onToggle } = React.useContext(SidebarContext);
-  if (!collapsed || !onToggle) return null;
-  return (
-    <div className="px-2 pt-2 flex justify-center">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label="Expand sidebar"
-        className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-      >
-        <ChevronsRight className="h-4 w-4" />
-      </button>
-    </div>
-  );
-};
-
-// ----------------------------------------------------------------------------
 // Nav / Group / Item
+// (Brand block lives in the Topbar via the standalone <Brand /> component —
+// it is intentionally NOT part of the Sidebar so it doesn't collapse along
+// with the menu.)
 // ----------------------------------------------------------------------------
 Sidebar.Nav = function SidebarNav({
   className,

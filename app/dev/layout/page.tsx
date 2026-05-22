@@ -27,6 +27,7 @@ import {
 import { AppShell } from '../../components/qq/app-shell';
 import { Sidebar } from '../../components/qq/sidebar';
 import { Topbar, Breadcrumbs } from '../../components/qq/topbar';
+import { Brand } from '../../components/qq/brand';
 import { Button } from '../../components/qq/button';
 import { Badge } from '../../components/qq/badge';
 import { Card } from '../../components/qq/card';
@@ -78,6 +79,13 @@ export default function LayoutPreviewPage() {
         }
         topbar={
           <Topbar
+            brand={
+              <Brand
+                title="Partners Hub"
+                sidebarCollapsed={collapsed}
+                onToggleSidebar={() => setCollapsed((c) => !c)}
+              />
+            }
             onToggleSidebar={() => setMobileOpen(true)}
             left={
               <Breadcrumbs
@@ -142,9 +150,6 @@ export default function LayoutPreviewPage() {
 function SidebarContent() {
   return (
     <>
-      <Sidebar.Brand title="Partners Hub" />
-      <Sidebar.CollapsedToggle />
-
       <Sidebar.Nav>
         <Sidebar.Group>
           <Sidebar.Item icon={<LayoutDashboard />} href="#">

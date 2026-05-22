@@ -3,41 +3,52 @@
 /**
  * AppShell — the standard layout for every admin/client page.
  *
+ *   ┌─────────────────────────────────────────────┐
+ *   │ Brand        │ topbar content │ user menu   │  ← full-width topbar
+ *   ├──────────────┼──────────────────────────────┤
+ *   │              │                              │
+ *   │   sidebar    │       page content           │
+ *   │              │                              │
+ *   └──────────────┴──────────────────────────────┘
+ *
+ * The brand block lives at the left of the topbar; it is NOT part of the
+ * sidebar. Collapsing the sidebar narrows only the sidebar — the brand
+ * block stays at its fixed width.
+ *
  *   <AppShell
- *     sidebar={<Sidebar>...</Sidebar>}
- *     topbar={<Topbar ... />}
+ *     topbar={<Topbar brand={<Brand ... />} left={...} right={...} />}
+ *     sidebar={<Sidebar collapsed={...}>...nav...</Sidebar>}
  *   >
  *     {pageContent}
  *   </AppShell>
- *
- * Responsive behavior:
- *  - <lg (1024px): sidebar is hidden, accessed via a Sheet/drawer (parent
- *                  passes the trigger via topbar.onToggleSidebar and renders
- *                  the drawer itself — keeps this component dumb).
- *  - lg+: sidebar shown inline; parent can swap a collapsed/expanded version
- *         via the same Sidebar component's `collapsed` prop.
  */
 
 import * as React from 'react';
 import { cn } from '../../../lib/utils';
 
 interface AppShellProps {
-  sidebar: React.ReactNode;
   topbar?: React.ReactNode;
+  sidebar: React.ReactNode;
   className?: string;
   contentClassName?: string;
   children: React.ReactNode;
 }
 
-export function AppShell({ sidebar, topbar, className, contentClassName, children }: AppShellProps) {
+export function AppShell({
+  topbar,
+  sidebar,
+  className,
+  contentClassName,
+  children,
+}: AppShellProps) {
   return (
-    <div className={cn('h-screen flex bg-background overflow-hidden', className)}>
-      {/* Sidebar: visible on lg+ only; mobile uses Sheet via topbar hamburger */}
-      <aside className="hidden lg:flex flex-shrink-0">{sidebar}</aside>
-
-      <div className="flex-1 flex flex-col min-w-0">
-        {topbar}
-        <main className={cn('flex-1 overflow-y-auto', contentClassName)}>{children}</main>
+    <div className={cn('h-screen flex flex-col bg-background overflow-hidden', className)}>
+      {topbar}
+      <div className="flex-1 flex overflow-hidden">
+        <aside className="hidden lg:flex flex-shrink-0">{sidebar}</aside>
+        <main className={cn('flex-1 overflow-y-auto min-w-0', contentClassName)}>
+          {children}
+        </main>
       </div>
     </div>
   );

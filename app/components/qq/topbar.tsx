@@ -16,9 +16,13 @@ import { Button } from './button';
 import { cn } from '../../../lib/utils';
 
 interface TopbarProps {
-  /** Called when the hamburger or collapse button is clicked. */
+  /** Brand block (logo + product name + collapse button). Sits at the far left,
+   *  spans full topbar height. Decoupled from the sidebar — does not change
+   *  width when the sidebar collapses. */
+  brand?: React.ReactNode;
+  /** Called when the mobile hamburger is clicked (opens the sidebar drawer). */
   onToggleSidebar?: () => void;
-  /** Show the mobile hamburger; defaults to true on small screens, hidden on large. */
+  /** Show the mobile hamburger; defaults to true. */
   showHamburger?: boolean;
   left?: React.ReactNode;
   right?: React.ReactNode;
@@ -26,6 +30,7 @@ interface TopbarProps {
 }
 
 export function Topbar({
+  brand,
   onToggleSidebar,
   showHamburger = true,
   left,
@@ -35,23 +40,26 @@ export function Topbar({
   return (
     <header
       className={cn(
-        'h-14 bg-card border-b border-border flex items-center px-4 gap-3',
+        'h-14 bg-card border-b border-border flex items-center flex-shrink-0',
         className
       )}
     >
-      {showHamburger && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggleSidebar}
-          aria-label="Toggle sidebar"
-          className="lg:hidden"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-      )}
-      <div className="flex-1 min-w-0">{left}</div>
-      {right && <div className="flex items-center gap-2">{right}</div>}
+      {brand}
+      <div className="flex-1 min-w-0 flex items-center gap-3 px-4">
+        {showHamburger && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggleSidebar}
+            aria-label="Open menu"
+            className="lg:hidden -ml-2"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        )}
+        <div className="flex-1 min-w-0">{left}</div>
+        {right && <div className="flex items-center gap-2">{right}</div>}
+      </div>
     </header>
   );
 }
