@@ -66,9 +66,9 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
   }, [onDismiss, toast.durationMs]);
 
   const styles = {
-    success: 'bg-white border-l-4 border-green-500 text-gray-900',
-    error: 'bg-white border-l-4 border-red-500 text-gray-900',
-    info: 'bg-white border-l-4 border-blue-500 text-gray-900',
+    success: 'bg-card border-l-2 border-emerald-500 text-card-foreground',
+    error: 'bg-card border-l-2 border-brand-magenta text-card-foreground',
+    info: 'bg-card border-l-2 border-brand-periwinkle text-card-foreground',
   }[toast.variant];
 
   const icon = {
@@ -78,17 +78,17 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
   }[toast.variant];
 
   const iconColor = {
-    success: 'text-green-600',
-    error: 'text-red-600',
-    info: 'text-blue-600',
+    success: 'text-emerald-600',
+    error: 'text-brand-magenta',
+    info: 'text-brand-periwinkle',
   }[toast.variant];
 
   return (
     <div
-      className={`${styles} shadow-lg rounded px-4 py-3 flex items-start gap-3 pointer-events-auto animate-in slide-in-from-right`}
+      className={`${styles} shadow-md border border-border rounded-md px-4 py-3 flex items-start gap-3 pointer-events-auto animate-in slide-in-from-right`}
       role="status"
     >
-      <span className={`${iconColor} font-bold text-lg leading-none mt-0.5`}>{icon}</span>
+      <span className={`${iconColor} font-semibold text-base leading-none mt-0.5`}>{icon}</span>
       <div className="flex-1 text-sm">
         <p>{toast.message}</p>
         {toast.href && (
@@ -96,7 +96,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
             href={toast.href.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 hover:underline text-xs mt-1 inline-block"
+            className="text-brand-periwinkle hover:underline text-xs mt-1 inline-block"
           >
             {toast.href.label} ↗
           </a>
@@ -104,7 +104,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
       </div>
       <button
         onClick={onDismiss}
-        className="text-gray-400 hover:text-gray-700 text-xs leading-none"
+        className="text-muted-foreground hover:text-foreground text-xs leading-none"
         aria-label="Dismiss"
       >
         ✕

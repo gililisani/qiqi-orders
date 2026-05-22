@@ -50,46 +50,46 @@ export default function ConfirmProvider({ children }: { children: ReactNode }) {
       {children}
       {pending && (
         <div
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
           onClick={() => close(false)}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-md w-full overflow-hidden"
+            className="bg-card rounded-md shadow-xl max-w-md w-full overflow-hidden border border-border"
             onClick={e => e.stopPropagation()}
           >
-            <div className={`px-6 py-4 border-b ${isDanger ? 'border-red-100 bg-red-50' : 'border-gray-100'}`}>
-              <h3 className={`text-lg font-semibold ${isDanger ? 'text-red-900' : 'text-gray-900'}`}>
+            <div className={`px-6 py-4 border-b ${isDanger ? 'border-brand-magenta/30 bg-brand-magenta/8' : 'border-border'}`}>
+              <h3 className={`text-base font-semibold tracking-tight ${isDanger ? 'text-brand-magenta' : 'text-foreground'}`}>
                 {pending.title}
               </h3>
             </div>
 
             <div className="px-6 py-4 space-y-3">
               {pending.description && (
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{pending.description}</p>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{pending.description}</p>
               )}
 
               {pending.bullets && pending.bullets.length > 0 && (
-                <ul className="space-y-1 text-sm">
+                <ul className="space-y-1.5 text-sm">
                   {pending.bullets.map((b, i) => {
                     const isObj = typeof b === 'object';
                     const label = isObj ? b.label : b;
                     const href = isObj ? b.href : undefined;
                     return (
                       <li key={i} className="flex items-start gap-2">
-                        <span className={`mt-1.5 inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ${isDanger ? 'bg-red-500' : 'bg-gray-400'}`} />
+                        <span className={`mt-1.5 inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ${isDanger ? 'bg-brand-magenta' : 'bg-muted-foreground'}`} />
                         {href ? (
                           <a
                             href={href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
+                            className="text-brand-periwinkle hover:underline"
                           >
                             {label} ↗
                           </a>
                         ) : (
-                          <span className="text-gray-800">{label}</span>
+                          <span className="text-foreground">{label}</span>
                         )}
                       </li>
                     );
@@ -98,36 +98,36 @@ export default function ConfirmProvider({ children }: { children: ReactNode }) {
               )}
 
               {pending.warning && (
-                <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+                <p className="text-xs text-brand-magenta bg-brand-magenta/8 border border-brand-magenta/30 rounded-md px-3 py-2">
                   {pending.warning}
                 </p>
               )}
 
               {pending.requireExplicitConfirm && (
-                <label className="flex items-start gap-2 text-sm text-gray-700 mt-3 cursor-pointer select-none">
+                <label className="flex items-start gap-2 text-sm text-foreground mt-3 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={acknowledged}
                     onChange={e => setAcknowledged(e.target.checked)}
-                    className="mt-0.5"
+                    className="mt-0.5 accent-foreground"
                   />
                   <span>I understand this action cannot be undone.</span>
                 </label>
               )}
             </div>
 
-            <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
+            <div className="px-6 py-3 bg-secondary/50 border-t border-border flex justify-end gap-2">
               <button
                 onClick={() => close(false)}
-                className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
+                className="h-10 px-4 text-sm font-medium text-foreground bg-background border border-border rounded-md hover:bg-secondary transition-colors"
               >
                 {pending.cancelLabel || 'Cancel'}
               </button>
               <button
                 onClick={() => close(true)}
                 disabled={confirmDisabled}
-                className={`px-4 py-2 text-sm text-white rounded disabled:opacity-40 disabled:cursor-not-allowed ${
-                  isDanger ? 'bg-red-600 hover:bg-red-700' : 'bg-black hover:opacity-90'
+                className={`h-10 px-4 text-sm font-medium text-white rounded-md disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${
+                  isDanger ? 'bg-brand-magenta hover:bg-brand-magenta/90' : 'bg-primary hover:bg-primary/90'
                 }`}
               >
                 {pending.confirmLabel || 'Confirm'}
