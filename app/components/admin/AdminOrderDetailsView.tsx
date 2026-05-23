@@ -598,72 +598,77 @@ export default function AdminOrderDetailsView({
             )}
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Field label="PO Number">
-              <span className="font-mono">{order.po_number || '—'}</span>
-            </Field>
+            {/* Row 1: PO Number (left) + Status (right) */}
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="PO Number">
+                <span className="font-mono">{order.po_number || '—'}</span>
+              </Field>
+              <Field label="Status" align="right">
+                {order.status !== 'Draft' && editOrderInfoMode ? (
+                  <Select value={order.status} onValueChange={(v) => handleStatusChange(v)}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.filter((s) => {
+                        if (order.netsuite_so_id && (s === 'Open' || s === 'Cancelled')) {
+                          return s === order.status;
+                        }
+                        return true;
+                      }).map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <StatusBadge status={order.status} />
+                )}
+              </Field>
+            </div>
 
-            <Field label="Status">
-              {order.status !== 'Draft' && editOrderInfoMode ? (
-                <Select value={order.status} onValueChange={(v) => handleStatusChange(v)}>
-                  <SelectTrigger className="h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.filter((s) => {
-                      if (order.netsuite_so_id && (s === 'Open' || s === 'Cancelled')) {
-                        return s === order.status;
-                      }
-                      return true;
-                    }).map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <StatusBadge status={order.status} />
-              )}
-            </Field>
+            {/* Row 2: Invoice Number (left) + SO Number (right) */}
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Invoice Number">
+                {editOrderInfoMode ? (
+                  <Input
+                    value={adminInvoiceNumber}
+                    onChange={(e) => setAdminInvoiceNumber(e.target.value)}
+                    className={`h-8 ${
+                      validateRequiredFields(order.status).includes('invoice_number')
+                        ? 'border-destructive'
+                        : ''
+                    }`}
+                    placeholder="—"
+                  />
+                ) : adminInvoiceNumber ? (
+                  <span className="font-mono">{adminInvoiceNumber}</span>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </Field>
+              <Field label="SO Number" align="right">
+                {editOrderInfoMode ? (
+                  <Input
+                    value={adminSoNumber}
+                    onChange={(e) => setAdminSoNumber(e.target.value)}
+                    className={`h-8 ${
+                      validateRequiredFields(order.status).includes('so_number')
+                        ? 'border-destructive'
+                        : ''
+                    }`}
+                    placeholder="—"
+                  />
+                ) : adminSoNumber ? (
+                  <span className="font-mono">{adminSoNumber}</span>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </Field>
+            </div>
 
-            <Field label="Invoice Number">
-              {editOrderInfoMode ? (
-                <Input
-                  value={adminInvoiceNumber}
-                  onChange={(e) => setAdminInvoiceNumber(e.target.value)}
-                  className={`h-8 ${
-                    validateRequiredFields(order.status).includes('invoice_number')
-                      ? 'border-destructive'
-                      : ''
-                  }`}
-                  placeholder="—"
-                />
-              ) : adminInvoiceNumber ? (
-                <span className="font-mono">{adminInvoiceNumber}</span>
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-            </Field>
-
-            <Field label="SO Number">
-              {editOrderInfoMode ? (
-                <Input
-                  value={adminSoNumber}
-                  onChange={(e) => setAdminSoNumber(e.target.value)}
-                  className={`h-8 ${
-                    validateRequiredFields(order.status).includes('so_number')
-                      ? 'border-destructive'
-                      : ''
-                  }`}
-                  placeholder="—"
-                />
-              ) : adminSoNumber ? (
-                <span className="font-mono">{adminSoNumber}</span>
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-            </Field>
-
+            {/* Pallets — full width row of its own */}
             <Field label="Number of Pallets">
               {editOrderInfoMode ? (
                 <Input
@@ -740,86 +745,81 @@ export default function AdminOrderDetailsView({
       </div>
 
       {/* Items */}
+      <SectionHeader title="Items">
+        {isReordering && (
+          <span className="text-xs text-muted-foreground">Drag rows to reorder</span>
+        )}
+        <Button
+          size="sm"
+          variant={isReordering ? 'default' : 'outline'}
+          onClick={() => setIsReordering((v) => !v)}
+        >
+          {isReordering ? 'Done reordering' : 'Reorder'}
+        </Button>
+      </SectionHeader>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm">Items</CardTitle>
-          <div className="flex items-center gap-3">
-            {isReordering && (
-              <span className="text-xs text-muted-foreground">Drag rows to reorder</span>
-            )}
-            <Button
-              size="sm"
-              variant={isReordering ? 'default' : 'outline'}
-              onClick={() => setIsReordering((v) => !v)}
-            >
-              {isReordering ? 'Done reordering' : 'Reorder'}
-            </Button>
+        {orderItems.length === 0 ? (
+          <div className="px-6 py-8 text-center text-sm text-muted-foreground">
+            No items on this order.
           </div>
-        </CardHeader>
-        <CardContent className="pt-0 px-0">
-          {orderItems.length === 0 ? (
-            <div className="px-6 py-8 text-center text-sm text-muted-foreground">
-              No items on this order.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {isReordering && <TableHead className="w-12" />}
-                  <TableHead>Product</TableHead>
-                  <TableHead className="hidden sm:table-cell">SKU</TableHead>
-                  <TableHead className="text-right">Quantity</TableHead>
-                  <TableHead className="text-right hidden md:table-cell">Cases</TableHead>
-                  <TableHead className="text-right">Unit Price</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orderItems.map((item) => (
-                  <TableRow
-                    key={item.id}
-                    draggable={isReordering}
-                    onDragStart={isReordering ? (e) => handleDragStart(e, item.id) : undefined}
-                    onDragOver={isReordering ? handleDragOver : undefined}
-                    onDrop={isReordering ? (e) => handleDrop(e, item.id) : undefined}
-                    className={`${item.is_support_fund_item ? 'bg-emerald-50/40' : ''} ${
-                      isReordering ? 'cursor-move' : ''
-                    } ${draggedItem === item.id ? 'opacity-50' : ''}`}
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {isReordering && <TableHead className="w-12" />}
+                <TableHead>Product</TableHead>
+                <TableHead className="hidden sm:table-cell">SKU</TableHead>
+                <TableHead className="text-right">Quantity</TableHead>
+                <TableHead className="text-right hidden md:table-cell">Cases</TableHead>
+                <TableHead className="text-right">Unit Price</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {orderItems.map((item) => (
+                <TableRow
+                  key={item.id}
+                  draggable={isReordering}
+                  onDragStart={isReordering ? (e) => handleDragStart(e, item.id) : undefined}
+                  onDragOver={isReordering ? handleDragOver : undefined}
+                  onDrop={isReordering ? (e) => handleDrop(e, item.id) : undefined}
+                  className={`${item.is_support_fund_item ? 'bg-emerald-50/40' : ''} ${
+                    isReordering ? 'cursor-move' : ''
+                  } ${draggedItem === item.id ? 'opacity-50' : ''}`}
+                >
+                  {isReordering && (
+                    <TableCell className="text-muted-foreground text-center">⋮⋮</TableCell>
+                  )}
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{item.product?.item_name || '—'}</span>
+                      {item.is_support_fund_item && (
+                        <Badge variant="success" className="text-[10px]">Support fund</Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell font-mono text-xs">{item.product?.sku || '—'}</TableCell>
+                  <TableCell className="text-right font-mono text-sm">{formatQuantity(item.quantity)}</TableCell>
+                  <TableCell className="hidden md:table-cell text-right font-mono text-sm">{formatQuantity(item.case_qty || 0)}</TableCell>
+                  <TableCell
+                    className={`text-right font-mono text-sm ${
+                      item.is_support_fund_item ? 'text-emerald-700' : ''
+                    }`}
                   >
-                    {isReordering && (
-                      <TableCell className="text-muted-foreground text-center">⋮⋮</TableCell>
-                    )}
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{item.product?.item_name || '—'}</span>
-                        {item.is_support_fund_item && (
-                          <Badge variant="success" className="text-[10px]">Support fund</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell font-mono text-xs">{item.product?.sku || '—'}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{formatQuantity(item.quantity)}</TableCell>
-                    <TableCell className="hidden md:table-cell text-right font-mono text-sm">{formatQuantity(item.case_qty || 0)}</TableCell>
-                    <TableCell
-                      className={`text-right font-mono text-sm ${
-                        item.is_support_fund_item ? 'text-emerald-700' : ''
-                      }`}
-                    >
-                      {formatCurrency(item.unit_price)}
-                    </TableCell>
-                    <TableCell
-                      className={`text-right font-mono text-sm font-medium ${
-                        item.is_support_fund_item ? 'text-emerald-700' : ''
-                      }`}
-                    >
-                      {formatCurrency(item.total_price)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
+                    {formatCurrency(item.unit_price)}
+                  </TableCell>
+                  <TableCell
+                    className={`text-right font-mono text-sm font-medium ${
+                      item.is_support_fund_item ? 'text-emerald-700' : ''
+                    }`}
+                  >
+                    {formatCurrency(item.total_price)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </Card>
 
       {/* Totals */}
@@ -854,25 +854,22 @@ export default function AdminOrderDetailsView({
       </Card>
 
       {/* Documents */}
+      <SectionHeader title="Documents">
+        <OrderDocumentUpload
+          orderId={orderId}
+          onUploadComplete={() => setDocumentsRefreshKey((k) => k + 1)}
+        />
+      </SectionHeader>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm">Documents</CardTitle>
-          <OrderDocumentUpload
-            orderId={orderId}
-            onUploadComplete={() => setDocumentsRefreshKey((k) => k + 1)}
-          />
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <OrderDocumentsView key={documentsRefreshKey} orderId={orderId} role="admin" />
         </CardContent>
       </Card>
 
       {/* History */}
+      <SectionHeader title="History" />
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">History</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <OrderHistoryView orderId={orderId} role="admin" />
         </CardContent>
       </Card>
@@ -1031,10 +1028,18 @@ export default function AdminOrderDetailsView({
 // ============================================================================
 // Local helpers
 // ============================================================================
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+  align = 'left',
+}: {
+  label: string;
+  children: React.ReactNode;
+  align?: 'left' | 'right';
+}) {
   return (
-    <div>
-      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+    <div className={align === 'right' ? 'text-right' : ''}>
+      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-medium block">
         {label}
       </Label>
       <div className="mt-1">{children}</div>
@@ -1057,6 +1062,20 @@ function Row({
     <div className="flex justify-between">
       <span className={labelClass || 'text-sm text-muted-foreground'}>{label}</span>
       <span className={`${valueClass || 'text-sm font-medium'} font-mono`}>{value}</span>
+    </div>
+  );
+}
+
+/**
+ * Section heading + optional actions on the right — used for Items,
+ * Documents, History where we want the label OUTSIDE the surrounding card
+ * (so it reads like a section heading, not a card title).
+ */
+function SectionHeader({ title, children }: { title: string; children?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 mt-2 mb-3">
+      <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
+      {children && <div className="flex items-center gap-2">{children}</div>}
     </div>
   );
 }
