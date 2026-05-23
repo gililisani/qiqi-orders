@@ -1,9 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '../../../../lib/supabaseClient';
 import Link from 'next/link';
+import { ArrowLeft, GripVertical } from 'lucide-react';
+
+import { supabase } from '../../../../lib/supabaseClient';
+import { PageHeader } from '../../../components/qq/page-header';
+import { Card, CardContent } from '../../../components/qq/card';
+import { Button } from '../../../components/qq/button';
+import { Badge } from '../../../components/qq/badge';
+import { Alert, AlertDescription } from '../../../components/qq/alert';
+import { useToast } from '../../../components/ui/ToastProvider';
 
 interface Category {
   id: number;
@@ -12,47 +19,38 @@ interface Category {
   sort_order: number;
   visible_to_americas: boolean;
   visible_to_international: boolean;
-  product_count?: number;
+  product_count: number;
 }
 
 export default function ReorderCategoriesPage() {
-  const router = useRouter();
+  const toast = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
   const fetchCategories = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('categories')
-        .select(`
-          *,
-          product_count:Products(count)
-        `)
+        .select('*, product_count:Products(count)')
         .order('sort_order');
-
       if (error) throw error;
-      
-      // Transform the data to get product counts
-      const categoriesWithCounts = data?.map(cat => ({
-        ...cat,
-        product_count: cat.product_count?.[0]?.count || 0
-      })) || [];
-      
-      setCategories(categoriesWithCounts);
+      setCategories(
+        (data || []).map((c: any) => ({ ...c, product_count: c.product_count?.[0]?.count || 0 }))
+      );
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to load categories.');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index);
@@ -66,221 +64,138 @@ export default function ReorderCategoriesPage() {
 
   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
-    
     if (draggedIndex === null || draggedIndex === dropIndex) {
       setDraggedIndex(null);
       return;
     }
-
-    const newCategories = [...categories];
-    const draggedCategory = newCategories[draggedIndex];
-    
-    // Remove dragged item
-    newCategories.splice(draggedIndex, 1);
-    
-    // Insert at new position
-    newCategories.splice(dropIndex, 0, draggedCategory);
-    
-    // Update sort_order values
-    const updatedCategories = newCategories.map((cat, index) => ({
-      ...cat,
-      sort_order: index + 1
-    }));
-    
-    setCategories(updatedCategories);
+    const next = [...categories];
+    const [moved] = next.splice(draggedIndex, 1);
+    next.splice(dropIndex, 0, moved);
+    setCategories(next.map((c, i) => ({ ...c, sort_order: i + 1 })));
     setDraggedIndex(null);
   };
 
   const handleSaveOrder = async () => {
     setSaving(true);
-    setError('');
-    setSuccess('');
-
+    setError(null);
     try {
-      // Update each category's sort_order
-      const updates = categories.map((category, index) => 
-        supabase
-          .from('categories')
-          .update({ sort_order: index + 1 })
-          .eq('id', category.id)
+      const updates = categories.map((c, i) =>
+        supabase.from('categories').update({ sort_order: i + 1 }).eq('id', c.id)
       );
-
       const results = await Promise.all(updates);
-      
-      // Check for any errors
-      const hasError = results.some(result => result.error);
-      if (hasError) {
-        throw new Error('Failed to update some categories');
-      }
-
-      setSuccess('Category order updated successfully!');
-      
-      // Refresh the data to confirm changes
+      if (results.some((r) => r.error)) throw new Error('Failed to update some categories.');
+      toast.success('Category order saved.');
       await fetchCategories();
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to save order.');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleReset = () => {
-    fetchCategories();
-    setError('');
-    setSuccess('');
-  };
-
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-64">
-          <div className="text-lg">Loading categories...</div>
-        </div>
+      <div className="px-6 py-8">
+        <p className="text-sm text-muted-foreground">Loading categories…</p>
+      </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Reorder Categories</h1>
-            <p className="text-gray-600 mt-1">Drag and drop categories to change their display order in order forms</p>
-          </div>
-          <Link
-            href="/admin/categories"
-            className="text-gray-600 hover:text-gray-800"
-          >
-            ← Back to Categories
-          </Link>
-        </div>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-            {success}
-          </div>
-        )}
-
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Category Display Order</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Drag and drop the categories below to reorder them. The order here will be reflected in the order forms.
-            </p>
-          </div>
-
-          <div className="p-6">
-            {categories.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No categories found.</p>
-                <Link
-                  href="/admin/categories/new"
-                  className="text-blue-600 hover:text-blue-800 mt-2 inline-block"
-                >
-                  Create your first category
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {categories.map((category, index) => (
-                  <div
-                    key={category.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, index)}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, index)}
-                    className={`
-                      flex items-center justify-between p-4 border-2 rounded-lg cursor-move transition-all
-                      ${draggedIndex === index 
-                        ? 'border-blue-500 bg-blue-50 shadow-lg transform rotate-1' 
-                        : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                      }
-                    `}
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-blue-600 font-medium text-sm">
-                            {index + 1}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex-1">
-                        <h3 className="text-lg font-medium text-gray-900">
-                          {category.name}
-                        </h3>
-                        {category.description && (
-                          <p className="text-sm text-gray-500 mt-1">{category.description}</p>
-                        )}
-                        <div className="flex items-center mt-2 space-x-4">
-                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                            {category.product_count} products
-                          </span>
-                          <div className="flex items-center space-x-2">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              category.visible_to_americas 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              Americas: {category.visible_to_americas ? 'Visible' : 'Hidden'}
-                            </span>
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              category.visible_to_international 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              International: {category.visible_to_international ? 'Visible' : 'Hidden'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex-shrink-0 text-gray-400">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                      </svg>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {categories.length > 0 && (
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={handleReset}
-                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition"
-                >
-                  Reset Changes
-                </button>
-                <button
-                  onClick={handleSaveOrder}
-                  disabled={saving}
-                  className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save Order'}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-900 mb-2">How it works:</h3>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Drag and drop categories to reorder them</li>
-            <li>• The order here determines how categories appear in order forms</li>
-            <li>• Categories with lower numbers appear first</li>
-            <li>• Changes are saved to the database when you click "Save Order"</li>
-            <li>• Products without categories always appear at the bottom</li>
-          </ul>
-        </div>
+    <div className="px-6 py-8 space-y-6">
+      <div>
+        <Link
+          href="/admin/categories"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to categories
+        </Link>
       </div>
+
+      <PageHeader
+        title="Reorder categories"
+        description="Drag and drop categories to change the order they appear in order forms."
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={fetchCategories} disabled={saving}>
+              Reset
+            </Button>
+            <Button size="sm" onClick={handleSaveOrder} loading={saving}>
+              Save order
+            </Button>
+          </>
+        }
+      />
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <Card>
+        <CardContent className="p-4">
+          {categories.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground">No categories yet.</p>
+              <Link
+                href="/admin/categories/new"
+                className="text-sm text-foreground hover:underline mt-2 inline-block"
+              >
+                Create your first category
+              </Link>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {categories.map((c, index) => (
+                <li
+                  key={c.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, index)}
+                  className={`flex items-center gap-3 p-3 border rounded-md cursor-move transition-all bg-background ${
+                    draggedIndex === index
+                      ? 'border-foreground shadow-md opacity-60'
+                      : 'border-border hover:border-foreground/30'
+                  }`}
+                >
+                  <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-mono">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{c.name}</div>
+                    {c.description && (
+                      <div className="text-xs text-muted-foreground truncate">{c.description}</div>
+                    )}
+                  </div>
+                  <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+                    <Badge variant="muted">{c.product_count} products</Badge>
+                    {c.visible_to_americas ? (
+                      <Badge variant="success">AMR</Badge>
+                    ) : (
+                      <Badge variant="muted">AMR</Badge>
+                    )}
+                    {c.visible_to_international ? (
+                      <Badge variant="success">INT</Badge>
+                    ) : (
+                      <Badge variant="muted">INT</Badge>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-4 text-sm text-muted-foreground space-y-1">
+          <p className="font-medium text-foreground">How it works</p>
+          <p>Drag rows to reorder. The order here determines how categories appear in the client order form. Products without a category always appear at the bottom. Changes only save when you click <span className="font-medium text-foreground">Save order</span>.</p>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

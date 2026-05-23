@@ -1,17 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { ArrowUp, ArrowDown, Plus, Trash2 } from 'lucide-react';
+
 import { supabase } from '../../../lib/supabaseClient';
-import { PlusIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
-import Card from '../../components/ui/Card';
+import { PageHeader } from '../../components/qq/page-header';
+import { Card, CardContent } from '../../components/qq/card';
+import { Button } from '../../components/qq/button';
+import { Alert, AlertDescription } from '../../components/qq/alert';
+import { EmptyState } from '../../components/qq/empty-state';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/qq/dialog';
+import { Input } from '../../components/qq/input';
+import { useToast } from '../../components/ui/ToastProvider';
+import { useConfirm } from '../../components/ui/ConfirmProvider';
 
 interface Product {
   id: number;
   item_name: string;
   picture_url?: string;
-  category?: {
-    name: string;
-  };
+  category?: { name: string } | null;
 }
 
 interface HighlightedProduct {
@@ -22,303 +34,288 @@ interface HighlightedProduct {
   product: Product;
 }
 
-export default function HighlightedProductsManager() {
-  const [highlightedProducts, setHighlightedProducts] = useState<HighlightedProduct[]>([]);
-  const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [showProductSelector, setShowProductSelector] = useState(false);
+export default function HighlightedProductsPage() {
+  const toast = useToast();
+  const confirm = useConfirm();
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const [highlighted, setHighlighted] = useState<HighlightedProduct[]>([]);
+  const [available, setAvailable] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showSelector, setShowSelector] = useState(false);
+  const [selectorQuery, setSelectorQuery] = useState('');
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch highlighted products with product details
-      const { data: highlightedData, error: highlightedError } = await supabase
-        .from('highlighted_products')
-        .select(`
-          *,
-          product:"Products"(
-            id,
-            item_name,
-            picture_url,
-            category:categories(name)
-          )
-        `)
-        .order('display_order', { ascending: true });
+      const [highlightedRes, productsRes] = await Promise.all([
+        supabase
+          .from('highlighted_products')
+          .select(`*, product:"Products"(id, item_name, picture_url, category:categories(name))`)
+          .order('display_order', { ascending: true }),
+        supabase
+          .from('Products')
+          .select(`id, item_name, picture_url, category:categories(name)`)
+          .order('item_name', { ascending: true }),
+      ]);
+      if (highlightedRes.error) throw highlightedRes.error;
+      if (productsRes.error) throw productsRes.error;
 
-      if (highlightedError) throw highlightedError;
-
-      // Fetch all products for selection
-      const { data: productsData, error: productsError } = await supabase
-        .from('Products')
-        .select(`
-          id,
-          item_name,
-          picture_url,
-          category:categories(name)
-        `)
-        .order('item_name', { ascending: true });
-
-      if (productsError) throw productsError;
-
-      setHighlightedProducts(highlightedData || []);
-      
-      // Filter out already highlighted products and transform data
-      const highlightedProductIds = (highlightedData || []).map(hp => hp.product_id);
-      const availableProducts = (productsData || [])
-        .filter(p => !highlightedProductIds.includes(p.id))
-        .map(p => ({
-          ...p,
-          category: Array.isArray(p.category) ? p.category[0] : p.category
-        }));
-      setAvailableProducts(availableProducts);
-      
+      const hp = highlightedRes.data || [];
+      setHighlighted(hp as HighlightedProduct[]);
+      const highlightedIds = new Set(hp.map((h: any) => h.product_id));
+      setAvailable(
+        (productsRes.data || [])
+          .filter((p: any) => !highlightedIds.has(p.id))
+          .map((p: any) => ({
+            ...p,
+            category: Array.isArray(p.category) ? p.category[0] : p.category,
+          }))
+      );
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to load.');
     } finally {
       setLoading(false);
     }
   };
 
-  const addHighlightedProduct = async (productId: number) => {
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const addProduct = async (productId: number) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const nextOrder = Math.max(...highlightedProducts.map(hp => hp.display_order), -1) + 1;
-
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated.');
+      const nextOrder = Math.max(-1, ...highlighted.map((h) => h.display_order)) + 1;
       const { error } = await supabase
         .from('highlighted_products')
-        .insert({
-          product_id: productId,
-          display_order: nextOrder,
-          created_by: user.id
-        });
-
+        .insert({ product_id: productId, display_order: nextOrder, created_by: user.id });
       if (error) throw error;
-      
-      setShowProductSelector(false);
+      toast.success('Product highlighted.');
+      setShowSelector(false);
+      setSelectorQuery('');
       fetchData();
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message || 'Failed to highlight product.');
     }
   };
 
-  const removeHighlightedProduct = async (id: string) => {
+  const removeProduct = async (hp: HighlightedProduct) => {
+    const ok = await confirm({
+      title: 'Remove highlighted product?',
+      description: `Remove "${hp.product?.item_name || 'this product'}" from the dashboard highlights.`,
+      variant: 'danger',
+      confirmLabel: 'Remove',
+    });
+    if (!ok) return;
     try {
-      const { error } = await supabase
-        .from('highlighted_products')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('highlighted_products').delete().eq('id', hp.id);
       if (error) throw error;
+      toast.success('Removed.');
       fetchData();
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message || 'Failed to remove.');
     }
   };
 
-  const toggleNewStatus = async (id: string, isNew: boolean) => {
+  const toggleNew = async (hp: HighlightedProduct) => {
     try {
       const { error } = await supabase
         .from('highlighted_products')
-        .update({ is_new: !isNew })
-        .eq('id', id);
-
+        .update({ is_new: !hp.is_new })
+        .eq('id', hp.id);
       if (error) throw error;
       fetchData();
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message || 'Failed to update.');
     }
   };
 
-  const moveProduct = async (id: string, direction: 'up' | 'down') => {
+  const moveProduct = async (hp: HighlightedProduct, direction: 'up' | 'down') => {
+    const currentIndex = highlighted.findIndex((h) => h.id === hp.id);
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= highlighted.length) return;
+    const target = highlighted[newIndex];
     try {
-      const currentIndex = highlightedProducts.findIndex(hp => hp.id === id);
-      if (currentIndex === -1) return;
-
-      const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-      if (newIndex < 0 || newIndex >= highlightedProducts.length) return;
-
-      const currentProduct = highlightedProducts[currentIndex];
-      const targetProduct = highlightedProducts[newIndex];
-
-      // Swap display orders
       await supabase
         .from('highlighted_products')
-        .update({ display_order: targetProduct.display_order })
-        .eq('id', currentProduct.id);
-
+        .update({ display_order: target.display_order })
+        .eq('id', hp.id);
       await supabase
         .from('highlighted_products')
-        .update({ display_order: currentProduct.display_order })
-        .eq('id', targetProduct.id);
-
+        .update({ display_order: hp.display_order })
+        .eq('id', target.id);
       fetchData();
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message || 'Failed to reorder.');
     }
   };
 
-  if (loading) {
-    return (
-      <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading highlighted products...</p>
-        </div>
-    );
-  }
+  const filteredAvailable = available.filter((p) =>
+    p.item_name.toLowerCase().includes(selectorQuery.toLowerCase())
+  );
 
   return (
-    <div className="mt-8 mb-4 space-y-6">
-        <h2 className="text-2xl font-semibold text-gray-900">Highlighted Products Manager</h2>
-        <div className="space-y-6">
-          <Card>
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-4">
-                Manage products that appear in the rotating banner on client dashboards. 
-                Use the "NEW" toggle to highlight new product releases.
-              </p>
-              
-              <button
-                onClick={() => setShowProductSelector(true)}
-                className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition flex items-center space-x-2"
-              >
-                <PlusIcon className="h-4 w-4" />
-                <span>Add Product</span>
-              </button>
-            </div>
+    <div className="px-6 py-8 space-y-6">
+      <PageHeader
+        title="Highlighted products"
+        description="Products shown in the rotating banner on client dashboards. Use NEW to flag fresh releases."
+        actions={
+          <Button size="sm" onClick={() => setShowSelector(true)} disabled={loading}>
+            <Plus className="h-4 w-4" /> Add product
+          </Button>
+        }
+      />
 
-            {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                {error}
-              </div>
-            )}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-            {highlightedProducts.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p>No products highlighted yet. Click "Add Product" to get started.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {highlightedProducts.map((highlightedProduct, index) => (
-                  <div key={highlightedProduct.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex flex-col space-y-1">
-                        <button
-                          onClick={() => moveProduct(highlightedProduct.id, 'up')}
-                          disabled={index === 0}
-                          className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
-                        >
-                          <ArrowUpIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => moveProduct(highlightedProduct.id, 'down')}
-                          disabled={index === highlightedProducts.length - 1}
-                          className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
-                        >
-                          <ArrowDownIcon className="h-4 w-4" />
-                        </button>
-                      </div>
-                      
-                      {highlightedProduct.product?.picture_url && (
-                        <img
-                          src={highlightedProduct.product.picture_url}
-                          alt={highlightedProduct.product.item_name}
-                          className="w-16 h-16 object-cover rounded"
-                        />
-                      )}
-                      
-                      <div>
-                        <h3 className="font-medium text-gray-900">
-                          {highlightedProduct.product?.item_name || 'Unknown Product'}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {highlightedProduct.product?.category?.name || 'No category'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-3">
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={highlightedProduct.is_new}
-                          onChange={() => toggleNewStatus(highlightedProduct.id, highlightedProduct.is_new)}
-                          className="rounded border-gray-300 text-black focus:ring-black"
-                        />
-                        <span className="text-sm font-medium text-gray-700">NEW</span>
-                      </label>
-                      
-                      <button
-                        onClick={() => removeHighlightedProduct(highlightedProduct.id)}
-                        className="text-red-600 hover:text-red-800 p-2"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-
-          {/* Product Selector Modal */}
-          {showProductSelector && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-semibold">Select Product to Highlight</h3>
-                    <button
-                      onClick={() => setShowProductSelector(false)}
-                      className="text-gray-400 hover:text-gray-600"
+      <Card>
+        <CardContent className="p-4">
+          {loading ? (
+            <p className="text-sm text-muted-foreground py-4">Loading…</p>
+          ) : highlighted.length === 0 ? (
+            <EmptyState
+              title="No highlighted products yet"
+              description="Add a product to feature it on the client dashboard banner."
+              action={
+                <Button size="sm" onClick={() => setShowSelector(true)}>
+                  <Plus className="h-4 w-4" /> Add product
+                </Button>
+              }
+              className="border-0 shadow-none"
+            />
+          ) : (
+            <ul className="space-y-2">
+              {highlighted.map((hp, index) => (
+                <li
+                  key={hp.id}
+                  className="flex items-center gap-3 p-3 border border-border rounded-md bg-background"
+                >
+                  <div className="flex flex-col gap-0.5 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => moveProduct(hp, 'up')}
+                      disabled={index === 0}
+                      className="h-6 w-6"
+                      aria-label="Move up"
                     >
-                      ✕
-                    </button>
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => moveProduct(hp, 'down')}
+                      disabled={index === highlighted.length - 1}
+                      className="h-6 w-6"
+                      aria-label="Move down"
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {availableProducts.map((product) => (
-                      <div
-                        key={product.id}
-                        onClick={() => addHighlightedProduct(product.id)}
-                        className="p-4 border border-gray-200 rounded-lg hover:border-black cursor-pointer transition"
-                      >
-                        <div className="flex items-center space-x-3">
-                          {product.picture_url && (
-                            <img
-                              src={product.picture_url}
-                              alt={product.item_name}
-                              className="w-12 h-12 object-cover rounded"
-                            />
-                          )}
-                          <div>
-                            <h4 className="font-medium text-gray-900">{product.item_name}</h4>
-                            <p className="text-sm text-gray-500">
-                              {product.category?.name || 'No category'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {availableProducts.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>All products are already highlighted.</p>
-                    </div>
+                  {hp.product?.picture_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={hp.product.picture_url}
+                      alt={hp.product.item_name}
+                      className="h-12 w-12 rounded object-cover border border-border shrink-0"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded border border-border bg-muted/50 shrink-0" />
                   )}
-                </div>
-              </div>
-            </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">
+                      {hp.product?.item_name || 'Unknown product'}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {hp.product?.category?.name || 'No category'}
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer select-none shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={hp.is_new}
+                      onChange={() => toggleNew(hp)}
+                      className="h-4 w-4 accent-foreground"
+                    />
+                    <span className="text-xs font-medium">NEW</span>
+                  </label>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeProduct(hp)}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                    aria-label="Remove"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
           )}
-      </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={showSelector} onOpenChange={setShowSelector}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Select a product to highlight</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <Input
+              value={selectorQuery}
+              onChange={(e) => setSelectorQuery(e.target.value)}
+              placeholder="Search products…"
+              autoFocus
+            />
+            {filteredAvailable.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                {available.length === 0
+                  ? 'All products are already highlighted.'
+                  : 'No products match the search.'}
+              </p>
+            ) : (
+              <ul className="max-h-[50vh] overflow-auto space-y-1.5">
+                {filteredAvailable.map((p) => (
+                  <li
+                    key={p.id}
+                    onClick={() => addProduct(p.id)}
+                    className="flex items-center gap-3 p-2.5 border border-border rounded-md cursor-pointer hover:bg-muted/50 transition-colors"
+                  >
+                    {p.picture_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.picture_url}
+                        alt={p.item_name}
+                        className="h-10 w-10 rounded object-cover border border-border"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded border border-border bg-muted/50" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{p.item_name}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {p.category?.name || 'No category'}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

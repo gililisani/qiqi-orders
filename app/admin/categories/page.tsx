@@ -1,179 +1,156 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '../../../lib/supabaseClient';
 import Link from 'next/link';
-import Card from '../../components/ui/Card';
+import { ArrowUpDown, Trash2 } from 'lucide-react';
+
+import { supabase } from '../../../lib/supabaseClient';
+import { AdminListPage } from '../../components/admin/AdminListPage';
+import { Badge } from '../../components/qq/badge';
+import { Button } from '../../components/qq/button';
+import { DropdownMenuItem } from '../../components/qq/dropdown-menu';
+import { useToast } from '../../components/ui/ToastProvider';
+import { useConfirm } from '../../components/ui/ConfirmProvider';
 
 interface Category {
   id: number;
   name: string;
-  description?: string;
+  description: string | null;
   sort_order: number;
   visible_to_americas: boolean;
   visible_to_international: boolean;
-  image_url?: string;
-  product_count?: number;
+  image_url: string | null;
+  product_count: number;
+}
+
+async function fetchCategories(): Promise<{ data: Category[] | null; error: any }> {
+  const { data, error } = await supabase
+    .from('categories')
+    .select(`id, name, description, sort_order, visible_to_americas, visible_to_international, image_url, product_count:Products(count)`)
+    .order('sort_order', { ascending: true });
+  if (error) return { data: null, error };
+  const rows: Category[] = (data || []).map((c: any) => ({
+    ...c,
+    product_count: c.product_count?.[0]?.count || 0,
+  }));
+  return { data: rows, error: null };
 }
 
 export default function CategoriesPage() {
-  const router = useRouter();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const toast = useToast();
+  const confirm = useConfirm();
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
+  const handleDelete = async (c: Category) => {
+    const ok = await confirm({
+      title: 'Delete category?',
+      description: `Permanently delete "${c.name}". The category will be removed from ${c.product_count} product${c.product_count === 1 ? '' : 's'} (the products themselves are kept).`,
+      variant: 'danger',
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('id,name,description,sort_order,visible_to_americas,visible_to_international,image_url')
-        .order('sort_order', { ascending: true });
-
-      if (error) throw error;
-
-      // Debug log to help diagnose empty results / RLS issues
-      console.log('[Categories] fetched rows:', data?.length || 0, { error });
-
-      setCategories(data || []);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`Are you sure you want to delete the category "${name}"? This will remove the category from all products.`)) {
-      return;
-    }
-
-    try {
-      // First, remove category from all products
+      // Detach from all products first.
       const { error: updateError } = await supabase
         .from('Products')
         .update({ category_id: null })
-        .eq('category_id', id);
-
+        .eq('category_id', c.id);
       if (updateError) throw updateError;
-
-      // Then delete the category
-      const { error: deleteError } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', id);
-
+      const { error: deleteError } = await supabase.from('categories').delete().eq('id', c.id);
       if (deleteError) throw deleteError;
-
-      fetchCategories();
+      toast.success('Category deleted.');
+      window.location.reload();
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message || 'Failed to delete category.');
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-64">
-          <div className="text-lg">Loading categories...</div>
-        </div>
-    );
-  }
-
   return (
-    <div className="mt-8 mb-4 space-y-6">
-        <h2 className="text-2xl font-semibold text-gray-900">Product Categories</h2>
-        <div className="flex justify-end items-center">
-          <div className="flex gap-3">
-            <Link href="/admin/categories/reorder" className="px-3 py-2 border border-[#e5e5e5] rounded text-sm hover:bg-gray-50">Reorder Categories</Link>
-            <Link href="/admin/categories/new" className="px-3 py-2 bg-black text-white rounded text-sm hover:bg-gray-900">Add Category</Link>
-          </div>
-        </div>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
-
-        <Card header={<h2 className="text-lg font-semibold">Categories Management</h2>}>
-          <div className="overflow-x-auto">
-            <table className="min-w-full border border-[#e5e5e5] rounded-lg overflow-hidden">
-              <thead>
-                <tr className="border-b border-[#e5e5e5]">
-                  {['Order','Image','Category','Products','Americas','International','Actions'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {categories.map((category) => (
-                  <tr
-                    key={category.id}
-                    onClick={() => router.push(`/admin/categories/${category.id}/edit`)}
-                    className="hover:bg-gray-50 cursor-pointer transition-colors border-b border-[#e5e5e5]"
-                  >
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{category.sort_order}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {category.image_url ? (
-                        <img
-                          src={category.image_url}
-                          alt={category.name}
-                          className="h-12 w-12 rounded object-cover border border-[#e5e5e5]"
-                        />
-                      ) : (
-                        <div className="h-12 w-12 rounded border border-[#e5e5e5] flex items-center justify-center text-gray-400 text-xs">
-                          No Image
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-gray-800">{category.name}</span>
-                        {category.description ? (
-                          <span className="text-xs text-gray-500">{category.description}</span>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{category.product_count ?? 0} products</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${category.visible_to_americas ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                        {category.visible_to_americas ? 'Visible' : 'Hidden'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${category.visible_to_international ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                        {category.visible_to_international ? 'Visible' : 'Hidden'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      <div className="flex items-center gap-3">
-                        <Link
-                          className="text-black hover:opacity-70 transition-opacity"
-                          href={`/admin/categories/${category.id}/edit`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Edit
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        {categories.length === 0 && (
-          <div className="py-12 text-center">
-            <h3 className="text-base font-medium text-gray-900 mb-1">No categories found</h3>
-            <p className="text-sm text-gray-500">Categories will help organize your products.</p>
-            <Link href="/admin/categories/new" className="mt-4 inline-block px-3 py-2 bg-black text-white rounded text-sm hover:bg-gray-900">Create your first category</Link>
-          </div>
-        )}
-      </div>
+    <AdminListPage<Category>
+      title="Product categories"
+      description="Categories used to organize the product catalog."
+      newUrl="/admin/categories/new"
+      newLabel="Add category"
+      editUrl={(id) => `/admin/categories/${id}/edit`}
+      fetch={fetchCategories}
+      searchPlaceholder="Search by name…"
+      filterRow={(c, q) =>
+        (c.name ?? '').toLowerCase().includes(q) ||
+        (c.description ?? '').toLowerCase().includes(q)
+      }
+      extraHeaderActions={
+        <Link href="/admin/categories/reorder">
+          <Button variant="outline" size="sm">
+            <ArrowUpDown className="h-4 w-4" /> Reorder
+          </Button>
+        </Link>
+      }
+      columns={[
+        {
+          header: 'Order',
+          className: 'hidden sm:table-cell w-16',
+          cell: (c) => <span className="font-mono text-sm">{c.sort_order}</span>,
+        },
+        {
+          header: 'Image',
+          className: 'hidden md:table-cell w-20',
+          cell: (c) =>
+            c.image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={c.image_url}
+                alt={c.name}
+                className="h-10 w-10 rounded object-cover border border-border"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded border border-border bg-muted/50 flex items-center justify-center text-[10px] text-muted-foreground">
+                —
+              </div>
+            ),
+        },
+        {
+          header: 'Category',
+          cell: (c) => (
+            <div>
+              <div className="text-sm font-medium text-foreground">{c.name}</div>
+              {c.description && (
+                <div className="text-xs text-muted-foreground">{c.description}</div>
+              )}
+            </div>
+          ),
+        },
+        {
+          header: 'Products',
+          className: 'hidden lg:table-cell',
+          cell: (c) => <span className="font-mono text-sm">{c.product_count}</span>,
+        },
+        {
+          header: 'Americas',
+          className: 'hidden lg:table-cell',
+          cell: (c) =>
+            c.visible_to_americas ? (
+              <Badge variant="success">Visible</Badge>
+            ) : (
+              <Badge variant="muted">Hidden</Badge>
+            ),
+        },
+        {
+          header: 'International',
+          className: 'hidden lg:table-cell',
+          cell: (c) =>
+            c.visible_to_international ? (
+              <Badge variant="success">Visible</Badge>
+            ) : (
+              <Badge variant="muted">Hidden</Badge>
+            ),
+        },
+      ]}
+      extraRowActions={(c) => (
+        <DropdownMenuItem
+          onClick={() => handleDelete(c)}
+          className="text-destructive focus:text-destructive"
+        >
+          <Trash2 className="h-4 w-4 mr-2" /> Delete
+        </DropdownMenuItem>
+      )}
+    />
   );
 }
