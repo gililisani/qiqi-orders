@@ -1,9 +1,26 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, Download, Upload } from 'lucide-react';
+
 import { supabase } from '../../../../lib/supabaseClient';
 import { formatCurrency } from '../../../../lib/formatters';
+import { PageHeader } from '../../../components/qq/page-header';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/qq/card';
+import { Button } from '../../../components/qq/button';
+import { Alert, AlertDescription } from '../../../components/qq/alert';
+import { Badge } from '../../../components/qq/badge';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '../../../components/qq/table';
+import { useToast } from '../../../components/ui/ToastProvider';
 
 interface ProductData {
   item_name: string;
@@ -19,111 +36,96 @@ interface ProductData {
   visible_to_americas: boolean;
   visible_to_international: boolean;
   picture_url?: string;
-  image_file?: File;
+}
+
+const REQUIRED_HEADERS = [
+  'item_name',
+  'netsuite_name',
+  'sku',
+  'upc',
+  'size',
+  'case_pack',
+  'price_international',
+  'price_americas',
+  'enable',
+  'list_in_support_funds',
+  'visible_to_americas',
+  'visible_to_international',
+] as const;
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
 }
 
 export default function BulkUploadProducts() {
   const router = useRouter();
-  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const toast = useToast();
+
   const [products, setProducts] = useState<ProductData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [previewMode, setPreviewMode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [fileName, setFileName] = useState('');
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type === 'text/csv') {
-      setCsvFile(file);
-      parseCSV(file);
-    } else {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null);
+    setSuccess(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
       setError('Please select a valid CSV file.');
+      return;
     }
+    setFileName(file.name);
+    parseCSV(file);
   };
 
   const parseCSV = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      const lines = text.split('\n').filter(line => line.trim());
-      
+      const lines = text.split('\n').filter((l) => l.trim());
       if (lines.length < 2) {
-        setError('CSV file must have at least a header row and one data row.');
+        setError('CSV file must have a header row and at least one data row.');
+        return;
+      }
+      const headers = parseCSVLine(lines[0]).map((h) => h.trim().toLowerCase());
+      const missing = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
+      if (missing.length > 0) {
+        setError(`Missing required headers: ${missing.join(', ')}`);
         return;
       }
 
-      // Debug: Show column counts for each row
-      console.log('CSV Debug Info:');
-      lines.forEach((line, index) => {
-        const columns = line.split(',').map(v => v.trim());
-        console.log(`Row ${index + 1} (simple split): ${columns.length} columns - ${columns.join(' | ')}`);
-      });
-
-      // Parse CSV properly handling quoted fields
-      const parseCSVLine = (line: string): string[] => {
-        const result: string[] = [];
-        let current = '';
-        let inQuotes = false;
-        
-        for (let i = 0; i < line.length; i++) {
-          const char = line[i];
-          
-          if (char === '"') {
-            if (inQuotes && line[i + 1] === '"') {
-              // Escaped quote inside quoted field
-              current += '"';
-              i++; // Skip next quote
-            } else {
-              // Toggle quote state
-              inQuotes = !inQuotes;
-            }
-          } else if (char === ',' && !inQuotes) {
-            // Field separator outside quotes
-            result.push(current.trim());
-            current = '';
-          } else {
-            current += char;
-          }
-        }
-        
-        // Add the last field
-        result.push(current.trim());
-        return result;
-      };
-
-      const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
-      const requiredHeaders = [
-        'item_name', 'netsuite_name', 'sku', 'upc', 'size', 
-        'case_pack', 'price_international', 'price_americas', 
-        'enable', 'list_in_support_funds', 'visible_to_americas', 'visible_to_international'
-      ];
-
-      // Check if all required headers are present
-      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
-      if (missingHeaders.length > 0) {
-        setError(`Missing required headers: ${missingHeaders.join(', ')}`);
-        return;
-      }
-
-      const parsedProducts: ProductData[] = [];
-      
+      const parsed: ProductData[] = [];
       for (let i = 1; i < lines.length; i++) {
         const values = parseCSVLine(lines[i]);
-        
-        // Debug: Show parsed values
-        console.log(`Row ${i + 1} (proper parsing): ${values.length} columns - ${values.join(' | ')}`);
-        
         if (values.length !== headers.length) {
-          setError(`Row ${i + 1} has incorrect number of columns. Expected ${headers.length}, got ${values.length}. 
-          
-Expected columns: ${headers.join(', ')}
-Received columns: ${values.join(', ')}
-          
-Please check for extra commas, missing fields, or incorrect column order.`);
+          setError(
+            `Row ${i + 1} has ${values.length} columns; expected ${headers.length}. Check for extra commas or missing fields.`
+          );
           return;
         }
-
-        const product: ProductData = {
+        parsed.push({
           item_name: values[headers.indexOf('item_name')] || '',
           netsuite_name: values[headers.indexOf('netsuite_name')] || '',
           sku: values[headers.indexOf('sku')] || '',
@@ -133,17 +135,16 @@ Please check for extra commas, missing fields, or incorrect column order.`);
           price_international: parseFloat(values[headers.indexOf('price_international')]) || 0,
           price_americas: parseFloat(values[headers.indexOf('price_americas')]) || 0,
           enable: values[headers.indexOf('enable')].toLowerCase() === 'true',
-          list_in_support_funds: values[headers.indexOf('list_in_support_funds')].toLowerCase() === 'true',
-          visible_to_americas: values[headers.indexOf('visible_to_americas')].toLowerCase() === 'true',
-          visible_to_international: values[headers.indexOf('visible_to_international')].toLowerCase() === 'true',
-          picture_url: values[headers.indexOf('picture_url')] || undefined
-        };
-
-        parsedProducts.push(product);
+          list_in_support_funds:
+            values[headers.indexOf('list_in_support_funds')].toLowerCase() === 'true',
+          visible_to_americas:
+            values[headers.indexOf('visible_to_americas')].toLowerCase() === 'true',
+          visible_to_international:
+            values[headers.indexOf('visible_to_international')].toLowerCase() === 'true',
+          picture_url: values[headers.indexOf('picture_url')] || undefined,
+        });
       }
-
-      setProducts(parsedProducts);
-      setError('');
+      setProducts(parsed);
     };
     reader.readAsText(file);
   };
@@ -153,223 +154,200 @@ Please check for extra commas, missing fields, or incorrect column order.`);
       setError('No products to upload.');
       return;
     }
-
     setLoading(true);
-    setError('');
-    setSuccess('');
-
+    setError(null);
+    setSuccess(null);
     try {
-      const { error } = await supabase
-        .from('Products')
-        .insert(products);
-
+      const { error } = await supabase.from('Products').insert(products);
       if (error) throw error;
-
-      setSuccess(`Successfully uploaded ${products.length} products!`);
+      const count = products.length;
+      setSuccess(`Successfully uploaded ${count} product${count === 1 ? '' : 's'}.`);
+      toast.success(`${count} product${count === 1 ? '' : 's'} uploaded.`);
       setProducts([]);
-      setCsvFile(null);
-      
-      // Reset file input
-      const fileInput = document.getElementById('csv-file') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
-      
+      setFileName('');
+      const input = document.getElementById('csv-file') as HTMLInputElement | null;
+      if (input) input.value = '';
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to upload products.');
     } finally {
       setLoading(false);
     }
   };
 
   const downloadTemplate = () => {
-    const headers = [
-      'item_name', 'netsuite_name', 'sku', 'upc', 'size', 
-      'case_pack', 'price_international', 'price_americas', 
-      'enable', 'list_in_support_funds', 'visible_to_americas', 'visible_to_international', 'picture_url'
+    const headers = [...REQUIRED_HEADERS, 'picture_url'];
+    const sample = [
+      'Sample Product',
+      'Sample NetSuite Name',
+      'SAMPLE001',
+      '123456789012',
+      '250ml',
+      '12',
+      '25.50',
+      '30.00',
+      'true',
+      'true',
+      'true',
+      'true',
+      'https://example.com/image.jpg',
     ];
-    
-    const sampleData = [
-      'Sample Product', 'Sample NetSuite Name', 'SAMPLE001', '123456789012', '250ml',
-      '12', '25.50', '30.00', 'true', 'true', 'true', 'true', 'https://example.com/image.jpg'
-    ];
-
-    const csvContent = [headers, sampleData].map(row => row.join(',')).join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
+    const csv = [headers, sample].map((r) => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'products_template.csv';
     a.click();
-    window.URL.revokeObjectURL(url);
+    URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Bulk Upload Products</h1>
-          <button
-            onClick={() => router.push('/admin/products')}
-            className="bg-gray-500 text-white px-4 py-2 rounded hover:opacity-90 transition"
-          >
-            Back to Products
-          </button>
-        </div>
+    <div className="px-6 py-8 space-y-6">
+      <div>
+        <Link
+          href="/admin/products"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to products
+        </Link>
+      </div>
 
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h2 className="text-lg font-semibold mb-4">Upload CSV File</h2>
-          
-          <div className="mb-4">
-            <label htmlFor="csv-file" className="block text-sm font-medium text-gray-700 mb-2">
-              Select CSV File
+      <PageHeader
+        title="Bulk upload products"
+        description="Upload a CSV to create many products at once."
+        actions={
+          <Button variant="outline" size="sm" onClick={downloadTemplate}>
+            <Download className="h-4 w-4" /> Download template
+          </Button>
+        }
+      />
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Upload CSV</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label htmlFor="csv-file" className="block text-sm font-medium mb-2">
+              Select CSV file
             </label>
             <input
               id="csv-file"
               type="file"
-              accept=".csv"
+              accept=".csv,text/csv"
               onChange={handleFileUpload}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:opacity-90"
+              className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-foreground file:text-background hover:file:opacity-90 cursor-pointer"
             />
+            {fileName && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Loaded <span className="font-mono">{fileName}</span>
+              </p>
+            )}
           </div>
 
-            <div className="mb-4">
-              <button
-                onClick={downloadTemplate}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:opacity-90 transition mr-2"
-              >
-                Download Template
-              </button>
-              <span className="text-sm text-gray-600">
-                Download the CSV template to see the required format (13 columns total)
-              </span>
-            </div>
-
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-              {error}
-            </div>
+            <Alert variant="destructive">
+              <AlertDescription className="whitespace-pre-wrap">{error}</AlertDescription>
+            </Alert>
           )}
 
           {success && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
-              {success}
-            </div>
+            <Alert>
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
           )}
-        </div>
+        </CardContent>
+      </Card>
 
-        {products.length > 0 && (
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">
-                Preview Products ({products.length} products)
-              </h2>
-              <div className="space-x-2">
-                <button
-                  onClick={() => setPreviewMode(!previewMode)}
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:opacity-90 transition"
-                >
-                  {previewMode ? 'Hide Preview' : 'Show Preview'}
-                </button>
-                <button
-                  onClick={handleBulkUpload}
-                  disabled={loading}
-                  className="bg-green-500 text-white px-4 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
-                >
-                  {loading ? 'Uploading...' : 'Upload All Products'}
-                </button>
-              </div>
+      {products.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm">
+                Preview ({products.length} {products.length === 1 ? 'product' : 'products'})
+              </CardTitle>
+              <Button size="sm" onClick={handleBulkUpload} loading={loading}>
+                <Upload className="h-4 w-4" />
+                Upload all
+              </Button>
             </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item name</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead className="hidden md:table-cell">UPC</TableHead>
+                  <TableHead className="hidden md:table-cell">Size</TableHead>
+                  <TableHead className="hidden lg:table-cell">Case pack</TableHead>
+                  <TableHead>Americas</TableHead>
+                  <TableHead>International</TableHead>
+                  <TableHead className="hidden lg:table-cell">Enabled</TableHead>
+                  <TableHead className="hidden lg:table-cell">Support funds</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products.map((p, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="text-sm font-medium">{p.item_name}</TableCell>
+                    <TableCell className="font-mono text-xs">{p.sku}</TableCell>
+                    <TableCell className="hidden md:table-cell font-mono text-xs">
+                      {p.upc}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm">{p.size}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm">{p.case_pack}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {formatCurrency(p.price_americas)}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {formatCurrency(p.price_international)}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {p.enable ? (
+                        <Badge variant="success">Yes</Badge>
+                      ) : (
+                        <Badge variant="muted">No</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {p.list_in_support_funds ? (
+                        <Badge variant="success">Yes</Badge>
+                      ) : (
+                        <Badge variant="muted">No</Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
-            {previewMode && (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Item Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        SKU
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        UPC
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Size
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Case Pack
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Int. Price
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Amer. Price
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Enabled
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Support Funds
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {products.map((product, index) => (
-                      <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {product.item_name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {product.sku}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {product.upc}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {product.size}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {product.case_pack}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {formatCurrency(product.price_international)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {formatCurrency(product.price_americas)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {product.enable ? 'Yes' : 'No'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {product.list_in_support_funds ? 'Yes' : 'No'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mt-6">
-          <h3 className="font-semibold mb-2">CSV Format Requirements:</h3>
-          <ul className="text-sm list-disc list-inside space-y-1">
-            <li><strong>item_name:</strong> Product display name (required)</li>
-            <li><strong>netsuite_name:</strong> NetSuite product name (required)</li>
-            <li><strong>sku:</strong> Product SKU code (required)</li>
-            <li><strong>upc:</strong> UPC barcode number (required)</li>
-            <li><strong>size:</strong> Product size/volume (required)</li>
-            <li><strong>case_pack:</strong> Units per case (number, required)</li>
-            <li><strong>price_international:</strong> International distributor price (number, required)</li>
-            <li><strong>price_americas:</strong> Americas distributor price (number, required)</li>
-            <li><strong>enable:</strong> true/false (required)</li>
-            <li><strong>list_in_support_funds:</strong> true/false (required)</li>
-            <li><strong>visible_to_americas:</strong> true/false (required)</li>
-            <li><strong>visible_to_international:</strong> true/false (required)</li>
-            <li><strong>picture_url:</strong> Image URL (optional) - For now, use URLs. Direct image upload coming soon!</li>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">CSV format</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground space-y-2">
+          <p>The CSV needs these columns (case-insensitive header row):</p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li><span className="font-mono text-foreground">item_name</span> — display name (required)</li>
+            <li><span className="font-mono text-foreground">netsuite_name</span> — NetSuite product name (required)</li>
+            <li><span className="font-mono text-foreground">sku</span> — SKU code (required)</li>
+            <li><span className="font-mono text-foreground">upc</span> — UPC barcode (required)</li>
+            <li><span className="font-mono text-foreground">size</span> — product size / volume (required)</li>
+            <li><span className="font-mono text-foreground">case_pack</span> — units per case, number (required)</li>
+            <li><span className="font-mono text-foreground">price_international</span> — number (required)</li>
+            <li><span className="font-mono text-foreground">price_americas</span> — number (required)</li>
+            <li><span className="font-mono text-foreground">enable</span> — true/false (required)</li>
+            <li><span className="font-mono text-foreground">list_in_support_funds</span> — true/false (required)</li>
+            <li><span className="font-mono text-foreground">visible_to_americas</span> — true/false (required)</li>
+            <li><span className="font-mono text-foreground">visible_to_international</span> — true/false (required)</li>
+            <li><span className="font-mono text-foreground">picture_url</span> — image URL (optional)</li>
           </ul>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
