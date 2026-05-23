@@ -85,6 +85,7 @@ import AdminOrderHistoryView from './AdminOrderHistoryView';
 import CreateSLIModal from '../modals/CreateSLIModal';
 
 import { useToast } from '../ui/ToastProvider';
+import { useConfirm } from '../ui/ConfirmProvider';
 import { salesOrderUrl, invoiceUrl } from '../../../lib/netsuiteUrls';
 import { validateRequiredFieldsForStatus } from '../shared/orderDetails/orderDetailsUtils';
 import { useOrderDetailsController } from '../shared/orderDetails/useOrderDetailsController';
@@ -150,6 +151,7 @@ export default function AdminOrderDetailsView({
 }: AdminOrderDetailsViewProps) {
   const { supabase: scopedSupabase } = useSupabase();
   const toast = useToast();
+  const confirm = useConfirm();
 
   // --------------------------------------------------------------------------
   // State
@@ -362,6 +364,15 @@ export default function AdminOrderDetailsView({
   // --------------------------------------------------------------------------
   const [nsLoading, setNsLoading] = useState<string | null>(null);
   const handleNsAction = async (action: 'push-so' | 'create-invoice' | 'sync-invoice') => {
+    if (action === 'push-so') {
+      const ok = await confirm({
+        title: 'Push order to NetSuite?',
+        description:
+          'This action will create a Purchase Order in NetSuite. Are you sure you want to continue?',
+        confirmLabel: 'Push to NetSuite',
+      });
+      if (!ok) return;
+    }
     setNsLoading(action);
     try {
       const res = await fetchWithAuth(`/api/netsuite/${action}`, {
