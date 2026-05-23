@@ -80,8 +80,8 @@ import {
 } from '../qq/select';
 
 import OrderDocumentUpload from '../shared/OrderDocumentUpload';
-import OrderDocumentsView from '../shared/OrderDocumentsView';
-import OrderHistoryView from '../shared/OrderHistoryView';
+import AdminOrderDocumentsView from './AdminOrderDocumentsView';
+import AdminOrderHistoryView from './AdminOrderHistoryView';
 import CreateSLIModal from '../modals/CreateSLIModal';
 
 import { useToast } from '../ui/ToastProvider';
@@ -862,7 +862,7 @@ export default function AdminOrderDetailsView({
       </SectionHeader>
       <Card>
         <CardContent className="pt-6">
-          <OrderDocumentsView key={documentsRefreshKey} orderId={orderId} role="admin" />
+          <AdminOrderDocumentsView key={documentsRefreshKey} orderId={orderId} />
         </CardContent>
       </Card>
 
@@ -870,7 +870,7 @@ export default function AdminOrderDetailsView({
       <SectionHeader title="History" />
       <Card>
         <CardContent className="pt-6">
-          <OrderHistoryView orderId={orderId} role="admin" />
+          <AdminOrderHistoryView orderId={orderId} />
         </CardContent>
       </Card>
 
