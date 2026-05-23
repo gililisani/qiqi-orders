@@ -1,9 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+/**
+ * Fetch every Supabase Auth user across all pages. The SDK's
+ * listUsers() defaults to 50 per page and the previous version of this
+ * route only grabbed the first page — anyone on page 2+ then appeared
+ * as a false-positive "missing auth" hit.
+ */
+async function listAllAuthUsers(supabaseAdmin: ReturnType<typeof createServiceRoleClient>) {
+  const perPage = 1000; // Supabase max
+  const all: any[] = [];
+  let page = 1;
+  for (;;) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+    if (!data?.users?.length) break;
+    all.push(...data.users);
+    if (data.users.length < perPage) break;
+    page += 1;
+    // Hard safety stop in case the API ever loops.
+    if (page > 50) break;
+  }
+  return all;
+}
 
 /**
  * Check for orphaned auth users and missing auth users
@@ -14,10 +33,8 @@ export async function GET(request: NextRequest) {
     await requireAdmin(request);
     const supabaseAdmin = createServiceRoleClient();
 
-    // Get all auth users
-    const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-    
-    if (authError) throw authError;
+    // Get all auth users (paginated)
+    const authUsersList = await listAllAuthUsers(supabaseAdmin);
 
     // Get all client records
     const { data: clients, error: clientsError } = await supabaseAdmin
@@ -34,13 +51,13 @@ export async function GET(request: NextRequest) {
     if (adminsError) throw adminsError;
 
     // Create sets for comparison (combine clients AND admins)
-    const authUserIds = new Set(authUsers.users.map(u => u.id));
+    const authUserIds = new Set(authUsersList.map(u => u.id));
     const clientIds = new Set(clients?.map(c => c.id) || []);
     const adminIds = new Set(admins?.map(a => a.id) || []);
     const allUserIds = new Set([...clientIds, ...adminIds]);
 
     // Find orphaned auth users (in auth but not in clients OR admins table)
-    const orphanedAuthUsers = authUsers.users.filter(u => !allUserIds.has(u.id));
+    const orphanedAuthUsers = authUsersList.filter(u => !allUserIds.has(u.id));
 
     // Find missing auth users (in clients/admins table but not in auth)
     const missingAuthClients = clients?.filter(c => !authUserIds.has(c.id)) || [];
@@ -50,7 +67,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       summary: {
-        totalAuthUsers: authUsers.users.length,
+        totalAuthUsers: authUsersList.length,
         totalClients: clients?.length || 0,
         totalAdmins: admins?.length || 0,
         orphanedAuthUsers: orphanedAuthUsers.length,
