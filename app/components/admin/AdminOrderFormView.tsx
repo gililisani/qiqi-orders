@@ -679,12 +679,13 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
             </Card>
           </div>
 
-          {/* Right column: summary */}
+          {/* Right column: cart */}
           <div className="xl:col-span-2 xl:sticky xl:top-24 xl:self-start">
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm">Order summary</CardTitle>
+            <Card className="overflow-hidden">
+              {/* Header: title + reset */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <h3 className="text-sm font-semibold">Order summary</h3>
+                {(orderItems.length > 0 || supportFundItems.length > 0) && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -692,162 +693,222 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                       setOrderItems([]);
                       setSupportFundItems([]);
                     }}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 px-2 text-xs"
                   >
-                    <RotateCcw className="h-3.5 w-3.5" /> Reset
+                    <RotateCcw className="h-3 w-3" /> Reset
                   </Button>
+                )}
+              </div>
+
+              {/* Always-visible summary strip */}
+              <div className="px-4 py-3 bg-muted/40 border-b border-border text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Order items</span>
+                  <span className="font-mono tabular-nums">
+                    {orderItems.length} item{orderItems.length === 1 ? '' : 's'} ·{' '}
+                    <span className="font-medium text-foreground">
+                      {formatCurrency(orderItems.reduce((s, i) => s + i.total_price, 0))}
+                    </span>
+                  </span>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                {orderItems.length === 0 && supportFundItems.length === 0 ? (
-                  <div className="py-6 text-center text-sm text-muted-foreground">
-                    Add products to your {isNewMode ? 'new ' : ''}order.
+                {supportFundPercent > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-green-700 flex items-center gap-1">
+                      <Gift className="h-3 w-3" /> Support funds
+                    </span>
+                    <span className="font-mono tabular-nums">
+                      {supportFundItems.length} item{supportFundItems.length === 1 ? '' : 's'} ·{' '}
+                      <span className="font-medium text-green-800">
+                        {formatCurrency(supportFundTotals.subtotal)}
+                      </span>
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Cart tabs (synced with main page tabs) */}
+              {supportFundPercent > 0 && (
+                <div className="px-2 pt-2 border-b border-border bg-background">
+                  <Tabs
+                    value={showSupportFundTab ? 'support' : 'order'}
+                    onValueChange={(v) =>
+                      v === 'support' ? switchToSupportFundTab() : switchToOrderTab()
+                    }
+                  >
+                    <TabsList className="w-full">
+                      <TabsTrigger value="order" className="flex-1 text-xs">
+                        Order ({orderItems.length})
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="support"
+                        className="flex-1 text-xs data-[state=active]:bg-green-100 data-[state=active]:text-green-900 data-[state=active]:border data-[state=active]:border-green-300"
+                      >
+                        <Gift className="h-3 w-3 mr-1" />
+                        Support ({supportFundItems.length})
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+              )}
+
+              {/* Scrollable item list (per active tab) */}
+              <div className="max-h-[40vh] overflow-y-auto px-3 py-3">
+                {!showSupportFundTab ? (
+                  // ----- Order items tab -----
+                  orderItems.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-muted-foreground">
+                      No items yet. Pick products from the catalog on the left.
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {orderItems.map((item) => (
+                        <SummaryLine
+                          key={`order-${item.product_id}`}
+                          sku={item.product.sku}
+                          detail={`${item.quantity} units · ${item.case_qty} case${item.case_qty !== 1 ? 's' : ''}`}
+                          total={item.total_price}
+                          onClick={() => scrollToProduct(item.product_id.toString(), false)}
+                        />
+                      ))}
+                    </div>
+                  )
+                ) : // ----- Support funds tab -----
+                supportFundItems.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-muted-foreground space-y-2">
+                    <p>No support fund items yet.</p>
+                    {totals.supportFundEarned > 0 ? (
+                      <p>
+                        You've earned{' '}
+                        <span className="font-medium text-green-700">
+                          {formatCurrency(totals.supportFundEarned)}
+                        </span>{' '}
+                        in credit. Pick eligible products above to redeem.
+                      </p>
+                    ) : (
+                      <p>Add credit-earning products to the order first.</p>
+                    )}
                   </div>
                 ) : (
-                  <>
-                    {orderItems.length > 0 && (
-                      <div className="space-y-1.5">
-                        {orderItems.map((item) => (
-                          <SummaryLine
-                            key={`order-${item.product_id}`}
-                            sku={item.product.sku}
-                            detail={`${item.quantity} units · ${item.case_qty} case${item.case_qty !== 1 ? 's' : ''}`}
-                            total={item.total_price}
-                            onClick={() => scrollToProduct(item.product_id.toString(), false)}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    {orderItems.length > 0 && (
-                      <Row
-                        label="Subtotal"
-                        value={formatCurrency(
-                          orderItems.reduce((s, i) => s + i.total_price, 0)
-                        )}
-                        bold
+                  <div className="space-y-1.5">
+                    {supportFundItems.map((item) => (
+                      <SummaryLine
+                        key={`sf-${item.product_id}`}
+                        sku={item.product.sku}
+                        detail={`${item.quantity} units · ${item.case_qty} case${item.case_qty !== 1 ? 's' : ''}`}
+                        total={item.total_price}
+                        accent="success"
+                        onClick={() => scrollToProduct(item.product_id.toString(), true)}
                       />
-                    )}
-                    {orderItems.length > 0 && totals.supportFundEarned > 0 && (
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Sticky bottom: totals + actions */}
+              <div className="border-t border-border bg-background px-4 py-3 space-y-3">
+                {/* Per-tab subtotal block */}
+                {!showSupportFundTab && orderItems.length > 0 && (
+                  <div className="space-y-1 text-xs">
+                    <Row
+                      label="Subtotal"
+                      value={formatCurrency(orderItems.reduce((s, i) => s + i.total_price, 0))}
+                      small
+                    />
+                    {totals.supportFundEarned > 0 && (
                       <Row
                         label="Credit earned"
                         value={formatCurrency(totals.supportFundEarned)}
+                        small
                         valueClass="text-green-700"
                       />
                     )}
-
-                    {supportFundItems.length > 0 && (
-                      <>
-                        <Separator />
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Support fund products
-                        </p>
-                        <div className="space-y-1.5">
-                          {supportFundItems.map((item) => (
-                            <SummaryLine
-                              key={`sf-${item.product_id}`}
-                              sku={item.product.sku}
-                              detail={`${item.quantity} units · ${item.case_qty} case${item.case_qty !== 1 ? 's' : ''}`}
-                              total={item.total_price}
-                              accent="success"
-                              onClick={() => scrollToProduct(item.product_id.toString(), true)}
-                            />
-                          ))}
-                        </div>
-                        <Row
-                          label="Subtotal"
-                          value={formatCurrency(
-                            supportFundItems.reduce((s, i) => s + i.total_price, 0)
-                          )}
-                          bold
-                          valueClass="text-green-700"
-                        />
-                        <Row
-                          label="Credit used"
-                          value={formatCurrency(
-                            Math.min(supportFundTotals.subtotal, totals.supportFundEarned)
-                          )}
-                          valueClass="text-green-700"
-                        />
-                        <Row
-                          label="Remaining credit"
-                          value={formatCurrency(supportFundTotals.remainingCredit)}
-                          valueClass={
-                            supportFundTotals.remainingCredit >= 0
-                              ? 'text-green-700'
-                              : 'text-destructive'
-                          }
-                        />
-                        <p className="text-[10px] text-muted-foreground italic leading-tight pt-1">
-                          • Credit must be redeemed in full with each order
-                          <br />
-                          • Unused Support Fund credit is forfeited
-                          <br />
-                          • Negative remaining credit adds to total
-                        </p>
-                      </>
-                    )}
-
-                    <Separator />
-                    <Row
-                      label="Grand total"
-                      value={formatCurrency(orderGrandTotal)}
-                      bold
-                      labelClass="text-base font-semibold"
-                      valueClass="text-base font-semibold"
-                    />
-                    <div className="text-xs text-muted-foreground space-y-0.5 pt-1">
-                      <Row
-                        label="Total items"
-                        value={
-                          orderItems.reduce((s, i) => s + (i.quantity || 0), 0) +
-                          supportFundItems.reduce((s, i) => s + (i.quantity || 0), 0)
-                        }
-                        small
-                      />
-                      <Row
-                        label="Total cases"
-                        value={
-                          orderItems.reduce((s, i) => s + (i.case_qty || 0), 0) +
-                          supportFundItems.reduce((s, i) => s + (i.case_qty || 0), 0)
-                        }
-                        small
-                      />
-                    </div>
-
-                    <Separator />
-                    <div className="space-y-2 pt-1">
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handleSave}
-                          loading={saving}
-                          disabled={!company}
-                          className="flex-1"
-                        >
-                          {isNewMode
-                            ? 'Create order'
-                            : order?.status === 'Draft'
-                              ? 'Save as Open'
-                              : 'Save changes'}
-                        </Button>
-                        <Button variant="outline" onClick={handleBack}>
-                          Cancel
-                        </Button>
-                      </div>
-                      {(isNewMode || order?.status === 'Draft') && (
-                        <Button
-                          variant="outline"
-                          onClick={handleSaveAsDraft}
-                          disabled={saving || !company}
-                          className="w-full"
-                        >
-                          Save as draft
-                        </Button>
-                      )}
-                    </div>
-                  </>
+                  </div>
                 )}
-              </CardContent>
+
+                {showSupportFundTab && supportFundItems.length > 0 && (
+                  <div className="space-y-1 text-xs">
+                    <Row
+                      label="Subtotal"
+                      value={formatCurrency(supportFundTotals.subtotal)}
+                      small
+                      valueClass="text-green-700"
+                    />
+                    <Row
+                      label="Credit used"
+                      value={formatCurrency(
+                        Math.min(supportFundTotals.subtotal, totals.supportFundEarned)
+                      )}
+                      small
+                      valueClass="text-green-700"
+                    />
+                    <Row
+                      label="Remaining credit"
+                      value={formatCurrency(supportFundTotals.remainingCredit)}
+                      small
+                      valueClass={
+                        supportFundTotals.remainingCredit >= 0
+                          ? 'text-green-700'
+                          : 'text-destructive'
+                      }
+                    />
+                  </div>
+                )}
+
+                {/* Grand total (always visible) */}
+                <div className="pt-2 border-t border-border">
+                  <Row
+                    label="Grand total"
+                    value={formatCurrency(orderGrandTotal)}
+                    bold
+                    labelClass="text-sm font-semibold"
+                    valueClass="text-sm font-semibold"
+                  />
+                  <div className="flex justify-between text-[11px] text-muted-foreground pt-1">
+                    <span>
+                      {orderItems.reduce((s, i) => s + (i.quantity || 0), 0) +
+                        supportFundItems.reduce((s, i) => s + (i.quantity || 0), 0)}{' '}
+                      units ·{' '}
+                      {orderItems.reduce((s, i) => s + (i.case_qty || 0), 0) +
+                        supportFundItems.reduce((s, i) => s + (i.case_qty || 0), 0)}{' '}
+                      cases
+                    </span>
+                  </div>
+                </div>
+
+                {/* Support fund disclaimer (only on support tab with items) */}
+                {showSupportFundTab && supportFundItems.length > 0 && (
+                  <p className="text-[10px] text-muted-foreground italic leading-tight">
+                    Credit must be redeemed in full per order. Unused credit is forfeited.
+                    Negative remaining credit adds to total.
+                  </p>
+                )}
+
+                {/* Actions */}
+                <div className="space-y-2 pt-1">
+                  <Button
+                    onClick={handleSave}
+                    loading={saving}
+                    disabled={!company || (orderItems.length === 0 && supportFundItems.length === 0)}
+                    className="w-full"
+                  >
+                    {isNewMode
+                      ? 'Create order'
+                      : order?.status === 'Draft'
+                        ? 'Save as Open'
+                        : 'Save changes'}
+                  </Button>
+                  {(isNewMode || order?.status === 'Draft') && (
+                    <Button
+                      variant="outline"
+                      onClick={handleSaveAsDraft}
+                      disabled={saving || !company}
+                      className="w-full"
+                    >
+                      Save as draft
+                    </Button>
+                  )}
+                </div>
+              </div>
             </Card>
           </div>
         </div>
