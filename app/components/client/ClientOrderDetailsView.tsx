@@ -111,7 +111,7 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
             .from('order_items')
             .select('*, product:Products(sku, item_name)')
             .eq('order_id', orderId)
-            .order('display_order', { ascending: true, nullsFirst: false }),
+            .order('sort_order', { ascending: true, nullsFirst: false }),
         ]);
         if (orderRes.error) throw orderRes.error;
         if (itemsRes.error) throw itemsRes.error;
