@@ -737,8 +737,12 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
             </Card>
           </div>
 
-          {/* Right column: cart */}
-          <div className="xl:col-span-2 xl:sticky xl:top-24 xl:self-start xl:h-[calc(100vh-7rem)]">
+          {/* Right column: cart
+             * top-24 (6rem / 96px) for the topbar; bottom buffer of 4rem
+             * (64px) keeps the Save / Save as Draft buttons clear of the
+             * viewport bottom on browsers that include chrome (bookmarks,
+             * mobile URL bar) or slim taskbars. Total subtracted: 10rem. */}
+          <div className="xl:col-span-2 xl:sticky xl:top-24 xl:self-start xl:h-[calc(100vh-10rem)]">
             <Card className="overflow-hidden xl:h-full xl:flex xl:flex-col">
               {/* Header: title + reset */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
@@ -813,7 +817,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
               <div className="relative xl:flex-1 xl:min-h-0">
                 <div
                   ref={cartListRef}
-                  className="max-h-[40vh] xl:max-h-none xl:h-full overflow-y-auto px-3 py-3"
+                  className="max-h-[40vh] xl:max-h-none xl:h-full overflow-y-auto px-3 pt-3 pb-10"
                 >
                 {!showSupportFundTab ? (
                   // ----- Order items tab -----
