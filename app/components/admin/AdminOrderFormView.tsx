@@ -136,8 +136,66 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const performSaveInFlightRef = useRef(false);
 
+  // Cart scroll handling
+  const cartListRef = useRef<HTMLDivElement>(null);
+  const [cartHasMoreBelow, setCartHasMoreBelow] = useState(false);
+  const prevOrderLenRef = useRef(0);
+  const prevSfLenRef = useRef(0);
+
   const isEditMode = !!orderId;
   const isNewMode = !orderId;
+
+  // Recalculate the "scroll hint" indicator: true when the cart list has
+  // more content below the visible area.
+  const recalcCartScrollHint = () => {
+    const el = cartListRef.current;
+    if (!el) return;
+    const hasMore = el.scrollHeight - el.scrollTop - el.clientHeight > 4;
+    setCartHasMoreBelow(hasMore);
+  };
+
+  // Watch scroll of the cart list to toggle the down-arrow hint
+  useEffect(() => {
+    const el = cartListRef.current;
+    if (!el) return;
+    recalcCartScrollHint();
+    el.addEventListener('scroll', recalcCartScrollHint);
+    return () => el.removeEventListener('scroll', recalcCartScrollHint);
+  }, []);
+
+  // Recheck on resize so the hint disappears when the cart can fit everything
+  useEffect(() => {
+    const onResize = () => recalcCartScrollHint();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // When the current tab's list grows (item added), scroll the cart to the
+  // newly added item (always at the bottom of the list since we append).
+  useEffect(() => {
+    const currentLen = showSupportFundTab ? supportFundItems.length : orderItems.length;
+    const prevLen = showSupportFundTab ? prevSfLenRef.current : prevOrderLenRef.current;
+    if (currentLen > prevLen && cartListRef.current) {
+      // Defer to next frame so DOM has the new row before scrolling
+      requestAnimationFrame(() => {
+        cartListRef.current?.scrollTo({
+          top: cartListRef.current.scrollHeight,
+          behavior: 'smooth',
+        });
+        recalcCartScrollHint();
+      });
+    } else {
+      // Re-check hint even on removals / quantity edits
+      requestAnimationFrame(recalcCartScrollHint);
+    }
+    prevOrderLenRef.current = orderItems.length;
+    prevSfLenRef.current = supportFundItems.length;
+  }, [orderItems.length, supportFundItems.length, showSupportFundTab]);
+
+  // Recheck hint after tab switch (the visible list changes height)
+  useEffect(() => {
+    requestAnimationFrame(recalcCartScrollHint);
+  }, [showSupportFundTab]);
 
   // ---- Close dropdown when clicking outside ----
   useEffect(() => {
@@ -680,10 +738,10 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
           </div>
 
           {/* Right column: cart */}
-          <div className="xl:col-span-2 xl:sticky xl:top-24 xl:self-start">
-            <Card className="overflow-hidden">
+          <div className="xl:col-span-2 xl:sticky xl:top-24 xl:self-start xl:h-[calc(100vh-7rem)]">
+            <Card className="overflow-hidden xl:h-full xl:flex xl:flex-col">
               {/* Header: title + reset */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
                 <h3 className="text-sm font-semibold">Order summary</h3>
                 {(orderItems.length > 0 || supportFundItems.length > 0) && (
                   <Button
@@ -701,7 +759,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
               </div>
 
               {/* Always-visible summary strip */}
-              <div className="px-4 py-3 bg-muted/40 border-b border-border text-xs space-y-1.5">
+              <div className="px-4 py-3 bg-muted/40 border-b border-border text-xs space-y-1.5 shrink-0">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Order items</span>
                   <span className="font-mono tabular-nums">
@@ -728,7 +786,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
 
               {/* Cart tabs (synced with main page tabs) */}
               {supportFundPercent > 0 && (
-                <div className="px-2 pt-2 border-b border-border bg-background">
+                <div className="px-2 pt-2 border-b border-border bg-background shrink-0">
                   <Tabs
                     value={showSupportFundTab ? 'support' : 'order'}
                     onValueChange={(v) =>
@@ -752,7 +810,11 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
               )}
 
               {/* Scrollable item list (per active tab) */}
-              <div className="max-h-[40vh] overflow-y-auto px-3 py-3">
+              <div className="relative xl:flex-1 xl:min-h-0">
+                <div
+                  ref={cartListRef}
+                  className="max-h-[40vh] xl:max-h-none xl:h-full overflow-y-auto px-3 py-3"
+                >
                 {!showSupportFundTab ? (
                   // ----- Order items tab -----
                   orderItems.length === 0 ? (
@@ -802,10 +864,20 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                     ))}
                   </div>
                 )}
+                </div>
+                {/* Scroll-down hint — appears when there's more content below */}
+                {cartHasMoreBelow && (
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background via-background/80 to-transparent flex items-end justify-center pb-1"
+                  >
+                    <ChevronDown className="h-4 w-4 text-muted-foreground animate-bounce" />
+                  </div>
+                )}
               </div>
 
               {/* Sticky bottom: totals + actions */}
-              <div className="border-t border-border bg-background px-4 py-3 space-y-3">
+              <div className="border-t border-border bg-background px-4 py-3 space-y-3 shrink-0">
                 {/* Per-tab subtotal block */}
                 {!showSupportFundTab && orderItems.length > 0 && (
                   <div className="space-y-1 text-xs">
