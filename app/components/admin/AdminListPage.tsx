@@ -78,6 +78,10 @@ export interface AdminListPageProps<T extends { id: string | number }> {
   /** Optional extra row actions appended to the dropdown menu after "Edit". */
   extraRowActions?: (row: T) => ReactNode;
 
+  /** Optional additional buttons rendered BEFORE the primary "New" action in
+   *  the page header (e.g. Import CSV). */
+  extraHeaderActions?: ReactNode;
+
   /** Optional empty-state copy override (when there are zero rows total). */
   emptyTitle?: string;
   emptyDescription?: string;
@@ -94,6 +98,7 @@ export function AdminListPage<T extends { id: string | number }>({
   searchPlaceholder = 'Search…',
   columns,
   extraRowActions,
+  extraHeaderActions,
   emptyTitle,
   emptyDescription,
 }: AdminListPageProps<T>) {
@@ -142,12 +147,15 @@ export function AdminListPage<T extends { id: string | number }>({
         title={title}
         description={description}
         actions={
-          <Link href={newUrl}>
-            <Button size="sm">
-              <Plus className="h-4 w-4" />
-              {newLabel}
-            </Button>
-          </Link>
+          <>
+            {extraHeaderActions}
+            <Link href={newUrl}>
+              <Button size="sm">
+                <Plus className="h-4 w-4" />
+                {newLabel}
+              </Button>
+            </Link>
+          </>
         }
       />
 
