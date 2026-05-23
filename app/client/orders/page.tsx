@@ -1,13 +1,7 @@
-"use client";
+'use client';
 
-import OrdersListView from '../../components/shared/OrdersListView';
+import ClientOrdersListView from '../../components/client/ClientOrdersListView';
 
 export default function ClientOrdersPage() {
-  return (
-    <OrdersListView
-        role="client"
-        newOrderUrl="/client/orders/new"
-        viewOrderUrl={(id) => `/client/orders/${id}`}
-      />
-  );
+  return <ClientOrdersListView />;
 }

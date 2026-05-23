@@ -1,19 +1,10 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import OrderDetailsView from '../../../components/shared/OrderDetailsView';
+import ClientOrderDetailsView from '../../../components/client/ClientOrderDetailsView';
 
 export default function ClientOrderViewPage() {
   const params = useParams();
   const orderId = params.id as string;
-
-  return (
-    <OrderDetailsView
-        role="client"
-        orderId={orderId}
-        backUrl="/client/orders"
-        editUrl={`/client/orders/${orderId}/edit`}
-        packingSlipUrl={`/client/orders/${orderId}/packing-slip`}
-      />
-  );
+  return <ClientOrderDetailsView orderId={orderId} />;
 }
