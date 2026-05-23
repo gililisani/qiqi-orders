@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Download, Edit } from 'lucide-react';
 
+import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import { PageHeader } from '../../../components/qq/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/qq/card';
 import { Button } from '../../../components/qq/button';
@@ -48,7 +49,7 @@ function SLIPreviewContent() {
   const generateHTML = async (data: any) => {
     try {
       setLoading(true);
-      const res = await fetch('/api/sli/generate-html', {
+      const res = await fetchWithAuth('/api/sli/generate-html', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),

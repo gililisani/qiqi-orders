@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Eye, Trash2 } from 'lucide-react';
 
 import { supabase } from '../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import { AdminListPage } from '../../../components/admin/AdminListPage';
 import { DropdownMenuItem } from '../../../components/qq/dropdown-menu';
 import { useToast } from '../../../components/ui/ToastProvider';
@@ -47,7 +48,7 @@ export default function SLIDocumentsPage() {
     if (!ok) return;
 
     try {
-      const res = await fetch(`/api/sli/standalone/${sli.id}`, { method: 'DELETE' });
+      const res = await fetchWithAuth(`/api/sli/standalone/${sli.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete SLI.');
       toast.success('SLI deleted.');

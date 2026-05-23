@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 import { supabase } from '../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import { PageHeader } from '../../../components/qq/page-header';
 import { Button } from '../../../components/qq/button';
 import { Alert, AlertDescription } from '../../../components/qq/alert';
@@ -60,7 +61,7 @@ export default function CreateStandaloneSLIPage() {
     }
     setSaving(true);
     try {
-      const res = await fetch('/api/sli/standalone/create', {
+      const res = await fetchWithAuth('/api/sli/standalone/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Download, Edit } from 'lucide-react';
 
+import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
 import { PageHeader } from '../../../../components/qq/page-header';
 import { Button } from '../../../../components/qq/button';
 import { Alert, AlertDescription } from '../../../../components/qq/alert';
@@ -29,8 +30,8 @@ export default function StandaloneSLIPreviewPage() {
     (async () => {
       try {
         const [htmlRes, dataRes] = await Promise.all([
-          fetch(`/api/sli/${sliId}/html`),
-          fetch(`/api/sli/${sliId}/data`),
+          fetchWithAuth(`/api/sli/${sliId}/html`),
+          fetchWithAuth(`/api/sli/${sliId}/data`),
         ]);
         if (!htmlRes.ok) {
           const data = await htmlRes.json().catch(() => ({}));
@@ -59,7 +60,7 @@ export default function StandaloneSLIPreviewPage() {
       setGeneratingPDF(true);
       let data = sliData;
       if (!data) {
-        const res = await fetch(`/api/sli/${sliId}/data`);
+        const res = await fetchWithAuth(`/api/sli/${sliId}/data`);
         if (!res.ok) {
           const error = await res.json();
           throw new Error(error.error || 'Failed to fetch SLI data.');

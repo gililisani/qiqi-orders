@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 import { supabase } from '../../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
 import { PageHeader } from '../../../../components/qq/page-header';
 import { Button } from '../../../../components/qq/button';
 import { Alert, AlertDescription } from '../../../../components/qq/alert';
@@ -62,7 +63,7 @@ export default function EditStandaloneSLIPage() {
     if (!sliId || companies.length === 0) return;
     (async () => {
       try {
-        const res = await fetch(`/api/sli/standalone/${sliId}`);
+        const res = await fetchWithAuth(`/api/sli/standalone/${sliId}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to fetch SLI.');
         const sli = data.sli;
@@ -112,7 +113,7 @@ export default function EditStandaloneSLIPage() {
     }
     setSaving(true);
     try {
-      const res = await fetch(`/api/sli/standalone/${sliId}`, {
+      const res = await fetchWithAuth(`/api/sli/standalone/${sliId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
