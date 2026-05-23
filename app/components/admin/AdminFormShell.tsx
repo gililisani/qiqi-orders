@@ -65,7 +65,7 @@ export function AdminFormShell({
   children,
 }: AdminFormShellProps) {
   return (
-    <div className="px-6 py-8 max-w-3xl">
+    <div className="px-6 py-8 max-w-3xl mx-auto">
       <Link
         href={backHref}
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-3"
