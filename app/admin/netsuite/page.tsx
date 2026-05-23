@@ -19,7 +19,7 @@ const STATUS_COPY: Record<ConnectionStatus, string> = {
 
 const STATUS_DOT: Record<ConnectionStatus, string> = {
   checking: 'bg-amber-500',
-  connected: 'bg-emerald-500',
+  connected: 'bg-green-500',
   disconnected: 'bg-destructive',
 };
 
