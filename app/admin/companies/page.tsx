@@ -1,13 +1,9 @@
 'use client';
 
-import Link from 'next/link';
-import { Upload, FileSpreadsheet } from 'lucide-react';
-
 import { supabase } from '../../../lib/supabaseClient';
 import { AdminListPage } from '../../components/admin/AdminListPage';
 import { Badge } from '../../components/qq/badge';
 import { SupportFundBadge } from '../../components/qq/support-fund-badge';
-import { Button } from '../../components/qq/button';
 
 interface Company {
   id: string;
@@ -67,23 +63,6 @@ export default function CompaniesPage() {
       filterRow={(c, q) =>
         (c.company_name ?? '').toLowerCase().includes(q) ||
         (c.netsuite_number ?? '').toLowerCase().includes(q)
-      }
-      extraHeaderActions={
-        <>
-          <Link href="/admin/companies/import" className="hidden sm:inline-flex">
-            <Button variant="outline" size="sm">
-              <Upload className="h-4 w-4" /> Import CSV
-            </Button>
-          </Link>
-          <Link
-            href="/admin/companies/historical-sales-import"
-            className="hidden md:inline-flex"
-          >
-            <Button variant="outline" size="sm">
-              <FileSpreadsheet className="h-4 w-4" /> Historical sales
-            </Button>
-          </Link>
-        </>
       }
       columns={[
         {

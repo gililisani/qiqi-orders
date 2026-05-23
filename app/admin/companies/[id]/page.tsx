@@ -186,7 +186,7 @@ export default function CompanyViewPage() {
 
   if (loading) {
     return (
-      <div className="px-6 py-8 max-w-6xl mx-auto">
+      <div className="px-6 py-8">
         <p className="text-sm text-muted-foreground">Loading company…</p>
       </div>
     );
@@ -194,7 +194,7 @@ export default function CompanyViewPage() {
 
   if (error || !company) {
     return (
-      <div className="px-6 py-8 max-w-6xl mx-auto">
+      <div className="px-6 py-8">
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error || 'Company not found.'}</AlertDescription>
         </Alert>
@@ -208,7 +208,7 @@ export default function CompanyViewPage() {
   }
 
   return (
-    <div className="px-6 py-8 max-w-6xl mx-auto space-y-6">
+    <div className="px-6 py-8 space-y-6">
       <div>
         <Link
           href="/admin/companies"
