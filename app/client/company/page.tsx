@@ -1,26 +1,33 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
 import { supabase } from '../../../lib/supabaseClient';
-import Card from '../../components/ui/Card';
-import ContractInfo from '../../components/shared/ContractInfo';
-import TerritoryList from '../../components/shared/TerritoryList';
 import { formatCurrency } from '../../../lib/formatters';
+import TerritoryList from '../../components/shared/TerritoryList';
+
+import { PageHeader } from '../../components/qq/page-header';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/qq/card';
+import { Badge } from '../../components/qq/badge';
+import { Separator } from '../../components/qq/separator';
+import { Alert, AlertDescription } from '../../components/qq/alert';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '../../components/qq/table';
 
 interface Company {
   id: string;
   company_name: string;
   netsuite_number: string;
-  support_fund_id?: string;
-  incoterm_id?: string;
-  payment_term_id?: string;
   company_address?: string;
   company_email?: string;
   company_phone?: string;
   company_tax_number?: string;
-  ship_to_contact_name?: string;
-  ship_to_contact_email?: string;
-  ship_to_contact_phone?: string;
   ship_to_street_line_1?: string;
   ship_to_street_line_2?: string;
   ship_to_city?: string;
@@ -30,7 +37,7 @@ interface Company {
   contract_execution_date?: string;
   contract_duration_months?: number;
   contract_status?: string;
-  support_fund?: { percent: number };
+  support_fund?: { percent: number } | { percent: number }[];
   incoterm?: { name: string };
   payment_term?: { name: string };
 }
@@ -75,55 +82,41 @@ export default function YourCompanyPage() {
     totalValueThisYear: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchData();
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated.');
+        const { data: clientData, error: clientError } = await supabase
+          .from('clients')
+          .select('company_id')
+          .eq('id', user.id)
+          .single();
+        if (clientError) throw clientError;
+        if (!clientData?.company_id) throw new Error('User not associated with a company.');
+        await Promise.all([
+          fetchCompany(clientData.company_id),
+          fetchTerritories(clientData.company_id),
+          fetchTargetPeriods(clientData.company_id),
+          fetchUsers(clientData.company_id),
+          fetchStats(clientData.company_id),
+        ]);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load company.');
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
-
-  const fetchData = async () => {
-    try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not found');
-
-      // Get user's company info
-      const { data: clientData, error: clientError } = await supabase
-        .from('clients')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
-
-      if (clientError) throw clientError;
-      if (!clientData?.company_id) throw new Error('User not associated with a company');
-
-      // Fetch all data in parallel
-      await Promise.all([
-        fetchCompany(clientData.company_id),
-        fetchTerritories(clientData.company_id),
-        fetchTargetPeriods(clientData.company_id),
-        fetchUsers(clientData.company_id),
-        fetchStats(clientData.company_id),
-      ]);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchCompany = async (companyId: string) => {
     const { data, error } = await supabase
       .from('companies')
-      .select(`
-        *,
-        support_fund:support_fund_levels(percent),
-        incoterm:incoterms(name),
-        payment_term:payment_terms(name)
-      `)
+      .select(`*, support_fund:support_fund_levels(percent), incoterm:incoterms(name), payment_term:payment_terms(name)`)
       .eq('id', companyId)
       .single();
-
     if (error) throw error;
     setCompany(data);
   };
@@ -133,7 +126,6 @@ export default function YourCompanyPage() {
       .from('company_territories')
       .select('*')
       .eq('company_id', companyId);
-
     if (error) throw error;
     setTerritories(data || []);
   };
@@ -144,27 +136,20 @@ export default function YourCompanyPage() {
       .select('*')
       .eq('company_id', companyId)
       .order('start_date', { ascending: true });
-
     if (error) throw error;
-
-    // Calculate current_progress dynamically for each target period
     const { calculateTargetPeriodProgress } = await import('../../../lib/targetPeriods');
-    const targetPeriodsWithProgress = await Promise.all(
-      (data || []).map(async (period) => {
-        const progress = await calculateTargetPeriodProgress(
+    const withProgress = await Promise.all(
+      (data || []).map(async (p) => ({
+        ...p,
+        current_progress: await calculateTargetPeriodProgress(
           supabase,
           companyId,
-          period.start_date,
-          period.end_date
-        );
-        return {
-          ...period,
-          current_progress: progress
-        };
-      })
+          p.start_date,
+          p.end_date
+        ),
+      }))
     );
-
-    setTargetPeriods(targetPeriodsWithProgress);
+    setTargetPeriods(withProgress);
   };
 
   const fetchUsers = async (companyId: string) => {
@@ -173,316 +158,256 @@ export default function YourCompanyPage() {
       .select('id, name, email, enabled, created_at')
       .eq('company_id', companyId)
       .order('name', { ascending: true });
-
     if (error) throw error;
     setUsers(data || []);
   };
 
   const fetchStats = async (companyId: string) => {
-    const currentYear = new Date().getFullYear();
-    const yearStart = `${currentYear}-01-01`;
-    const yearEnd = `${currentYear}-12-31`;
-
-    // Get all orders for the company
-    const { data: allOrders, error: ordersError } = await supabase
+    const yearStart = `${new Date().getFullYear()}-01-01`;
+    const yearEnd = `${new Date().getFullYear()}-12-31`;
+    const { data: allOrders, error } = await supabase
       .from('orders')
       .select('id, created_at, status, total_value')
       .eq('company_id', companyId);
-
-    if (ordersError) throw ordersError;
-
-    // Calculate stats
-    const ordersThisYear = (allOrders || []).filter(order => {
-      const orderDate = new Date(order.created_at);
-      return orderDate >= new Date(yearStart) && orderDate <= new Date(yearEnd);
-    });
-
-    const openOrders = (allOrders || []).filter(order => 
-      !['Done', 'Cancelled', 'Draft'].includes(order.status)
+    if (error) throw error;
+    const inYear = (allOrders || []).filter(
+      (o) =>
+        new Date(o.created_at) >= new Date(yearStart) &&
+        new Date(o.created_at) <= new Date(yearEnd)
     );
-
-    const totalValueThisYear = ordersThisYear.reduce((sum, order) => sum + (order.total_value || 0), 0);
-
     setStats({
-      ordersThisYear: ordersThisYear.length,
-      openOrders: openOrders.length,
-      totalValueThisYear,
+      ordersThisYear: inYear.length,
+      openOrders: (allOrders || []).filter(
+        (o) => !['Done', 'Cancelled', 'Draft'].includes(o.status)
+      ).length,
+      totalValueThisYear: inYear.reduce((sum, o) => sum + (o.total_value || 0), 0),
     });
-  };
-
-  const formatShipToAddress = () => {
-    if (!company) return 'N/A';
-    const parts = [
-      company.ship_to_street_line_1,
-      company.ship_to_street_line_2,
-      company.ship_to_city,
-      company.ship_to_state,
-      company.ship_to_postal_code,
-      company.ship_to_country,
-    ].filter(Boolean);
-    return parts.length > 0 ? parts.join(', ') : 'N/A';
-  };
-
-  const calculateExpirationDate = () => {
-    if (!company?.contract_execution_date || !company?.contract_duration_months) return null;
-    const executionDate = new Date(company.contract_execution_date);
-    executionDate.setMonth(executionDate.getMonth() + company.contract_duration_months);
-    return executionDate;
   };
 
   if (loading) {
     return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
-        <p className="text-gray-600">Loading company information...</p>
+      <div className="px-6 py-8">
+        <p className="text-sm text-muted-foreground">Loading company…</p>
       </div>
     );
   }
 
   if (error || !company) {
     return (
-      <div className="text-center py-8">
-        <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
-        <p className="text-gray-600 mb-4">{error || 'Company information not found.'}</p>
+      <div className="px-6 py-8">
+        <Alert variant="destructive">
+          <AlertDescription>{error || 'Company information not found.'}</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   const supportFundPercent = Array.isArray(company.support_fund)
-    ? (company.support_fund[0]?.percent || 0)
-    : (company.support_fund?.percent || 0);
+    ? company.support_fund[0]?.percent || 0
+    : company.support_fund?.percent || 0;
 
-  const expirationDate = calculateExpirationDate();
+  const shipTo = [
+    company.ship_to_street_line_1,
+    company.ship_to_street_line_2,
+    [company.ship_to_city, company.ship_to_state].filter(Boolean).join(', '),
+    company.ship_to_postal_code,
+    company.ship_to_country,
+  ].filter(Boolean);
+
+  const expirationDate = (() => {
+    if (!company.contract_execution_date || !company.contract_duration_months) return null;
+    const d = new Date(company.contract_execution_date);
+    d.setMonth(d.getMonth() + company.contract_duration_months);
+    return d;
+  })();
 
   return (
-    <div className="mt-8 mb-4 space-y-6">
-      <h2 className="text-2xl font-semibold text-gray-900">Your Company</h2>
+    <div className="px-6 py-8 space-y-6">
+      <PageHeader
+        title={company.company_name}
+        description={
+          company.netsuite_number
+            ? `NetSuite customer ${company.netsuite_number}`
+            : undefined
+        }
+      />
 
-      {/* Stats Boxes */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard
+          label="Orders this year"
+          value={stats.ordersThisYear}
+          sub={`Calendar year ${new Date().getFullYear()}`}
+        />
+        <StatCard label="Open orders" value={stats.openOrders} sub="Orders in progress" />
+        <StatCard
+          label="Total orders value"
+          value={formatCurrency(stats.totalValueThisYear)}
+          sub="This year"
+        />
+      </div>
+
+      {/* Company details */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
-          <div className="p-6">
-            <div className="text-sm font-medium text-gray-500 mb-1">Orders This Year</div>
-            <div className="text-3xl font-bold text-gray-900">{stats.ordersThisYear}</div>
-            <div className="text-xs text-gray-500 mt-1">Calendar year {new Date().getFullYear()}</div>
-          </div>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="space-y-3 text-sm">
+              <Field label="Company name" value={company.company_name} />
+              {company.company_email && <Field label="Email" value={company.company_email} />}
+              {company.company_phone && <Field label="Phone" value={company.company_phone} />}
+              {company.company_address && (
+                <Field label="Address" value={company.company_address} multiline />
+              )}
+              {shipTo.length > 0 && (
+                <Field label="Ship-to address" value={shipTo.join(', ')} />
+              )}
+              {company.company_tax_number && (
+                <Field label="Tax / VAT number" value={company.company_tax_number} />
+              )}
+            </dl>
+          </CardContent>
         </Card>
 
         <Card>
-          <div className="p-6">
-            <div className="text-sm font-medium text-gray-500 mb-1">Open Orders</div>
-            <div className="text-3xl font-bold text-gray-900">{stats.openOrders}</div>
-            <div className="text-xs text-gray-500 mt-1">Orders in progress</div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="p-6">
-            <div className="text-sm font-medium text-gray-500 mb-1">Total Orders Value</div>
-            <div className="text-3xl font-bold text-gray-900">{formatCurrency(stats.totalValueThisYear)}</div>
-            <div className="text-xs text-gray-500 mt-1">This year</div>
-          </div>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Financial terms</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="space-y-3 text-sm">
+              {company.incoterm?.name && (
+                <Field label="Incoterm" value={company.incoterm.name} />
+              )}
+              {company.payment_term?.name && (
+                <Field label="Payment terms" value={company.payment_term.name} />
+              )}
+              {supportFundPercent > 0 && (
+                <div>
+                  <dt className="text-xs text-muted-foreground mb-1">Support fund</dt>
+                  <dd>
+                    <Badge variant="success">{supportFundPercent}% credit</Badge>
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </CardContent>
         </Card>
       </div>
 
-      {/* Company Details */}
-      <Card header={<h3 className="text-lg font-semibold">Company Details</h3>}>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Left Column: Details */}
-            <div className="space-y-6">
-              <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-2">Details</h4>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Company Name</label>
-                  <p className="text-sm text-gray-900">{company.company_name}</p>
-                </div>
-
-                {company.company_email && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">Company Email</label>
-                    <p className="text-sm text-gray-900">{company.company_email}</p>
-                  </div>
+      {/* Contract */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Contract</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {company.contract_execution_date ||
+          company.contract_duration_months ||
+          targetPeriods.length > 0 ? (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                {company.contract_execution_date && (
+                  <Field
+                    label="Execution date"
+                    value={new Date(company.contract_execution_date).toLocaleDateString()}
+                  />
                 )}
-
-                {company.company_phone && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">Company Phone</label>
-                    <p className="text-sm text-gray-900">{company.company_phone}</p>
-                  </div>
+                {company.contract_duration_months && (
+                  <Field
+                    label="Duration"
+                    value={`${company.contract_duration_months} months`}
+                  />
                 )}
-
-                {company.company_address && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">Company Address</label>
-                    <p className="text-sm text-gray-900 whitespace-pre-line">{company.company_address}</p>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Ship To Address</label>
-                  <p className="text-sm text-gray-900">{formatShipToAddress()}</p>
-                </div>
-
-                {company.company_tax_number && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">Tax Information</label>
-                    <p className="text-sm text-gray-900">{company.company_tax_number}</p>
-                  </div>
+                {expirationDate && (
+                  <Field label="Expiration date" value={expirationDate.toLocaleDateString()} />
                 )}
               </div>
-            </div>
-
-            {/* Right Column: Financials */}
-            <div className="space-y-6">
-              <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-2">Financials</h4>
-              <div className="space-y-4">
-                {company.incoterm && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">Incoterm</label>
-                    <p className="text-sm text-gray-900">{company.incoterm.name}</p>
-                  </div>
-                )}
-
-                {company.payment_term && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">Payment Terms</label>
-                    <p className="text-sm text-gray-900">{company.payment_term.name}</p>
-                  </div>
-                )}
-
-                {supportFundPercent > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">Support Funds</label>
-                    <p className="text-sm text-gray-900">
-                      <span className="text-green-600 font-medium">{supportFundPercent}%</span>
-                    </p>
-                  </div>
-                )}
-
-                {company.company_tax_number && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">Tax</label>
-                    <p className="text-sm text-gray-900">{company.company_tax_number}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Contract Information */}
-      <Card header={<h3 className="text-lg font-semibold">Contract Information</h3>}>
-        <div className="p-6">
-          {company.contract_execution_date || company.contract_duration_months || targetPeriods.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {company.contract_execution_date && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Execution Date</label>
-                  <p className="text-sm text-gray-900">
-                    {new Date(company.contract_execution_date).toLocaleDateString()}
-                  </p>
-                </div>
-              )}
-
-              {company.contract_duration_months && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Duration</label>
-                  <p className="text-sm text-gray-900">{company.contract_duration_months} months</p>
-                </div>
-              )}
-
-              {expirationDate && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Expiration Date</label>
-                  <p className="text-sm text-gray-900">{expirationDate.toLocaleDateString()}</p>
-                </div>
-              )}
 
               {targetPeriods.length > 0 && (
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-500 mb-3">Annual Targets</label>
-                  <div className="space-y-3">
-                    {targetPeriods.map((period) => {
-                      // Format dates
-                      const formatDate = (dateString: string) => {
-                        const date = new Date(dateString);
-                        return date.toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        });
-                      };
-
-                      // Check if period is ended or calculate days remaining
-                      const endDate = new Date(period.end_date);
-                      endDate.setHours(23, 59, 59, 999);
-                      const now = new Date();
-                      const isEnded = now > endDate;
-                      
-                      const startDate = new Date(period.start_date);
-                      const daysRemaining = isEnded 
-                        ? 0 
-                        : Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                      const hasStarted = now >= startDate;
-
-                      return (
-                        <div key={period.id} className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium text-gray-900">{period.period_name}</p>
-                                {isEnded && (
-                                  <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded">
-                                    Ended
-                                  </span>
-                                )}
-                                {!isEnded && hasStarted && (
-                                  <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded">
-                                    {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} to complete
-                                  </span>
-                                )}
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm font-medium mb-3">Annual targets</p>
+                    <div className="space-y-3">
+                      {targetPeriods.map((p) => {
+                        const endDate = new Date(p.end_date);
+                        endDate.setHours(23, 59, 59, 999);
+                        const startDate = new Date(p.start_date);
+                        const now = new Date();
+                        const isEnded = now > endDate;
+                        const hasStarted = now >= startDate;
+                        const daysRemaining = isEnded
+                          ? 0
+                          : Math.ceil(
+                              (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+                            );
+                        const progressPct =
+                          p.target_amount > 0
+                            ? Math.min(
+                                100,
+                                ((p.current_progress || 0) / p.target_amount) * 100
+                              )
+                            : 0;
+                        return (
+                          <div
+                            key={p.id}
+                            className="border border-border rounded-md p-4"
+                          >
+                            <div className="flex justify-between items-start mb-2 gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="text-sm font-medium">{p.period_name}</p>
+                                  {isEnded && <Badge variant="muted">Ended</Badge>}
+                                  {!isEnded && hasStarted && (
+                                    <Badge variant="accent">
+                                      {daysRemaining}{' '}
+                                      {daysRemaining === 1 ? 'day' : 'days'} left
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {new Date(p.start_date).toLocaleDateString()} —{' '}
+                                  {new Date(p.end_date).toLocaleDateString()}
+                                </p>
                               </div>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {formatDate(period.start_date)} - {formatDate(period.end_date)}
-                              </p>
+                              <div className="text-right shrink-0">
+                                <p className="text-sm font-semibold font-mono">
+                                  {formatCurrency(p.target_amount)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Progress: {formatCurrency(p.current_progress || 0)}
+                                </p>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-sm font-semibold text-gray-900">
-                                {formatCurrency(period.target_amount)}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                Progress: {formatCurrency(period.current_progress || 0)}
-                              </p>
-                            </div>
+                            {p.target_amount > 0 && (
+                              <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
+                                <div
+                                  className="bg-foreground h-full rounded-full transition-all"
+                                  style={{ width: `${progressPct}%` }}
+                                />
+                              </div>
+                            )}
                           </div>
-                          {period.target_amount > 0 && (
-                            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                              <div
-                                className="bg-blue-600 h-2 rounded-full"
-                                style={{
-                                  width: `${Math.min(100, ((period.current_progress || 0) / period.target_amount) * 100)}%`,
-                                }}
-                              ></div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
           ) : (
-            <p className="text-sm text-gray-500">No contract information available.</p>
+            <p className="text-sm text-muted-foreground">No contract information available.</p>
           )}
-        </div>
+        </CardContent>
       </Card>
 
       {/* Territories */}
-      <Card header={<h3 className="text-lg font-semibold">Territories</h3>}>
-        <div className="p-6">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Territories</CardTitle>
+        </CardHeader>
+        <CardContent>
           {territories.length > 0 ? (
             <TerritoryList
               companyId={company.id}
@@ -491,62 +416,93 @@ export default function YourCompanyPage() {
               allowEdit={false}
             />
           ) : (
-            <p className="text-sm text-gray-500">No territories assigned.</p>
+            <p className="text-sm text-muted-foreground">No territories assigned.</p>
           )}
-        </div>
+        </CardContent>
       </Card>
 
       {/* Users */}
-      <Card header={<h3 className="text-lg font-semibold">Users</h3>}>
-        <div className="p-6">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Users</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
           {users.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full border border-[#e5e5e5] rounded-lg">
-                <thead>
-                  <tr className="border-b border-[#e5e5e5] bg-gray-50">
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                      Name
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                      Created
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id} className="border-b border-[#e5e5e5] hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm text-gray-900">{user.name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{user.email}</td>
-                      <td className="px-4 py-3 text-sm">
-                        {user.enabled ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Enabled
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            Disabled
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {new Date(user.created_at).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden sm:table-cell">Created</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((u) => (
+                  <TableRow key={u.id}>
+                    <TableCell className="text-sm font-medium">{u.name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
+                    <TableCell>
+                      {u.enabled ? (
+                        <Badge variant="success">Enabled</Badge>
+                      ) : (
+                        <Badge variant="muted">Disabled</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                      {new Date(u.created_at).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
-            <p className="text-sm text-gray-500">No users found.</p>
+            <p className="text-sm text-muted-foreground p-4">No users.</p>
           )}
-        </div>
+        </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Helpers
+// ----------------------------------------------------------------------------
+function StatCard({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+          {label}
+        </div>
+        <div className="text-2xl font-semibold tabular-nums">{value}</div>
+        {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function Field({
+  label,
+  value,
+  multiline = false,
+}: {
+  label: string;
+  value: string;
+  multiline?: boolean;
+}) {
+  return (
+    <div>
+      <dt className="text-xs text-muted-foreground mb-0.5">{label}</dt>
+      <dd className={`font-medium ${multiline ? 'whitespace-pre-line' : ''}`}>{value}</dd>
     </div>
   );
 }
