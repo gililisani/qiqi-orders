@@ -838,8 +838,8 @@ export default function AdminOrderDetailsView({
             return (
               <>
                 <Row label="Regular items" value={formatCurrency(regularSubtotal)} />
-                <Row label="Credit used" value={formatCurrency(creditUsed)} valueClass="text-emerald-700" />
-                <Row label="Balance" value={formatCurrency(balance)} valueClass="text-amber-700" />
+                <Row label="Credit used" value={formatCurrency(creditUsed)} valueClass="text-green-700" />
+                <Row label="Balance" value={formatCurrency(balance)} valueClass="text-brand-magenta" />
                 <Separator />
                 <Row
                   label="Total order value"
