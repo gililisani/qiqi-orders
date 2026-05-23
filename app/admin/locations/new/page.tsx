@@ -1,134 +1,83 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
-import Link from 'next/link';
-
-interface FormData {
-  location_name: string;
-  country: string;
-  netsuite_id: string;
-}
+import { AdminFormShell } from '../../../components/admin/AdminFormShell';
+import { FormField } from '../../../components/qq/form-field';
+import { Input } from '../../../components/qq/input';
+import { useToast } from '../../../components/ui/ToastProvider';
 
 export default function NewLocationPage() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [formData, setFormData] = useState<FormData>({
-    location_name: '',
-    country: '',
-    netsuite_id: ''
-  });
+  const router = useRouter();
+  const toast = useToast();
+  const [locationName, setLocationName] = useState('');
+  const [country, setCountry] = useState('');
+  const [netsuiteId, setNetsuiteId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-
+    if (!locationName.trim()) {
+      setError('Location name is required.');
+      return;
+    }
+    setSaving(true);
+    setError(null);
     try {
-      const { error } = await supabase
-        .from('Locations')
-        .insert([{
-          location_name: formData.location_name,
-          country: formData.country || null,
-          netsuite_id: formData.netsuite_id || null
-        }]);
-
-      if (error) throw error;
-
-      window.location.href = '/admin/locations';
+      const { error: insertError } = await supabase.from('Locations').insert([{
+        location_name: locationName.trim(),
+        country: country.trim() || null,
+        netsuite_id: netsuiteId.trim() || null,
+      }]);
+      if (insertError) throw insertError;
+      toast.success('Location created.');
+      router.push('/admin/locations');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to create location.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
   return (
-    <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Add New Location</h1>
-          <Link
-            href="/admin/locations"
-            className="text-gray-600 hover:text-gray-800"
-          >
-            ← Back to Locations
-          </Link>
-        </div>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Location Name *
-              </label>
-              <input
-                type="text"
-                name="location_name"
-                value={formData.location_name}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Country
-              </label>
-              <input
-                type="text"
-                name="country"
-                value={formData.country}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                NetSuite Internal ID
-              </label>
-              <input
-                type="text"
-                name="netsuite_id"
-                value={formData.netsuite_id}
-                onChange={handleChange}
-                placeholder="e.g. 5 (from Setup → Company → Locations, Internal ID column)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-          </div>
-
-          <div className="flex space-x-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
-            >
-              {loading ? 'Creating...' : 'Create Location'}
-            </button>
-            <Link
-              href="/admin/locations"
-              className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition"
-            >
-              Cancel
-            </Link>
-          </div>
-        </form>
-      </div>
+    <AdminFormShell
+      title="New location"
+      description="Warehouse or stocking location used in NetSuite."
+      backHref="/admin/locations"
+      backLabel="Back to locations"
+      saving={saving}
+      error={error}
+      onSubmit={handleSubmit}
+      onCancel={() => router.push('/admin/locations')}
+      submitLabel="Create location"
+    >
+      <FormField label="Location name" required>
+        <Input
+          value={locationName}
+          onChange={(e) => setLocationName(e.target.value)}
+          autoFocus
+          required
+        />
+      </FormField>
+      <FormField label="Country">
+        <Input
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+          placeholder="e.g. United States"
+        />
+      </FormField>
+      <FormField
+        label="NetSuite Internal ID"
+        helper="From Setup → Company → Locations, Internal ID column."
+      >
+        <Input
+          value={netsuiteId}
+          onChange={(e) => setNetsuiteId(e.target.value)}
+          placeholder="e.g. 5"
+        />
+      </FormField>
+    </AdminFormShell>
   );
 }

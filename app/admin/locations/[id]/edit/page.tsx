@@ -3,125 +3,110 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
-import Link from 'next/link';
+import { AdminFormShell } from '../../../../components/admin/AdminFormShell';
+import { FormField } from '../../../../components/qq/form-field';
+import { Input } from '../../../../components/qq/input';
+import { useToast } from '../../../../components/ui/ToastProvider';
 
 export default function EditLocationPage() {
-  const params = useParams();
   const router = useRouter();
-  const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string);
+  const params = useParams();
+  const id = params?.id as string;
+  const toast = useToast();
 
+  const [locationName, setLocationName] = useState('');
+  const [country, setCountry] = useState('');
+  const [netsuiteId, setNetsuiteId] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [formData, setFormData] = useState({ location_name: '', country: '', netsuite_id: '' });
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchItem = async () => {
+    if (!id) return;
+    (async () => {
       try {
         const { data, error } = await supabase
           .from('Locations')
-          .select('id, location_name, country, netsuite_id')
+          .select('location_name, country, netsuite_id')
           .eq('id', id)
           .single();
         if (error) throw error;
-        if (data) setFormData({ location_name: data.location_name || '', country: data.country || '', netsuite_id: data.netsuite_id || '' });
+        setLocationName(data?.location_name || '');
+        setCountry(data?.country || '');
+        setNetsuiteId(data?.netsuite_id || '');
       } catch (err: any) {
-        setError(err.message || 'Failed to load location');
+        setError(err.message || 'Failed to load location.');
       } finally {
         setLoading(false);
       }
-    };
-    if (id) fetchItem();
+    })();
   }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!locationName.trim()) {
+      setError('Location name is required.');
+      return;
+    }
     setSaving(true);
-    setError('');
+    setError(null);
     try {
-      const { error } = await supabase
+      const { error: updateError } = await supabase
         .from('Locations')
         .update({
-          location_name: formData.location_name,
-          country: formData.country || null,
-          netsuite_id: formData.netsuite_id || null,
+          location_name: locationName.trim(),
+          country: country.trim() || null,
+          netsuite_id: netsuiteId.trim() || null,
         })
         .eq('id', id);
-      if (error) throw error;
+      if (updateError) throw updateError;
+      toast.success('Location updated.');
       router.push('/admin/locations');
     } catch (err: any) {
-      setError(err.message || 'Failed to update');
+      setError(err.message || 'Failed to update location.');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  if (loading) {
-    return (
-      <div className="p-6">Loading...</div>
-    );
-  }
-
   return (
-    <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Edit Location</h1>
-          <Link href="/admin/locations" className="text-gray-600 hover:text-gray-800">← Back</Link>
-        </div>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>
-        )}
-
-        <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Location Name *</label>
-              <input
-                type="text"
-                name="location_name"
-                value={formData.location_name}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-              <input
-                type="text"
-                name="country"
-                value={formData.country}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">NetSuite Internal ID</label>
-              <input
-                type="text"
-                name="netsuite_id"
-                value={formData.netsuite_id}
-                onChange={handleChange}
-                placeholder="e.g. 5 (from Setup → Company → Locations, Internal ID column)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <button type="submit" disabled={saving} className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50">
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-            <Link href="/admin/locations" className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition">Cancel</Link>
-          </div>
-        </form>
-      </div>
+    <AdminFormShell
+      title="Edit location"
+      backHref="/admin/locations"
+      backLabel="Back to locations"
+      saving={saving}
+      error={error}
+      onSubmit={handleSubmit}
+      onCancel={() => router.push('/admin/locations')}
+      submitLabel="Save changes"
+    >
+      <FormField label="Location name" required>
+        <Input
+          value={locationName}
+          onChange={(e) => setLocationName(e.target.value)}
+          disabled={loading}
+          required
+          autoFocus
+        />
+      </FormField>
+      <FormField label="Country">
+        <Input
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+          disabled={loading}
+        />
+      </FormField>
+      <FormField
+        label="NetSuite Internal ID"
+        helper="From Setup → Company → Locations, Internal ID column."
+      >
+        <Input
+          value={netsuiteId}
+          onChange={(e) => setNetsuiteId(e.target.value)}
+          disabled={loading}
+          placeholder="e.g. 5"
+        />
+      </FormField>
+    </AdminFormShell>
   );
 }
-

@@ -1,203 +1,134 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
-import Link from 'next/link';
-
-interface FormData {
-  name: string;
-  netsuite_id: string;
-  ship_from_address: string;
-  company_address: string;
-  phone: string;
-  email: string;
-  footer_text: string;
-}
+import { AdminFormShell } from '../../../components/admin/AdminFormShell';
+import { FormField } from '../../../components/qq/form-field';
+import { Input } from '../../../components/qq/input';
+import { Label } from '../../../components/qq/label';
+import { useToast } from '../../../components/ui/ToastProvider';
 
 export default function NewSubsidiaryPage() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [formData, setFormData] = useState<FormData>({
+  const router = useRouter();
+  const toast = useToast();
+  const [formData, setFormData] = useState({
     name: '',
     netsuite_id: '',
     ship_from_address: '',
     company_address: '',
     phone: '',
     email: '',
-    footer_text: ''
+    footer_text: '',
   });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const onChange = (key: keyof typeof formData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setFormData((p) => ({ ...p, [key]: e.target.value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-
+    if (!formData.name.trim()) {
+      setError('Subsidiary name is required.');
+      return;
+    }
+    if (!formData.ship_from_address.trim()) {
+      setError('Ship From address is required.');
+      return;
+    }
+    if (!formData.company_address.trim()) {
+      setError('Company address is required.');
+      return;
+    }
+    setSaving(true);
+    setError(null);
     try {
-      const { error } = await supabase
-        .from('subsidiaries')
-        .insert([{
-          name: formData.name,
-          netsuite_id: formData.netsuite_id || null,
-          ship_from_address: formData.ship_from_address,
-          company_address: formData.company_address,
-          phone: formData.phone,
-          email: formData.email,
-          footer_text: formData.footer_text
-        }]);
-
-      if (error) throw error;
-
-      window.location.href = '/admin/subsidiaries';
+      const { error: insertError } = await supabase.from('subsidiaries').insert([{
+        name: formData.name.trim(),
+        netsuite_id: formData.netsuite_id.trim() || null,
+        ship_from_address: formData.ship_from_address.trim(),
+        company_address: formData.company_address.trim(),
+        phone: formData.phone.trim() || null,
+        email: formData.email.trim() || null,
+        footer_text: formData.footer_text.trim() || null,
+      }]);
+      if (insertError) throw insertError;
+      toast.success('Subsidiary created.');
+      router.push('/admin/subsidiaries');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to create subsidiary.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
   return (
-    <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Add New Subsidiary</h1>
-          <Link
-            href="/admin/subsidiaries"
-            className="text-gray-600 hover:text-gray-800"
-          >
-            ← Back to Subsidiaries
-          </Link>
-        </div>
+    <AdminFormShell
+      title="New subsidiary"
+      description="Qiqi legal entity used for order routing in NetSuite."
+      backHref="/admin/subsidiaries"
+      backLabel="Back to subsidiaries"
+      saving={saving}
+      error={error}
+      onSubmit={handleSubmit}
+      onCancel={() => router.push('/admin/subsidiaries')}
+      submitLabel="Create subsidiary"
+    >
+      <FormField label="Subsidiary name" required>
+        <Input value={formData.name} onChange={onChange('name')} autoFocus required />
+      </FormField>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
+      <FormField
+        label="NetSuite Internal ID"
+        helper="From Setup → Company → Subsidiaries, Internal ID column."
+      >
+        <Input value={formData.netsuite_id} onChange={onChange('netsuite_id')} placeholder="e.g. 3" />
+      </FormField>
 
-        <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Subsidiary Name *
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              NetSuite Internal ID
-            </label>
-            <input
-              type="text"
-              name="netsuite_id"
-              value={formData.netsuite_id}
-              onChange={handleChange}
-              placeholder="e.g. 3 (from Setup → Company → Subsidiaries, Internal ID column)"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Ship From Address *
-            </label>
-            <textarea
-              name="ship_from_address"
-              value={formData.ship_from_address}
-              onChange={handleChange}
-              required
-              rows={4}
-              placeholder="Enter full shipping address for this subsidiary..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Company Address *
-            </label>
-            <textarea
-              name="company_address"
-              value={formData.company_address}
-              onChange={handleChange}
-              required
-              rows={4}
-              placeholder="Enter company address for this subsidiary..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Phone
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              placeholder="Enter phone number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Enter email address"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Footer Text
-            </label>
-            <textarea
-              name="footer_text"
-              value={formData.footer_text}
-              onChange={handleChange}
-              rows={3}
-              placeholder="Enter footer text to display on packing slips"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-            />
-          </div>
-
-          <div className="flex space-x-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
-            >
-              {loading ? 'Creating...' : 'Create Subsidiary'}
-            </button>
-            <Link
-              href="/admin/subsidiaries"
-              className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition"
-            >
-              Cancel
-            </Link>
-          </div>
-        </form>
+      <div>
+        <Label className="text-sm font-medium">Ship From address *</Label>
+        <textarea
+          value={formData.ship_from_address}
+          onChange={onChange('ship_from_address')}
+          rows={3}
+          required
+          placeholder="Full shipping address for this subsidiary"
+          className="mt-1.5 w-full px-3 py-2 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+        />
       </div>
+
+      <div>
+        <Label className="text-sm font-medium">Company address *</Label>
+        <textarea
+          value={formData.company_address}
+          onChange={onChange('company_address')}
+          rows={3}
+          required
+          placeholder="Legal company address"
+          className="mt-1.5 w-full px-3 py-2 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormField label="Phone">
+          <Input type="tel" value={formData.phone} onChange={onChange('phone')} />
+        </FormField>
+        <FormField label="Email">
+          <Input type="email" value={formData.email} onChange={onChange('email')} />
+        </FormField>
+      </div>
+
+      <div>
+        <Label className="text-sm font-medium">Footer text</Label>
+        <textarea
+          value={formData.footer_text}
+          onChange={onChange('footer_text')}
+          rows={2}
+          placeholder="Optional text shown on packing slips"
+          className="mt-1.5 w-full px-3 py-2 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+        />
+      </div>
+    </AdminFormShell>
   );
 }

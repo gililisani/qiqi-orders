@@ -2,326 +2,213 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { Trash2 } from 'lucide-react';
 import { supabase } from '../../../../../lib/supabaseClient';
-import Link from 'next/link';
-
-interface FormData {
-  name: string;
-  email: string;
-  enabled: boolean;
-  changePassword: boolean;
-  newPassword: string;
-}
+import { AdminFormShell } from '../../../../components/admin/AdminFormShell';
+import { FormField } from '../../../../components/qq/form-field';
+import { Input } from '../../../../components/qq/input';
+import { Button } from '../../../../components/qq/button';
+import { useToast } from '../../../../components/ui/ToastProvider';
+import { useConfirm } from '../../../../components/ui/ConfirmProvider';
 
 export default function EditAdminPage() {
-  const params = useParams();
   const router = useRouter();
-  const adminId = params.id as string;
-  
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [admin, setAdmin] = useState<any>(null);
+  const params = useParams();
+  const adminId = params?.id as string;
+  const toast = useToast();
+  const confirm = useConfirm();
 
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState({
     name: '',
     email: '',
     enabled: true,
     changePassword: false,
-    newPassword: ''
+    newPassword: '',
   });
+  const [originalEmail, setOriginalEmail] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (adminId) {
-      fetchAdmin();
-    }
+    if (!adminId) return;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('admins')
+          .select('*')
+          .eq('id', adminId)
+          .single();
+        if (error) throw error;
+        setFormData({
+          name: data?.name || '',
+          email: data?.email || '',
+          enabled: !!data?.enabled,
+          changePassword: false,
+          newPassword: '',
+        });
+        setOriginalEmail(data?.email || '');
+      } catch (err: any) {
+        setError(err.message || 'Failed to load admin.');
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [adminId]);
-
-  const fetchAdmin = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('admins')
-        .select('*')
-        .eq('id', adminId)
-        .single();
-
-      if (error) throw error;
-
-      setAdmin(data);
-      setFormData({
-        name: data.name || '',
-        email: data.email || '',
-        enabled: data.enabled || false,
-        changePassword: false,
-        newPassword: ''
-      });
-      
-      // Set breadcrumb
-      if ((window as any).__setBreadcrumbs && data.name) {
-        (window as any).__setBreadcrumbs([
-          { label: data.name },
-          { label: 'Edit' }
-        ]);
-      }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setInitialLoading(false);
-    }
-  };
-  
-  // Clean up breadcrumb on unmount
-  useEffect(() => {
-    return () => {
-      if ((window as any).__setBreadcrumbs) {
-        (window as any).__setBreadcrumbs([]);
-      }
-    };
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-
+    if (!formData.name.trim() || !formData.email.trim()) {
+      setError('Name and email are required.');
+      return;
+    }
+    if (formData.changePassword && formData.newPassword.length < 6) {
+      setError('New password must be at least 6 characters.');
+      return;
+    }
+    setSaving(true);
+    setError(null);
     try {
-      // Update admin profile in our admins table
       const { error: profileError } = await supabase
         .from('admins')
         .update({
-          name: formData.name,
-          email: formData.email,
-          enabled: formData.enabled
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          enabled: formData.enabled,
         })
         .eq('id', adminId);
-
       if (profileError) throw profileError;
 
-      // Update user in Supabase Auth if email changed
-      if (formData.email !== admin.email) {
-        const { error: authError } = await supabase.auth.admin.updateUserById(adminId, {
-          email: formData.email,
-          user_metadata: {
-            full_name: formData.name
-          }
+      if (formData.email !== originalEmail) {
+        await supabase.auth.admin.updateUserById(adminId, {
+          email: formData.email.trim(),
+          user_metadata: { full_name: formData.name.trim() },
         });
-
-        if (authError) {
-          console.error('Error updating auth user:', authError);
-          // Don't throw here, profile was updated successfully
-        }
       }
 
-      // Update password if requested
       if (formData.changePassword && formData.newPassword) {
-        const { error: passwordError } = await supabase.auth.admin.updateUserById(adminId, {
-          password: formData.newPassword
+        await supabase.auth.admin.updateUserById(adminId, {
+          password: formData.newPassword,
         });
-
-        if (passwordError) {
-          console.error('Error updating password:', passwordError);
-          // Don't throw here, other updates were successful
-        }
       }
 
+      toast.success('Admin updated.');
       router.push('/admin/admins');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to update admin.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this admin? This action cannot be undone.')) return;
-
+    const ok = await confirm({
+      title: 'Delete admin?',
+      description: 'This permanently removes the admin and revokes their access. This cannot be undone.',
+      variant: 'danger',
+      confirmLabel: 'Delete admin',
+      requireExplicitConfirm: true,
+    });
+    if (!ok) return;
+    setDeleting(true);
     try {
-      setLoading(true);
-      
-      // Delete from our admins table first
       const { error: profileError } = await supabase
         .from('admins')
         .delete()
         .eq('id', adminId);
-
       if (profileError) throw profileError;
-
-      // Delete from Supabase Auth
-      const { error: authError } = await supabase.auth.admin.deleteUser(adminId);
-      
-      if (authError) {
-        console.error('Error deleting auth user:', authError);
-        // Don't throw here, profile was deleted successfully
-      }
-
+      await supabase.auth.admin.deleteUser(adminId);
+      toast.success('Admin deleted.');
       router.push('/admin/admins');
     } catch (err: any) {
-      setError(err.message);
-      setLoading(false);
+      setError(err.message || 'Failed to delete admin.');
+      setDeleting(false);
     }
   };
 
-  if (initialLoading) {
-    return (
-      <div className="p-6">
-          <p>Loading admin...</p>
-        </div>
-    );
-  }
-
-  if (error && !admin) {
-    return (
-      <div className="p-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Admin Not Found</h1>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <Link
-              href="/admin/admins"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
-            >
-              Back to Admins
-            </Link>
-          </div>
-        </div>
-    );
-  }
-
   return (
-    <div className="mt-8 mb-4 space-y-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-semibold text-gray-900">Edit Admin</h2>
-          <Link
-            href="/admin/admins"
-            className="text-gray-600 hover:text-gray-800"
-          >
-            ← Back to Admins
-          </Link>
-        </div>
+    <AdminFormShell
+      title="Edit admin"
+      backHref="/admin/admins"
+      backLabel="Back to admins"
+      saving={saving}
+      error={error}
+      onSubmit={handleSubmit}
+      onCancel={() => router.push('/admin/admins')}
+      submitLabel="Save changes"
+      headerActions={
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleDelete}
+          disabled={deleting || saving}
+          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+        >
+          <Trash2 className="h-4 w-4" />
+          {deleting ? 'Deleting…' : 'Delete'}
+        </Button>
+      }
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormField label="Full name" required>
+          <Input
+            value={formData.name}
+            onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+            disabled={loading}
+            required
+            autoFocus
+          />
+        </FormField>
+        <FormField label="Email address" required>
+          <Input
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
+            disabled={loading}
+            required
+          />
+        </FormField>
+      </div>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={formData.enabled}
+          onChange={(e) => setFormData((p) => ({ ...p, enabled: e.target.checked }))}
+          disabled={loading}
+          className="h-4 w-4 accent-foreground"
+        />
+        <span className="text-sm">Admin is enabled</span>
+      </label>
+
+      <div className="space-y-3 pt-2 border-t border-border">
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={formData.changePassword}
+            onChange={(e) =>
+              setFormData((p) => ({ ...p, changePassword: e.target.checked, newPassword: '' }))
+            }
+            disabled={loading}
+            className="h-4 w-4 accent-foreground"
+          />
+          <span className="text-sm font-medium">Change password</span>
+        </label>
+
+        {formData.changePassword && (
+          <FormField label="New password" required helper="Minimum 6 characters.">
+            <Input
+              type="password"
+              value={formData.newPassword}
+              onChange={(e) => setFormData((p) => ({ ...p, newPassword: e.target.value }))}
+              minLength={6}
+              required
+            />
+          </FormField>
         )}
-
-        <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                name="enabled"
-                checked={formData.enabled}
-                onChange={handleChange}
-                className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
-              />
-              <label className="ml-2 block text-sm text-gray-700">
-                Admin is enabled
-              </label>
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                name="changePassword"
-                checked={formData.changePassword}
-                onChange={handleChange}
-                className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
-              />
-              <label className="ml-2 block text-sm text-gray-700">
-                Change password
-              </label>
-            </div>
-          </div>
-
-          {formData.changePassword && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                New Password *
-              </label>
-              <input
-                type="password"
-                name="newPassword"
-                value={formData.newPassword}
-                onChange={handleChange}
-                required={formData.changePassword}
-                minLength={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-              <p className="text-sm text-gray-500 mt-1">Minimum 6 characters</p>
-            </div>
-          )}
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded p-4">
-            <h3 className="text-sm font-medium text-yellow-800 mb-2">Admin Information:</h3>
-            <ul className="text-sm text-yellow-700 space-y-1">
-              <li>• <strong>Role:</strong> Admin</li>
-              <li>• <strong>Admin ID:</strong> {adminId}</li>
-              <li>• <strong>Created:</strong> {admin?.created_at ? new Date(admin.created_at).toLocaleDateString() : 'Unknown'}</li>
-              <li>• <strong>Permissions:</strong> Full system access</li>
-            </ul>
-          </div>
-
-          <div className="flex space-x-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
-            >
-              {loading ? 'Updating...' : 'Update Admin'}
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={loading}
-              className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 transition disabled:opacity-50"
-            >
-              Delete Admin
-            </button>
-            <Link
-              href="/admin/admins"
-              className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition"
-            >
-              Cancel
-            </Link>
-          </div>
-        </form>
-    </div>
+      </div>
+    </AdminFormShell>
   );
 }
