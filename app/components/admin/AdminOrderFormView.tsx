@@ -170,12 +170,16 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // When the current tab's list grows (item added), scroll the cart to the
-  // newly added item (always at the bottom of the list since we append).
+  // When the user adds a single item to the active tab, scroll the cart to
+  // the newly added item (always at the bottom of the list since we append).
+  // Only triggers on a +1 jump — bulk loads (edit-mode hydration from the
+  // server) jump by N>1 and are ignored, so the cart stays scrolled to the
+  // top and the down-chevron hint can do its job.
   useEffect(() => {
     const currentLen = showSupportFundTab ? supportFundItems.length : orderItems.length;
     const prevLen = showSupportFundTab ? prevSfLenRef.current : prevOrderLenRef.current;
-    if (currentLen > prevLen && cartListRef.current) {
+    const isSingleAdd = currentLen === prevLen + 1;
+    if (isSingleAdd && cartListRef.current) {
       // Defer to next frame so DOM has the new row before scrolling
       requestAnimationFrame(() => {
         cartListRef.current?.scrollTo({
@@ -185,7 +189,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
         recalcCartScrollHint();
       });
     } else {
-      // Re-check hint even on removals / quantity edits
+      // Re-check hint on removals, quantity edits, and bulk hydration
       requestAnimationFrame(recalcCartScrollHint);
     }
     prevOrderLenRef.current = orderItems.length;
@@ -738,11 +742,11 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
           </div>
 
           {/* Right column: cart
-             * top-24 (6rem / 96px) for the topbar; bottom buffer of 4rem
-             * (64px) keeps the Save / Save as Draft buttons clear of the
-             * viewport bottom on browsers that include chrome (bookmarks,
-             * mobile URL bar) or slim taskbars. Total subtracted: 10rem. */}
-          <div className="xl:col-span-2 xl:sticky xl:top-24 xl:self-start xl:h-[calc(100vh-10rem)]">
+             * top-24 (6rem / 96px) for the topbar; bottom buffer of 6rem
+             * (96px) keeps the entire card visible (rounded bottom corners
+             * included) on browsers that include chrome (bookmarks, mobile
+             * URL bar) or slim taskbars. Total subtracted: 12rem. */}
+          <div className="xl:col-span-2 xl:sticky xl:top-24 xl:self-start xl:h-[calc(100vh-12rem)]">
             <Card className="overflow-hidden xl:h-full xl:flex xl:flex-col">
               {/* Header: title + reset */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
@@ -817,7 +821,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
               <div className="relative xl:flex-1 xl:min-h-0">
                 <div
                   ref={cartListRef}
-                  className="max-h-[40vh] xl:max-h-none xl:h-full overflow-y-auto px-3 pt-3 pb-10"
+                  className="max-h-[40vh] xl:max-h-none xl:h-full overflow-y-auto px-3 pt-3 pb-6"
                 >
                 {!showSupportFundTab ? (
                   // ----- Order items tab -----
