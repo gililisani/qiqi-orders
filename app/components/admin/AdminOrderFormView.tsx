@@ -138,6 +138,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
 
   // Cart scroll handling
   const cartListRef = useRef<HTMLDivElement>(null);
+  const cartContentRef = useRef<HTMLDivElement>(null);
   const [cartHasMoreBelow, setCartHasMoreBelow] = useState(false);
   const prevOrderLenRef = useRef(0);
   const prevSfLenRef = useRef(0);
@@ -163,11 +164,19 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
     return () => el.removeEventListener('scroll', recalcCartScrollHint);
   }, []);
 
-  // Recheck on resize so the hint disappears when the cart can fit everything
+  // Observe both the scroll container AND its content for size changes.
+  // ResizeObserver fires AFTER the browser has done layout, so heights
+  // are accurate — fixes the "chevron only shows after a window resize"
+  // bug in edit mode where items hydrate from the server async and the
+  // requestAnimationFrame-based recheck ran on stale measurements.
   useEffect(() => {
-    const onResize = () => recalcCartScrollHint();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    if (typeof ResizeObserver === 'undefined') return; // SSR / very old browsers
+    const observer = new ResizeObserver(() => recalcCartScrollHint());
+    const container = cartListRef.current;
+    const content = cartContentRef.current;
+    if (container) observer.observe(container);
+    if (content) observer.observe(content);
+    return () => observer.disconnect();
   }, []);
 
   // When the user adds a single item to the active tab, scroll the cart to
@@ -823,6 +832,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                   ref={cartListRef}
                   className="max-h-[40vh] xl:max-h-none xl:h-full overflow-y-auto px-3 pt-3 pb-6"
                 >
+                <div ref={cartContentRef}>
                 {!showSupportFundTab ? (
                   // ----- Order items tab -----
                   orderItems.length === 0 ? (
@@ -872,6 +882,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                     ))}
                   </div>
                 )}
+                </div>
                 </div>
                 {/* Scroll-down hint — appears when there's more content below */}
                 {cartHasMoreBelow && (
