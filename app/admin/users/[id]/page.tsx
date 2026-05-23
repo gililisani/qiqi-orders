@@ -1,10 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { supabase } from '../../../../lib/supabaseClient';
-import Card from '../../../components/ui/Card';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { ArrowLeft, Edit, ArrowRight } from 'lucide-react';
+
+import { supabase } from '../../../../lib/supabaseClient';
+import { PageHeader } from '../../../components/qq/page-header';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/qq/card';
+import { Button } from '../../../components/qq/button';
+import { Badge } from '../../../components/qq/badge';
+import { Alert, AlertDescription } from '../../../components/qq/alert';
+import { Label } from '../../../components/qq/label';
+import { useToast } from '../../../components/ui/ToastProvider';
 
 interface Client {
   id: string;
@@ -16,210 +24,199 @@ interface Client {
   company?: {
     company_name: string;
     netsuite_number: string;
-    support_fund?: { percent: number };
-    subsidiary?: { name: string };
-    class?: { name: string };
-    location?: { location_name: string };
+    support_fund?: { percent: number } | null;
+    subsidiary?: { name: string } | null;
+    class?: { name: string } | null;
+    location?: { location_name: string } | null;
   };
 }
 
 export default function UserViewPage() {
   const params = useParams();
-  const userId = params.id as string;
-  
+  const userId = params?.id as string;
+  const toast = useToast();
+
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (userId) {
-      fetchClient();
-    }
-  }, [userId]);
-  
-  // Set breadcrumb when client is loaded
-  useEffect(() => {
-    if (client && (window as any).__setBreadcrumbs) {
-      (window as any).__setBreadcrumbs([
-        { label: client.name }
-      ]);
-    }
-    return () => {
-      if ((window as any).__setBreadcrumbs) {
-        (window as any).__setBreadcrumbs([]);
+    if (!userId) return;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .select(`
+            *,
+            company:companies(
+              company_name,
+              netsuite_number,
+              support_fund:support_fund_levels(percent),
+              subsidiary:subsidiaries(name),
+              class:classes(name),
+              location:Locations(location_name)
+            )
+          `)
+          .eq('id', userId)
+          .single();
+        if (error) throw error;
+        setClient(data as any);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load user.');
+      } finally {
+        setLoading(false);
       }
-    };
-  }, [client]);
-
-  const fetchClient = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('clients')
-        .select(`
-          *,
-          company:companies(
-            company_name,
-            netsuite_number,
-            support_fund:support_fund_levels(percent),
-            subsidiary:subsidiaries(name),
-            class:classes(name),
-            location:Locations(location_name)
-          )
-        `)
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-      setClient(data);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    })();
+  }, [userId]);
 
   const handleToggleEnabled = async () => {
     if (!client) return;
-
     try {
       const { error } = await supabase
         .from('clients')
         .update({ enabled: !client.enabled })
         .eq('id', userId);
-
       if (error) throw error;
-      setClient(prev => prev ? { ...prev, enabled: !prev.enabled } : null);
+      setClient((prev) => (prev ? { ...prev, enabled: !prev.enabled } : prev));
+      toast.success(`User ${client.enabled ? 'disabled' : 'enabled'}.`);
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message || 'Failed to update user.');
     }
   };
 
   if (loading) {
     return (
-      <div className="p-6">
-          <p>Loading user...</p>
-        </div>
+      <div className="px-6 py-8 max-w-5xl mx-auto">
+        <p className="text-sm text-muted-foreground">Loading user…</p>
+      </div>
     );
   }
 
   if (error || !client) {
     return (
-      <div className="p-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">User Not Found</h1>
-            <p className="text-gray-600 mb-4">{error || 'The user you are looking for does not exist.'}</p>
-            <Link
-              href="/admin/users"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
-            >
-              Back to Users
-            </Link>
-          </div>
-        </div>
+      <div className="px-6 py-8 max-w-5xl mx-auto">
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error || 'User not found.'}</AlertDescription>
+        </Alert>
+        <Link href="/admin/users">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4" /> Back to users
+          </Button>
+        </Link>
+      </div>
     );
   }
 
   return (
-    <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">{client.name}</h1>
-          <div className="flex space-x-2">
-            <Link
-              href={`/admin/users/${client.id}/edit`}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-            >
-              Edit User
-            </Link>
-            <Link
-              href="/admin/users"
-              className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition"
-            >
-              Back to Users
-            </Link>
-          </div>
-        </div>
+    <div className="px-6 py-8 max-w-5xl mx-auto space-y-6">
+      <div>
+        <Link
+          href="/admin/users"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to users
+        </Link>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* User Details */}
-          <Card header={<h2 className="font-semibold">User Details</h2>}>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium text-gray-500">Full Name</label>
-                <p className="text-lg">{client.name}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Email Address</label>
-                <p className="text-lg">{client.email}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Status</label>
-                <div className="flex items-center space-x-2">
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    client.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {client.enabled ? 'Enabled' : 'Disabled'}
-                  </span>
-                  <button
-                    onClick={handleToggleEnabled}
-                    className="text-sm text-blue-600 hover:text-blue-800"
-                  >
-                    {client.enabled ? 'Disable' : 'Enable'}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">User ID</label>
-                <p className="text-sm font-mono text-gray-600">{client.id}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Created</label>
-                <p className="text-lg">{new Date(client.created_at).toLocaleDateString()}</p>
+      <PageHeader
+        title={client.name || client.email}
+        description={client.email}
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleToggleEnabled}
+            >
+              {client.enabled ? 'Disable user' : 'Enable user'}
+            </Button>
+            <Link href={`/admin/users/${client.id}/edit`}>
+              <Button size="sm">
+                <Edit className="h-4 w-4" /> Edit
+              </Button>
+            </Link>
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">User details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <ViewField label="Full name" value={client.name || '—'} />
+            <ViewField label="Email" value={client.email} mono />
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider font-medium block">
+                Status
+              </Label>
+              <div className="mt-1">
+                {client.enabled ? (
+                  <Badge variant="success">Enabled</Badge>
+                ) : (
+                  <Badge variant="muted">Disabled</Badge>
+                )}
               </div>
             </div>
-          </Card>
+            <ViewField label="User ID" value={client.id} mono />
+            <ViewField
+              label="Created"
+              value={new Date(client.created_at).toLocaleDateString()}
+            />
+          </CardContent>
+        </Card>
 
-          {/* Company Details */}
-          <Card header={<h2 className="font-semibold">Company Details</h2>}>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Company</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
             {client.company ? (
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Company Name</label>
-                  <p className="text-lg">{client.company.company_name}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">NetSuite Number</label>
-                  <p className="text-lg">{client.company.netsuite_number}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Support Fund</label>
-                  <p className="text-lg">{client.company.support_fund?.percent || 0}%</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Subsidiary</label>
-                  <p className="text-lg">{client.company.subsidiary?.name || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Class</label>
-                  <p className="text-lg">{client.company.class?.name || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Location</label>
-                  <p className="text-lg">{client.company.location?.location_name || 'N/A'}</p>
-                </div>
-                <div className="pt-4">
+              <>
+                <ViewField label="Company name" value={client.company.company_name || '—'} />
+                <ViewField
+                  label="NetSuite number"
+                  value={client.company.netsuite_number || '—'}
+                  mono
+                />
+                <ViewField
+                  label="Support fund"
+                  value={`${client.company.support_fund?.percent ?? 0}%`}
+                />
+                <ViewField label="Subsidiary" value={client.company.subsidiary?.name || '—'} />
+                <ViewField label="Class" value={client.company.class?.name || '—'} />
+                <ViewField
+                  label="Location"
+                  value={client.company.location?.location_name || '—'}
+                />
+                <div className="pt-1">
                   <Link
                     href={`/admin/companies/${client.company_id}`}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
+                    className="inline-flex items-center text-sm text-brand-periwinkle hover:underline"
                   >
-                    View Full Company Details →
+                    View full company <ArrowRight className="h-3 w-3 ml-1" />
                   </Link>
                 </div>
-              </div>
+              </>
             ) : (
-              <p className="text-gray-500">No company assigned</p>
+              <p className="text-muted-foreground">No company assigned.</p>
             )}
-          </Card>
-        </div>
+          </CardContent>
+        </Card>
       </div>
+    </div>
+  );
+}
+
+function ViewField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div>
+      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-medium block">
+        {label}
+      </Label>
+      <p className={`mt-1 text-sm ${mono ? 'font-mono' : ''}`}>{value}</p>
+    </div>
   );
 }

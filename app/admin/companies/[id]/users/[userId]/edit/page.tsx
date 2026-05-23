@@ -2,368 +2,230 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { Trash2, Mail } from 'lucide-react';
+
 import { supabase } from '../../../../../../../lib/supabaseClient';
 import { fetchWithAuth } from '../../../../../../../lib/fetchWithAuth';
-import Link from 'next/link';
+import { AdminFormShell } from '../../../../../../components/admin/AdminFormShell';
+import { FormField } from '../../../../../../components/qq/form-field';
+import { Input } from '../../../../../../components/qq/input';
+import { Button } from '../../../../../../components/qq/button';
+import { useToast } from '../../../../../../components/ui/ToastProvider';
+import { useConfirm } from '../../../../../../components/ui/ConfirmProvider';
 
-interface FormData {
-  name: string;
-  email: string;
-  enabled: boolean;
-  changePassword: boolean;
-  newPassword: string;
-}
-
-export default function EditUserPage() {
-  const params = useParams();
+export default function EditCompanyUserPage() {
   const router = useRouter();
-  const companyId = params.id as string;
-  const userId = params.userId as string;
-  
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [user, setUser] = useState<any>(null);
-  const [company, setCompany] = useState<any>(null);
+  const params = useParams();
+  const companyId = params?.id as string;
+  const userId = params?.userId as string;
+  const toast = useToast();
+  const confirm = useConfirm();
 
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState({
     name: '',
     email: '',
     enabled: true,
-    changePassword: false,
-    newPassword: ''
   });
-  const [sendingResetLink, setSendingResetLink] = useState(false);
-  const [resetLinkMessage, setResetLinkMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [originalEmail, setOriginalEmail] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [resendingLink, setResendingLink] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (userId && companyId) {
-      fetchUser();
-      fetchCompany();
-    }
+    if (!userId || !companyId) return;
+    (async () => {
+      try {
+        const [userRes, companyRes] = await Promise.all([
+          supabase
+            .from('clients')
+            .select('*')
+            .eq('id', userId)
+            .eq('company_id', companyId)
+            .single(),
+          supabase.from('companies').select('company_name').eq('id', companyId).single(),
+        ]);
+        if (userRes.error) throw userRes.error;
+        const u = userRes.data;
+        setFormData({
+          name: u?.name || '',
+          email: u?.email || '',
+          enabled: !!u?.enabled,
+        });
+        setOriginalEmail(u?.email || '');
+        setCompanyName(companyRes.data?.company_name || '');
+      } catch (err: any) {
+        setError(err.message || 'Failed to load user.');
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [userId, companyId]);
-
-  const fetchUser = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('id', userId)
-        .eq('company_id', companyId)
-        .single();
-
-      if (error) throw error;
-
-      setUser(data);
-      setFormData({
-        name: data.name || '',
-        email: data.email || '',
-        enabled: data.enabled || false,
-        changePassword: false,
-        newPassword: ''
-      });
-      setResetLinkMessage(null); // Clear any previous messages
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setInitialLoading(false);
-    }
-  };
-
-  const fetchCompany = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('company_name')
-        .eq('id', companyId)
-        .single();
-
-      if (error) throw error;
-      setCompany(data);
-    } catch (err: any) {
-      console.error('Error fetching company:', err);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-
+    if (!formData.name.trim() || !formData.email.trim()) {
+      setError('Name and email are required.');
+      return;
+    }
+    setSaving(true);
+    setError(null);
     try {
-      // Update client profile in our clients table
       const { error: profileError } = await supabase
         .from('clients')
         .update({
-          name: formData.name,
-          email: formData.email,
-          enabled: formData.enabled
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          enabled: formData.enabled,
         })
         .eq('id', userId);
-
       if (profileError) throw profileError;
 
-      // Update user in Supabase Auth if email changed
-      if (formData.email !== user.email) {
-        const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
-          email: formData.email,
-          user_metadata: {
-            full_name: formData.name
-          }
+      if (formData.email !== originalEmail) {
+        await supabase.auth.admin.updateUserById(userId, {
+          email: formData.email.trim(),
+          user_metadata: { full_name: formData.name.trim() },
         });
-
-        if (authError) {
-          console.error('Error updating auth user:', authError);
-          // Don't throw here, profile was updated successfully
-        }
       }
-
+      toast.success('User updated.');
       router.push(`/admin/companies/${companyId}`);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to update user.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
   const handleSendResetLink = async () => {
-    setSendingResetLink(true);
-    setResetLinkMessage(null);
-
+    setResendingLink(true);
     try {
-      const response = await fetchWithAuth('/api/users/send-reset-link', {
+      const res = await fetchWithAuth('/api/users/send-reset-link', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: userId,
+          userId,
           userEmail: formData.email,
           userName: formData.name,
-          companyId: companyId,
-          companyName: company?.company_name,
+          companyId,
+          companyName,
         }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setResetLinkMessage({
-          type: 'error',
-          text: data.error || 'Failed to send password link. Please try again.'
-        });
-      } else {
-        const isNewUser = data.isNewUser;
-        setResetLinkMessage({
-          type: 'success',
-          text: isNewUser
-            ? 'Password setup link sent successfully! The user will receive a welcome email with instructions to set their password.'
-            : 'Password reset link sent successfully! The user will receive an email with instructions to reset their password.'
-        });
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send link.');
+      toast.success(
+        data.isNewUser
+          ? 'Password setup link sent.'
+          : 'Password reset link sent.'
+      );
     } catch (err: any) {
-      setResetLinkMessage({
-        type: 'error',
-        text: 'An unexpected error occurred. Please try again.'
-      });
+      toast.error(err.message || 'Failed to send link.');
     } finally {
-      setSendingResetLink(false);
+      setResendingLink(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
-
+    const ok = await confirm({
+      title: 'Delete user?',
+      description: `Permanently delete ${formData.name || formData.email}. This cannot be undone.`,
+      variant: 'danger',
+      confirmLabel: 'Delete user',
+      requireExplicitConfirm: true,
+    });
+    if (!ok) return;
+    setDeleting(true);
     try {
-      setLoading(true);
-      
-      // Delete from our clients table first
-      const { error: profileError } = await supabase
-        .from('clients')
-        .delete()
-        .eq('id', userId);
-
-      if (profileError) throw profileError;
-
-      // Delete from Supabase Auth
-      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-      
-      if (authError) {
-        console.error('Error deleting auth user:', authError);
-        // Don't throw here, profile was deleted successfully
-      }
-
+      const res = await fetchWithAuth('/api/users/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete user.');
+      toast.success('User deleted.');
       router.push(`/admin/companies/${companyId}`);
     } catch (err: any) {
-      setError(err.message);
-      setLoading(false);
+      setError(err.message || 'Failed to delete user.');
+      setDeleting(false);
     }
   };
 
-  if (initialLoading) {
-    return (
-      <div className="p-6">
-          <p>Loading user...</p>
-        </div>
-    );
-  }
-
-  if (error && !user) {
-    return (
-      <div className="p-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">User Not Found</h1>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <Link
-              href={`/admin/companies/${companyId}`}
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
-            >
-              Back to Company
-            </Link>
-          </div>
-        </div>
-    );
-  }
-
   return (
-    <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Edit User</h1>
-          <Link
-            href={`/admin/companies/${companyId}`}
-            className="text-gray-600 hover:text-gray-800"
-          >
-            ← Back to Company
-          </Link>
-        </div>
-
-        {company && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
-            <p className="text-sm text-blue-800">
-              <strong>Company:</strong> {company.company_name}
-            </p>
-          </div>
-        )}
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                name="enabled"
-                checked={formData.enabled}
-                onChange={handleChange}
-                className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
-              />
-              <label className="ml-2 block text-sm text-gray-700">
-                User is enabled
-              </label>
-            </div>
-
-          </div>
-
-          {/* Password Reset Section */}
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Password Management</h3>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800 mb-4">
-                Send a password setup link (for new users) or reset link (for existing users) via email. The system will automatically detect if the user has set their password before and send the appropriate email.
-              </p>
-              {resetLinkMessage && (
-                <div className={`mb-4 p-3 rounded ${
-                  resetLinkMessage.type === 'success' 
-                    ? 'bg-green-100 border border-green-400 text-green-700' 
-                    : 'bg-red-100 border border-red-400 text-red-700'
-                }`}>
-                  {resetLinkMessage.text}
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={handleSendResetLink}
-                disabled={sendingResetLink || loading}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
-              >
-                {sendingResetLink ? 'Sending...' : 'Send Password Setup/Reset Email'}
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded p-4">
-            <h3 className="text-sm font-medium text-yellow-800 mb-2">User Information:</h3>
-            <ul className="text-sm text-yellow-700 space-y-1">
-              <li>• <strong>Role:</strong> Client</li>
-              <li>• <strong>User ID:</strong> {userId}</li>
-              <li>• <strong>Created:</strong> {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}</li>
-            </ul>
-          </div>
-
-          <div className="flex space-x-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-black text-white px-6 py-2 rounded hover:opacity-90 transition disabled:opacity-50"
-            >
-              {loading ? 'Updating...' : 'Update User'}
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={loading}
-              className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 transition disabled:opacity-50"
-            >
-              Delete User
-            </button>
-            <Link
-              href={`/admin/companies/${companyId}`}
-              className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition"
-            >
-              Cancel
-            </Link>
-          </div>
-        </form>
+    <AdminFormShell
+      title="Edit user"
+      description={companyName ? `Under ${companyName}.` : undefined}
+      backHref={`/admin/companies/${companyId}`}
+      backLabel="Back to company"
+      saving={saving}
+      error={error}
+      onSubmit={handleSubmit}
+      onCancel={() => router.push(`/admin/companies/${companyId}`)}
+      submitLabel="Save changes"
+      headerActions={
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleDelete}
+          disabled={deleting || saving}
+          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+        >
+          <Trash2 className="h-4 w-4" />
+          {deleting ? 'Deleting…' : 'Delete'}
+        </Button>
+      }
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormField label="Full name" required>
+          <Input
+            value={formData.name}
+            onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+            disabled={loading}
+            required
+            autoFocus
+          />
+        </FormField>
+        <FormField label="Email address" required>
+          <Input
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
+            disabled={loading}
+            required
+          />
+        </FormField>
       </div>
+
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={formData.enabled}
+          onChange={(e) => setFormData((p) => ({ ...p, enabled: e.target.checked }))}
+          disabled={loading}
+          className="h-4 w-4 accent-foreground"
+        />
+        <span className="text-sm">User is enabled</span>
+      </label>
+
+      <div className="pt-3 border-t border-border">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleSendResetLink}
+          loading={resendingLink}
+          disabled={loading || saving}
+        >
+          <Mail className="h-4 w-4" />
+          {resendingLink ? 'Sending…' : 'Send password setup/reset email'}
+        </Button>
+        <p className="text-xs text-muted-foreground mt-2">
+          Sends a fresh password link to <span className="font-medium">{formData.email}</span>.
+          Valid for 24 hours.
+        </p>
+      </div>
+    </AdminFormShell>
   );
 }
