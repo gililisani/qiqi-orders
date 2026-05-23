@@ -20,7 +20,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronDown, Minus, Plus, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Gift, Minus, Plus, RotateCcw } from 'lucide-react';
 
 import { useSupabase } from '../../../lib/supabase-provider';
 import { useOrderFormController } from '../shared/orderForm/useOrderFormController';
@@ -485,16 +485,6 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
 
   return (
     <div className="px-6 py-8 space-y-6">
-      {/* Back link */}
-      <div>
-        <button
-          onClick={handleBack}
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" /> Back
-        </button>
-      </div>
-
       <PageHeader
         title={isNewMode ? 'New order' : `Edit order${order?.po_number ? ` · ${order.po_number}` : ''}`}
         description={
@@ -503,6 +493,11 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
             : isNewMode
               ? 'Pick a company to start.'
               : undefined
+        }
+        actions={
+          <Button variant="outline" size="sm" onClick={handleBack}>
+            <ArrowLeft className="h-4 w-4" /> Back
+          </Button>
         }
       />
 
@@ -623,7 +618,13 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
             )}
 
             {/* Tabs + products */}
-            <Card>
+            <Card
+              className={
+                showSupportFundTab
+                  ? 'ring-1 ring-green-400/40 bg-green-50/30 transition-colors'
+                  : ''
+              }
+            >
               <CardHeader className="pb-0">
                 <Tabs
                   value={showSupportFundTab ? 'support' : 'order'}
@@ -634,10 +635,17 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                   <TabsList>
                     <TabsTrigger value="order">Order form</TabsTrigger>
                     {supportFundPercent > 0 && (
-                      <TabsTrigger value="support">
+                      <TabsTrigger
+                        value="support"
+                        className="data-[state=active]:bg-green-100 data-[state=active]:text-green-900 data-[state=active]:border data-[state=active]:border-green-300 data-[state=active]:shadow-sm"
+                      >
+                        <Gift className="h-3.5 w-3.5 mr-1.5" />
                         Support funds
-                        <Badge variant="success" className="ml-2 text-[10px]">
-                          {formatCurrency(totals.supportFundEarned)}
+                        <Badge
+                          variant="success"
+                          className="ml-2 text-[10px] tabular-nums"
+                        >
+                          {formatCurrency(totals.supportFundEarned)} available
                         </Badge>
                       </TabsTrigger>
                     )}
@@ -1002,12 +1010,19 @@ function CategoryAccordion({
                 const isHighlighted = highlightedProductId === product.id.toString();
                 const hasQty = (orderItem?.case_qty || 0) > 0;
 
+                const baseRowBg = showSupportFundRedemption
+                  ? hasQty
+                    ? 'bg-green-100/60'
+                    : 'bg-green-50/50 hover:bg-green-100/40'
+                  : hasQty
+                    ? 'bg-muted/30'
+                    : 'hover:bg-muted/20';
                 return (
                   <tr
                     key={product.id}
-                    className={`border-b border-border last:border-b-0 transition-colors ${
-                      hasQty ? 'bg-muted/30' : 'hover:bg-muted/20'
-                    } ${isHighlighted ? 'ring-2 ring-brand-periwinkle/40' : ''}`}
+                    className={`border-b border-border last:border-b-0 transition-colors ${baseRowBg} ${
+                      isHighlighted ? 'ring-2 ring-brand-periwinkle/40' : ''
+                    }`}
                   >
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2 min-w-0">
