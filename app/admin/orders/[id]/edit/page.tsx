@@ -1,17 +1,11 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import OrderFormView from '../../../../components/shared/OrderFormView';
+import AdminOrderFormView from '../../../../components/admin/AdminOrderFormView';
 
 export default function AdminEditOrderPage() {
   const params = useParams();
   const orderId = params.id as string;
 
-  return (
-    <OrderFormView
-        role="admin"
-        orderId={orderId}
-        backUrl={`/admin/orders/${orderId}`}
-      />
-  );
+  return <AdminOrderFormView orderId={orderId} backUrl={`/admin/orders/${orderId}`} />;
 }

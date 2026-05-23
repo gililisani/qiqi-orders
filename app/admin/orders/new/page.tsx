@@ -1,13 +1,7 @@
 'use client';
 
-import OrderFormView from '../../../components/shared/OrderFormView';
+import AdminOrderFormView from '../../../components/admin/AdminOrderFormView';
 
 export default function AdminNewOrderPage() {
-  return (
-    <OrderFormView
-        role="admin"
-        orderId={null}
-        backUrl="/admin/orders"
-      />
-  );
+  return <AdminOrderFormView orderId={null} backUrl="/admin/orders" />;
 }
