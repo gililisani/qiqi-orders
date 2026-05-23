@@ -138,7 +138,6 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
 
   // Cart scroll handling
   const cartListRef = useRef<HTMLDivElement>(null);
-  const cartContentRef = useRef<HTMLDivElement>(null);
   const [cartHasMoreBelow, setCartHasMoreBelow] = useState(false);
   const prevOrderLenRef = useRef(0);
   const prevSfLenRef = useRef(0);
@@ -155,41 +154,25 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
     setCartHasMoreBelow(hasMore);
   };
 
-  // Watch scroll of the cart list to toggle the down-arrow hint
+  // Watch scroll + window resize to toggle the down-arrow hint
   useEffect(() => {
     const el = cartListRef.current;
     if (!el) return;
     recalcCartScrollHint();
     el.addEventListener('scroll', recalcCartScrollHint);
-    return () => el.removeEventListener('scroll', recalcCartScrollHint);
+    window.addEventListener('resize', recalcCartScrollHint);
+    return () => {
+      el.removeEventListener('scroll', recalcCartScrollHint);
+      window.removeEventListener('resize', recalcCartScrollHint);
+    };
   }, []);
 
-  // Observe both the scroll container AND its content for size changes.
-  // ResizeObserver fires AFTER the browser has done layout, so heights
-  // are accurate — fixes the "chevron only shows after a window resize"
-  // bug in edit mode where items hydrate from the server async and the
-  // requestAnimationFrame-based recheck ran on stale measurements.
-  useEffect(() => {
-    if (typeof ResizeObserver === 'undefined') return; // SSR / very old browsers
-    const observer = new ResizeObserver(() => recalcCartScrollHint());
-    const container = cartListRef.current;
-    const content = cartContentRef.current;
-    if (container) observer.observe(container);
-    if (content) observer.observe(content);
-    return () => observer.disconnect();
-  }, []);
-
-  // When the user adds a single item to the active tab, scroll the cart to
-  // the newly added item (always at the bottom of the list since we append).
-  // Only triggers on a +1 jump — bulk loads (edit-mode hydration from the
-  // server) jump by N>1 and are ignored, so the cart stays scrolled to the
-  // top and the down-chevron hint can do its job.
+  // Auto-scroll on single user-initiated add (ignores bulk hydration)
+  // and recompute the chevron hint on length / tab changes.
   useEffect(() => {
     const currentLen = showSupportFundTab ? supportFundItems.length : orderItems.length;
     const prevLen = showSupportFundTab ? prevSfLenRef.current : prevOrderLenRef.current;
-    const isSingleAdd = currentLen === prevLen + 1;
-    if (isSingleAdd && cartListRef.current) {
-      // Defer to next frame so DOM has the new row before scrolling
+    if (currentLen === prevLen + 1 && cartListRef.current) {
       requestAnimationFrame(() => {
         cartListRef.current?.scrollTo({
           top: cartListRef.current.scrollHeight,
@@ -198,17 +181,11 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
         recalcCartScrollHint();
       });
     } else {
-      // Re-check hint on removals, quantity edits, and bulk hydration
       requestAnimationFrame(recalcCartScrollHint);
     }
     prevOrderLenRef.current = orderItems.length;
     prevSfLenRef.current = supportFundItems.length;
   }, [orderItems.length, supportFundItems.length, showSupportFundTab]);
-
-  // Recheck hint after tab switch (the visible list changes height)
-  useEffect(() => {
-    requestAnimationFrame(recalcCartScrollHint);
-  }, [showSupportFundTab]);
 
   // ---- Close dropdown when clicking outside ----
   useEffect(() => {
@@ -832,7 +809,6 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                   ref={cartListRef}
                   className="max-h-[40vh] xl:max-h-none xl:h-full overflow-y-auto px-3 pt-3 pb-6"
                 >
-                <div ref={cartContentRef}>
                 {!showSupportFundTab ? (
                   // ----- Order items tab -----
                   orderItems.length === 0 ? (
@@ -882,7 +858,6 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                     ))}
                   </div>
                 )}
-                </div>
                 </div>
                 {/* Scroll-down hint — appears when there's more content below */}
                 {cartHasMoreBelow && (
