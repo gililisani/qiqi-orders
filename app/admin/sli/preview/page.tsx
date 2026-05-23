@@ -1,12 +1,21 @@
 'use client';
 
-import { useEffect, useState, useRef, Suspense } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Download, Edit } from 'lucide-react';
+
+import { PageHeader } from '../../../components/qq/page-header';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/qq/card';
+import { Button } from '../../../components/qq/button';
+import { Input } from '../../../components/qq/input';
+import { Alert, AlertDescription } from '../../../components/qq/alert';
+import { FormField } from '../../../components/qq/form-field';
 
 function SLIPreviewContent() {
   const searchParams = useSearchParams();
   const tempId = searchParams.get('temp');
-  const [htmlContent, setHtmlContent] = useState<string>('');
+
+  const [htmlContent, setHtmlContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sliData, setSliData] = useState<any>(null);
@@ -15,28 +24,23 @@ function SLIPreviewContent() {
 
   useEffect(() => {
     if (!tempId) {
-      setError('No SLI data found');
+      setError('No SLI data found.');
       setLoading(false);
       return;
     }
-
-    // Retrieve data from localStorage
     const dataKey = `sli_${tempId}`;
-    const storedData = localStorage.getItem(dataKey);
-    
-    if (!storedData) {
-      setError('SLI data expired or not found');
+    const stored = localStorage.getItem(dataKey);
+    if (!stored) {
+      setError('SLI data expired or not found.');
       setLoading(false);
       return;
     }
-
     try {
-      const parsedData = JSON.parse(storedData);
-      setSliData(parsedData);
-      generateHTML(parsedData);
-    } catch (err) {
-      console.error('Error parsing SLI data:', err);
-      setError('Invalid SLI data');
+      const parsed = JSON.parse(stored);
+      setSliData(parsed);
+      generateHTML(parsed);
+    } catch {
+      setError('Invalid SLI data.');
       setLoading(false);
     }
   }, [tempId]);
@@ -44,182 +48,147 @@ function SLIPreviewContent() {
   const generateHTML = async (data: any) => {
     try {
       setLoading(true);
-      
-      // Generate HTML directly from template
-      const response = await fetch('/api/sli/generate-html', {
+      const res = await fetch('/api/sli/generate-html', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate SLI HTML');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to generate SLI HTML.');
       }
-
-      const { html } = await response.json();
+      const { html } = await res.json();
       setHtmlContent(html);
     } catch (err: any) {
-      console.error('Error generating HTML:', err);
-      setError(err.message || 'Failed to generate SLI');
+      setError(err.message || 'Failed to generate SLI.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDownloadPDF = () => {
-    window.print();
-  };
-
-  const handleEdit = () => {
-    setIsEditing(true);
-  };
-
   const handleSaveEdit = () => {
-    // Re-generate HTML with updated data
-    if (tempId) {
-      const dataKey = `sli_${tempId}`;
-      localStorage.setItem(dataKey, JSON.stringify(sliData));
-      generateHTML(sliData);
-      setIsEditing(false);
-    }
+    if (!tempId) return;
+    localStorage.setItem(`sli_${tempId}`, JSON.stringify(sliData));
+    generateHTML(sliData);
+    setIsEditing(false);
   };
 
   const handleCancelEdit = () => {
-    // Reload from localStorage
-    if (tempId) {
-      const dataKey = `sli_${tempId}`;
-      const storedData = localStorage.getItem(dataKey);
-      if (storedData) {
-        const parsedData = JSON.parse(storedData);
-        setSliData(parsedData);
-      }
-    }
+    if (!tempId) return;
+    const stored = localStorage.getItem(`sli_${tempId}`);
+    if (stored) setSliData(JSON.parse(stored));
     setIsEditing(false);
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-          <div className="text-lg">Generating SLI...</div>
-        </div>
+      <div className="px-6 py-8">
+        <p className="text-sm text-muted-foreground">Generating SLI…</p>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen">
-          <div className="text-red-600 text-lg">{error}</div>
-        </div>
+      <div className="px-6 py-8">
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
   if (isEditing && sliData) {
     return (
-      <div className="max-w-6xl mx-auto p-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h1 className="text-2xl font-bold mb-6">Edit SLI</h1>
-            
-            {/* Simple edit form - just key fields */}
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">Consignee Name</label>
-                <input
-                  type="text"
-                  value={sliData.consignee_name || ''}
-                  onChange={(e) => setSliData({...sliData, consignee_name: e.target.value})}
-                  className="w-full px-3 py-2 border rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Invoice Number</label>
-                <input
-                  type="text"
-                  value={sliData.invoice_number || ''}
-                  onChange={(e) => setSliData({...sliData, invoice_number: e.target.value})}
-                  className="w-full px-3 py-2 border rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Instructions to Forwarder</label>
-                <textarea
-                  value={sliData.instructions_to_forwarder || ''}
-                  onChange={(e) => setSliData({...sliData, instructions_to_forwarder: e.target.value})}
-                  className="w-full px-3 py-2 border rounded"
-                  rows={3}
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <button
-                onClick={handleSaveEdit}
-                className="px-6 py-2 bg-black text-white rounded hover:bg-gray-800"
-              >
-                Save & Regenerate
-              </button>
-              <button
-                onClick={handleCancelEdit}
-                className="px-6 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
+      <div className="px-6 py-8 space-y-6">
+        <PageHeader title="Edit SLI" description="Update key fields and regenerate the document." />
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Key fields</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FormField label="Consignee name">
+              <Input
+                value={sliData.consignee_name || ''}
+                onChange={(e) => setSliData({ ...sliData, consignee_name: e.target.value })}
+              />
+            </FormField>
+            <FormField label="Invoice number">
+              <Input
+                value={sliData.invoice_number || ''}
+                onChange={(e) => setSliData({ ...sliData, invoice_number: e.target.value })}
+              />
+            </FormField>
+            <FormField label="Instructions to forwarder">
+              <textarea
+                value={sliData.instructions_to_forwarder || ''}
+                onChange={(e) =>
+                  setSliData({ ...sliData, instructions_to_forwarder: e.target.value })
+                }
+                rows={3}
+                className="w-full px-3 py-2 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+              />
+            </FormField>
+          </CardContent>
+        </Card>
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={handleCancelEdit}>
+            Cancel
+          </Button>
+          <Button onClick={handleSaveEdit}>Save & regenerate</Button>
         </div>
+      </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-4 flex gap-4 print:hidden">
-        <button
-          onClick={handleDownloadPDF}
-          className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
-        >
-          Download as PDF
-        </button>
-        <button
-          onClick={handleEdit}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          Edit SLI
-        </button>
-      </div>
-      
-      <div ref={contentRef} dangerouslySetInnerHTML={{ __html: htmlContent }} />
-      
+    <>
       <style jsx global>{`
         @media print {
-          body * {
-            visibility: hidden;
+          .no-print {
+            display: none !important;
           }
-          ${contentRef.current ? `
-          #${contentRef.current.id},
-          #${contentRef.current.id} * {
-            visibility: visible;
+          body {
+            margin: 0;
+            padding: 0;
           }
-          #${contentRef.current.id} {
-            position: absolute;
-            left: 0;
-            top: 0;
-          }
-          ` : ''}
         }
       `}</style>
-    </div>
+
+      <div className="px-6 py-8 space-y-6">
+        <div className="no-print">
+          <PageHeader
+            title="SLI preview"
+            description="Preview before saving — use the buttons to print or edit."
+            actions={
+              <>
+                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                  <Edit className="h-4 w-4" /> Edit
+                </Button>
+                <Button size="sm" onClick={() => window.print()}>
+                  <Download className="h-4 w-4" /> Print / PDF
+                </Button>
+              </>
+            }
+          />
+        </div>
+
+        <div ref={contentRef} dangerouslySetInnerHTML={{ __html: htmlContent }} />
+      </div>
+    </>
   );
 }
 
 export default function StandaloneSLIPreviewPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-screen">
-          <div className="text-lg">Loading SLI...</div>
+    <Suspense
+      fallback={
+        <div className="px-6 py-8">
+          <p className="text-sm text-muted-foreground">Loading SLI…</p>
         </div>
-    }>
+      }
+    >
       <SLIPreviewContent />
     </Suspense>
   );
 }
-
