@@ -49,8 +49,14 @@ export function Brand({
   const logoEl =
     logo ||
     (logoSrc ? (
+      // Height-constrained, width auto so wordmark logos render at their
+      // natural aspect ratio (icon-only logos still look square).
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={logoSrc} alt={title} className="h-7 w-7 object-contain flex-shrink-0" />
+      <img
+        src={logoSrc}
+        alt={title}
+        className="h-6 w-auto max-w-[100px] object-contain flex-shrink-0"
+      />
     ) : (
       <div className="h-7 w-7 rounded bg-foreground text-background flex items-center justify-center text-[11px] font-bold flex-shrink-0">
         Q

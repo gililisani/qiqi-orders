@@ -200,7 +200,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             brand={
               <Brand
                 title="Partners Hub"
-                logoSrc="/QIQI-Logo-cropped.svg"
+                logoSrc="/QIQI-Logo.svg"
                 sidebarCollapsed={collapsed}
                 onToggleSidebar={() => setCollapsed((c) => !c)}
               />
