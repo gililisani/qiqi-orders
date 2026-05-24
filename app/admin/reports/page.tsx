@@ -49,9 +49,9 @@ const OTHER_REPORTS = [
     icon: Target,
   },
   {
-    name: 'Sales',
-    description: 'Filterable orders ledger with CSV/XLSX export',
-    href: '/admin/reports/sales',
+    name: 'Sales Explorer',
+    description: 'Pivot any dimension × any other, with CSV/XLSX export',
+    href: '/admin/reports/sales-explorer',
     icon: BarChart3,
   },
   {
