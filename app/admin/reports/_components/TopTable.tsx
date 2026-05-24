@@ -1,7 +1,13 @@
 'use client';
 
-import { formatCurrency, formatNumber } from '../../../../lib/formatters';
-
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from '../../../components/qq/table';
 export interface TopColumn<Row> {
   header: string;
   key: keyof Row | string;
@@ -20,48 +26,46 @@ export default function TopTable<Row extends Record<string, any>>({
   emptyMessage?: string;
 }) {
   if (!rows || rows.length === 0) {
-    return <div className="py-8 text-sm text-gray-500 text-center">{emptyMessage}</div>;
+    return (
+      <div className="py-12 text-center text-sm text-muted-foreground">
+        {emptyMessage}
+      </div>
+    );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-[#e5e5e5]">
-            {columns.map((c) => (
-              <th
-                key={String(c.key)}
-                className={[
-                  'py-2 pr-3 font-medium',
-                  c.align === 'right' ? 'text-right' : 'text-left',
-                ].join(' ')}
-                style={c.width ? { width: c.width } : undefined}
-              >
-                {c.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i} className="border-b border-[#f1f5f9] last:border-0">
-              {columns.map((c) => (
-                <td
-                  key={String(c.key)}
-                  className={[
-                    'py-2 pr-3',
-                    c.align === 'right' ? 'text-right tabular-nums' : 'text-left',
-                  ].join(' ')}
-                >
-                  {c.render ? c.render(row) : String(row[c.key as keyof Row] ?? '')}
-                </td>
-              ))}
-            </tr>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {columns.map((c) => (
+            <TableHead
+              key={String(c.key)}
+              className={c.align === 'right' ? 'text-right' : undefined}
+              style={c.width ? { width: c.width } : undefined}
+            >
+              {c.header}
+            </TableHead>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row, i) => (
+          <TableRow key={i}>
+            {columns.map((c) => (
+              <TableCell
+                key={String(c.key)}
+                className={
+                  c.align === 'right'
+                    ? 'text-right font-mono text-sm tabular-nums'
+                    : undefined
+                }
+              >
+                {c.render ? c.render(row) : String(row[c.key as keyof Row] ?? '')}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
-
-export { formatCurrency, formatNumber };

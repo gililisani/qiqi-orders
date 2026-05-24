@@ -6,7 +6,9 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, BarChart3, Boxes, Building2, Target } from 'lucide-react';
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 import { formatCurrency, formatNumber } from '../../../lib/formatters';
-import Card from '../../components/ui/Card';
+import { PageHeader } from '../../components/qq/page-header';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/qq/card';
+import { Skeleton } from '../../components/qq/skeleton';
 import KpiCard from './_components/KpiCard';
 import PeriodSelector from './_components/PeriodSelector';
 import SalesTrendChart, { type TrendPoint } from './_components/SalesTrendChart';
@@ -102,25 +104,21 @@ export default function ExecutiveDashboardPage() {
   }, [window, sp]);
 
   return (
-    <div className="mt-8 mb-8 space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Executive Dashboard</h1>
-          <p className="text-gray-600 mt-1 text-sm">
-            Sales, partners and order flow at a glance.
-          </p>
-        </div>
-        <PeriodSelector current={window} />
-      </div>
+    <div className="px-6 py-8">
+      <PageHeader
+        title="Executive Dashboard"
+        description="Sales, partners and order flow at a glance."
+        actions={<PeriodSelector current={window} />}
+      />
 
       {error && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="mb-6 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       )}
 
       {/* KPI row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <KpiCard
           label="Total Sales"
           value={loading || !data ? '—' : formatCurrency(data.kpis.totalSales.value)}
@@ -145,113 +143,124 @@ export default function ExecutiveDashboardPage() {
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card
-          className="lg:col-span-2"
-          header={
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-base font-semibold text-gray-900">Sales trend</h2>
-              <span className="text-xs text-gray-500">Daily, committed orders only</span>
-            </div>
-          }
-        >
-          {loading ? <ChartSkeleton /> : <SalesTrendChart data={data?.trend ?? []} />}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex-row items-baseline justify-between space-y-0 pb-2">
+            <CardTitle>Sales trend</CardTitle>
+            <span className="text-xs text-muted-foreground">
+              Daily, committed orders only
+            </span>
+          </CardHeader>
+          <CardContent>
+            {loading ? <ChartSkeleton /> : <SalesTrendChart data={data?.trend ?? []} />}
+          </CardContent>
         </Card>
-        <Card
-          header={
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-base font-semibold text-gray-900">Order status</h2>
-              <span className="text-xs text-gray-500">Live</span>
-            </div>
-          }
-        >
-          {loading ? <ChartSkeleton /> : <StatusFunnelChart data={data?.funnel ?? []} />}
+        <Card>
+          <CardHeader className="flex-row items-baseline justify-between space-y-0 pb-2">
+            <CardTitle>Order status</CardTitle>
+            <span className="text-xs text-muted-foreground">Live</span>
+          </CardHeader>
+          <CardContent>
+            {loading ? <ChartSkeleton /> : <StatusFunnelChart data={data?.funnel ?? []} />}
+          </CardContent>
         </Card>
       </div>
 
       {/* Top tables row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card
-          header={<h2 className="text-base font-semibold text-gray-900">Top 10 Companies</h2>}
-        >
-          <TopTable
-            rows={data?.topCompanies ?? []}
-            emptyMessage={loading ? 'Loading…' : 'No companies in this period'}
-            columns={[
-              { header: 'Company', key: 'name' },
-              {
-                header: 'Orders',
-                key: 'orders',
-                align: 'right',
-                render: (r) => formatNumber(r.orders),
-                width: '90px',
-              },
-              {
-                header: 'Revenue',
-                key: 'revenue',
-                align: 'right',
-                render: (r) => formatCurrency(r.revenue),
-                width: '130px',
-              },
-            ]}
-          />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle>Top 10 Companies</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <TopTable
+              rows={data?.topCompanies ?? []}
+              emptyMessage={loading ? 'Loading…' : 'No companies in this period'}
+              columns={[
+                { header: 'Company', key: 'name' },
+                {
+                  header: 'Orders',
+                  key: 'orders',
+                  align: 'right',
+                  render: (r) => formatNumber(r.orders),
+                  width: '100px',
+                },
+                {
+                  header: 'Revenue',
+                  key: 'revenue',
+                  align: 'right',
+                  render: (r) => formatCurrency(r.revenue),
+                  width: '140px',
+                },
+              ]}
+            />
+          </CardContent>
         </Card>
-        <Card
-          header={<h2 className="text-base font-semibold text-gray-900">Top 10 Products</h2>}
-        >
-          <TopTable
-            rows={data?.topProducts ?? []}
-            emptyMessage={loading ? 'Loading…' : 'No products sold in this period'}
-            columns={[
-              {
-                header: 'SKU',
-                key: 'sku',
-                render: (r) => <span className="font-mono text-xs">{r.sku ?? '—'}</span>,
-                width: '110px',
-              },
-              {
-                header: 'Product',
-                key: 'name',
-                render: (r) => r.name ?? '—',
-              },
-              {
-                header: 'Units',
-                key: 'units',
-                align: 'right',
-                render: (r) => formatNumber(r.units),
-                width: '80px',
-              },
-              {
-                header: 'Revenue',
-                key: 'revenue',
-                align: 'right',
-                render: (r) => formatCurrency(r.revenue),
-                width: '120px',
-              },
-            ]}
-          />
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle>Top 10 Products</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <TopTable
+              rows={data?.topProducts ?? []}
+              emptyMessage={loading ? 'Loading…' : 'No products sold in this period'}
+              columns={[
+                {
+                  header: 'SKU',
+                  key: 'sku',
+                  render: (r) => (
+                    <span className="font-mono text-xs">{r.sku ?? '—'}</span>
+                  ),
+                  width: '110px',
+                },
+                {
+                  header: 'Product',
+                  key: 'name',
+                  render: (r) => r.name ?? '—',
+                },
+                {
+                  header: 'Units',
+                  key: 'units',
+                  align: 'right',
+                  render: (r) => formatNumber(r.units),
+                  width: '90px',
+                },
+                {
+                  header: 'Revenue',
+                  key: 'revenue',
+                  align: 'right',
+                  render: (r) => formatCurrency(r.revenue),
+                  width: '130px',
+                },
+              ]}
+            />
+          </CardContent>
         </Card>
       </div>
 
       {/* Other reports nav */}
-      <div className="pt-2">
-        <h2 className="text-sm font-medium text-gray-700 mb-3">More reports</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div>
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          More reports
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {OTHER_REPORTS.map((r) => {
             const Icon = r.icon;
             return (
               <Link
                 key={r.href}
                 href={r.href}
-                className="group flex items-start gap-3 rounded-xl border border-[#e5e5e5] bg-white px-4 py-3 hover:border-gray-400 transition-colors"
+                className="group flex items-start gap-3 rounded-md border border-border bg-card px-4 py-3 hover:border-foreground/40 hover:bg-secondary/40 transition-colors"
               >
-                <Icon className="h-5 w-5 text-gray-500 mt-0.5" />
-                <div className="flex-1">
-                  <div className="flex items-center gap-1 text-sm font-medium text-gray-900">
+                <Icon className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1 text-sm font-medium text-foreground">
                     {r.name}
                     <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  <div className="text-xs text-gray-500 mt-0.5">{r.description}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {r.description}
+                  </div>
                 </div>
               </Link>
             );
@@ -263,5 +272,5 @@ export default function ExecutiveDashboardPage() {
 }
 
 function ChartSkeleton() {
-  return <div className="h-72 w-full animate-pulse rounded-lg bg-gray-100" />;
+  return <Skeleton className="h-72 w-full" />;
 }

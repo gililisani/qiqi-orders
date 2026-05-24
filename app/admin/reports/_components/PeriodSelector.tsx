@@ -25,7 +25,7 @@ export default function PeriodSelector({ current }: { current: string }) {
   );
 
   return (
-    <div className="inline-flex rounded-lg border border-[#e5e5e5] bg-white p-1">
+    <div className="inline-flex rounded-md border border-border bg-card p-1">
       {PRESETS.map((p) => {
         const active = current === p.key;
         return (
@@ -34,10 +34,10 @@ export default function PeriodSelector({ current }: { current: string }) {
             type="button"
             onClick={() => pick(p.key)}
             className={[
-              'px-3 py-1.5 text-sm rounded-md transition-colors',
+              'px-3 py-1.5 text-sm rounded transition-colors',
               active
-                ? 'bg-gray-900 text-white'
-                : 'text-gray-700 hover:bg-gray-100',
+                ? 'bg-foreground text-background'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary',
             ].join(' ')}
           >
             {p.label}

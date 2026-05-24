@@ -21,7 +21,7 @@ const STATUS_COLOR: Record<string, string> = {
 export default function StatusFunnelChart({ data }: { data: FunnelRow[] }) {
   if (!data || data.length === 0) {
     return (
-      <div className="h-72 flex items-center justify-center text-sm text-gray-500">
+      <div className="h-72 flex items-center justify-center text-sm text-muted-foreground">
         No orders in this period.
       </div>
     );

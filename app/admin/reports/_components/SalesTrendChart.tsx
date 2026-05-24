@@ -21,7 +21,7 @@ export interface TrendPoint {
 export default function SalesTrendChart({ data }: { data: TrendPoint[] }) {
   if (!data || data.length === 0) {
     return (
-      <div className="h-72 flex items-center justify-center text-sm text-gray-500">
+      <div className="h-72 flex items-center justify-center text-sm text-muted-foreground">
         No sales in this period.
       </div>
     );
