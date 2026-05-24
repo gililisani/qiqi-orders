@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import { useSupabase } from '../../../lib/supabase-provider';
-import Card from '../ui/Card';
-import { Spinner, Typography } from '../MaterialTailwind';
+import { Card } from '../qq/card';
+import { Alert, AlertDescription } from '../qq/alert';
+import { Button } from '../qq/button';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
 import 'svg2pdf.js'; // This patches jsPDF with .svg() method
@@ -820,17 +822,15 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
   if (error || !order) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-md mx-auto text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Order Not Found</h1>
-          <p className="text-gray-600 mb-4">{error || 'The order you are looking for does not exist.'}</p>
-          <Link
-            href={backUrl}
-            className="inline-flex items-center px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            ← Back to Orders
-          </Link>
-        </div>
+      <div className="px-6 py-8">
+        <Alert variant="destructive" className="mb-4 max-w-md">
+          <AlertDescription>{error || 'Order not found.'}</AlertDescription>
+        </Alert>
+        <Link href={backUrl}>
+          <Button variant="outline">
+            <ArrowLeft className="h-4 w-4" /> Back to order
+          </Button>
+        </Link>
       </div>
     );
   }
@@ -1075,35 +1075,25 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
 
 
   return (
-    <div>
-      {/* Navigation */}
-      <div className="mb-6">
+    <div className="px-6 py-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <Link
           href={backUrl}
-          className="inline-flex items-center text-gray-600 hover:text-gray-800 mb-4 font-sans text-sm"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          ← Back to Order
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to order
         </Link>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={generatePDF}>
+            Download PDF
+          </Button>
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={() => setEditMode(true)}>
+              {packingSlip ? 'Edit packing slip' : 'Create packing slip'}
+            </Button>
+          )}
+        </div>
       </div>
-
-       {/* Action Buttons at Top */}
-       <div className="flex justify-end gap-3 mb-6">
-           <button
-             onClick={generatePDF}
-             className="bg-black text-white px-4 py-2 rounded transition hover:opacity-90 focus:ring-2 focus:ring-gray-900 font-sans text-sm"
-           >
-             Download PDF
-           </button>
-
-           {canEdit && (
-             <button
-               onClick={() => setEditMode(true)}
-               className="bg-gray-600 text-white px-4 py-2 rounded transition hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 font-sans text-sm"
-             >
-               {packingSlip ? 'Edit Packing Slip' : 'Create Packing Slip'}
-             </button>
-           )}
-         </div>
 
         {/* Single Block Layout */}
         <Card>
