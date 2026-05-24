@@ -227,17 +227,18 @@ export async function GET(request: NextRequest) {
     let topProducts: Array<{ productId: number; sku: string | null; name: string | null; units: number; revenue: number }> = [];
 
     if (usePresetMv) {
-      // Fetch all rows for this window (orders + historical, both sources).
-      // PostgREST can't GROUP BY, so we sum per company in JS — at most ~few
-      // hundred companies × 2 sources, trivially fast.
+      // PostgREST can't auto-embed across materialized views (no FK
+      // metadata), so query the MVs first then batch-fetch the names
+      // separately. Also can't GROUP BY in PostgREST — sum per company
+      // in JS (at most a few hundred companies × 2 sources, fast).
       const [companiesRes, productsRes] = await Promise.all([
         supabase
           .from('mv_company_sales')
-          .select('company_id, source, orders, revenue, companies:company_id(company_name)')
+          .select('company_id, source, orders, revenue')
           .eq('window_key', window),
         supabase
           .from('mv_product_sales')
-          .select('product_id, units, revenue, Products:product_id(sku, item_name)')
+          .select('product_id, units, revenue')
           .eq('window_key', window)
           .order('revenue', { ascending: false })
           .limit(10),
@@ -246,30 +247,62 @@ export async function GET(request: NextRequest) {
       if (companiesRes.error) throw companiesRes.error;
       if (productsRes.error) throw productsRes.error;
 
-      const compMap = new Map<string, { name: string; orders: number; revenue: number }>();
+      const compAgg = new Map<string, { orders: number; revenue: number }>();
       for (const r of (companiesRes.data ?? []) as any[]) {
         if (!r.company_id) continue;
-        const entry = compMap.get(r.company_id) ?? {
-          name: r.companies?.company_name ?? 'Unknown',
-          orders: 0,
-          revenue: 0,
-        };
+        const entry = compAgg.get(r.company_id) ?? { orders: 0, revenue: 0 };
         entry.orders += Number(r.orders) || 0;
         entry.revenue += Number(r.revenue) || 0;
-        compMap.set(r.company_id, entry);
+        compAgg.set(r.company_id, entry);
       }
-      topCompanies = Array.from(compMap.entries())
-        .map(([companyId, v]) => ({ companyId, ...v }))
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 10);
+      const topCompanyIds = Array.from(compAgg.entries())
+        .sort((a, b) => b[1].revenue - a[1].revenue)
+        .slice(0, 10)
+        .map(([id]) => id);
 
-      topProducts = ((productsRes.data ?? []) as any[]).map((r) => ({
-        productId: r.product_id,
-        sku: r.Products?.sku ?? null,
-        name: r.Products?.item_name ?? null,
-        units: Number(r.units) || 0,
-        revenue: Number(r.revenue) || 0,
+      const topProductIds = ((productsRes.data ?? []) as any[])
+        .map((r) => r.product_id)
+        .filter((v) => v != null);
+
+      const [companyNamesRes, productNamesRes] = await Promise.all([
+        topCompanyIds.length
+          ? supabase.from('companies').select('id, company_name').in('id', topCompanyIds)
+          : Promise.resolve({ data: [], error: null } as any),
+        topProductIds.length
+          ? supabase.from('Products').select('id, sku, item_name').in('id', topProductIds)
+          : Promise.resolve({ data: [], error: null } as any),
+      ]);
+
+      if (companyNamesRes.error) throw companyNamesRes.error;
+      if (productNamesRes.error) throw productNamesRes.error;
+
+      const companyNameById = new Map<string, string>(
+        (companyNamesRes.data ?? []).map((c: any) => [c.id, c.company_name ?? 'Unknown']),
+      );
+      const productById = new Map<number, { sku: string | null; name: string | null }>(
+        (productNamesRes.data ?? []).map((p: any) => [
+          p.id,
+          { sku: p.sku ?? null, name: p.item_name ?? null },
+        ]),
+      );
+
+      topCompanies = topCompanyIds.map((id) => ({
+        companyId: id,
+        name: companyNameById.get(id) ?? 'Unknown',
+        orders: compAgg.get(id)!.orders,
+        revenue: compAgg.get(id)!.revenue,
       }));
+
+      topProducts = ((productsRes.data ?? []) as any[]).map((r) => {
+        const meta = productById.get(r.product_id) ?? { sku: null, name: null };
+        return {
+          productId: r.product_id,
+          sku: meta.sku,
+          name: meta.name,
+          units: Number(r.units) || 0,
+          revenue: Number(r.revenue) || 0,
+        };
+      });
     } else {
       // Custom window: live aggregate across orders + historical_sales.
       const [liveOrdersRes, liveHistRes] = await Promise.all([
