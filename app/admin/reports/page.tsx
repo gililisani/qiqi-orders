@@ -55,9 +55,9 @@ const OTHER_REPORTS = [
     icon: BarChart3,
   },
   {
-    name: 'Product Sales',
-    description: 'Units, revenue and top buyers per SKU',
-    href: '/admin/reports/product-sales',
+    name: 'Product Insights',
+    description: 'Top SKUs, top buyers, dead products, category heatmap',
+    href: '/admin/reports/product-insights',
     icon: Boxes,
   },
 ];
