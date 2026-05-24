@@ -46,13 +46,13 @@ DROP MATERIALIZED VIEW IF EXISTS public.mv_company_sales CASCADE;
 
 CREATE MATERIALIZED VIEW public.mv_company_sales AS
 WITH windows AS (
-  SELECT '30d'::text AS window, (now() - interval '30 days') AS since UNION ALL
-  SELECT '90d'::text,             (now() - interval '90 days') UNION ALL
-  SELECT 'ytd'::text,             date_trunc('year', now())
+  SELECT '30d'::text AS window_key, (now() - interval '30 days') AS since UNION ALL
+  SELECT '90d'::text,                 (now() - interval '90 days') UNION ALL
+  SELECT 'ytd'::text,                 date_trunc('year', now())
 )
 SELECT
   o.company_id,
-  w.window,
+  w.window_key,
   COUNT(*)::int                                AS orders,
   COALESCE(SUM(o.total_value), 0)::numeric     AS revenue,
   COALESCE(SUM(o.support_fund_used), 0)::numeric AS support_fund_used,
@@ -62,13 +62,13 @@ CROSS JOIN windows w
 WHERE o.status NOT IN ('Draft', 'Cancelled')
   AND o.created_at >= w.since
   AND o.company_id IS NOT NULL
-GROUP BY o.company_id, w.window;
+GROUP BY o.company_id, w.window_key;
 
 CREATE UNIQUE INDEX mv_company_sales_pk_idx
-  ON public.mv_company_sales (company_id, window);
+  ON public.mv_company_sales (company_id, window_key);
 
 CREATE INDEX mv_company_sales_window_revenue_idx
-  ON public.mv_company_sales (window, revenue DESC);
+  ON public.mv_company_sales (window_key, revenue DESC);
 
 ------------------------------------------------------------------------
 -- mv_product_sales
@@ -78,13 +78,13 @@ DROP MATERIALIZED VIEW IF EXISTS public.mv_product_sales CASCADE;
 
 CREATE MATERIALIZED VIEW public.mv_product_sales AS
 WITH windows AS (
-  SELECT '30d'::text AS window, (now() - interval '30 days') AS since UNION ALL
-  SELECT '90d'::text,             (now() - interval '90 days') UNION ALL
-  SELECT 'ytd'::text,             date_trunc('year', now())
+  SELECT '30d'::text AS window_key, (now() - interval '30 days') AS since UNION ALL
+  SELECT '90d'::text,                 (now() - interval '90 days') UNION ALL
+  SELECT 'ytd'::text,                 date_trunc('year', now())
 )
 SELECT
   oi.product_id,
-  w.window,
+  w.window_key,
   COALESCE(SUM(oi.quantity), 0)::numeric      AS units,
   COALESCE(SUM(oi.total_price), 0)::numeric   AS revenue,
   COUNT(DISTINCT oi.order_id)::int            AS orders
@@ -94,13 +94,13 @@ CROSS JOIN windows w
 WHERE o.status NOT IN ('Draft', 'Cancelled')
   AND o.created_at >= w.since
   AND oi.product_id IS NOT NULL
-GROUP BY oi.product_id, w.window;
+GROUP BY oi.product_id, w.window_key;
 
 CREATE UNIQUE INDEX mv_product_sales_pk_idx
-  ON public.mv_product_sales (product_id, window);
+  ON public.mv_product_sales (product_id, window_key);
 
 CREATE INDEX mv_product_sales_window_revenue_idx
-  ON public.mv_product_sales (window, revenue DESC);
+  ON public.mv_product_sales (window_key, revenue DESC);
 
 ------------------------------------------------------------------------
 -- Refresh function + permissions

@@ -146,13 +146,13 @@ export async function GET(request: NextRequest) {
         supabase
           .from('mv_company_sales')
           .select('company_id, orders, revenue, companies:company_id(company_name)')
-          .eq('window', window)
+          .eq('window_key', window)
           .order('revenue', { ascending: false })
           .limit(10),
         supabase
           .from('mv_product_sales')
           .select('product_id, units, revenue, Products:product_id(sku, item_name)')
-          .eq('window', window)
+          .eq('window_key', window)
           .order('revenue', { ascending: false })
           .limit(10),
       ]);
