@@ -36,3 +36,5 @@ next-env.d.ts
 # Template files (not for production)
 temp-template/
 Tailwind Template/
+# Claude Code local state
+.claude/
