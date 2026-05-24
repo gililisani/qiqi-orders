@@ -81,8 +81,11 @@ export default function FeedbackPopup({ isOpen, onClose }: FeedbackPopupProps) {
     submissionInProgress.current = true;
     setSending(true);
     try {
+      // API expects 'issue' | 'feedback'; UI uses 'idea' for the second tab.
+      const wireType = view === 'idea' ? 'feedback' : view;
+
       const formData = new FormData();
-      formData.append('type', view);
+      formData.append('type', wireType);
       formData.append('text', text);
       formData.append('userName', userName);
       formData.append('userEmail', userEmail);
