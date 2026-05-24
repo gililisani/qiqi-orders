@@ -1,13 +1,7 @@
 'use client';
 
-import OrderFormView from '../../../components/shared/OrderFormView';
+import ClientOrderFormView from '../../../components/client/ClientOrderFormView';
 
 export default function ClientNewOrderPage() {
-  return (
-    <OrderFormView
-        role="client"
-        orderId={null}
-        backUrl="/client/orders"
-      />
-  );
+  return <ClientOrderFormView orderId={null} backUrl="/client/orders" />;
 }
