@@ -1,9 +1,35 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../../../../../lib/supabaseClient';
+import Link from 'next/link';
+import { ArrowLeft, Plus, Pencil, Trash2, Check, X, Search } from 'lucide-react';
+
 import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
-import { PencilIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+
+import { PageHeader } from '../../../../components/qq/page-header';
+import { Card } from '../../../../components/qq/card';
+import { Input } from '../../../../components/qq/input';
+import { Label } from '../../../../components/qq/label';
+import { Button } from '../../../../components/qq/button';
+import { Alert, AlertDescription } from '../../../../components/qq/alert';
+import { EmptyState } from '../../../../components/qq/empty-state';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '../../../../components/qq/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../../../../components/qq/dialog';
+import { useToast } from '../../../../components/ui/ToastProvider';
+import { useConfirm } from '../../../../components/ui/ConfirmProvider';
 
 interface Tag {
   id: string;
@@ -13,325 +39,290 @@ interface Tag {
 }
 
 export default function TagsPage() {
+  const toast = useToast();
+  const confirm = useConfirm();
+
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ label: string }>({ label: '' });
+  const [editLabel, setEditLabel] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createForm, setCreateForm] = useState<{ label: string }>({ label: '' });
-  const [error, setError] = useState('');
+  const [createLabel, setCreateLabel] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchTags();
+    const id = setTimeout(fetchTags, searchTerm ? 300 : 0);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
 
   const fetchTags = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('Not authenticated');
-        setLoading(false);
-        return;
-      }
-
-      const url = searchTerm 
+      setLoading(true);
+      const url = searchTerm
         ? `/api/admin/tags?search=${encodeURIComponent(searchTerm)}`
         : '/api/admin/tags';
-
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
+      const res = await fetchWithAuth(url);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to load tags');
       }
-
-      const data = await response.json();
+      const data = await res.json();
       setTags(data.tags || []);
+      setError(null);
     } catch (err: any) {
-      console.error('Error fetching tags:', err);
-      setError(err.message || 'Failed to load tags');
+      setError(err.message || 'Failed to load tags.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (tag: Tag) => {
-    setEditingId(tag.id);
-    setEditForm({ label: tag.label });
-  };
-
   const handleSave = async () => {
     if (!editingId) return;
-
+    setSaving(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('Not authenticated');
-        return;
-      }
-
-      const response = await fetchWithAuth('/api/admin/tags', {
+      const res = await fetchWithAuth('/api/admin/tags', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          id: editingId,
-          label: editForm.label,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingId, label: editLabel }),
       });
-
-      if (!response.ok) {
-        const data = await response.json();
+      if (!res.ok) {
+        const data = await res.json();
         throw new Error(data.error || 'Failed to update tag');
       }
-
+      toast.success('Tag updated.');
       setEditingId(null);
       fetchTags();
     } catch (err: any) {
-      setError(err.message || 'Failed to update tag');
+      toast.error(err.message || 'Failed to update tag.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleCreate = async () => {
-    if (!createForm.label.trim()) {
-      setError('Tag name is required');
+    if (!createLabel.trim()) {
+      toast.error('Tag name is required.');
       return;
     }
-
+    setSaving(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('Not authenticated');
-        return;
-      }
-
-      const response = await fetchWithAuth('/api/admin/tags', {
+      const res = await fetchWithAuth('/api/admin/tags', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          label: createForm.label,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: createLabel }),
       });
-
-      if (!response.ok) {
-        const data = await response.json();
+      if (!res.ok) {
+        const data = await res.json();
         throw new Error(data.error || 'Failed to create tag');
       }
-
+      toast.success('Tag created.');
       setShowCreateModal(false);
-      setCreateForm({ label: '' });
+      setCreateLabel('');
       fetchTags();
     } catch (err: any) {
-      setError(err.message || 'Failed to create tag');
+      toast.error(err.message || 'Failed to create tag.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (tag: Tag) => {
-    const message = tag.asset_count > 0
-      ? `Delete tag "${tag.label}"? It will be removed from ${tag.asset_count} asset(s) and cannot be undone.`
-      : `Delete tag "${tag.label}"?`;
-
-    if (!confirm(message)) {
-      return;
-    }
-
+    const ok = await confirm({
+      title: 'Delete tag?',
+      description:
+        tag.asset_count > 0
+          ? `Delete "${tag.label}". It will be removed from ${tag.asset_count} asset${
+              tag.asset_count !== 1 ? 's' : ''
+            }. This cannot be undone.`
+          : `Delete "${tag.label}"?`,
+      variant: 'danger',
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('Not authenticated');
-        return;
-      }
-
-      const response = await fetchWithAuth(`/api/admin/tags?id=${tag.id}`, {
+      const res = await fetchWithAuth(`/api/admin/tags?id=${tag.id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
       });
-
-      if (!response.ok) {
-        const data = await response.json();
+      if (!res.ok) {
+        const data = await res.json();
         throw new Error(data.error || 'Failed to delete tag');
       }
-
+      toast.success('Tag deleted.');
       fetchTags();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete tag');
+      toast.error(err.message || 'Failed to delete tag.');
     }
   };
 
-  if (loading) {
-    return (
-      <div className="mt-8 mb-4 space-y-6">
-        <p className="text-gray-500">Loading tags...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="mt-8 mb-4 space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Tags Settings</h2>
-          <p className="text-sm text-gray-500 mt-1">Manage tags for categorizing and searching assets</p>
-        </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-black text-white px-4 py-2 rounded-md hover:opacity-90 transition text-sm font-medium"
+    <div className="px-6 py-8 space-y-4">
+      <div>
+        <Link
+          href="/admin/dam/settings"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          Add Tag
-        </button>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to DAM settings
+        </Link>
       </div>
 
-      <div className="flex gap-4 items-center">
-        <input
-          type="text"
-          placeholder="Search tags by name or slug..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 max-w-md px-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
-        />
-      </div>
-
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">Create New Tag</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tag Name *</label>
-                <input
-                  type="text"
-                  value={createForm.label}
-                  onChange={(e) => setCreateForm({ label: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
-                  placeholder="e.g. Marketing, Product, Campaign"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => {
-                  setShowCreateModal(false);
-                  setCreateForm({ label: '' });
-                }}
-                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreate}
-                className="px-4 py-2 bg-black text-white rounded hover:opacity-90"
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PageHeader
+        title="Tags"
+        description="Tags for categorizing and searching assets."
+        actions={
+          <Button size="sm" onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4" /> Add tag
+          </Button>
+        }
+      />
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
-      <div className="bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-4 md:px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-sm font-semibold text-gray-900">Tags</h3>
-          <span className="text-xs text-gray-500">{tags.length} {tags.length === 1 ? 'item' : 'items'}</span>
+      <Card className="p-3">
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Search tags by name or slug…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
         </div>
-        {tags.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <p className="text-sm">No tags found.</p>
-          </div>
+      </Card>
+
+      <Card>
+        {loading ? (
+          <p className="text-sm text-muted-foreground p-4">Loading…</p>
+        ) : tags.length === 0 ? (
+          <EmptyState
+            title="No tags"
+            description={
+              searchTerm ? 'Try a different search.' : 'Add tags to organize the asset library.'
+            }
+            action={
+              !searchTerm ? (
+                <Button size="sm" onClick={() => setShowCreateModal(true)}>
+                  <Plus className="h-4 w-4" /> Add tag
+                </Button>
+              ) : undefined
+            }
+            className="border-0 shadow-none"
+          />
         ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Tag Name</th>
-                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Slug</th>
-                <th className="px-4 md:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Assets</th>
-                <th className="px-4 md:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tag</TableHead>
+                <TableHead className="hidden sm:table-cell">Slug</TableHead>
+                <TableHead className="text-right hidden sm:table-cell">Assets</TableHead>
+                <TableHead className="text-right w-40">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {tags.map((tag) => (
-                <tr key={tag.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
+                <TableRow key={tag.id}>
+                  <TableCell>
                     {editingId === tag.id ? (
-                      <input
-                        type="text"
-                        value={editForm.label}
-                        onChange={(e) => setEditForm({ label: e.target.value })}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                      <Input
+                        value={editLabel}
+                        onChange={(e) => setEditLabel(e.target.value)}
+                        className="h-8"
+                        autoFocus
                       />
                     ) : (
-                      <div className="text-sm font-medium text-gray-900">{tag.label}</div>
+                      <span className="text-sm font-medium">{tag.label}</span>
                     )}
-                  </td>
-                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{tag.slug}</div>
-                  </td>
-                  <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right">
-                    <div className="text-sm text-gray-500">{tag.asset_count}</div>
-                  </td>
-                  <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right">
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell font-mono text-xs text-muted-foreground">
+                    {tag.slug}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-right font-mono text-sm">
+                    {tag.asset_count}
+                  </TableCell>
+                  <TableCell className="text-right">
                     {editingId === tag.id ? (
-                      <div className="flex justify-end items-center space-x-3">
-                        <button
-                          onClick={handleSave}
-                          className="inline-flex items-center text-sm text-gray-700 hover:text-gray-900 transition-colors"
-                        >
-                          <CheckIcon className="h-4 w-4 mr-1" />
-                          Save
-                        </button>
-                        <button
+                      <div className="inline-flex gap-1.5">
+                        <Button size="sm" onClick={handleSave} loading={saving}>
+                          <Check className="h-3.5 w-3.5" /> Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => setEditingId(null)}
-                          className="inline-flex items-center text-sm text-gray-700 hover:text-gray-900 transition-colors"
+                          disabled={saving}
                         >
-                          <XMarkIcon className="h-4 w-4 mr-1" />
-                          Cancel
-                        </button>
+                          <X className="h-3.5 w-3.5" /> Cancel
+                        </Button>
                       </div>
                     ) : (
-                      <div className="flex justify-end items-center space-x-3">
-                        <button
-                          onClick={() => handleEdit(tag)}
-                          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                          title="Rename"
+                      <div className="inline-flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingId(tag.id);
+                            setEditLabel(tag.label);
+                          }}
                         >
-                          <PencilIcon className="h-4 w-4 mr-1" />
-                          Rename
-                        </button>
-                        <button
+                          <Pencil className="h-3.5 w-3.5" /> Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleDelete(tag)}
-                          className="inline-flex items-center text-sm text-red-600 hover:text-red-700 transition-colors"
-                          title="Delete"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
-                          <TrashIcon className="h-4 w-4 mr-1" />
-                          Delete
-                        </button>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
-      </div>
+      </Card>
+
+      <Dialog open={showCreateModal} onOpenChange={(open) => !saving && setShowCreateModal(open)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>New tag</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <Label className="text-sm font-medium">Tag name *</Label>
+            <Input
+              value={createLabel}
+              onChange={(e) => setCreateLabel(e.target.value)}
+              placeholder="e.g. Marketing"
+              className="mt-1.5"
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCreateModal(false);
+                setCreateLabel('');
+              }}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCreate} loading={saving}>
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-

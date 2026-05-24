@@ -1,9 +1,43 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../../../../../lib/supabaseClient';
+import Link from 'next/link';
+import { ArrowLeft, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
+
 import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
-import { PencilIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+
+import { PageHeader } from '../../../../components/qq/page-header';
+import { Card } from '../../../../components/qq/card';
+import { Input } from '../../../../components/qq/input';
+import { Label } from '../../../../components/qq/label';
+import { Button } from '../../../../components/qq/button';
+import { Badge } from '../../../../components/qq/badge';
+import { Alert, AlertDescription } from '../../../../components/qq/alert';
+import { EmptyState } from '../../../../components/qq/empty-state';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '../../../../components/qq/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../../../../components/qq/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../components/qq/select';
+import { useToast } from '../../../../components/ui/ToastProvider';
+import { useConfirm } from '../../../../components/ui/ConfirmProvider';
 
 interface AssetSubtype {
   id: string;
@@ -22,424 +56,359 @@ interface AssetType {
   active: boolean;
 }
 
+const slugify = (s: string) =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
 export default function AssetSubtypesPage() {
+  const toast = useToast();
+  const confirm = useConfirm();
+
   const [subtypes, setSubtypes] = useState<AssetSubtype[]>([]);
   const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ name: string; slug: string; asset_type_id: string; active: boolean }>({ 
-    name: '', slug: '', asset_type_id: '', active: true 
-  });
+  const [editName, setEditName] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createForm, setCreateForm] = useState<{ name: string; slug: string; asset_type_id: string }>({ 
-    name: '', slug: '', asset_type_id: '' 
-  });
-  const [error, setError] = useState('');
+  const [createForm, setCreateForm] = useState({ name: '', slug: '', asset_type_id: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchData();
+    fetchAll();
   }, []);
 
-  const fetchData = async () => {
+  const fetchAll = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('Not authenticated');
-        setLoading(false);
-        return;
+      setLoading(true);
+      const [subRes, typesRes] = await Promise.all([
+        fetchWithAuth('/api/admin/asset-subtypes'),
+        fetchWithAuth('/api/admin/asset-types'),
+      ]);
+      if (!subRes.ok) {
+        const data = await subRes.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to load asset sub-types');
       }
-
-      // Fetch subtypes
-      const subtypesResponse = await fetchWithAuth('/api/admin/asset-subtypes', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (!subtypesResponse.ok) {
-        const data = await subtypesResponse.json();
-        throw new Error(data.error || 'Failed to load asset subtypes');
+      if (!typesRes.ok) {
+        const data = await typesRes.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to load asset types');
       }
-
-      const subtypesData = await subtypesResponse.json();
-      setSubtypes(subtypesData.assetSubtypes || []);
-
-      // Fetch asset types for dropdown
-      const typesResponse = await fetchWithAuth('/api/admin/asset-types', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (typesResponse.ok) {
-        const typesData = await typesResponse.json();
-        setAssetTypes(typesData.assetTypes || []);
-      }
+      const subData = await subRes.json();
+      const typesData = await typesRes.json();
+      setSubtypes(subData.assetSubtypes || []);
+      setAssetTypes((typesData.assetTypes || []).filter((t: AssetType) => t.active));
+      setError(null);
     } catch (err: any) {
-      console.error('Error fetching data:', err);
-      setError(err.message || 'Failed to load data');
+      setError(err.message || 'Failed to load.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleSave = async () => {
+    if (!editingId) return;
+    setSaving(true);
+    try {
+      const res = await fetchWithAuth('/api/admin/asset-subtypes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingId, name: editName }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to update sub-type');
+      }
+      toast.success('Sub-type updated.');
+      setEditingId(null);
+      fetchAll();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update sub-type.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleActive = async (item: AssetSubtype) => {
+    try {
+      const res = await fetchWithAuth('/api/admin/asset-subtypes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: item.id, active: !item.active }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to toggle');
+      }
+      fetchAll();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to toggle.');
+    }
+  };
+
   const handleCreate = async () => {
-    if (!createForm.name || !createForm.asset_type_id) {
-      setError('Name and Asset Type are required');
+    if (!createForm.name.trim() || !createForm.asset_type_id) {
+      toast.error('Name and asset type are required.');
       return;
     }
-
+    setSaving(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('Not authenticated');
-        return;
-      }
-
-      const response = await fetchWithAuth('/api/admin/asset-subtypes', {
+      const res = await fetchWithAuth('/api/admin/asset-subtypes', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: createForm.name,
-          slug: createForm.slug || createForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+          slug: createForm.slug || slugify(createForm.name),
           asset_type_id: createForm.asset_type_id,
         }),
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to create asset subtype');
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to create sub-type');
       }
-
+      toast.success('Sub-type created.');
       setShowCreateModal(false);
       setCreateForm({ name: '', slug: '', asset_type_id: '' });
-      fetchData();
+      fetchAll();
     } catch (err: any) {
-      setError(err.message || 'Failed to create asset subtype');
+      toast.error(err.message || 'Failed to create sub-type.');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleEdit = (subtype: AssetSubtype) => {
-    setEditingId(subtype.id);
-    setEditForm({ 
-      name: subtype.name, 
-      slug: subtype.slug, 
-      asset_type_id: subtype.asset_type_id,
-      active: subtype.active 
+  const handleDelete = async (item: AssetSubtype) => {
+    const ok = await confirm({
+      title: 'Delete sub-type?',
+      description:
+        item.asset_count > 0
+          ? `"${item.name}" is used by ${item.asset_count} asset${
+              item.asset_count !== 1 ? 's' : ''
+            }. Delete anyway?`
+          : `Delete "${item.name}"?`,
+      variant: 'danger',
+      confirmLabel: 'Delete',
     });
-  };
-
-  const handleSave = async () => {
-    if (!editingId) return;
-
+    if (!ok) return;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('Not authenticated');
-        return;
-      }
-
-      const response = await fetchWithAuth('/api/admin/asset-subtypes', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          id: editingId,
-          ...editForm,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to update asset subtype');
-      }
-
-      setEditingId(null);
-      fetchData();
-    } catch (err: any) {
-      setError(err.message || 'Failed to update asset subtype');
-    }
-  };
-
-  const handleToggleActive = async (subtype: AssetSubtype) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('Not authenticated');
-        return;
-      }
-
-      const response = await fetchWithAuth('/api/admin/asset-subtypes', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          id: subtype.id,
-          active: !subtype.active,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to update asset subtype');
-      }
-
-      fetchData();
-    } catch (err: any) {
-      setError(err.message || 'Failed to update asset subtype');
-    }
-  };
-
-  const handleDelete = async (subtype: AssetSubtype) => {
-    if (!confirm(`Delete asset subtype "${subtype.name}"? This will only work if no assets use it.`)) {
-      return;
-    }
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('Not authenticated');
-        return;
-      }
-
-      const response = await fetchWithAuth(`/api/admin/asset-subtypes?id=${subtype.id}`, {
+      const res = await fetchWithAuth(`/api/admin/asset-subtypes?id=${item.id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to delete asset subtype');
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to delete');
       }
-
-      fetchData();
+      toast.success('Sub-type deleted.');
+      fetchAll();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete asset subtype');
+      toast.error(err.message || 'Failed to delete.');
     }
   };
-
-  if (loading) {
-    return (
-      <div className="mt-8 mb-4 space-y-6">
-        <p className="text-gray-500">Loading asset subtypes...</p>
-      </div>
-    );
-  }
 
   return (
-    <div className="mt-8 mb-4 space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Asset Sub-Types Settings</h2>
-          <p className="text-sm text-gray-500 mt-1">Manage asset sub-type categories within each asset type</p>
-        </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-black text-white px-4 py-2 rounded-md hover:opacity-90 transition text-sm font-medium"
+    <div className="px-6 py-8 space-y-4">
+      <div>
+        <Link
+          href="/admin/dam/settings"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          Add New Sub-Type
-        </button>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to DAM settings
+        </Link>
       </div>
+
+      <PageHeader
+        title="Asset sub-types"
+        description="Sub-categories within each asset type."
+        actions={
+          <Button size="sm" onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4" /> Add sub-type
+          </Button>
+        }
+      />
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">Create New Asset Sub-Type</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  value={createForm.name}
-                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Slug (optional)</label>
-                <input
-                  type="text"
-                  value={createForm.slug}
-                  onChange={(e) => setCreateForm({ ...createForm, slug: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Asset Type</label>
-                <select
-                  value={createForm.asset_type_id}
-                  onChange={(e) => setCreateForm({ ...createForm, asset_type_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
-                >
-                  <option value="">Select Asset Type</option>
-                  {assetTypes.filter(t => t.active).map((type) => (
-                    <option key={type.id} value={type.id}>{type.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => {
-                  setShowCreateModal(false);
-                  setCreateForm({ name: '', slug: '', asset_type_id: '' });
-                }}
-                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreate}
-                className="px-4 py-2 bg-black text-white rounded hover:opacity-90"
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-4 md:px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-sm font-semibold text-gray-900">Asset Sub-Types</h3>
-          <span className="text-xs text-gray-500">{subtypes.length} {subtypes.length === 1 ? 'item' : 'items'}</span>
-        </div>
-        {subtypes.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <p className="text-sm">No asset subtypes found.</p>
-          </div>
+      <Card>
+        {loading ? (
+          <p className="text-sm text-muted-foreground p-4">Loading…</p>
+        ) : subtypes.length === 0 ? (
+          <EmptyState
+            title="No sub-types"
+            description="Add sub-types to refine asset organization."
+            action={
+              <Button size="sm" onClick={() => setShowCreateModal(true)}>
+                <Plus className="h-4 w-4" /> Add sub-type
+              </Button>
+            }
+            className="border-0 shadow-none"
+          />
         ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Name</th>
-                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Slug</th>
-                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Parent Type</th>
-                <th className="px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Active</th>
-                <th className="px-4 md:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Assets</th>
-                <th className="px-4 md:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {subtypes.map((subtype) => (
-                <tr key={subtype.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
-                    {editingId === subtype.id ? (
-                      <input
-                        type="text"
-                        value={editForm.name}
-                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Parent type</TableHead>
+                <TableHead className="hidden md:table-cell">Slug</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right hidden sm:table-cell">Assets</TableHead>
+                <TableHead className="text-right w-44">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {subtypes.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    {editingId === item.id ? (
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="h-8"
+                        autoFocus
                       />
                     ) : (
-                      <div className="text-sm font-medium text-gray-900">{subtype.name}</div>
+                      <span className="text-sm font-medium">{item.name}</span>
                     )}
-                  </td>
-                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
-                    {editingId === subtype.id ? (
-                      <input
-                        type="text"
-                        value={editForm.slug}
-                        onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
-                      />
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {item.asset_type_name}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell font-mono text-xs text-muted-foreground">
+                    {item.slug}
+                  </TableCell>
+                  <TableCell>
+                    {item.active ? (
+                      <Badge variant="success">Active</Badge>
                     ) : (
-                      <div className="text-sm text-gray-500">{subtype.slug}</div>
+                      <Badge variant="muted">Inactive</Badge>
                     )}
-                  </td>
-                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
-                    {editingId === subtype.id ? (
-                      <select
-                        value={editForm.asset_type_id}
-                        onChange={(e) => setEditForm({ ...editForm, asset_type_id: e.target.value })}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
-                      >
-                        {assetTypes.filter(t => t.active).map((type) => (
-                          <option key={type.id} value={type.id}>{type.name}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="text-sm text-gray-500">{subtype.asset_type_name}</div>
-                    )}
-                  </td>
-                  <td className="px-4 md:px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      subtype.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {subtype.active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right">
-                    <div className="text-sm text-gray-500">{subtype.asset_count}</div>
-                  </td>
-                  <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right">
-                    {editingId === subtype.id ? (
-                      <div className="flex justify-end items-center space-x-3">
-                        <button
-                          onClick={handleSave}
-                          className="inline-flex items-center text-sm text-gray-700 hover:text-gray-900 transition-colors"
-                        >
-                          <CheckIcon className="h-4 w-4 mr-1" />
-                          Save
-                        </button>
-                        <button
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-right font-mono text-sm">
+                    {item.asset_count}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {editingId === item.id ? (
+                      <div className="inline-flex gap-1.5">
+                        <Button size="sm" onClick={handleSave} loading={saving}>
+                          <Check className="h-3.5 w-3.5" /> Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => setEditingId(null)}
-                          className="inline-flex items-center text-sm text-gray-700 hover:text-gray-900 transition-colors"
+                          disabled={saving}
                         >
-                          <XMarkIcon className="h-4 w-4 mr-1" />
-                          Cancel
-                        </button>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     ) : (
-                      <div className="flex justify-end items-center space-x-3">
-                        <button
-                          onClick={() => handleEdit(subtype)}
-                          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                          title="Edit"
+                      <div className="inline-flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingId(item.id);
+                            setEditName(item.name);
+                          }}
                         >
-                          <PencilIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleToggleActive(subtype)}
-                          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                          title={subtype.active ? 'Deactivate' : 'Activate'}
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleActive(item)}
+                          className="text-xs"
                         >
-                          {subtype.active ? 'Deactivate' : 'Activate'}
-                        </button>
-                        {subtype.asset_count === 0 && (
-                          <button
-                            onClick={() => handleDelete(subtype)}
-                            className="inline-flex items-center text-sm text-red-600 hover:text-red-700 transition-colors"
-                            title="Delete"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        )}
+                          {item.active ? 'Deactivate' : 'Activate'}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(item)}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
-      </div>
+      </Card>
+
+      <Dialog open={showCreateModal} onOpenChange={(open) => !saving && setShowCreateModal(open)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>New sub-type</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-sm font-medium">Parent asset type *</Label>
+              <div className="mt-1.5">
+                <Select
+                  value={createForm.asset_type_id}
+                  onValueChange={(v) => setCreateForm({ ...createForm, asset_type_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose asset type…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assetTypes.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Name *</Label>
+              <Input
+                value={createForm.name}
+                onChange={(e) => {
+                  const name = e.target.value;
+                  setCreateForm({
+                    ...createForm,
+                    name,
+                    slug: createForm.slug || slugify(name),
+                  });
+                }}
+                placeholder="e.g. Hero shot"
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Slug</Label>
+              <Input
+                value={createForm.slug}
+                onChange={(e) => setCreateForm({ ...createForm, slug: e.target.value })}
+                placeholder="auto-generated from name"
+                className="mt-1.5 font-mono"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCreateModal(false);
+                setCreateForm({ name: '', slug: '', asset_type_id: '' });
+              }}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCreate} loading={saving}>
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-

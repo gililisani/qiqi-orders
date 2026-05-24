@@ -1,19 +1,50 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { useSupabase } from '../../../../../lib/supabase-provider';
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
-  PlusIcon,
-  TrashIcon,
-  PhotoIcon,
-  CalendarIcon,
-  ArrowLeftIcon,
-} from '@heroicons/react/24/outline';
+  Plus,
+  Trash2,
+  Image as ImageIcon,
+  Calendar,
+  ArrowLeft,
+  X,
+  Check,
+  Search,
+} from 'lucide-react';
+
+import { useSupabase } from '../../../../../lib/supabase-provider';
 import AssetCard from '../../../../components/dam/AssetCard';
 import AssetDetailModal from '../../../../components/dam/AssetDetailModal';
-import { AssetRecord, VimeoDownloadFormat } from '../../../../components/dam/types';
-import { ensureTokenUrl, buildAuthHeaders, getFileTypeBadge } from '../../../../components/dam/utils';
+import { AssetRecord } from '../../../../components/dam/types';
+import { ensureTokenUrl, buildAuthHeaders } from '../../../../components/dam/utils';
+
+import { PageHeader } from '../../../../components/qq/page-header';
+import { Card } from '../../../../components/qq/card';
+import { Button } from '../../../../components/qq/button';
+import { Input } from '../../../../components/qq/input';
+import { Badge } from '../../../../components/qq/badge';
+import { Alert, AlertDescription } from '../../../../components/qq/alert';
+import { EmptyState } from '../../../../components/qq/empty-state';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../../../../components/qq/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../components/qq/select';
+import { useToast } from '../../../../components/ui/ToastProvider';
+import { useConfirm } from '../../../../components/ui/ConfirmProvider';
+
+const ALL = '__all__';
 
 interface Campaign {
   id: string;
@@ -33,6 +64,9 @@ export default function CampaignDetailPage() {
   const params = useParams();
   const campaignId = params.id as string;
   const { session, supabase } = useSupabase();
+  const toast = useToast();
+  const confirm = useConfirm();
+
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [assets, setAssets] = useState<AssetRecord[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -42,12 +76,10 @@ export default function CampaignDetailPage() {
   const [hoveredAssetId, setHoveredAssetId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'compact' | 'comfortable'>('compact');
   const [downloadingFormats, setDownloadingFormats] = useState<Set<string>>(new Set());
-  const [assetTypes, setAssetTypes] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [assetSubtypes, setAssetSubtypes] = useState<Array<{ id: string; name: string; slug: string; asset_type_id: string }>>([]);
 
   const [accessToken, setAccessToken] = useState<string | null>(session?.access_token ?? null);
 
-  // Fallback: Get session from Supabase if not available from provider (same pattern as DAM page)
   useEffect(() => {
     let active = true;
     if (!accessToken && supabase) {
@@ -56,16 +88,11 @@ export default function CampaignDetailPage() {
         setAccessToken(data.session?.access_token ?? null);
       });
     }
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [accessToken, supabase]);
 
-  // Update token when session from provider changes
   useEffect(() => {
-    if (session?.access_token) {
-      setAccessToken(session.access_token);
-    }
+    if (session?.access_token) setAccessToken(session.access_token);
   }, [session]);
 
   const fetchLookups = async () => {
@@ -77,10 +104,8 @@ export default function CampaignDetailPage() {
         headers: Object.keys(headers).length ? headers : undefined,
         credentials: 'same-origin',
       });
-
       if (response.ok) {
         const payload = await response.json();
-        setAssetTypes(payload.assetTypes || []);
         setAssetSubtypes(payload.assetSubtypes || []);
       }
     } catch (err) {
@@ -94,47 +119,35 @@ export default function CampaignDetailPage() {
       setErrorMessage('Campaign ID is required');
       return;
     }
-
     if (!accessToken) {
       setStatus('error');
       setErrorMessage('Authentication required');
       return;
     }
-
     try {
       setStatus('loading');
       const headers = buildAuthHeaders(accessToken);
       const response = await fetch(`/api/campaigns/${campaignId}`, { headers });
-      
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || `Failed to fetch campaign: ${response.status}`;
         setStatus('error');
-        setErrorMessage(errorMsg);
+        setErrorMessage(errorData.error || `Failed to fetch campaign: ${response.status}`);
         setCampaign(null);
         setAssets([]);
         return;
       }
-
       const data = await response.json();
-      
       if (!data.campaign) {
         setStatus('error');
         setErrorMessage('Campaign data is missing');
-        setCampaign(null);
-        setAssets([]);
         return;
       }
-      
       setCampaign(data.campaign);
       setAssets(data.assets || []);
       setStatus('success');
     } catch (err: any) {
-      console.error('Campaign load error', err);
       setStatus('error');
       setErrorMessage(err.message || 'Failed to load campaign');
-      setCampaign(null);
-      setAssets([]);
     }
   };
 
@@ -144,85 +157,66 @@ export default function CampaignDetailPage() {
       setErrorMessage('Campaign ID is required');
       return;
     }
-
-    if (!accessToken) {
-      // Don't set error immediately - accessToken might still be loading from getSession()
-      // The getSession() useEffect will set accessToken when ready, then this will run again
-      return;
-    }
-
+    if (!accessToken) return;
     fetchCampaign();
     fetchLookups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId, accessToken]);
 
   const handleRemoveAsset = async (assetId: string) => {
-    if (!window.confirm('Remove this asset from the campaign? Assets will remain in the library.')) {
-      return;
-    }
-
+    const ok = await confirm({
+      title: 'Remove from campaign?',
+      description: 'The asset stays in the library; it just leaves this campaign.',
+      confirmLabel: 'Remove',
+      variant: 'danger',
+    });
+    if (!ok) return;
     try {
       const headers = buildAuthHeaders(accessToken);
       headers['Content-Type'] = 'application/json';
-
       const response = await fetch(`/api/campaigns/${campaignId}/remove-asset`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ assetId }),
       });
-
       if (!response.ok) throw new Error('Failed to remove asset');
-
-      // Remove from local state
-      setAssets(assets.filter(a => a.id !== assetId));
-    } catch (err) {
-      console.error('Failed to remove asset', err);
-      alert('Failed to remove asset from campaign');
+      setAssets(assets.filter((a) => a.id !== assetId));
+      toast.success('Asset removed from campaign.');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove asset from campaign.');
     }
   };
 
   const handleDownload = async (asset: AssetRecord, format?: string) => {
     if (!asset.current_version?.downloadPath) return;
-
     const downloadKey = format ? `video-${asset.id}-${format}` : `asset-action-${asset.id}`;
-    setDownloadingFormats(prev => new Set(prev).add(downloadKey));
-
+    setDownloadingFormats((prev) => new Set(prev).add(downloadKey));
     try {
       const downloadUrl = ensureTokenUrl(asset.current_version.downloadPath, accessToken);
       const filename = asset.use_title_as_filename && asset.title
         ? `${asset.title}.${asset.current_version.mime_type?.split('/')[1] || 'bin'}`
-        : asset.current_version.originalFileName || `${asset.title || 'asset'}.${asset.current_version.mime_type?.split('/')[1] || 'bin'}`;
+        : asset.current_version.originalFileName ||
+          `${asset.title || 'asset'}.${asset.current_version.mime_type?.split('/')[1] || 'bin'}`;
 
-      // For video formats, use the format URL
       if (format && asset.vimeo_download_formats) {
-        const formatObj = asset.vimeo_download_formats.find(f => f.resolution === format);
+        const formatObj = asset.vimeo_download_formats.find((f) => f.resolution === format);
         if (formatObj?.url) {
           const link = document.createElement('a');
           link.href = formatObj.url;
           link.download = `${asset.title || 'video'}_${format}.mp4`;
           link.click();
-          setDownloadingFormats(prev => {
-            const next = new Set(prev);
-            next.delete(downloadKey);
-            return next;
-          });
           return;
         }
       }
 
-      // For regular assets, fetch and download
       const response = await fetch(downloadUrl, { headers: buildAuthHeaders(accessToken) });
       if (!response.ok) throw new Error('Download failed');
-
       let downloadFilename = filename;
       const contentDisposition = response.headers.get('Content-Disposition');
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (filenameMatch && filenameMatch[1]) {
-          downloadFilename = filenameMatch[1].replace(/['"]/g, '');
-        }
+        const m = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (m && m[1]) downloadFilename = m[1].replace(/['"]/g, '');
       }
-
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -232,11 +226,10 @@ export default function CampaignDetailPage() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-      console.error('Download failed', err);
-      alert('Failed to download asset');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to download asset.');
     } finally {
-      setDownloadingFormats(prev => {
+      setDownloadingFormats((prev) => {
         const next = new Set(prev);
         next.delete(downloadKey);
         return next;
@@ -246,160 +239,130 @@ export default function CampaignDetailPage() {
 
   const formatDateRange = (startDate?: string | null, endDate?: string | null) => {
     if (!startDate && !endDate) return null;
-    
-    const formatDate = (dateStr: string) => {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    };
-
-    if (startDate && endDate) {
-      return `${formatDate(startDate)} – ${formatDate(endDate)}`;
-    } else if (startDate) {
-      return `From ${formatDate(startDate)}`;
-    } else if (endDate) {
-      return `Until ${formatDate(endDate)}`;
-    }
+    const fmt = (d: string) =>
+      new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (startDate && endDate) return `${fmt(startDate)} – ${fmt(endDate)}`;
+    if (startDate) return `From ${fmt(startDate)}`;
+    if (endDate) return `Until ${fmt(endDate)}`;
     return null;
   };
 
   const renderAssetTypePill = (type: string, size: 'sm' | 'md' = 'md') => {
-    const typeMap: Record<string, { label: string; bg: string; text: string }> = {
-      image: { label: 'Image', bg: 'bg-blue-100', text: 'text-blue-700' },
-      video: { label: 'Video', bg: 'bg-purple-100', text: 'text-purple-700' },
-      document: { label: 'Document', bg: 'bg-green-100', text: 'text-green-700' },
-      artwork: { label: 'Artwork', bg: 'bg-orange-100', text: 'text-orange-700' },
-      audio: { label: 'Audio', bg: 'bg-pink-100', text: 'text-pink-700' },
-      font: { label: 'Font', bg: 'bg-gray-100', text: 'text-gray-700' },
-      archive: { label: 'Archive', bg: 'bg-yellow-100', text: 'text-yellow-700' },
-      other: { label: 'Other', bg: 'bg-gray-100', text: 'text-gray-700' },
-    };
-
-    const typeInfo = typeMap[type.toLowerCase()] || typeMap.other;
-    const sizeClasses = size === 'sm' ? 'text-[10px] px-1.5 py-0.5' : 'text-xs px-2 py-1';
-
+    const sizeClasses = size === 'sm' ? 'text-[10px] px-1.5 py-0.5' : 'text-xs px-2 py-0.5';
     return (
-      <span className={`rounded-md ${typeInfo.bg} ${typeInfo.text} ${sizeClasses} font-medium`}>
-        {typeInfo.label}
+      <span className={`inline-flex items-center rounded-sm bg-muted ${sizeClasses} text-muted-foreground capitalize`}>
+        {type}
       </span>
     );
   };
 
-  // Show loading when status is 'idle' (waiting for session) or 'loading' (fetching data)
   if (status === 'loading' || status === 'idle') {
     return (
-      <div className="p-8">
-        <div className="text-center text-gray-500">Loading campaign...</div>
+      <div className="px-6 py-8">
+        <p className="text-sm text-muted-foreground">Loading campaign…</p>
       </div>
     );
   }
 
   if (status === 'error') {
     return (
-      <div className="p-8">
-        <div className="text-center text-red-500">{errorMessage || 'Failed to load campaign'}</div>
+      <div className="px-6 py-8">
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{errorMessage || 'Failed to load campaign.'}</AlertDescription>
+        </Alert>
+        <Link href="/admin/dam/campaigns">
+          <Button variant="outline">
+            <ArrowLeft className="h-4 w-4" /> Back to campaigns
+          </Button>
+        </Link>
       </div>
     );
   }
 
-  if (status === 'success' && !campaign) {
-    return (
-      <div className="p-8">
-        <div className="text-center text-red-500">Campaign not found</div>
-      </div>
-    );
-  }
-
-  if (status !== 'success' || !campaign) {
-    return null;
-  }
+  if (!campaign) return null;
 
   return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="mb-6">
-        <button
-          onClick={() => router.push('/admin/dam/campaigns')}
-          className="mb-4 inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+    <div className="px-6 py-8 space-y-4">
+      <div>
+        <Link
+          href="/admin/dam/campaigns"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeftIcon className="h-4 w-4" />
-          Back to Campaigns
-        </button>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to campaigns
+        </Link>
+      </div>
 
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">{campaign.name}</h1>
-            {campaign.description && (
-              <p className="mt-1 text-sm text-gray-600">{campaign.description}</p>
-            )}
-            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-600">
-              {campaign.product_line && (
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-                  {campaign.product_line}
-                </span>
-              )}
-              {formatDateRange(campaign.start_date, campaign.end_date) && (
-                <div className="flex items-center gap-1.5">
-                  <CalendarIcon className="h-4 w-4" />
-                  <span>{formatDateRange(campaign.start_date, campaign.end_date)}</span>
-                </div>
-              )}
-              <span className="text-gray-500">
-                {assets.length} {assets.length === 1 ? 'asset' : 'assets'}
-              </span>
+      <PageHeader
+        title={campaign.name}
+        description={campaign.description || undefined}
+        actions={
+          <>
+            <div className="inline-flex items-center rounded-md border border-border bg-muted/30 p-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode('compact')}
+                className={`px-2.5 py-1 text-xs font-medium rounded-sm transition-colors ${
+                  viewMode === 'compact'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Compact
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('comfortable')}
+                className={`px-2.5 py-1 text-xs font-medium rounded-sm transition-colors ${
+                  viewMode === 'comfortable'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Comfortable
+              </button>
             </div>
-          </div>
-          <button
-            onClick={() => setShowAddAssetsModal(true)}
-            className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition"
-          >
-            <PlusIcon className="h-4 w-4" />
-            Add Assets to Campaign
-          </button>
-        </div>
+            <Button size="sm" onClick={() => setShowAddAssetsModal(true)}>
+              <Plus className="h-4 w-4" /> Add assets
+            </Button>
+          </>
+        }
+      />
+
+      {/* Meta row */}
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        {campaign.product_line && <Badge variant="muted">{campaign.product_line}</Badge>}
+        {formatDateRange(campaign.start_date, campaign.end_date) && (
+          <span className="inline-flex items-center gap-1">
+            <Calendar className="h-3.5 w-3.5" />
+            {formatDateRange(campaign.start_date, campaign.end_date)}
+          </span>
+        )}
+        <span>{assets.length} {assets.length === 1 ? 'asset' : 'assets'}</span>
       </div>
 
-      {/* View Mode Toggle */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2 rounded-lg border border-gray-300 bg-gray-50 p-1">
-          <button
-            onClick={() => setViewMode('compact')}
-            className={`rounded px-3 py-1 text-xs font-medium transition ${
-              viewMode === 'compact'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Compact
-          </button>
-          <button
-            onClick={() => setViewMode('comfortable')}
-            className={`rounded px-3 py-1 text-xs font-medium transition ${
-              viewMode === 'comfortable'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Comfortable
-          </button>
-        </div>
-      </div>
-
-      {/* Assets Grid */}
+      {/* Assets */}
       {assets.length === 0 ? (
-        <div className="rounded-lg border border-gray-200 bg-white p-12 text-center">
-          <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-4 text-sm font-medium text-gray-900">No assets in this campaign</h3>
-          <p className="mt-2 text-sm text-gray-500">Add assets to get started.</p>
-          <button
-            onClick={() => setShowAddAssetsModal(true)}
-            className="mt-4 inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition"
-          >
-            <PlusIcon className="h-4 w-4" />
-            Add Assets
-          </button>
-        </div>
+        <Card>
+          <EmptyState
+            icon={<ImageIcon />}
+            title="No assets in this campaign yet"
+            description="Pick assets from the library to attach them to this campaign."
+            action={
+              <Button size="sm" onClick={() => setShowAddAssetsModal(true)}>
+                <Plus className="h-4 w-4" /> Add assets
+              </Button>
+            }
+            className="border-0 shadow-none"
+          />
+        </Card>
       ) : (
-        <div className={`grid gap-2.5 ${viewMode === 'compact' ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'}`}>
+        <div
+          className={`grid gap-2 ${
+            viewMode === 'compact'
+              ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6'
+              : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
+          }`}
+        >
           {assets.map((asset) => (
             <div key={asset.id} className="relative group">
               <AssetCard
@@ -417,23 +380,23 @@ export default function CampaignDetailPage() {
                 assetSubtypes={assetSubtypes}
                 renderAssetTypePill={renderAssetTypePill}
               />
-              {/* Remove from campaign button */}
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleRemoveAsset(asset.id);
                 }}
-                className="absolute top-2 right-2 z-30 rounded-md bg-red-600/90 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-700"
+                className="absolute top-2 right-2 z-30 inline-flex h-6 w-6 items-center justify-center rounded-md bg-background/95 text-destructive shadow-sm opacity-0 transition-opacity group-hover:opacity-100 hover:bg-background"
                 title="Remove from campaign"
+                aria-label="Remove from campaign"
               >
-                <TrashIcon className="h-3.5 w-3.5" />
+                <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
         </div>
       )}
 
-      {/* Asset Detail Modal */}
       {selectedAsset && (
         <AssetDetailModal
           asset={selectedAsset}
@@ -446,11 +409,10 @@ export default function CampaignDetailPage() {
         />
       )}
 
-      {/* Add Assets Modal */}
       {showAddAssetsModal && (
         <AddAssetsModal
           campaignId={campaignId}
-          existingAssetIds={assets.map(a => a.id)}
+          existingAssetIds={assets.map((a) => a.id)}
           onClose={() => setShowAddAssetsModal(false)}
           onAssetsAdded={() => {
             fetchCampaign();
@@ -463,7 +425,9 @@ export default function CampaignDetailPage() {
   );
 }
 
-// Add Assets Modal Component
+// ----------------------------------------------------------------------------
+// Add Assets Modal
+// ----------------------------------------------------------------------------
 interface AddAssetsModalProps {
   campaignId: string;
   existingAssetIds: string[];
@@ -472,7 +436,14 @@ interface AddAssetsModalProps {
   accessToken: string | null;
 }
 
-function AddAssetsModal({ campaignId, existingAssetIds, onClose, onAssetsAdded, accessToken }: AddAssetsModalProps) {
+function AddAssetsModal({
+  campaignId,
+  existingAssetIds,
+  onClose,
+  onAssetsAdded,
+  accessToken,
+}: AddAssetsModalProps) {
+  const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [assets, setAssets] = useState<AssetRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -480,14 +451,12 @@ function AddAssetsModal({ campaignId, existingAssetIds, onClose, onAssetsAdded, 
   const [adding, setAdding] = useState(false);
   const [filters, setFilters] = useState({
     assetType: '',
-    locale: '',
-    region: '',
-    tag: '',
     productLine: '',
   });
 
   useEffect(() => {
     fetchAssets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, filters]);
 
   const fetchAssets = async () => {
@@ -497,19 +466,15 @@ function AddAssetsModal({ campaignId, existingAssetIds, onClose, onAssetsAdded, 
       const params = new URLSearchParams();
       if (searchTerm) params.set('q', searchTerm);
       if (filters.assetType) params.set('assetType', filters.assetType);
-      if (filters.locale) params.set('locale', filters.locale);
-      if (filters.region) params.set('region', filters.region);
-      if (filters.tag) params.set('tag', filters.tag);
       if (filters.productLine) params.set('productLine', filters.productLine);
       params.set('limit', '100');
-
       const response = await fetch(`/api/dam/assets?${params.toString()}`, { headers });
       if (!response.ok) throw new Error('Failed to fetch assets');
-
       const data = await response.json();
-      // Filter out assets already in campaign
-      const availableAssets = (data.assets || []).filter((a: AssetRecord) => !existingAssetIds.includes(a.id));
-      setAssets(availableAssets);
+      const available = (data.assets || []).filter(
+        (a: AssetRecord) => !existingAssetIds.includes(a.id)
+      );
+      setAssets(available);
     } catch (err) {
       console.error('Failed to load assets', err);
     } finally {
@@ -518,198 +483,167 @@ function AddAssetsModal({ campaignId, existingAssetIds, onClose, onAssetsAdded, 
   };
 
   const handleToggleSelection = (assetId: string) => {
-    setSelectedAssetIds(prev => {
+    setSelectedAssetIds((prev) => {
       const next = new Set(prev);
-      if (next.has(assetId)) {
-        next.delete(assetId);
-      } else {
-        next.add(assetId);
-      }
+      if (next.has(assetId)) next.delete(assetId);
+      else next.add(assetId);
       return next;
     });
   };
 
   const handleAddAssets = async () => {
-    if (selectedAssetIds.size === 0) {
-      alert('Please select at least one asset');
-      return;
-    }
-
+    if (selectedAssetIds.size === 0) return;
     try {
       setAdding(true);
       const headers = buildAuthHeaders(accessToken);
       headers['Content-Type'] = 'application/json';
-
       const response = await fetch(`/api/campaigns/${campaignId}/add-assets`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ assetIds: Array.from(selectedAssetIds) }),
       });
-
       if (!response.ok) throw new Error('Failed to add assets');
-
+      toast.success(`${selectedAssetIds.size} asset${selectedAssetIds.size !== 1 ? 's' : ''} added.`);
       onAssetsAdded();
-    } catch (err) {
-      console.error('Failed to add assets', err);
-      alert('Failed to add assets to campaign');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add assets to campaign.');
     } finally {
       setAdding(false);
     }
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div className="w-full max-w-6xl max-h-[90vh] rounded-lg bg-white shadow-xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-900">Add Assets to Campaign</h2>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 text-gray-400 hover:text-gray-600"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => !open && !adding && onClose()}>
+      <DialogContent className="max-w-6xl h-[85vh] p-0 flex flex-col">
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle>Add assets to campaign</DialogTitle>
+        </DialogHeader>
 
-        {/* Search and Filters */}
-        <div className="border-b border-gray-200 px-6 py-4 space-y-3">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search assets by title, tag, SKU, product…"
-            className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-          />
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <select
-              value={filters.assetType}
-              onChange={(e) => setFilters({ ...filters, assetType: e.target.value })}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+        <div className="px-6 py-3 border-b border-border space-y-3 shrink-0">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              type="search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search assets by title, tag, SKU, product…"
+              className="pl-9"
+            />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <Select
+              value={filters.assetType || ALL}
+              onValueChange={(v) =>
+                setFilters({ ...filters, assetType: v === ALL ? '' : v })
+              }
             >
-              <option value="">All Types</option>
-              <option value="image">Image</option>
-              <option value="video">Video</option>
-              <option value="document">Document</option>
-            </select>
-            <select
-              value={filters.locale}
-              onChange={(e) => setFilters({ ...filters, locale: e.target.value })}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Asset type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All types</SelectItem>
+                <SelectItem value="image">Image</SelectItem>
+                <SelectItem value="video">Video</SelectItem>
+                <SelectItem value="document">Document</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={filters.productLine || ALL}
+              onValueChange={(v) =>
+                setFilters({ ...filters, productLine: v === ALL ? '' : v })
+              }
             >
-              <option value="">All Locales</option>
-            </select>
-            <select
-              value={filters.region}
-              onChange={(e) => setFilters({ ...filters, region: e.target.value })}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-            >
-              <option value="">All Regions</option>
-            </select>
-            <select
-              value={filters.tag}
-              onChange={(e) => setFilters({ ...filters, tag: e.target.value })}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-            >
-              <option value="">All Tags</option>
-            </select>
-            <select
-              value={filters.productLine}
-              onChange={(e) => setFilters({ ...filters, productLine: e.target.value })}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-            >
-              <option value="">All Product Lines</option>
-              <option value="ProCtrl">ProCtrl</option>
-              <option value="SelfCtrl">SelfCtrl</option>
-              <option value="Both">Both</option>
-            </select>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Product line" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All product lines</SelectItem>
+                <SelectItem value="ProCtrl">ProCtrl</SelectItem>
+                <SelectItem value="SelfCtrl">SelfCtrl</SelectItem>
+                <SelectItem value="Both">Both</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        {/* Assets Grid */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
           {loading ? (
-            <div className="text-center text-gray-500 py-8">Loading assets...</div>
+            <p className="text-sm text-muted-foreground py-6 text-center">Loading assets…</p>
           ) : assets.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">No assets found</div>
+            <p className="text-sm text-muted-foreground py-6 text-center">No matching assets.</p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {assets.map((asset) => (
-                <div
-                  key={asset.id}
-                  onClick={() => handleToggleSelection(asset.id)}
-                  className={`relative cursor-pointer rounded-lg border-2 overflow-hidden transition ${
-                    selectedAssetIds.has(asset.id)
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <div className="aspect-square bg-gray-100 relative">
-                    {asset.asset_type === 'video' && asset.vimeo_video_id ? (
-                      <img
-                        src={`https://vumbnail.com/${asset.vimeo_video_id}.jpg`}
-                        alt={asset.title}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : asset.current_version?.previewPath && accessToken ? (
-                      <img
-                        src={ensureTokenUrl(asset.current_version.previewPath, accessToken)}
-                        alt={asset.title}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-gray-400">
-                        <PhotoIcon className="h-12 w-12" />
-                      </div>
-                    )}
-                    {selectedAssetIds.has(asset.id) && (
-                      <div className="absolute top-2 right-2 rounded-full bg-blue-600 p-1">
-                        <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-2">
-                    <p className="text-xs font-medium text-gray-900 truncate">{asset.title}</p>
-                  </div>
-                </div>
-              ))}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {assets.map((asset) => {
+                const selected = selectedAssetIds.has(asset.id);
+                return (
+                  <button
+                    key={asset.id}
+                    type="button"
+                    onClick={() => handleToggleSelection(asset.id)}
+                    className={`relative text-left rounded-md border overflow-hidden transition-all ${
+                      selected
+                        ? 'border-brand-periwinkle ring-2 ring-brand-periwinkle/30 bg-brand-periwinkle/5'
+                        : 'border-border hover:border-foreground/30'
+                    }`}
+                  >
+                    <div className="aspect-square bg-muted/40 relative">
+                      {asset.asset_type === 'video' && asset.vimeo_video_id ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={`https://vumbnail.com/${asset.vimeo_video_id}.jpg`}
+                          alt={asset.title}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : asset.current_version?.previewPath && accessToken ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={ensureTokenUrl(asset.current_version.previewPath, accessToken)}
+                          alt={asset.title}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                          <ImageIcon className="h-10 w-10" />
+                        </div>
+                      )}
+                      {selected && (
+                        <div className="absolute top-2 right-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-periwinkle text-white shadow-sm">
+                          <Check className="h-3 w-3" strokeWidth={3} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-2">
+                      <p className="text-xs font-medium text-foreground truncate">{asset.title}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-          <span className="text-sm text-gray-600">
+        <DialogFooter className="px-6 py-3 border-t border-border flex items-center justify-between sm:justify-between gap-2 shrink-0">
+          <span className="text-xs text-muted-foreground">
             {selectedAssetIds.size} {selectedAssetIds.size === 1 ? 'asset' : 'assets'} selected
           </span>
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={onClose} disabled={adding}>
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleAddAssets}
               disabled={selectedAssetIds.size === 0 || adding}
-              className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              loading={adding}
             >
-              {adding ? 'Adding...' : `Add ${selectedAssetIds.size} Asset${selectedAssetIds.size !== 1 ? 's' : ''}`}
-            </button>
+              {adding
+                ? 'Adding…'
+                : `Add ${selectedAssetIds.size || ''} ${
+                    selectedAssetIds.size === 1 ? 'asset' : 'assets'
+                  }`.trim()}
+            </Button>
           </div>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
-
