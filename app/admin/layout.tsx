@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -24,7 +24,7 @@ import {
   CreditCard,
   DollarSign,
   Settings,
-  Bell,
+  MessageSquare,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabaseClient';
@@ -34,8 +34,8 @@ import { AppShell } from '../components/qq/app-shell';
 import { Sidebar } from '../components/qq/sidebar';
 import { Topbar } from '../components/qq/topbar';
 import { Brand } from '../components/qq/brand';
-import { Button } from '../components/qq/button';
 import { Avatar, AvatarFallback } from '../components/qq/avatar';
+import FeedbackPopup from '../components/ui/FeedbackPopup';
 import {
   Sheet,
   SheetContent,
@@ -135,6 +135,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [userEmail, setUserEmail] = useState<string>('');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const feedbackButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -198,6 +200,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             brand={
               <Brand
                 title="Partners Hub"
+                logoSrc="/QIQI-Logo-cropped.svg"
                 sidebarCollapsed={collapsed}
                 onToggleSidebar={() => setCollapsed((c) => !c)}
               />
@@ -206,9 +209,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             left={null}
             right={
               <>
-                <Button variant="ghost" size="icon" aria-label="Notifications">
-                  <Bell className="h-4 w-4" />
-                </Button>
+                <button
+                  ref={feedbackButtonRef}
+                  type="button"
+                  onClick={() => setFeedbackOpen((v) => !v)}
+                  className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                  aria-label="Send feedback"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="hidden sm:inline">Feedback</span>
+                </button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -253,6 +263,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Sidebar>
         </SheetContent>
       </Sheet>
+
+      <FeedbackPopup
+        isOpen={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        buttonRef={feedbackButtonRef}
+      />
     </>
   );
 }

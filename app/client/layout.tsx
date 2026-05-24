@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -8,7 +8,7 @@ import {
   Image as ImageIcon,
   StickyNote,
   Building2,
-  Bell,
+  MessageSquare,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabaseClient';
@@ -18,7 +18,6 @@ import { AppShell } from '../components/qq/app-shell';
 import { Sidebar } from '../components/qq/sidebar';
 import { Topbar } from '../components/qq/topbar';
 import { Brand } from '../components/qq/brand';
-import { Button } from '../components/qq/button';
 import { Avatar, AvatarFallback } from '../components/qq/avatar';
 import {
   Sheet,
@@ -34,14 +33,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/qq/dropdown-menu';
+import FeedbackPopup from '../components/ui/FeedbackPopup';
 
 // ----------------------------------------------------------------------------
-// Nav structure — flat, no nested sub-menus (mirrors admin layout pattern)
+// Nav structure
 // ----------------------------------------------------------------------------
 interface NavItem {
   label: string;
   href: string;
   icon: ReactNode;
+  /** Optional key used to look up dynamic state (e.g. unread badge). */
+  key?: string;
 }
 interface NavGroup {
   label?: string;
@@ -54,7 +56,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Dashboard', href: '/client',         icon: <LayoutDashboard /> },
       { label: 'Orders',    href: '/client/orders',  icon: <ShoppingCart /> },
       { label: 'Assets',    href: '/client/assets',  icon: <ImageIcon /> },
-      { label: 'Notes',     href: '/client/notes',   icon: <StickyNote /> },
+      { label: 'Notes',     href: '/client/notes',   icon: <StickyNote />, key: 'notes' },
     ],
   },
   {
@@ -67,9 +69,17 @@ const NAV_GROUPS: NavGroup[] = [
 
 function isActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
-  if (href === '/client') return false; // dashboard only matches exactly
+  if (href === '/client') return false;
   return pathname.startsWith(`${href}/`);
 }
+
+// Red dot indicator for the Notes sidebar item
+const UnreadDot = () => (
+  <span
+    aria-label="Unread notes"
+    className="inline-block h-1.5 w-1.5 rounded-full bg-brand-magenta"
+  />
+);
 
 // ----------------------------------------------------------------------------
 // Layout
@@ -80,8 +90,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string>('');
+  const [userId, setUserId] = useState<string>('');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Unread notes indicator
+  const [hasUnreadNotes, setHasUnreadNotes] = useState(false);
+
+  // Feedback popup
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const feedbackButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -99,6 +117,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           return;
         }
         setUserEmail(user.email || '');
+        setUserId(user.id);
       } catch {
         router.push('/');
         return;
@@ -107,6 +126,66 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       setLoading(false);
     })();
   }, [router]);
+
+  // ---- Unread notes check ----
+  const checkUnreadNotes = async (clientId: string) => {
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('company_id')
+        .eq('id', clientId)
+        .single();
+      if (!clientData?.company_id) return;
+
+      const { data: notes } = await supabase
+        .from('company_notes')
+        .select('id')
+        .eq('company_id', clientData.company_id)
+        .eq('visible_to_client', true);
+      if (!notes || notes.length === 0) {
+        setHasUnreadNotes(false);
+        return;
+      }
+
+      const { data: viewed } = await supabase
+        .from('client_note_views')
+        .select('note_id')
+        .eq('client_id', clientId)
+        .in('note_id', notes.map((n) => n.id));
+
+      const viewedIds = new Set((viewed || []).map((v) => v.note_id));
+      setHasUnreadNotes(notes.some((n) => !viewedIds.has(n.id)));
+    } catch (err) {
+      console.error('Error checking unread notes:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!userId) return;
+    checkUnreadNotes(userId);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') checkUnreadNotes(userId);
+    };
+    const handleNotesViewed = () => {
+      // Tiny delay so the DB write lands before we re-check
+      setTimeout(() => checkUnreadNotes(userId), 500);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('notesViewed', handleNotesViewed);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('notesViewed', handleNotesViewed);
+    };
+  }, [userId]);
+
+  // Re-check unread badge whenever the user navigates away from /client/notes
+  useEffect(() => {
+    if (userId && pathname !== '/client/notes') {
+      checkUnreadNotes(userId);
+    }
+  }, [pathname, userId]);
 
   // Close the mobile drawer on route change
   useEffect(() => {
@@ -128,7 +207,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   if (!isAuthenticated) return null;
 
-  const sidebarContent = <NavContent pathname={pathname} />;
+  const sidebarContent = (
+    <NavContent pathname={pathname} hasUnreadNotes={hasUnreadNotes} />
+  );
   const initials = userEmail ? userEmail.split('@')[0].slice(0, 2).toUpperCase() : 'C';
 
   return (
@@ -144,6 +225,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             brand={
               <Brand
                 title="Partners Hub"
+                logoSrc="/QIQI-Logo-cropped.svg"
                 sidebarCollapsed={collapsed}
                 onToggleSidebar={() => setCollapsed((c) => !c)}
               />
@@ -152,9 +234,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             left={null}
             right={
               <>
-                <Button variant="ghost" size="icon" aria-label="Notifications">
-                  <Bell className="h-4 w-4" />
-                </Button>
+                <button
+                  ref={feedbackButtonRef}
+                  type="button"
+                  onClick={() => setFeedbackOpen((v) => !v)}
+                  className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                  aria-label="Send feedback"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="hidden sm:inline">Feedback</span>
+                </button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -199,11 +288,24 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </Sidebar>
         </SheetContent>
       </Sheet>
+
+      {/* Feedback popup — positioned relative to its button */}
+      <FeedbackPopup
+        isOpen={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        buttonRef={feedbackButtonRef}
+      />
     </>
   );
 }
 
-function NavContent({ pathname }: { pathname: string }) {
+function NavContent({
+  pathname,
+  hasUnreadNotes,
+}: {
+  pathname: string;
+  hasUnreadNotes: boolean;
+}) {
   return (
     <Sidebar.Nav>
       {NAV_GROUPS.map((group, idx) => (
@@ -214,6 +316,7 @@ function NavContent({ pathname }: { pathname: string }) {
               href={it.href}
               icon={it.icon}
               active={isActive(pathname, it.href)}
+              badge={it.key === 'notes' && hasUnreadNotes ? <UnreadDot /> : undefined}
             >
               {it.label}
             </Sidebar.Item>
