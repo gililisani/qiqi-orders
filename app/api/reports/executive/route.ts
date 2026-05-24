@@ -7,11 +7,14 @@ import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth
  * Returns the full payload backing /admin/reports in a single shot:
  *   { period, prevPeriod, kpis, trend, funnel, topCompanies, topProducts }
  *
- * - `window` chooses a preset; if `custom`, `from`/`to` are required.
- * - 30d/90d/ytd presets hit the pre-rolled MVs (mv_company_sales,
- *   mv_product_sales). Custom windows fall back to live aggregation —
- *   slower but exact, and gated by the admin guard so volume is low.
- * - The status funnel always queries `orders` live.
+ * Data sources:
+ *   - Revenue / Active Partners / Top Companies / Trend: orders (committed)
+ *     UNION historical_sales (pre-NetSuite backfill table).
+ *   - AOV: orders only (historical_sales has no order concept).
+ *   - Top Products / Order Status Funnel / Support Fund Used: orders only.
+ *
+ * Presets (30d / 90d / ytd) read pre-rolled MVs; custom windows aggregate
+ * live (slower, exact, admin-only so volume is low).
  */
 
 type WindowKey = '30d' | '90d' | 'ytd' | 'custom';
@@ -44,6 +47,42 @@ function periodRange(window: WindowKey, fromParam: string | null, toParam: strin
   return { from, to, prevFrom, prevTo };
 }
 
+interface DailyRow {
+  day: string;
+  source: 'orders' | 'historical';
+  orders: number | string | null;
+  revenue: number | string | null;
+  support_fund_used: number | string | null;
+}
+
+interface DailyAgg {
+  revenue: number;          // orders + historical
+  supportFundUsed: number;  // orders only (historical contributes 0)
+  orders: number;           // orders only
+  ordersRevenue: number;    // orders only — denominator-side of AOV
+}
+
+function aggregateDaily(rows: DailyRow[]): Map<string, DailyAgg> {
+  const out = new Map<string, DailyAgg>();
+  for (const r of rows) {
+    const entry = out.get(r.day) ?? {
+      revenue: 0,
+      supportFundUsed: 0,
+      orders: 0,
+      ordersRevenue: 0,
+    };
+    const rev = Number(r.revenue) || 0;
+    const sf = Number(r.support_fund_used) || 0;
+    const ord = Number(r.orders) || 0;
+    entry.revenue += rev;
+    entry.supportFundUsed += sf;
+    entry.orders += ord;
+    if (r.source === 'orders') entry.ordersRevenue += rev;
+    out.set(r.day, entry);
+  }
+  return out;
+}
+
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin(request);
@@ -55,18 +94,18 @@ export async function GET(request: NextRequest) {
     const { from, to, prevFrom, prevTo } = periodRange(window, fromParam, toParam);
     const supabase = createServiceRoleClient();
 
-    // --- KPIs + sales trend: from mv_daily_sales (works for every window). ---
+    // --- KPIs + sales trend: from mv_daily_sales (orders + historical). ---
     const [{ data: dailyRows, error: dailyErr }, { data: prevRows, error: prevErr }] =
       await Promise.all([
         supabase
           .from('mv_daily_sales')
-          .select('day, orders, revenue, support_fund_used')
+          .select('day, source, orders, revenue, support_fund_used')
           .gte('day', from.toISOString().slice(0, 10))
           .lte('day', to.toISOString().slice(0, 10))
           .order('day', { ascending: true }),
         supabase
           .from('mv_daily_sales')
-          .select('orders, revenue')
+          .select('day, source, orders, revenue, support_fund_used')
           .gte('day', prevFrom.toISOString().slice(0, 10))
           .lte('day', prevTo.toISOString().slice(0, 10)),
       ]);
@@ -74,46 +113,92 @@ export async function GET(request: NextRequest) {
     if (dailyErr) throw dailyErr;
     if (prevErr) throw prevErr;
 
-    const trend = (dailyRows ?? []).map((r) => ({
-      day: r.day,
-      revenue: Number(r.revenue) || 0,
-      supportFundUsed: Number(r.support_fund_used) || 0,
-      orders: Number(r.orders) || 0,
-    }));
+    const dailyAgg = aggregateDaily((dailyRows ?? []) as DailyRow[]);
+    const prevAgg = aggregateDaily((prevRows ?? []) as DailyRow[]);
 
-    const totalRevenue = trend.reduce((s, r) => s + r.revenue, 0);
-    const totalOrders = trend.reduce((s, r) => s + r.orders, 0);
-    const totalSupportFund = trend.reduce((s, r) => s + r.supportFundUsed, 0);
-    const aov = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const trend = Array.from(dailyAgg.entries())
+      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+      .map(([day, v]) => ({
+        day,
+        revenue: v.revenue,
+        supportFundUsed: v.supportFundUsed,
+        orders: v.orders,
+      }));
 
-    const prevRevenue = (prevRows ?? []).reduce((s, r) => s + (Number(r.revenue) || 0), 0);
-    const prevOrders = (prevRows ?? []).reduce((s, r) => s + (Number(r.orders) || 0), 0);
-    const prevAov = prevOrders > 0 ? prevRevenue / prevOrders : 0;
+    let totalRevenue = 0;
+    let totalSupportFund = 0;
+    let totalOrders = 0;
+    let totalOrdersRevenue = 0;
+    for (const v of dailyAgg.values()) {
+      totalRevenue += v.revenue;
+      totalSupportFund += v.supportFundUsed;
+      totalOrders += v.orders;
+      totalOrdersRevenue += v.ordersRevenue;
+    }
+    const aov = totalOrders > 0 ? totalOrdersRevenue / totalOrders : 0;
 
-    // --- Active partners: live distinct count in period (cheap; uses index). ---
-    const { data: partnerRows, error: partnerErr } = await supabase
-      .from('orders')
-      .select('company_id', { count: 'exact', head: false })
-      .gte('created_at', from.toISOString())
-      .lte('created_at', to.toISOString())
-      .in('status', COMMITTED_STATUSES)
-      .not('company_id', 'is', null);
+    let prevRevenue = 0;
+    let prevOrders = 0;
+    let prevOrdersRevenue = 0;
+    let prevSupportFund = 0;
+    for (const v of prevAgg.values()) {
+      prevRevenue += v.revenue;
+      prevOrders += v.orders;
+      prevOrdersRevenue += v.ordersRevenue;
+      prevSupportFund += v.supportFundUsed;
+    }
+    const prevAov = prevOrders > 0 ? prevOrdersRevenue / prevOrders : 0;
 
-    if (partnerErr) throw partnerErr;
-    const activePartners = new Set((partnerRows ?? []).map((r) => r.company_id)).size;
+    // --- Active partners: union of committed-order companies + historical
+    //     companies in the period. ---
+    const [
+      { data: orderPartnerRows, error: orderPartnerErr },
+      { data: histPartnerRows, error: histPartnerErr },
+      { data: prevOrderPartnerRows, error: prevOrderPartnerErr },
+      { data: prevHistPartnerRows, error: prevHistPartnerErr },
+    ] = await Promise.all([
+      supabase
+        .from('orders')
+        .select('company_id')
+        .gte('created_at', from.toISOString())
+        .lte('created_at', to.toISOString())
+        .in('status', COMMITTED_STATUSES)
+        .not('company_id', 'is', null),
+      supabase
+        .from('historical_sales')
+        .select('company_id')
+        .gte('sale_date', from.toISOString().slice(0, 10))
+        .lte('sale_date', to.toISOString().slice(0, 10)),
+      supabase
+        .from('orders')
+        .select('company_id')
+        .gte('created_at', prevFrom.toISOString())
+        .lte('created_at', prevTo.toISOString())
+        .in('status', COMMITTED_STATUSES)
+        .not('company_id', 'is', null),
+      supabase
+        .from('historical_sales')
+        .select('company_id')
+        .gte('sale_date', prevFrom.toISOString().slice(0, 10))
+        .lte('sale_date', prevTo.toISOString().slice(0, 10)),
+    ]);
 
-    const { data: prevPartnerRows, error: prevPartnerErr } = await supabase
-      .from('orders')
-      .select('company_id')
-      .gte('created_at', prevFrom.toISOString())
-      .lte('created_at', prevTo.toISOString())
-      .in('status', COMMITTED_STATUSES)
-      .not('company_id', 'is', null);
+    if (orderPartnerErr) throw orderPartnerErr;
+    if (histPartnerErr) throw histPartnerErr;
+    if (prevOrderPartnerErr) throw prevOrderPartnerErr;
+    if (prevHistPartnerErr) throw prevHistPartnerErr;
 
-    if (prevPartnerErr) throw prevPartnerErr;
-    const prevActivePartners = new Set((prevPartnerRows ?? []).map((r) => r.company_id)).size;
+    const partnerSet = new Set<string>();
+    for (const r of orderPartnerRows ?? []) if (r.company_id) partnerSet.add(r.company_id);
+    for (const r of histPartnerRows ?? []) if (r.company_id) partnerSet.add(r.company_id);
+    const activePartners = partnerSet.size;
 
-    // --- Order status funnel: live, current period. ---
+    const prevPartnerSet = new Set<string>();
+    for (const r of prevOrderPartnerRows ?? []) if (r.company_id) prevPartnerSet.add(r.company_id);
+    for (const r of prevHistPartnerRows ?? []) if (r.company_id) prevPartnerSet.add(r.company_id);
+    const prevActivePartners = prevPartnerSet.size;
+
+    // --- Order status funnel: live, current period, orders only. ---
     const { data: funnelRows, error: funnelErr } = await supabase
       .from('orders')
       .select('status, total_value')
@@ -142,13 +227,14 @@ export async function GET(request: NextRequest) {
     let topProducts: Array<{ productId: number; sku: string | null; name: string | null; units: number; revenue: number }> = [];
 
     if (usePresetMv) {
+      // Fetch all rows for this window (orders + historical, both sources).
+      // PostgREST can't GROUP BY, so we sum per company in JS — at most ~few
+      // hundred companies × 2 sources, trivially fast.
       const [companiesRes, productsRes] = await Promise.all([
         supabase
           .from('mv_company_sales')
-          .select('company_id, orders, revenue, companies:company_id(company_name)')
-          .eq('window_key', window)
-          .order('revenue', { ascending: false })
-          .limit(10),
+          .select('company_id, source, orders, revenue, companies:company_id(company_name)')
+          .eq('window_key', window),
         supabase
           .from('mv_product_sales')
           .select('product_id, units, revenue, Products:product_id(sku, item_name)')
@@ -160,14 +246,24 @@ export async function GET(request: NextRequest) {
       if (companiesRes.error) throw companiesRes.error;
       if (productsRes.error) throw productsRes.error;
 
-      topCompanies = (companiesRes.data ?? []).map((r: any) => ({
-        companyId: r.company_id,
-        name: r.companies?.company_name ?? 'Unknown',
-        orders: Number(r.orders) || 0,
-        revenue: Number(r.revenue) || 0,
-      }));
+      const compMap = new Map<string, { name: string; orders: number; revenue: number }>();
+      for (const r of (companiesRes.data ?? []) as any[]) {
+        if (!r.company_id) continue;
+        const entry = compMap.get(r.company_id) ?? {
+          name: r.companies?.company_name ?? 'Unknown',
+          orders: 0,
+          revenue: 0,
+        };
+        entry.orders += Number(r.orders) || 0;
+        entry.revenue += Number(r.revenue) || 0;
+        compMap.set(r.company_id, entry);
+      }
+      topCompanies = Array.from(compMap.entries())
+        .map(([companyId, v]) => ({ companyId, ...v }))
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 10);
 
-      topProducts = (productsRes.data ?? []).map((r: any) => ({
+      topProducts = ((productsRes.data ?? []) as any[]).map((r) => ({
         productId: r.product_id,
         sku: r.Products?.sku ?? null,
         name: r.Products?.item_name ?? null,
@@ -175,19 +271,27 @@ export async function GET(request: NextRequest) {
         revenue: Number(r.revenue) || 0,
       }));
     } else {
-      // Custom window: live aggregate. Pull all committed orders in range +
-      // join items in app code (single round-trip each).
-      const { data: liveOrders, error: liveOrdersErr } = await supabase
-        .from('orders')
-        .select('id, company_id, total_value, companies:company_id(company_name)')
-        .gte('created_at', from.toISOString())
-        .lte('created_at', to.toISOString())
-        .in('status', COMMITTED_STATUSES);
+      // Custom window: live aggregate across orders + historical_sales.
+      const [liveOrdersRes, liveHistRes] = await Promise.all([
+        supabase
+          .from('orders')
+          .select('id, company_id, total_value, companies:company_id(company_name)')
+          .gte('created_at', from.toISOString())
+          .lte('created_at', to.toISOString())
+          .in('status', COMMITTED_STATUSES),
+        supabase
+          .from('historical_sales')
+          .select('company_id, amount, companies:company_id(company_name)')
+          .gte('sale_date', from.toISOString().slice(0, 10))
+          .lte('sale_date', to.toISOString().slice(0, 10)),
+      ]);
 
-      if (liveOrdersErr) throw liveOrdersErr;
+      if (liveOrdersRes.error) throw liveOrdersRes.error;
+      if (liveHistRes.error) throw liveHistRes.error;
+      const liveOrders = liveOrdersRes.data ?? [];
 
       const compMap = new Map<string, { name: string; orders: number; revenue: number }>();
-      for (const o of liveOrders ?? []) {
+      for (const o of liveOrders) {
         if (!o.company_id) continue;
         const entry = compMap.get(o.company_id) ?? {
           name: (o as any).companies?.company_name ?? 'Unknown',
@@ -198,12 +302,22 @@ export async function GET(request: NextRequest) {
         entry.revenue += Number(o.total_value) || 0;
         compMap.set(o.company_id, entry);
       }
+      for (const h of liveHistRes.data ?? []) {
+        if (!h.company_id) continue;
+        const entry = compMap.get(h.company_id) ?? {
+          name: (h as any).companies?.company_name ?? 'Unknown',
+          orders: 0,
+          revenue: 0,
+        };
+        entry.revenue += Number(h.amount) || 0;
+        compMap.set(h.company_id, entry);
+      }
       topCompanies = Array.from(compMap.entries())
         .map(([companyId, v]) => ({ companyId, ...v }))
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 10);
 
-      const orderIds = (liveOrders ?? []).map((o) => o.id);
+      const orderIds = liveOrders.map((o) => o.id);
       if (orderIds.length > 0) {
         const { data: liveItems, error: liveItemsErr } = await supabase
           .from('order_items')
@@ -244,7 +358,7 @@ export async function GET(request: NextRequest) {
         totalSales: { value: totalRevenue, deltaPct: pct(totalRevenue, prevRevenue) },
         activePartners: { value: activePartners, deltaPct: pct(activePartners, prevActivePartners) },
         aov: { value: aov, deltaPct: pct(aov, prevAov) },
-        supportFundUsed: { value: totalSupportFund, deltaPct: null },
+        supportFundUsed: { value: totalSupportFund, deltaPct: pct(totalSupportFund, prevSupportFund) },
         orders: { value: totalOrders, deltaPct: pct(totalOrders, prevOrders) },
       },
       trend,

@@ -137,8 +137,7 @@ export default function ExecutiveDashboardPage() {
         <KpiCard
           label="Support Fund Used"
           value={loading || !data ? '—' : formatCurrency(data.kpis.supportFundUsed.value)}
-          deltaPct={null}
-          hint="this period"
+          deltaPct={data?.kpis.supportFundUsed.deltaPct ?? null}
         />
       </div>
 
