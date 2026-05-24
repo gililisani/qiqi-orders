@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { TrashIcon, ChevronDownIcon, ChevronUpIcon, PhotoIcon, DocumentTextIcon, FilmIcon, MusicalNoteIcon } from '@heroicons/react/24/outline';
+import { Trash2, ChevronDown, ChevronUp, Image as ImageIcon, FileText, Film, Music } from 'lucide-react';
 import { LocaleOption } from './types';
 
 interface BulkFile {
@@ -85,10 +85,10 @@ export default function BulkUploadCard({
   const [newTagLabel, setNewTagLabel] = useState('');
 
   const getFileIcon = () => {
-    if (file.assetType === 'image') return <PhotoIcon className="h-12 w-12 text-blue-500" />;
-    if (file.assetType === 'document' || file.assetType === 'artwork') return <DocumentTextIcon className="h-12 w-12 text-green-500" />;
-    if (file.assetType === 'video') return <FilmIcon className="h-12 w-12 text-purple-500" />;
-    return <DocumentTextIcon className="h-12 w-12 text-gray-500" />;
+    if (file.assetType === 'image') return <ImageIcon className="h-12 w-12 text-blue-500" />;
+    if (file.assetType === 'document' || file.assetType === 'artwork') return <FileText className="h-12 w-12 text-green-500" />;
+    if (file.assetType === 'video') return <Film className="h-12 w-12 text-purple-500" />;
+    return <FileText className="h-12 w-12 text-gray-500" />;
   };
 
   const renderThumbnail = () => {
@@ -242,7 +242,7 @@ export default function BulkUploadCard({
           disabled={isUploading || file.status === 'uploading'}
           className="flex-shrink-0 rounded-md p-1 text-gray-400 hover:text-red-600 disabled:opacity-50 transition"
         >
-          <TrashIcon className="h-4 w-4" />
+          <Trash2 className="h-4 w-4" />
         </button>
       </div>
 
@@ -369,9 +369,9 @@ export default function BulkUploadCard({
       >
         <span>More metadata</span>
         {isExpanded ? (
-          <ChevronUpIcon className="h-4 w-4" />
+          <ChevronUp className="h-4 w-4" />
         ) : (
-          <ChevronDownIcon className="h-4 w-4" />
+          <ChevronDown className="h-4 w-4" />
         )}
       </button>
 

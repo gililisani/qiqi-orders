@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { PencilIcon } from '@heroicons/react/24/outline';
+import { Pencil } from 'lucide-react';
 import { LocaleOption, RegionOption, AssetRecord } from './types';
 import { ensureTokenUrl } from './utils';
 import BulkUploadCard from './BulkUploadCard';
 import BulkUploadDefaults from './BulkUploadDefaults';
+
+import { Card } from '../qq/card';
+import { Button } from '../qq/button';
 
 interface BulkEditFile {
   assetId: string;
@@ -141,31 +144,30 @@ export default function BulkEditPanel({
   });
 
   return (
-    <div className="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm">
-      {/* Header - Fixed at top */}
-      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 bg-white sticky top-0 z-10">
+    <Card className="mb-6 overflow-hidden">
+      {/* Header - sticky at top */}
+      <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-background sticky top-0 z-10">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Bulk Edit</h3>
-          <p className="text-xs text-gray-500 mt-0.5">{assets.length} asset{assets.length !== 1 ? 's' : ''} selected</p>
+          <h3 className="text-sm font-semibold">Bulk edit</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {assets.length} asset{assets.length !== 1 ? 's' : ''} selected
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isSaving}
-            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
+          <Button variant="outline" size="sm" onClick={onCancel} disabled={isSaving}>
             Cancel
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            size="sm"
             onClick={onSave}
             disabled={!canSave || isSaving}
-            className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            loading={isSaving}
           >
-            <PencilIcon className="h-4 w-4" />
-            {isSaving ? 'Saving...' : `Save ${assets.length} Asset${assets.length !== 1 ? 's' : ''}`}
-          </button>
+            <Pencil className="h-3.5 w-3.5" />
+            {isSaving
+              ? 'Saving…'
+              : `Save ${assets.length} asset${assets.length !== 1 ? 's' : ''}`}
+          </Button>
         </div>
       </div>
 
@@ -184,14 +186,14 @@ export default function BulkEditPanel({
         />
       )}
 
-      {/* Asset Grid - Scrollable */}
+      {/* Asset grid */}
       <div className="p-4">
         {assets.length === 0 ? (
-          <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-            <p className="text-sm text-gray-500">No assets selected</p>
+          <div className="text-center py-12 border-2 border-dashed border-border rounded-md">
+            <p className="text-sm text-muted-foreground">No assets selected.</p>
           </div>
         ) : (
-          <div className="mt-4 rounded-lg border border-gray-300 bg-[#fafafa] p-4">
+          <div className="rounded-md border border-border bg-muted/30 p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {assets.map((asset) => {
                 // Create a dummy file for BulkUploadCard compatibility
@@ -251,7 +253,7 @@ export default function BulkEditPanel({
           </div>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 

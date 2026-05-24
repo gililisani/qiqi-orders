@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { ArrowUpTrayIcon } from '@heroicons/react/24/outline';
+import { Upload } from 'lucide-react';
 import { LocaleOption } from './types';
 import BulkUploadCard from './BulkUploadCard';
 import BulkUploadDefaults from './BulkUploadDefaults';
+
+import { Card } from '../qq/card';
+import { Button } from '../qq/button';
 
 interface BulkFile {
   tempId: string;
@@ -321,31 +324,30 @@ export default function BulkUploadPanel({
   });
 
   return (
-    <div className="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm">
-      {/* Header - Fixed at top */}
-      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 bg-white sticky top-0 z-10">
+    <Card className="mb-6 overflow-hidden">
+      {/* Header - sticky at top */}
+      <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-background sticky top-0 z-10">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Bulk Upload</h3>
-          <p className="text-xs text-gray-500 mt-0.5">{files.length} file{files.length !== 1 ? 's' : ''} selected</p>
+          <h3 className="text-sm font-semibold">Bulk upload</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {files.length} file{files.length !== 1 ? 's' : ''} selected
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isUploading}
-            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
+          <Button variant="outline" size="sm" onClick={onCancel} disabled={isUploading}>
             Cancel
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            size="sm"
             onClick={onUpload}
             disabled={!canUpload || isUploading}
-            className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            loading={isUploading}
           >
-            <ArrowUpTrayIcon className="h-4 w-4" />
-            {isUploading ? 'Uploading...' : `Upload ${files.length} Asset${files.length !== 1 ? 's' : ''}`}
-          </button>
+            <Upload className="h-3.5 w-3.5" />
+            {isUploading
+              ? 'Uploading…'
+              : `Upload ${files.length} asset${files.length !== 1 ? 's' : ''}`}
+          </Button>
         </div>
       </div>
 
@@ -364,9 +366,11 @@ export default function BulkUploadPanel({
         />
       )}
 
-      {/* File Selector / Drop Zone */}
-      <div className="px-4 py-3 border-b border-gray-200">
-        <label className="block text-xs font-medium text-gray-700 mb-2">Select Files</label>
+      {/* File selector */}
+      <div className="px-4 py-3 border-b border-border">
+        <label className="block text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
+          Select files
+        </label>
         <div className="flex items-center">
           <input
             ref={fileInputRef}
@@ -377,30 +381,39 @@ export default function BulkUploadPanel({
             disabled={isUploading}
             id="bulk-upload-file-input"
           />
-          <label
-            htmlFor="bulk-upload-file-input"
-            className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-xs font-medium text-white hover:opacity-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
-            <ArrowUpTrayIcon className="h-4 w-4" />
-            Choose Files
+          <label htmlFor="bulk-upload-file-input">
+            <span
+              className={`inline-flex items-center gap-2 rounded-md bg-foreground text-background px-3 py-1.5 text-sm font-medium hover:opacity-90 cursor-pointer transition ${
+                isUploading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              <Upload className="h-3.5 w-3.5" />
+              Choose files
+            </span>
           </label>
         </div>
       </div>
 
-      {/* File Grid - Scrollable */}
+      {/* File grid */}
       <div
-        className={`p-4 ${isDragging ? 'bg-blue-50 border-2 border-blue-400 border-dashed' : ''}`}
+        className={`p-4 transition-colors ${
+          isDragging ? 'bg-brand-periwinkle/5' : ''
+        }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         {files.length === 0 ? (
-          <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-            <p className="text-sm text-gray-500 mb-2">Drag and drop files here</p>
-            <p className="text-xs text-gray-400">or use the file selector above</p>
+          <div
+            className={`text-center py-12 border-2 border-dashed rounded-md transition-colors ${
+              isDragging ? 'border-brand-periwinkle bg-brand-periwinkle/5' : 'border-border'
+            }`}
+          >
+            <p className="text-sm text-muted-foreground mb-1">Drag and drop files here</p>
+            <p className="text-xs text-muted-foreground/70">or use the file selector above</p>
           </div>
         ) : (
-          <div className="mt-4 rounded-lg border border-gray-300 bg-[#fafafa] p-4">
+          <div className="rounded-md border border-border bg-muted/30 p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {files.map((file) => (
                 <BulkUploadCard
@@ -428,6 +441,6 @@ export default function BulkUploadPanel({
           </div>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
