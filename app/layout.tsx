@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { createServerSupabase } from '../lib/supabase-server';
 import { SupabaseProvider } from '../lib/supabase-provider';
-import MaterialThemeProvider from './components/ThemeProvider';
 import ToastProvider from './components/ui/ToastProvider';
 import ConfirmProvider from './components/ui/ConfirmProvider';
 
@@ -36,13 +35,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <body className={inter.className}>
         <SupabaseProvider session={session}>
-          <MaterialThemeProvider>
-            <ToastProvider>
-              <ConfirmProvider>
-                {children}
-              </ConfirmProvider>
-            </ToastProvider>
-          </MaterialThemeProvider>
+          <ToastProvider>
+            <ConfirmProvider>
+              {children}
+            </ConfirmProvider>
+          </ToastProvider>
         </SupabaseProvider>
       </body>
     </html>

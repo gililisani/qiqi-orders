@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Select, Option } from '../../components/MaterialTailwind';
 import Card from '../ui/Card';
 import { MultiSelect } from './MultiSelect';
 
@@ -91,21 +90,24 @@ export function ReportFilters({ filters, values, onChange, loading, onSubmit, on
           if (filter.type === 'select') {
             return (
               <div key={filter.key}>
-                <Select
-                  label={filter.label}
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {filter.label}
+                </label>
+                <select
                   value={values[filter.key] || ''}
-                  onChange={(val) => handleSelectChange(filter.key, val)}
+                  onChange={(e) => handleSelectChange(filter.key, e.target.value || undefined)}
                   disabled={loading}
-                  placeholder={filter.placeholder}
-                  onPointerEnterCapture={undefined}
-                  onPointerLeaveCapture={undefined}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black disabled:bg-gray-100 disabled:cursor-not-allowed bg-white"
                 >
+                  {filter.placeholder && (
+                    <option value="">{filter.placeholder}</option>
+                  )}
                   {filter.options?.map((option) => (
-                    <Option key={option.value} value={option.value}>
+                    <option key={option.value} value={option.value}>
                       {option.label}
-                    </Option>
+                    </option>
                   ))}
-                </Select>
+                </select>
               </div>
             );
           }

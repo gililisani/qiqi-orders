@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Button } from '../MaterialTailwind';
+import Button from '../ui/Button';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { exportToExcel, exportToCSV, ColumnDef as ExportColumnDef, generateFilename } from '../../../lib/reportExport';
 
@@ -43,10 +43,7 @@ export function ExportButton({
     <Button
       onClick={handleExport}
       disabled={disabled || data.length === 0}
-      className="flex items-center gap-2"
-      placeholder={undefined}
-      onPointerEnterCapture={undefined}
-      onPointerLeaveCapture={undefined}
+      className="gap-2"
     >
       <ArrowDownTrayIcon className="h-5 w-5" />
       Export {format.toUpperCase()}
