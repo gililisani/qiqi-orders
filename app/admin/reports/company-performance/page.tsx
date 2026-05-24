@@ -47,6 +47,8 @@ interface PeriodRow {
   companyId: string;
   companyName: string;
   netsuiteNumber: string | null;
+  subsidiaryId: string | null;
+  isEnrolled: boolean;
   periodName: string;
   startDate: string;
   endDate: string;
@@ -59,7 +61,7 @@ interface PeriodRow {
   expectedPct: number;
   paceDeltaPct: number;
   status: Status;
-  sfAllocated: number;
+  sfEarned: number;
   sfUsed: number;
   sfBalance: number;
 }
@@ -74,11 +76,15 @@ interface Kpis {
   totalTarget: number;
   totalActual: number;
   overallProgressPct: number;
-  sfAllocated: number;
+  enrolledCount: number;
+  notEnrolledCount: number;
+  sfEarned: number;
   sfUsed: number;
   sfRedemptionPct: number;
   toppingUpCount: number;
   avgTopUp: number;
+  leftoverTotal: number;
+  topUpTotal: number;
 }
 
 interface SfBehavior {
@@ -90,10 +96,21 @@ interface SfBehavior {
   sampleSize: number;
 }
 
+interface FilterOptions {
+  companies: Array<{
+    id: string;
+    name: string;
+    subsidiaryId: string | null;
+    isEnrolled: boolean;
+  }>;
+  subsidiaries: Array<{ id: string; name: string }>;
+}
+
 interface Payload {
   rows: PeriodRow[];
   kpis: Kpis;
   sfBehavior: SfBehavior;
+  filterOptions: FilterOptions;
 }
 
 type Scope = 'active' | 'all';
@@ -104,7 +121,7 @@ type SortKey =
   | 'actual'
   | 'progressPct'
   | 'paceDeltaPct'
-  | 'sfAllocated'
+  | 'sfEarned'
   | 'sfUsed'
   | 'sfBalance';
 
@@ -112,6 +129,8 @@ export default function CompanyPerformancePage() {
   const router = useRouter();
   const sp = useSearchParams();
   const scope = (sp.get('scope') as Scope) ?? 'active';
+  const companyId = sp.get('companyId') ?? '';
+  const subsidiaryId = sp.get('subsidiaryId') ?? '';
 
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,7 +143,12 @@ export default function CompanyPerformancePage() {
     setLoading(true);
     setError(null);
 
-    fetchWithAuth(`/api/reports/company-performance?scope=${scope}`)
+    const qs = new URLSearchParams();
+    qs.set('scope', scope);
+    if (companyId) qs.set('companyId', companyId);
+    if (subsidiaryId) qs.set('subsidiaryId', subsidiaryId);
+
+    fetchWithAuth(`/api/reports/company-performance?${qs.toString()}`)
       .then(async (res) => {
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error || 'Failed to load');
@@ -143,13 +167,23 @@ export default function CompanyPerformancePage() {
     return () => {
       cancelled = true;
     };
-  }, [scope]);
+  }, [scope, companyId, subsidiaryId]);
 
-  const setScope = (s: Scope) => {
+  const updateParam = (key: string, value: string | null) => {
     const params = new URLSearchParams(sp.toString());
-    params.set('scope', s);
+    if (value) params.set(key, value);
+    else params.delete(key);
     router.push(`/admin/reports/company-performance?${params.toString()}`);
   };
+
+  // When subsidiary changes, drop a company selection that no longer fits.
+  const filteredCompanyOptions = useMemo(() => {
+    if (!data) return [];
+    if (!subsidiaryId) return data.filterOptions.companies;
+    return data.filterOptions.companies.filter(
+      (c) => c.subsidiaryId === subsidiaryId,
+    );
+  }, [data, subsidiaryId]);
 
   const sortedRows = useMemo(() => {
     if (!data) return [];
@@ -193,22 +227,66 @@ export default function CompanyPerformancePage() {
           </Link>
         }
         actions={
-          <div className="inline-flex rounded-md border border-border bg-card p-1">
-            {(['active', 'all'] as Scope[]).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setScope(s)}
-                className={cn(
-                  'px-3 py-1.5 text-sm rounded transition-colors',
-                  scope === s
-                    ? 'bg-foreground text-background'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary',
-                )}
-              >
-                {s === 'active' ? 'Active periods' : 'All periods'}
-              </button>
-            ))}
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={subsidiaryId}
+              onChange={(e) => {
+                const v = e.target.value || null;
+                const params = new URLSearchParams(sp.toString());
+                if (v) params.set('subsidiaryId', v);
+                else params.delete('subsidiaryId');
+                // Drop company filter if it no longer matches the subsidiary.
+                if (companyId && data) {
+                  const co = data.filterOptions.companies.find(
+                    (c) => c.id === companyId,
+                  );
+                  if (v && co?.subsidiaryId !== v) params.delete('companyId');
+                }
+                router.push(
+                  `/admin/reports/company-performance?${params.toString()}`,
+                );
+              }}
+              className="h-9 rounded-md border border-border bg-card px-3 text-sm text-foreground min-w-[140px]"
+              aria-label="Subsidiary filter"
+            >
+              <option value="">All subsidiaries</option>
+              {data?.filterOptions.subsidiaries.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={companyId}
+              onChange={(e) => updateParam('companyId', e.target.value || null)}
+              className="h-9 rounded-md border border-border bg-card px-3 text-sm text-foreground min-w-[180px]"
+              aria-label="Company filter"
+            >
+              <option value="">All companies</option>
+              {filteredCompanyOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {!c.isEnrolled ? ' — not enrolled' : ''}
+                </option>
+              ))}
+            </select>
+            <div className="inline-flex rounded-md border border-border bg-card p-1">
+              {(['active', 'all'] as Scope[]).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => updateParam('scope', s === 'active' ? null : s)}
+                  className={cn(
+                    'px-3 py-1.5 text-sm rounded transition-colors',
+                    scope === s
+                      ? 'bg-foreground text-background'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary',
+                  )}
+                >
+                  {s === 'active' ? 'Active' : 'All periods'}
+                </button>
+              ))}
+            </div>
           </div>
         }
       />
@@ -244,11 +322,14 @@ export default function CompanyPerformancePage() {
         />
         <SfRedemptionKpi
           loading={loading}
-          allocated={data?.kpis.sfAllocated ?? 0}
+          enrolled={data?.kpis.enrolledCount ?? 0}
+          notEnrolled={data?.kpis.notEnrolledCount ?? 0}
+          earned={data?.kpis.sfEarned ?? 0}
           used={data?.kpis.sfUsed ?? 0}
           pct={data?.kpis.sfRedemptionPct ?? 0}
           toppingUpCount={data?.kpis.toppingUpCount ?? 0}
-          avgTopUp={data?.kpis.avgTopUp ?? 0}
+          topUpTotal={data?.kpis.topUpTotal ?? 0}
+          leftoverTotal={data?.kpis.leftoverTotal ?? 0}
         />
       </div>
 
@@ -267,81 +348,22 @@ export default function CompanyPerformancePage() {
             </div>
           ) : sortedRows.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
-              No {scope === 'active' ? 'active' : ''} target periods found.
+              No target periods match these filters.
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableHead
-                    label="Company"
-                    sortKey="companyName"
-                    current={sortKey}
-                    dir={sortDir}
-                    onClick={toggleSort}
-                  />
-                  <SortableHead
-                    label="Period"
-                    sortKey="periodName"
-                    current={sortKey}
-                    dir={sortDir}
-                    onClick={toggleSort}
-                  />
-                  <SortableHead
-                    label="Target"
-                    sortKey="target"
-                    current={sortKey}
-                    dir={sortDir}
-                    onClick={toggleSort}
-                    align="right"
-                  />
-                  <SortableHead
-                    label="Actual"
-                    sortKey="actual"
-                    current={sortKey}
-                    dir={sortDir}
-                    onClick={toggleSort}
-                    align="right"
-                  />
-                  <SortableHead
-                    label="Progress"
-                    sortKey="progressPct"
-                    current={sortKey}
-                    dir={sortDir}
-                    onClick={toggleSort}
-                  />
-                  <SortableHead
-                    label="Pace"
-                    sortKey="paceDeltaPct"
-                    current={sortKey}
-                    dir={sortDir}
-                    onClick={toggleSort}
-                    align="right"
-                  />
+                  <SortableHead label="Company" sortKey="companyName" current={sortKey} dir={sortDir} onClick={toggleSort} />
+                  <SortableHead label="Period" sortKey="periodName" current={sortKey} dir={sortDir} onClick={toggleSort} />
+                  <SortableHead label="Target" sortKey="target" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
+                  <SortableHead label="Actual" sortKey="actual" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
+                  <SortableHead label="Progress" sortKey="progressPct" current={sortKey} dir={sortDir} onClick={toggleSort} />
+                  <SortableHead label="Pace" sortKey="paceDeltaPct" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
                   <TableHead>Status</TableHead>
-                  <SortableHead
-                    label="SF Earned"
-                    sortKey="sfAllocated"
-                    current={sortKey}
-                    dir={sortDir}
-                    onClick={toggleSort}
-                    align="right"
-                  />
-                  <SortableHead
-                    label="SF Used"
-                    sortKey="sfUsed"
-                    current={sortKey}
-                    dir={sortDir}
-                    onClick={toggleSort}
-                    align="right"
-                  />
-                  <SortableHead
-                    label="Balance"
-                    sortKey="sfBalance"
-                    current={sortKey}
-                    dir={sortDir}
-                    onClick={toggleSort}
-                  />
+                  <SortableHead label="Credit Earned" sortKey="sfEarned" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
+                  <SortableHead label="Credit Used" sortKey="sfUsed" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
+                  <SortableHead label="Balance" sortKey="sfBalance" current={sortKey} dir={sortDir} onClick={toggleSort} />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -381,15 +403,23 @@ export default function CompanyPerformancePage() {
                     <TableCell>
                       <StatusPill status={r.status} />
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm tabular-nums">
-                      {formatCurrency(r.sfAllocated)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-sm tabular-nums">
-                      {formatCurrency(r.sfUsed)}
-                    </TableCell>
-                    <TableCell>
-                      <BalancePill balance={r.sfBalance} />
-                    </TableCell>
+                    {r.isEnrolled ? (
+                      <>
+                        <TableCell className="text-right font-mono text-sm tabular-nums">
+                          {formatCurrency(r.sfEarned)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm tabular-nums">
+                          {formatCurrency(r.sfUsed)}
+                        </TableCell>
+                        <TableCell>
+                          <BalancePill balance={r.sfBalance} hasActivity={r.sfEarned > 0 || r.sfUsed > 0} />
+                        </TableCell>
+                      </>
+                    ) : (
+                      <TableCell colSpan={3} className="text-left">
+                        <NotEnrolledPill />
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -400,11 +430,18 @@ export default function CompanyPerformancePage() {
 
       {/* Support fund behavior */}
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader className="flex-row items-baseline justify-between space-y-0 pb-2">
           <CardTitle>Support fund behavior</CardTitle>
+          <span className="text-xs text-muted-foreground">
+            Enrolled partners only
+          </span>
         </CardHeader>
         <CardContent>
-          <SfBehaviorBlock loading={loading} data={data?.sfBehavior} />
+          <SfBehaviorBlock
+            loading={loading}
+            data={data?.sfBehavior}
+            notEnrolledCount={data?.kpis.notEnrolledCount ?? 0}
+          />
         </CardContent>
       </Card>
     </div>
@@ -531,36 +568,54 @@ function ProgressKpi({
 
 function SfRedemptionKpi({
   loading,
-  allocated,
+  enrolled,
+  notEnrolled,
+  earned,
   used,
   pct,
   toppingUpCount,
-  avgTopUp,
+  topUpTotal,
+  leftoverTotal,
 }: {
   loading: boolean;
-  allocated: number;
+  enrolled: number;
+  notEnrolled: number;
+  earned: number;
   used: number;
   pct: number;
   toppingUpCount: number;
-  avgTopUp: number;
+  topUpTotal: number;
+  leftoverTotal: number;
 }) {
   return (
     <Card>
       <CardContent className="p-4 pt-4">
         <p className="text-xs text-muted-foreground uppercase tracking-wider">
-          SF Redemption
+          Credit Redemption
         </p>
         <p className="mt-1 text-2xl font-semibold text-foreground tabular-nums">
-          {loading ? '—' : `${pct.toFixed(0)}%`}
+          {loading ? '—' : earned > 0 ? `${pct.toFixed(0)}%` : '—'}
         </p>
         <p className="mt-1 text-xs text-muted-foreground tabular-nums">
           {loading
             ? ''
-            : `${formatCurrency(used)} / ${formatCurrency(allocated)}`}
+            : earned > 0
+              ? `${formatCurrency(used)} of ${formatCurrency(earned)} earned`
+              : `${enrolled} enrolled · ${notEnrolled} not enrolled`}
         </p>
-        {!loading && toppingUpCount > 0 && (
+        {!loading && (toppingUpCount > 0 || leftoverTotal > 0) && (
           <p className="mt-1 text-xs text-muted-foreground">
-            {toppingUpCount} topping up · avg {formatCurrency(avgTopUp)}
+            {toppingUpCount > 0 && (
+              <span className="text-rose-600">
+                {toppingUpCount} top-up · {formatCurrency(topUpTotal)}
+              </span>
+            )}
+            {toppingUpCount > 0 && leftoverTotal > 0 && ' · '}
+            {leftoverTotal > 0 && (
+              <span className="text-emerald-700">
+                {formatCurrency(leftoverTotal)} unused
+              </span>
+            )}
           </p>
         )}
       </CardContent>
@@ -588,7 +643,6 @@ function ProgressBar({
           )}
           style={{ width: `${clamped}%` }}
         />
-        {/* Expected pace marker */}
         <div
           className="absolute top-0 h-full w-px bg-foreground/40"
           style={{ left: `${expectedClamped}%` }}
@@ -613,8 +667,7 @@ function PaceCell({
   if (status === 'Not Started' || status === 'Complete') {
     return <span className="text-muted-foreground text-sm">—</span>;
   }
-  const direction =
-    deltaPct > 1 ? 'up' : deltaPct < -1 ? 'down' : 'flat';
+  const direction = deltaPct > 1 ? 'up' : deltaPct < -1 ? 'down' : 'flat';
   const Icon =
     direction === 'up' ? ArrowUpRight : direction === 'down' ? ArrowDownRight : Minus;
   const color =
@@ -656,16 +709,27 @@ function StatusPill({ status }: { status: Status }) {
   );
 }
 
-function BalancePill({ balance }: { balance: number }) {
+function BalancePill({
+  balance,
+  hasActivity,
+}: {
+  balance: number;
+  hasActivity: boolean;
+}) {
+  if (!hasActivity) {
+    return <span className="text-xs text-muted-foreground">No activity</span>;
+  }
   if (Math.abs(balance) < 0.01) {
     return (
-      <span className="text-xs text-muted-foreground">Even</span>
+      <span className="inline-flex items-center rounded-sm border border-border bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
+        Fully redeemed
+      </span>
     );
   }
   if (balance > 0) {
     return (
       <span className="inline-flex items-center rounded-sm border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 font-mono">
-        +{formatCurrency(balance)} left
+        +{formatCurrency(balance)} unused
       </span>
     );
   }
@@ -676,12 +740,22 @@ function BalancePill({ balance }: { balance: number }) {
   );
 }
 
+function NotEnrolledPill() {
+  return (
+    <span className="inline-flex items-center rounded-sm border border-border bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
+      Not enrolled in support fund
+    </span>
+  );
+}
+
 function SfBehaviorBlock({
   loading,
   data,
+  notEnrolledCount,
 }: {
   loading: boolean;
   data?: SfBehavior;
+  notEnrolledCount: number;
 }) {
   if (loading || !data) {
     return <Skeleton className="h-24 w-full" />;
@@ -690,6 +764,15 @@ function SfBehaviorBlock({
     return (
       <p className="text-sm text-muted-foreground">
         No Done orders with support-fund activity in the selected periods.
+        {notEnrolledCount > 0 && (
+          <>
+            {' '}
+            <span className="text-xs">
+              ({notEnrolledCount} partner{notEnrolledCount === 1 ? '' : 's'} not
+              enrolled and excluded.)
+            </span>
+          </>
+        )}
       </p>
     );
   }
@@ -699,6 +782,7 @@ function SfBehaviorBlock({
         <p className="text-xs text-muted-foreground mb-2">
           Distribution across {data.sampleSize} order
           {data.sampleSize === 1 ? '' : 's'}
+          {notEnrolledCount > 0 && ` · ${notEnrolledCount} partner${notEnrolledCount === 1 ? '' : 's'} excluded (not enrolled)`}
         </p>
         <div className="flex h-3 w-full overflow-hidden rounded-full bg-secondary">
           <div
@@ -718,21 +802,9 @@ function SfBehaviorBlock({
           />
         </div>
         <div className="mt-3 space-y-1.5 text-sm">
-          <LegendRow
-            color="bg-emerald-500"
-            label="Fully redeemed"
-            pct={data.fullyRedeemedPct}
-          />
-          <LegendRow
-            color="bg-amber-400"
-            label="Under-redeemed (balance left)"
-            pct={data.underRedeemedPct}
-          />
-          <LegendRow
-            color="bg-rose-500"
-            label="Topped up (extra paid in)"
-            pct={data.toppedUpPct}
-          />
+          <LegendRow color="bg-emerald-500" label="Fully redeemed" pct={data.fullyRedeemedPct} />
+          <LegendRow color="bg-amber-400" label="Under-redeemed (balance left)" pct={data.underRedeemedPct} />
+          <LegendRow color="bg-rose-500" label="Topped up (extra paid in)" pct={data.toppedUpPct} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
