@@ -88,7 +88,10 @@ export default function FeedbackPopup({ isOpen, onClose }: FeedbackPopupProps) {
       formData.append('userEmail', userEmail);
       if (screenshot && view === 'issue') formData.append('screenshot', screenshot);
 
-      const res = await fetch('/api/feedback/submit', { method: 'POST', body: formData });
+      const res = await fetchWithAuth('/api/feedback/submit', {
+        method: 'POST',
+        body: formData,
+      });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to send feedback');
