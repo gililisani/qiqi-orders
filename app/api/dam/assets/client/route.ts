@@ -202,10 +202,30 @@ export async function GET(request: NextRequest) {
           }
         : null;
 
+      // Extract dynamic video formats stored as an HTML comment inside the
+      // description (admin endpoint does the same). Without this the client
+      // sees the raw <!--VIDEO_FORMATS:...--> comment in the modal and no
+      // download buttons render for the formats.
+      let extractedFormats: any[] | null = null;
+      let cleanDescription = record.description;
+      if (record.description && typeof record.description === 'string') {
+        const formatMatch = record.description.match(/<!--VIDEO_FORMATS:(.+?)-->/);
+        if (formatMatch) {
+          try {
+            extractedFormats = JSON.parse(formatMatch[1]);
+            cleanDescription = record.description
+              .replace(/<!--VIDEO_FORMATS:.+?-->/, '')
+              .trim();
+          } catch {
+            /* malformed comment — ignore */
+          }
+        }
+      }
+
       return {
         id: record.id,
         title: record.title,
-        description: record.description,
+        description: cleanDescription,
         asset_type: record.asset_type,
         asset_type_id: record.asset_type_id ?? null,
         asset_subtype_id: record.asset_subtype_id ?? null,
@@ -213,6 +233,7 @@ export async function GET(request: NextRequest) {
         product_name: record.product_name ?? null,
         sku: record.sku,
         vimeo_video_id: record.vimeo_video_id ?? null,
+        vimeo_download_formats: extractedFormats,
         vimeo_download_1080p: record.vimeo_download_1080p ?? null,
         vimeo_download_720p: record.vimeo_download_720p ?? null,
         vimeo_download_480p: record.vimeo_download_480p ?? null,
