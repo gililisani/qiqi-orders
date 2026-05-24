@@ -1,212 +1,402 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import {
+  createServiceRoleClient,
+  requireAdmin,
+} from '../../../../platform/auth/guards';
+import { calculateTargetPeriodProgress } from '../../../../lib/targetPeriods';
 
 /**
- * API endpoint for Company Performance Report
- * GET /api/reports/company-performance
- * Query params: startDate, endDate, companyIds (comma-separated), subsidiaryIds (comma-separated), classIds (comma-separated)
+ * GET /api/reports/company-performance?scope=active|all
+ *
+ * One row per target_period (a company × period combination). Actuals use
+ * the canonical helper calculateTargetPeriodProgress — Done orders counted
+ * on their Done-transition date plus historical_sales — so this report
+ * always agrees with /admin/reports/company-goals.
+ *
+ * Adds support-fund context per period:
+ *   - sf_allocated = SUM(orders.credit_earned) on the same Done-in-period set
+ *   - sf_used      = SUM(orders.support_fund_used) on the same set
+ *   - balance      = sf_allocated - sf_used (positive: leftover; negative: top-up)
+ *
+ * Aggregate KPIs and a small SF-behavior distribution are computed across
+ * the returned rows so the page can render the overview cards without a
+ * second round trip.
  */
+
+type Scope = 'active' | 'all';
+
+type Status =
+  | 'Not Started'
+  | 'Ahead'
+  | 'On Track'
+  | 'Slipping'
+  | 'Complete'
+  | 'At Risk';
+
+interface PeriodRow {
+  periodId: string;
+  companyId: string;
+  companyName: string;
+  netsuiteNumber: string | null;
+  periodName: string;
+  startDate: string;
+  endDate: string;
+  daysTotal: number;
+  daysElapsed: number;
+  daysRemaining: number;
+  target: number;
+  actual: number;
+  progressPct: number;
+  expectedPct: number;
+  paceDeltaPct: number;
+  status: Status;
+  sfAllocated: number;
+  sfUsed: number;
+  sfBalance: number;
+}
+
+function classifyStatus(
+  now: Date,
+  startDate: Date,
+  endDate: Date,
+  target: number,
+  actual: number,
+  progressPct: number,
+  expectedPct: number,
+): Status {
+  if (now < startDate) return 'Not Started';
+  if (now > endDate) {
+    return actual >= target ? 'Complete' : 'At Risk';
+  }
+  if (progressPct >= expectedPct + 5) return 'Ahead';
+  if (progressPct < expectedPct - 20) return 'Slipping';
+  return 'On Track';
+}
+
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin(request);
     const { searchParams } = new URL(request.url);
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    const companyIdsParam = searchParams.get('companyIds');
-    const subsidiaryIdsParam = searchParams.get('subsidiaryIds');
-    const classIdsParam = searchParams.get('classIds');
+    const scope = (searchParams.get('scope') ?? 'active') as Scope;
 
     const supabase = createServiceRoleClient();
+    const now = new Date();
+    const todayISO = now.toISOString().slice(0, 10);
 
-    // Build base query for companies
-    let companiesQuery = supabase
-      .from('companies')
-      .select(`
-        id,
-        company_name,
-        netsuite_number,
-        subsidiary:subsidiaries(name),
-        class:classes(name)
-      `)
-      .order('company_name');
+    let periodsQuery = supabase
+      .from('target_periods')
+      .select(
+        'id, company_id, period_name, start_date, end_date, target_amount, company:companies(id, company_name, netsuite_number)',
+      )
+      .order('end_date', { ascending: true });
 
-    // Handle subsidiary and class filters
-    if (subsidiaryIdsParam) {
-      const subsidiaryIds = subsidiaryIdsParam.split(',').filter(Boolean);
-      if (subsidiaryIds.length > 0) {
-        companiesQuery = companiesQuery.in('subsidiary_id', subsidiaryIds);
-      }
+    if (scope === 'active') {
+      periodsQuery = periodsQuery
+        .lte('start_date', todayISO)
+        .gte('end_date', todayISO);
     }
 
-    if (classIdsParam) {
-      const classIds = classIdsParam.split(',').filter(Boolean);
-      if (classIds.length > 0) {
-        companiesQuery = companiesQuery.in('class_id', classIds);
-      }
-    }
+    const { data: periods, error: periodsErr } = await periodsQuery;
+    if (periodsErr) throw periodsErr;
 
-    if (companyIdsParam) {
-      const companyIds = companyIdsParam.split(',').filter(Boolean);
-      if (companyIds.length > 0) {
-        companiesQuery = companiesQuery.in('id', companyIds);
-      } else {
-        // If companyIdsParam exists but is empty after filtering, return empty
-        return NextResponse.json({ data: [] });
-      }
-    }
-
-    const { data: companies, error: companiesError } = await companiesQuery;
-
-    if (companiesError) {
-      console.error('Error fetching companies:', companiesError);
-      return NextResponse.json(
-        { error: 'Failed to fetch companies' },
-        { status: 500 }
-      );
-    }
-
-    if (!companies || companies.length === 0) {
-      return NextResponse.json({ data: [] });
-    }
-
-    const companyIds = companies.map((c) => c.id);
-
-    // Build query for orders
-    let ordersQuery = supabase
-      .from('orders')
-      .select(`
-        id,
-        company_id,
-        created_at,
-        total_value,
-        status,
-        support_fund_used,
-        credit_earned,
-        order_items(
-          product:Products(sku, item_name)
-        )
-      `)
-      .in('company_id', companyIds)
-      .order('created_at', { ascending: false });
-
-    // Apply date filters
-    if (startDate) {
-      ordersQuery = ordersQuery.gte('created_at', `${startDate}T00:00:00`);
-    }
-
-    if (endDate) {
-      ordersQuery = ordersQuery.lte('created_at', `${endDate}T23:59:59`);
-    }
-
-    const { data: orders, error: ordersError } = await ordersQuery;
-
-    if (ordersError) {
-      console.error('Error fetching orders:', ordersError);
-      return NextResponse.json(
-        { error: 'Failed to fetch orders' },
-        { status: 500 }
-      );
-    }
-
-    // Aggregate data by company
-    const companyStats = new Map<string, any>();
-
-    // Initialize company stats
-    companies.forEach((company) => {
-      const subsidiary = Array.isArray(company.subsidiary)
-        ? company.subsidiary[0]?.name
-        : (company.subsidiary as any)?.name;
-      const classData = Array.isArray(company.class)
-        ? company.class[0]?.name
-        : (company.class as any)?.name;
-      
-      companyStats.set(company.id, {
-        company_id: company.id,
-        company_name: company.company_name,
-        netsuite_number: company.netsuite_number,
-        subsidiary: subsidiary || 'N/A',
-        class: classData || 'N/A',
-        total_sales: 0,
-        order_count: 0,
-        support_fund_used: 0,
-        credit_earned: 0,
-        products: new Map<string, { sku: string; name: string; quantity: number; revenue: number }>(),
+    if (!periods || periods.length === 0) {
+      return NextResponse.json({
+        rows: [],
+        kpis: emptyKpis(),
+        sfBehavior: emptySfBehavior(),
       });
-    });
+    }
 
-    // Process orders
-    (orders || []).forEach((order) => {
-      const stats = companyStats.get(order.company_id);
-      if (!stats) return;
+    const rows: PeriodRow[] = await Promise.all(
+      periods.map(async (p: any) => {
+        const target = Number(p.target_amount) || 0;
+        const company = Array.isArray(p.company) ? p.company[0] : p.company;
 
-      stats.total_sales += order.total_value || 0;
-      stats.order_count += 1;
-      stats.support_fund_used += order.support_fund_used || 0;
-      stats.credit_earned += order.credit_earned || 0;
+        const actual = await calculateTargetPeriodProgress(
+          supabase,
+          p.company_id,
+          p.start_date,
+          p.end_date,
+        );
 
-      // Track products
-      if (order.order_items && Array.isArray(order.order_items)) {
-        order.order_items.forEach((item: any) => {
-          const product = item.product;
-          if (product && product.sku) {
-            const existing = stats.products.get(product.sku) || {
-              sku: product.sku,
-              name: product.item_name || product.sku,
-              quantity: 0,
-              revenue: 0,
-            };
-            existing.quantity += item.quantity || 0;
-            existing.revenue += item.total_price || 0;
-            stats.products.set(product.sku, existing);
+        // SF allocated / used = SUM over the same Done-in-period order set.
+        const { data: doneOrders, error: doneErr } = await supabase
+          .from('orders')
+          .select('id, credit_earned, support_fund_used')
+          .eq('company_id', p.company_id)
+          .eq('status', 'Done');
+        if (doneErr) throw doneErr;
+
+        let sfAllocated = 0;
+        let sfUsed = 0;
+        if (doneOrders && doneOrders.length > 0) {
+          const orderIds = doneOrders.map((o: any) => o.id);
+          const { data: history, error: historyErr } = await supabase
+            .from('order_history')
+            .select('order_id, created_at')
+            .in('order_id', orderIds)
+            .eq('status_to', 'Done')
+            .order('created_at', { ascending: true });
+          if (historyErr) throw historyErr;
+
+          const periodStart = new Date(p.start_date);
+          const periodEnd = new Date(p.end_date);
+          periodEnd.setHours(23, 59, 59, 999);
+
+          const firstDone = new Map<string, Date>();
+          for (const h of history ?? []) {
+            if (!firstDone.has(h.order_id)) {
+              firstDone.set(h.order_id, new Date(h.created_at));
+            }
           }
-        });
-      }
-    });
 
-    // Convert to array and calculate averages
-    const results = Array.from(companyStats.values()).map((stats) => {
-      const averageOrderValue =
-        stats.order_count > 0 ? stats.total_sales / stats.order_count : 0;
+          const byId = new Map<string, any>(doneOrders.map((o: any) => [o.id, o]));
+          for (const [orderId, doneAt] of firstDone) {
+            if (doneAt >= periodStart && doneAt <= periodEnd) {
+              const o = byId.get(orderId);
+              if (o) {
+                sfAllocated += Number(o.credit_earned) || 0;
+                sfUsed += Number(o.support_fund_used) || 0;
+              }
+            }
+          }
+        }
 
-      // Get top 5 products by revenue
-      type ProductStats = { sku: string; name: string; quantity: number; revenue: number };
-      const topProducts = Array.from(stats.products.values() as Iterable<ProductStats>)
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 5)
-        .map((p) => ({
-          sku: p.sku,
-          name: p.name,
-          quantity: p.quantity,
-          revenue: p.revenue,
-        }));
+        const startDate = new Date(p.start_date);
+        const endDate = new Date(p.end_date);
+        endDate.setHours(23, 59, 59, 999);
 
-      return {
-        company_id: stats.company_id,
-        company_name: stats.company_name,
-        netsuite_number: stats.netsuite_number,
-        subsidiary: stats.subsidiary || 'N/A',
-        class: stats.class || 'N/A',
-        total_sales: stats.total_sales,
-        order_count: stats.order_count,
-        average_order_value: averageOrderValue,
-        support_fund_used: stats.support_fund_used,
-        credit_earned: stats.credit_earned,
-        top_products: topProducts,
-      };
-    });
+        const daysTotal = Math.max(
+          1,
+          Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000),
+        );
+        const daysElapsedRaw = Math.ceil(
+          (Math.min(now.getTime(), endDate.getTime()) - startDate.getTime()) /
+            86400000,
+        );
+        const daysElapsed = Math.max(0, Math.min(daysTotal, daysElapsedRaw));
+        const daysRemaining = Math.max(0, daysTotal - daysElapsed);
 
-    // Sort by total sales descending
-    results.sort((a, b) => b.total_sales - a.total_sales);
+        const progressPct = target > 0 ? (actual / target) * 100 : 0;
+        const expectedPct = (daysElapsed / daysTotal) * 100;
+        const paceDeltaPct = progressPct - expectedPct;
 
-    return NextResponse.json({ data: results });
-  } catch (error: any) {
-    if (error instanceof Response) return error;
-    console.error('Error in company-performance report:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
+        const status = classifyStatus(
+          now,
+          startDate,
+          endDate,
+          target,
+          actual,
+          progressPct,
+          expectedPct,
+        );
+
+        return {
+          periodId: p.id,
+          companyId: p.company_id,
+          companyName: company?.company_name ?? 'Unknown',
+          netsuiteNumber: company?.netsuite_number ?? null,
+          periodName: p.period_name ?? '',
+          startDate: p.start_date,
+          endDate: p.end_date,
+          daysTotal,
+          daysElapsed,
+          daysRemaining,
+          target,
+          actual,
+          progressPct,
+          expectedPct,
+          paceDeltaPct,
+          status,
+          sfAllocated,
+          sfUsed,
+          sfBalance: sfAllocated - sfUsed,
+        };
+      }),
     );
+
+    const kpis = aggregateKpis(rows);
+    const sfBehavior = await computeSfBehavior(supabase, periods);
+
+    return NextResponse.json({ rows, kpis, sfBehavior });
+  } catch (err: any) {
+    const msg = err?.message ?? 'Unknown error';
+    const status =
+      msg === 'Not authenticated' || msg === 'Forbidden' ? 401 : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }
 
+function emptyKpis() {
+  return {
+    onTrack: 0,
+    slipping: 0,
+    ahead: 0,
+    atRisk: 0,
+    complete: 0,
+    notStarted: 0,
+    totalTarget: 0,
+    totalActual: 0,
+    overallProgressPct: 0,
+    sfAllocated: 0,
+    sfUsed: 0,
+    sfRedemptionPct: 0,
+    toppingUpCount: 0,
+    avgTopUp: 0,
+  };
+}
+
+function emptySfBehavior() {
+  return {
+    underRedeemedPct: 0,
+    fullyRedeemedPct: 0,
+    toppedUpPct: 0,
+    avgTopUp: 0,
+    avgLeftover: 0,
+    sampleSize: 0,
+  };
+}
+
+function aggregateKpis(rows: PeriodRow[]) {
+  let onTrack = 0,
+    slipping = 0,
+    ahead = 0,
+    atRisk = 0,
+    complete = 0,
+    notStarted = 0;
+  let totalTarget = 0,
+    totalActual = 0,
+    sfAllocated = 0,
+    sfUsed = 0;
+  let toppingUpCount = 0;
+  let topUpSum = 0;
+
+  for (const r of rows) {
+    totalTarget += r.target;
+    totalActual += r.actual;
+    sfAllocated += r.sfAllocated;
+    sfUsed += r.sfUsed;
+    if (r.sfBalance < 0) {
+      toppingUpCount += 1;
+      topUpSum += -r.sfBalance;
+    }
+    switch (r.status) {
+      case 'On Track':
+        onTrack += 1;
+        break;
+      case 'Slipping':
+        slipping += 1;
+        break;
+      case 'Ahead':
+        ahead += 1;
+        break;
+      case 'At Risk':
+        atRisk += 1;
+        break;
+      case 'Complete':
+        complete += 1;
+        break;
+      case 'Not Started':
+        notStarted += 1;
+        break;
+    }
+  }
+
+  return {
+    onTrack,
+    slipping,
+    ahead,
+    atRisk,
+    complete,
+    notStarted,
+    totalTarget,
+    totalActual,
+    overallProgressPct: totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0,
+    sfAllocated,
+    sfUsed,
+    sfRedemptionPct: sfAllocated > 0 ? (sfUsed / sfAllocated) * 100 : 0,
+    toppingUpCount,
+    avgTopUp: toppingUpCount > 0 ? topUpSum / toppingUpCount : 0,
+  };
+}
+
+async function computeSfBehavior(supabase: any, periods: any[]) {
+  const companyIds = Array.from(new Set(periods.map((p) => p.company_id)));
+  if (companyIds.length === 0) return emptySfBehavior();
+
+  const { data: doneOrders, error } = await supabase
+    .from('orders')
+    .select('id, company_id, credit_earned, support_fund_used')
+    .eq('status', 'Done')
+    .in('company_id', companyIds);
+  if (error) throw error;
+
+  if (!doneOrders || doneOrders.length === 0) return emptySfBehavior();
+
+  const { data: history, error: hErr } = await supabase
+    .from('order_history')
+    .select('order_id, created_at')
+    .in(
+      'order_id',
+      doneOrders.map((o: any) => o.id),
+    )
+    .eq('status_to', 'Done')
+    .order('created_at', { ascending: true });
+  if (hErr) throw hErr;
+
+  const firstDone = new Map<string, Date>();
+  for (const h of history ?? []) {
+    if (!firstDone.has(h.order_id)) {
+      firstDone.set(h.order_id, new Date(h.created_at));
+    }
+  }
+
+  const periodsByCompany = new Map<string, Array<{ s: Date; e: Date }>>();
+  for (const p of periods) {
+    const s = new Date(p.start_date);
+    const e = new Date(p.end_date);
+    e.setHours(23, 59, 59, 999);
+    const list = periodsByCompany.get(p.company_id) ?? [];
+    list.push({ s, e });
+    periodsByCompany.set(p.company_id, list);
+  }
+
+  let under = 0,
+    full = 0,
+    over = 0;
+  let topUpSum = 0,
+    leftoverSum = 0;
+  let total = 0;
+
+  for (const o of doneOrders as any[]) {
+    const doneAt = firstDone.get(o.id);
+    if (!doneAt) continue;
+    const ranges = periodsByCompany.get(o.company_id) ?? [];
+    if (!ranges.some((r) => doneAt >= r.s && doneAt <= r.e)) continue;
+
+    const earned = Number(o.credit_earned) || 0;
+    const used = Number(o.support_fund_used) || 0;
+    if (earned === 0 && used === 0) continue;
+
+    total += 1;
+    const delta = earned - used;
+    if (Math.abs(delta) < 0.01) {
+      full += 1;
+    } else if (delta > 0) {
+      under += 1;
+      leftoverSum += delta;
+    } else {
+      over += 1;
+      topUpSum += -delta;
+    }
+  }
+
+  return {
+    underRedeemedPct: total > 0 ? (under / total) * 100 : 0,
+    fullyRedeemedPct: total > 0 ? (full / total) * 100 : 0,
+    toppedUpPct: total > 0 ? (over / total) * 100 : 0,
+    avgTopUp: over > 0 ? topUpSum / over : 0,
+    avgLeftover: under > 0 ? leftoverSum / under : 0,
+    sampleSize: total,
+  };
+}

@@ -37,16 +37,16 @@ interface DashboardPayload {
 
 const OTHER_REPORTS = [
   {
-    name: 'Company Annual Goals',
-    description: 'Per-company target progress and trajectory',
-    href: '/admin/reports/company-goals',
-    icon: Target,
-  },
-  {
     name: 'Company Performance',
-    description: 'Trends, comparisons and health signals',
+    description: 'Goal pace, slipping partners, support-fund behavior',
     href: '/admin/reports/company-performance',
     icon: Building2,
+  },
+  {
+    name: 'Company Annual Goals',
+    description: 'Per-company target progress (legacy table view)',
+    href: '/admin/reports/company-goals',
+    icon: Target,
   },
   {
     name: 'Sales',
