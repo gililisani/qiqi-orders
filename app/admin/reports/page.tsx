@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ArrowRight, BarChart3, Boxes, Building2, Target } from 'lucide-react';
+import { ArrowRight, BarChart3, Boxes, Building2, PiggyBank } from 'lucide-react';
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 import { formatCurrency, formatNumber } from '../../../lib/formatters';
 import { PageHeader } from '../../components/qq/page-header';
@@ -43,22 +43,22 @@ const OTHER_REPORTS = [
     icon: Building2,
   },
   {
-    name: 'Company Annual Goals',
-    description: 'Per-company target progress (legacy table view)',
-    href: '/admin/reports/company-goals',
-    icon: Target,
+    name: 'Product Insights',
+    description: 'Top SKUs, top buyers, dead products, category heatmap',
+    href: '/admin/reports/product-insights',
+    icon: Boxes,
+  },
+  {
+    name: 'Support Funds',
+    description: 'Earned, used, leftover, top-up behavior, top SF products',
+    href: '/admin/reports/support-funds',
+    icon: PiggyBank,
   },
   {
     name: 'Sales Explorer',
     description: 'Pivot any dimension × any other, with CSV/XLSX export',
     href: '/admin/reports/sales-explorer',
     icon: BarChart3,
-  },
-  {
-    name: 'Product Insights',
-    description: 'Top SKUs, top buyers, dead products, category heatmap',
-    href: '/admin/reports/product-insights',
-    icon: Boxes,
   },
 ];
 
@@ -108,7 +108,7 @@ export default function ExecutiveDashboardPage() {
       <PageHeader
         title="Executive Dashboard"
         description="Sales, partners and order flow at a glance."
-        actions={<PeriodSelector current={window} />}
+        actions={<PeriodSelector current={window} basePath="/admin/reports" />}
       />
 
       {error && (

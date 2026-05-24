@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Bar,
@@ -37,8 +37,9 @@ import {
   TableRow,
 } from '../../../components/qq/table';
 import { Input } from '../../../components/qq/input';
+import PeriodSelector from '../_components/PeriodSelector';
 
-type WindowKey = '30d' | '90d' | 'ytd';
+type WindowKey = '30d' | '90d' | 'ytd' | 'custom';
 
 interface ProductRow {
   productId: number;
@@ -108,12 +109,6 @@ type SortKey =
   | 'orders'
   | 'buyers';
 
-const PRESETS: Array<{ key: WindowKey; label: string }> = [
-  { key: '30d', label: 'Last 30d' },
-  { key: '90d', label: 'Last 90d' },
-  { key: 'ytd', label: 'YTD' },
-];
-
 const CATEGORY_COLORS = [
   '#6366f1',
   '#10b981',
@@ -128,7 +123,6 @@ const CATEGORY_COLORS = [
 ];
 
 export default function ProductInsightsPage() {
-  const router = useRouter();
   const sp = useSearchParams();
   const window = (sp.get('window') as WindowKey) ?? '90d';
 
@@ -146,7 +140,16 @@ export default function ProductInsightsPage() {
     setLoading(true);
     setError(null);
 
-    fetchWithAuth(`/api/reports/product-insights?window=${window}`)
+    const qs = new URLSearchParams();
+    qs.set('window', window);
+    if (window === 'custom') {
+      const f = sp.get('from');
+      const t = sp.get('to');
+      if (f) qs.set('from', f);
+      if (t) qs.set('to', t);
+    }
+
+    fetchWithAuth(`/api/reports/product-insights?${qs.toString()}`)
       .then(async (res) => {
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error || 'Failed to load');
@@ -165,13 +168,7 @@ export default function ProductInsightsPage() {
     return () => {
       cancelled = true;
     };
-  }, [window]);
-
-  const setWindow = (w: WindowKey) => {
-    const params = new URLSearchParams(sp.toString());
-    params.set('window', w);
-    router.push(`/admin/reports/product-insights?${params.toString()}`);
-  };
+  }, [window, sp]);
 
   const filteredSortedProducts = useMemo(() => {
     if (!data) return [];
@@ -221,23 +218,10 @@ export default function ProductInsightsPage() {
           </Link>
         }
         actions={
-          <div className="inline-flex rounded-md border border-border bg-card p-1">
-            {PRESETS.map((p) => (
-              <button
-                key={p.key}
-                type="button"
-                onClick={() => setWindow(p.key)}
-                className={cn(
-                  'px-3 py-1.5 text-sm rounded transition-colors',
-                  window === p.key
-                    ? 'bg-foreground text-background'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary',
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+          <PeriodSelector
+            current={window}
+            basePath="/admin/reports/product-insights"
+          />
         }
       />
 

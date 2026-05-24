@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from '../../../components/qq/card';
 import { Skeleton } from '../../../components/qq/skeleton';
+import PeriodSelector from '../_components/PeriodSelector';
 
 type Dim =
   | 'company'
@@ -33,7 +34,7 @@ type Dim =
   | 'quarter';
 type DimOrNone = Dim | 'none';
 type Metric = 'revenue' | 'units' | 'orders';
-type WindowKey = '30d' | '90d' | 'ytd';
+type WindowKey = '30d' | '90d' | 'ytd' | 'custom';
 
 interface Payload {
   period: { window: string; from: string; to: string };
@@ -69,12 +70,6 @@ const METRIC_OPTIONS: Array<{ value: Metric; label: string }> = [
   { value: 'orders', label: 'Orders' },
 ];
 
-const PERIOD_OPTIONS: Array<{ value: WindowKey; label: string }> = [
-  { value: '30d', label: 'Last 30d' },
-  { value: '90d', label: 'Last 90d' },
-  { value: 'ytd', label: 'YTD' },
-];
-
 export default function SalesExplorerPage() {
   const router = useRouter();
   const sp = useSearchParams();
@@ -100,6 +95,12 @@ export default function SalesExplorerPage() {
     qs.set('col', col);
     qs.set('metric', metric);
     qs.set('window', window);
+    if (window === 'custom') {
+      const f = sp.get('from');
+      const t = sp.get('to');
+      if (f) qs.set('from', f);
+      if (t) qs.set('to', t);
+    }
     if (companyId) qs.set('companyId', companyId);
     if (subsidiaryId) qs.set('subsidiaryId', subsidiaryId);
 
@@ -122,7 +123,7 @@ export default function SalesExplorerPage() {
     return () => {
       cancelled = true;
     };
-  }, [row, col, metric, window, companyId, subsidiaryId]);
+  }, [row, col, metric, window, companyId, subsidiaryId, sp]);
 
   const updateParam = (
     updates: Record<string, string | null>,
@@ -231,8 +232,17 @@ export default function SalesExplorerPage() {
 
       {/* Controls */}
       <Card className="mb-6">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+        <CardContent className="p-4 space-y-4">
+          <div>
+            <span className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+              Period
+            </span>
+            <PeriodSelector
+              current={window}
+              basePath="/admin/reports/sales-explorer"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <ControlSelect
               label="Rows"
               value={row}
@@ -253,12 +263,6 @@ export default function SalesExplorerPage() {
               value={metric}
               onChange={(v) => updateParam({ metric: v as string })}
               options={METRIC_OPTIONS}
-            />
-            <ControlSelect
-              label="Period"
-              value={window}
-              onChange={(v) => updateParam({ window: v as string })}
-              options={PERIOD_OPTIONS}
             />
             <ControlSelect
               label="Subsidiary"
