@@ -1,12 +1,9 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import { createServerSupabase } from '../lib/supabase-server';
 import { SupabaseProvider } from '../lib/supabase-provider';
 import ToastProvider from './components/ui/ToastProvider';
 import ConfirmProvider from './components/ui/ConfirmProvider';
-
-const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Qiqi Partners Hub',
@@ -33,7 +30,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body>
         <SupabaseProvider session={session}>
           <ToastProvider>
             <ConfirmProvider>
