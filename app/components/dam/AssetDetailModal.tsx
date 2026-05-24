@@ -1,22 +1,46 @@
 'use client';
 
+/**
+ * AssetDetailModal — full asset preview + metadata + download actions.
+ * Shared by admin and client surfaces (props gate admin-only affordances:
+ * edit, delete, video URL editing).
+ */
 import { useEffect, useState } from 'react';
-import { XMarkIcon, PhotoIcon, EyeIcon, ArrowDownTrayIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
+import {
+  X,
+  Image as ImageIcon,
+  Eye,
+  Download,
+  Trash2,
+  Pencil,
+  Plus,
+  Loader2,
+} from 'lucide-react';
 import { AssetRecord, VimeoDownloadFormat } from './types';
 import { formatBytes, getFriendlyFileType, getStaticDocumentThumbnail, resolveSignedAssetUrl } from './utils';
+
+import { Dialog, DialogContent } from '../qq/dialog';
+import { Button } from '../qq/button';
+import { Badge } from '../qq/badge';
+import { Input } from '../qq/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../qq/select';
+import { Separator } from '../qq/separator';
 
 interface AssetDetailModalProps {
   asset: AssetRecord;
   accessToken: string | null;
   onClose: () => void;
-  // Download handling
   onDownload?: (asset: AssetRecord, format?: string) => Promise<void>;
   downloadingFormats?: Set<string>;
-  // Admin-only features
   isAdmin?: boolean;
   onEdit?: (asset: AssetRecord) => void;
   onDelete?: (assetId: string) => void;
-  // Video download URL editing (admin only)
   isEditingVideoUrls?: boolean;
   editingDownloadUrls?: VimeoDownloadFormat[];
   onToggleEditVideoUrls?: () => void;
@@ -26,7 +50,6 @@ interface AssetDetailModalProps {
   onRemoveVideoFormat?: (index: number) => void;
   savingUrls?: boolean;
   resolutionOptions?: string[];
-  // Rendering helpers
   renderAssetTypePill?: (type: string) => JSX.Element | null;
 }
 
@@ -53,70 +76,61 @@ export default function AssetDetailModal({
   renderAssetTypePill,
 }: AssetDetailModalProps) {
   const [resolvedPreviewUrl, setResolvedPreviewUrl] = useState<string>('');
-
-  const previewApiPath = asset.current_version?.previewPath || asset.current_version?.downloadPath || null;
+  const previewApiPath =
+    asset.current_version?.previewPath || asset.current_version?.downloadPath || null;
 
   useEffect(() => {
     let active = true;
-    async function run() {
-      if (!accessToken) return;
-      if (!previewApiPath) return;
+    (async () => {
+      if (!accessToken || !previewApiPath) return;
       const signed = await resolveSignedAssetUrl(previewApiPath, accessToken);
-      if (!active) return;
-      setResolvedPreviewUrl(signed);
-    }
-    run();
+      if (active) setResolvedPreviewUrl(signed);
+    })();
     return () => {
       active = false;
     };
   }, [accessToken, previewApiPath]);
+
   const getValidVideoFormats = (): VimeoDownloadFormat[] => {
     const formats: VimeoDownloadFormat[] = [];
-    
-    // Use dynamic formats if available
     if (asset.vimeo_download_formats && asset.vimeo_download_formats.length > 0) {
-      formats.push(...asset.vimeo_download_formats.filter(f => f.url && f.url.trim() !== ''));
+      formats.push(...asset.vimeo_download_formats.filter((f) => f.url && f.url.trim() !== ''));
     } else {
-      // Fall back to legacy fields
       if (asset.vimeo_download_1080p) formats.push({ resolution: '1080p', url: asset.vimeo_download_1080p });
       if (asset.vimeo_download_720p) formats.push({ resolution: '720p', url: asset.vimeo_download_720p });
       if (asset.vimeo_download_480p) formats.push({ resolution: '480p', url: asset.vimeo_download_480p });
       if (asset.vimeo_download_360p) formats.push({ resolution: '360p', url: asset.vimeo_download_360p });
     }
-    
     return formats;
   };
 
   const validFormats = getValidVideoFormats();
   const assetDownloadKey = `asset-action-${asset.id}`;
   const isDownloadingAsset = downloadingFormats.has(assetDownloadKey);
+  const staticThumbnail = getStaticDocumentThumbnail(asset.current_version?.mime_type);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-lg shadow-xl overflow-hidden flex flex-col">
-        {/* Close button */}
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-6xl max-h-[90vh] p-0 overflow-hidden flex flex-col">
+        {/* Close (custom — DialogContent's default close is fine but we want it on the preview side) */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-3 right-3 z-20 rounded-md bg-white/90 p-1.5 text-gray-600 hover:bg-white hover:text-gray-900 transition shadow-sm"
+          className="absolute top-3 right-3 z-30 inline-flex h-7 w-7 items-center justify-center rounded-md bg-background/90 text-muted-foreground hover:text-foreground hover:bg-background transition shadow-sm"
+          aria-label="Close"
         >
-          <XMarkIcon className="h-4 w-4" />
+          <X className="h-4 w-4" />
         </button>
 
-        {/* Two Column Layout */}
         <div className="flex flex-col lg:flex-row h-full overflow-hidden">
-          {/* Left Column - Preview */}
-          <div className="lg:w-[55%] bg-gray-50 flex items-center justify-center p-6 min-h-[400px]">
+          {/* Preview */}
+          <div className="lg:w-[55%] bg-muted/40 flex items-center justify-center p-6 min-h-[400px]">
             {asset.asset_type === 'video' && asset.vimeo_video_id ? (
               <div className="w-full max-w-3xl">
-                <div className="relative w-full rounded-md overflow-hidden shadow-md" style={{ aspectRatio: '16/9' }}>
+                <div
+                  className="relative w-full rounded-md overflow-hidden shadow-sm"
+                  style={{ aspectRatio: '16/9' }}
+                >
                   <iframe
                     src={`https://player.vimeo.com/video/${asset.vimeo_video_id}?byline=0&title=0&portrait=0`}
                     allow="autoplay; fullscreen; picture-in-picture"
@@ -126,349 +140,324 @@ export default function AssetDetailModal({
                   />
                 </div>
               </div>
-            ) : (() => {
-              // Check for static Word/Excel thumbnails first
-              const staticThumbnail = getStaticDocumentThumbnail(asset.current_version?.mime_type);
-              if (staticThumbnail) {
-                return (
-                  <div className="w-full max-w-3xl flex items-center justify-center">
-                    <img
-                      src={staticThumbnail}
-                      alt={asset.title}
-                      className="w-full h-auto max-h-[70vh] object-contain"
-                    />
-                  </div>
-                );
-              }
-              return previewApiPath && accessToken && resolvedPreviewUrl ? (
-                <div className="w-full max-w-3xl">
-                  <img
-                    src={resolvedPreviewUrl}
-                    alt={asset.title}
-                    className="w-full h-auto max-h-[70vh] object-contain"
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center text-gray-400">
-                  <PhotoIcon className="h-24 w-24 mb-4" />
-                  <p className="text-sm">No preview available</p>
-                </div>
-              );
-            })()}
+            ) : staticThumbnail ? (
+              <div className="w-full max-w-3xl flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={staticThumbnail}
+                  alt={asset.title}
+                  className="w-full h-auto max-h-[70vh] object-contain"
+                />
+              </div>
+            ) : previewApiPath && accessToken && resolvedPreviewUrl ? (
+              <div className="w-full max-w-3xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={resolvedPreviewUrl}
+                  alt={asset.title}
+                  className="w-full h-auto max-h-[70vh] object-contain"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center text-muted-foreground">
+                <ImageIcon className="h-20 w-20 mb-3" />
+                <p className="text-sm">No preview available</p>
+              </div>
+            )}
           </div>
 
-          {/* Right Column - Metadata */}
-          <div className="lg:w-[45%] bg-white overflow-y-auto p-5 border-l border-gray-200">
-            {/* Header */}
-            <div className="mb-4 pb-4 border-b border-gray-200">
-              <div className="flex items-start gap-2 mb-2">
-                <h2 className="text-lg font-semibold text-gray-900 flex-1">{asset.title || 'Untitled Asset'}</h2>
-              </div>
-              <div className="flex items-center gap-2 mb-2">
-                {renderAssetTypePill && renderAssetTypePill(asset.asset_type)}
-              </div>
+          {/* Metadata */}
+          <div className="lg:w-[45%] bg-background overflow-y-auto p-5 border-l border-border">
+            {/* Title */}
+            <div className="mb-4 pb-4 border-b border-border">
+              <h2 className="text-lg font-semibold text-foreground mb-2 pr-8">
+                {asset.title || 'Untitled asset'}
+              </h2>
+              {renderAssetTypePill && (
+                <div className="mb-2">{renderAssetTypePill(asset.asset_type)}</div>
+              )}
               {asset.description && (
-                <p className="text-sm text-gray-600 leading-relaxed">{asset.description}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {asset.description}
+                </p>
               )}
             </div>
 
-            {/* Preview & Downloads Section */}
-            <div className="mb-4 pb-4 border-b border-gray-100">
+            {/* Preview & downloads */}
+            <div className="mb-4 pb-4 border-b border-border">
               <div className="flex items-center justify-between mb-2.5">
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Preview & Downloads</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Preview & downloads
+                </h3>
                 {isAdmin && asset.asset_type === 'video' && asset.vimeo_video_id && onToggleEditVideoUrls && (
                   <button
                     type="button"
                     onClick={onToggleEditVideoUrls}
-                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
                   >
-                    {isEditingVideoUrls ? 'Cancel' : 'Edit Download URLs'}
+                    {isEditingVideoUrls ? 'Cancel' : 'Edit URLs'}
                   </button>
                 )}
               </div>
 
               {/* Video download formats */}
               {asset.asset_type === 'video' && asset.vimeo_video_id ? (
-                <div className="space-y-4">
-                  {isAdmin && isEditingVideoUrls && editingDownloadUrls && onVideoUrlChange && onAddVideoFormat && onRemoveVideoFormat && onUpdateVideoUrls ? (
-                    <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+                <div className="space-y-3">
+                  {isAdmin &&
+                  isEditingVideoUrls &&
+                  editingDownloadUrls &&
+                  onVideoUrlChange &&
+                  onAddVideoFormat &&
+                  onRemoveVideoFormat &&
+                  onUpdateVideoUrls ? (
+                    <div className="space-y-3 border border-border rounded-md p-3 bg-muted/40">
                       {editingDownloadUrls.map((format, index) => (
-                        <div key={index} className="flex items-start gap-2">
+                        <div key={index} className="flex items-end gap-2">
                           <div className="flex-1">
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Resolution</label>
-                            <select
+                            <label className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">
+                              Resolution
+                            </label>
+                            <Select
                               value={format.resolution}
-                              onChange={(e) => onVideoUrlChange(index, 'resolution', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                              onValueChange={(v) => onVideoUrlChange(index, 'resolution', v)}
                             >
-                              {resolutionOptions.map((res) => (
-                                <option key={res} value={res}>
-                                  {res}
-                                </option>
-                              ))}
-                            </select>
+                              <SelectTrigger className="h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {resolutionOptions.map((res) => (
+                                  <SelectItem key={res} value={res}>
+                                    {res}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-                          <div className="flex-1">
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Download URL</label>
-                            <input
-                              type="text"
+                          <div className="flex-[2]">
+                            <label className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">
+                              Download URL
+                            </label>
+                            <Input
                               value={format.url}
                               onChange={(e) => onVideoUrlChange(index, 'url', e.target.value)}
-                              placeholder="https://..."
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                              placeholder="https://…"
+                              className="h-8"
                             />
                           </div>
-                          <button
-                            type="button"
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => onRemoveVideoFormat(index)}
-                            className="mt-6 text-red-600 hover:text-red-700"
-                            title="Remove format"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            aria-label="Remove format"
                           >
-                            <XMarkIcon className="h-4 w-4" />
-                          </button>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       ))}
-                      <button
-                        type="button"
-                        onClick={onAddVideoFormat}
-                        className="w-full flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                      >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        Add Download Format
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onUpdateVideoUrls(editingDownloadUrls.filter(f => f.url.trim() !== ''))}
-                        disabled={savingUrls}
-                        className="w-full flex items-center justify-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {savingUrls ? 'Saving...' : 'Save URLs'}
-                      </button>
+                      <div className="flex flex-col gap-2 pt-1">
+                        <Button variant="outline" size="sm" onClick={onAddVideoFormat}>
+                          <Plus className="h-3.5 w-3.5" /> Add format
+                        </Button>
+                        <Button
+                          size="sm"
+                          loading={savingUrls}
+                          onClick={() =>
+                            onUpdateVideoUrls(
+                              editingDownloadUrls.filter((f) => f.url.trim() !== '')
+                            )
+                          }
+                        >
+                          {savingUrls ? 'Saving…' : 'Save URLs'}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : validFormats.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {validFormats.map((format) => {
+                        const formatKey = `video-${asset.id}-${format.resolution}`;
+                        const isDownloading = downloadingFormats.has(formatKey);
+                        return (
+                          <Button
+                            key={format.resolution}
+                            variant="outline"
+                            size="sm"
+                            disabled={isDownloading}
+                            onClick={() => onDownload && onDownload(asset, format.resolution)}
+                          >
+                            {isDownloading ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Preparing…
+                              </>
+                            ) : (
+                              <>
+                                <Download className="h-3.5 w-3.5" /> {format.resolution}
+                              </>
+                            )}
+                          </Button>
+                        );
+                      })}
                     </div>
                   ) : (
-                    <>
-                      {validFormats.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {validFormats.map((format, index) => {
-                            const formatKey = `video-${asset.id}-${format.resolution}`;
-                            const isDownloading = downloadingFormats.has(formatKey);
-                            return (
-                              <button
-                                key={index}
-                                type="button"
-                                disabled={isDownloading}
-                                onClick={() => onDownload && onDownload(asset, format.resolution)}
-                                className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-wait"
-                              >
-                                {isDownloading ? (
-                                  <>
-                                    <svg className="animate-spin h-4 w-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Preparing...
-                                  </>
-                                ) : (
-                                  <>
-                                    <ArrowDownTrayIcon className="h-4 w-4" />
-                                    Download {format.resolution}
-                                  </>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-500 italic">
-                          {isAdmin ? 'No download URLs configured. Click "Edit Download URLs" above to add download links.' : 'No download URLs available for this video.'}
-                        </p>
-                      )}
-                    </>
+                    <p className="text-sm text-muted-foreground italic">
+                      {isAdmin
+                        ? 'No download URLs configured. Click "Edit URLs" above to add download links.'
+                        : 'No download URLs available for this video.'}
+                    </p>
                   )}
                 </div>
               ) : null}
 
-              {/* Preview button for non-video assets */}
+              {/* Preview button for non-video */}
               {asset.asset_type !== 'video' && asset.current_version?.id && accessToken ? (
-                <button
-                  type="button"
+                <Button
+                  size="sm"
+                  className="mt-1"
                   onClick={async (e) => {
                     e.stopPropagation();
-                    // Protected API route cannot be opened directly (no Bearer header on navigation).
-                    // Resolve to signed URL first, then open the signed URL.
                     const apiUrl = `/api/assets/${asset.id}/preview?version=${asset.current_version!.id}&rendition=original`;
                     const signed = await resolveSignedAssetUrl(apiUrl, accessToken);
-                    if (!signed) {
-                      alert('Preview unavailable. Please try again.');
-                      return;
-                    }
+                    if (!signed) return;
                     window.open(signed, '_blank', 'noopener,noreferrer');
                   }}
-                  className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition shadow-sm mb-3"
                 >
-                  <EyeIcon className="h-4 w-4" />
-                  Preview
-                </button>
+                  <Eye className="h-3.5 w-3.5" /> Preview
+                </Button>
               ) : null}
             </div>
 
-            {/* Metadata Section */}
-            <div className="space-y-4">
-              <div className="pb-4 border-b border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2.5 uppercase tracking-wide">Details</h3>
-                <dl className="space-y-2 text-sm">
-                  {asset.sku && (
-                    <div>
-                      <dt className="font-medium text-gray-700 mb-1">SKU</dt>
-                      <dd className="text-gray-600">{asset.sku}</dd>
-                    </div>
-                  )}
-                  {asset.product_line && (
-                    <div>
-                      <dt className="font-medium text-gray-700 mb-1">Product Line</dt>
-                      <dd className="text-gray-600">{asset.product_line}</dd>
-                    </div>
-                  )}
-                  {asset.product_name && (
-                    <div>
-                      <dt className="font-medium text-gray-700 mb-1">Product</dt>
-                      <dd className="text-gray-600">{asset.product_name}</dd>
-                    </div>
-                  )}
-                  {asset.campaign && (
-                    <div>
-                      <dt className="font-medium text-gray-700 mb-1">Campaign</dt>
-                      <dd className="text-gray-600">
-                        <a
-                          href={`/admin/dam/campaigns/${asset.campaign.id}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.location.href = `/admin/dam/campaigns/${asset.campaign!.id}`;
-                          }}
-                          className="text-blue-600 hover:text-blue-800 underline"
-                        >
-                          {asset.campaign.name}
-                        </a>
-                      </dd>
-                    </div>
-                  )}
-                  <div>
-                    <dt className="font-medium text-gray-700 mb-1">Created</dt>
-                    <dd className="text-gray-600">{new Date(asset.created_at).toLocaleDateString()}</dd>
-                  </div>
-                  {asset.current_version && (
-                    <>
-                      <div>
-                        <dt className="font-medium text-gray-700 mb-1">Size</dt>
-                        <dd className="text-gray-600">{formatBytes(asset.current_version.file_size) || '—'}</dd>
-                      </div>
-                      <div>
-                        <dt className="font-medium text-gray-700 mb-1">File Type</dt>
-                        <dd className="text-gray-600">{getFriendlyFileType(asset.current_version.mime_type)}</dd>
-                      </div>
-                      {asset.current_version.width && asset.current_version.height && (
-                        <div>
-                          <dt className="font-medium text-gray-700 mb-1">Dimensions</dt>
-                          <dd className="text-gray-600">{asset.current_version.width} × {asset.current_version.height} px</dd>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </dl>
-              </div>
-
-              {asset.tags.length > 0 && (
-                <div className="pb-4 border-b border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2.5 uppercase tracking-wide">Tags</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {asset.tags.map((tag) => (
-                      <span key={tag} className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {asset.locales.length > 0 && (
-                <div className="pb-4 border-b border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2.5 uppercase tracking-wide">Locales</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {asset.locales.map((locale) => (
-                      <span key={locale.code} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-                        {locale.label}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {asset.regions.length > 0 && (
-                <div className="pb-4 border-b border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2.5 uppercase tracking-wide">Regions</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {asset.regions.map((region) => (
-                      <span key={region.code} className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
-                        {region.label}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+            {/* Metadata */}
+            <div className="mb-4 pb-4 border-b border-border">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                Details
+              </h3>
+              <dl className="space-y-2.5 text-sm">
+                {asset.sku && <Field label="SKU" value={<span className="font-mono">{asset.sku}</span>} />}
+                {asset.product_line && <Field label="Product line" value={asset.product_line} />}
+                {asset.product_name && <Field label="Product" value={asset.product_name} />}
+                {asset.campaign && (
+                  <Field
+                    label="Campaign"
+                    value={
+                      <a
+                        href={`/admin/dam/campaigns/${asset.campaign.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.location.href = `/admin/dam/campaigns/${asset.campaign!.id}`;
+                        }}
+                        className="text-foreground underline hover:no-underline"
+                      >
+                        {asset.campaign.name}
+                      </a>
+                    }
+                  />
+                )}
+                <Field label="Created" value={new Date(asset.created_at).toLocaleDateString()} />
+                {asset.current_version && (
+                  <>
+                    <Field
+                      label="Size"
+                      value={formatBytes(asset.current_version.file_size) || '—'}
+                    />
+                    <Field
+                      label="File type"
+                      value={getFriendlyFileType(asset.current_version.mime_type)}
+                    />
+                    {asset.current_version.width && asset.current_version.height && (
+                      <Field
+                        label="Dimensions"
+                        value={`${asset.current_version.width} × ${asset.current_version.height} px`}
+                      />
+                    )}
+                  </>
+                )}
+              </dl>
             </div>
 
-            {/* Action Buttons */}
-            <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
+            {asset.tags.length > 0 && (
+              <TagSection label="Tags">
+                {asset.tags.map((tag) => (
+                  <Badge key={tag} variant="muted" className="text-[10px]">
+                    {tag}
+                  </Badge>
+                ))}
+              </TagSection>
+            )}
+
+            {asset.locales.length > 0 && (
+              <TagSection label="Locales">
+                {asset.locales.map((locale) => (
+                  <Badge key={locale.code} variant="accent" className="text-[10px]">
+                    {locale.label}
+                  </Badge>
+                ))}
+              </TagSection>
+            )}
+
+            {asset.regions.length > 0 && (
+              <TagSection label="Regions">
+                {asset.regions.map((region) => (
+                  <Badge key={region.code} variant="success" className="text-[10px]">
+                    {region.label}
+                  </Badge>
+                ))}
+              </TagSection>
+            )}
+
+            {/* Action buttons */}
+            <div className="pt-2 space-y-2">
               {asset.current_version?.downloadPath && onDownload && (
-                <button
-                  type="button"
+                <Button
                   disabled={isDownloadingAsset}
+                  loading={isDownloadingAsset}
                   onClick={() => onDownload(asset)}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-black px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition shadow-sm disabled:opacity-50 disabled:cursor-wait"
+                  className="w-full"
                 >
-                  {isDownloadingAsset ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Preparing...
-                    </>
-                  ) : (
-                    <>
-                      <ArrowDownTrayIcon className="h-4 w-4" />
-                      Download Asset
-                    </>
-                  )}
-                </button>
+                  <Download className="h-4 w-4" />
+                  {isDownloadingAsset ? 'Preparing…' : 'Download asset'}
+                </Button>
               )}
               {isAdmin && onEdit && (
-                <button
-                  type="button"
-                  onClick={() => onEdit(asset)}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-                >
-                  <PencilIcon className="h-4 w-4" />
-                  Edit Asset
-                </button>
+                <Button variant="outline" onClick={() => onEdit(asset)} className="w-full">
+                  <Pencil className="h-4 w-4" /> Edit asset
+                </Button>
               )}
               {isAdmin && onDelete && (
-                <button
-                  type="button"
+                <Button
+                  variant="outline"
                   onClick={() => onDelete(asset.id)}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-red-300 bg-white px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition"
+                  className="w-full text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
                 >
-                  <TrashIcon className="h-4 w-4" />
-                  Delete Asset
-                </button>
+                  <Trash2 className="h-4 w-4" /> Delete asset
+                </Button>
               )}
             </div>
           </div>
         </div>
-      </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Small helpers
+// ----------------------------------------------------------------------------
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="text-[11px] text-muted-foreground mb-0.5">{label}</dt>
+      <dd className="text-foreground">{value}</dd>
     </div>
   );
 }
 
+function TagSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-4 pb-4 border-b border-border">
+      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+        {label}
+      </h3>
+      <div className="flex flex-wrap gap-1.5">{children}</div>
+    </div>
+  );
+}
