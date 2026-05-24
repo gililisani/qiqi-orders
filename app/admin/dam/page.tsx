@@ -1,24 +1,24 @@
 'use client';
 
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { useSupabase } from '../../../lib/supabase-provider';
-import Card from '../../components/ui/Card';
 import {
-  ArrowPathIcon,
-  ArrowUpTrayIcon,
-  DocumentTextIcon,
-  FilmIcon,
-  MusicalNoteIcon,
-  PhotoIcon,
-  Squares2X2Icon,
-  TrashIcon,
-  XMarkIcon,
-  ArrowDownTrayIcon,
-  CheckIcon,
-  EyeIcon,
-  PencilIcon,
-  MagnifyingGlassIcon,
-} from '@heroicons/react/24/outline';
+  RefreshCw,
+  Upload,
+  FileText,
+  Film,
+  Music,
+  Image as ImageIcon,
+  Grid3x3,
+  Trash2,
+  X,
+  Download,
+  Check,
+  Eye,
+  Pencil,
+  Search,
+} from 'lucide-react';
+
+import { useSupabase } from '../../../lib/supabase-provider';
 import AssetCard from '../../components/dam/AssetCard';
 import AssetDetailModal from '../../components/dam/AssetDetailModal';
 import BulkUploadPanel from '../../components/dam/BulkUploadPanel';
@@ -26,14 +26,35 @@ import BulkEditPanel from '../../components/dam/BulkEditPanel';
 import { AssetRecord, LocaleOption, RegionOption, AssetVersion, VimeoDownloadFormat } from '../../components/dam/types';
 import { formatBytes, ensureTokenUrl, getFileTypeBadge, buildAuthHeaders, resolveSignedAssetUrl, resolveSignedPreviewUrlsBatch } from '../../components/dam/utils';
 
+import { PageHeader } from '../../components/qq/page-header';
+import { Card } from '../../components/qq/card';
+import { Input } from '../../components/qq/input';
+import { Label } from '../../components/qq/label';
+import { Button } from '../../components/qq/button';
+import { Badge } from '../../components/qq/badge';
+import { Alert, AlertDescription } from '../../components/qq/alert';
+import { Pagination } from '../../components/qq/pagination';
+import { EmptyState } from '../../components/qq/empty-state';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/qq/select';
+import { useToast } from '../../components/ui/ToastProvider';
+import { useConfirm } from '../../components/ui/ConfirmProvider';
+
+const ALL_SELECT_VALUE = '__all__';
+
 const assetTypeOptions: Array<{ value: string; label: string; icon: JSX.Element }> = [
-  { value: 'image', label: 'Image', icon: <PhotoIcon className="h-4 w-4" /> },
-  { value: 'video', label: 'Video', icon: <FilmIcon className="h-4 w-4" /> },
-  { value: 'document', label: 'Document', icon: <DocumentTextIcon className="h-4 w-4" /> },
-  { value: 'audio', label: 'Audio', icon: <MusicalNoteIcon className="h-4 w-4" /> },
-  { value: 'font', label: 'Font', icon: <DocumentTextIcon className="h-4 w-4" /> },
-  { value: 'archive', label: 'Archive', icon: <Squares2X2Icon className="h-4 w-4" /> },
-  { value: 'other', label: 'Other', icon: <Squares2X2Icon className="h-4 w-4" /> },
+  { value: 'image', label: 'Image', icon: <ImageIcon className="h-3.5 w-3.5" /> },
+  { value: 'video', label: 'Video', icon: <Film className="h-3.5 w-3.5" /> },
+  { value: 'document', label: 'Document', icon: <FileText className="h-3.5 w-3.5" /> },
+  { value: 'audio', label: 'Audio', icon: <Music className="h-3.5 w-3.5" /> },
+  { value: 'font', label: 'Font', icon: <FileText className="h-3.5 w-3.5" /> },
+  { value: 'archive', label: 'Archive', icon: <Grid3x3 className="h-3.5 w-3.5" /> },
+  { value: 'other', label: 'Other', icon: <Grid3x3 className="h-3.5 w-3.5" /> },
 ];
 
 interface TagOption {
@@ -2406,33 +2427,20 @@ export default function AdminDigitalAssetManagerPage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-gray-50">
-      {/* Main Content - Full Width */}
-      <div className="w-full">
-        {/* Header with Search Bar */}
-        <div className="bg-white border-b border-gray-200 px-6 py-3">
-          <div className="flex items-center gap-3">
-            {/* Large Search Bar */}
-            <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="search"
-                placeholder="Search assets by title, tag, SKU, product…"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                className="w-full pl-9 pr-4 py-2 rounded-md border border-gray-300 focus:border-black focus:outline-none focus:ring-1 focus:ring-black/10 text-sm"
-              />
-            </div>
-            
-            {/* View Mode Toggle - Segmented Control */}
-            <div className="inline-flex items-center rounded-lg border border-gray-300 bg-gray-50 p-1">
+    <div className="px-6 py-8 space-y-4">
+      <PageHeader
+        title="DAM"
+        description="Digital asset library — manage images, videos, documents, and more."
+        actions={
+          <>
+            <div className="inline-flex items-center rounded-md border border-border bg-muted/30 p-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode('compact')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                className={`px-2.5 py-1 text-xs font-medium rounded-sm transition-colors ${
                   viewMode === 'compact'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Compact
@@ -2440,77 +2448,79 @@ export default function AdminDigitalAssetManagerPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('comfortable')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                className={`px-2.5 py-1 text-xs font-medium rounded-sm transition-colors ${
                   viewMode === 'comfortable'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Comfortable
               </button>
             </div>
-            
-            {/* Upload Buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  // Clear any previous messages when opening drawer
-                  setSuccessMessage('');
-                  setError('');
-                  // Refresh campaigns when opening drawer
-                  if (accessToken) {
-                    fetchCampaigns(accessToken);
-                  }
-                  setIsUploadDrawerOpen(true);
-                }}
-                className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
-              >
-                <ArrowUpTrayIcon className="h-4 w-4" />
-                Upload Asset
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  // Initialize global defaults
-                  const defaultLocale = locales.find(loc => loc.is_default) || locales[0];
-                  setBulkGlobalDefaults({
-                    assetSubtypeId: null,
-                    productLine: '',
-                    selectedTagSlugs: [],
-                    selectedLocaleCodes: defaultLocale ? [defaultLocale.code] : [],
-                    campaignId: null,
-                  });
-                  setBulkFiles([]);
-                  setSuccessMessage('');
-                  setError('');
-                  // Close bulk edit mode if open
-                  if (isBulkEditMode) {
-                    setIsBulkEditMode(false);
-                    setBulkEditAssets([]);
-                  }
-                  setIsBulkUploadMode(true);
-                }}
-                className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
-              >
-                <ArrowUpTrayIcon className="h-4 w-4" />
-                Bulk Upload
-              </button>
-            </div>
-            
-            {/* Refresh Button */}
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const defaultLocale = locales.find((loc) => loc.is_default) || locales[0];
+                setBulkGlobalDefaults({
+                  assetSubtypeId: null,
+                  productLine: '',
+                  selectedTagSlugs: [],
+                  selectedLocaleCodes: defaultLocale ? [defaultLocale.code] : [],
+                  campaignId: null,
+                });
+                setBulkFiles([]);
+                setSuccessMessage('');
+                setError('');
+                if (isBulkEditMode) {
+                  setIsBulkEditMode(false);
+                  setBulkEditAssets([]);
+                }
+                setIsBulkUploadMode(true);
+              }}
+            >
+              <Upload className="h-4 w-4" /> Bulk upload
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setSuccessMessage('');
+                setError('');
+                if (accessToken) fetchCampaigns(accessToken);
+                setIsUploadDrawerOpen(true);
+              }}
+            >
+              <Upload className="h-4 w-4" /> Upload asset
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => {
                 setCurrentPage(1);
                 fetchAssets(accessToken ?? '', undefined, 1);
               }}
-              className="inline-flex items-center justify-center rounded-md border border-gray-300 w-9 h-9 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+              aria-label="Refresh"
             >
-              <ArrowPathIcon className="h-4 w-4" />
-            </button>
-          </div>
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+          </>
+        }
+      />
+
+      <Card className="p-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            type="search"
+            placeholder="Search assets by title, tag, SKU, product…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
         </div>
+      </Card>
+
+      <div>{/* legacy wrapper kept open — closing div at outer return */}
 
         {/* Bulk Edit Panel */}
         {isBulkEditMode && (
@@ -2622,127 +2632,81 @@ export default function AdminDigitalAssetManagerPage() {
           </div>
         )}
 
-        {/* Filter Row */}
-        <div className="bg-white border-b border-gray-200 px-6 py-1.5">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {/* Filter Dropdowns */}
-            <select
+        {/* Filter row */}
+        <Card className="p-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
+            <FilterSelect
               value={assetTypeFilter}
-              onChange={(event) => {
-                setAssetTypeFilter(event.target.value);
+              onValueChange={(v) => {
+                setAssetTypeFilter(v);
                 setAssetSubtypeFilter('');
               }}
-              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
-            >
-              <option value="">Asset Type</option>
-              {assetTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-            </select>
-
-            <select
+              placeholder="Asset type"
+              options={assetTypes.map((t) => ({ value: t.id, label: t.name }))}
+            />
+            <FilterSelect
               value={assetSubtypeFilter}
-              onChange={(event) => setAssetSubtypeFilter(event.target.value)}
+              onValueChange={setAssetSubtypeFilter}
+              placeholder="Sub-type"
               disabled={!assetTypeFilter}
-              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed bg-white"
-            >
-              <option value="">Sub-Type</option>
-              {assetSubtypes
-                .filter((subtype) => subtype.asset_type_id === assetTypeFilter)
-                .map((subtype) => (
-                  <option key={subtype.id} value={subtype.id}>
-                    {subtype.name}
-                  </option>
-                ))}
-            </select>
-
-            <select
+              options={assetSubtypes
+                .filter((s) => s.asset_type_id === assetTypeFilter)
+                .map((s) => ({ value: s.id, label: s.name }))}
+            />
+            <FilterSelect
               value={productLineFilter}
-              onChange={(event) => setProductLineFilter(event.target.value)}
-              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
-            >
-              <option value="">Product Line</option>
-              {productLines.map(pl => (
-                <option key={pl.code} value={pl.code}>{pl.name}</option>
-              ))}
-            </select>
-
-            <select
+              onValueChange={setProductLineFilter}
+              placeholder="Product line"
+              options={productLines.map((p) => ({ value: p.code, label: p.name }))}
+            />
+            <FilterSelect
               value={productNameFilter}
-              onChange={(event) => setProductNameFilter(event.target.value)}
-              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
-            >
-              <option value="">Product</option>
-              {products.map((product) => (
-                <option key={product.id} value={product.item_name}>
-                  {product.item_name}
-                </option>
-              ))}
-            </select>
-
-            <select
+              onValueChange={setProductNameFilter}
+              placeholder="Product"
+              options={products.map((p) => ({ value: p.item_name, label: p.item_name }))}
+            />
+            <FilterSelect
               value={localeFilter}
-              onChange={(event) => setLocaleFilter(event.target.value)}
-              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
-            >
-              <option value="">Locale</option>
-              {locales.map((locale) => (
-                <option key={locale.code} value={locale.code}>
-                  {locale.label}
-                </option>
-              ))}
-            </select>
-
-            <select
+              onValueChange={setLocaleFilter}
+              placeholder="Locale"
+              options={locales.map((l) => ({ value: l.code, label: l.label }))}
+            />
+            <FilterSelect
               value={regionFilter}
-              onChange={(event) => setRegionFilter(event.target.value)}
-              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
-            >
-              <option value="">Region</option>
-              {regions.map((region) => (
-                <option key={region.code} value={region.code}>
-                  {region.label}
-                </option>
-              ))}
-            </select>
-
-            <select
+              onValueChange={setRegionFilter}
+              placeholder="Region"
+              options={regions.map((r) => ({ value: r.code, label: r.label }))}
+            />
+            <FilterSelect
               value={tagFilter}
-              onChange={(event) => setTagFilter(event.target.value)}
-              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs focus:border-black focus:outline-none bg-white h-8"
-            >
-              <option value="">Tag</option>
-              {tags.map((tag) => (
-                <option key={tag.slug} value={tag.label}>
-                  {tag.label}
-                </option>
-              ))}
-            </select>
+              onValueChange={setTagFilter}
+              placeholder="Tag"
+              options={tags.map((t) => ({ value: t.label, label: t.label }))}
+            />
           </div>
 
-          {/* Filter Chips */}
+          {/* Filter chips */}
           {getActiveFilterChips().length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-1.5 pt-1.5 border-t border-gray-100">
+            <div className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2.5 border-t border-border">
               {getActiveFilterChips().map((chip, idx) => (
                 <span
                   key={idx}
-                  className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700"
+                  className="inline-flex items-center gap-1 rounded-sm border border-brand-periwinkle/30 bg-brand-periwinkle/10 px-2 py-0.5 text-xs font-medium text-brand-periwinkle"
                 >
                   {chip.label}
                   <button
                     type="button"
                     onClick={chip.onRemove}
-                    className="hover:text-gray-900"
+                    className="hover:opacity-70"
+                    aria-label={`Remove ${chip.label}`}
                   >
-                    <XMarkIcon className="h-3 w-3" />
+                    <X className="h-3 w-3" />
                   </button>
                 </span>
               ))}
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Asset Library - Full Width */}
         <div className="px-6 py-4 border-t border-gray-100">
@@ -2833,7 +2797,7 @@ export default function AdminDigitalAssetManagerPage() {
           {loadingAssets ? (
             <div className="flex items-center justify-center py-12 text-gray-600">
               <div className="flex items-center gap-3 text-sm">
-                <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                <RefreshCw className="h-5 w-5 animate-spin" />
                 Loading assets…
               </div>
             </div>
@@ -2856,7 +2820,7 @@ export default function AdminDigitalAssetManagerPage() {
                       disabled={bulkDeleting}
                       className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <PencilIcon className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" />
                       Bulk Edit
                     </button>
                     <button
@@ -2865,7 +2829,7 @@ export default function AdminDigitalAssetManagerPage() {
                       disabled={bulkDeleting}
                       className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <TrashIcon className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" />
                       {bulkDeleting ? 'Deleting...' : `Delete ${selectedAssetIds.size}`}
                     </button>
                   </div>
@@ -2886,7 +2850,7 @@ export default function AdminDigitalAssetManagerPage() {
                         : 'border-gray-300 bg-white'
                     }`}>
                       {selectedAssetIds.size === filteredAssets.length && filteredAssets.length > 0 && (
-                        <CheckIcon className="h-3 w-3 text-white" />
+                        <Check className="h-3 w-3 text-white" />
                       )}
                     </div>
                     <span>Select All</span>
@@ -2985,62 +2949,22 @@ export default function AdminDigitalAssetManagerPage() {
           
           {/* Pagination */}
           {pagination && pagination.total > 0 && (
-            <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
-              <div className="text-sm text-gray-700">
-                Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{' '}
-                <span className="font-medium">
-                  {Math.min(pagination.page * pagination.limit, pagination.total)}
-                </span>{' '}
-                of <span className="font-medium">{pagination.total}</span> assets
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 pr-2">
-                  <span className="text-sm text-gray-700">Page size</span>
-                  <select
-                    value={pageSize}
-                    onChange={(e) => {
-                      const next = parseInt(e.target.value, 10);
-                      if (next === 25 || next === 50 || next === 100) {
-                        setPageSize(next);
-                        setCurrentPage(1);
-                      }
-                    }}
-                    className="rounded-md border border-gray-300 bg-white px-2 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newPage = currentPage - 1;
-                    setCurrentPage(newPage);
-                    fetchAssets(accessToken ?? '', searchTerm || undefined, newPage);
-                  }}
-                  disabled={!pagination.hasPreviousPage}
-                  className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <span className="text-sm text-gray-700">
-                  Page {pagination.page} of {pagination.totalPages}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newPage = currentPage + 1;
-                    setCurrentPage(newPage);
-                    fetchAssets(accessToken ?? '', searchTerm || undefined, newPage);
-                  }}
-                  disabled={!pagination.hasNextPage}
-                  className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+            <Card className="mt-4">
+              <Pagination
+                page={currentPage}
+                totalPages={Math.max(1, pagination.totalPages)}
+                onPageChange={(p) => {
+                  setCurrentPage(p);
+                  fetchAssets(accessToken ?? '', searchTerm || undefined, p);
+                }}
+                pageSize={pageSize}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setCurrentPage(1);
+                }}
+                totalItems={pagination.total}
+              />
+            </Card>
           )}
         </div>
       </div>
@@ -3071,7 +2995,7 @@ export default function AdminDigitalAssetManagerPage() {
                 }}
                 className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
               >
-                <XMarkIcon className="h-4 w-4" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -3564,7 +3488,7 @@ export default function AdminDigitalAssetManagerPage() {
                                         className="mt-5 text-red-600 hover:text-red-700"
                                         title="Remove format"
                                       >
-                                        <XMarkIcon className="h-4 w-4" />
+                                        <X className="h-4 w-4" />
                                       </button>
                                     </div>
                                   ))}
@@ -3689,7 +3613,7 @@ export default function AdminDigitalAssetManagerPage() {
                   disabled={uploading}
                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  <ArrowUpTrayIcon className="h-4 w-4" />
+                  <Upload className="h-4 w-4" />
                   {uploading ? (isEditingExistingAsset ? 'Updating…' : 'Uploading…') : (isEditingExistingAsset ? 'Update Asset' : 'Upload Asset')}
                 </button>
                 <button
@@ -3901,5 +3825,42 @@ export default function AdminDigitalAssetManagerPage() {
         />
       )}
     </div>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Helpers
+// ----------------------------------------------------------------------------
+function FilterSelect({
+  value,
+  onValueChange,
+  placeholder,
+  options,
+  disabled = false,
+}: {
+  value: string;
+  onValueChange: (v: string) => void;
+  placeholder: string;
+  options: Array<{ value: string; label: string }>;
+  disabled?: boolean;
+}) {
+  return (
+    <Select
+      value={value || ALL_SELECT_VALUE}
+      onValueChange={(v) => onValueChange(v === ALL_SELECT_VALUE ? '' : v)}
+      disabled={disabled}
+    >
+      <SelectTrigger className="h-8 text-xs">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL_SELECT_VALUE}>{placeholder}</SelectItem>
+        {options.map((o) => (
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
