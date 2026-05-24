@@ -3,6 +3,19 @@
 import { useState } from 'react';
 import { Trash2, ChevronDown, ChevronUp, Image as ImageIcon, FileText, Film, Music } from 'lucide-react';
 import { LocaleOption } from './types';
+import { Card } from '../qq/card';
+import { Input } from '../qq/input';
+import { Label } from '../qq/label';
+import { Button } from '../qq/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../qq/select';
+
+const NONE_VALUE = '__none__';
 
 interface BulkFile {
   tempId: string;
@@ -225,22 +238,24 @@ export default function BulkUploadCard({
     }
   };
 
+  const rowDisabled = isUploading || file.status === 'uploading';
+
   return (
-    <div className="rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow transition-shadow">
+    <Card className="hover:shadow transition-shadow">
       {/* Card Header */}
-      <div className="flex items-start gap-2 p-2.5 border-b border-gray-100">
+      <div className="flex items-start gap-2 p-2.5 border-b border-border">
         <div className="flex-shrink-0">
           {renderThumbnail()}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-base font-semibold text-gray-900 truncate">{file.file.name}</p>
-          <p className="text-xs text-gray-500">{(file.file.size / 1024).toFixed(1)} KB</p>
+          <p className="text-base font-semibold text-foreground truncate">{file.file.name}</p>
+          <p className="text-xs text-muted-foreground">{(file.file.size / 1024).toFixed(1)} KB</p>
         </div>
         <button
           type="button"
           onClick={() => onRemove(file.tempId)}
-          disabled={isUploading || file.status === 'uploading'}
-          className="flex-shrink-0 rounded-md p-1 text-gray-400 hover:text-red-600 disabled:opacity-50 transition"
+          disabled={rowDisabled}
+          className="flex-shrink-0 rounded-md p-1 text-muted-foreground hover:text-destructive disabled:opacity-50 transition-colors"
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -248,114 +263,128 @@ export default function BulkUploadCard({
 
       {/* Status */}
       {file.status === 'uploading' && (
-        <div className="px-2.5 py-1 text-xs text-blue-600 bg-blue-50 border-b border-gray-100">Uploading...</div>
+        <div className="px-2.5 py-1 text-xs text-accent bg-accent/10 border-b border-border">Uploading…</div>
       )}
       {file.status === 'success' && (
-        <div className="px-2.5 py-1 text-xs text-green-600 bg-green-50 border-b border-gray-100">✓ Uploaded</div>
+        <div className="px-2.5 py-1 text-xs text-green-700 bg-green-50 border-b border-border">✓ Uploaded</div>
       )}
       {file.status === 'error' && file.error && (
-        <div className="px-2.5 py-1 text-xs text-red-600 bg-red-50 border-b border-gray-100">✗ {file.error}</div>
+        <div className="px-2.5 py-1 text-xs text-destructive bg-destructive/10 border-b border-border">✗ {file.error}</div>
       )}
 
       {/* Main Fields */}
-      <div className="p-2.5 space-y-1">
+      <div className="p-2.5 space-y-1.5">
         <div>
-          <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Title *</label>
-          <input
+          <Label className="text-[11px] font-semibold">Title *</Label>
+          <Input
             type="text"
             value={file.title}
             onChange={(e) => onFieldChange(file.tempId, 'title', e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
-            disabled={isUploading || file.status === 'uploading'}
+            className="mt-1 h-7 text-xs"
+            disabled={rowDisabled}
           />
         </div>
 
         <div className="grid grid-cols-3 gap-1.5">
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Type *</label>
-            <select
-              value={effectiveAssetTypeId || ''}
-              onChange={(e) => {
-                const selectedTypeId = e.target.value || null;
-                const selectedType = assetTypes.find(t => t.id === selectedTypeId);
-                const slugToEnumMap: Record<string, string> = {
-                  'image': 'image',
-                  'video': 'video',
-                  'document': 'document',
-                  'artwork': 'document',
-                  'audio': 'audio',
-                  'packaging-regulatory': 'document',
-                  'campaign': 'document',
-                };
-                // Update all related fields atomically and mark as overridden
-                const overrides = { ...(file.overrides || {}), assetTypeId: true, assetSubtypeId: true };
-                if (onFieldsChange) {
-                  onFieldsChange(file.tempId, {
-                    assetTypeId: selectedTypeId,
-                    assetType: selectedType ? slugToEnumMap[selectedType.slug] || 'other' : 'other',
-                    assetSubtypeId: null, // Reset subtype when type changes
-                    overrides: overrides,
-                  });
-                } else {
-                  onFieldChange(file.tempId, 'assetTypeId', selectedTypeId);
-                  onFieldChange(file.tempId, 'assetType', selectedType ? slugToEnumMap[selectedType.slug] || 'other' : 'other');
-                  onFieldChange(file.tempId, 'assetSubtypeId', null);
-                  onFieldChange(file.tempId, 'overrides', overrides);
-                }
-              }}
-              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
-              disabled={isUploading || file.status === 'uploading'}
-            >
-              <option value="">Select</option>
-              {assetTypes.map(type => (
-                <option key={type.id} value={type.id}>{type.name}</option>
-              ))}
-            </select>
+            <Label className="text-[11px] font-semibold">Type *</Label>
+            <div className="mt-1">
+              <Select
+                value={effectiveAssetTypeId || undefined}
+                onValueChange={(value) => {
+                  const selectedTypeId = value || null;
+                  const selectedType = assetTypes.find(t => t.id === selectedTypeId);
+                  const slugToEnumMap: Record<string, string> = {
+                    'image': 'image',
+                    'video': 'video',
+                    'document': 'document',
+                    'artwork': 'document',
+                    'audio': 'audio',
+                    'packaging-regulatory': 'document',
+                    'campaign': 'document',
+                  };
+                  const overrides = { ...(file.overrides || {}), assetTypeId: true, assetSubtypeId: true };
+                  if (onFieldsChange) {
+                    onFieldsChange(file.tempId, {
+                      assetTypeId: selectedTypeId,
+                      assetType: selectedType ? slugToEnumMap[selectedType.slug] || 'other' : 'other',
+                      assetSubtypeId: null,
+                      overrides: overrides,
+                    });
+                  } else {
+                    onFieldChange(file.tempId, 'assetTypeId', selectedTypeId);
+                    onFieldChange(file.tempId, 'assetType', selectedType ? slugToEnumMap[selectedType.slug] || 'other' : 'other');
+                    onFieldChange(file.tempId, 'assetSubtypeId', null);
+                    onFieldChange(file.tempId, 'overrides', overrides);
+                  }
+                }}
+                disabled={rowDisabled}
+              >
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {assetTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Sub-Type *</label>
-            <select
-              value={effectiveAssetSubtypeId || ''}
-              onChange={(e) => handlePerFileOverride('assetSubtypeId', e.target.value || null)}
-              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
-              disabled={isUploading || file.status === 'uploading' || !effectiveAssetTypeId}
-            >
-              <option value="">Select</option>
-              {assetSubtypes
-                .filter(st => st.asset_type_id === effectiveAssetTypeId)
-                .map(subtype => (
-                  <option key={subtype.id} value={subtype.id}>{subtype.name}</option>
-                ))}
-            </select>
+            <Label className="text-[11px] font-semibold">Sub-Type *</Label>
+            <div className="mt-1">
+              <Select
+                value={effectiveAssetSubtypeId || undefined}
+                onValueChange={(value) => handlePerFileOverride('assetSubtypeId', value || null)}
+                disabled={rowDisabled || !effectiveAssetTypeId}
+              >
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {assetSubtypes
+                    .filter(st => st.asset_type_id === effectiveAssetTypeId)
+                    .map(subtype => (
+                      <SelectItem key={subtype.id} value={subtype.id}>{subtype.name}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Product</label>
-            <select
-              value={file.productName || ''}
-              onChange={(e) => {
-                const selectedValue = e.target.value;
-                const selectedProduct = products.find(p => p.item_name === selectedValue);
-                // Update both fields atomically if onFieldsChange is available, otherwise update separately
-                if (onFieldsChange) {
-                  onFieldsChange(file.tempId, {
-                    productName: selectedValue,
-                    sku: selectedProduct?.sku || '',
-                  });
-                } else {
-                  onFieldChange(file.tempId, 'productName', selectedValue);
-                  onFieldChange(file.tempId, 'sku', selectedProduct?.sku || '');
-                }
-              }}
-              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
-              disabled={isUploading || file.status === 'uploading'}
-            >
-              <option value="">None</option>
-              {products.map(product => (
-                <option key={product.id} value={product.item_name}>{product.item_name}</option>
-              ))}
-            </select>
+            <Label className="text-[11px] font-semibold">Product</Label>
+            <div className="mt-1">
+              <Select
+                value={file.productName || undefined}
+                onValueChange={(value) => {
+                  const selectedValue = value === NONE_VALUE ? '' : value;
+                  const selectedProduct = products.find(p => p.item_name === selectedValue);
+                  if (onFieldsChange) {
+                    onFieldsChange(file.tempId, {
+                      productName: selectedValue,
+                      sku: selectedProduct?.sku || '',
+                    });
+                  } else {
+                    onFieldChange(file.tempId, 'productName', selectedValue);
+                    onFieldChange(file.tempId, 'sku', selectedProduct?.sku || '');
+                  }
+                }}
+                disabled={rowDisabled}
+              >
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_VALUE}>None</SelectItem>
+                  {products.map(product => (
+                    <SelectItem key={product.id} value={product.item_name}>{product.item_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
@@ -364,8 +393,8 @@ export default function BulkUploadCard({
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-2.5 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-50 border-t border-gray-100 transition"
-        disabled={isUploading || file.status === 'uploading'}
+        className="w-full flex items-center justify-between px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 border-t border-border transition-colors"
+        disabled={rowDisabled}
       >
         <span>More metadata</span>
         {isExpanded ? (
@@ -377,70 +406,78 @@ export default function BulkUploadCard({
 
       {/* Expanded Metadata */}
       {isExpanded && (
-        <div className="px-2.5 pb-2.5 space-y-1.5 border-t border-gray-100 bg-gray-50">
+        <div className="px-2.5 pb-2.5 pt-1.5 space-y-1.5 border-t border-border bg-muted/30">
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Description</label>
+            <Label className="text-[11px] font-semibold">Description</Label>
             <textarea
               value={file.description}
               onChange={(e) => onFieldChange(file.tempId, 'description', e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black resize-none h-16"
-              disabled={isUploading || file.status === 'uploading'}
+              className="mt-1 flex w-full rounded-md border border-input bg-background px-2 py-1 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 resize-none h-16"
+              disabled={rowDisabled}
               placeholder="Asset description"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Product Line</label>
-            <select
-              value={effectiveProductLine}
-              onChange={(e) => handlePerFileOverride('productLine', e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
-              disabled={isUploading || file.status === 'uploading'}
-            >
-              <option value="">None</option>
-              {(() => {
-                // Get active product lines
-                const activeOptions = productLines.map(pl => ({ code: pl.code, name: pl.name, active: true }));
-                // If current value is inactive, add it to options
-                const currentValue = effectiveProductLine;
-                // Note: We'd need allProductLines prop to check for inactive, but for now just show active ones
-                // The main form handles inactive values, bulk upload is typically for new assets
-                return activeOptions.map(pl => (
-                  <option key={pl.code} value={pl.code}>{pl.name}</option>
-                ));
-              })()}
-            </select>
+            <Label className="text-[11px] font-semibold">Product Line</Label>
+            <div className="mt-1">
+              <Select
+                value={effectiveProductLine || undefined}
+                onValueChange={(value) =>
+                  handlePerFileOverride('productLine', value === NONE_VALUE ? '' : value)
+                }
+                disabled={rowDisabled}
+              >
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_VALUE}>None</SelectItem>
+                  {productLines.map(pl => (
+                    <SelectItem key={pl.code} value={pl.code}>{pl.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">Campaign</label>
-            <select
-              value={effectiveCampaignId || ''}
-              onChange={(e) => handlePerFileOverride('campaignId', e.target.value || null)}
-              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
-              disabled={isUploading || file.status === 'uploading'}
-            >
-              <option value="">None</option>
-              {campaigns.map(campaign => (
-                <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
-              ))}
-            </select>
+            <Label className="text-[11px] font-semibold">Campaign</Label>
+            <div className="mt-1">
+              <Select
+                value={effectiveCampaignId || undefined}
+                onValueChange={(value) =>
+                  handlePerFileOverride('campaignId', value === NONE_VALUE ? null : value)
+                }
+                disabled={rowDisabled}
+              >
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_VALUE}>None</SelectItem>
+                  {campaigns.map(campaign => (
+                    <SelectItem key={campaign.id} value={campaign.id}>{campaign.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-0.5">SKU</label>
-            <input
+            <Label className="text-[11px] font-semibold">SKU</Label>
+            <Input
               type="text"
               value={file.sku}
               onChange={(e) => handlePerFileOverride('sku', e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black h-7"
-              disabled={isUploading || file.status === 'uploading'}
+              className="mt-1 h-7 text-xs"
+              disabled={rowDisabled}
               placeholder="Auto-filled from product"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Tags</label>
+            <Label className="text-[11px] font-semibold mb-1 block">Tags</Label>
             <div className="space-y-2">
               <div className="flex flex-wrap gap-1">
                 {tags.map((tag) => {
@@ -450,11 +487,11 @@ export default function BulkUploadCard({
                       type="button"
                       key={tag.slug}
                       onClick={() => handlePerFileOverride('tags', toggleSelection(currentTags, tag.slug))}
-                      disabled={isUploading || file.status === 'uploading'}
-                      className={`rounded-md border px-2 py-0.5 text-[10px] font-medium transition ${
+                      disabled={rowDisabled}
+                      className={`rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors ${
                         selected
-                          ? 'border-black bg-black text-white'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-border bg-background text-foreground hover:bg-secondary'
                       } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       {tag.label}
@@ -463,7 +500,7 @@ export default function BulkUploadCard({
                 })}
               </div>
               <div className="flex items-center gap-1">
-                <input
+                <Input
                   type="text"
                   value={newTagLabel}
                   onChange={(event) => setNewTagLabel(event.target.value)}
@@ -473,24 +510,26 @@ export default function BulkUploadCard({
                       handleAddTag();
                     }
                   }}
-                  className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-[10px] focus:border-black focus:outline-none h-6"
+                  className="flex-1 h-6 text-[10px] px-2"
                   placeholder="Add new tag"
-                  disabled={isUploading || file.status === 'uploading'}
+                  disabled={rowDisabled}
                 />
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-[10px] px-2"
                   onClick={handleAddTag}
-                  disabled={isUploading || file.status === 'uploading'}
-                  className="rounded-md border border-gray-300 px-2 py-1 text-[10px] font-medium text-gray-700 hover:bg-gray-100 h-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={rowDisabled}
                 >
                   Add
-                </button>
+                </Button>
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Locales</label>
+            <Label className="text-[11px] font-semibold mb-1 block">Locales</Label>
             <div className="space-y-1">
               {(() => {
                 // Get active locales
@@ -504,30 +543,30 @@ export default function BulkUploadCard({
                   })
                   .filter((l): l is LocaleOption & { is_inactive: true } => l !== null);
                 const allDisplayLocales = [...activeLocales, ...selectedInactiveLocales];
-                
+
                 return allDisplayLocales.map((locale) => {
                   const selected = currentLocales.includes(locale.code);
                   return (
-                    <div key={locale.code} className="flex items-center justify-between rounded-md border border-gray-200 px-2 py-1">
-                      <label className="flex items-center gap-1.5 text-[10px] text-gray-700">
+                    <div key={locale.code} className="flex items-center justify-between rounded-md border border-border bg-background px-2 py-1">
+                      <label className="flex items-center gap-1.5 text-[10px] text-foreground">
                         <input
                           type="checkbox"
                           checked={selected}
                           onChange={() => handleLocaleToggle(locale.code)}
-                          className="h-3.5 w-3.5 rounded border-gray-300 text-black focus:ring-black"
-                          disabled={(isUploading || file.status === 'uploading') || (locale as any).is_inactive}
+                          className="h-3.5 w-3.5 rounded border-input text-primary focus:ring-ring"
+                          disabled={rowDisabled || (locale as any).is_inactive}
                         />
                         <span>{locale.label}{(locale as any).is_inactive ? ' (inactive)' : ''}</span>
                       </label>
                       {selected && (
-                        <label className="flex items-center gap-1 text-[9px] text-gray-600">
+                        <label className="flex items-center gap-1 text-[9px] text-muted-foreground">
                           <input
                             type="radio"
                             name={`primary-locale-${file.tempId}`}
                             checked={file.primaryLocale === locale.code}
                             onChange={() => onFieldChange(file.tempId, 'primaryLocale', locale.code)}
-                            className="h-2.5 w-2.5"
-                            disabled={isUploading || file.status === 'uploading'}
+                            className="h-2.5 w-2.5 text-primary focus:ring-ring"
+                            disabled={rowDisabled}
                           />
                           Primary
                         </label>
@@ -540,7 +579,7 @@ export default function BulkUploadCard({
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 

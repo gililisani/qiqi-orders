@@ -42,10 +42,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/qq/select';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from '../../components/qq/sheet';
 import { useToast } from '../../components/ui/ToastProvider';
 import { useConfirm } from '../../components/ui/ConfirmProvider';
 
 const ALL_SELECT_VALUE = '__all__';
+const NONE_SELECT_VALUE = '__none__';
 
 const assetTypeOptions: Array<{ value: string; label: string; icon: JSX.Element }> = [
   { value: 'image', label: 'Image', icon: <ImageIcon className="h-3.5 w-3.5" /> },
@@ -2809,51 +2817,54 @@ export default function AdminDigitalAssetManagerPage() {
             <>
               {/* Bulk Actions Bar */}
               {selectedAssetIds.size > 0 && (
-                <div className="mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-                  <span className="text-sm font-medium text-blue-900">
+                <Card className="mb-4 flex items-center justify-between border-accent/40 bg-accent/10 px-4 py-3">
+                  <span className="text-sm font-medium text-foreground">
                     {selectedAssetIds.size} asset{selectedAssetIds.size !== 1 ? 's' : ''} selected
                   </span>
                   <div className="flex items-center gap-2">
-                    <button
+                    <Button
                       type="button"
+                      size="sm"
                       onClick={initializeBulkEdit}
                       disabled={bulkDeleting}
-                      className="inline-flex items-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Pencil className="h-4 w-4" />
                       Bulk Edit
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      size="sm"
+                      variant="destructive"
                       onClick={handleBulkDelete}
-                      disabled={bulkDeleting}
-                      className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      loading={bulkDeleting}
                     >
-                      <Trash2 className="h-4 w-4" />
-                      {bulkDeleting ? 'Deleting...' : `Delete ${selectedAssetIds.size}`}
-                    </button>
+                      {!bulkDeleting && <Trash2 className="h-4 w-4" />}
+                      {bulkDeleting ? 'Deleting…' : `Delete ${selectedAssetIds.size}`}
+                    </Button>
                   </div>
-                </div>
+                </Card>
               )}
-              
+
               {/* Select All */}
               {filteredAssets.length > 0 && (
                 <div className="mb-4 flex items-center gap-2">
                   <button
                     type="button"
                     onClick={toggleSelectAll}
-                    className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
+                    className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    <div className={`flex h-4 w-4 items-center justify-center rounded border-2 ${
-                      selectedAssetIds.size === filteredAssets.length && filteredAssets.length > 0
-                        ? 'border-blue-600 bg-blue-600'
-                        : 'border-gray-300 bg-white'
-                    }`}>
+                    <span
+                      className={`flex h-4 w-4 items-center justify-center rounded border ${
+                        selectedAssetIds.size === filteredAssets.length && filteredAssets.length > 0
+                          ? 'border-accent bg-accent'
+                          : 'border-border bg-background'
+                      }`}
+                    >
                       {selectedAssetIds.size === filteredAssets.length && filteredAssets.length > 0 && (
-                        <Check className="h-3 w-3 text-white" />
+                        <Check className="h-3 w-3 text-accent-foreground" />
                       )}
-                    </div>
-                    <span>Select All</span>
+                    </span>
+                    <span>Select all</span>
                   </button>
                 </div>
               )}
@@ -2969,145 +2980,141 @@ export default function AdminDigitalAssetManagerPage() {
         </div>
       </div>
 
-      {/* Upload Drawer - Slide Over */}
-      {isUploadDrawerOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/50 transition-opacity"
-            onClick={() => setIsUploadDrawerOpen(false)}
-          />
-          
-          {/* Drawer */}
-          <div className="absolute right-0 top-0 h-full w-full max-w-[500px] bg-white shadow-xl flex flex-col">
-            {/* Drawer Header */}
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3 flex-shrink-0">
-              <h2 className="text-base font-semibold text-gray-900">
-                {isEditingExistingAsset ? 'Edit Asset' : 'Upload Asset'}
-              </h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsUploadDrawerOpen(false);
-                  setIsEditingExistingAsset(false);
-                  setEditingAssetId(null);
-                  resetForm();
-                }}
-                className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      {/* Upload / Edit Drawer */}
+      <Sheet
+        open={isUploadDrawerOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsUploadDrawerOpen(false);
+            setIsEditingExistingAsset(false);
+            setEditingAssetId(null);
+            resetForm();
+          }
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="p-0 w-full sm:max-w-[500px] flex flex-col gap-0"
+        >
+          <SheetHeader className="flex-row items-center justify-between space-y-0 border-b border-border px-5 py-3 flex-shrink-0">
+            <SheetTitle>
+              {isEditingExistingAsset ? 'Edit Asset' : 'Upload Asset'}
+            </SheetTitle>
+          </SheetHeader>
 
-            {/* Drawer Content - Scrollable */}
-            <div className="flex-1 overflow-y-auto px-5 py-4">
+          {/* Drawer Content - Scrollable */}
+          <div className="flex-1 overflow-y-auto px-5 py-4">
               {error && (
-                <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                  {error}
-                </div>
+                <Alert variant="destructive" className="mb-3">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
               {/* Only show success message for uploads, not deletions */}
               {successMessage && successMessage.includes('uploaded') && (
-                <div className="mb-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">
-                  {successMessage}
-                </div>
+                <Alert className="mb-3 border-green-200 bg-green-50 text-green-700">
+                  <AlertDescription>{successMessage}</AlertDescription>
+                </Alert>
               )}
               
               <form id="upload-form" onSubmit={handleUpload} className="pb-4">
                 {/* Section 1: Basic Information */}
                 <div className="mb-5">
-                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Basic Information</h3>
+                  <h3 className="text-xs font-semibold text-foreground uppercase tracking-wide mb-3">Basic Information</h3>
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Title *</label>
-                      <input
+                      <Label className="text-xs">Title *</Label>
+                      <Input
                         type="text"
                         value={formState.title}
                         onChange={(event) => setFormState((prev) => ({ ...prev, title: event.target.value }))}
-                        className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
+                        className="mt-1.5 h-8 text-sm"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Description</label>
+                      <Label className="text-xs">Description</Label>
                       <textarea
                         value={formState.description}
                         onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
                         rows={2}
-                        className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none resize-none"
+                        className="mt-1.5 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 mb-5"></div>
+                <div className="border-t border-border mb-5"></div>
 
                 {/* Section 2: Asset Taxonomy */}
                 <div className="mb-5">
-                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Asset Taxonomy</h3>
+                  <h3 className="text-xs font-semibold text-foreground uppercase tracking-wide mb-3">Asset Taxonomy</h3>
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Asset Type *</label>
-                      <select
-                        value={formState.assetTypeId || ''}
-                        onChange={(event) => {
-                          const selectedTypeId = event.target.value || null;
-                          setFormState((prev) => ({ 
-                            ...prev, 
-                            assetTypeId: selectedTypeId,
-                            assetSubtypeId: null,
-                            assetType: selectedTypeId ? (() => {
-                              const selectedType = assetTypes.find(t => t.id === selectedTypeId);
-                              if (!selectedType) return prev.assetType;
-                              const slugToEnumMap: Record<string, string> = {
-                                'image': 'image',
-                                'video': 'video',
-                                'document': 'document',
-                                'artwork': 'document',
-                                'audio': 'audio',
-                                'packaging-regulatory': 'document',
-                                'campaign': 'document',
-                              };
-                              return slugToEnumMap[selectedType.slug] || 'other';
-                            })() : prev.assetType,
-                            file: null
-                          }));
-                        }}
-                        className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
-                        required
-                      >
-                        <option value="">Select Asset Type</option>
-                        {(() => {
-                          // Get active asset types
-                          const activeTypes = assetTypes;
-                          // If current value is inactive, add it to options
-                          const currentValue = formState.assetTypeId;
-                          const currentInactive = currentValue && !assetTypes.find(t => t.id === currentValue)
-                            ? allAssetTypes.find(t => t.id === currentValue)
-                            : null;
-                          const allOptions = currentInactive 
-                            ? [...activeTypes, { id: currentInactive.id, name: currentInactive.name, slug: currentInactive.slug }]
-                            : activeTypes;
-                          return allOptions.map(type => (
-                            <option key={type.id} value={type.id}>
-                              {type.name}{currentInactive && type.id === currentInactive.id ? ' (inactive)' : ''}
-                            </option>
-                          ));
-                        })()}
-                      </select>
+                      <Label className="text-xs">Asset Type *</Label>
+                      <div className="mt-1.5">
+                        <Select
+                          value={formState.assetTypeId || undefined}
+                          onValueChange={(value) => {
+                            const selectedTypeId = value || null;
+                            setFormState((prev) => ({
+                              ...prev,
+                              assetTypeId: selectedTypeId,
+                              assetSubtypeId: null,
+                              assetType: selectedTypeId ? (() => {
+                                const selectedType = assetTypes.find(t => t.id === selectedTypeId);
+                                if (!selectedType) return prev.assetType;
+                                const slugToEnumMap: Record<string, string> = {
+                                  'image': 'image',
+                                  'video': 'video',
+                                  'document': 'document',
+                                  'artwork': 'document',
+                                  'audio': 'audio',
+                                  'packaging-regulatory': 'document',
+                                  'campaign': 'document',
+                                };
+                                return slugToEnumMap[selectedType.slug] || 'other';
+                              })() : prev.assetType,
+                              file: null
+                            }));
+                          }}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Select Asset Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(() => {
+                              // Get active asset types
+                              const activeTypes = assetTypes;
+                              // If current value is inactive, add it to options
+                              const currentValue = formState.assetTypeId;
+                              const currentInactive = currentValue && !assetTypes.find(t => t.id === currentValue)
+                                ? allAssetTypes.find(t => t.id === currentValue)
+                                : null;
+                              const allOptions = currentInactive
+                                ? [...activeTypes, { id: currentInactive.id, name: currentInactive.name, slug: currentInactive.slug }]
+                                : activeTypes;
+                              return allOptions.map(type => (
+                                <SelectItem key={type.id} value={type.id}>
+                                  {type.name}{currentInactive && type.id === currentInactive.id ? ' (inactive)' : ''}
+                                </SelectItem>
+                              ));
+                            })()}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       {(() => {
                         const selectedType = assetTypes.find(t => t.id === formState.assetTypeId);
                         if (selectedType?.slug === 'image') {
                           return (
-                            <p className="mt-1 text-[10px] text-blue-600 leading-tight">
+                            <p className="mt-1 text-[10px] text-brand-periwinkle leading-tight">
                               <strong>Image:</strong> Finished, exported visuals (JPG/PNG/WebP). No layers.
                             </p>
                           );
                         }
                         if (selectedType?.slug === 'artwork') {
                           return (
-                            <p className="mt-1 text-[10px] text-purple-600 leading-tight">
+                            <p className="mt-1 text-[10px] text-brand-magenta leading-tight">
                               <strong>Artwork:</strong> Editable layered files (PSD/AI/EPS/SVG/INDD/CMYK PDFs). For designers.
                             </p>
                           );
@@ -3117,113 +3124,134 @@ export default function AdminDigitalAssetManagerPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      <Label className="text-xs">
                         Asset Sub-Type {formState.assetTypeId ? '*' : ''}
-                      </label>
-                      <select
-                        value={formState.assetSubtypeId || ''}
-                        onChange={(event) => {
-                          setFormState((prev) => ({ 
-                            ...prev, 
-                            assetSubtypeId: event.target.value || null 
-                          }));
-                        }}
-                        disabled={!formState.assetTypeId}
-                        className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed h-8"
-                        required={!!formState.assetTypeId}
-                      >
-                        <option value="">Select Sub-Type</option>
-                        {(() => {
-                          // Get active subtypes for the selected asset type
-                          const activeSubtypes = assetSubtypes.filter(
-                            (subtype) => subtype.asset_type_id === formState.assetTypeId
-                          );
-                          // If current value is inactive, add it to options
-                          const currentValue = formState.assetSubtypeId;
-                          const currentInactive = currentValue && !activeSubtypes.find(st => st.id === currentValue)
-                            ? allAssetSubtypes.find(st => st.id === currentValue && st.asset_type_id === formState.assetTypeId)
-                            : null;
-                          const allOptions = currentInactive 
-                            ? [...activeSubtypes, { id: currentInactive.id, name: currentInactive.name, slug: currentInactive.slug, asset_type_id: currentInactive.asset_type_id }]
-                            : activeSubtypes;
-                          return allOptions.map((subtype) => (
-                            <option key={subtype.id} value={subtype.id}>
-                              {subtype.name}{currentInactive && subtype.id === currentInactive.id ? ' (inactive)' : ''}
-                            </option>
-                          ));
-                        })()}
-                      </select>
+                      </Label>
+                      <div className="mt-1.5">
+                        <Select
+                          value={formState.assetSubtypeId || undefined}
+                          onValueChange={(value) => {
+                            setFormState((prev) => ({
+                              ...prev,
+                              assetSubtypeId: value || null,
+                            }));
+                          }}
+                          disabled={!formState.assetTypeId}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Select Sub-Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(() => {
+                              // Get active subtypes for the selected asset type
+                              const activeSubtypes = assetSubtypes.filter(
+                                (subtype) => subtype.asset_type_id === formState.assetTypeId
+                              );
+                              // If current value is inactive, add it to options
+                              const currentValue = formState.assetSubtypeId;
+                              const currentInactive = currentValue && !activeSubtypes.find(st => st.id === currentValue)
+                                ? allAssetSubtypes.find(st => st.id === currentValue && st.asset_type_id === formState.assetTypeId)
+                                : null;
+                              const allOptions = currentInactive
+                                ? [...activeSubtypes, { id: currentInactive.id, name: currentInactive.name, slug: currentInactive.slug, asset_type_id: currentInactive.asset_type_id }]
+                                : activeSubtypes;
+                              return allOptions.map((subtype) => (
+                                <SelectItem key={subtype.id} value={subtype.id}>
+                                  {subtype.name}{currentInactive && subtype.id === currentInactive.id ? ' (inactive)' : ''}
+                                </SelectItem>
+                              ));
+                            })()}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 mb-5"></div>
+                <div className="border-t border-border mb-5"></div>
 
                 {/* Section 3: Product Information */}
                 <div className="mb-5">
-                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Product Information</h3>
+                  <h3 className="text-xs font-semibold text-foreground uppercase tracking-wide mb-3">Product Information</h3>
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">Product Line</label>
-                        <select
-                          value={formState.productLine}
-                          onChange={(event) => setFormState((prev) => ({ ...prev, productLine: event.target.value }))}
-                          className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
-                        >
-                          <option value="">None</option>
-                          {(() => {
-                            // Get active product lines
-                            const activeOptions = productLines.map(pl => ({ code: pl.code, name: pl.name, active: true }));
-                            // If current value is inactive, add it to options
-                            const currentValue = formState.productLine;
-                            const currentInactive = currentValue && !productLines.find(pl => pl.code === currentValue)
-                              ? allProductLines.find(pl => pl.code === currentValue)
-                              : null;
-                            const allOptions = currentInactive 
-                              ? [...activeOptions, { code: currentInactive.code, name: currentInactive.name, active: false }]
-                              : activeOptions;
-                            return allOptions.map(pl => (
-                              <option key={pl.code} value={pl.code}>
-                                {pl.name}{!pl.active ? ' (inactive)' : ''}
-                              </option>
-                            ));
-                          })()}
-                        </select>
+                        <Label className="text-xs">Product Line</Label>
+                        <div className="mt-1.5">
+                          <Select
+                            value={formState.productLine || undefined}
+                            onValueChange={(value) =>
+                              setFormState((prev) => ({
+                                ...prev,
+                                productLine: value === NONE_SELECT_VALUE ? '' : value,
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="None" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={NONE_SELECT_VALUE}>None</SelectItem>
+                              {(() => {
+                                // Get active product lines
+                                const activeOptions = productLines.map(pl => ({ code: pl.code, name: pl.name, active: true }));
+                                // If current value is inactive, add it to options
+                                const currentValue = formState.productLine;
+                                const currentInactive = currentValue && !productLines.find(pl => pl.code === currentValue)
+                                  ? allProductLines.find(pl => pl.code === currentValue)
+                                  : null;
+                                const allOptions = currentInactive
+                                  ? [...activeOptions, { code: currentInactive.code, name: currentInactive.name, active: false }]
+                                  : activeOptions;
+                                return allOptions.map(pl => (
+                                  <SelectItem key={pl.code} value={pl.code}>
+                                    {pl.name}{!pl.active ? ' (inactive)' : ''}
+                                  </SelectItem>
+                                ));
+                              })()}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1.5">Product Name</label>
-                        <select
-                          value={formState.productName}
-                          onChange={(event) => {
-                            const selectedProductName = event.target.value;
-                            const selectedProduct = products.find(p => p.item_name === selectedProductName);
-                            setFormState((prev) => ({ 
-                              ...prev, 
-                              productName: selectedProductName,
-                              sku: selectedProductName ? (selectedProduct?.sku || '') : '', // Auto-populate SKU from Products table, clear if no product selected
-                            }));
-                          }}
-                          className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
-                        >
-                          <option value="">Select Product</option>
-                          {products.map((product) => (
-                            <option key={product.id} value={product.item_name}>
-                              {product.item_name}
-                            </option>
-                          ))}
-                        </select>
+                        <Label className="text-xs">Product Name</Label>
+                        <div className="mt-1.5">
+                          <Select
+                            value={formState.productName || undefined}
+                            onValueChange={(value) => {
+                              const selectedProductName = value === NONE_SELECT_VALUE ? '' : value;
+                              const selectedProduct = products.find(p => p.item_name === selectedProductName);
+                              setFormState((prev) => ({
+                                ...prev,
+                                productName: selectedProductName,
+                                sku: selectedProductName ? (selectedProduct?.sku || '') : '',
+                              }));
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Select Product" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={NONE_SELECT_VALUE}>— None —</SelectItem>
+                              {products.map((product) => (
+                                <SelectItem key={product.id} value={product.item_name}>
+                                  {product.item_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 mb-5"></div>
+                <div className="border-t border-border mb-5"></div>
 
                 {/* Section 4: Tags */}
                 <div className="mb-5">
-                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Tags</h3>
+                  <h3 className="text-xs font-semibold text-foreground uppercase tracking-wide mb-3">Tags</h3>
                   <div className="space-y-2.5">
                     <div className="flex flex-wrap gap-1.5">
                       {tags.map((tag) => {
@@ -3238,10 +3266,10 @@ export default function AdminDigitalAssetManagerPage() {
                                 selectedTagSlugs: toggleSelection(prev.selectedTagSlugs, tag.slug),
                               }))
                             }
-                            className={`rounded-md border px-2 py-0.5 text-xs font-medium transition ${
+                            className={`rounded-md border px-2 py-0.5 text-xs font-medium transition-colors ${
                               selected
-                                ? 'border-black bg-black text-white'
-                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border bg-background text-foreground hover:bg-secondary'
                             }`}
                           >
                             {tag.label}
@@ -3250,33 +3278,34 @@ export default function AdminDigitalAssetManagerPage() {
                       })}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <input
+                      <Input
                         type="text"
                         value={newTagLabel}
                         onChange={(event) => setNewTagLabel(event.target.value)}
-                        className="flex-1 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
+                        className="flex-1 h-8 text-sm"
                         placeholder="Add new tag"
                       />
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={handleAddTag}
-                        className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 h-8"
                       >
                         Add
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 mb-5"></div>
+                <div className="border-t border-border mb-5"></div>
 
                 {/* Section 5: Locales */}
                 <div className="mb-5">
-                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Locales</h3>
+                  <h3 className="text-xs font-semibold text-foreground uppercase tracking-wide mb-3">Locales</h3>
                   <div className="space-y-3">
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-xs font-medium text-gray-700">Locales *</label>
+                        <Label className="text-xs">Locales *</Label>
                         <button
                           type="button"
                           onClick={async () => {
@@ -3284,7 +3313,7 @@ export default function AdminDigitalAssetManagerPage() {
                             if (!code) return;
                             const label = prompt('Enter locale label (e.g., German):');
                             if (!label) return;
-                            
+
                             try {
                               const headers = buildAuthHeaders(accessToken);
                               const response = await fetch('/api/dam/lookups', {
@@ -3300,12 +3329,12 @@ export default function AdminDigitalAssetManagerPage() {
                                   label: label.trim(),
                                 }),
                               });
-                              
+
                               if (!response.ok) {
-                                const error = await response.json().catch(() => ({}));
-                                throw new Error(error.error || 'Failed to add locale');
+                                const errorData = await response.json().catch(() => ({}));
+                                throw new Error(errorData.error || 'Failed to add locale');
                               }
-                              
+
                               const data = await response.json();
                               setLocales(data.locales || []);
                               alert('Locale added successfully!');
@@ -3313,7 +3342,7 @@ export default function AdminDigitalAssetManagerPage() {
                               alert('Failed to add locale: ' + err.message);
                             }
                           }}
-                          className="text-[10px] text-blue-600 hover:text-blue-800 underline"
+                          className="text-[10px] text-accent hover:underline"
                         >
                           + Add Language
                         </button>
@@ -3331,29 +3360,29 @@ export default function AdminDigitalAssetManagerPage() {
                             })
                             .filter((l): l is LocaleOption & { is_inactive: true } => l !== null);
                           const allDisplayLocales = [...activeLocales, ...selectedInactiveLocales];
-                          
+
                           return allDisplayLocales.map((locale) => {
                             const selected = formState.selectedLocaleCodes.includes(locale.code);
                             return (
-                              <div key={locale.code} className="flex items-center justify-between rounded-md border border-gray-200 px-2.5 py-1.5">
-                                <label className="flex items-center gap-2 text-xs text-gray-700">
+                              <div key={locale.code} className="flex items-center justify-between rounded-md border border-border px-2.5 py-1.5">
+                                <label className="flex items-center gap-2 text-xs text-foreground">
                                   <input
                                     type="checkbox"
                                     checked={selected}
                                     onChange={() => handleLocaleToggle(locale.code)}
-                                    className="h-3.5 w-3.5 rounded border-gray-300 text-black focus:ring-black"
+                                    className="h-3.5 w-3.5 rounded border-input text-primary focus:ring-ring"
                                     disabled={(locale as any).is_inactive}
                                   />
                                   <span>{locale.label}{(locale as any).is_inactive ? ' (inactive)' : ''}</span>
                                 </label>
                                 {selected && (
-                                  <label className="flex items-center gap-1 text-[10px] text-gray-600">
+                                  <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
                                     <input
                                       type="radio"
                                       name="primary-locale"
                                       checked={formState.primaryLocale === locale.code}
                                       onChange={() => handlePrimaryLocaleChange(locale.code)}
-                                      className="h-3 w-3"
+                                      className="h-3 w-3 text-primary focus:ring-ring"
                                     />
                                     Primary
                                   </label>
@@ -3367,32 +3396,43 @@ export default function AdminDigitalAssetManagerPage() {
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 mb-5"></div>
+                <div className="border-t border-border mb-5"></div>
 
                 {/* Section 5.5: Campaign (optional) */}
                 <div className="mb-5">
-                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Campaign (Optional)</h3>
+                  <h3 className="text-xs font-semibold text-foreground uppercase tracking-wide mb-3">Campaign (Optional)</h3>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Campaign</label>
-                    <select
-                      value={formState.campaignId || ''}
-                      onChange={(e) => setFormState((prev) => ({ ...prev, campaignId: e.target.value || null }))}
-                      className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
-                    >
-                      <option value="">None</option>
-                      {campaigns.map((campaign) => (
-                        <option key={campaign.id} value={campaign.id}>
-                          {campaign.name}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="mt-1 text-[10px] text-gray-500 leading-tight">
+                    <Label className="text-xs">Campaign</Label>
+                    <div className="mt-1.5">
+                      <Select
+                        value={formState.campaignId || undefined}
+                        onValueChange={(value) =>
+                          setFormState((prev) => ({
+                            ...prev,
+                            campaignId: value === NONE_SELECT_VALUE ? null : value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="None" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NONE_SELECT_VALUE}>None</SelectItem>
+                          {campaigns.map((campaign) => (
+                            <SelectItem key={campaign.id} value={campaign.id}>
+                              {campaign.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="mt-1 text-[10px] text-muted-foreground leading-tight">
                       Optionally assign this asset to a campaign.
                     </p>
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 mb-5"></div>
+                <div className="border-t border-border mb-5"></div>
 
                 {/* Section 6: File Upload or Video Input */}
                 <div className="mb-5">
@@ -3404,33 +3444,33 @@ export default function AdminDigitalAssetManagerPage() {
                     if (isVideoType) {
                       return (
                         <div>
-                          <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-2.5">Video Options</h3>
+                          <h3 className="text-xs font-semibold text-foreground uppercase tracking-wide mb-2.5">Video Options</h3>
                           <div className="space-y-2.5">
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1.5">Vimeo Video ID or URL *</label>
-                              <input
+                              <Label className="text-xs">Vimeo Video ID or URL *</Label>
+                              <Input
                                 type="text"
                                 value={formState.vimeoVideoId}
                                 onChange={(event) => setFormState((prev) => ({ ...prev, vimeoVideoId: event.target.value }))}
-                                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-black focus:outline-none h-8"
+                                className="mt-1.5 h-8 text-sm"
                                 placeholder="e.g., 123456789 or https://vimeo.com/123456789"
                                 required
                               />
-                              <p className="mt-1 text-[10px] text-gray-500 leading-tight">
+                              <p className="mt-1 text-[10px] text-muted-foreground leading-tight">
                                 This is the main video link used to embed the player in the detail modal. Enter the Vimeo URL or numeric ID.
                               </p>
                             </div>
-                            
+
                             {/* Collapsible Download Formats Card */}
-                            <div className="border border-gray-200 rounded-md bg-[#fafafa] overflow-hidden">
+                            <Card className="overflow-hidden bg-muted/40">
                               <button
                                 type="button"
                                 onClick={() => setShowVideoDownloadFormats(!showVideoDownloadFormats)}
-                                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/60 transition-colors"
                               >
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
                                   <svg
-                                    className={`h-3.5 w-3.5 text-gray-500 flex-shrink-0 transition-transform ${showVideoDownloadFormats ? 'rotate-180' : ''}`}
+                                    className={`h-3.5 w-3.5 text-muted-foreground flex-shrink-0 transition-transform ${showVideoDownloadFormats ? 'rotate-180' : ''}`}
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -3438,36 +3478,42 @@ export default function AdminDigitalAssetManagerPage() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                   </svg>
                                   <div className="flex-1 min-w-0">
-                                    <div className="text-xs font-medium text-gray-900">Download Formats (Optional)</div>
-                                    <div className="text-[10px] text-gray-500 mt-0.5">Add direct download URLs for different video qualities (4K, 2K, 1080p, etc.).</div>
+                                    <div className="text-xs font-medium text-foreground">Download Formats (Optional)</div>
+                                    <div className="text-[10px] text-muted-foreground mt-0.5">Add direct download URLs for different video qualities (4K, 2K, 1080p, etc.).</div>
                                   </div>
                                 </div>
                               </button>
                               {showVideoDownloadFormats && (
-                                <div className="px-4 pb-4 pt-2 border-t border-gray-200 space-y-2.5">
+                                <div className="px-4 pb-4 pt-2 border-t border-border space-y-2.5">
                                   {formState.vimeoDownloadFormats.map((format, index) => (
                                     <div key={index} className="flex items-start gap-2">
                                       <div className="flex-1">
-                                        <label className="block text-[10px] text-gray-600 mb-1">Resolution</label>
-                                        <select
-                                          value={format.resolution}
-                                          onChange={(e) => {
-                                            const newFormats = [...formState.vimeoDownloadFormats];
-                                            newFormats[index].resolution = e.target.value;
-                                            setFormState((prev) => ({ ...prev, vimeoDownloadFormats: newFormats }));
-                                          }}
-                                          className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none h-7"
-                                        >
-                                          {RESOLUTION_OPTIONS.map((res) => (
-                                            <option key={res} value={res}>
-                                              {res}
-                                            </option>
-                                          ))}
-                                        </select>
+                                        <Label className="text-[10px] text-muted-foreground">Resolution</Label>
+                                        <div className="mt-1">
+                                          <Select
+                                            value={format.resolution}
+                                            onValueChange={(value) => {
+                                              const newFormats = [...formState.vimeoDownloadFormats];
+                                              newFormats[index].resolution = value;
+                                              setFormState((prev) => ({ ...prev, vimeoDownloadFormats: newFormats }));
+                                            }}
+                                          >
+                                            <SelectTrigger className="h-7 text-xs">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {RESOLUTION_OPTIONS.map((res) => (
+                                                <SelectItem key={res} value={res}>
+                                                  {res}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
                                       </div>
                                       <div className="flex-1">
-                                        <label className="block text-[10px] text-gray-600 mb-1">Download URL</label>
-                                        <input
+                                        <Label className="text-[10px] text-muted-foreground">Download URL</Label>
+                                        <Input
                                           type="text"
                                           value={format.url}
                                           onChange={(e) => {
@@ -3475,7 +3521,7 @@ export default function AdminDigitalAssetManagerPage() {
                                             newFormats[index].url = e.target.value;
                                             setFormState((prev) => ({ ...prev, vimeoDownloadFormats: newFormats }));
                                           }}
-                                          className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs focus:border-black focus:outline-none h-7"
+                                          className="mt-1 h-7 text-xs"
                                           placeholder="https://..."
                                         />
                                       </div>
@@ -3485,45 +3531,47 @@ export default function AdminDigitalAssetManagerPage() {
                                           const newFormats = formState.vimeoDownloadFormats.filter((_, i) => i !== index);
                                           setFormState((prev) => ({ ...prev, vimeoDownloadFormats: newFormats }));
                                         }}
-                                        className="mt-5 text-red-600 hover:text-red-700"
+                                        className="mt-5 text-destructive hover:text-destructive/80"
                                         title="Remove format"
                                       >
                                         <X className="h-4 w-4" />
                                       </button>
                                     </div>
                                   ))}
-                                  <button
+                                  <Button
                                     type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full h-7 text-xs"
                                     onClick={() => {
                                       setFormState((prev) => ({
                                         ...prev,
                                         vimeoDownloadFormats: [...prev.vimeoDownloadFormats, { resolution: '1080p', url: '' }],
                                       }));
                                     }}
-                                    className="w-full mt-2 flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
                                   >
                                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                     </svg>
                                     Add Download Format
-                                  </button>
+                                  </Button>
                                 </div>
                               )}
-                            </div>
+                            </Card>
                           </div>
                         </div>
                       );
                     }
-                    
+
                     // For non-video types, show file upload
                     return (
                       <div>
-                        <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">File Upload</h3>
+                        <h3 className="text-xs font-semibold text-foreground uppercase tracking-wide mb-3">File Upload</h3>
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                          <Label className="text-xs">
                             File {!isEditingExistingAsset ? '*' : '(optional when editing)'}
-                          </label>
-                          <input
+                          </Label>
+                          <Input
                             type="file"
                             accept={getAcceptAttribute(formState.assetType, formState.assetTypeId)}
                             onChange={(event) => {
@@ -3553,11 +3601,11 @@ export default function AdminDigitalAssetManagerPage() {
                               }
                               setFormState((prev) => ({ ...prev, file }));
                             }}
-                            className="block w-full text-xs text-gray-700 file:mr-4 file:rounded-md file:border file:border-gray-200 file:bg-white file:px-2.5 file:py-1.5 file:text-xs file:font-medium file:text-gray-700 hover:file:border-gray-400"
+                            className="mt-1.5 h-auto py-1.5 text-xs file:mr-4 file:rounded-md file:border file:border-border file:bg-background file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-foreground hover:file:bg-secondary"
                             required={!isVideoType && !isEditingExistingAsset}
                           />
                           {formState.file && (
-                            <p className="mt-1.5 text-[10px] text-gray-500">
+                            <p className="mt-1.5 text-[10px] text-muted-foreground">
                               {formState.file.name} • {formatBytes(formState.file.size)}
                             </p>
                           )}
@@ -3568,9 +3616,9 @@ export default function AdminDigitalAssetManagerPage() {
                                 id="useTitleAsFilename"
                                 checked={formState.useTitleAsFilename}
                                 onChange={(e) => setFormState((prev) => ({ ...prev, useTitleAsFilename: e.target.checked }))}
-                                className="h-3.5 w-3.5 rounded border-gray-300 text-black focus:ring-black"
+                                className="h-3.5 w-3.5 rounded border-input text-primary focus:ring-ring"
                               />
-                              <label htmlFor="useTitleAsFilename" className="text-xs text-gray-700 cursor-pointer">
+                              <label htmlFor="useTitleAsFilename" className="text-xs text-foreground cursor-pointer">
                                 Override file name with title
                               </label>
                             </div>
@@ -3584,9 +3632,9 @@ export default function AdminDigitalAssetManagerPage() {
                                 id="isArchived"
                                 checked={formState.isArchived}
                                 onChange={(e) => setFormState((prev) => ({ ...prev, isArchived: e.target.checked }))}
-                                className="h-3.5 w-3.5 rounded border-gray-300 text-black focus:ring-black"
+                                className="h-3.5 w-3.5 rounded border-input text-primary focus:ring-ring"
                               />
-                              <label htmlFor="isArchived" className="text-xs text-gray-700 cursor-pointer">
+                              <label htmlFor="isArchived" className="text-xs text-foreground cursor-pointer">
                                 Archive asset (hide from clients)
                               </label>
                             </div>
@@ -3605,32 +3653,29 @@ export default function AdminDigitalAssetManagerPage() {
             </div>
 
             {/* Sticky Footer with Actions */}
-            <div className="border-t border-gray-200 bg-white px-5 py-3 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <button
-                  type="submit"
-                  form="upload-form"
-                  disabled={uploading}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  <Upload className="h-4 w-4" />
-                  {uploading ? (isEditingExistingAsset ? 'Updating…' : 'Uploading…') : (isEditingExistingAsset ? 'Update Asset' : 'Upload Asset')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    resetForm();
-                    setIsUploadDrawerOpen(false);
-                  }}
-                  className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+            <SheetFooter className="border-t border-border bg-card px-5 py-3 flex-shrink-0 flex-col sm:flex-row sm:justify-start sm:space-x-0 gap-2">
+              <Button
+                type="submit"
+                form="upload-form"
+                className="flex-1"
+                loading={uploading}
+              >
+                {!uploading && <Upload className="h-4 w-4" />}
+                {uploading ? (isEditingExistingAsset ? 'Updating…' : 'Uploading…') : (isEditingExistingAsset ? 'Update Asset' : 'Upload Asset')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  resetForm();
+                  setIsUploadDrawerOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+            </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {/* Asset Detail Modal - Using Shared Component */}
       {selectedAsset && (
