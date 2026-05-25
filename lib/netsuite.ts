@@ -56,6 +56,51 @@ export interface NSInventoryItem {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalize a date string returned by SuiteQL into ISO YYYY-MM-DD that
+ * Postgres DATE columns accept. SuiteQL renders dates in the NetSuite
+ * account's preferred format (e.g. "29/04/2026" on a DD/MM/YYYY account),
+ * which Postgres rejects with "date/time field value out of range".
+ *
+ * The NS REST API ("/record/v1/...") already returns ISO, so this is only
+ * needed at the SuiteQL boundary.
+ *
+ * Strategy: pass through ISO; for slash/dash-separated 3-part dates use a
+ * heuristic on the first two components (a > 12 → DD/MM, b > 12 → MM/DD,
+ * ambiguous → assume DD/MM since the production account is DD/MM/YYYY).
+ * Returns null when the input is empty or unparseable so callers can decide
+ * whether to drop the field or surface the error.
+ */
+export function normalizeNsDate(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+
+  // Already ISO?
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (!m) return null;
+  let day = parseInt(m[1], 10);
+  let month = parseInt(m[2], 10);
+  const year = m[3];
+
+  if (day > 12 && month <= 12) {
+    // DD/MM/YYYY — keep as parsed
+  } else if (month > 12 && day <= 12) {
+    // MM/DD/YYYY — swap
+    [day, month] = [month, day];
+  }
+  // Ambiguous (both ≤ 12) → keep as DD/MM (Israeli account default)
+
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+// ---------------------------------------------------------------------------
 // NetSuiteAPI class
 // ---------------------------------------------------------------------------
 
@@ -424,7 +469,7 @@ export class NetSuiteAPI {
     return {
       nsInvoiceId: String(r.id),
       invoiceNumber: r.tranid,
-      invoiceDate: r.trandate || '',
+      invoiceDate: normalizeNsDate(r.trandate) ?? '',
       status: r.status || '',
     };
   }
