@@ -365,44 +365,55 @@ export default function AdminOrderDetailsView({
   const [nsLoading, setNsLoading] = useState<string | null>(null);
 
   // Reconciliation runs once per (orderId) when an order has a so_number set
-  // but no netsuite_so_id linkage yet. Hides the Push button while it runs.
+  // but no netsuite_so_id linkage yet. Hides the Push button while it runs
+  // and surfaces a "not found" hint when NS returns no match, so admin can
+  // see the system actually checked (vs assuming it was ignored).
   //
   // The "already started for this order" guard is a ref, NOT React state, so
   // calling setReconciling doesn't re-fire the effect mid-flight (which would
-  // cancel itself and leave reconciling stuck at true forever). The finally
-  // block also unconditionally clears the in-flight indicator — state updates
-  // on an unmounted component are a noop in React 18.
+  // cancel itself and leave reconciling stuck at true forever).
+  type ReconcileResult =
+    | { kind: 'reconciled' }
+    | { kind: 'notFound'; message: string }
+    | { kind: 'error'; message: string };
   const reconcileStartedFor = useRef<string | null>(null);
   const [reconciling, setReconciling] = useState(false);
+  const [reconcileResult, setReconcileResult] = useState<ReconcileResult | null>(null);
+
+  const runReconcile = useCallback(async () => {
+    if (!order?.id) return;
+    setReconciling(true);
+    setReconcileResult(null);
+    try {
+      const res = await fetchWithAuth('/api/netsuite/reconcile-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.reconciled) {
+        setReconcileResult({ kind: 'reconciled' });
+        await fetchOrder();
+      } else if (res.ok && data.notFound) {
+        setReconcileResult({ kind: 'notFound', message: data.message });
+      } else if (!res.ok) {
+        setReconcileResult({ kind: 'error', message: data.error || 'NetSuite lookup failed.' });
+      }
+    } catch (err: any) {
+      setReconcileResult({ kind: 'error', message: err?.message || 'Network error.' });
+    } finally {
+      setReconciling(false);
+    }
+  }, [order?.id, fetchOrder]);
+
   useEffect(() => {
     if (!order || !order.id) return;
     if (order.netsuite_so_id) return;       // already linked, nothing to do
     if (!order.so_number) return;           // no number to look up
     if (reconcileStartedFor.current === order.id) return;
-
     reconcileStartedFor.current = order.id;
-    setReconciling(true);
-
-    (async () => {
-      try {
-        const res = await fetchWithAuth('/api/netsuite/reconcile-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: order.id }),
-        });
-        const data = await res.json();
-        if (res.ok && data.reconciled) {
-          await fetchOrder();
-        }
-        // On notFound / noop / failure: fall through. The existing Push
-        // button stays visible so the admin can push manually.
-      } catch {
-        // Same fall-through behavior on network error.
-      } finally {
-        setReconciling(false);
-      }
-    })();
-  }, [order?.id, order?.netsuite_so_id, order?.so_number, fetchOrder]);
+    runReconcile();
+  }, [order?.id, order?.netsuite_so_id, order?.so_number, runReconcile]);
   const handleNsAction = async (action: 'push-so' | 'create-invoice' | 'sync-invoice') => {
     if (action === 'push-so') {
       const ok = await confirm({
@@ -541,15 +552,33 @@ export default function AdminOrderDetailsView({
                 <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
                 Checking NetSuite…
               </span>
-            ) : nsPrimary ? (
-              <Button
-                size="sm"
-                onClick={() => handleNsAction(nsPrimary.action)}
-                loading={nsLoading === nsPrimary.action}
-              >
-                {nsPrimary.label}
-              </Button>
-            ) : null}
+            ) : (
+              <>
+                {nsPrimary && (
+                  <Button
+                    size="sm"
+                    onClick={() => handleNsAction(nsPrimary.action)}
+                    loading={nsLoading === nsPrimary.action}
+                  >
+                    {nsPrimary.label}
+                  </Button>
+                )}
+                {/* Show a Recheck button when we tried and didn't find / errored,
+                    so admin can retry after fixing the SO# without refreshing. */}
+                {!order.netsuite_so_id &&
+                  !!order.so_number &&
+                  reconcileResult &&
+                  reconcileResult.kind !== 'reconciled' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={runReconcile}
+                    >
+                      Re-check NetSuite
+                    </Button>
+                  )}
+              </>
+            )}
 
             {/* Edit */}
             <Link href={editUrl}>
@@ -638,6 +667,22 @@ export default function AdminOrderDetailsView({
           </>
         }
       />
+
+      {/* NetSuite reconcile feedback (notFound / error) */}
+      {!order.netsuite_so_id &&
+        !!order.so_number &&
+        reconcileResult &&
+        reconcileResult.kind !== 'reconciled' && (
+          <Alert
+            variant={reconcileResult.kind === 'error' ? 'destructive' : 'default'}
+          >
+            <AlertDescription>
+              {reconcileResult.kind === 'notFound'
+                ? reconcileResult.message
+                : `NetSuite lookup failed: ${reconcileResult.message}`}
+            </AlertDescription>
+          </Alert>
+        )}
 
       {/* Three info cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

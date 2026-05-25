@@ -382,12 +382,16 @@ export class NetSuiteAPI {
   async findSalesOrderByTranId(
     tranId: string,
   ): Promise<NSSalesOrderResult | null> {
-    const escaped = tranId.replace(/'/g, "''");
+    // Normalize: trim + uppercase on both sides. Admin-typed SO numbers can
+    // drift in case/whitespace vs the NS canonical form (e.g. "sous16162" vs
+    // "SOUS16162"). Using transaction.type ('SalesOrd' code) is the canonical
+    // column — recordtype works in most accounts but type is more portable.
+    const escaped = tranId.trim().toUpperCase().replace(/'/g, "''");
     const rows = await this.suiteQL<{ id: string; tranid: string }>(
       `SELECT id, tranid
          FROM transaction
-        WHERE recordtype = 'salesorder'
-          AND tranid = '${escaped}'
+        WHERE type = 'SalesOrd'
+          AND UPPER(TRIM(tranid)) = '${escaped}'
         FETCH FIRST 1 ROWS ONLY`,
     );
     if (rows.length === 0) return null;
@@ -411,7 +415,7 @@ export class NetSuiteAPI {
          FROM transaction t
          JOIN nexttransactionlink ntl ON ntl.nextdoc = t.id
         WHERE ntl.previousdoc = ${nsSOId}
-          AND t.recordtype = 'invoice'
+          AND t.type = 'CustInvc'
         ORDER BY t.trandate DESC
         FETCH FIRST 1 ROWS ONLY`,
     );

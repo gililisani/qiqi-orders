@@ -75,9 +75,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (!so) {
+      console.warn(
+        `reconcile-order: SO not found in NetSuite for tranid="${order.so_number}" (orderId=${orderId})`,
+      );
       return NextResponse.json({
         notFound: true,
         soNumber: order.so_number,
+        message: `No Sales Order with number "${order.so_number}" exists in NetSuite. Verify the number is correct, or push this order to create the SO.`,
       });
     }
 
