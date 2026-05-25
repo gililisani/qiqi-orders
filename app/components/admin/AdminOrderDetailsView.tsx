@@ -17,7 +17,7 @@
  *  - alert() / native confirm() → qq toast / useConfirm.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -366,17 +366,23 @@ export default function AdminOrderDetailsView({
 
   // Reconciliation runs once per (orderId) when an order has a so_number set
   // but no netsuite_so_id linkage yet. Hides the Push button while it runs.
+  //
+  // The "already started for this order" guard is a ref, NOT React state, so
+  // calling setReconciling doesn't re-fire the effect mid-flight (which would
+  // cancel itself and leave reconciling stuck at true forever). The finally
+  // block also unconditionally clears the in-flight indicator — state updates
+  // on an unmounted component are a noop in React 18.
+  const reconcileStartedFor = useRef<string | null>(null);
   const [reconciling, setReconciling] = useState(false);
-  const [reconciledOrderId, setReconciledOrderId] = useState<string | null>(null);
   useEffect(() => {
     if (!order || !order.id) return;
-    if (reconciledOrderId === order.id) return;
     if (order.netsuite_so_id) return;       // already linked, nothing to do
     if (!order.so_number) return;           // no number to look up
-    if (reconciling) return;
+    if (reconcileStartedFor.current === order.id) return;
 
-    let cancelled = false;
+    reconcileStartedFor.current = order.id;
     setReconciling(true);
+
     (async () => {
       try {
         const res = await fetchWithAuth('/api/netsuite/reconcile-order', {
@@ -385,25 +391,18 @@ export default function AdminOrderDetailsView({
           body: JSON.stringify({ orderId: order.id }),
         });
         const data = await res.json();
-        if (cancelled) return;
-        setReconciledOrderId(order.id);
         if (res.ok && data.reconciled) {
-          // Re-pull order so all NS columns update in the UI.
           await fetchOrder();
         }
-        // On notFound / noop / failure, fall through silently — the existing
-        // Push to NetSuite button stays visible so the admin can act.
+        // On notFound / noop / failure: fall through. The existing Push
+        // button stays visible so the admin can push manually.
       } catch {
-        if (!cancelled) setReconciledOrderId(order.id);
+        // Same fall-through behavior on network error.
       } finally {
-        if (!cancelled) setReconciling(false);
+        setReconciling(false);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [order, reconciledOrderId, reconciling, fetchOrder]);
+  }, [order?.id, order?.netsuite_so_id, order?.so_number, fetchOrder]);
   const handleNsAction = async (action: 'push-so' | 'create-invoice' | 'sync-invoice') => {
     if (action === 'push-so') {
       const ok = await confirm({
@@ -500,10 +499,9 @@ export default function AdminOrderDetailsView({
         label: nsLoading === 'create-invoice' ? 'Creating…' : 'Create NS Invoice',
       };
     }
-    return {
-      action: 'sync-invoice' as const,
-      label: nsLoading === 'sync-invoice' ? 'Syncing…' : 'Sync Invoice',
-    };
+    // SO and Invoice both already in NetSuite — nothing primary to do.
+    // (Refreshing invoice status moved out of the primary slot per spec.)
+    return null;
   })();
 
   const canDelete =
@@ -719,7 +717,7 @@ export default function AdminOrderDetailsView({
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-mono text-foreground hover:underline"
+                        className="font-mono text-accent underline-offset-4 hover:underline"
                         title="Open invoice in NetSuite"
                       >
                         {adminInvoiceNumber}
@@ -754,7 +752,7 @@ export default function AdminOrderDetailsView({
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-mono text-foreground hover:underline"
+                        className="font-mono text-accent underline-offset-4 hover:underline"
                         title="Open SO in NetSuite"
                       >
                         {adminSoNumber}
