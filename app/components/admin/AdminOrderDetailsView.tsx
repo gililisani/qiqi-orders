@@ -457,6 +457,53 @@ export default function AdminOrderDetailsView({
     }
   };
 
+  // Unlink the order from its NetSuite SO + Invoice. Clears all NS columns
+  // (so_number, netsuite_so_id, invoice_number, netsuite_invoice_id,
+  // netsuite_invoice_date, netsuite_invoice_status). NS records themselves
+  // are NOT touched — this is purely a Hub-side detach so admin can enter
+  // a fresh SO number when the NS record has been deleted and recreated.
+  const handleUnlinkNetSuite = async () => {
+    const linkedLabel =
+      order?.so_number || (order?.netsuite_so_id ? 'this Sales Order' : null);
+    const invoiceLabel =
+      order?.invoice_number ||
+      (order?.netsuite_invoice_id ? 'invoice' : null);
+
+    const ok = await confirm({
+      title: 'Unlink from NetSuite?',
+      description: `This will detach this order from ${linkedLabel ?? 'NetSuite'}${
+        invoiceLabel ? ` and its ${invoiceLabel}` : ''
+      }. The records in NetSuite will NOT be deleted. You can then enter a new SO Number and the Hub will re-verify it with NetSuite on the next page load.`,
+      confirmLabel: 'Unlink',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    setNsLoading('unlink');
+    try {
+      const res = await fetchWithAuth('/api/netsuite/unlink-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+      toast.success('Unlinked from NetSuite. Enter a new SO Number to re-link.');
+      // Reset the auto-reconcile guard so the next mount with a new so_number
+      // re-runs the lookup. Without this, after the user types and saves a
+      // new SO# the page would skip reconcile because we "already tried" this
+      // orderId in this session.
+      reconcileStartedFor.current = null;
+      setReconcileResult(null);
+      await fetchOrder();
+      await fetchOrderHistory();
+    } catch (err: any) {
+      toast.error(err.message || 'Unlink failed.');
+    } finally {
+      setNsLoading(null);
+    }
+  };
+
   // --------------------------------------------------------------------------
   // Loading / error
   // --------------------------------------------------------------------------
@@ -741,7 +788,30 @@ export default function AdminOrderDetailsView({
             {/* Row 2: Invoice Number (left) + SO Number (right) */}
             <div className="grid grid-cols-2 gap-4">
               <Field label="Invoice Number">
-                {editOrderInfoMode ? (
+                {/* When linked to a NS invoice, the field is read-only even in
+                    edit mode — admin must explicitly Unlink (below) to clear
+                    the link. Prevents accidental fat-finger corruption of a
+                    real NS reference. */}
+                {order.netsuite_invoice_id ? (
+                  (() => {
+                    const url = invoiceUrl(order.netsuite_invoice_id);
+                    return url ? (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-accent underline-offset-4 hover:underline"
+                        title="Open invoice in NetSuite"
+                      >
+                        {adminInvoiceNumber || '—'}
+                      </a>
+                    ) : (
+                      <span className="font-mono">
+                        {adminInvoiceNumber || '—'}
+                      </span>
+                    );
+                  })()
+                ) : editOrderInfoMode ? (
                   <Input
                     value={adminInvoiceNumber}
                     onChange={(e) => setAdminInvoiceNumber(e.target.value)}
@@ -753,30 +823,31 @@ export default function AdminOrderDetailsView({
                     placeholder="—"
                   />
                 ) : adminInvoiceNumber ? (
+                  <span className="font-mono">{adminInvoiceNumber}</span>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </Field>
+              <Field label="SO Number" align="right">
+                {/* Same lock-when-linked policy as Invoice Number above. */}
+                {order.netsuite_so_id ? (
                   (() => {
-                    const url = order.netsuite_invoice_id
-                      ? invoiceUrl(order.netsuite_invoice_id)
-                      : null;
+                    const url = salesOrderUrl(order.netsuite_so_id);
                     return url ? (
                       <a
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="font-mono text-accent underline-offset-4 hover:underline"
-                        title="Open invoice in NetSuite"
+                        title="Open SO in NetSuite"
                       >
-                        {adminInvoiceNumber}
+                        {adminSoNumber || '—'}
                       </a>
                     ) : (
-                      <span className="font-mono">{adminInvoiceNumber}</span>
+                      <span className="font-mono">{adminSoNumber || '—'}</span>
                     );
                   })()
-                ) : (
-                  <span className="text-muted-foreground">—</span>
-                )}
-              </Field>
-              <Field label="SO Number" align="right">
-                {editOrderInfoMode ? (
+                ) : editOrderInfoMode ? (
                   <Input
                     value={adminSoNumber}
                     onChange={(e) => setAdminSoNumber(e.target.value)}
@@ -788,29 +859,34 @@ export default function AdminOrderDetailsView({
                     placeholder="—"
                   />
                 ) : adminSoNumber ? (
-                  (() => {
-                    const url = order.netsuite_so_id
-                      ? salesOrderUrl(order.netsuite_so_id)
-                      : null;
-                    return url ? (
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-mono text-accent underline-offset-4 hover:underline"
-                        title="Open SO in NetSuite"
-                      >
-                        {adminSoNumber}
-                      </a>
-                    ) : (
-                      <span className="font-mono">{adminSoNumber}</span>
-                    );
-                  })()
+                  <span className="font-mono">{adminSoNumber}</span>
                 ) : (
                   <span className="text-muted-foreground">—</span>
                 )}
               </Field>
             </div>
+
+            {/* Unlink affordance — only in edit mode, only when something is
+                linked to NetSuite. Lets admin reset the link when a NS record
+                has been deleted and recreated under a different number. */}
+            {editOrderInfoMode &&
+              (order.netsuite_so_id || order.netsuite_invoice_id) && (
+                <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-secondary/30 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">
+                    SO &amp; Invoice are locked because they reference real
+                    NetSuite records.
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleUnlinkNetSuite}
+                    loading={nsLoading === 'unlink'}
+                  >
+                    Unlink from NetSuite
+                  </Button>
+                </div>
+              )}
 
             {/* Pallets — full width row of its own */}
             <Field label="Number of Pallets">
