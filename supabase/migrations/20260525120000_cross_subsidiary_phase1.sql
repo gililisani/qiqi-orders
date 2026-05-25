@@ -74,16 +74,18 @@ CREATE INDEX IF NOT EXISTS locations_subsidiary_id_idx
   ON public."Locations" (subsidiary_id);
 
 -- Backfill: derive from the subsidiary of companies pointing at each location.
--- MIN() is deterministic; today each location is single-subsidiary so it picks
--- the correct value. Admin should sanity-check after the migration applies.
+-- DISTINCT ON picks one row per location_id (Postgres has no MIN(uuid)).
+-- Today each location is single-subsidiary so the pick is correct
+-- regardless of which row wins. Admin should sanity-check after the
+-- migration applies — see commit body for the verification query.
 UPDATE public."Locations" l
    SET subsidiary_id = sub.subsidiary_id
   FROM (
-    SELECT location_id, MIN(subsidiary_id) AS subsidiary_id
+    SELECT DISTINCT ON (location_id) location_id, subsidiary_id
       FROM public.companies
      WHERE location_id IS NOT NULL
        AND subsidiary_id IS NOT NULL
-     GROUP BY location_id
+     ORDER BY location_id, subsidiary_id
   ) sub
  WHERE l.id = sub.location_id
    AND l.subsidiary_id IS NULL;
