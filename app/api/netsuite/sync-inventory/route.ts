@@ -53,17 +53,45 @@ export async function POST(request: NextRequest) {
     // Using a simple approach: update a stock_quantity field on Products if it exists,
     // otherwise insert into an inventory_levels table.
     // We'll use inventory_levels (created below if not existing) for clean separation.
-    let updated = 0;
-    const upsertRows = items
-      .filter(i => skuToProductId.has(i.sku))
-      .map(i => ({
-        product_id: skuToProductId.get(i.sku),
-        location_id: locationId,
-        quantity_on_hand: i.quantityOnHand,
-        quantity_available: i.quantityAvailable,
-        synced_at: new Date().toISOString(),
-      }));
+    // Defensive dedupe by product_id. getInventoryByLocation already aggregates
+    // at the SuiteQL layer, but if anything ever returned duplicates again the
+    // upsert would error with "ON CONFLICT DO UPDATE command cannot affect row
+    // a second time". Also collect unmatched SKUs so the admin can see them.
+    const dedupedByProductId = new Map<
+      number,
+      { quantity_on_hand: number; quantity_available: number }
+    >();
+    const unmatchedSkus: string[] = [];
 
+    for (const item of items) {
+      const productId = skuToProductId.get(item.sku);
+      if (productId == null) {
+        unmatchedSkus.push(item.sku);
+        continue;
+      }
+      const existing = dedupedByProductId.get(productId);
+      if (existing) {
+        existing.quantity_on_hand += item.quantityOnHand;
+        existing.quantity_available += item.quantityAvailable;
+      } else {
+        dedupedByProductId.set(productId, {
+          quantity_on_hand: item.quantityOnHand,
+          quantity_available: item.quantityAvailable,
+        });
+      }
+    }
+
+    const upsertRows = Array.from(dedupedByProductId.entries()).map(
+      ([product_id, v]) => ({
+        product_id,
+        location_id: locationId,
+        quantity_on_hand: v.quantity_on_hand,
+        quantity_available: v.quantity_available,
+        synced_at: new Date().toISOString(),
+      }),
+    );
+
+    let updated = 0;
     if (upsertRows.length > 0) {
       const { error: upsertError } = await supabase
         .from('inventory_levels')
@@ -71,16 +99,34 @@ export async function POST(request: NextRequest) {
 
       if (upsertError) {
         console.error('inventory_levels upsert error:', upsertError);
-        return NextResponse.json({ error: 'Failed to save inventory data: ' + upsertError.message }, { status: 500 });
+        return NextResponse.json(
+          { error: 'Failed to save inventory data: ' + upsertError.message },
+          { status: 500 },
+        );
       }
       updated = upsertRows.length;
+    }
+
+    const unmatchedSample = unmatchedSkus.slice(0, 5);
+    const messageParts = [
+      `Synced ${updated} of ${items.length} item${items.length === 1 ? '' : 's'} for ${location.location_name}.`,
+    ];
+    if (unmatchedSkus.length > 0) {
+      messageParts.push(
+        `Skipped ${unmatchedSkus.length} (no matching Hub product by SKU)` +
+          (unmatchedSample.length > 0
+            ? `: e.g. ${unmatchedSample.join(', ')}${unmatchedSkus.length > unmatchedSample.length ? '…' : ''}`
+            : '.'),
+      );
     }
 
     return NextResponse.json({
       success: true,
       updated,
       total: items.length,
-      message: `Synced ${updated} products for ${location.location_name}.`,
+      unmatched: unmatchedSkus.length,
+      unmatchedSample,
+      message: messageParts.join(' '),
     });
   } catch (error: any) {
     if (error instanceof Response) return error;

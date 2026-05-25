@@ -363,6 +363,47 @@ export default function AdminOrderDetailsView({
   // NetSuite actions (push / create invoice / sync invoice) — same as before
   // --------------------------------------------------------------------------
   const [nsLoading, setNsLoading] = useState<string | null>(null);
+
+  // Reconciliation runs once per (orderId) when an order has a so_number set
+  // but no netsuite_so_id linkage yet. Hides the Push button while it runs.
+  const [reconciling, setReconciling] = useState(false);
+  const [reconciledOrderId, setReconciledOrderId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!order || !order.id) return;
+    if (reconciledOrderId === order.id) return;
+    if (order.netsuite_so_id) return;       // already linked, nothing to do
+    if (!order.so_number) return;           // no number to look up
+    if (reconciling) return;
+
+    let cancelled = false;
+    setReconciling(true);
+    (async () => {
+      try {
+        const res = await fetchWithAuth('/api/netsuite/reconcile-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: order.id }),
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        setReconciledOrderId(order.id);
+        if (res.ok && data.reconciled) {
+          // Re-pull order so all NS columns update in the UI.
+          await fetchOrder();
+        }
+        // On notFound / noop / failure, fall through silently — the existing
+        // Push to NetSuite button stays visible so the admin can act.
+      } catch {
+        if (!cancelled) setReconciledOrderId(order.id);
+      } finally {
+        if (!cancelled) setReconciling(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [order, reconciledOrderId, reconciling, fetchOrder]);
   const handleNsAction = async (action: 'push-so' | 'create-invoice' | 'sync-invoice') => {
     if (action === 'push-so') {
       const ok = await confirm({
@@ -437,6 +478,16 @@ export default function AdminOrderDetailsView({
   // --------------------------------------------------------------------------
   const nsPrimary = (() => {
     if (order.status === 'Draft') return null;
+    // While reconciliation is in flight on an order with so_number but no
+    // netsuite_so_id, suppress the Push button — we may be about to discover
+    // the SO already exists in NetSuite and showing Push would be wrong.
+    if (
+      reconciling &&
+      !order.netsuite_so_id &&
+      !!order.so_number
+    ) {
+      return null;
+    }
     if (!order.netsuite_so_id) {
       return {
         action: 'push-so' as const,
@@ -487,7 +538,12 @@ export default function AdminOrderDetailsView({
         actions={
           <>
             {/* Primary NS contextual action */}
-            {nsPrimary && (
+            {reconciling && !order.netsuite_so_id && !!order.so_number ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-secondary px-2.5 py-1.5 rounded-md">
+                <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                Checking NetSuite…
+              </span>
+            ) : nsPrimary ? (
               <Button
                 size="sm"
                 onClick={() => handleNsAction(nsPrimary.action)}
@@ -495,7 +551,7 @@ export default function AdminOrderDetailsView({
               >
                 {nsPrimary.label}
               </Button>
-            )}
+            ) : null}
 
             {/* Edit */}
             <Link href={editUrl}>
@@ -654,7 +710,24 @@ export default function AdminOrderDetailsView({
                     placeholder="—"
                   />
                 ) : adminInvoiceNumber ? (
-                  <span className="font-mono">{adminInvoiceNumber}</span>
+                  (() => {
+                    const url = order.netsuite_invoice_id
+                      ? invoiceUrl(order.netsuite_invoice_id)
+                      : null;
+                    return url ? (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-foreground hover:underline"
+                        title="Open invoice in NetSuite"
+                      >
+                        {adminInvoiceNumber}
+                      </a>
+                    ) : (
+                      <span className="font-mono">{adminInvoiceNumber}</span>
+                    );
+                  })()
                 ) : (
                   <span className="text-muted-foreground">—</span>
                 )}
@@ -672,7 +745,24 @@ export default function AdminOrderDetailsView({
                     placeholder="—"
                   />
                 ) : adminSoNumber ? (
-                  <span className="font-mono">{adminSoNumber}</span>
+                  (() => {
+                    const url = order.netsuite_so_id
+                      ? salesOrderUrl(order.netsuite_so_id)
+                      : null;
+                    return url ? (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-foreground hover:underline"
+                        title="Open SO in NetSuite"
+                      >
+                        {adminSoNumber}
+                      </a>
+                    ) : (
+                      <span className="font-mono">{adminSoNumber}</span>
+                    );
+                  })()
                 ) : (
                   <span className="text-muted-foreground">—</span>
                 )}

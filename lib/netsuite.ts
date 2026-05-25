@@ -374,6 +374,58 @@ export class NetSuiteAPI {
   }
 
   // ---------------------------------------------------------------------------
+  // Look up a Sales Order by its tranid (the human-readable SO number).
+  // Returns null if no SO with that tranid exists in NetSuite. Used by the
+  // reconcile-order flow to backfill netsuite_so_id on legacy orders that
+  // have an admin-entered so_number but were never pushed through the Hub.
+  // ---------------------------------------------------------------------------
+  async findSalesOrderByTranId(
+    tranId: string,
+  ): Promise<NSSalesOrderResult | null> {
+    const escaped = tranId.replace(/'/g, "''");
+    const rows = await this.suiteQL<{ id: string; tranid: string }>(
+      `SELECT id, tranid
+         FROM transaction
+        WHERE recordtype = 'salesorder'
+          AND tranid = '${escaped}'
+        FETCH FIRST 1 ROWS ONLY`,
+    );
+    if (rows.length === 0) return null;
+    return { nsSOId: String(rows[0].id), soNumber: rows[0].tranid };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Look up the invoice created from a given SO (if any). Used by reconcile.
+  // ---------------------------------------------------------------------------
+  async findInvoiceForSalesOrder(
+    nsSOId: string,
+  ): Promise<NSInvoiceResult | null> {
+    // Invoices created from an SO link via nexttransactionlink.previousdoc.
+    const rows = await this.suiteQL<{
+      id: string;
+      tranid: string;
+      trandate: string;
+      status: string;
+    }>(
+      `SELECT t.id, t.tranid, t.trandate, BUILTIN.DF(t.status) AS status
+         FROM transaction t
+         JOIN nexttransactionlink ntl ON ntl.nextdoc = t.id
+        WHERE ntl.previousdoc = ${nsSOId}
+          AND t.recordtype = 'invoice'
+        ORDER BY t.trandate DESC
+        FETCH FIRST 1 ROWS ONLY`,
+    );
+    if (rows.length === 0) return null;
+    const r = rows[0];
+    return {
+      nsInvoiceId: String(r.id),
+      invoiceNumber: r.tranid,
+      invoiceDate: r.trandate || '',
+      status: r.status || '',
+    };
+  }
+
+  // ---------------------------------------------------------------------------
   // Check if an invoice has any payments applied (Customer Payments)
   // Returns the list of payment internal IDs, empty array if none.
   // ---------------------------------------------------------------------------
@@ -419,6 +471,11 @@ export class NetSuiteAPI {
   // locationNsId: the NS internal ID of the location (from Locations.netsuite_id)
   // ---------------------------------------------------------------------------
   async getInventoryByLocation(locationNsId: string): Promise<NSInventoryItem[]> {
+    // inventoryBalance can return multiple rows per (item, location) when an
+    // item is stocked in multiple bins / lots / serials. Aggregate at the
+    // SuiteQL layer so the caller gets exactly one row per item — otherwise
+    // the downstream upsert against (product_id, location_id) errors with
+    // "ON CONFLICT DO UPDATE command cannot affect row a second time".
     const rows = await this.suiteQL<{
       item: string;
       location: string;
@@ -426,11 +483,16 @@ export class NetSuiteAPI {
       quantityavailable: string;
       itemid: string;
     }>(
-      `SELECT il.item, il.location, il.quantityonhand, il.quantityavailable, i.itemid
-       FROM inventoryBalance il
-       JOIN item i ON i.id = il.item
-       WHERE il.location = ${locationNsId}
-       AND i.itemid IS NOT NULL`
+      `SELECT il.item,
+              il.location,
+              SUM(il.quantityonhand)    AS quantityonhand,
+              SUM(il.quantityavailable) AS quantityavailable,
+              i.itemid
+         FROM inventoryBalance il
+         JOIN item i ON i.id = il.item
+        WHERE il.location = ${locationNsId}
+          AND i.itemid IS NOT NULL
+        GROUP BY il.item, il.location, i.itemid`
     );
 
     return rows.map(r => ({
