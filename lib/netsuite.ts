@@ -23,7 +23,15 @@ interface HubOrderForSync {
     netsuite_number: string;
     netsuite_internal_id: string;
     subsidiary: { name: string; netsuite_id: string } | null;
-    location: { location_name: string; netsuite_id: string } | null;
+    // The location passed here is the FULFILLING location (typically the
+    // snapshot from orders.location_id, falling back to companies.location_id).
+    // Includes the location's own subsidiary so push-SO can detect cross-sub
+    // fulfillment (location.subsidiary.netsuite_id !== company.subsidiary.netsuite_id).
+    location: {
+      location_name: string;
+      netsuite_id: string;
+      subsidiary: { netsuite_id: string } | null;
+    } | null;
     class: { name: string } | null;
   };
   order_items: Array<{
@@ -262,13 +270,26 @@ export class NetSuiteAPI {
       }
     }
 
+    // Cross-subsidiary fulfillment detection: when the fulfilling location
+    // belongs to a different subsidiary than the customer, NetSuite needs
+    // per-line `location` so it can auto-populate the inventory subsidiary.
+    // Falls through to the simpler header-only location when same-subsidiary.
+    const locationSubsidiaryNsId = company.location.subsidiary?.netsuite_id;
+    const isCrossSubsidiary =
+      !!locationSubsidiaryNsId &&
+      locationSubsidiaryNsId !== company.subsidiary.netsuite_id;
+
     const lineItems: object[] = [];
     for (const item of consolidated.values()) {
-      lineItems.push({
+      const line: Record<string, unknown> = {
         item: { id: item.nsItemId },
         quantity: item.quantity,
         rate: item.rate,
-      });
+      };
+      if (isCrossSubsidiary) {
+        line.location = { id: company.location.netsuite_id };
+      }
+      lineItems.push(line);
     }
 
     // Support fund discount line — single negative-rate line
@@ -282,12 +303,16 @@ export class NetSuiteAPI {
           'Verify the item exists and the integration role can see it.'
         );
       }
-      lineItems.push({
+      const discountLine: Record<string, unknown> = {
         item: { id: String(discountRows[0].id) },
         quantity: 1,
         rate: -order.support_fund_used,
         description: 'Distributor Support Fund',
-      });
+      };
+      if (isCrossSubsidiary) {
+        discountLine.location = { id: company.location.netsuite_id };
+      }
+      lineItems.push(discountLine);
     }
 
     const subsidiaryName = company.subsidiary.name;
@@ -297,7 +322,6 @@ export class NetSuiteAPI {
     const payload: Record<string, unknown> = {
       entity: { id: company.netsuite_internal_id },
       subsidiary: { id: company.subsidiary.netsuite_id },
-      location: { id: company.location.netsuite_id },
       tranDate,
       orderstatus: { id: 'B' }, // Pending Fulfillment
       currency: { id: '1' }, // USD — adjust if your NS USD currency internal ID differs
@@ -306,6 +330,13 @@ export class NetSuiteAPI {
         items: lineItems,
       },
     };
+
+    // Header location: skip in cross-sub mode (lines carry their own
+    // location). For normal same-subsidiary orders, set it as before so
+    // every line inherits.
+    if (!isCrossSubsidiary) {
+      payload.location = { id: company.location.netsuite_id };
+    }
 
     // Tax item — added as a custom body field if applicable
     const taxItem = this.taxItemForSubsidiary(subsidiaryName);

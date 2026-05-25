@@ -13,7 +13,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceRoleClient();
 
-    // Fetch order with all NS-relevant fields
+    // Fetch order with all NS-relevant fields. We pull BOTH the snapshot
+    // fulfilling location (orders.location_id, set at order creation time)
+    // AND the company's current location, so we can fall back to the
+    // company's location for any legacy order that pre-dates the
+    // location_id snapshot column.
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(`
@@ -23,12 +27,22 @@ export async function POST(request: NextRequest) {
         status,
         support_fund_used,
         netsuite_so_id,
+        location_id,
+        snapshot_location:Locations!orders_location_id_fkey(
+          location_name,
+          netsuite_id,
+          subsidiary:subsidiaries(netsuite_id)
+        ),
         company:companies(
           company_name,
           netsuite_number,
           netsuite_internal_id,
           subsidiary:subsidiaries(name, netsuite_id),
-          location:Locations(location_name, netsuite_id),
+          location:Locations(
+            location_name,
+            netsuite_id,
+            subsidiary:subsidiaries(netsuite_id)
+          ),
           class:classes(name)
         ),
         order_items(
@@ -53,8 +67,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Pick the location that drives fulfillment: prefer the snapshot on the
+    // order (frozen at creation), fall back to the company's current
+    // location. The fallback covers orders created before the snapshot
+    // column existed; new orders always have location_id populated.
+    const orderForNs: any = { ...order };
+    if (orderForNs.snapshot_location && orderForNs.company) {
+      orderForNs.company = {
+        ...orderForNs.company,
+        location: orderForNs.snapshot_location,
+      };
+    }
+
     const ns = createNetSuiteAPI();
-    const { nsSOId, soNumber } = await ns.pushOrderToNetSuite(order as any);
+    const { nsSOId, soNumber } = await ns.pushOrderToNetSuite(orderForNs);
 
     // Write SO ID + number back, and advance status to "In Process"
     const { error: updateError } = await supabase

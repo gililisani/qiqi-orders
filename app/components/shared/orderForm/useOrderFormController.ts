@@ -89,7 +89,9 @@ export function useOrderFormController(params: {
             role: role,
           });
 
-          // Create new order
+          // Create new order — snapshot location_id from company so the
+          // fulfilling location is frozen even if the company is later
+          // re-pointed to a different location (e.g. the 3PL relocation).
           const { data: newOrder, error: orderError } = await supabase
             .from('orders')
             .insert({
@@ -97,6 +99,7 @@ export function useOrderFormController(params: {
               user_id: user.id,
               po_number: poNumber,
               status: asDraft ? 'Draft' : 'Open',
+              location_id: (company as any).location_id ?? null,
             })
             .select()
             .single();

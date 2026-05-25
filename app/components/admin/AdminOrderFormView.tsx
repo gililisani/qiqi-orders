@@ -240,7 +240,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
       const { data, error } = await supabase
         .from('companies')
         .select(
-          `id, company_name, netsuite_number, support_fund:support_fund_levels(percent), class:classes(name)`
+          `id, company_name, netsuite_number, location_id, support_fund:support_fund_levels(percent), class:classes(name)`
         )
         .order('company_name', { ascending: true });
       if (error) throw error;
