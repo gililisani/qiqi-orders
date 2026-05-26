@@ -81,9 +81,8 @@ export function userHasPermission(
 }
 
 /** Where should a CLIENT land after login? Pick the first area they're
- *  allowed to see. Returns '/client/company' as a last resort because
- *  every client can see their own company profile. Only returns null if
- *  the user has no permissions at all (extreme misconfig). */
+ *  allowed to see. Returns null if the user has no client-side area
+ *  access at all (caller should redirect to /forbidden). */
 export function firstAllowedClientArea(
   permissions: string[] | null | undefined,
 ): '/client' | '/client/assets' | '/client/company' | null {
@@ -92,8 +91,9 @@ export function firstAllowedClientArea(
   if (perms.includes('orders')) return '/client';
   // DAM library lives at /client/assets in this app.
   if (perms.includes('dam')) return '/client/assets';
-  // Every client can always see their own company page — safe fallback.
-  return '/client/company';
+  // "Your company" surfaces company-level info gated on the reports permission.
+  if (perms.includes('reports')) return '/client/company';
+  return null;
 }
 
 /** Where should an ADMIN land after login? Same logic, broader area set. */

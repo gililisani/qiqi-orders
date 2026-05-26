@@ -69,9 +69,10 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Account',
     items: [
-      // "Your company" is always visible — every client needs access to their
-      // own profile / company info regardless of which areas they can use.
-      { label: 'Your company', href: '/client/company', icon: <Building2 />, permission: null },
+      // "Your company" shows company-level info that overlaps with reports
+      // (targets, support funds, etc.), so it's gated on the same
+      // permission. DAM-only users don't see it.
+      { label: 'Your company', href: '/client/company', icon: <Building2 />, permission: 'reports' },
     ],
   },
 ];
