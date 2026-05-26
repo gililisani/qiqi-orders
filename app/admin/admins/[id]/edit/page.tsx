@@ -10,6 +10,8 @@ import { Input } from '../../../../components/qq/input';
 import { Button } from '../../../../components/qq/button';
 import { useToast } from '../../../../components/ui/ToastProvider';
 import { useConfirm } from '../../../../components/ui/ConfirmProvider';
+import { PermissionsField } from '../../../../components/admin/PermissionsField';
+import { DEFAULT_ADMIN_PERMISSIONS } from '../../../../../lib/permissions';
 
 export default function EditAdminPage() {
   const router = useRouter();
@@ -24,6 +26,7 @@ export default function EditAdminPage() {
     enabled: true,
     changePassword: false,
     newPassword: '',
+    permissions: [...DEFAULT_ADMIN_PERMISSIONS] as string[],
   });
   const [originalEmail, setOriginalEmail] = useState('');
   const [loading, setLoading] = useState(true);
@@ -47,6 +50,9 @@ export default function EditAdminPage() {
           enabled: !!data?.enabled,
           changePassword: false,
           newPassword: '',
+          permissions: Array.isArray(data?.permissions) && data.permissions.length > 0
+            ? data.permissions
+            : [...DEFAULT_ADMIN_PERMISSIONS],
         });
         setOriginalEmail(data?.email || '');
       } catch (err: any) {
@@ -76,6 +82,7 @@ export default function EditAdminPage() {
           name: formData.name.trim(),
           email: formData.email.trim(),
           enabled: formData.enabled,
+          permissions: formData.permissions,
         })
         .eq('id', adminId);
       if (profileError) throw profileError;
@@ -171,6 +178,17 @@ export default function EditAdminPage() {
           />
         </FormField>
       </div>
+
+      <FormField
+        label="Access"
+        helper="Which areas of the Hub this admin can manage. Default is everything; untick to restrict."
+      >
+        <PermissionsField
+          value={formData.permissions}
+          onChange={(next) => setFormData((p) => ({ ...p, permissions: next }))}
+          disabled={loading}
+        />
+      </FormField>
 
       <label className="flex items-center gap-2 cursor-pointer select-none">
         <input

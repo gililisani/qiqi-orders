@@ -18,6 +18,13 @@ import {
 import { Button } from '../../../../components/qq/button';
 import { useToast } from '../../../../components/ui/ToastProvider';
 import { useConfirm } from '../../../../components/ui/ConfirmProvider';
+import { PermissionsField } from '../../../../components/admin/PermissionsField';
+import { DEFAULT_CLIENT_PERMISSIONS, type Permission } from '../../../../../lib/permissions';
+
+// Clients only see the area-scoped subset. Admin-scoped permissions
+// (companies:manage, admins:manage, netsuite, settings) are hidden — they
+// would have no effect even if set, since clients can't reach admin routes.
+const CLIENT_AVAILABLE_PERMISSIONS: Permission[] = ['orders', 'dam', 'reports'];
 
 interface Company {
   id: string;
@@ -37,6 +44,7 @@ export default function EditUserPage() {
     email: '',
     enabled: true,
     company_id: '',
+    permissions: [...DEFAULT_CLIENT_PERMISSIONS] as string[],
   });
   const [originalEmail, setOriginalEmail] = useState('');
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -61,6 +69,9 @@ export default function EditUserPage() {
           email: c?.email || '',
           enabled: !!c?.enabled,
           company_id: c?.company_id || '',
+          permissions: Array.isArray(c?.permissions) && c.permissions.length > 0
+            ? c.permissions
+            : [...DEFAULT_CLIENT_PERMISSIONS],
         });
         setOriginalEmail(c?.email || '');
         setCompanies(companiesRes.data || []);
@@ -88,6 +99,7 @@ export default function EditUserPage() {
           email: formData.email.trim(),
           enabled: formData.enabled,
           company_id: formData.company_id,
+          permissions: formData.permissions,
         })
         .eq('id', userId);
       if (profileError) throw profileError;
@@ -224,6 +236,18 @@ export default function EditUserPage() {
             ))}
           </SelectContent>
         </Select>
+      </FormField>
+
+      <FormField
+        label="Access"
+        helper="Which areas of the Hub this user can see. Untick to hide an area from them."
+      >
+        <PermissionsField
+          value={formData.permissions}
+          onChange={(next) => setFormData((p) => ({ ...p, permissions: next }))}
+          available={CLIENT_AVAILABLE_PERMISSIONS}
+          disabled={loading}
+        />
       </FormField>
 
       <label className="flex items-center gap-2 cursor-pointer select-none">

@@ -58,6 +58,10 @@ interface NavItem {
   label: string;
   href: string;
   icon: ReactNode;
+  // null = always shown; otherwise hidden when the admin lacks this permission.
+  // Most admins today have ALL permissions so the filter is invisible — it
+  // only matters when someone is intentionally restricted.
+  permission?: string | null;
 }
 interface NavGroup {
   label?: string;
@@ -67,52 +71,52 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
   {
     items: [
-      { label: 'Dashboard',  href: '/admin',                 icon: <LayoutDashboard /> },
-      { label: 'Orders',     href: '/admin/orders',          icon: <ShoppingCart /> },
-      { label: 'SLI Documents', href: '/admin/sli/documents', icon: <FileText /> },
-      { label: 'Companies',  href: '/admin/companies',       icon: <Building2 /> },
+      { label: 'Dashboard',  href: '/admin',                 icon: <LayoutDashboard />, permission: 'orders' },
+      { label: 'Orders',     href: '/admin/orders',          icon: <ShoppingCart />,    permission: 'orders' },
+      { label: 'SLI Documents', href: '/admin/sli/documents', icon: <FileText />,       permission: 'orders' },
+      { label: 'Companies',  href: '/admin/companies',       icon: <Building2 />,       permission: 'companies:manage' },
     ],
   },
   {
     label: 'Users',
     items: [
-      { label: 'Users',  href: '/admin/users',  icon: <Users /> },
-      { label: 'Admins', href: '/admin/admins', icon: <Shield /> },
+      { label: 'Users',  href: '/admin/users',  icon: <Users />,  permission: 'users:manage' },
+      { label: 'Admins', href: '/admin/admins', icon: <Shield />, permission: 'admins:manage' },
     ],
   },
   {
     label: 'Catalog',
     items: [
-      { label: 'Products',             href: '/admin/products',              icon: <Box /> },
-      { label: 'Highlighted Products', href: '/admin/highlighted-products',  icon: <Star /> },
-      { label: 'Categories',           href: '/admin/categories',            icon: <FolderOpen /> },
-      { label: 'DAM',                  href: '/admin/dam',                   icon: <ImageIcon /> },
-      { label: 'DAM Campaigns',        href: '/admin/dam/campaigns',         icon: <Megaphone /> },
+      { label: 'Products',             href: '/admin/products',              icon: <Box />,        permission: 'settings' },
+      { label: 'Highlighted Products', href: '/admin/highlighted-products',  icon: <Star />,       permission: 'settings' },
+      { label: 'Categories',           href: '/admin/categories',            icon: <FolderOpen />, permission: 'settings' },
+      { label: 'DAM',                  href: '/admin/dam',                   icon: <ImageIcon />,  permission: 'dam' },
+      { label: 'DAM Campaigns',        href: '/admin/dam/campaigns',         icon: <Megaphone />,  permission: 'dam' },
     ],
   },
   {
     label: 'Insights',
     items: [
-      { label: 'Reports', href: '/admin/reports', icon: <BarChart3 /> },
+      { label: 'Reports', href: '/admin/reports', icon: <BarChart3 />, permission: 'reports' },
     ],
   },
   {
     label: 'Integrations',
     items: [
-      { label: 'NetSuite',       href: '/admin/netsuite',  icon: <Plug /> },
-      { label: 'Inventory Sync', href: '/admin/inventory', icon: <Package /> },
+      { label: 'NetSuite',       href: '/admin/netsuite',  icon: <Plug />,    permission: 'netsuite' },
+      { label: 'Inventory Sync', href: '/admin/inventory', icon: <Package />, permission: 'netsuite' },
     ],
   },
   {
     label: 'Configuration',
     items: [
-      { label: 'Subsidiaries',   href: '/admin/subsidiaries',  icon: <Building /> },
-      { label: 'Locations',      href: '/admin/locations',     icon: <MapPin /> },
-      { label: 'Classes',        href: '/admin/classes',       icon: <Tag /> },
-      { label: 'Incoterms',      href: '/admin/incoterms',     icon: <FileBadge /> },
-      { label: 'Payment Terms',  href: '/admin/payment-terms', icon: <CreditCard /> },
-      { label: 'Support Funds',  href: '/admin/support-funds', icon: <DollarSign /> },
-      { label: 'DAM Settings',   href: '/admin/dam/settings',  icon: <Settings /> },
+      { label: 'Subsidiaries',   href: '/admin/subsidiaries',  icon: <Building />,   permission: 'settings' },
+      { label: 'Locations',      href: '/admin/locations',     icon: <MapPin />,     permission: 'settings' },
+      { label: 'Classes',        href: '/admin/classes',       icon: <Tag />,        permission: 'settings' },
+      { label: 'Incoterms',      href: '/admin/incoterms',     icon: <FileBadge />,  permission: 'settings' },
+      { label: 'Payment Terms',  href: '/admin/payment-terms', icon: <CreditCard />, permission: 'settings' },
+      { label: 'Support Funds',  href: '/admin/support-funds', icon: <DollarSign />, permission: 'settings' },
+      { label: 'DAM Settings',   href: '/admin/dam/settings',  icon: <Settings />,   permission: 'dam' },
     ],
   },
 ];
@@ -133,6 +137,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string>('');
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -154,6 +159,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           return;
         }
         setUserEmail(user.email || '');
+        // Load admin's permission list so the sidebar can filter nav items.
+        // Defaults to all-on if the column is missing/null (pre-migration).
+        const { data: adminRow } = await supabase
+          .from('admins')
+          .select('permissions')
+          .eq('id', user.id)
+          .maybeSingle();
+        setPermissions(
+          Array.isArray(adminRow?.permissions) ? adminRow!.permissions : [],
+        );
       } catch {
         router.push('/');
         return;
@@ -183,7 +198,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (!isAuthenticated) return null;
 
-  const sidebarContent = <NavContent pathname={pathname} />;
+  const sidebarContent = (
+    <NavContent pathname={pathname} permissions={permissions} />
+  );
 
   const initials = userEmail ? userEmail.split('@')[0].slice(0, 2).toUpperCase() : 'A';
 
@@ -273,10 +290,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   );
 }
 
-function NavContent({ pathname }: { pathname: string }) {
+function NavContent({
+  pathname,
+  permissions,
+}: {
+  pathname: string;
+  permissions: string[];
+}) {
+  // Filter each group to items the admin is allowed to see, then drop any
+  // group that ends up empty. An admin with all permissions sees everything,
+  // matching today's behavior.
+  const visibleGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter(
+      (it) => !it.permission || permissions.includes(it.permission),
+    ),
+  })).filter((group) => group.items.length > 0);
+
   return (
     <Sidebar.Nav>
-      {NAV_GROUPS.map((group, idx) => (
+      {visibleGroups.map((group, idx) => (
         <Sidebar.Group key={idx} label={group.label}>
           {group.items.map((it) => (
             <Sidebar.Item
