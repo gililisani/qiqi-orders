@@ -190,15 +190,36 @@ export async function POST(request: NextRequest) {
     }
 
     // Send email
+    const sendStartedAt = Date.now();
     const result = await sendMail({
       to: recipientEmail,
       subject: emailTemplate.subject,
       html: emailTemplate.html,
     });
+    const durationMs = Date.now() - sendStartedAt;
 
     if (!result.success) {
+      console.error('[send-email] FAILED', {
+        orderId,
+        emailType,
+        recipient: recipientEmail,
+        actor: user.id,
+        actorRoles: user.roles,
+        durationMs,
+        error: result.error,
+      });
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
+
+    console.log('[send-email] OK', {
+      orderId,
+      emailType,
+      recipient: recipientEmail,
+      actor: user.id,
+      actorRoles: user.roles,
+      durationMs,
+      messageId: result.messageId,
+    });
 
     return NextResponse.json({
       success: true,

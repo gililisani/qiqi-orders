@@ -9,6 +9,50 @@ import {
 } from './orderPayload';
 import { validatePerformSave } from './orderValidation';
 
+// ---------------------------------------------------------------------------
+// Email triggers — fire-and-forget after order create / open-transition.
+//
+// Two calls fire in PARALLEL (not sequential): if the customer email is slow
+// or fails, the admin notification still goes out, and vice versa. Each is
+// posted with keepalive:true so the browser keeps the request alive across
+// the navigation that happens right after submit.
+//
+// Errors are logged but never thrown — email failure must not block the
+// order being saved or the redirect.
+// ---------------------------------------------------------------------------
+function fireBoth(
+  orderId: string,
+  emailType: 'created' | 'updated',
+): void {
+  const post = (path: string, body: object) =>
+    fetchWithAuth(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      // keepalive lets the browser finish the request even after the page
+      // unloads/navigates. Critical because the trigger fires inside a
+      // setTimeout right before router.push.
+      keepalive: true,
+    } as RequestInit).catch((err) => {
+      console.error(`[order-email] ${path} failed:`, err);
+    });
+
+  // Customer email.
+  post('/api/orders/send-email', { orderId, emailType });
+  // Admin notification — only relevant for "new order" events, not edits.
+  if (emailType === 'created') {
+    post('/api/orders/send-notification', { orderId });
+  }
+}
+
+function fireOrderCreatedEmails(orderId: string): void {
+  fireBoth(orderId, 'created');
+}
+
+function fireOrderUpdatedEmail(orderId: string): void {
+  fireBoth(orderId, 'updated');
+}
+
 export function useOrderFormController(params: {
   supabase: any;
   router: any;
@@ -161,35 +205,17 @@ export function useOrderFormController(params: {
             // Don't block order creation if history fails
           }
 
-          // Send order created email (fire and forget - don't block redirect)
-          // Only send email for non-draft orders
+          // Send order created emails (fire and forget — don't block redirect).
+          // Only when this is a real Open submission, not a Draft.
+          //
+          // We fire both calls IN PARALLEL with keepalive:true so that:
+          //   (a) a slow first call doesn't starve the second,
+          //   (b) the browser keeps the requests in flight even though
+          //       router.push happens immediately after this.
           if (!asDraft) {
-            // Use setTimeout to ensure order is fully committed to database
-            setTimeout(async () => {
-              try {
-                // Send email to client
-                await fetchWithAuth('/api/orders/send-email', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    orderId: newOrder.id,
-                    emailType: 'created',
-                  }),
-                });
-
-                // Send notification email to orders@qiqiglobal.com
-                await fetchWithAuth('/api/orders/send-notification', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    orderId: newOrder.id,
-                  }),
-                });
-              } catch (emailError) {
-                // Log but don't throw - email failure shouldn't block order creation
-                console.error('Failed to send order created email:', emailError);
-              }
-            }, 1000); // 1 second delay to ensure DB commit
+            setTimeout(() => {
+              fireOrderCreatedEmails(newOrder.id);
+            }, 1000); // 1s delay to make sure the order row is committed
           }
 
           // Clear unsaved changes flag
@@ -261,23 +287,30 @@ export function useOrderFormController(params: {
             // Don't block order update if history fails
           }
 
-          // Send order updated email notification (fire and forget)
-          // IMPORTANT: do not email when saving as Draft (Draft -> Draft, or Open -> Draft).
+          // Send order email notifications (fire and forget — don't block redirect).
+          //
+          // Two distinct cases:
+          //  (a) Draft → Open transition. This is functionally a "new order"
+          //      from the admin team's perspective — they didn't see the
+          //      Draft. Send BOTH the customer email AND the admin
+          //      notification, identical to the create-as-Open path.
+          //  (b) Open → Open edit (or any other non-Draft → non-Draft).
+          //      The order is being updated, not newly opened. Send only
+          //      the customer "updated" email; admin already got their
+          //      original notification when the order first opened.
+          //
+          // We never email on transitions to Draft.
+          const wasDraft = order?.status === 'Draft';
+          const goingOpenForFirstTime = wasDraft && newStatus === 'Open';
+
           if (newStatus !== 'Draft') {
-            setTimeout(async () => {
-              try {
-                await fetchWithAuth('/api/orders/send-email', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    orderId: orderId,
-                    emailType: 'updated',
-                  }),
-                });
-              } catch (emailError) {
-                console.error('Failed to send order updated email:', emailError);
+            setTimeout(() => {
+              if (goingOpenForFirstTime) {
+                fireOrderCreatedEmails(orderId);
+              } else {
+                fireOrderUpdatedEmail(orderId);
               }
-            }, 1000); // 1 second delay to ensure DB commit
+            }, 1000);
           }
 
           // Clear unsaved changes flag

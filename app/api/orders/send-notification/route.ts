@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { escapeHtml } from '../../../../lib/htmlEscape';
+import { escapeHtml, sanitizeEmailHeader } from '../../../../lib/htmlEscape';
 import { createServiceRoleClient, requireAnyRole } from '../../../../platform/auth/guards';
 import { assertOrderAccess } from '../../../../platform/auth/orderAccess';
 import { sendMail } from '../../../../lib/emailService';
@@ -196,17 +196,40 @@ export async function POST(request: NextRequest) {
 </html>
     `;
 
-    // Send email to orders@qiqiglobal.com
+    // Send email to orders@qiqiglobal.com.
+    // Headers are plain text — use sanitizeEmailHeader (CR/LF strip), NOT
+    // escapeHtml (which would put HTML entities into the visible subject).
+    const subject = sanitizeEmailHeader(
+      `🔔 New Order: ${poNumber} - ${companyName}`,
+    );
+    const sendStartedAt = Date.now();
     const result = await sendMail({
       to: 'orders@qiqiglobal.com',
-      subject: `🔔 New Order: ${escapeHtml(poNumber)} - ${escapeHtml(companyName)}`,
+      subject,
       html: emailHtml,
     });
+    const durationMs = Date.now() - sendStartedAt;
 
     if (!result.success) {
-      console.error('[send-notification] Failed:', result.error);
+      console.error('[send-notification] FAILED', {
+        orderId,
+        recipient: 'orders@qiqiglobal.com',
+        actor: user.id,
+        actorRoles: user.roles,
+        durationMs,
+        error: result.error,
+      });
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
+
+    console.log('[send-notification] OK', {
+      orderId,
+      recipient: 'orders@qiqiglobal.com',
+      actor: user.id,
+      actorRoles: user.roles,
+      durationMs,
+      messageId: result.messageId,
+    });
 
     return NextResponse.json({
       success: true,
