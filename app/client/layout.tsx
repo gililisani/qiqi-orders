@@ -34,6 +34,10 @@ import {
   DropdownMenuTrigger,
 } from '../components/qq/dropdown-menu';
 import FeedbackPopup from '../components/ui/FeedbackPopup';
+import { firstAllowedClientArea } from '../../lib/permissions';
+
+// Local alias matching the layout's call site.
+const firstAllowedArea = firstAllowedClientArea;
 
 // ----------------------------------------------------------------------------
 // Nav structure
@@ -44,6 +48,9 @@ interface NavItem {
   icon: ReactNode;
   /** Optional key used to look up dynamic state (e.g. unread badge). */
   key?: string;
+  /** Permission required to see this nav item. null/undefined = always visible
+   *  (e.g. "Your company" — every client needs to see their own profile). */
+  permission?: string | null;
 }
 interface NavGroup {
   label?: string;
@@ -53,16 +60,18 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
   {
     items: [
-      { label: 'Dashboard', href: '/client',         icon: <LayoutDashboard /> },
-      { label: 'Orders',    href: '/client/orders',  icon: <ShoppingCart /> },
-      { label: 'Assets',    href: '/client/assets',  icon: <ImageIcon /> },
-      { label: 'Notes',     href: '/client/notes',   icon: <StickyNote />, key: 'notes' },
+      { label: 'Dashboard', href: '/client',         icon: <LayoutDashboard />, permission: 'orders' },
+      { label: 'Orders',    href: '/client/orders',  icon: <ShoppingCart />,    permission: 'orders' },
+      { label: 'Assets',    href: '/client/assets',  icon: <ImageIcon />,       permission: 'dam' },
+      { label: 'Notes',     href: '/client/notes',   icon: <StickyNote />, key: 'notes', permission: 'orders' },
     ],
   },
   {
     label: 'Account',
     items: [
-      { label: 'Your company', href: '/client/company', icon: <Building2 /> },
+      // "Your company" is always visible — every client needs access to their
+      // own profile / company info regardless of which areas they can use.
+      { label: 'Your company', href: '/client/company', icon: <Building2 />, permission: null },
     ],
   },
 ];
@@ -71,6 +80,31 @@ function isActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
   if (href === '/client') return false;
   return pathname.startsWith(`${href}/`);
+}
+
+/** Decide whether the current pathname is allowed under the user's
+ *  permissions. Walks the nav items; the matching item's permission is the
+ *  gate. Pathnames that don't match any nav item (e.g. nested routes like
+ *  /client/orders/[id]) inherit the nearest parent's permission. */
+function isPathAllowed(pathname: string, permissions: string[]): boolean {
+  // Find the nav item whose href is the deepest prefix of pathname.
+  let bestMatch: NavItem | null = null;
+  let bestLen = -1;
+  for (const group of NAV_GROUPS) {
+    for (const item of group.items) {
+      const matches =
+        pathname === item.href ||
+        (item.href !== '/client' && pathname.startsWith(`${item.href}/`));
+      if (matches && item.href.length > bestLen) {
+        bestMatch = item;
+        bestLen = item.href.length;
+      }
+    }
+  }
+  // No nav item matches → default to /client (Dashboard) rules.
+  if (!bestMatch) return permissions.includes('orders');
+  if (!bestMatch.permission) return true;
+  return permissions.includes(bestMatch.permission);
 }
 
 // Red dot indicator for the Notes sidebar item
@@ -91,6 +125,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -118,6 +153,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         }
         setUserEmail(user.email || '');
         setUserId(user.id);
+        // Load client's permission list so the sidebar can filter nav items
+        // and the layout can redirect them off forbidden routes.
+        const { data: clientRow } = await supabase
+          .from('clients')
+          .select('permissions')
+          .eq('id', user.id)
+          .maybeSingle();
+        setPermissions(
+          Array.isArray(clientRow?.permissions) ? clientRow!.permissions : [],
+        );
       } catch {
         router.push('/');
         return;
@@ -126,6 +171,23 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       setLoading(false);
     })();
   }, [router]);
+
+  // Route-level guard: if the user has landed on a path they don't have
+  // permission for, send them to their first allowed area (or /forbidden
+  // if they have no area access at all). Runs every time pathname or
+  // permissions change.
+  useEffect(() => {
+    if (loading || !isAuthenticated) return;
+    if (isPathAllowed(pathname, permissions)) return;
+    // "Your company" is always allowed (permission:null), so this only
+    // fires for the real area pages.
+    const target = firstAllowedArea(permissions);
+    if (target && target !== pathname) {
+      router.replace(target);
+    } else if (!target) {
+      router.replace('/forbidden');
+    }
+  }, [loading, isAuthenticated, pathname, permissions, router]);
 
   // ---- Unread notes check ----
   const checkUnreadNotes = async (clientId: string) => {
@@ -208,7 +270,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   if (!isAuthenticated) return null;
 
   const sidebarContent = (
-    <NavContent pathname={pathname} hasUnreadNotes={hasUnreadNotes} />
+    <NavContent
+      pathname={pathname}
+      hasUnreadNotes={hasUnreadNotes}
+      permissions={permissions}
+    />
   );
   const initials = userEmail ? userEmail.split('@')[0].slice(0, 2).toUpperCase() : 'C';
 
@@ -302,13 +368,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 function NavContent({
   pathname,
   hasUnreadNotes,
+  permissions,
 }: {
   pathname: string;
   hasUnreadNotes: boolean;
+  permissions: string[];
 }) {
+  // Filter each group to items the client is allowed to see, then drop any
+  // group that ends up empty. Items with permission=null (e.g. "Your company")
+  // are always shown.
+  const visibleGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter(
+      (it) => !it.permission || permissions.includes(it.permission),
+    ),
+  })).filter((group) => group.items.length > 0);
+
   return (
     <Sidebar.Nav>
-      {NAV_GROUPS.map((group, idx) => (
+      {visibleGroups.map((group, idx) => (
         <Sidebar.Group key={idx} label={group.label}>
           {group.items.map((it) => (
             <Sidebar.Item
