@@ -218,24 +218,35 @@ export default function EditUserPage() {
       </div>
 
       <FormField label="Company" required>
-        <Select
-          value={formData.company_id || undefined}
-          onValueChange={(v) => setFormData((p) => ({ ...p, company_id: v }))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select a company…" />
-          </SelectTrigger>
-          <SelectContent>
-            {companies.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.company_name}
-                {c.netsuite_number && (
-                  <span className="text-muted-foreground"> · {c.netsuite_number}</span>
-                )}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {loading ? (
+          // Don't render the Select until both the user's company_id AND the
+          // companies list are loaded — Radix Select reads `value` against the
+          // mounted SelectItems at the moment it mounts; if the matching item
+          // isn't there yet it never picks up the value when items arrive
+          // later, and the trigger keeps showing the placeholder.
+          <div className="h-9 rounded-md border border-border bg-secondary/40 px-3 flex items-center text-sm text-muted-foreground">
+            Loading…
+          </div>
+        ) : (
+          <Select
+            value={formData.company_id || undefined}
+            onValueChange={(v) => setFormData((p) => ({ ...p, company_id: v }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a company…" />
+            </SelectTrigger>
+            <SelectContent>
+              {companies.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.company_name}
+                  {c.netsuite_number && (
+                    <span className="text-muted-foreground"> · {c.netsuite_number}</span>
+                  )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </FormField>
 
       <FormField
