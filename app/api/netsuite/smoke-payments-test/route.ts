@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
     const durationMs = Date.now() - startedAt;
 
     const totalPaid = productionHelperResult.reduce(
-      (s: number, p: any) => s + p.appliedAmount,
+      (s: number, p: any) => s + (p.paymentTotal || 0),
       0,
     );
     const balance = (Number(order.total_value) || 0) - totalPaid;

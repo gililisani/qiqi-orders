@@ -521,17 +521,23 @@ export class NetSuiteAPI {
   }
 
   /**
-   * Rich version of getInvoicePayments — returns one row per payment with
-   * tranid, date, status, and applied-to-this-invoice amount.
+   * Rich version of getInvoicePayments — returns one row per payment that
+   * applies to the given invoice.
    *
-   * NetSuite stores payments as negative-sign amounts internally; we ABS()
-   * them so the caller always sees positive numbers.
+   * Link direction (verified against the QiqiIL account, May 2026): the
+   * payment is the `previousdoc` (the applying transaction) and the
+   * invoice is the `nextdoc` (the target). The NextTransactionLink table
+   * does NOT have a foreignamount column in this account, so we cannot get
+   * the per-application amount from the link itself — we report the
+   * payment's total. For the common case (1 payment = 1 invoice) this is
+   * exactly the applied amount; for split payments (one payment applied
+   * to multiple invoices) it over-reports. We accept that for v1 — if it
+   * becomes a real issue we'll join transactionline for the per-line
+   * apply amount.
    *
-   * `applied_amount` is the portion of the payment that landed on THIS
-   * invoice (from nexttransactionlink.foreignamount). `payment_total` is
-   * the payment's full amount (may have been split across multiple
-   * invoices). Date is normalized via normalizeNsDate so the caller can
-   * write straight to a Postgres DATE column or display directly.
+   * Includes CustPymt (Customer Payment), CustCred (Credit Memo) and
+   * CustDep (Customer Deposit) — any of these can settle an invoice.
+   * Dates are normalized via normalizeNsDate.
    */
   async getInvoicePaymentsDetailed(nsInvoiceId: string): Promise<
     Array<{
@@ -539,7 +545,7 @@ export class NetSuiteAPI {
       tranId: string;
       tranDate: string | null;
       status: string;
-      appliedAmount: number;
+      type: string;
       paymentTotal: number;
     }>
   > {
@@ -548,19 +554,19 @@ export class NetSuiteAPI {
       tranid: string;
       trandate: string;
       status: string;
-      applied_amount: string;
+      type: string;
       payment_total: string;
     }>(
-      `SELECT t.id,
+      `SELECT DISTINCT t.id,
               t.tranid,
               t.trandate,
-              BUILTIN.DF(t.status)        AS status,
-              ABS(ntl.foreignamount)      AS applied_amount,
-              ABS(t.foreigntotal)         AS payment_total
+              BUILTIN.DF(t.status) AS status,
+              t.type,
+              ABS(t.foreigntotal)  AS payment_total
          FROM transaction t
-         JOIN nexttransactionlink ntl ON ntl.nextdoc = t.id
-        WHERE ntl.previousdoc = ${nsInvoiceId}
-          AND t.type = 'CustPymt'
+         JOIN nexttransactionlink ntl ON ntl.previousdoc = t.id
+        WHERE ntl.nextdoc = ${nsInvoiceId}
+          AND t.type IN ('CustPymt', 'CustCred', 'CustDep')
         ORDER BY t.trandate DESC`,
     );
     return rows.map((r) => ({
@@ -568,7 +574,7 @@ export class NetSuiteAPI {
       tranId: r.tranid,
       tranDate: normalizeNsDate(r.trandate),
       status: r.status || '',
-      appliedAmount: parseFloat(r.applied_amount) || 0,
+      type: r.type || '',
       paymentTotal: parseFloat(r.payment_total) || 0,
     }));
   }
