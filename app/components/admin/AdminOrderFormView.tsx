@@ -335,9 +335,15 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
   };
 
   // ---- Pricing helpers ----
+  // Pick the correct price column based on the company's NetSuite class.
+  // Class names in NS are things like "North America Distributors" or
+  // "International Distributors"; we test by substring so we don't depend
+  // on exact wording. Any class whose name mentions "america" maps to
+  // price_americas; everything else (including no class at all) falls
+  // back to price_international, matching the historical default.
   const getProductPrice = (product: Product) => {
-    const className = company?.class?.name?.toLowerCase();
-    if (className === 'americas') return product.price_americas || 0;
+    const className = (company?.class?.name || '').toLowerCase();
+    if (className.includes('america')) return product.price_americas || 0;
     return product.price_international || 0;
   };
 
