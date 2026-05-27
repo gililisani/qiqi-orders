@@ -520,6 +520,59 @@ export class NetSuiteAPI {
     return rows.map(r => String(r.id));
   }
 
+  /**
+   * Rich version of getInvoicePayments — returns one row per payment with
+   * tranid, date, status, and applied-to-this-invoice amount.
+   *
+   * NetSuite stores payments as negative-sign amounts internally; we ABS()
+   * them so the caller always sees positive numbers.
+   *
+   * `applied_amount` is the portion of the payment that landed on THIS
+   * invoice (from nexttransactionlink.foreignamount). `payment_total` is
+   * the payment's full amount (may have been split across multiple
+   * invoices). Date is normalized via normalizeNsDate so the caller can
+   * write straight to a Postgres DATE column or display directly.
+   */
+  async getInvoicePaymentsDetailed(nsInvoiceId: string): Promise<
+    Array<{
+      nsPaymentId: string;
+      tranId: string;
+      tranDate: string | null;
+      status: string;
+      appliedAmount: number;
+      paymentTotal: number;
+    }>
+  > {
+    const rows = await this.suiteQL<{
+      id: string;
+      tranid: string;
+      trandate: string;
+      status: string;
+      applied_amount: string;
+      payment_total: string;
+    }>(
+      `SELECT t.id,
+              t.tranid,
+              t.trandate,
+              BUILTIN.DF(t.status)        AS status,
+              ABS(ntl.foreignamount)      AS applied_amount,
+              ABS(t.foreigntotal)         AS payment_total
+         FROM transaction t
+         JOIN nexttransactionlink ntl ON ntl.nextdoc = t.id
+        WHERE ntl.previousdoc = ${nsInvoiceId}
+          AND t.type = 'CustPymt'
+        ORDER BY t.trandate DESC`,
+    );
+    return rows.map((r) => ({
+      nsPaymentId: String(r.id),
+      tranId: r.tranid,
+      tranDate: normalizeNsDate(r.trandate),
+      status: r.status || '',
+      appliedAmount: parseFloat(r.applied_amount) || 0,
+      paymentTotal: parseFloat(r.payment_total) || 0,
+    }));
+  }
+
   // ---------------------------------------------------------------------------
   // Delete a NetSuite Sales Order by internal ID.
   // Idempotent: 404 (already gone) is treated as success.
