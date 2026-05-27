@@ -33,6 +33,11 @@ interface Order {
   total_value: number;
   support_fund_used: number;
   credit_earned: number;
+  // NetSuite-synced invoice fields used by the outstanding balance badge.
+  invoice_number?: string | null;
+  invoice_amount_remaining?: number | null;
+  invoice_due_date?: string | null;
+  netsuite_invoice_status?: string | null;
 }
 
 interface Company {
@@ -117,6 +122,8 @@ export default function ClientDashboard() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
+      <OutstandingBalanceBadge orders={orders} />
 
       {/* Quick actions + Highlighted products */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -237,5 +244,78 @@ export default function ClientDashboard() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Outstanding balance badge — aggregates invoice_amount_remaining across
+// orders that have an invoice with a non-zero open balance. Stays out of
+// the way when everything's paid.
+// ---------------------------------------------------------------------------
+function OutstandingBalanceBadge({ orders }: { orders: Order[] }) {
+  let totalOutstanding = 0;
+  let overdueOutstanding = 0;
+  let outstandingCount = 0;
+  let overdueCount = 0;
+  const now = Date.now();
+
+  for (const o of orders) {
+    const remaining = Number(o.invoice_amount_remaining);
+    if (!o.invoice_number || !Number.isFinite(remaining) || remaining <= 0.005) {
+      continue;
+    }
+    totalOutstanding += remaining;
+    outstandingCount += 1;
+    if (o.invoice_due_date) {
+      const dueMs = new Date(`${o.invoice_due_date}T23:59:59Z`).getTime();
+      if (!Number.isNaN(dueMs) && dueMs < now) {
+        overdueOutstanding += remaining;
+        overdueCount += 1;
+      }
+    }
+  }
+
+  if (outstandingCount === 0) {
+    return null; // nothing outstanding — don't clutter the dashboard
+  }
+
+  const isOverdue = overdueCount > 0;
+  return (
+    <Card
+      className={
+        isOverdue ? 'border-rose-200 bg-rose-50/40' : 'border-amber-200 bg-amber-50/40'
+      }
+    >
+      <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            Outstanding balance
+          </p>
+          <p
+            className={`mt-0.5 text-2xl font-semibold font-mono tabular-nums ${
+              isOverdue ? 'text-rose-700' : 'text-amber-700'
+            }`}
+          >
+            {formatCurrency(totalOutstanding)}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Across {outstandingCount} invoice{outstandingCount === 1 ? '' : 's'}
+            {overdueCount > 0 && (
+              <>
+                {' '}·{' '}
+                <span className="text-rose-700 font-medium">
+                  {formatCurrency(overdueOutstanding)} overdue ({overdueCount})
+                </span>
+              </>
+            )}
+          </p>
+        </div>
+        <Link href="/client/orders">
+          <Button variant="outline" size="sm">
+            View orders
+          </Button>
+        </Link>
+      </CardContent>
+    </Card>
   );
 }

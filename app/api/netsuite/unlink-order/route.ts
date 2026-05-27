@@ -72,6 +72,8 @@ export async function POST(request: NextRequest) {
         netsuite_invoice_id: null,
         netsuite_invoice_date: null,
         netsuite_invoice_status: null,
+        invoice_amount_remaining: null,
+        invoice_due_date: null,
       })
       .eq('id', orderId);
 

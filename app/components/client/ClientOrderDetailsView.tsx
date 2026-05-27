@@ -23,6 +23,8 @@ import { ArrowLeft, Edit, Trash2, Package } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 import { formatCurrency, formatQuantity } from '../../../lib/formatters';
+import { salesOrderUrl, invoiceUrl } from '../../../lib/netsuiteUrls';
+import { cn } from '../../../lib/utils';
 
 import { PageHeader } from '../qq/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../qq/card';
@@ -65,6 +67,15 @@ interface Order {
   company_id: string;
   company?: OrderCompany;
   so_number?: string;
+  // NetSuite-synced invoice fields. All optional — populated by admin
+  // workflows (push-so, create-invoice, sync-invoice, reconcile-order).
+  netsuite_so_id?: string | null;
+  netsuite_invoice_id?: string | null;
+  invoice_number?: string | null;
+  netsuite_invoice_date?: string | null;
+  netsuite_invoice_status?: string | null;
+  invoice_amount_remaining?: number | null;
+  invoice_due_date?: string | null;
 }
 
 interface OrderItem {
@@ -249,7 +260,24 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
             </Field>
             {order.so_number && (
               <Field label="Sales order #">
-                <span className="font-mono">{order.so_number}</span>
+                {(() => {
+                  const url = order.netsuite_so_id
+                    ? salesOrderUrl(order.netsuite_so_id)
+                    : null;
+                  return url ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-accent underline-offset-4 hover:underline"
+                      title="Open in NetSuite"
+                    >
+                      {order.so_number}
+                    </a>
+                  ) : (
+                    <span className="font-mono">{order.so_number}</span>
+                  );
+                })()}
               </Field>
             )}
             <Field label="Created">
@@ -298,6 +326,13 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Invoice (NetSuite-synced) — only shown when this order has been
+          invoiced. Surfaces the document number, status, dates, and
+          outstanding balance so the client knows where they stand. */}
+      {order.invoice_number && (
+        <InvoiceCard order={order} />
+      )}
 
       {/* Items */}
       <Card>
@@ -453,5 +488,149 @@ function Row({
         {value}
       </span>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Invoice block — NetSuite-synced data only. No on-demand NS calls here;
+// everything we render comes from columns already cached on orders by the
+// admin push/sync workflows. Outstanding balance and due date come from the
+// NS invoice record (.amountRemaining / .dueDate) — fully reliable for the
+// "Paid In Full" case, may be null on legacy orders that haven't been
+// re-synced since the migration that added those columns.
+// ---------------------------------------------------------------------------
+function InvoiceCard({
+  order,
+}: {
+  order: {
+    invoice_number?: string | null;
+    netsuite_invoice_id?: string | null;
+    netsuite_invoice_status?: string | null;
+    netsuite_invoice_date?: string | null;
+    invoice_amount_remaining?: number | null;
+    invoice_due_date?: string | null;
+  };
+}) {
+  const url = order.netsuite_invoice_id
+    ? invoiceUrl(order.netsuite_invoice_id)
+    : null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-sm">Invoice</CardTitle>
+        <InvoiceStatusBadge status={order.netsuite_invoice_status} />
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+        <Field label="Invoice #">
+          {url ? (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-accent underline-offset-4 hover:underline"
+              title="Open in NetSuite"
+            >
+              {order.invoice_number}
+            </a>
+          ) : (
+            <span className="font-mono">{order.invoice_number}</span>
+          )}
+        </Field>
+        <Field label="Issue date">
+          <span>{formatNullableDate(order.netsuite_invoice_date)}</span>
+        </Field>
+        <Field label="Due date">
+          <span>{formatNullableDate(order.invoice_due_date)}</span>
+        </Field>
+        <Field label="Outstanding">
+          <OutstandingValue amount={order.invoice_amount_remaining} dueDate={order.invoice_due_date} />
+        </Field>
+      </CardContent>
+    </Card>
+  );
+}
+
+function formatNullableDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  // ISO YYYY-MM-DD → Mar 19, 2026
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+function isOverdue(dueDate: string | null | undefined): boolean {
+  if (!dueDate) return false;
+  const d = new Date(`${dueDate}T23:59:59Z`);
+  return d.getTime() < Date.now();
+}
+
+function OutstandingValue({
+  amount,
+  dueDate,
+}: {
+  amount: number | null | undefined;
+  dueDate: string | null | undefined;
+}) {
+  if (amount == null) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  if (amount <= 0.005) {
+    return (
+      <span className="font-mono text-emerald-700 font-medium">
+        {formatCurrency(0)}
+      </span>
+    );
+  }
+  const overdue = isOverdue(dueDate);
+  return (
+    <span
+      className={cn(
+        'font-mono font-medium',
+        overdue ? 'text-rose-700' : 'text-foreground',
+      )}
+    >
+      {formatCurrency(amount)}
+      {overdue && (
+        <span className="ml-2 inline-flex items-center rounded-sm border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700">
+          Overdue
+        </span>
+      )}
+    </span>
+  );
+}
+
+// Status colors mirror the NS invoice statuses we've observed in this
+// account: "Paid In Full" (green), "Open" (amber), "Partially Paid"
+// (amber too), anything else falls back to muted.
+const INVOICE_STATUS_STYLES: Record<string, string> = {
+  'Paid In Full': 'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]',
+  Open: 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]',
+  'Partially Paid': 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]',
+};
+
+function InvoiceStatusBadge({ status }: { status: string | null | undefined }) {
+  if (!status) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+  // NS sometimes prefixes statuses with "Invoice : " — strip it for display.
+  const clean = status.replace(/^Invoice\s*:\s*/i, '');
+  const style =
+    INVOICE_STATUS_STYLES[clean] ||
+    'bg-secondary text-muted-foreground border-border';
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium',
+        style,
+      )}
+    >
+      {clean}
+    </span>
   );
 }

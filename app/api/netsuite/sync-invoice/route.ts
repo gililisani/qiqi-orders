@@ -40,6 +40,8 @@ export async function POST(request: NextRequest) {
             invoice_number: null,
             netsuite_invoice_date: null,
             netsuite_invoice_status: null,
+            invoice_amount_remaining: null,
+            invoice_due_date: null,
           })
           .eq('id', orderId);
         return NextResponse.json(
@@ -59,6 +61,8 @@ export async function POST(request: NextRequest) {
         invoice_number: result.invoiceNumber,
         netsuite_invoice_date: result.invoiceDate,
         netsuite_invoice_status: result.status,
+        invoice_amount_remaining: result.amountRemaining,
+        invoice_due_date: result.dueDate,
       })
       .eq('id', orderId);
 

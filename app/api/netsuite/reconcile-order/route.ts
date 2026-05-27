@@ -104,6 +104,27 @@ export async function POST(request: NextRequest) {
       patch.invoice_number = invoice.invoiceNumber;
       patch.netsuite_invoice_date = invoice.invoiceDate || null;
       patch.netsuite_invoice_status = invoice.status || null;
+
+      // SuiteQL doesn't expose amountRemaining / dueDate cleanly, so fetch
+      // the full invoice record via REST to populate those fields too.
+      // Non-fatal — reconciliation still succeeds with the basic fields.
+      try {
+        const fullInvoice = await ns.getInvoiceDetails(invoice.nsInvoiceId);
+        patch.invoice_amount_remaining = fullInvoice.amountRemaining;
+        patch.invoice_due_date = fullInvoice.dueDate;
+        // Prefer the REST date if it differs (SuiteQL has locale issues).
+        if (fullInvoice.invoiceDate) {
+          patch.netsuite_invoice_date = fullInvoice.invoiceDate;
+        }
+        if (fullInvoice.status) {
+          patch.netsuite_invoice_status = fullInvoice.status;
+        }
+      } catch (e: any) {
+        console.error(
+          'reconcile-order: getInvoiceDetails post-fetch failed:',
+          e?.message,
+        );
+      }
     }
 
     const { error: updateError } = await supabase

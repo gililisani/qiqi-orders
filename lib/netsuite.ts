@@ -54,6 +54,12 @@ export interface NSInvoiceResult {
   invoiceNumber: string;
   invoiceDate: string;
   status: string;
+  // Both fields come straight off the NS invoice record. amountRemaining is
+  // the canonical "open balance" — 0 means paid in full. dueDate is ISO.
+  // Both may be null if NS doesn't expose the field for a given invoice
+  // (e.g. drafts) — callers should handle null gracefully.
+  amountRemaining: number | null;
+  dueDate: string | null;
 }
 
 export interface NSInventoryItem {
@@ -421,31 +427,42 @@ export class NetSuiteAPI {
       throw new Error('NetSuite created the invoice but did not return an ID.');
     }
 
-    // Fetch invoice details
-    const inv = await this.request<{ tranId: string; tranDate: string; status: { refName: string } }>(
-      `/record/v1/invoice/${nsInvoiceId}`
-    );
-
-    return {
-      nsInvoiceId,
-      invoiceNumber: inv.tranId || nsInvoiceId,
-      invoiceDate: inv.tranDate || new Date().toISOString().split('T')[0],
-      status: inv.status?.refName || 'Open',
-    };
+    // Fetch full invoice details via the shared helper so amountRemaining +
+    // dueDate are populated for create-invoice callers (same as sync).
+    return this.getInvoiceDetails(nsInvoiceId);
   }
 
   // ---------------------------------------------------------------------------
   // Sync invoice data back from NetSuite
   // ---------------------------------------------------------------------------
   async getInvoiceDetails(nsInvoiceId: string): Promise<NSInvoiceResult> {
-    const inv = await this.request<{ tranId: string; tranDate: string; status: { refName: string } }>(
-      `/record/v1/invoice/${nsInvoiceId}`
-    );
+    // NS REST returns the invoice record. The amountRemaining + dueDate
+    // fields aren't always present in the default response — pulled when
+    // they exist, otherwise null. Date fields come back ISO from REST
+    // (unlike SuiteQL), so no normalizeNsDate needed here.
+    const inv = await this.request<{
+      tranId: string;
+      tranDate: string;
+      status: { refName: string };
+      amountRemaining?: number | string;
+      dueDate?: string;
+    }>(`/record/v1/invoice/${nsInvoiceId}`);
+
+    const amountRemainingRaw = inv.amountRemaining;
+    const amountRemaining =
+      amountRemainingRaw == null
+        ? null
+        : typeof amountRemainingRaw === 'number'
+          ? amountRemainingRaw
+          : parseFloat(String(amountRemainingRaw));
+
     return {
       nsInvoiceId,
       invoiceNumber: inv.tranId || nsInvoiceId,
       invoiceDate: inv.tranDate || '',
       status: inv.status?.refName || '',
+      amountRemaining: Number.isFinite(amountRemaining) ? amountRemaining : null,
+      dueDate: inv.dueDate || null,
     };
   }
 
@@ -497,11 +514,16 @@ export class NetSuiteAPI {
     );
     if (rows.length === 0) return null;
     const r = rows[0];
+    // SuiteQL gives us enough to find the invoice; for amountRemaining +
+    // dueDate the caller should call getInvoiceDetails(nsInvoiceId) which
+    // hits the REST record endpoint. We return null for those fields here.
     return {
       nsInvoiceId: String(r.id),
       invoiceNumber: r.tranid,
       invoiceDate: normalizeNsDate(r.trandate) ?? '',
       status: r.status || '',
+      amountRemaining: null,
+      dueDate: null,
     };
   }
 
