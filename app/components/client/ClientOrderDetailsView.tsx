@@ -499,6 +499,32 @@ function Row({
 // "Paid In Full" case, may be null on legacy orders that haven't been
 // re-synced since the migration that added those columns.
 // ---------------------------------------------------------------------------
+/**
+ * Best-known outstanding amount for an order's invoice.
+ *
+ * Priority:
+ *   1. invoice_amount_remaining if populated (cached from NS sync)
+ *   2. 0 if the invoice's status says "Paid In Full" — we know the
+ *      balance regardless of whether sync has run, because the status
+ *      column already implies it
+ *   3. null otherwise — display as "—"
+ *
+ * Used by both the order detail Invoice card and the dashboard
+ * Outstanding Balance badge so they agree.
+ */
+function derivedOutstanding(order: {
+  netsuite_invoice_status?: string | null;
+  invoice_amount_remaining?: number | null;
+}): number | null {
+  const cached = order.invoice_amount_remaining;
+  if (cached != null && Number.isFinite(Number(cached))) {
+    return Number(cached);
+  }
+  const status = (order.netsuite_invoice_status || '').toLowerCase();
+  if (status.includes('paid in full')) return 0;
+  return null;
+}
+
 function InvoiceCard({
   order,
 }: {
@@ -544,7 +570,10 @@ function InvoiceCard({
           <span>{formatNullableDate(order.invoice_due_date)}</span>
         </Field>
         <Field label="Outstanding">
-          <OutstandingValue amount={order.invoice_amount_remaining} dueDate={order.invoice_due_date} />
+          <OutstandingValue
+            amount={derivedOutstanding(order)}
+            dueDate={order.invoice_due_date}
+          />
         </Field>
       </CardContent>
     </Card>

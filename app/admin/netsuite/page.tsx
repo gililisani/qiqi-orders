@@ -111,6 +111,10 @@ export default function NetSuitePage() {
         </CardContent>
       </Card>
 
+      {/* Invoice refresh */}
+      <RefreshInvoicesCard />
+
+
       {/* Configuration */}
       <Card>
         <CardHeader className="pb-3">
@@ -142,5 +146,117 @@ export default function NetSuitePage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Bulk refresh of cached invoice amounts.
+//
+// Hits /api/netsuite/refresh-all-invoices which loops through every order
+// with a netsuite_invoice_id and pulls amountRemaining + dueDate from NS.
+// Designed for one-off use (after the migration that added the new
+// columns), but safe to re-run any time you want fresh AR data without
+// waiting on per-order Sync Invoice clicks.
+// ---------------------------------------------------------------------------
+interface RefreshResult {
+  total: number;
+  refreshed: number;
+  failed: number;
+  durationMs: number;
+  failures: Array<{ orderId: string; poNumber: string | null; error: string }>;
+  truncated?: boolean;
+  message?: string;
+}
+
+function RefreshInvoicesCard() {
+  const [running, setRunning] = useState(false);
+  const [onlyMissing, setOnlyMissing] = useState(false);
+  const [result, setResult] = useState<RefreshResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async () => {
+    setRunning(true);
+    setError(null);
+    setResult(null);
+    try {
+      const { fetchWithAuth } = await import('../../../lib/fetchWithAuth');
+      const res = await fetchWithAuth('/api/netsuite/refresh-all-invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ onlyMissing }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      setResult(data);
+    } catch (e: any) {
+      setError(e?.message || 'Request failed');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm">Refresh invoice balances</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Pulls amount remaining + due date from NetSuite for every order that
+          has an invoice. Use this once after the invoice-amounts migration to
+          backfill historical orders, or anytime you want fresh AR data without
+          clicking Sync Invoice per order. Safe to re-run; takes ~30s per ~100
+          invoices.
+        </p>
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={onlyMissing}
+            onChange={(e) => setOnlyMissing(e.target.checked)}
+            className="h-4 w-4 accent-foreground"
+          />
+          <span>
+            Only refresh orders that are missing the cached fields (faster).
+          </span>
+        </label>
+        <Button onClick={run} loading={running} size="sm">
+          <RefreshCw className={`h-4 w-4 ${running ? 'animate-spin' : ''}`} />
+          {running ? 'Refreshing…' : 'Refresh now'}
+        </Button>
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        {result && (
+          <div className="rounded-md border border-border bg-secondary/30 p-3 text-sm space-y-1">
+            <p className="font-medium">{result.message}</p>
+            <p className="text-xs text-muted-foreground">
+              {result.refreshed} succeeded · {result.failed} failed · ran in{' '}
+              {(result.durationMs / 1000).toFixed(1)}s
+            </p>
+            {result.failures.length > 0 && (
+              <details className="mt-2">
+                <summary className="cursor-pointer text-xs font-medium">
+                  {result.failures.length} failure
+                  {result.failures.length === 1 ? '' : 's'} (
+                  {result.truncated ? 'first 10 shown' : 'all'})
+                </summary>
+                <ul className="mt-2 space-y-1 text-xs font-mono">
+                  {result.failures.map((f) => (
+                    <li key={f.orderId} className="text-rose-700">
+                      <span className="text-muted-foreground">
+                        {f.poNumber ?? f.orderId.slice(0, 8)}
+                      </span>
+                      : {f.error}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

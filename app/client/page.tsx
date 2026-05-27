@@ -260,10 +260,21 @@ function OutstandingBalanceBadge({ orders }: { orders: Order[] }) {
   const now = Date.now();
 
   for (const o of orders) {
-    const remaining = Number(o.invoice_amount_remaining);
-    if (!o.invoice_number || !Number.isFinite(remaining) || remaining <= 0.005) {
-      continue;
+    if (!o.invoice_number) continue;
+
+    // Best-known balance: cached amount_remaining if present, else 0 when
+    // status says "Paid In Full" (so unsynced paid invoices count as $0
+    // not unknown). Anything we genuinely don't know is skipped — better
+    // to under-report than to inflate the outstanding total.
+    let remaining: number | null = null;
+    const cached = Number(o.invoice_amount_remaining);
+    if (Number.isFinite(cached)) {
+      remaining = cached;
+    } else if ((o.netsuite_invoice_status || '').toLowerCase().includes('paid in full')) {
+      remaining = 0;
     }
+    if (remaining == null || remaining <= 0.005) continue;
+
     totalOutstanding += remaining;
     outstandingCount += 1;
     if (o.invoice_due_date) {
