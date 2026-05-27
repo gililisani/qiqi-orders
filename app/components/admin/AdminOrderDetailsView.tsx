@@ -109,6 +109,10 @@ interface Order {
   packing_slip_generated?: boolean;
   netsuite_so_id?: string | null;
   netsuite_invoice_id?: string | null;
+  netsuite_invoice_status?: string | null;
+  netsuite_invoice_date?: string | null;
+  invoice_amount_remaining?: number | null;
+  invoice_due_date?: string | null;
   company?: {
     company_name: string;
     netsuite_number: string;
@@ -964,6 +968,11 @@ export default function AdminOrderDetailsView({
         </Card>
       </div>
 
+      {/* Invoice — NetSuite-synced data. Only shown after the order has
+          been invoiced through NS. Admin sees the same fields as the
+          client view, with NS deep-links (clients see plain text). */}
+      {order.invoice_number && <AdminInvoiceCard order={order} />}
+
       {/* Items */}
       <SectionHeader title="Items">
         {isReordering && (
@@ -1297,5 +1306,138 @@ function SectionHeader({ title, children }: { title: string; children?: React.Re
       <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
       {children && <div className="flex items-center gap-2">{children}</div>}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Admin-side Invoice card.
+//
+// Mirrors the client InvoiceCard but keeps the NS deep-links (admin has
+// access to NetSuite). Same status / outstanding / due-date semantics so
+// the two views agree on what "paid in full" means.
+// ---------------------------------------------------------------------------
+function AdminInvoiceCard({ order }: { order: Order }) {
+  const invoiceLink = order.netsuite_invoice_id
+    ? invoiceUrl(order.netsuite_invoice_id)
+    : null;
+
+  // Same derivation as the client view: when status says "Paid In Full"
+  // we know the balance is 0 even if amount_remaining was never synced.
+  const cached = order.invoice_amount_remaining;
+  const statusLower = (order.netsuite_invoice_status || '').toLowerCase();
+  const outstanding =
+    cached != null && Number.isFinite(Number(cached))
+      ? Number(cached)
+      : statusLower.includes('paid in full')
+        ? 0
+        : null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-sm">Invoice</CardTitle>
+        <AdminInvoiceStatusBadge status={order.netsuite_invoice_status} />
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+        <Field label="Invoice #">
+          {invoiceLink ? (
+            <a
+              href={invoiceLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-accent underline-offset-4 hover:underline"
+              title="Open invoice in NetSuite"
+            >
+              {order.invoice_number}
+            </a>
+          ) : (
+            <span className="font-mono">{order.invoice_number}</span>
+          )}
+        </Field>
+        <Field label="Issue date">
+          <span>{formatAdminDate(order.netsuite_invoice_date)}</span>
+        </Field>
+        <Field label="Due date">
+          <span>{formatAdminDate(order.invoice_due_date)}</span>
+        </Field>
+        <Field label="Outstanding">
+          <AdminOutstandingValue
+            amount={outstanding}
+            dueDate={order.invoice_due_date}
+          />
+        </Field>
+      </CardContent>
+    </Card>
+  );
+}
+
+function formatAdminDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+function AdminOutstandingValue({
+  amount,
+  dueDate,
+}: {
+  amount: number | null;
+  dueDate: string | null | undefined;
+}) {
+  if (amount == null) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  if (amount <= 0.005) {
+    return (
+      <span className="font-mono text-emerald-700 font-medium">$0.00</span>
+    );
+  }
+  const overdue =
+    !!dueDate &&
+    new Date(`${dueDate}T23:59:59Z`).getTime() < Date.now();
+  return (
+    <span
+      className={`font-mono font-medium ${overdue ? 'text-rose-700' : 'text-foreground'}`}
+    >
+      ${Number(amount).toFixed(2)}
+      {overdue && (
+        <span className="ml-2 inline-flex items-center rounded-sm border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700">
+          Overdue
+        </span>
+      )}
+    </span>
+  );
+}
+
+const ADMIN_INVOICE_STATUS_STYLES: Record<string, string> = {
+  'Paid In Full': 'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]',
+  Open: 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]',
+  'Partially Paid': 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]',
+};
+
+function AdminInvoiceStatusBadge({
+  status,
+}: {
+  status: string | null | undefined;
+}) {
+  if (!status) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+  const clean = status.replace(/^Invoice\s*:\s*/i, '');
+  const style =
+    ADMIN_INVOICE_STATUS_STYLES[clean] ||
+    'bg-secondary text-muted-foreground border-border';
+  return (
+    <span
+      className={`inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium ${style}`}
+    >
+      {clean}
+    </span>
   );
 }

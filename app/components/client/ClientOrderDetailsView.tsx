@@ -23,7 +23,6 @@ import { ArrowLeft, Edit, Trash2, Package } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 import { formatCurrency, formatQuantity } from '../../../lib/formatters';
-import { salesOrderUrl, invoiceUrl } from '../../../lib/netsuiteUrls';
 import { cn } from '../../../lib/utils';
 
 import { PageHeader } from '../qq/page-header';
@@ -260,24 +259,11 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
             </Field>
             {order.so_number && (
               <Field label="Sales order #">
-                {(() => {
-                  const url = order.netsuite_so_id
-                    ? salesOrderUrl(order.netsuite_so_id)
-                    : null;
-                  return url ? (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono text-accent underline-offset-4 hover:underline"
-                      title="Open in NetSuite"
-                    >
-                      {order.so_number}
-                    </a>
-                  ) : (
-                    <span className="font-mono">{order.so_number}</span>
-                  );
-                })()}
+                {/* Plain text on the client side — clients have no NetSuite
+                    access, so deep-linking them in would breach the
+                    integration boundary. Will become a "Download SO PDF"
+                    link in Phase 3 (RESTlet-based document download). */}
+                <span className="font-mono">{order.so_number}</span>
               </Field>
             )}
             <Field label="Created">
@@ -537,10 +523,6 @@ function InvoiceCard({
     invoice_due_date?: string | null;
   };
 }) {
-  const url = order.netsuite_invoice_id
-    ? invoiceUrl(order.netsuite_invoice_id)
-    : null;
-
   return (
     <Card>
       <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
@@ -549,19 +531,9 @@ function InvoiceCard({
       </CardHeader>
       <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
         <Field label="Invoice #">
-          {url ? (
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-accent underline-offset-4 hover:underline"
-              title="Open in NetSuite"
-            >
-              {order.invoice_number}
-            </a>
-          ) : (
-            <span className="font-mono">{order.invoice_number}</span>
-          )}
+          {/* Plain text — clients don't have NetSuite access. Becomes a
+              "Download PDF" link in Phase 3 (RESTlet). */}
+          <span className="font-mono">{order.invoice_number}</span>
         </Field>
         <Field label="Issue date">
           <span>{formatNullableDate(order.netsuite_invoice_date)}</span>
