@@ -67,44 +67,33 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       ns.getInvoiceDetails(nsInvoiceId),
       ns.getInvoicePaymentsDetailed(nsInvoiceId),
-      // 1. Everything linked downstream of the invoice (transformations, applications going OUT)
+      // 1. Everything where invoice is the previousdoc (downstream)
       ns
         .suiteQL<any>(
-          `SELECT ntl.previousdoc, ntl.nextdoc, ntl.linktype,
-                  ABS(ntl.foreignamount) AS amount,
-                  nd.tranid AS next_tranid, nd.trandate AS next_trandate,
-                  nd.type AS next_type, BUILTIN.DF(nd.status) AS next_status
+          `SELECT nd.id, nd.tranid, nd.trandate, nd.type,
+                  BUILTIN.DF(nd.status) AS status,
+                  ABS(nd.foreigntotal)  AS total,
+                  ntl.linktype
              FROM nexttransactionlink ntl
              JOIN transaction nd ON nd.id = ntl.nextdoc
             WHERE ntl.previousdoc = ${nsInvoiceId}`,
         )
         .catch((e: any) => ({ error: e.message })),
-      // 2. Everything linked upstream of the invoice (applications coming IN to the invoice)
+      // 2. Everything where invoice is the nextdoc (upstream / applying TO it)
+      //    Drops foreignamount (doesn't exist on this account's NextTransactionLink).
       ns
         .suiteQL<any>(
-          `SELECT ntl.previousdoc, ntl.nextdoc, ntl.linktype,
-                  ABS(ntl.foreignamount) AS amount,
-                  pd.tranid AS prev_tranid, pd.trandate AS prev_trandate,
-                  pd.type AS prev_type, BUILTIN.DF(pd.status) AS prev_status
+          `SELECT pd.id, pd.tranid, pd.trandate, pd.type,
+                  BUILTIN.DF(pd.status) AS status,
+                  ABS(pd.foreigntotal)  AS total,
+                  ntl.linktype
              FROM nexttransactionlink ntl
              JOIN transaction pd ON pd.id = ntl.previousdoc
             WHERE ntl.nextdoc = ${nsInvoiceId}`,
         )
         .catch((e: any) => ({ error: e.message })),
-      // 3. Find any transaction whose lines reference this invoice — covers
-      //    the case where the linkage isn't in nexttransactionlink at all
-      //    (e.g. journal entries, certain credit memo applications).
-      ns
-        .suiteQL<any>(
-          `SELECT DISTINCT t.id, t.tranid, t.trandate, t.type,
-                  BUILTIN.DF(t.status) AS status,
-                  ABS(t.foreigntotal) AS total
-             FROM transaction t
-             JOIN transactionline tl ON tl.transaction = t.id
-            WHERE tl.createdfrom = ${nsInvoiceId}
-               OR tl.linkedtransaction = ${nsInvoiceId}`,
-        )
-        .catch((e: any) => ({ error: e.message })),
+      // 3. (placeholder — dropped, transactionline.linkedtransaction doesn't exist here)
+      Promise.resolve({ note: 'Skipped — column not available on this account.' }),
     ]);
     const durationMs = Date.now() - startedAt;
 
