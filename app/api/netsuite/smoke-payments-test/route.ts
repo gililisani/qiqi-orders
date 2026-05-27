@@ -6,7 +6,7 @@ import {
 import { createNetSuiteAPI } from '../../../../lib/netsuite';
 
 /**
- * GET /api/netsuite/_smoke-payments?orderId=<uuid>
+ * GET /api/netsuite/smoke-payments-test?orderId=<uuid>
  *
  * Admin-only smoke test for the Phase 2 client-payments work.
  * Returns the raw response of getInvoicePaymentsDetailed() for the order's
