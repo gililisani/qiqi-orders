@@ -566,11 +566,15 @@ export default function AdminOrderDetailsView({
     return null;
   })();
 
-  const canDelete =
-    !!order.netsuite_so_id ||
-    !!order.netsuite_invoice_id ||
-    originalStatus === 'Cancelled' ||
-    originalStatus === 'Draft';
+  // Product rule: delete is allowed ONLY when the order is Cancelled.
+  // Drafts must be cancelled first. NS-linked orders can still be deleted
+  // (the API route cleans up the NS records too) — same Cancelled gate.
+  const canDelete = originalStatus === 'Cancelled';
+
+  // Product rule: edit is allowed only in Draft / Open. Once the order
+  // moves to In Process / Ready / Done / Cancelled, the data is frozen
+  // (it's been pushed to NS, fulfilled by 3PL, etc.).
+  const canEdit = order.status === 'Draft' || order.status === 'Open';
 
   const showPackingSlipBtn = ['Ready', 'Done'].includes(originalStatus);
   const canDownload3PL = !!order.so_number && ['In Process', 'Ready', 'Done'].includes(order.status);
@@ -631,12 +635,14 @@ export default function AdminOrderDetailsView({
               </>
             )}
 
-            {/* Edit */}
-            <Link href={editUrl}>
-              <Button size="sm" variant="outline">
-                <Edit className="h-4 w-4" /> Edit
-              </Button>
-            </Link>
+            {/* Edit — only when status is Draft or Open. Frozen otherwise. */}
+            {canEdit && (
+              <Link href={editUrl}>
+                <Button size="sm" variant="outline">
+                  <Edit className="h-4 w-4" /> Edit
+                </Button>
+              </Link>
+            )}
 
             {/* Send update */}
             <Button

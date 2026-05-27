@@ -188,8 +188,11 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
     );
   }
 
+  // Product rule: edit only in Draft/Open; delete only when Cancelled.
+  // Drafts must be cancelled first then deleted — cleaner lifecycle and
+  // matches the admin and server-side gates.
   const canEdit = order.status === 'Draft' || order.status === 'Open';
-  const canDelete = order.status === 'Draft';
+  const canDelete = order.status === 'Cancelled';
   const showPackingSlip = ['Ready', 'Done'].includes(order.status);
 
   // Totals breakdown

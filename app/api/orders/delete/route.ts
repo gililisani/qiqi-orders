@@ -38,7 +38,20 @@ export async function DELETE(request: NextRequest) {
     const isAdmin = user.roles.includes('admin');
     const hasNsLink = !!(order.netsuite_so_id || order.netsuite_invoice_id);
 
-    // Authorization
+    // Product rule: deletes ONLY when status='Cancelled'. Applies to both
+    // admin and client paths. Drafts must be cancelled first then deleted —
+    // cleaner lifecycle and a proper audit trail than direct draft-delete.
+    if (order.status !== 'Cancelled') {
+      return NextResponse.json(
+        {
+          error: `Cannot delete order with status "${order.status}". Only Cancelled orders can be deleted — cancel the order first if you want to remove it.`,
+        },
+        { status: 403 },
+      );
+    }
+
+    // Per-role scope check (kept after the status gate so the error message
+    // above always reflects the real product rule, not "access denied").
     if (!isAdmin) {
       const { data: clientRow, error: clientError } = await supabase
         .from('clients')
@@ -49,31 +62,20 @@ export async function DELETE(request: NextRequest) {
       if (!clientRow || clientRow.company_id !== order.company_id) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
-      if (order.status === 'Draft' && order.user_id !== user.id) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-      }
-      // Clients can only ever delete their own Draft orders, never NS-linked ones
-      if (hasNsLink || order.status !== 'Draft') {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      // Clients can never delete NS-linked orders — NetSuite cleanup is
+      // admin-only because it may need to delete NS records too.
+      if (hasNsLink) {
+        return NextResponse.json(
+          { error: 'Only an admin can delete an order that has been pushed to NetSuite.' },
+          { status: 403 },
+        );
       }
     }
 
-    // Status rules:
-    // - Without NS link: must be Cancelled or Draft (legacy behavior)
-    // - With NS link: admin can delete any status, but NS records must come down too,
-    //   and a Customer Payment in NS blocks deletion entirely.
-    if (!hasNsLink) {
-      if (order.status !== 'Cancelled' && order.status !== 'Draft') {
-        return NextResponse.json(
-          { error: `Cannot delete order with status "${order.status}". Only Cancelled or Draft orders can be deleted.` },
-          { status: 403 }
-        );
-      }
-    } else {
-      // Admin-only beyond this point
-      if (!isAdmin) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-      }
+    // NS cleanup: only when admin is deleting a NS-linked order. The route
+    // tries to delete the NS Invoice + SO; payments applied to the invoice
+    // block deletion entirely.
+    if (hasNsLink) {
 
       const ns = createNetSuiteAPI();
 

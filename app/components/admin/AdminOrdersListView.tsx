@@ -390,13 +390,38 @@ export default function AdminOrdersListView() {
                     <TableRow
                       key={order.id}
                       className="cursor-pointer"
-                      onClick={() => router.push(`/admin/orders/${order.id}`)}
+                      onClick={(e) => {
+                        // Match the browser's anchor behavior for the row click.
+                        // Ctrl/Cmd-click opens in a new tab; plain click navigates.
+                        if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                          window.open(`/admin/orders/${order.id}`, '_blank', 'noopener');
+                          return;
+                        }
+                        router.push(`/admin/orders/${order.id}`);
+                      }}
+                      onAuxClick={(e) => {
+                        // Middle-click → new tab. The browser sends button=1 on aux click.
+                        if (e.button === 1) {
+                          e.preventDefault();
+                          window.open(`/admin/orders/${order.id}`, '_blank', 'noopener');
+                        }
+                      }}
                     >
                       <TableCell className="font-mono text-sm">
                         {/* Constrain mobile width so a long company name truncates inside
                             the cell instead of pushing the table off-screen. */}
                         <div className="max-w-[160px] sm:max-w-none">
-                          <div className="truncate">{order.po_number || order.id.substring(0, 6)}</div>
+                          {/* Real <a href> on the primary identifier so the browser's
+                              native right-click → "Open in new tab" works. The row's
+                              onClick still handles plain left-click anywhere else in
+                              the row. stopPropagation prevents double-navigation. */}
+                          <Link
+                            href={`/admin/orders/${order.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="block truncate hover:underline"
+                          >
+                            {order.po_number || order.id.substring(0, 6)}
+                          </Link>
                           {/* Mobile-only stacked context: NS number, company, client */}
                           <div className="md:hidden mt-1 font-sans space-y-0.5">
                             {company?.netsuite_number && (
