@@ -52,13 +52,66 @@ export async function GET(request: NextRequest) {
 
     const ns = createNetSuiteAPI();
     const startedAt = Date.now();
-    const [invoice, payments] = await Promise.all([
-      ns.getInvoiceDetails(order.netsuite_invoice_id),
-      ns.getInvoicePaymentsDetailed(order.netsuite_invoice_id),
+    const nsInvoiceId = order.netsuite_invoice_id;
+
+    // Run several diagnostic queries in parallel so we can see what NS
+    // actually has linked to this invoice and why the production helper
+    // returned no payments. The "right" query for this account is whichever
+    // direction + type combination produces the matching payment.
+    const [
+      invoice,
+      productionHelperResult,
+      linksWhereInvoiceIsPrevious,
+      linksWhereInvoiceIsNext,
+      anyTxAppliedToInvoice,
+    ] = await Promise.all([
+      ns.getInvoiceDetails(nsInvoiceId),
+      ns.getInvoicePaymentsDetailed(nsInvoiceId),
+      // 1. Everything linked downstream of the invoice (transformations, applications going OUT)
+      ns
+        .suiteQL<any>(
+          `SELECT ntl.previousdoc, ntl.nextdoc, ntl.linktype,
+                  ABS(ntl.foreignamount) AS amount,
+                  nd.tranid AS next_tranid, nd.trandate AS next_trandate,
+                  nd.type AS next_type, BUILTIN.DF(nd.status) AS next_status
+             FROM nexttransactionlink ntl
+             JOIN transaction nd ON nd.id = ntl.nextdoc
+            WHERE ntl.previousdoc = ${nsInvoiceId}`,
+        )
+        .catch((e: any) => ({ error: e.message })),
+      // 2. Everything linked upstream of the invoice (applications coming IN to the invoice)
+      ns
+        .suiteQL<any>(
+          `SELECT ntl.previousdoc, ntl.nextdoc, ntl.linktype,
+                  ABS(ntl.foreignamount) AS amount,
+                  pd.tranid AS prev_tranid, pd.trandate AS prev_trandate,
+                  pd.type AS prev_type, BUILTIN.DF(pd.status) AS prev_status
+             FROM nexttransactionlink ntl
+             JOIN transaction pd ON pd.id = ntl.previousdoc
+            WHERE ntl.nextdoc = ${nsInvoiceId}`,
+        )
+        .catch((e: any) => ({ error: e.message })),
+      // 3. Find any transaction whose lines reference this invoice — covers
+      //    the case where the linkage isn't in nexttransactionlink at all
+      //    (e.g. journal entries, certain credit memo applications).
+      ns
+        .suiteQL<any>(
+          `SELECT DISTINCT t.id, t.tranid, t.trandate, t.type,
+                  BUILTIN.DF(t.status) AS status,
+                  ABS(t.foreigntotal) AS total
+             FROM transaction t
+             JOIN transactionline tl ON tl.transaction = t.id
+            WHERE tl.createdfrom = ${nsInvoiceId}
+               OR tl.linkedtransaction = ${nsInvoiceId}`,
+        )
+        .catch((e: any) => ({ error: e.message })),
     ]);
     const durationMs = Date.now() - startedAt;
 
-    const totalPaid = payments.reduce((s, p) => s + p.appliedAmount, 0);
+    const totalPaid = productionHelperResult.reduce(
+      (s: number, p: any) => s + p.appliedAmount,
+      0,
+    );
     const balance = (Number(order.total_value) || 0) - totalPaid;
 
     return NextResponse.json({
@@ -75,11 +128,18 @@ export async function GET(request: NextRequest) {
         total_value: order.total_value,
       },
       invoiceFromNs: invoice,
-      paymentsFromNs: payments,
+      productionHelperResult,
       derived: {
         totalPaid,
         balance,
-        paymentCount: payments.length,
+        paymentCount: productionHelperResult.length,
+      },
+      diagnostics: {
+        explanation:
+          'These three queries probe different places NetSuite might record the payment-to-invoice link. Whichever one returns the actual payment is the right linkage for this account.',
+        linksWhereInvoiceIsPrevious_downstream: linksWhereInvoiceIsPrevious,
+        linksWhereInvoiceIsNext_upstream: linksWhereInvoiceIsNext,
+        transactionLinesReferencingInvoice: anyTxAppliedToInvoice,
       },
     });
   } catch (err: any) {
