@@ -6,7 +6,6 @@ import { RefreshCw, Search, Download, ArrowRight, ListChecks } from 'lucide-reac
 
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 import { PageHeader } from '../../components/qq/page-header';
-import { Card, CardContent } from '../../components/qq/card';
 import { Button } from '../../components/qq/button';
 import { Input } from '../../components/qq/input';
 import { Badge } from '../../components/qq/badge';
@@ -20,7 +19,7 @@ import {
   TableCell,
 } from '../../components/qq/table';
 
-type Confidence = 'CLEAN' | 'PARTIAL' | 'NONE';
+type Category = 'CLEAN' | 'PARTIAL' | 'MANUAL' | 'CLOSED';
 type Status = 'todo' | 'done' | 'skipped';
 
 interface Row {
@@ -33,11 +32,11 @@ interface Row {
   recommendedAction: string;
   suspectNsTransactionId: string | null;
   suspectDoc: string | null;
-  suspectType: string | null;
+  suspectType: string | null; // raw NS type code
   suspectDate: string | null;
   changeFrom: string | null;
   changeTo: string | null;
-  confidence: Confidence;
+  category: Category;
   notes: string;
   status: Status;
 }
@@ -53,8 +52,25 @@ const ACTION_LABEL: Record<string, string> = {
   REDUCE_QTY: 'Reduce quantity',
   DELETE: 'Delete transaction',
   CHANGE_DATE_FORWARD: 'Change date forward',
+  CHANGE_DATE_EARLIER: 'Change date earlier',
   MANUAL_REVIEW: 'Needs manual review',
+  CLOSED_PERIOD: 'Out of scope — closed period',
 };
+
+// Raw NS type code → label (only the editable types ever appear as a target).
+const NS_TYPE_LABEL: Record<string, string> = {
+  InvTrnfr: 'Inventory Transfer',
+  InvAdjst: 'Inventory Adjustment',
+  ItemRcpt: 'Item Receipt',
+  VendBill: 'Bill',
+};
+
+const CHIPS: { key: Category; label: string }[] = [
+  { key: 'CLEAN', label: 'Clean' },
+  { key: 'PARTIAL', label: 'Partial' },
+  { key: 'MANUAL', label: 'Manual review' },
+  { key: 'CLOSED', label: 'Closed period' },
+];
 
 const fmt = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 2 });
 
@@ -66,7 +82,7 @@ export default function WorklistPage() {
   const [recomputing, setRecomputing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [cleanOnly, setCleanOnly] = useState(false);
+  const [active, setActive] = useState<Set<Category>>(new Set<Category>(['CLEAN'])); // default CLEAN only
   const [hideDone, setHideDone] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -115,37 +131,42 @@ export default function WorklistPage() {
     }).catch(() => {});
   };
 
+  const toggleChip = (c: Category) => {
+    setActive((prev) => {
+      const next = new Set(prev);
+      if (next.has(c)) next.delete(c);
+      else next.add(c);
+      return next.size === 0 ? new Set<Category>([c]) : next; // never empty
+    });
+  };
+
+  const counts = useMemo(() => {
+    const c: Record<Category, number> = { CLEAN: 0, PARTIAL: 0, MANUAL: 0, CLOSED: 0 };
+    for (const r of rows) c[r.category] = (c[r.category] ?? 0) + 1;
+    return c;
+  }, [rows]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toUpperCase();
     return rows.filter((r) => {
-      if (cleanOnly && r.confidence !== 'CLEAN') return false;
+      if (!active.has(r.category)) return false;
       if (hideDone && r.status === 'done') return false;
       if (q && !r.itemCode.toUpperCase().includes(q) && !(r.itemName ?? '').toUpperCase().includes(q)) return false;
       return true;
     });
-  }, [rows, cleanOnly, hideDone, search]);
-
-  const counts = useMemo(() => {
-    const c = { clean: 0, partial: 0, none: 0, done: 0 };
-    for (const r of rows) {
-      if (r.status === 'done') c.done++;
-      if (r.confidence === 'CLEAN') c.clean++;
-      else if (r.confidence === 'PARTIAL') c.partial++;
-      else c.none++;
-    }
-    return c;
-  }, [rows]);
+  }, [rows, active, hideDone, search]);
 
   const exportCsv = () => {
     const head = [
       'Item', 'Item Name', 'Location', 'Depth', 'Since', 'Recommended Action',
-      'Suspect Doc', 'Suspect Type', 'Suspect Date', 'Change From', 'Change To',
-      'Confidence', 'Status', 'Notes',
+      'Transaction To Edit', 'Type', 'Tx Date', 'Change From', 'Change To',
+      'Category', 'Status', 'Notes',
     ];
     const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines = filtered.map((r) =>
       [r.itemCode, r.itemName, r.locationName, r.depth, r.since, ACTION_LABEL[r.recommendedAction] ?? r.recommendedAction,
-        r.suspectDoc, r.suspectType, r.suspectDate, r.changeFrom, r.changeTo, r.confidence, r.status, r.notes]
+        r.suspectDoc, r.suspectType ? NS_TYPE_LABEL[r.suspectType] ?? r.suspectType : '', r.suspectDate,
+        r.changeFrom, r.changeTo, r.category, r.status, r.notes]
         .map(esc).join(','),
     );
     const blob = new Blob([[head.join(','), ...lines].join('\n')], { type: 'text/csv' });
@@ -167,7 +188,7 @@ export default function WorklistPage() {
     <div className="px-6 py-8">
       <PageHeader
         title="Inventory Worklist"
-        description="Recommended fixes for every negative-inventory case. Execute them manually in NetSuite — nothing is pushed automatically."
+        description="Recommended fixes for every negative-inventory case. Only clerical records (transfers, receipts, adjustments, bills) in open periods are ever proposed — execute them manually in NetSuite."
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={exportCsv} disabled={!filtered.length}>
@@ -180,11 +201,10 @@ export default function WorklistPage() {
         }
       />
 
-      {/* Meta + quick item search */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <p className="text-xs text-muted-foreground">
           {meta?.computedAt
-            ? <>Last computed {new Date(meta.computedAt).toLocaleString()} · {counts.clean} clean · {counts.partial} partial · {counts.none} manual{meta.durationMs ? ` · ${(meta.durationMs / 1000).toFixed(0)}s` : ''}</>
+            ? <>Last computed {new Date(meta.computedAt).toLocaleString()} · {meta.cases} cases{meta.durationMs ? ` · ${(meta.durationMs / 1000).toFixed(0)}s` : ''}</>
             : 'Not computed yet — click “Recompute worklist” (takes ~30s).'}
         </p>
         <form onSubmit={goSearch} className="flex items-center gap-2">
@@ -203,13 +223,23 @@ export default function WorklistPage() {
         </form>
       </div>
 
-      {/* Toggles */}
-      <div className="flex items-center gap-4 mb-3 text-sm">
-        <label className="flex items-center gap-1.5">
-          <input type="checkbox" checked={cleanOnly} onChange={(e) => setCleanOnly(e.target.checked)} />
-          CLEAN only (easy wins)
-        </label>
-        <label className="flex items-center gap-1.5">
+      {/* Category chips */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        {CHIPS.map((chip) => {
+          const on = active.has(chip.key);
+          return (
+            <button
+              key={chip.key}
+              onClick={() => toggleChip(chip.key)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                on ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-secondary'
+              }`}
+            >
+              {chip.label} <span className="opacity-70">{counts[chip.key]}</span>
+            </button>
+          );
+        })}
+        <label className="flex items-center gap-1.5 text-sm ml-2">
           <input type="checkbox" checked={hideDone} onChange={(e) => setHideDone(e.target.checked)} />
           Hide done
         </label>
@@ -232,7 +262,7 @@ export default function WorklistPage() {
           action={<Button onClick={recompute} loading={recomputing}><RefreshCw className="h-4 w-4" /> Recompute worklist</Button>}
         />
       ) : filtered.length === 0 ? (
-        <EmptyState icon={<ListChecks />} title="Nothing matches" description="Adjust the filters above." />
+        <EmptyState icon={<ListChecks />} title="Nothing matches" description="Adjust the category chips or filters above." />
       ) : (
         <div className="rounded-md border border-border overflow-hidden">
           <div className="overflow-x-auto">
@@ -246,7 +276,7 @@ export default function WorklistPage() {
                   <TableHead>Recommended action</TableHead>
                   <TableHead>Transaction to edit</TableHead>
                   <TableHead>Change</TableHead>
-                  <TableHead>Confidence</TableHead>
+                  <TableHead>Category</TableHead>
                   <TableHead>Notes</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
@@ -273,19 +303,21 @@ export default function WorklistPage() {
                     <TableCell className="py-2 text-xs whitespace-nowrap">{ACTION_LABEL[r.recommendedAction] ?? r.recommendedAction}</TableCell>
                     <TableCell className="py-2 text-xs whitespace-nowrap">
                       {r.suspectDoc ? (
-                        <span title={`${r.suspectType ?? ''} ${r.suspectDate ?? ''}`}>
+                        <span className="font-mono">
                           {r.suspectDoc}
-                          <span className="text-muted-foreground"> · {r.suspectDate}</span>
+                          <span className="text-muted-foreground font-sans">
+                            {' · '}{r.suspectType ? NS_TYPE_LABEL[r.suspectType] ?? r.suspectType : '?'}{' · '}{r.suspectDate}
+                          </span>
                         </span>
                       ) : (
-                        '—'
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell className="py-2 font-mono text-xs whitespace-nowrap">
                       {r.changeFrom != null ? `${r.changeFrom} → ${r.changeTo}` : ''}
                     </TableCell>
                     <TableCell className="py-2">
-                      <ConfidenceBadge c={r.confidence} />
+                      <CategoryBadge c={r.category} />
                     </TableCell>
                     <TableCell className="py-2 text-xs text-muted-foreground max-w-[320px]">{r.notes}</TableCell>
                     <TableCell className="py-2">
@@ -310,8 +342,9 @@ export default function WorklistPage() {
   );
 }
 
-function ConfidenceBadge({ c }: { c: Confidence }) {
+function CategoryBadge({ c }: { c: Category }) {
   if (c === 'CLEAN') return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">CLEAN</Badge>;
   if (c === 'PARTIAL') return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">PARTIAL</Badge>;
+  if (c === 'CLOSED') return <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100">CLOSED</Badge>;
   return <Badge variant="secondary">MANUAL</Badge>;
 }

@@ -37,7 +37,8 @@ export interface LedgerTxn {
   transferGroup?: string | null;
   transferLeg?: 'source' | 'dest' | null;
   memo?: string;
-  nsType?: string | null; // raw NetSuite type display name — UI only, engine ignores it
+  nsType?: string | null; // NetSuite type DISPLAY name (e.g. "Inventory Transfer") — UI only
+  nsTypeCode?: string | null; // RAW NetSuite type code (e.g. "InvTrnfr") — drives editability; engine ignores it
 }
 
 export interface OpeningBalance {

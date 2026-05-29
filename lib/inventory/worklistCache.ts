@@ -59,7 +59,7 @@ export async function writeWorklist(comp: WorklistComputation, durationMs: numbe
       suspect_date: r.suspectDate,
       change_from: r.changeFrom,
       change_to: r.changeTo,
-      confidence: r.confidence,
+      confidence: r.category,
       notes: r.notes,
       status,
       computed_at: now,
@@ -112,7 +112,7 @@ export async function readWorklist(): Promise<{ rows: WorklistRecord[]; meta: Wo
     suspectDate: r.suspect_date,
     changeFrom: r.change_from,
     changeTo: r.change_to,
-    confidence: r.confidence,
+    category: r.confidence,
     notes: r.notes,
     status: r.status,
   }));

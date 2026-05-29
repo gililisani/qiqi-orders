@@ -90,7 +90,7 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
       itemsScanned: metaById.size,
       itemsWithLines,
       cases: rows.length,
-      cleanCount: rows.filter((r) => r.confidence === 'CLEAN').length,
+      cleanCount: rows.filter((r) => r.category === 'CLEAN').length,
     },
   };
 }

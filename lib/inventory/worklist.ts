@@ -1,16 +1,29 @@
 /**
- * Auto-recommendation engine. For each (item, location) that goes negative,
- * pick the suspect transaction and find the best honest fix, using the SAME
- * balance engine + simulate() as the UI. Pure — no I/O.
+ * Auto-recommendation engine with HARD business rules.
  *
- * Per case:
- *  1. suspect = earliest "drove/deepened" outbound at the negative location.
- *  2. try fixes in order: REDUCE_QTY (reduce to zero the suspect-day EOD),
- *     DELETE, CHANGE_DATE_FORWARD (to the day after the next inbound at the loc).
- *  3. classify each via simulate(): CLEAN (target resolved + NO new negatives
- *     anywhere through end of data), PARTIAL (resolved but creates new), or
- *     INEFFECTIVE (target not resolved).
- *  4. recommend the first CLEAN; else MANUAL_REVIEW with the best PARTIAL shown.
+ * RULE 1 — CLOSED PERIODS: never recommend editing a transaction dated before
+ *   2024-01-01. If a location's negative ORIGINATES before 2024-01-01, the case
+ *   is OUT OF SCOPE — CLOSED PERIOD (handled by accounting catch-up, not here).
+ *
+ * RULE 2 — ONLY CLERICAL TYPES ARE EDITABLE: a recommended fix may only target
+ *   Inventory Transfer / Inventory Adjustment / Item Receipt / Vendor Bill.
+ *   Assembly Build/Unbuild, Item Fulfillment, Invoice, Cash Sale, Credit Memo,
+ *   Customer Refund represent physical/commercial reality and are NEVER edited.
+ *   Editability keys on the RAW NetSuite type code (nsTypeCode), so unknown
+ *   types are non-editable by default.
+ *
+ * Algorithm per (item, location) negative case:
+ *   - trigger = first date the location's end-of-day goes negative.
+ *   - if trigger < 2024-01-01 → CLOSED.
+ *   - else generate candidate fixes ONLY from editable + post-2024 transactions
+ *     at the location: outbound legs → reduce / change-date-forward / delete;
+ *     late inbound legs → change-date-earlier. Simulate each across the full
+ *     timeline; classify CLEAN (resolves target, no new negatives anywhere) /
+ *     PARTIAL (resolves but creates new) / ineffective.
+ *   - recommend the first CLEAN; else best PARTIAL as a starting point; else
+ *     MANUAL (e.g. the only driver is a non-editable build/fulfillment).
+ *
+ * Uses the SAME balance engine + simulate() as the UI.
  */
 import {
   computeLedger,
@@ -23,8 +36,35 @@ import {
   type LocationNegative,
 } from '@/lib/inventory/balanceEngine';
 
-export type WorklistAction = 'REDUCE_QTY' | 'DELETE' | 'CHANGE_DATE_FORWARD' | 'MANUAL_REVIEW';
-export type Confidence = 'CLEAN' | 'PARTIAL' | 'NONE';
+export const CLOSED_PERIOD_CUTOFF = '2024-01-01';
+
+/** Raw NetSuite type codes that are clerical and therefore editable. */
+export const EDITABLE_NS_TYPES = new Set(['InvTrnfr', 'InvAdjst', 'ItemRcpt', 'VendBill']);
+
+/** Raw code → display label (for the worklist "transaction to edit" column). */
+export const NS_TYPE_LABEL: Record<string, string> = {
+  InvTrnfr: 'Inventory Transfer',
+  InvAdjst: 'Inventory Adjustment',
+  ItemRcpt: 'Item Receipt',
+  VendBill: 'Bill',
+  Build: 'Assembly Build',
+  Unbuild: 'Assembly Unbuild',
+  ItemShip: 'Item Fulfillment',
+  CustInvc: 'Invoice',
+  CashSale: 'Cash Sale',
+  CustCred: 'Credit Memo',
+  CustRfnd: 'Customer Refund',
+};
+
+export type WorklistAction =
+  | 'REDUCE_QTY'
+  | 'DELETE'
+  | 'CHANGE_DATE_FORWARD'
+  | 'CHANGE_DATE_EARLIER'
+  | 'MANUAL_REVIEW'
+  | 'CLOSED_PERIOD';
+
+export type Category = 'CLEAN' | 'PARTIAL' | 'MANUAL' | 'CLOSED';
 
 export interface ItemMeta {
   itemCode: string;
@@ -38,16 +78,18 @@ export interface WorklistRow {
   itemName: string | null;
   locationNsId: string;
   locationName: string;
-  depth: number; // deepest negative (negative number)
+  depth: number;
   since: string | null;
   recommendedAction: WorklistAction;
+  // The transaction the user should edit (only set for CLEAN / PARTIAL — always
+  // an editable type dated on/after the cutoff).
   suspectNsTransactionId: string | null;
   suspectDoc: string | null;
-  suspectType: string | null;
+  suspectType: string | null; // RAW NS type code
   suspectDate: string | null;
   changeFrom: string | null;
   changeTo: string | null;
-  confidence: Confidence;
+  category: Category;
   notes: string;
 }
 
@@ -58,18 +100,24 @@ const ACTION_LABEL: Record<WorklistAction, string> = {
   REDUCE_QTY: 'Reduce quantity',
   DELETE: 'Delete transaction',
   CHANGE_DATE_FORWARD: 'Change date forward',
+  CHANGE_DATE_EARLIER: 'Change date earlier',
   MANUAL_REVIEW: 'Needs manual review',
+  CLOSED_PERIOD: 'Out of scope — closed period',
 };
-const ORDER: WorklistAction[] = ['REDUCE_QTY', 'DELETE', 'CHANGE_DATE_FORWARD'];
 
-function addDay(iso: string): string {
+const isEditable = (t: { nsTypeCode?: string | null }) => !!t.nsTypeCode && EDITABLE_NS_TYPES.has(t.nsTypeCode);
+const inScope = (date: string) => date >= CLOSED_PERIOD_CUTOFF;
+
+function shiftDay(iso: string, days: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + 1);
+  d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
 
 interface Candidate {
   action: WorklistAction;
+  priority: number; // lower = preferred
+  tx: AnnotatedTxn;
   change: SimChange;
   changeFrom: string;
   changeTo: string;
@@ -98,6 +146,7 @@ function recommendCase(
   locId: string,
 ): WorklistRow {
   const lane = ledger.byLocation[locId];
+  const trigger = neg.spans[0]?.from ?? neg.deepestDate;
   const base = {
     itemCode: meta.itemCode,
     nsItemId: meta.nsItemId,
@@ -105,94 +154,113 @@ function recommendCase(
     locationNsId: locId,
     locationName: neg.locationName,
     depth: neg.deepestBalance,
-    since: neg.spans[0]?.from ?? null,
+    since: trigger,
+  };
+  const noFix = {
+    suspectNsTransactionId: null,
+    suspectDoc: null,
+    suspectType: null,
+    suspectDate: null,
+    changeFrom: null,
+    changeTo: null,
   };
 
-  // Earliest suspect at this location (lane.rows are already engine-sorted).
-  const suspect: AnnotatedTxn | undefined = lane.rows.find((r) => r.suspect);
-  if (!suspect) {
+  // RULE 1 — negative originates in a closed period.
+  if (trigger && trigger < CLOSED_PERIOD_CUTOFF) {
     return {
       ...base,
-      recommendedAction: 'MANUAL_REVIEW',
-      suspectNsTransactionId: null,
-      suspectDoc: null,
-      suspectType: null,
-      suspectDate: null,
-      changeFrom: null,
-      changeTo: null,
-      confidence: 'NONE',
-      notes: `${neg.locationName} is negative but no outbound transaction drove it (likely a negative opening / incomplete pre-go-live history). Manual review.`,
+      ...noFix,
+      recommendedAction: 'CLOSED_PERIOD',
+      category: 'CLOSED',
+      notes: `${neg.locationName} first goes negative ${trigger} (pre-2024, closed period). Out of scope here — resolve via the separate accounting catch-up.`,
     };
   }
 
-  const suspectMeta = {
-    suspectNsTransactionId: suspect.nsTransactionId,
-    suspectDoc: suspect.docNumber || null,
-    suspectType: suspect.nsType || suspect.tranType,
-    suspectDate: suspect.tranDate,
-  };
-
-  // Build candidate fixes in priority order.
+  // Build candidate fixes ONLY from editable + in-scope transactions at this location.
   const candidates: Candidate[] = [];
-  const mag = Math.abs(suspect.signedQty);
-  const eodOnDay = lane.eodTimeline.find((p) => p.date === suspect.tranDate)?.eod ?? 0;
-  const reduceTo = mag + eodOnDay; // eodOnDay < 0 → this lowers the magnitude
-  if (reduceTo > 0 && reduceTo < mag) {
-    candidates.push({
-      action: 'REDUCE_QTY',
-      change: { kind: 'changeQty', nsTransactionId: suspect.nsTransactionId, newQty: reduceTo },
-      changeFrom: fmt(mag),
-      changeTo: fmt(reduceTo),
-    });
-  }
-  candidates.push({
-    action: 'DELETE',
-    change: { kind: 'delete', nsTransactionId: suspect.nsTransactionId },
-    changeFrom: fmt(mag),
-    changeTo: 'delete',
-  });
-  const nextInbound = lane.rows.find((r) => r.signedQty > 0 && r.tranDate > suspect.tranDate);
-  if (nextInbound) {
-    const newDate = addDay(nextInbound.tranDate);
-    candidates.push({
-      action: 'CHANGE_DATE_FORWARD',
-      change: { kind: 'changeDate', nsTransactionId: suspect.nsTransactionId, newDate },
-      changeFrom: suspect.tranDate,
-      changeTo: newDate,
-    });
+  const eodByDate = new Map(lane.eodTimeline.map((p) => [p.date, p.eod]));
+
+  for (const r of lane.rows) {
+    if (!isEditable(r) || !inScope(r.tranDate)) continue;
+
+    if (r.signedQty < 0 && r.tranDate <= neg.deepestDate) {
+      // Outbound that contributed to the shortage.
+      const mag = Math.abs(r.signedQty);
+      const eod = eodByDate.get(r.tranDate) ?? 0;
+      const reduceTo = mag + eod; // eod < 0 lowers magnitude
+      if (reduceTo > 0 && reduceTo < mag) {
+        candidates.push({
+          action: 'REDUCE_QTY',
+          priority: 10,
+          tx: r,
+          change: { kind: 'changeQty', nsTransactionId: r.nsTransactionId, newQty: reduceTo },
+          changeFrom: fmt(mag),
+          changeTo: fmt(reduceTo),
+        });
+      }
+      const nextInbound = lane.rows.find((x) => x.signedQty > 0 && x.tranDate > r.tranDate);
+      if (nextInbound) {
+        const newDate = shiftDay(nextInbound.tranDate, 1);
+        candidates.push({
+          action: 'CHANGE_DATE_FORWARD',
+          priority: 30,
+          tx: r,
+          change: { kind: 'changeDate', nsTransactionId: r.nsTransactionId, newDate },
+          changeFrom: r.tranDate,
+          changeTo: newDate,
+        });
+      }
+      candidates.push({
+        action: 'DELETE',
+        priority: 40,
+        tx: r,
+        change: { kind: 'delete', nsTransactionId: r.nsTransactionId },
+        changeFrom: fmt(mag),
+        changeTo: 'delete',
+      });
+    } else if (r.signedQty > 0 && trigger && r.tranDate > trigger) {
+      // Late inbound — should it have arrived before the shortage?
+      const newDate = trigger; // same day as the shortage → end-of-day covers it
+      candidates.push({
+        action: 'CHANGE_DATE_EARLIER',
+        priority: 20,
+        tx: r,
+        change: { kind: 'changeDate', nsTransactionId: r.nsTransactionId, newDate },
+        changeFrom: r.tranDate,
+        changeTo: newDate,
+      });
+    }
   }
 
-  // Evaluate every candidate with simulate().
-  const evals = candidates.map((c) => {
-    const res = simulate(txns, openings, c.change);
-    const resolved = !res.after[locId]; // target location no longer negative anywhere
-    const newProblem = res.delta.newProblem;
-    return { c, resolved, newProblem };
-  });
+  // Evaluate every candidate against the FULL item timeline.
+  const evals = candidates
+    .map((c) => {
+      const res = simulate(txns, openings, c.change);
+      const resolved = !res.after[locId];
+      return { c, resolved, newProblem: res.delta.newProblem };
+    })
+    .sort((a, b) => a.c.priority - b.c.priority || b.c.tx.tranDate.localeCompare(a.c.tx.tranDate));
 
-  // First CLEAN in priority order wins.
   const clean = evals.find((e) => e.resolved && e.newProblem.length === 0);
   if (clean) {
     return {
       ...base,
-      ...suspectMeta,
       recommendedAction: clean.c.action,
+      suspectNsTransactionId: clean.c.tx.nsTransactionId,
+      suspectDoc: clean.c.tx.docNumber || null,
+      suspectType: clean.c.tx.nsTypeCode ?? null,
+      suspectDate: clean.c.tx.tranDate,
       changeFrom: clean.c.changeFrom,
       changeTo: clean.c.changeTo,
-      confidence: 'CLEAN',
-      notes: `${ACTION_LABEL[clean.c.action]} resolves ${neg.locationName}. No new negatives anywhere through end of data.`,
+      category: 'CLEAN',
+      notes: `${ACTION_LABEL[clean.c.action]} on ${clean.c.tx.docNumber} resolves ${neg.locationName}. No new negatives anywhere through end of data.`,
     };
   }
 
-  // Otherwise pick the best PARTIAL (least collateral; tie-break by priority).
   const collateral = (np: { depth: number }[]) => np.reduce((s, n) => s + Math.abs(n.depth), 0);
   const partials = evals
     .filter((e) => e.resolved && e.newProblem.length > 0)
-    .sort(
-      (a, b) =>
-        collateral(a.newProblem) - collateral(b.newProblem) ||
-        ORDER.indexOf(a.c.action) - ORDER.indexOf(b.c.action),
-    );
+    .sort((a, b) => collateral(a.newProblem) - collateral(b.newProblem) || a.c.priority - b.c.priority);
 
   if (partials.length) {
     const p = partials[0];
@@ -201,23 +269,46 @@ function recommendCase(
       .join('; ');
     return {
       ...base,
-      ...suspectMeta,
       recommendedAction: 'MANUAL_REVIEW',
+      suspectNsTransactionId: p.c.tx.nsTransactionId,
+      suspectDoc: p.c.tx.docNumber || null,
+      suspectType: p.c.tx.nsTypeCode ?? null,
+      suspectDate: p.c.tx.tranDate,
       changeFrom: p.c.changeFrom,
       changeTo: p.c.changeTo,
-      confidence: 'PARTIAL',
-      notes: `No clean fix. Best candidate: ${ACTION_LABEL[p.c.action]} (${p.c.changeFrom} → ${p.c.changeTo}) resolves ${neg.locationName} but would create ${detail}.`,
+      category: 'PARTIAL',
+      notes: `No clean fix. Best candidate: ${ACTION_LABEL[p.c.action]} on ${p.c.tx.docNumber} (${p.c.changeFrom} → ${p.c.changeTo}) resolves ${neg.locationName} but would create ${detail}.`,
     };
   }
 
-  // No candidate even resolves the target.
+  // Nothing editable resolves it — explain the (non-editable) driver for context.
+  const driver = lane.rows.find((r) => r.suspect);
+  const driverNote = driver
+    ? ` Driven by ${driver.docNumber} (${NS_TYPE_LABEL[driver.nsTypeCode ?? ''] ?? driver.nsType ?? driver.tranType}), which is not an editable type.`
+    : '';
   return {
     ...base,
-    ...suspectMeta,
+    ...noFix,
     recommendedAction: 'MANUAL_REVIEW',
-    changeFrom: null,
-    changeTo: null,
-    confidence: 'NONE',
-    notes: `No single-transaction fix on ${suspect.docNumber || 'the suspect'} resolves ${neg.locationName}. Manual review.`,
+    category: 'MANUAL',
+    notes: `No editable transfer/receipt/adjustment/bill on/after 2024-01-01 resolves ${neg.locationName}.${driverNote} Likely needs a new inventory adjustment — manual judgment.`,
   };
+}
+
+/**
+ * Hard safety self-check. Returns any row whose recommended edit target violates
+ * Rule 1 (pre-cutoff) or Rule 2 (non-editable type). MUST be empty.
+ */
+export function validateWorklist(rows: WorklistRow[]): {
+  nonEditable: WorklistRow[];
+  closedPeriod: WorklistRow[];
+} {
+  const nonEditable: WorklistRow[] = [];
+  const closedPeriod: WorklistRow[] = [];
+  for (const r of rows) {
+    if (!r.suspectNsTransactionId) continue; // no recommended edit target
+    if (!r.suspectType || !EDITABLE_NS_TYPES.has(r.suspectType)) nonEditable.push(r);
+    if (r.suspectDate && r.suspectDate < CLOSED_PERIOD_CUTOFF) closedPeriod.push(r);
+  }
+  return { nonEditable, closedPeriod };
 }

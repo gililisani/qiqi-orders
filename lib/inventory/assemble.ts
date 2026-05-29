@@ -85,6 +85,7 @@ export function assembleItem(lines: RawTxnLine[], qohRows: RawQoh[]): AssembledI
       tranDate: date,
       tranType: NS_TO_TYPE[String(r.ns_type)] ?? 'ADJ',
       nsType: (r.ns_type_name as string) ?? (r.ns_type as string) ?? null,
+      nsTypeCode: r.ns_type == null ? null : String(r.ns_type),
       locationNsId: locId,
       locationName: nameByLoc.get(locId) || locId,
       signedQty: qty,
