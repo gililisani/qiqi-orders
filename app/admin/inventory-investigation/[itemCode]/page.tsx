@@ -20,6 +20,7 @@ import {
 import { buildTableRows, fmtQty } from '../../../components/inventory/inventoryView';
 import { InventoryTimeline } from '../../../components/inventory/InventoryTimeline';
 import { InventoryTransactionTable } from '../../../components/inventory/InventoryTransactionTable';
+import { InventorySimulator } from '../../../components/inventory/InventorySimulator';
 
 interface Payload {
   cached: boolean;
@@ -215,44 +216,22 @@ export default function InventoryInvestigationPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Simulator</CardTitle>
+                <CardTitle>Fix Simulator</CardTitle>
               </CardHeader>
               <CardContent>
-                {selectedTxnId ? (
-                  <SelectedTxnPreview ledger={ledger} txnId={selectedTxnId} />
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Click a marker on the timeline or a row in the table to select a transaction.
-                  </p>
-                )}
-                <p className="mt-3 rounded-md bg-secondary px-3 py-2 text-xs text-muted-foreground">
-                  The fix simulator (change date / quantity / delete, with full delta analysis) arrives in Phase 3.
-                </p>
+                <InventorySimulator
+                  itemCode={itemCode}
+                  txns={txns}
+                  openings={openings}
+                  selectedTxnId={selectedTxnId}
+                  plannedTxnIds={plannedTxnIds}
+                  onMarkersChanged={load}
+                />
               </CardContent>
             </Card>
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function SelectedTxnPreview({ ledger, txnId }: { ledger: ReturnType<typeof computeLedger>; txnId: string }) {
-  const legs = Object.values(ledger.byLocation)
-    .flatMap((l) => l.rows)
-    .filter((r) => r.nsTransactionId === txnId);
-  if (!legs.length) return <p className="text-sm text-muted-foreground">Transaction not found.</p>;
-  const first = legs[0];
-  return (
-    <div className="text-sm space-y-1">
-      <div className="font-medium">{first.docNumber}</div>
-      <div className="text-muted-foreground">{first.nsType || first.tranType} · {first.tranDate}</div>
-      {legs.map((l) => (
-        <div key={l.id} className="flex justify-between gap-2">
-          <span className="text-muted-foreground truncate">{l.locationName}</span>
-          <span className={`font-mono ${l.signedQty < 0 ? 'text-destructive' : ''}`}>{fmtQty(l.signedQty)}</span>
-        </div>
-      ))}
     </div>
   );
 }
