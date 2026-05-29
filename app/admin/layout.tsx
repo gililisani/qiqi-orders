@@ -17,6 +17,7 @@ import {
   BarChart3,
   Plug,
   Package,
+  PackageSearch,
   Building,
   MapPin,
   Tag,
@@ -105,6 +106,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'NetSuite',       href: '/admin/netsuite',  icon: <Plug />,    permission: 'netsuite' },
       { label: 'Inventory Sync', href: '/admin/inventory', icon: <Package />, permission: 'netsuite' },
+      { label: 'Inventory Investigation', href: '/admin/inventory-investigation', icon: <PackageSearch />, permission: 'netsuite' },
     ],
   },
   {

@@ -185,7 +185,7 @@ export class NetSuiteAPI {
     return response.data as T;
   }
 
-  // SuiteQL — returns rows array
+  // SuiteQL — returns rows array (first page only, max 1000 rows)
   async suiteQL<T = Record<string, unknown>>(query: string): Promise<T[]> {
     const response = await this.request<{ items: T[] }>(
       '/query/v1/suiteql',
@@ -193,6 +193,25 @@ export class NetSuiteAPI {
       { q: query }
     );
     return response.items || [];
+  }
+
+  // SuiteQL with pagination — loops offset until NetSuite reports no more rows.
+  // Use this for unbounded result sets (e.g. a full transaction history); the
+  // plain suiteQL() caps at the first 1000 rows.
+  async suiteQLPaged<T = Record<string, unknown>>(query: string): Promise<T[]> {
+    const out: T[] = [];
+    let offset = 0;
+    for (;;) {
+      const response = await this.request<{ items: T[]; hasMore: boolean }>(
+        `/query/v1/suiteql?limit=1000&offset=${offset}`,
+        'POST',
+        { q: query }
+      );
+      out.push(...(response.items || []));
+      if (!response.hasMore) break;
+      offset += 1000;
+    }
+    return out;
   }
 
   // ---------------------------------------------------------------------------

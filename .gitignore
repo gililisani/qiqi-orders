@@ -29,6 +29,9 @@ yarn-error.log*
 # Vercel
 .vercel
 
+# Inventory-investigation probe output (raw NetSuite dumps)
+tmp/
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
