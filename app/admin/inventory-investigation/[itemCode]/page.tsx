@@ -44,6 +44,13 @@ export default function InventoryInvestigationPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedTxnId, setSelectedTxnId] = useState<string | null>(null);
 
+  // Preselect the suspect transaction when arriving from the worklist (?tx=).
+  // Read from window (not useSearchParams) to avoid a Suspense boundary at build.
+  useEffect(() => {
+    const tx = new URLSearchParams(window.location.search).get('tx');
+    if (tx) setSelectedTxnId(tx);
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);

@@ -12,7 +12,8 @@
     "test:coverage": "vitest run --coverage",
     "dam:worker": "echo 'Worker archived - see legacy/apps/worker'",
     "dam:export-storage": "tsx scripts/export-storage.ts",
-    "inv:probe": "tsx scripts/inventoryProbe.ts"
+    "inv:probe": "tsx scripts/inventoryProbe.ts",
+    "inv:worklist": "tsx scripts/inventoryWorklist.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.614.0",
