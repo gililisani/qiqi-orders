@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { RefreshCw, Search, Download, ArrowRight, ListChecks } from 'lucide-react';
+import { RefreshCw, Search, Download, ArrowRight, ListChecks, History } from 'lucide-react';
 
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 import { PageHeader } from '../../components/qq/page-header';
@@ -18,6 +18,7 @@ import {
   TableRow,
   TableCell,
 } from '../../components/qq/table';
+import { InvTabs, TierBadge } from '../../components/inventory/InvTabs';
 
 type Category = 'CLEAN' | 'PARTIAL' | 'MANUAL' | 'CLOSED';
 type Status = 'todo' | 'done' | 'skipped';
@@ -37,6 +38,7 @@ interface Row {
   changeFrom: string | null;
   changeTo: string | null;
   category: Category;
+  tier: number;
   notes: string;
   status: Status;
 }
@@ -53,6 +55,7 @@ const ACTION_LABEL: Record<string, string> = {
   DELETE: 'Delete transaction',
   CHANGE_DATE_FORWARD: 'Change date forward',
   CHANGE_DATE_EARLIER: 'Change date earlier',
+  CREATE_TRANSFER: 'Create transfer',
   MANUAL_REVIEW: 'Needs manual review',
   CLOSED_PERIOD: 'Out of scope — closed period',
 };
@@ -158,13 +161,13 @@ export default function WorklistPage() {
 
   const exportCsv = () => {
     const head = [
-      'Item', 'Item Name', 'Location', 'Depth', 'Since', 'Recommended Action',
+      'Item', 'Item Name', 'Location', 'Depth', 'Since', 'Tier', 'Recommended Action',
       'Transaction To Edit', 'Type', 'Tx Date', 'Change From', 'Change To',
       'Category', 'Status', 'Notes',
     ];
     const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines = filtered.map((r) =>
-      [r.itemCode, r.itemName, r.locationName, r.depth, r.since, ACTION_LABEL[r.recommendedAction] ?? r.recommendedAction,
+      [r.itemCode, r.itemName, r.locationName, r.depth, r.since, `T${r.tier}`, ACTION_LABEL[r.recommendedAction] ?? r.recommendedAction,
         r.suspectDoc, r.suspectType ? NS_TYPE_LABEL[r.suspectType] ?? r.suspectType : '', r.suspectDate,
         r.changeFrom, r.changeTo, r.category, r.status, r.notes]
         .map(esc).join(','),
@@ -200,6 +203,8 @@ export default function WorklistPage() {
           </div>
         }
       />
+
+      <InvTabs />
 
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <p className="text-xs text-muted-foreground">
@@ -276,6 +281,7 @@ export default function WorklistPage() {
                   <TableHead>Recommended action</TableHead>
                   <TableHead>Transaction to edit</TableHead>
                   <TableHead>Change</TableHead>
+                  <TableHead>Tier</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Notes</TableHead>
                   <TableHead>Status</TableHead>
@@ -285,24 +291,38 @@ export default function WorklistPage() {
                 {filtered.map((r) => (
                   <TableRow key={`${r.itemCode}|${r.locationNsId}`} className={r.status === 'done' ? 'opacity-50' : ''}>
                     <TableCell className="py-2">
-                      <button
-                        onClick={() =>
-                          router.push(
-                            `/admin/inventory-investigation/${encodeURIComponent(r.itemCode)}${r.suspectNsTransactionId ? `?tx=${encodeURIComponent(r.suspectNsTransactionId)}` : ''}`,
-                          )
-                        }
-                        className="font-medium text-accent hover:underline"
-                        title={r.itemName ?? ''}
-                      >
-                        {r.itemCode}
-                      </button>
+                      <div className="flex flex-col">
+                        <button
+                          onClick={() =>
+                            router.push(
+                              `/admin/inventory-investigation/${encodeURIComponent(r.itemCode)}${r.suspectNsTransactionId ? `?tx=${encodeURIComponent(r.suspectNsTransactionId)}` : `?loc=${encodeURIComponent(r.locationNsId)}`}`,
+                            )
+                          }
+                          className="font-medium text-accent hover:underline text-left"
+                          title={r.itemName ?? ''}
+                        >
+                          {r.itemCode}
+                        </button>
+                        <button
+                          onClick={() =>
+                            router.push(
+                              `/admin/inventory-investigation/negatives-history?item=${encodeURIComponent(r.itemCode)}&loc=${encodeURIComponent(r.locationNsId)}`,
+                            )
+                          }
+                          className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground hover:underline"
+                        >
+                          <History className="h-3 w-3" /> history
+                        </button>
+                      </div>
                     </TableCell>
                     <TableCell className="py-2 text-xs">{r.locationName}</TableCell>
                     <TableCell className="py-2 text-right font-mono text-xs text-destructive font-semibold">{fmt(r.depth)}</TableCell>
                     <TableCell className="py-2 font-mono text-xs whitespace-nowrap">{r.since ?? ''}</TableCell>
                     <TableCell className="py-2 text-xs whitespace-nowrap">{ACTION_LABEL[r.recommendedAction] ?? r.recommendedAction}</TableCell>
                     <TableCell className="py-2 text-xs whitespace-nowrap">
-                      {r.suspectDoc ? (
+                      {r.recommendedAction === 'CREATE_TRANSFER' ? (
+                        <span className="text-muted-foreground italic">(new transaction)</span>
+                      ) : r.suspectDoc ? (
                         <span className="font-mono">
                           {r.suspectDoc}
                           <span className="text-muted-foreground font-sans">
@@ -314,8 +334,9 @@ export default function WorklistPage() {
                       )}
                     </TableCell>
                     <TableCell className="py-2 font-mono text-xs whitespace-nowrap">
-                      {r.changeFrom != null ? `${r.changeFrom} → ${r.changeTo}` : ''}
+                      {r.changeTo ? (r.changeFrom != null ? `${r.changeFrom} → ${r.changeTo}` : r.changeTo) : ''}
                     </TableCell>
+                    <TableCell className="py-2"><TierBadge tier={r.tier} /></TableCell>
                     <TableCell className="py-2">
                       <CategoryBadge c={r.category} />
                     </TableCell>

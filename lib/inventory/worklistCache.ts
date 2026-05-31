@@ -10,6 +10,7 @@
 import { createServiceRoleClient } from '@/platform/auth/guards';
 import type { WorklistRow } from '@/lib/inventory/worklist';
 import type { WorklistComputation } from '@/lib/inventory/worklistPull';
+import type { NegativeWindow, Tier } from '@/lib/inventory/negativeWindows';
 
 export type WorklistStatus = 'todo' | 'done' | 'skipped';
 
@@ -60,6 +61,7 @@ export async function writeWorklist(comp: WorklistComputation, durationMs: numbe
       change_from: r.changeFrom,
       change_to: r.changeTo,
       confidence: r.category,
+      tier: r.tier,
       notes: r.notes,
       status,
       computed_at: now,
@@ -113,6 +115,7 @@ export async function readWorklist(): Promise<{ rows: WorklistRecord[]; meta: Wo
     changeFrom: r.change_from,
     changeTo: r.change_to,
     category: r.confidence,
+    tier: (Number(r.tier) || 4) as Tier,
     notes: r.notes,
     status: r.status,
   }));
@@ -142,4 +145,52 @@ export async function setWorklistStatus(
     .eq('item_code', itemCode.toUpperCase())
     .eq('location_ns_id', locationNsId);
   if (error) throw new Error(error.message);
+}
+
+export async function writeNegativeWindows(windows: NegativeWindow[]): Promise<void> {
+  const sb = createServiceRoleClient();
+  await sb.from('inv_inv_negative_windows').delete().neq('item_code', '');
+  const now = new Date().toISOString();
+  const rows = windows.map((w) => ({
+    item_code: w.itemCode,
+    ns_item_id: w.nsItemId,
+    item_name: w.itemName,
+    location_ns_id: w.locationNsId,
+    location_name: w.locationName,
+    start_date: w.start,
+    end_date: w.end,
+    min_balance: w.minBalance,
+    duration_days: w.durationDays,
+    builds_during: w.buildsDuring,
+    other_outbound_during: w.otherOutboundDuring,
+    status: w.status,
+    crossed_closed_period: w.crossedClosedPeriod,
+    tier: w.tier,
+    computed_at: now,
+  }));
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const { error } = await sb.from('inv_inv_negative_windows').insert(rows.slice(i, i + CHUNK));
+    if (error) throw new Error(`negative windows insert: ${error.message}`);
+  }
+}
+
+export async function readNegativeWindows(): Promise<NegativeWindow[]> {
+  const sb = createServiceRoleClient();
+  const { data } = await sb.from('inv_inv_negative_windows').select('*');
+  return (data ?? []).map((r: any) => ({
+    itemCode: r.item_code,
+    nsItemId: r.ns_item_id,
+    itemName: r.item_name,
+    locationNsId: r.location_ns_id,
+    locationName: r.location_name,
+    start: r.start_date,
+    end: r.end_date,
+    minBalance: Number(r.min_balance),
+    durationDays: Number(r.duration_days),
+    buildsDuring: Number(r.builds_during),
+    otherOutboundDuring: Number(r.other_outbound_during),
+    status: r.status,
+    crossedClosedPeriod: !!r.crossed_closed_period,
+    tier: (Number(r.tier) || 4) as Tier,
+  }));
 }

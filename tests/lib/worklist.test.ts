@@ -81,6 +81,22 @@ describe('computeWorklistForItem — hard business rules', () => {
     expect(['CLEAN', 'PARTIAL']).toContain(a.category);
   });
 
+  it('CREATE_TRANSFER: invents a transfer from a surplus location when no editable edit is clean', () => {
+    // A is driven negative by a (non-editable) Build; B holds plenty of surplus.
+    const txns = [
+      tx({ loc: 'B', date: '2024-01-01', qty: 500, code: 'ItemRcpt' }),
+      tx({ loc: 'A', date: '2024-03-01', qty: -100, code: 'Build', tx: 'ASBIL9' }),
+    ];
+    const rows = computeWorklistForItem(META, txns, [open('A', 0), open('B', 0)]);
+    const a = rows.find((r) => r.locationNsId === 'A')!;
+    expect(a.recommendedAction).toBe('CREATE_TRANSFER');
+    expect(a.category).toBe('CLEAN');
+    expect(a.suspectNsTransactionId).toBeNull(); // nothing existing is edited
+    expect(a.suspectDate).toBe('2024-03-01'); // proposed transfer date (in scope)
+    expect(a.changeTo).toMatch(/Loc-B → Loc-A, 100, dated 2024-03-01/);
+    expect(a.tier).toBe(1); // ongoing window with a build during → toxic
+  });
+
   it('validateWorklist passes for rule-compliant rows and flags violations', () => {
     const txns = [
       tx({ loc: 'A', date: '2024-08-01', qty: 100, code: 'ItemRcpt' }),

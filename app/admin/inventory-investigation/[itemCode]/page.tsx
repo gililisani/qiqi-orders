@@ -42,6 +42,10 @@ export default function InventoryInvestigationPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Read deep-link params from window.location (not useSearchParams) to avoid a
+  // Suspense-boundary requirement at build time.
+  const locParam =
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('loc') : null;
   const [selectedTxnId, setSelectedTxnId] = useState<string | null>(null);
 
   // Preselect the suspect transaction when arriving from the worklist (?tx=).
@@ -185,7 +189,12 @@ export default function InventoryInvestigationPage() {
                 <CardTitle>Transactions</CardTitle>
               </CardHeader>
               <CardContent>
-                <InventoryTransactionTable rows={tableRows} selectedTxnId={selectedTxnId} onSelectTxn={setSelectedTxnId} />
+                <InventoryTransactionTable
+                  rows={tableRows}
+                  selectedTxnId={selectedTxnId}
+                  onSelectTxn={setSelectedTxnId}
+                  initialLocation={locParam ? openings.find((o) => o.locationNsId === locParam)?.locationName : undefined}
+                />
               </CardContent>
             </Card>
           </div>

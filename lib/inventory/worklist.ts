@@ -29,12 +29,15 @@ import {
   computeLedger,
   summarizeNegatives,
   simulate,
+  type Ledger,
   type LedgerTxn,
   type OpeningBalance,
   type SimChange,
   type AnnotatedTxn,
+  type LocationLedger,
   type LocationNegative,
 } from '@/lib/inventory/balanceEngine';
+import { computeItemWindows, type NegativeWindow } from '@/lib/inventory/negativeWindows';
 
 export const CLOSED_PERIOD_CUTOFF = '2024-01-01';
 
@@ -61,10 +64,12 @@ export type WorklistAction =
   | 'DELETE'
   | 'CHANGE_DATE_FORWARD'
   | 'CHANGE_DATE_EARLIER'
+  | 'CREATE_TRANSFER'
   | 'MANUAL_REVIEW'
   | 'CLOSED_PERIOD';
 
 export type Category = 'CLEAN' | 'PARTIAL' | 'MANUAL' | 'CLOSED';
+export type Tier = 1 | 2 | 3 | 4;
 
 export interface ItemMeta {
   itemCode: string;
@@ -90,6 +95,7 @@ export interface WorklistRow {
   changeFrom: string | null;
   changeTo: string | null;
   category: Category;
+  tier: Tier; // damage tier of the location's ongoing window (4 if recovered)
   notes: string;
 }
 
@@ -101,6 +107,7 @@ const ACTION_LABEL: Record<WorklistAction, string> = {
   DELETE: 'Delete transaction',
   CHANGE_DATE_FORWARD: 'Change date forward',
   CHANGE_DATE_EARLIER: 'Change date earlier',
+  CREATE_TRANSFER: 'Create transfer',
   MANUAL_REVIEW: 'Needs manual review',
   CLOSED_PERIOD: 'Out of scope — closed period',
 };
@@ -127,14 +134,50 @@ export function computeWorklistForItem(
   meta: ItemMeta,
   transactions: LedgerTxn[],
   openings: OpeningBalance[],
+  ledger?: Ledger,
+  windows?: NegativeWindow[],
 ): WorklistRow[] {
-  const ledger = computeLedger(transactions, openings);
-  const negatives = summarizeNegatives(ledger);
+  const lg = ledger ?? computeLedger(transactions, openings);
+  const wins = windows ?? computeItemWindows(meta, lg);
+  const ongoingTierByLoc = new Map<string, Tier>();
+  for (const w of wins) if (w.status === 'Ongoing') ongoingTierByLoc.set(w.locationNsId, w.tier);
+
+  const negatives = summarizeNegatives(lg);
   const rows: WorklistRow[] = [];
   for (const locId of Object.keys(negatives)) {
-    rows.push(recommendCase(meta, transactions, openings, ledger, negatives[locId], locId));
+    const row = recommendCase(meta, transactions, openings, lg, negatives[locId], locId);
+    row.tier = ongoingTierByLoc.get(locId) ?? 4; // recovered locations are Tier 4
+    rows.push(row);
   }
   return rows;
+}
+
+/** Carried balance at a location at the END of `date` (or opening if no prior activity). */
+function balanceAsOf(lane: LocationLedger, date: string): number {
+  let bal = lane.opening;
+  for (const p of lane.eodTimeline) {
+    if (p.date <= date) bal = p.eod;
+    else break;
+  }
+  return bal;
+}
+
+/** Set of "sourceLoc->destLoc" pairs seen among existing transfers (operational plausibility). */
+function existingTransferPairs(txns: LedgerTxn[]): Set<string> {
+  const byTx = new Map<string, LedgerTxn[]>();
+  for (const t of txns) {
+    if (t.nsTypeCode !== 'InvTrnfr') continue;
+    const a = byTx.get(t.nsTransactionId);
+    if (a) a.push(t);
+    else byTx.set(t.nsTransactionId, [t]);
+  }
+  const pairs = new Set<string>();
+  for (const legs of byTx.values()) {
+    const src = legs.find((l) => l.signedQty < 0);
+    const dst = legs.find((l) => l.signedQty > 0);
+    if (src && dst) pairs.add(`${src.locationNsId}->${dst.locationNsId}`);
+  }
+  return pairs;
 }
 
 function recommendCase(
@@ -155,6 +198,7 @@ function recommendCase(
     locationName: neg.locationName,
     depth: neg.deepestBalance,
     since: trigger,
+    tier: 4 as Tier, // overridden by computeWorklistForItem from the ongoing window
   };
   const noFix = {
     suspectNsTransactionId: null,
@@ -203,7 +247,7 @@ function recommendCase(
         const newDate = shiftDay(nextInbound.tranDate, 1);
         candidates.push({
           action: 'CHANGE_DATE_FORWARD',
-          priority: 30,
+          priority: 20,
           tx: r,
           change: { kind: 'changeDate', nsTransactionId: r.nsTransactionId, newDate },
           changeFrom: r.tranDate,
@@ -212,7 +256,7 @@ function recommendCase(
       }
       candidates.push({
         action: 'DELETE',
-        priority: 40,
+        priority: 30,
         tx: r,
         change: { kind: 'delete', nsTransactionId: r.nsTransactionId },
         changeFrom: fmt(mag),
@@ -255,6 +299,50 @@ function recommendCase(
       category: 'CLEAN',
       notes: `${ACTION_LABEL[clean.c.action]} on ${clean.c.tx.docNumber} resolves ${neg.locationName}. No new negatives anywhere through end of data.`,
     };
+  }
+
+  // CREATE_TRANSFER (Part A) — only when no existing edit is clean. Inventing a
+  // record is the most invasive fix, so it ranks last. Bring the trigger-day
+  // end-of-day to zero from a surplus location.
+  const eodAtTrigger = eodByDate.get(trigger) ?? neg.deepestBalance;
+  const requiredQty = Math.abs(eodAtTrigger);
+  if (requiredQty > 0) {
+    const pairs = existingTransferPairs(txns);
+    const cleanSources: { lane: LocationLedger; surplus: number; priorPair: boolean }[] = [];
+    for (const src of Object.values(ledger.byLocation)) {
+      if (src.locationNsId === locId || src.rows.length === 0) continue; // real location w/ prior activity
+      const surplus = balanceAsOf(src, trigger);
+      if (surplus < requiredQty) continue;
+      const change: SimChange = {
+        kind: 'createTransfer',
+        source: src.locationNsId,
+        sourceName: src.locationName,
+        dest: locId,
+        destName: neg.locationName,
+        qty: requiredQty,
+        date: trigger,
+      };
+      const res = simulate(txns, openings, change);
+      if (!res.after[locId] && res.delta.newProblem.length === 0) {
+        cleanSources.push({ lane: src, surplus, priorPair: pairs.has(`${src.locationNsId}->${locId}`) });
+      }
+    }
+    if (cleanSources.length) {
+      cleanSources.sort((a, b) => b.surplus - a.surplus || Number(b.priorPair) - Number(a.priorPair));
+      const best = cleanSources[0];
+      return {
+        ...base,
+        recommendedAction: 'CREATE_TRANSFER',
+        suspectNsTransactionId: null,
+        suspectDoc: null,
+        suspectType: null,
+        suspectDate: trigger, // proposed transfer date — validated >= cutoff
+        changeFrom: null,
+        changeTo: `Create IT: ${best.lane.locationName} → ${neg.locationName}, ${fmt(requiredQty)}, dated ${trigger}`,
+        category: 'CLEAN',
+        notes: `Source ${best.lane.locationName} has end-of-day surplus of ${fmt(best.surplus)} on ${trigger}${best.priorPair ? ' (has transferred here before)' : ''}; simulation shows no new negatives anywhere through end of data.`,
+      };
+    }
   }
 
   const collateral = (np: { depth: number }[]) => np.reduce((s, n) => s + Math.abs(n.depth), 0);
@@ -302,13 +390,20 @@ function recommendCase(
 export function validateWorklist(rows: WorklistRow[]): {
   nonEditable: WorklistRow[];
   closedPeriod: WorklistRow[];
+  createBad: WorklistRow[];
 } {
   const nonEditable: WorklistRow[] = [];
   const closedPeriod: WorklistRow[] = [];
+  const createBad: WorklistRow[] = [];
   for (const r of rows) {
+    if (r.recommendedAction === 'CREATE_TRANSFER') {
+      // No existing tx is edited; the invented transfer's date must be in scope.
+      if (!r.suspectDate || r.suspectDate < CLOSED_PERIOD_CUTOFF) createBad.push(r);
+      continue;
+    }
     if (!r.suspectNsTransactionId) continue; // no recommended edit target
     if (!r.suspectType || !EDITABLE_NS_TYPES.has(r.suspectType)) nonEditable.push(r);
     if (r.suspectDate && r.suspectDate < CLOSED_PERIOD_CUTOFF) closedPeriod.push(r);
   }
-  return { nonEditable, closedPeriod };
+  return { nonEditable, closedPeriod, createBad };
 }

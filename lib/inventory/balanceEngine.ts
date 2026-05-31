@@ -93,7 +93,17 @@ export type NegativeSummary = Record<string, LocationNegative>;
 export type SimChange =
   | { kind: 'changeDate'; nsTransactionId: string; newDate: string }
   | { kind: 'changeQty'; nsTransactionId: string; newQty: number } // newQty = MAGNITUDE; sign preserved per leg
-  | { kind: 'delete'; nsTransactionId: string };
+  | { kind: 'delete'; nsTransactionId: string }
+  // Invent a brand-new inventory transfer (Part A). Appends two synthetic legs.
+  | {
+      kind: 'createTransfer';
+      source: string;
+      sourceName?: string;
+      dest: string;
+      destName?: string;
+      qty: number;
+      date: string;
+    };
 
 export interface SimDelta {
   fixed: { locationNsId: string; locationName: string; wasDepth: number }[];
@@ -302,6 +312,36 @@ export function applyChange(txns: LedgerTxn[], change: SimChange): LedgerTxn[] {
         const sign = t.signedQty < 0 ? -1 : 1;
         return { ...t, signedQty: sign * mag };
       });
+    }
+    case 'createTransfer': {
+      const id = `NEW-${change.source}->${change.dest}@${change.date}`;
+      const q = Math.abs(change.qty);
+      const leg = (
+        loc: string,
+        name: string | undefined,
+        signedQty: number,
+        which: 'source' | 'dest',
+        lineId: string,
+      ): LedgerTxn => ({
+        id: `${id}-${which}`,
+        nsTransactionId: id,
+        lineId,
+        docNumber: '(new transfer)',
+        tranDate: change.date,
+        tranType: 'IT',
+        nsType: 'Inventory Transfer',
+        nsTypeCode: 'InvTrnfr',
+        locationNsId: loc,
+        locationName: name ?? loc,
+        signedQty,
+        transferGroup: id,
+        transferLeg: which,
+      });
+      return [
+        ...txns,
+        leg(change.source, change.sourceName, -q, 'source', '1'),
+        leg(change.dest, change.destName, q, 'dest', '2'),
+      ];
     }
   }
 }

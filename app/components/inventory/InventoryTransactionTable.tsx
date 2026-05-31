@@ -24,10 +24,11 @@ interface Props {
   rows: InvTableRow[];
   selectedTxnId: string | null;
   onSelectTxn: (id: string) => void;
+  initialLocation?: string; // location NAME to pre-filter to (from a history deep-link)
 }
 
-export function InventoryTransactionTable({ rows, selectedTxnId, onSelectTxn }: Props) {
-  const [loc, setLoc] = useState('all');
+export function InventoryTransactionTable({ rows, selectedTxnId, onSelectTxn, initialLocation }: Props) {
+  const [loc, setLoc] = useState(initialLocation ?? 'all');
   const [type, setType] = useState('all');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');

@@ -38,7 +38,7 @@ async function printItems(codes: string[]) {
         ? `${r.suspectDoc} · ${NS_TYPE_LABEL[r.suspectType ?? ''] ?? r.suspectType} · ${r.suspectDate}`
         : '—';
       console.log(
-        `  ${r.locationName} [${r.locationNsId}]  depth=${r.depth}  since=${r.since}\n` +
+        `  ${r.locationName} [${r.locationNsId}]  depth=${r.depth}  since=${r.since}  TIER ${r.tier}\n` +
           `    ${r.category}  ${r.recommendedAction}  edit: ${target}  ${r.changeFrom ?? ''} → ${r.changeTo ?? ''}\n` +
           `    ${r.notes}`,
       );
@@ -54,7 +54,7 @@ async function main() {
   }
 
   const { computeCatalogWorklist } = await import('../lib/inventory/worklistPull');
-  const { writeWorklist } = await import('../lib/inventory/worklistCache');
+  const { writeWorklist, writeNegativeWindows } = await import('../lib/inventory/worklistCache');
 
   console.log('[worklist] computing catalog-wide worklist from NetSuite…');
   const started = Date.now();
@@ -63,21 +63,24 @@ async function main() {
 
   const byCat: Record<string, number> = {};
   for (const r of comp.rows) byCat[r.category] = (byCat[r.category] || 0) + 1;
+  const byTier: Record<string, number> = {};
+  for (const w of comp.windows) byTier[`T${w.tier}`] = (byTier[`T${w.tier}`] || 0) + 1;
   console.log(
-    `[worklist] scanned=${comp.stats.itemsScanned} withLines=${comp.stats.itemsWithLines} cases=${comp.stats.cases} | ${JSON.stringify(byCat)} in ${(durationMs / 1000).toFixed(1)}s`,
+    `[worklist] scanned=${comp.stats.itemsScanned} withLines=${comp.stats.itemsWithLines} cases=${comp.stats.cases} windows=${comp.windows.length} | cat=${JSON.stringify(byCat)} tier=${JSON.stringify(byTier)} in ${(durationMs / 1000).toFixed(1)}s`,
   );
 
-  // Hard self-check.
-  const { nonEditable, closedPeriod } = validateWorklist(comp.rows);
-  console.log(`[worklist] self-check: nonEditable targets=${nonEditable.length}, pre-2024 targets=${closedPeriod.length}`);
-  if (nonEditable.length || closedPeriod.length) {
+  // Hard self-check (Part D).
+  const { nonEditable, closedPeriod, createBad } = validateWorklist(comp.rows);
+  console.log(`[worklist] self-check: nonEditable=${nonEditable.length}, pre-2024=${closedPeriod.length}, createTransfer pre-2024=${createBad.length}`);
+  if (nonEditable.length || closedPeriod.length || createBad.length) {
     console.error('[worklist] RULE VIOLATION — refusing to write. Examples:');
-    for (const r of [...nonEditable, ...closedPeriod].slice(0, 5))
-      console.error(`  ${r.itemCode} ${r.locationName} → ${r.suspectDoc} ${r.suspectType} ${r.suspectDate}`);
+    for (const r of [...nonEditable, ...closedPeriod, ...createBad].slice(0, 5))
+      console.error(`  ${r.itemCode} ${r.locationName} → ${r.recommendedAction} ${r.suspectDoc} ${r.suspectType} ${r.suspectDate}`);
     process.exit(1);
   }
 
   await writeWorklist(comp, durationMs);
+  await writeNegativeWindows(comp.windows);
   console.log('[worklist] written to Supabase. Open /admin/inventory-investigation.');
   // Show the worst 15 for a quick sanity read.
   for (const r of comp.rows.slice(0, 15)) {

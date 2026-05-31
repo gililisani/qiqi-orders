@@ -8,12 +8,21 @@
  * pagination latency, not the math.
  */
 import { createNetSuiteAPI } from '@/lib/netsuite';
+import { computeLedger } from '@/lib/inventory/balanceEngine';
 import { assembleItem, type RawTxnLine, type RawQoh } from '@/lib/inventory/assemble';
 import { computeWorklistForItem, type WorklistRow, type ItemMeta } from '@/lib/inventory/worklist';
+import { computeItemWindows, type NegativeWindow } from '@/lib/inventory/negativeWindows';
 
 export interface WorklistComputation {
   rows: WorklistRow[];
-  stats: { itemsScanned: number; itemsWithLines: number; cases: number; cleanCount: number };
+  windows: NegativeWindow[];
+  stats: {
+    itemsScanned: number;
+    itemsWithLines: number;
+    cases: number;
+    cleanCount: number;
+    windowCount: number;
+  };
 }
 
 // Item types in scope: Inventory Item (InvtPart) + Assembly.
@@ -73,12 +82,16 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
   }
 
   const rows: WorklistRow[] = [];
+  const windows: NegativeWindow[] = [];
   let itemsWithLines = 0;
   for (const [itemId, lines] of linesByItem) {
     itemsWithLines++;
     const meta = metaById.get(itemId) ?? { itemCode: itemId, itemName: null, nsItemId: itemId };
     const { transactions, openings } = assembleItem(lines, qohByItem.get(itemId) ?? []);
-    rows.push(...computeWorklistForItem(meta, transactions, openings));
+    const ledger = computeLedger(transactions, openings);
+    const itemWindows = computeItemWindows(meta, ledger);
+    windows.push(...itemWindows);
+    rows.push(...computeWorklistForItem(meta, transactions, openings, ledger, itemWindows));
   }
 
   // Worst negatives first (depth is negative → ascending = most negative first).
@@ -86,11 +99,13 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
 
   return {
     rows,
+    windows,
     stats: {
       itemsScanned: metaById.size,
       itemsWithLines,
       cases: rows.length,
       cleanCount: rows.filter((r) => r.category === 'CLEAN').length,
+      windowCount: windows.length,
     },
   };
 }
