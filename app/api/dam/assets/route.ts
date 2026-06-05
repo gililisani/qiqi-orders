@@ -213,7 +213,8 @@ export async function GET(request: NextRequest) {
           },
           {
             headers: {
-              'Cache-Control': 'private, max-age=60',
+              // no-store so the admin DAM list reflects deletes/uploads/edits immediately.
+'Cache-Control': 'no-store, must-revalidate',
             },
           }
         );
@@ -232,7 +233,8 @@ export async function GET(request: NextRequest) {
         { assets: [] },
         {
           headers: {
-            'Cache-Control': 'private, max-age=60', // Cache for 1 minute
+            // no-store so the admin DAM list reflects deletes/uploads/edits immediately.
+'Cache-Control': 'no-store, must-revalidate',
           },
         }
       );
@@ -472,7 +474,10 @@ export async function GET(request: NextRequest) {
       }
     }, {
       headers: {
-        'Cache-Control': 'private, max-age=60', // Cache for 1 minute (private because it requires auth)
+        // no-store so the admin DAM list reflects deletes/uploads/edits immediately.
+// The thumbnails themselves are signed-URL cached separately; this endpoint
+// is light (JSON metadata only), so re-fetching per navigation is cheap.
+'Cache-Control': 'no-store, must-revalidate',
       },
     });
   } catch (err: any) {

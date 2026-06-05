@@ -675,6 +675,10 @@ export default function AdminDigitalAssetManagerPage() {
         method: 'GET',
         headers: Object.keys(headers).length ? headers : undefined,
         credentials: 'same-origin',
+        // Don't let the browser serve a stale list right after a
+        // delete/upload/edit. The server already sends no-store; this
+        // is defence-in-depth in case a proxy strips that header.
+        cache: 'no-store',
       });
 
       if (!response.ok) {
