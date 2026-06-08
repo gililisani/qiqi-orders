@@ -90,9 +90,10 @@ async function main() {
     process.exit(1);
   }
 
-  const { writeWorklist, writeNegativeWindows } = await import('../lib/inventory/worklistCache');
+  const { writeWorklist, writeNegativeWindows, writeResiduals } = await import('../lib/inventory/worklistCache');
   await writeWorklist(comp, durationMs);
   await writeNegativeWindows(comp.windows);
+  await writeResiduals(comp.residuals);
   console.log('[worklist] written to Supabase. Open /admin/inventory-investigation.');
 }
 

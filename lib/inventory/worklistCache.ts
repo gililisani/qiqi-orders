@@ -203,3 +203,52 @@ export async function readNegativeWindows(): Promise<NegativeWindow[]> {
     tier: (Number(r.tier) || 4) as Tier,
   }));
 }
+
+export interface ResidualRecord {
+  itemCode: string;
+  nsItemId: string | null;
+  itemName: string | null;
+  locationNsId: string;
+  locationName: string;
+  currentQoh: number;
+  txSum: number;
+  residual: number;
+}
+
+export async function writeResiduals(
+  residuals: { itemCode: string; nsItemId: string | null; itemName: string | null; locationNsId: string; locationName: string; currentQoh: number; txSum: number; residual: number }[],
+): Promise<void> {
+  const sb = createServiceRoleClient();
+  await sb.from('inv_inv_residuals').delete().neq('item_code', '');
+  const now = new Date().toISOString();
+  const rows = residuals.map((r) => ({
+    item_code: r.itemCode,
+    ns_item_id: r.nsItemId,
+    item_name: r.itemName,
+    location_ns_id: r.locationNsId,
+    location_name: r.locationName,
+    current_qoh: r.currentQoh,
+    tx_sum: r.txSum,
+    residual: r.residual,
+    computed_at: now,
+  }));
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const { error } = await sb.from('inv_inv_residuals').insert(rows.slice(i, i + CHUNK));
+    if (error) throw new Error(`residuals insert: ${error.message}`);
+  }
+}
+
+export async function readResiduals(): Promise<ResidualRecord[]> {
+  const sb = createServiceRoleClient();
+  const { data } = await sb.from('inv_inv_residuals').select('*');
+  return (data ?? []).map((r: any) => ({
+    itemCode: r.item_code,
+    nsItemId: r.ns_item_id,
+    itemName: r.item_name,
+    locationNsId: r.location_ns_id,
+    locationName: r.location_name,
+    currentQoh: Number(r.current_qoh),
+    txSum: Number(r.tx_sum),
+    residual: Number(r.residual),
+  }));
+}

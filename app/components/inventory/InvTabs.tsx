@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 const TABS = [
   { label: 'Worklist', href: '/admin/inventory-investigation' },
   { label: 'Negatives History', href: '/admin/inventory-investigation/negatives-history' },
+  { label: 'Data Integrity', href: '/admin/inventory-investigation/data-integrity' },
 ];
 
 export function InvTabs() {

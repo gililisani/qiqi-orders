@@ -22,10 +22,12 @@ import {
 } from '@/lib/inventory/worklist';
 import { computeItemWindows, type NegativeWindow } from '@/lib/inventory/negativeWindows';
 import { linkChains, buildItemChains, type TOrdCostPair } from '@/lib/inventory/chains';
+import type { LocationResidual } from '@/lib/inventory/assemble';
 
 export interface WorklistComputation {
   rows: WorklistRow[];
   windows: NegativeWindow[];
+  residuals: (LocationResidual & { itemCode: string; nsItemId: string | null; itemName: string | null })[];
   stats: {
     itemsScanned: number;
     itemsWithLines: number;
@@ -122,11 +124,13 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
 
   // First pass: assemble + link chains + build ledgers → CatalogContext.
   const ctx: CatalogContext = { byItemId: new Map<string, ItemContext>(), componentsByBuildTxId };
-  let residualItemCount = 0;
+  const residuals: WorklistComputation['residuals'] = [];
   for (const [itemId, lines] of linesByItem) {
     const meta = metaById.get(itemId) ?? { itemCode: itemId, itemName: null, nsItemId: itemId };
     const assembled = assembleItem(lines, qohByItem.get(itemId) ?? []);
-    if (assembled.residuals.length > 0) residualItemCount++;
+    for (const r of assembled.residuals) {
+      residuals.push({ ...r, itemCode: meta.itemCode, nsItemId: meta.nsItemId, itemName: meta.itemName });
+    }
     const txns = linkChains(assembled.transactions, pairs);
     const ledger = computeLedger(txns, assembled.openings);
     ctx.byItemId.set(itemId, {
@@ -137,6 +141,9 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
       chains: buildItemChains(txns),
     });
   }
+  // Worst (largest magnitude) residuals first.
+  residuals.sort((a, b) => Math.abs(b.residual) - Math.abs(a.residual));
+  const residualItemCount = new Set(residuals.map((r) => r.itemCode)).size;
 
   // Second pass: recommendations + windows (now ctx is complete for cross-item checks).
   const rows: WorklistRow[] = [];
@@ -154,6 +161,7 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
   return {
     rows,
     windows,
+    residuals,
     stats: {
       itemsScanned: metaById.size,
       itemsWithLines,

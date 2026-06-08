@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireWithPermission } from '@/platform/auth/guards';
 import { computeCatalogWorklist } from '@/lib/inventory/worklistPull';
-import { writeWorklist, writeNegativeWindows } from '@/lib/inventory/worklistCache';
+import { writeWorklist, writeNegativeWindows, writeResiduals } from '@/lib/inventory/worklistCache';
 import { validateWorklist } from '@/lib/inventory/worklist';
 
 // Recompute is a heavy catalog-wide pull from NetSuite — allow up to 5 minutes.
@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
 
     await writeWorklist(comp, durationMs);
     await writeNegativeWindows(comp.windows);
+    await writeResiduals(comp.residuals);
     return NextResponse.json({ success: true, durationMs, ...comp.stats });
   } catch (err: any) {
     if (err instanceof Response) return err;
