@@ -88,6 +88,7 @@ export default function WorklistPage() {
   const [active, setActive] = useState<Set<Category>>(new Set<Category>(['CLEAN'])); // default CLEAN only
   const [hideDone, setHideDone] = useState(true);
   const [search, setSearch] = useState('');
+  const [year, setYear] = useState('all');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -149,15 +150,22 @@ export default function WorklistPage() {
     return c;
   }, [rows]);
 
+  const years = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of rows) if (r.since) s.add(r.since.slice(0, 4));
+    return [...s].sort().reverse();
+  }, [rows]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toUpperCase();
     return rows.filter((r) => {
       if (!active.has(r.category)) return false;
       if (hideDone && r.status === 'done') return false;
+      if (year !== 'all' && (r.since ?? '').slice(0, 4) !== year) return false;
       if (q && !r.itemCode.toUpperCase().includes(q) && !(r.itemName ?? '').toUpperCase().includes(q)) return false;
       return true;
     });
-  }, [rows, active, hideDone, search]);
+  }, [rows, active, hideDone, year, search]);
 
   const exportCsv = () => {
     const head = [
@@ -244,7 +252,18 @@ export default function WorklistPage() {
             </button>
           );
         })}
-        <label className="flex items-center gap-1.5 text-sm ml-2">
+        <select
+          value={year}
+          onChange={(e) => setYear(e.target.value)}
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm ml-2"
+          title="Filter by the year the location went negative"
+        >
+          <option value="all">All years</option>
+          {years.map((y) => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
+        <label className="flex items-center gap-1.5 text-sm">
           <input type="checkbox" checked={hideDone} onChange={(e) => setHideDone(e.target.checked)} />
           Hide done
         </label>

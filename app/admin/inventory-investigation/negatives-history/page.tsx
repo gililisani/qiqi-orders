@@ -53,6 +53,7 @@ export default function NegativesHistoryPage() {
   const [crossed, setCrossed] = useState<'all' | 'yes' | 'no'>('all');
   const [search, setSearch] = useState(() => initialParam('item', ''));
   const [loc, setLoc] = useState(() => initialParam('loc', 'all'));
+  const [year, setYear] = useState('all');
 
   useEffect(() => {
     (async () => {
@@ -72,6 +73,15 @@ export default function NegativesHistoryPage() {
     return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [wins]);
 
+  const years = useMemo(() => {
+    const s = new Set<string>();
+    for (const w of wins) {
+      if (w.start) s.add(w.start.slice(0, 4));
+      if (w.end) s.add(w.end.slice(0, 4));
+    }
+    return [...s].sort().reverse();
+  }, [wins]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toUpperCase();
     const rows = wins.filter((w) => {
@@ -79,6 +89,14 @@ export default function NegativesHistoryPage() {
       if (status !== 'all' && w.status !== status) return false;
       if (crossed !== 'all' && (crossed === 'yes') !== w.crossedClosedPeriod) return false;
       if (loc !== 'all' && w.locationNsId !== loc) return false;
+      // Year = window active during that year (started on/before year-end AND
+      // not recovered before year-start). Ongoing windows have no end.
+      if (year !== 'all') {
+        const ys = `${year}-01-01`;
+        const ye = `${year}-12-31`;
+        if (w.start > ye) return false;
+        if (w.end && w.end < ys) return false;
+      }
       if (q && !w.itemCode.toUpperCase().includes(q) && !(w.itemName ?? '').toUpperCase().includes(q)) return false;
       return true;
     });
@@ -92,7 +110,7 @@ export default function NegativesHistoryPage() {
       return b.durationDays - a.durationDays; // longest first
     });
     return rows;
-  }, [wins, tier, status, crossed, loc, search]);
+  }, [wins, tier, status, crossed, loc, year, search]);
 
   const exportCsv = () => {
     const head = ['Item', 'Item Name', 'Location', 'Start', 'End', 'Duration (d)', 'Depth', 'Tier', 'Status', 'Builds During', 'Other Outbound', 'Crossed Period'];
@@ -155,6 +173,12 @@ export default function NegativesHistoryPage() {
           <option value="all">All locations</option>
           {locations.map(([id, name]) => (
             <option key={id} value={id}>{name}</option>
+          ))}
+        </select>
+        <select value={year} onChange={(e) => setYear(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm" title="Windows active during this year">
+          <option value="all">All years</option>
+          {years.map((y) => (
+            <option key={y} value={y}>{y}</option>
           ))}
         </select>
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Item…" className="h-9 w-40" />
