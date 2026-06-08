@@ -17,19 +17,22 @@ export async function POST(request: NextRequest) {
     const durationMs = Date.now() - startedAt;
 
     // Hard safety self-check — never write recommendations that break the rules.
-    const { nonEditable, closedPeriod, createBad } = validateWorklist(comp.rows);
-    if (nonEditable.length > 0 || closedPeriod.length > 0 || createBad.length > 0) {
+    const { nonEditable, closedPeriod, prereqPreCutoff, incompleteChain } = validateWorklist(comp.rows);
+    const violations = nonEditable.length + closedPeriod.length + prereqPreCutoff.length + incompleteChain.length;
+    if (violations > 0) {
       console.error('[worklist recompute] RULE VIOLATION — not writing', {
         nonEditable: nonEditable.slice(0, 5),
         closedPeriod: closedPeriod.slice(0, 5),
-        createBad: createBad.slice(0, 5),
+        prereqPreCutoff: prereqPreCutoff.slice(0, 5),
+        incompleteChain: incompleteChain.slice(0, 5),
       });
       return NextResponse.json(
         {
-          error: 'Self-check failed: recommendations violated the editable-type / closed-period rules. Worklist NOT updated.',
+          error: 'Self-check failed: recommendations violated the editable-type / closed-period / chain-completeness rules. Worklist NOT updated.',
           nonEditableCount: nonEditable.length,
           closedPeriodCount: closedPeriod.length,
-          createBadCount: createBad.length,
+          prereqPreCutoffCount: prereqPreCutoff.length,
+          incompleteChainCount: incompleteChain.length,
         },
         { status: 500 },
       );

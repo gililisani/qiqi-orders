@@ -39,6 +39,10 @@ export interface LedgerTxn {
   memo?: string;
   nsType?: string | null; // NetSuite type DISPLAY name (e.g. "Inventory Transfer") — UI only
   nsTypeCode?: string | null; // RAW NetSuite type code (e.g. "InvTrnfr") — drives editability; engine ignores it
+  subsidiaryName?: string | null; // owning subsidiary — for intercompany detection / broken-chain checks
+  // Intercompany TOrdCost linkage (engine ignores; chains.ts uses it):
+  chainPartnerTxId?: string | null; // the paired IF/IR transaction internal id
+  chainRole?: 'if' | 'ir' | null;
 }
 
 export interface OpeningBalance {
@@ -346,6 +350,13 @@ export function applyChange(txns: LedgerTxn[], change: SimChange): LedgerTxn[] {
   }
 }
 
+/** Fold a list of changes left-to-right. Used for multi-document edits — an
+ *  intercompany chain (move both IF and IR), or a primary fix + its upstream
+ *  prerequisite — applied as one atomic set. */
+export function applyChanges(txns: LedgerTxn[], changes: SimChange[]): LedgerTxn[] {
+  return changes.reduce((acc, c) => applyChange(acc, c), txns);
+}
+
 /**
  * Simulate a change and return current vs. after negative-summaries plus an
  * explicit delta (FIXED / STILL_NEGATIVE / NEW PROBLEM).
@@ -361,8 +372,17 @@ export function simulate(
   openings: OpeningBalance[],
   change: SimChange,
 ): SimResult {
+  return simulateMany(txns, openings, [change]);
+}
+
+/** Multi-change variant — applies all changes together, then diffs. */
+export function simulateMany(
+  txns: LedgerTxn[],
+  openings: OpeningBalance[],
+  changes: SimChange[],
+): SimResult {
   const current = summarizeNegatives(computeLedger(txns, openings));
-  const after = summarizeNegatives(computeLedger(applyChange(txns, change), openings));
+  const after = summarizeNegatives(computeLedger(applyChanges(txns, changes), openings));
 
   const delta: SimDelta = { fixed: [], stillNegative: [], newProblem: [] };
   const locIds = new Set([...Object.keys(current), ...Object.keys(after)]);

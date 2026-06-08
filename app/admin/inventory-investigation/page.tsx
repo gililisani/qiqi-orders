@@ -23,6 +23,22 @@ import { InvTabs, TierBadge } from '../../components/inventory/InvTabs';
 type Category = 'CLEAN' | 'PARTIAL' | 'MANUAL' | 'CLOSED';
 type Status = 'todo' | 'done' | 'skipped';
 
+interface EditStep {
+  order: number;
+  manual?: boolean;
+  doc: string | null;
+  docType: string | null;
+  action: string;
+  detail?: string;
+}
+interface FixOption {
+  label: string;
+  recommendationType: string;
+  category: Category;
+  edits: EditStep[];
+  prerequisiteSummary: string;
+  notes: string;
+}
 interface Row {
   itemCode: string;
   itemName: string | null;
@@ -30,16 +46,18 @@ interface Row {
   locationName: string;
   depth: number;
   since: string | null;
-  recommendedAction: string;
+  tier: number;
+  recommendationType: string;
+  category: Category;
+  editsRequired: EditStep[];
+  prerequisiteSummary: string;
+  isBrokenChain: boolean;
+  options: FixOption[];
+  notes: string;
   suspectNsTransactionId: string | null;
   suspectDoc: string | null;
-  suspectType: string | null; // raw NS type code
+  suspectType: string | null;
   suspectDate: string | null;
-  changeFrom: string | null;
-  changeTo: string | null;
-  category: Category;
-  tier: number;
-  notes: string;
   status: Status;
 }
 interface Meta {
@@ -50,22 +68,15 @@ interface Meta {
   durationMs: number | null;
 }
 
-const ACTION_LABEL: Record<string, string> = {
-  REDUCE_QTY: 'Reduce quantity',
-  DELETE: 'Delete transaction',
-  CHANGE_DATE_FORWARD: 'Change date forward',
-  CHANGE_DATE_EARLIER: 'Change date earlier',
-  CREATE_TRANSFER: 'Create transfer',
-  MANUAL_REVIEW: 'Needs manual review',
-  CLOSED_PERIOD: 'Out of scope — closed period',
-};
-
-// Raw NS type code → label (only the editable types ever appear as a target).
+// Raw NS type code → label.
 const NS_TYPE_LABEL: Record<string, string> = {
   InvTrnfr: 'Inventory Transfer',
   InvAdjst: 'Inventory Adjustment',
   ItemRcpt: 'Item Receipt',
   VendBill: 'Bill',
+  ItemShip: 'Item Fulfillment',
+  Build: 'Assembly Build',
+  TransferOrder: 'Transfer Order',
 };
 
 const CHIPS: { key: Category; label: string }[] = [
@@ -167,17 +178,20 @@ export default function WorklistPage() {
     });
   }, [rows, active, hideDone, year, search]);
 
+  const editsText = (r: Row) =>
+    r.editsRequired
+      .map((e) => `${e.order}. ${e.manual ? '[NetSuite UI] ' : ''}${e.doc ? e.doc + ' (' + (NS_TYPE_LABEL[e.docType ?? ''] ?? e.docType) + '): ' : ''}${e.action}`)
+      .join('  |  ');
+
   const exportCsv = () => {
     const head = [
-      'Item', 'Item Name', 'Location', 'Depth', 'Since', 'Tier', 'Recommended Action',
-      'Transaction To Edit', 'Type', 'Tx Date', 'Change From', 'Change To',
-      'Category', 'Status', 'Notes',
+      'Item', 'Item Name', 'Location', 'Depth', 'Since', 'Tier', 'Recommendation Type',
+      'Edits Required', 'Prerequisite', 'Category', 'Broken Chain', 'Status', 'Notes',
     ];
     const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines = filtered.map((r) =>
-      [r.itemCode, r.itemName, r.locationName, r.depth, r.since, `T${r.tier}`, ACTION_LABEL[r.recommendedAction] ?? r.recommendedAction,
-        r.suspectDoc, r.suspectType ? NS_TYPE_LABEL[r.suspectType] ?? r.suspectType : '', r.suspectDate,
-        r.changeFrom, r.changeTo, r.category, r.status, r.notes]
+      [r.itemCode, r.itemName, r.locationName, r.depth, r.since, `T${r.tier}`, r.recommendationType,
+        editsText(r), r.prerequisiteSummary, r.category, r.isBrokenChain ? 'yes' : '', r.status, r.notes]
         .map(esc).join(','),
     );
     const blob = new Blob([[head.join(','), ...lines].join('\n')], { type: 'text/csv' });
@@ -206,7 +220,7 @@ export default function WorklistPage() {
               <Download className="h-4 w-4" /> CSV
             </Button>
             <Button onClick={recompute} loading={recomputing}>
-              <RefreshCw className="h-4 w-4" /> Recompute worklist
+              <RefreshCw className="h-4 w-4" /> Refresh All from NetSuite
             </Button>
           </div>
         }
@@ -214,11 +228,24 @@ export default function WorklistPage() {
 
       <InvTabs />
 
+      {recomputing && (
+        <div className="mb-4 flex items-center gap-3 rounded-md border border-accent/40 bg-accent/5 px-4 py-3 text-sm">
+          <RefreshCw className="h-4 w-4 animate-spin text-accent" />
+          <div>
+            <div className="font-medium">Re-pulling the full catalog from NetSuite…</div>
+            <div className="text-xs text-muted-foreground">
+              Fetching every item's inventory history + intercompany chain links, then recomputing all
+              recommendations. This takes ~30–60 seconds — you can keep this tab open.
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <p className="text-xs text-muted-foreground">
           {meta?.computedAt
             ? <>Last computed {new Date(meta.computedAt).toLocaleString()} · {meta.cases} cases{meta.durationMs ? ` · ${(meta.durationMs / 1000).toFixed(0)}s` : ''}</>
-            : 'Not computed yet — click “Recompute worklist” (takes ~30s).'}
+            : 'Not computed yet — click “Refresh All from NetSuite” (takes ~30–60s).'}
         </p>
         <form onSubmit={goSearch} className="flex items-center gap-2">
           <div className="relative">
@@ -282,8 +309,8 @@ export default function WorklistPage() {
         <EmptyState
           icon={<ListChecks />}
           title="No worklist yet"
-          description='Click "Recompute worklist" to scan the catalog for negative-inventory cases and generate recommended fixes (~30 seconds).'
-          action={<Button onClick={recompute} loading={recomputing}><RefreshCw className="h-4 w-4" /> Recompute worklist</Button>}
+          description='Click "Refresh All from NetSuite" to scan the catalog for negative-inventory cases and generate recommended fixes (~30–60 seconds).'
+          action={<Button onClick={recompute} loading={recomputing}><RefreshCw className="h-4 w-4" /> Refresh All from NetSuite</Button>}
         />
       ) : filtered.length === 0 ? (
         <EmptyState icon={<ListChecks />} title="Nothing matches" description="Adjust the category chips or filters above." />
@@ -297,19 +324,18 @@ export default function WorklistPage() {
                   <TableHead>Location</TableHead>
                   <TableHead className="text-right">Depth</TableHead>
                   <TableHead>Since</TableHead>
-                  <TableHead>Recommended action</TableHead>
-                  <TableHead>Transaction to edit</TableHead>
-                  <TableHead>Change</TableHead>
                   <TableHead>Tier</TableHead>
+                  <TableHead>Recommendation</TableHead>
+                  <TableHead className="min-w-[320px]">Edits required</TableHead>
+                  <TableHead>Prerequisite</TableHead>
                   <TableHead>Category</TableHead>
-                  <TableHead>Notes</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((r) => (
-                  <TableRow key={`${r.itemCode}|${r.locationNsId}`} className={r.status === 'done' ? 'opacity-50' : ''}>
-                    <TableCell className="py-2">
+                  <TableRow key={`${r.itemCode}|${r.locationNsId}|${r.since}`} className={r.status === 'done' ? 'opacity-50' : ''}>
+                    <TableCell className="py-2 align-top">
                       <div className="flex flex-col">
                         <button
                           onClick={() =>
@@ -334,33 +360,56 @@ export default function WorklistPage() {
                         </button>
                       </div>
                     </TableCell>
-                    <TableCell className="py-2 text-xs">{r.locationName}</TableCell>
-                    <TableCell className="py-2 text-right font-mono text-xs text-destructive font-semibold">{fmt(r.depth)}</TableCell>
-                    <TableCell className="py-2 font-mono text-xs whitespace-nowrap">{r.since ?? ''}</TableCell>
-                    <TableCell className="py-2 text-xs whitespace-nowrap">{ACTION_LABEL[r.recommendedAction] ?? r.recommendedAction}</TableCell>
-                    <TableCell className="py-2 text-xs whitespace-nowrap">
-                      {r.recommendedAction === 'CREATE_TRANSFER' ? (
-                        <span className="text-muted-foreground italic">(new transaction)</span>
-                      ) : r.suspectDoc ? (
-                        <span className="font-mono">
-                          {r.suspectDoc}
-                          <span className="text-muted-foreground font-sans">
-                            {' · '}{r.suspectType ? NS_TYPE_LABEL[r.suspectType] ?? r.suspectType : '?'}{' · '}{r.suspectDate}
-                          </span>
-                        </span>
+                    <TableCell className="py-2 text-xs align-top">{r.locationName}</TableCell>
+                    <TableCell className="py-2 text-right font-mono text-xs text-destructive font-semibold align-top">{r.depth ? fmt(r.depth) : ''}</TableCell>
+                    <TableCell className="py-2 font-mono text-xs whitespace-nowrap align-top">{r.since ?? ''}</TableCell>
+                    <TableCell className="py-2 align-top"><TierBadge tier={r.tier} /></TableCell>
+                    <TableCell className="py-2 text-xs whitespace-nowrap align-top">
+                      {r.isBrokenChain ? <span className="font-semibold text-destructive">Broken chain</span> : r.recommendationType}
+                    </TableCell>
+                    <TableCell className="py-2 text-xs align-top">
+                      {r.editsRequired.length ? (
+                        <ol className="space-y-0.5">
+                          {r.editsRequired.map((e) => (
+                            <li key={e.order} className="flex gap-1.5">
+                              <span className="text-muted-foreground tabular-nums">{e.order}.</span>
+                              <span>
+                                {e.manual && <span className="mr-1 rounded bg-amber-100 px-1 text-[10px] font-medium text-amber-800">NetSuite UI</span>}
+                                {e.doc && (
+                                  <span className="font-mono font-medium">
+                                    {e.doc}
+                                    <span className="font-sans font-normal text-muted-foreground"> · {NS_TYPE_LABEL[e.docType ?? ''] ?? e.docType} · </span>
+                                  </span>
+                                )}
+                                {e.action}
+                                {e.detail && <span className="block text-[11px] text-muted-foreground">{e.detail}</span>}
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <span className="text-muted-foreground">{r.isBrokenChain ? 'See notes — manual review' : '—'}</span>
                       )}
+                      {r.options.length > 0 && (
+                        <details className="mt-1">
+                          <summary className="cursor-pointer text-[11px] text-accent">{r.options.length} alternative{r.options.length > 1 ? 's' : ''}</summary>
+                          <div className="mt-1 space-y-1 border-l-2 border-border pl-2">
+                            {r.options.map((o, i) => (
+                              <div key={i} className="text-[11px]">
+                                <span className="font-medium">{String.fromCharCode(66 + i)}. [{o.category}] {o.recommendationType}</span>
+                                {' '}· prereq {o.prerequisiteSummary} · {o.edits.length} edit{o.edits.length > 1 ? 's' : ''}
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                      <NoteWithWarning notes={r.notes} />
                     </TableCell>
-                    <TableCell className="py-2 font-mono text-xs whitespace-nowrap">
-                      {r.changeTo ? (r.changeFrom != null ? `${r.changeFrom} → ${r.changeTo}` : r.changeTo) : ''}
-                    </TableCell>
-                    <TableCell className="py-2"><TierBadge tier={r.tier} /></TableCell>
-                    <TableCell className="py-2">
+                    <TableCell className="py-2 text-xs align-top">{r.prerequisiteSummary}</TableCell>
+                    <TableCell className="py-2 align-top">
                       <CategoryBadge c={r.category} />
                     </TableCell>
-                    <TableCell className="py-2 text-xs text-muted-foreground max-w-[320px]">{r.notes}</TableCell>
-                    <TableCell className="py-2">
+                    <TableCell className="py-2 align-top">
                       <select
                         value={r.status}
                         onChange={(e) => setStatus(r, e.target.value as Status)}
@@ -387,4 +436,24 @@ function CategoryBadge({ c }: { c: Category }) {
   if (c === 'PARTIAL') return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">PARTIAL</Badge>;
   if (c === 'CLOSED') return <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100">CLOSED</Badge>;
   return <Badge variant="secondary">MANUAL</Badge>;
+}
+
+const BOUNDARY_WARN_PREFIX = '⚠️ CLOSED-PERIOD BOUNDARY: ';
+
+// Splits the closed-period-boundary warning out of the notes so it can be shown
+// with a distinct amber accent (Adjustment 1).
+function NoteWithWarning({ notes }: { notes: string }) {
+  const idx = notes.indexOf(BOUNDARY_WARN_PREFIX);
+  if (idx === -1) return <div className="mt-1 text-[11px] text-muted-foreground">{notes}</div>;
+  const base = notes.slice(0, idx).trim();
+  const warn = notes.slice(idx + BOUNDARY_WARN_PREFIX.length).trim();
+  return (
+    <div className="mt-1 space-y-1">
+      {base && <div className="text-[11px] text-muted-foreground">{base}</div>}
+      <div className="rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] text-amber-900">
+        <span className="font-semibold">⚠️ Closed-period boundary — </span>
+        {warn}
+      </div>
+    </div>
+  );
 }

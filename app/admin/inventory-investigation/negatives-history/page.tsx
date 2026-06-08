@@ -54,6 +54,8 @@ export default function NegativesHistoryPage() {
   const [search, setSearch] = useState(() => initialParam('item', ''));
   const [loc, setLoc] = useState(() => initialParam('loc', 'all'));
   const [year, setYear] = useState('all');
+  // BUG-2 scope: default view excludes wholly pre-2024 windows. Toggle to inspect them.
+  const [showPre2024, setShowPre2024] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -85,6 +87,10 @@ export default function NegativesHistoryPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toUpperCase();
     const rows = wins.filter((w) => {
+      // BUG-2: a window wholly before 2024-01-01 (started AND ended pre-cutoff)
+      // is out of scope; hidden unless the user opts in.
+      const whollyPre2024 = (w.start ?? '') < '2024-01-01' && !!w.end && w.end < '2024-01-01';
+      if (whollyPre2024 && !showPre2024) return false;
       if (tier !== 'all' && w.tier !== tier) return false;
       if (status !== 'all' && w.status !== status) return false;
       if (crossed !== 'all' && (crossed === 'yes') !== w.crossedClosedPeriod) return false;
@@ -110,7 +116,7 @@ export default function NegativesHistoryPage() {
       return b.durationDays - a.durationDays; // longest first
     });
     return rows;
-  }, [wins, tier, status, crossed, loc, year, search]);
+  }, [wins, tier, status, crossed, loc, year, search, showPre2024]);
 
   const exportCsv = () => {
     const head = ['Item', 'Item Name', 'Location', 'Start', 'End', 'Duration (d)', 'Depth', 'Tier', 'Status', 'Builds During', 'Other Outbound', 'Crossed Period'];
@@ -164,6 +170,10 @@ export default function NegativesHistoryPage() {
           <option value="Ongoing">Ongoing only</option>
           <option value="Closed">Closed only</option>
         </select>
+        <label className="flex items-center gap-1.5 text-xs whitespace-nowrap">
+          <input type="checkbox" checked={showPre2024} onChange={(e) => setShowPre2024(e.target.checked)} />
+          Show pre-2024 (out of scope)
+        </label>
         <select value={crossed} onChange={(e) => setCrossed(e.target.value as any)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
           <option value="all">Crossed period: all</option>
           <option value="yes">Crossed: yes</option>

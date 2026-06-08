@@ -34,6 +34,7 @@ export interface RawTxnLine {
   loc_name?: unknown;
   quantity: unknown;
   line_memo?: unknown;
+  subsidiary_name?: unknown;
 }
 
 export interface RawQoh {
@@ -92,6 +93,9 @@ export function assembleItem(lines: RawTxnLine[], qohRows: RawQoh[]): AssembledI
       transferGroup: isTransfer ? String(r.doc ?? r.tx_id) : null,
       transferLeg: isTransfer ? (qty < 0 ? 'source' : 'dest') : null,
       memo: (r.line_memo as string) || (r.tx_memo as string) || undefined,
+      subsidiaryName: (r.subsidiary_name as string) ?? null,
+      chainPartnerTxId: null, // populated post-assembly by linkChains()
+      chainRole: null,
     });
   }
 
