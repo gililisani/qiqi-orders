@@ -31,19 +31,20 @@ const CHUNK = 500;
 export async function writeWorklist(comp: WorklistComputation, durationMs: number): Promise<void> {
   const sb = createServiceRoleClient();
 
-  // Preserve prior statuses for carry-over.
+  // Preserve prior statuses for carry-over. Keyed on (item, location, since) —
+  // a location can have multiple negative windows, each its own row/status.
   const { data: existing } = await sb
     .from('inv_inv_worklist')
-    .select('item_code, location_ns_id, status');
+    .select('item_code, location_ns_id, since, status');
   const prevStatus = new Map<string, string>();
-  for (const e of existing ?? []) prevStatus.set(`${e.item_code}|${e.location_ns_id}`, e.status);
+  for (const e of existing ?? []) prevStatus.set(`${e.item_code}|${e.location_ns_id}|${e.since ?? ''}`, e.status);
 
   // Replace all rows.
   await sb.from('inv_inv_worklist').delete().neq('item_code', '');
 
   const now = new Date().toISOString();
   const rows = comp.rows.map((r) => {
-    const prev = prevStatus.get(`${r.itemCode}|${r.locationNsId}`);
+    const prev = prevStatus.get(`${r.itemCode}|${r.locationNsId}|${r.since ?? ''}`);
     const status: WorklistStatus = prev === 'skipped' ? 'skipped' : 'todo'; // 'done' resets to 'todo'
     return {
       item_code: r.itemCode,
@@ -141,14 +142,17 @@ export async function readWorklist(): Promise<{ rows: WorklistRecord[]; meta: Wo
 export async function setWorklistStatus(
   itemCode: string,
   locationNsId: string,
+  since: string | null,
   status: WorklistStatus,
 ): Promise<void> {
   const sb = createServiceRoleClient();
-  const { error } = await sb
+  let q = sb
     .from('inv_inv_worklist')
     .update({ status })
     .eq('item_code', itemCode.toUpperCase())
     .eq('location_ns_id', locationNsId);
+  q = since ? q.eq('since', since) : q.is('since', null);
+  const { error } = await q;
   if (error) throw new Error(error.message);
 }
 

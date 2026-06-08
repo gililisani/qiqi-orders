@@ -136,13 +136,18 @@ export default function WorklistPage() {
   };
 
   const setStatus = async (r: Row, status: Status) => {
+    // Identity is (item, location, since) — a location can have several windows.
     setRows((prev) =>
-      prev.map((x) => (x.itemCode === r.itemCode && x.locationNsId === r.locationNsId ? { ...x, status } : x)),
+      prev.map((x) =>
+        x.itemCode === r.itemCode && x.locationNsId === r.locationNsId && x.since === r.since
+          ? { ...x, status }
+          : x,
+      ),
     );
     await fetchWithAuth('/api/inventory-investigation/worklist/status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ itemCode: r.itemCode, locationNsId: r.locationNsId, status }),
+      body: JSON.stringify({ itemCode: r.itemCode, locationNsId: r.locationNsId, since: r.since, status }),
     }).catch(() => {});
   };
 
