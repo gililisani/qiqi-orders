@@ -65,7 +65,7 @@ async function main() {
   const byTier: Record<string, number> = {};
   for (const w of comp.windows) byTier[`T${w.tier}`] = (byTier[`T${w.tier}`] || 0) + 1;
   console.log(
-    `[worklist] scanned=${comp.stats.itemsScanned} withLines=${comp.stats.itemsWithLines} cases=${comp.stats.cases} windows=${comp.windows.length} chainPairs=${comp.stats.chainPairs} | cat=${JSON.stringify(byCat)} tier=${JSON.stringify(byTier)} in ${(durationMs / 1000).toFixed(1)}s`,
+    `[worklist] scanned=${comp.stats.itemsScanned} withLines=${comp.stats.itemsWithLines} cases=${comp.stats.cases} windows=${comp.windows.length} chainPairs=${comp.stats.chainPairs} residualItems=${comp.stats.residualItems} | cat=${JSON.stringify(byCat)} tier=${JSON.stringify(byTier)} in ${(durationMs / 1000).toFixed(1)}s`,
   );
 
   const ok = selfCheck(comp.rows);

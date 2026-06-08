@@ -25,6 +25,7 @@ export interface PulledItem {
   itemType: string;
   transactions: LedgerTxn[];
   openings: OpeningBalance[];
+  residuals: import('@/lib/inventory/assemble').LocationResidual[];
   dateMin: string | null;
   dateMax: string | null;
 }
@@ -62,6 +63,6 @@ export async function pullItemInventory(itemCode: string): Promise<PulledItem> {
       GROUP BY il.location, BUILTIN.DF(il.location)`,
   );
 
-  const { transactions, openings, dateMin, dateMax } = assembleItem(lines, qohRows);
-  return { itemCode: itemCode.toUpperCase(), nsItemId, itemName, itemType, transactions, openings, dateMin, dateMax };
+  const { transactions, openings, residuals, dateMin, dateMax } = assembleItem(lines, qohRows);
+  return { itemCode: itemCode.toUpperCase(), nsItemId, itemName, itemType, transactions, openings, residuals, dateMin, dateMax };
 }

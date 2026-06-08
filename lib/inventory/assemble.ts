@@ -43,9 +43,19 @@ export interface RawQoh {
   qoh: unknown;
 }
 
+export interface LocationResidual {
+  locationNsId: string;
+  locationName: string;
+  currentQoh: number;
+  txSum: number; // sum of pulled signed transactions at this location
+  residual: number; // currentQoh − txSum; nonzero = NS on-hand disagrees with its own tx history
+}
+
 export interface AssembledItem {
   transactions: LedgerTxn[];
   openings: OpeningBalance[];
+  /** Per-location phantom residuals (NS on-hand vs transaction history). */
+  residuals: LocationResidual[];
   dateMin: string | null;
   dateMax: string | null;
 }
@@ -105,16 +115,37 @@ export function assembleItem(lines: RawTxnLine[], qohRows: RawQoh[]): AssembledI
   }
   const allLocs = new Set<string>([...sumByLoc.keys(), ...qohByLoc.keys()]);
   const openings: OpeningBalance[] = [];
+  const residuals: LocationResidual[] = [];
   for (const loc of allLocs) {
     const qoh = qohByLoc.get(loc) ?? 0;
     const sum = sumByLoc.get(loc) ?? 0;
+    // ZERO-ANCHOR: start every location's running balance at 0, so the
+    // reconstructed end-of-day curve matches NetSuite's own day-by-day (NS runs
+    // forward from zero). The old "opening = qoh − sum" smeared any phantom
+    // discrepancy into the curve, shifting every depth (FPS0028: −1,412 vs the
+    // true −1,436). We keep currentQoh on the opening for reference, but
+    // openingQty is 0.
     openings.push({
       locationNsId: loc,
       locationName: nameByLoc.get(loc) || loc,
-      openingQty: qoh - sum,
+      openingQty: 0,
       currentQoh: qoh,
     });
+    // Residual = what NS on-hand claims vs what the transaction history sums to.
+    // After a zero-anchored run, final balance = sum; residual = qoh − sum.
+    // Round to 2 dp to swallow float noise (e.g. summing 42.2-style decimals
+    // can leave a 1e-13 artifact that is NOT a real discrepancy).
+    const residual = Math.round((qoh - sum) * 100) / 100;
+    if (residual !== 0) {
+      residuals.push({
+        locationNsId: loc,
+        locationName: nameByLoc.get(loc) || loc,
+        currentQoh: qoh,
+        txSum: sum,
+        residual,
+      });
+    }
   }
 
-  return { transactions, openings, dateMin, dateMax };
+  return { transactions, openings, residuals, dateMin, dateMax };
 }

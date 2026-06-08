@@ -107,6 +107,22 @@ export default function InventoryInvestigationPage() {
   );
   const suspectCount = ledger.suspectRowIds.size;
 
+  // Phantom residuals: NS current on-hand vs the zero-anchored transaction history.
+  // Balances are run forward from zero (matching NetSuite's day-by-day), so a
+  // nonzero residual means NS on-hand can't be explained by visible transactions
+  // (a pre-history / migration artifact). Surfaced, not smeared into the curve.
+  const residuals = useMemo(
+    () =>
+      openings
+        .map((o) => {
+          const final = ledger.byLocation[o.locationNsId]?.final ?? 0;
+          const residual = Math.round(((o.currentQoh ?? 0) - final) * 100) / 100;
+          return { name: o.locationName, qoh: o.currentQoh ?? 0, residual };
+        })
+        .filter((r) => r.residual !== 0),
+    [openings, ledger],
+  );
+
   return (
     <div className="px-6 py-8">
       <PageHeader
@@ -226,6 +242,25 @@ export default function InventoryInvestigationPage() {
                       </li>
                     ))}
                   </ul>
+                )}
+
+                {residuals.length > 0 && (
+                  <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    <div className="font-semibold">⚠️ Data note — NS on-hand vs transaction history</div>
+                    <p className="mt-0.5">
+                      Balances run forward from zero (matching NetSuite day-by-day). At these locations
+                      NetSuite&apos;s current on-hand can&apos;t be fully explained by visible transactions —
+                      a pre-history/migration artifact. Depths are accurate to NS; the gap is shown for transparency.
+                    </p>
+                    <ul className="mt-1 space-y-0.5">
+                      {residuals.map((r) => (
+                        <li key={r.name} className="flex justify-between gap-2 font-mono">
+                          <span className="truncate">{r.name}</span>
+                          <span>NS {fmtQty(r.qoh)} · unexplained {fmtQty(r.residual)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </CardContent>
             </Card>

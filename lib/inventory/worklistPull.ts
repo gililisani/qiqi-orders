@@ -33,6 +33,7 @@ export interface WorklistComputation {
     cleanCount: number;
     windowCount: number;
     chainPairs: number;
+    residualItems: number; // items where NS on-hand disagrees with its tx history
   };
 }
 
@@ -121,9 +122,11 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
 
   // First pass: assemble + link chains + build ledgers → CatalogContext.
   const ctx: CatalogContext = { byItemId: new Map<string, ItemContext>(), componentsByBuildTxId };
+  let residualItemCount = 0;
   for (const [itemId, lines] of linesByItem) {
     const meta = metaById.get(itemId) ?? { itemCode: itemId, itemName: null, nsItemId: itemId };
     const assembled = assembleItem(lines, qohByItem.get(itemId) ?? []);
+    if (assembled.residuals.length > 0) residualItemCount++;
     const txns = linkChains(assembled.transactions, pairs);
     const ledger = computeLedger(txns, assembled.openings);
     ctx.byItemId.set(itemId, {
@@ -158,6 +161,7 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
       cleanCount: rows.filter((r) => r.category === 'CLEAN').length,
       windowCount: windows.length,
       chainPairs: pairs.length,
+      residualItems: residualItemCount,
     },
   };
 }
