@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { RefreshCw, Search, Download, ArrowRight, ListChecks, History } from 'lucide-react';
+import { RefreshCw, Search, Download, ArrowRight, ListChecks, History, Upload } from 'lucide-react';
 
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 import { PageHeader } from '../../components/qq/page-header';
@@ -101,6 +101,17 @@ export default function WorklistPage() {
   const [search, setSearch] = useState('');
   const [year, setYear] = useState('all');
 
+  const [snapshot, setSnapshot] = useState<{ cutoffDate: string | null; rowCount: number; uploadedAt: string | null } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [cutoffDate, setCutoffDate] = useState('2023-12-31');
+  const [uploadMsg, setUploadMsg] = useState<string | null>(null);
+
+  const loadSnapshot = useCallback(async () => {
+    const res = await fetchWithAuth('/api/inventory-investigation/opening-snapshot');
+    const json = await res.json().catch(() => ({}));
+    if (res.ok) setSnapshot(json);
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -118,7 +129,29 @@ export default function WorklistPage() {
 
   useEffect(() => {
     load();
-  }, [load]);
+    loadSnapshot();
+  }, [load, loadSnapshot]);
+
+  const uploadSnapshot = async (file: File) => {
+    setUploading(true);
+    setUploadMsg(null);
+    try {
+      const csv = await file.text();
+      const res = await fetchWithAuth('/api/inventory-investigation/opening-snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cutoffDate, csv }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Import failed');
+      setUploadMsg(`Imported ${json.imported} opening rows as of ${json.cutoffDate}.${json.warningCount ? ` ${json.warningCount} warning(s).` : ''} Click “Refresh All from NetSuite” to apply.`);
+      await loadSnapshot();
+    } catch (e: any) {
+      setUploadMsg(`Import failed: ${e?.message || 'unknown error'}`);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const recompute = async () => {
     setRecomputing(true);
@@ -232,6 +265,55 @@ export default function WorklistPage() {
       />
 
       <InvTabs />
+
+      {/* Opening-balance snapshot — anchors balances so they match NetSuite. */}
+      <div className={`mb-4 rounded-md border px-4 py-3 text-sm ${snapshot?.cutoffDate ? 'border-border bg-card' : 'border-amber-300 bg-amber-50'}`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            {snapshot?.cutoffDate ? (
+              <>
+                <span className="font-medium">Opening snapshot active</span>
+                <span className="text-muted-foreground">
+                  {' '}— {snapshot.rowCount.toLocaleString()} item/location openings as of {snapshot.cutoffDate}
+                  {snapshot.uploadedAt ? ` · uploaded ${new Date(snapshot.uploadedAt).toLocaleDateString()}` : ''}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="font-semibold text-amber-900">⚠️ No opening snapshot</span>
+                <span className="text-amber-900">
+                  {' '}— balances run from zero, so items with pre-2024 stock (e.g. FPS0017) won&apos;t match NetSuite.
+                  Upload a NetSuite on-hand export (Item · Location · Quantity On Hand) as of the cutoff to anchor them.
+                </span>
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-muted-foreground">Cutoff</label>
+            <input
+              type="date"
+              value={cutoffDate}
+              onChange={(e) => setCutoffDate(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            />
+            <label className={`inline-flex h-9 cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-3 text-sm hover:bg-secondary ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+              <Upload className="h-4 w-4" />
+              {uploading ? 'Uploading…' : 'Upload snapshot CSV'}
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadSnapshot(f);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+          </div>
+        </div>
+        {uploadMsg && <div className="mt-2 text-xs text-foreground">{uploadMsg}</div>}
+      </div>
 
       {recomputing && (
         <div className="mb-4 flex items-center gap-3 rounded-md border border-accent/40 bg-accent/5 px-4 py-3 text-sm">

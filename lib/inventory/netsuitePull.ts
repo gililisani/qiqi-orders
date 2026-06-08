@@ -15,7 +15,8 @@
  *   - opening(item,loc) = currentQOH - SUM(signed)
  */
 import { createNetSuiteAPI } from '@/lib/netsuite';
-import { assembleItem } from '@/lib/inventory/assemble';
+import { assembleItem, type OpeningAnchor } from '@/lib/inventory/assemble';
+import { readSnapshotLookup } from '@/lib/inventory/openingSnapshot';
 import type { LedgerTxn, OpeningBalance } from '@/lib/inventory/balanceEngine';
 
 export interface PulledItem {
@@ -63,6 +64,18 @@ export async function pullItemInventory(itemCode: string): Promise<PulledItem> {
       GROUP BY il.location, BUILTIN.DF(il.location)`,
   );
 
-  const { transactions, openings, residuals, dateMin, dateMax } = assembleItem(lines, qohRows);
+  // Anchor on the imported opening snapshot if one exists (else zero-anchor).
+  const { lookup, cutoffDate } = await readSnapshotLookup();
+  let anchor: OpeningAnchor | undefined;
+  if (cutoffDate && lookup.size > 0) {
+    const openingByLocName = new Map<string, number>();
+    const prefix = `${itemCode.toUpperCase()}|`;
+    for (const [k, v] of lookup) {
+      if (k.startsWith(prefix)) openingByLocName.set(k.slice(prefix.length), v);
+    }
+    anchor = { cutoffDate, openingByLocName };
+  }
+
+  const { transactions, openings, residuals, dateMin, dateMax } = assembleItem(lines, qohRows, anchor);
   return { itemCode: itemCode.toUpperCase(), nsItemId, itemName, itemType, transactions, openings, residuals, dateMin, dateMax };
 }

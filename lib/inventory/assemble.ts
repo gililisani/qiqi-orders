@@ -66,7 +66,20 @@ const num = (v: unknown): number => {
   return Number.isFinite(n) ? n : NaN;
 };
 
-export function assembleItem(lines: RawTxnLine[], qohRows: RawQoh[]): AssembledItem {
+/**
+ * Optional measured-opening anchor (from an imported NetSuite snapshot).
+ *  - cutoffDate: the snapshot's "as of" date (ISO).
+ *  - openingByLocName: location NAME → on-hand at the cutoff.
+ * When provided, the engine starts each location at its snapshot qty and
+ * INCLUDES ONLY transactions dated AFTER the cutoff (the snapshot already
+ * embodies everything on/before it). Without it, we zero-anchor (legacy).
+ */
+export interface OpeningAnchor {
+  cutoffDate: string;
+  openingByLocName: Map<string, number>; // key = location name
+}
+
+export function assembleItem(lines: RawTxnLine[], qohRows: RawQoh[], anchor?: OpeningAnchor): AssembledItem {
   const nameByLoc = new Map<string, string>();
   const qohByLoc = new Map<string, number>();
   for (const r of qohRows) {
@@ -84,6 +97,9 @@ export function assembleItem(lines: RawTxnLine[], qohRows: RawQoh[]): AssembledI
     const locId = r.location == null ? '(no location)' : String(r.location);
     if (r.loc_name) nameByLoc.set(locId, String(r.loc_name));
     const date = normalizeNsDate(r.trandate as any) || String(r.trandate);
+    // With a snapshot anchor, drop everything on/before the cutoff — the
+    // snapshot already accounts for it. (dateMin/dateMax track only kept rows.)
+    if (anchor && date <= anchor.cutoffDate) continue;
     if (dateMin === null || date < dateMin) dateMin = date;
     if (dateMax === null || date > dateMax) dateMax = date;
 
@@ -118,28 +134,33 @@ export function assembleItem(lines: RawTxnLine[], qohRows: RawQoh[]): AssembledI
   const residuals: LocationResidual[] = [];
   for (const loc of allLocs) {
     const qoh = qohByLoc.get(loc) ?? 0;
-    const sum = sumByLoc.get(loc) ?? 0;
-    // ZERO-ANCHOR: start every location's running balance at 0, so the
-    // reconstructed end-of-day curve matches NetSuite's own day-by-day (NS runs
-    // forward from zero). The old "opening = qoh − sum" smeared any phantom
-    // discrepancy into the curve, shifting every depth (FPS0028: −1,412 vs the
-    // true −1,436). We keep currentQoh on the opening for reference, but
-    // openingQty is 0.
+    const sum = sumByLoc.get(loc) ?? 0; // sum of KEPT transactions (post-cutoff if anchored)
+    const locName = nameByLoc.get(loc) || loc;
+
+    // OPENING:
+    //  - With a snapshot anchor: the MEASURED on-hand at the cutoff (the only
+    //    way to correctly place a residual in time — see FPS0017 vs FPS0028).
+    //    Defaults to 0 if the snapshot has no row for this (item, location).
+    //  - Without: zero-anchor (legacy), matching NetSuite's run-from-zero.
+    const opening = anchor ? anchor.openingByLocName.get(locName) ?? 0 : 0;
+
     openings.push({
       locationNsId: loc,
-      locationName: nameByLoc.get(loc) || loc,
-      openingQty: 0,
+      locationName: locName,
+      openingQty: opening,
       currentQoh: qoh,
     });
-    // Residual = what NS on-hand claims vs what the transaction history sums to.
-    // After a zero-anchored run, final balance = sum; residual = qoh − sum.
-    // Round to 2 dp to swallow float noise (e.g. summing 42.2-style decimals
-    // can leave a 1e-13 artifact that is NOT a real discrepancy).
-    const residual = Math.round((qoh - sum) * 100) / 100;
+
+    // Residual = NS current on-hand vs the reconstructed final (opening + Σkept).
+    // With a correct snapshot this should be ~0; a nonzero value flags an
+    // (item, location) whose on-hand still can't be reconciled (a real data
+    // integrity issue, or a snapshot gap). Round 2dp to ignore float noise.
+    const reconstructedFinal = opening + sum;
+    const residual = Math.round((qoh - reconstructedFinal) * 100) / 100;
     if (residual !== 0) {
       residuals.push({
         locationNsId: loc,
-        locationName: nameByLoc.get(loc) || loc,
+        locationName: locName,
         currentQoh: qoh,
         txSum: sum,
         residual,

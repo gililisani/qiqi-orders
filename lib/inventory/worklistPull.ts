@@ -11,7 +11,8 @@
  */
 import { createNetSuiteAPI } from '@/lib/netsuite';
 import { computeLedger } from '@/lib/inventory/balanceEngine';
-import { assembleItem, type RawTxnLine, type RawQoh } from '@/lib/inventory/assemble';
+import { assembleItem, type RawTxnLine, type RawQoh, type OpeningAnchor } from '@/lib/inventory/assemble';
+import { readSnapshotLookup } from '@/lib/inventory/openingSnapshot';
 import {
   computeWorklistForItem,
   type WorklistRow,
@@ -122,12 +123,24 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
     });
   }
 
+  // Load the opening snapshot once; build a per-item anchor from it.
+  const { lookup: snapLookup, cutoffDate } = await readSnapshotLookup();
+  const anchorFor = (itemCode: string): OpeningAnchor | undefined => {
+    if (!cutoffDate || snapLookup.size === 0) return undefined;
+    const prefix = `${itemCode.toUpperCase()}|`;
+    const openingByLocName = new Map<string, number>();
+    for (const [k, v] of snapLookup) {
+      if (k.startsWith(prefix)) openingByLocName.set(k.slice(prefix.length), v);
+    }
+    return { cutoffDate, openingByLocName };
+  };
+
   // First pass: assemble + link chains + build ledgers → CatalogContext.
   const ctx: CatalogContext = { byItemId: new Map<string, ItemContext>(), componentsByBuildTxId };
   const residuals: WorklistComputation['residuals'] = [];
   for (const [itemId, lines] of linesByItem) {
     const meta = metaById.get(itemId) ?? { itemCode: itemId, itemName: null, nsItemId: itemId };
-    const assembled = assembleItem(lines, qohByItem.get(itemId) ?? []);
+    const assembled = assembleItem(lines, qohByItem.get(itemId) ?? [], anchorFor(meta.itemCode));
     for (const r of assembled.residuals) {
       residuals.push({ ...r, itemCode: meta.itemCode, nsItemId: meta.nsItemId, itemName: meta.itemName });
     }
