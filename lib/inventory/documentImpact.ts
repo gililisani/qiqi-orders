@@ -12,7 +12,6 @@ import { createNetSuiteAPI } from '@/lib/netsuite';
 import { assembleItem, type OpeningAnchor } from '@/lib/inventory/assemble';
 import {
   computeLedger,
-  summarizeNegatives,
   applyChanges,
   type LedgerTxn,
   type OpeningBalance,
@@ -80,21 +79,41 @@ export interface DocImpact {
 
 const key = (itemCode: string, loc: string) => `${itemCode}|||${loc}`;
 
-/** All (item,location) negatives across the document's affected items, given a
- *  per-item transaction override (the change already applied or not). */
-function negativesFor(items: DocItem[], txnsByItem: Map<string, LedgerTxn[]>): Map<string, NegativeRef> {
-  const out = new Map<string, NegativeRef>();
+/**
+ * Per-(item,location) negativity stats — TIME-AWARE. The earlier version only
+ * recorded WHETHER a location was ever negative, so a fix that created a NEW
+ * negative window at a location already negative elsewhere in time was missed
+ * (the IT10186 → 12/31 bug). We now capture, per location:
+ *   - area:   Σ max(0, −eod) over the timeline (total negative unit-days proxy).
+ *             Monotonic — any new window OR deepening increases it.
+ *   - depth:  most-negative end-of-day (for display + adjustment sizing).
+ *   - since:  first date the balance goes negative (for adjustment dating).
+ */
+interface LocStat {
+  itemCode: string;
+  locationName: string;
+  area: number;
+  depth: number; // <= 0
+  since: string | null;
+}
+
+function statsFor(items: DocItem[], txnsByItem: Map<string, LedgerTxn[]>): Map<string, LocStat> {
+  const out = new Map<string, LocStat>();
   for (const it of items) {
     const txns = txnsByItem.get(it.nsItemId) ?? it.transactions;
     const ledger = computeLedger(txns, it.openings);
-    const negs = summarizeNegatives(ledger);
-    for (const n of Object.values(negs)) {
-      out.set(key(it.itemCode, n.locationName), {
-        itemCode: it.itemCode,
-        locationName: n.locationName,
-        depth: n.deepestBalance,
-        since: n.spans[0]?.from ?? n.deepestDate,
-      });
+    for (const lane of Object.values(ledger.byLocation)) {
+      let area = 0;
+      let depth = 0;
+      let since: string | null = null;
+      for (const p of lane.eodTimeline) {
+        if (p.eod < 0) {
+          area += -p.eod;
+          if (p.eod < depth) depth = p.eod;
+          if (since === null) since = p.date;
+        }
+      }
+      if (area > 0) out.set(key(it.itemCode, lane.locationName), { itemCode: it.itemCode, locationName: lane.locationName, area, depth, since });
     }
   }
   return out;
@@ -111,34 +130,42 @@ function applyDocChangeToItem(txns: LedgerTxn[], nsTransactionId: string, change
   return applyChanges(txns, [simChange]);
 }
 
+const EPS = 0.001;
+
 export function evaluateDocChange(ctx: DocumentContext, change: DocChange): DocImpact {
-  const before = negativesFor(ctx.items, new Map());
+  const before = statsFor(ctx.items, new Map());
 
   const afterTxns = new Map<string, LedgerTxn[]>();
   for (const it of ctx.items) {
     afterTxns.set(it.nsItemId, applyDocChangeToItem(it.transactions, ctx.nsTransactionId, change));
   }
-  const after = negativesFor(ctx.items, afterTxns);
+  const after = statsFor(ctx.items, afterTxns);
+
+  const toRef = (s: LocStat): NegativeRef => ({ itemCode: s.itemCode, locationName: s.locationName, depth: s.depth, since: s.since ?? '' });
 
   const fixed: NegativeRef[] = [];
-  const created: NegativeRef[] = [];
-  const remaining: NegativeRef[] = [];
+  const created: NegativeRef[] = []; // NEW or WORSE — anything that got more negative
+  const remaining: NegativeRef[] = []; // still negative, but no worse than before
 
-  for (const [k, n] of before) {
-    if (!after.has(k)) fixed.push(n);
-    else remaining.push(after.get(k)!);
-  }
-  for (const [k, n] of after) {
-    if (!before.has(k)) created.push(n);
+  const allKeys = new Set([...before.keys(), ...after.keys()]);
+  for (const k of allKeys) {
+    const b = before.get(k);
+    const a = after.get(k);
+    if (a && !b) created.push(toRef(a)); // brand-new negativity
+    else if (b && !a) fixed.push(toRef(b)); // fully cleared
+    else if (a && b) {
+      if (a.area > b.area + EPS) created.push(toRef(a)); // deepened / new window in time
+      else remaining.push(toRef(a)); // unchanged or improved-but-still-negative
+    }
   }
 
-  const sortRef = (a: NegativeRef, b: NegativeRef) => a.depth - b.depth;
+  const sortRef = (x: NegativeRef, y: NegativeRef) => x.depth - y.depth;
   fixed.sort(sortRef);
   created.sort(sortRef);
   remaining.sort(sortRef);
 
-  // Adjustment quantification: to make everything clean AFTER the change, each
-  // still-negative or newly-negative (item,location) needs +|depth| units.
+  // To make fully clean, each new/worse or still-negative (item,location) needs
+  // +|depth| units at its first negative date.
   const adjustments: AdjustmentSuggestion[] = [...created, ...remaining].map((n) => ({
     itemCode: n.itemCode,
     locationName: n.locationName,

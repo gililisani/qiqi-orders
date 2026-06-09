@@ -89,4 +89,34 @@ describe('document impact — multi-item', () => {
     const adj = impact.adjustments.find((a) => a.itemCode === 'ITEMA' && a.locationName === 'PK');
     expect(adj?.addQty).toBe(50);
   });
+
+  // Regression for the IT10186 bug: a change that creates a NEW negative window
+  // at a location ALREADY negative elsewhere in time must be flagged "created"
+  // (the old whether-ever-negative comparison missed this and reported "clean").
+  it('detects a NEW/ deepened negative window even when the location was already negative later', () => {
+    const item: DocItem = {
+      nsItemId: 'X',
+      itemCode: 'ITEMX',
+      itemName: 'X',
+      transactions: [
+        // PK starts fine; receives via DOC on 07-11 (+50), consumes 50 on 08-01 (net 0),
+        // then is independently negative far later (2025) for an unrelated reason.
+        tx({ tx: 'DOC', loc: 'SQ', date: '2024-07-11', qty: -50 }),
+        tx({ tx: 'DOC', loc: 'PK', date: '2024-07-11', qty: 50 }),
+        tx({ tx: 'CONS', loc: 'PK', date: '2024-08-01', qty: -50 }),
+        tx({ tx: 'LATE', loc: 'PK', date: '2025-06-01', qty: -10 }), // pre-existing 2025 negative
+        tx({ tx: 'RSQ', loc: 'SQ', date: '2024-07-05', qty: 50 }), // SQ has stock so DOC is fine where it is
+      ],
+      openings: [open('SQ'), open('PK')],
+    };
+    const ctx: DocumentContext = {
+      docNumber: 'DOC', nsTransactionId: 'DOC', nsType: 'InvTrnfr', tranDate: '2024-07-11',
+      legs: [], items: [item], itemCount: 1, locationNames: ['SQ', 'PK'],
+    };
+    // Move DOC later than the 08-01 consumption → PK goes negative Aug–later,
+    // a NEW window even though PK was already negative in 2025.
+    const impact = evaluateDocChange(ctx, { kind: 'changeDate', newDate: '2024-09-01' });
+    expect(impact.created.some((c) => c.itemCode === 'ITEMX' && c.locationName === 'PK')).toBe(true);
+    expect(impact.clean).toBe(false);
+  });
 });
