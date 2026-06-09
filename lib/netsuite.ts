@@ -262,6 +262,25 @@ export class NetSuiteAPI {
     return !!process.env.NETSUITE_ASOF_SCRIPT_ID && !!process.env.NETSUITE_ASOF_DEPLOY_ID;
   }
 
+  // Diagnostic: hit the RESTlet's self-probe (?debug=1) to learn which search
+  // step NetSuite rejects. Temporary aid while validating the RESTlet.
+  async getInventoryAsOfDebug(dateIso: string, itemCode?: string): Promise<unknown> {
+    const scriptId = process.env.NETSUITE_ASOF_SCRIPT_ID;
+    const deployId = process.env.NETSUITE_ASOF_DEPLOY_ID;
+    const urlAccountId = this.config.accountId.toLowerCase().replace(/_/g, '-');
+    const base = `https://${urlAccountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl`;
+    const params = new URLSearchParams({ script: scriptId!, deploy: deployId!, date: dateIso, debug: '1' });
+    if (itemCode) params.set('item', itemCode);
+    const url = `${base}?${params.toString()}`;
+    const r = await axios({
+      method: 'GET',
+      url,
+      headers: { Authorization: this.getAuthHeader(url, 'GET'), Accept: 'application/json', 'Content-Type': 'application/json' },
+      validateStatus: () => true,
+    });
+    return r.data;
+  }
+
   // ---------------------------------------------------------------------------
   // Item ID resolution — looks up NS internal IDs for a list of SKUs in one call
   // ---------------------------------------------------------------------------

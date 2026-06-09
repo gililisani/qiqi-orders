@@ -21,6 +21,13 @@ async function main() {
     console.error('RESTlet not configured. Set NETSUITE_ASOF_SCRIPT_ID and NETSUITE_ASOF_DEPLOY_ID in .env.local.');
     process.exit(1);
   }
+
+  // --debug: hit the RESTlet's self-diagnosing probe and print which step fails.
+  if (process.argv.includes('--debug')) {
+    const dbg = await (ns as any).getInventoryAsOfDebug(date, item);
+    console.log(JSON.stringify(dbg, null, 2));
+    return;
+  }
   console.log(`[as-of] calling RESTlet for date=${date}${item ? ` item=${item}` : ''}…`);
   const res = await ns.getInventoryAsOf(date, item ? { itemCode: item } : undefined);
   console.log(`[as-of] asOfDate=${res.asOfDate} rows=${res.rows.length}`);

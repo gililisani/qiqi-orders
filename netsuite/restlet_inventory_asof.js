@@ -68,9 +68,47 @@ define(['N/search', 'N/error'], function (search, error) {
       filters.push(['item.itemid', 'is', context.item]);
     }
 
-    // NON-grouped search (summary/grouped searches threw generic internal
-    // errors on this account). Pull raw line rows and aggregate by (item,
-    // location) in JS — robust and trivial.
+    // ── Self-diagnosing probe ────────────────────────────────────────────────
+    // NetSuite returns an opaque "UNEXPECTED_ERROR" with no detail, so we run a
+    // sequence of progressively-fuller searches inside try/catch and, with
+    // ?debug=1, return WHICH step fails and its real .message. Remove once the
+    // working combination is confirmed.
+    if (context.debug) {
+      var steps = [];
+      function tryStep(label, build) {
+        try {
+          var ss = build();
+          var n = ss.run().getRange({ start: 0, end: 5 }).length;
+          steps.push({ step: label, ok: true, sampleRows: n });
+          return true;
+        } catch (e) {
+          steps.push({ step: label, ok: false, error: (e && (e.message || e.toString())) || 'unknown' });
+          return false;
+        }
+      }
+      tryStep('A: minimal type=item only', function () {
+        return search.create({ type: search.Type.TRANSACTION, filters: [['mainline', 'is', 'F']], columns: [search.createColumn({ name: 'internalid' })] });
+      });
+      tryStep('B: + item/location/quantity columns', function () {
+        return search.create({ type: search.Type.TRANSACTION, filters: [['mainline', 'is', 'F']], columns: [search.createColumn({ name: 'item' }), search.createColumn({ name: 'location' }), search.createColumn({ name: 'quantity' })] });
+      });
+      tryStep('C: + posting + taxline filters', function () {
+        return search.create({ type: search.Type.TRANSACTION, filters: [['posting', 'is', 'T'], 'AND', ['mainline', 'is', 'F'], 'AND', ['taxline', 'is', 'F']], columns: [search.createColumn({ name: 'item' }), search.createColumn({ name: 'location' }), search.createColumn({ name: 'quantity' })] });
+      });
+      tryStep('D: + trandate onorbefore (Date object)', function () {
+        return search.create({ type: search.Type.TRANSACTION, filters: [['posting', 'is', 'T'], 'AND', ['mainline', 'is', 'F'], 'AND', ['trandate', 'onorbefore', asOfDateObj]], columns: [search.createColumn({ name: 'item' })] });
+      });
+      tryStep('E: + trandate onorbefore (MM/DD/YYYY string)', function () {
+        var mmdd = p[1] + '/' + p[2] + '/' + p[0];
+        return search.create({ type: search.Type.TRANSACTION, filters: [['posting', 'is', 'T'], 'AND', ['mainline', 'is', 'F'], 'AND', ['trandate', 'onorbefore', mmdd]], columns: [search.createColumn({ name: 'item' })] });
+      });
+      tryStep('F: + item.itemid filter', function () {
+        return search.create({ type: search.Type.TRANSACTION, filters: [['mainline', 'is', 'F'], 'AND', ['item.itemid', 'is', context.item || 'FPS0017']], columns: [search.createColumn({ name: 'item' })] });
+      });
+      return { debug: true, steps: steps };
+    }
+
+    // NON-grouped search; aggregate by (item, location) in JS.
     var itemCol = search.createColumn({ name: 'item' });
     var locCol = search.createColumn({ name: 'location' });
     var qtyCol = search.createColumn({ name: 'quantity' });
