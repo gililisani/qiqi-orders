@@ -49,6 +49,7 @@ interface Row {
   since: string | null;
   tier: number;
   feedStatus: FeedStatus | null;
+  verified?: boolean | null;
   recommendationType: string;
   category: Category;
   editsRequired: EditStep[];
@@ -461,6 +462,14 @@ export default function WorklistPage() {
                       <div className="flex flex-col items-end gap-1">
                         <span className="font-mono text-xs text-destructive font-semibold">{r.depth ? fmt(r.depth) : ''}</span>
                         <FeedBadge s={r.feedStatus} />
+                        {r.verified === false && (
+                          <span
+                            className="rounded bg-orange-100 px-1.5 text-[10px] font-medium text-orange-800"
+                            title="Depth is approximate — this window overlaps a span NetSuite couldn't reconcile against a trusted snapshot. Capture more snapshots around it to verify."
+                          >
+                            approximate
+                          </span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="py-2 font-mono text-xs whitespace-nowrap align-top">{r.since ?? ''}</TableCell>

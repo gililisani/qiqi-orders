@@ -9,7 +9,7 @@
  * pull and the catalog-wide worklist pull so the math can't diverge.
  */
 import { normalizeNsDate } from '@/lib/netsuite';
-import type { LedgerTxn, OpeningBalance, TranType } from '@/lib/inventory/balanceEngine';
+import type { LedgerTxn, OpeningBalance, TranType, CorrectionMap } from '@/lib/inventory/balanceEngine';
 
 const NS_TO_TYPE: Record<string, TranType> = {
   ItemRcpt: 'IR',
@@ -56,6 +56,9 @@ export interface AssembledItem {
   openings: OpeningBalance[];
   /** Per-location phantom residuals (NS on-hand vs transaction history). */
   residuals: LocationResidual[];
+  /** Trusted re-anchor points (keyed by location id) for the later snapshots —
+   *  pass straight to computeLedger. Empty unless the anchor carried them. */
+  corrections: CorrectionMap;
   dateMin: string | null;
   dateMax: string | null;
 }
@@ -77,6 +80,10 @@ const num = (v: unknown): number => {
 export interface OpeningAnchor {
   cutoffDate: string;
   openingByLocName: Map<string, number>; // key = location name
+  /** Later trusted snapshots (dates strictly after cutoffDate): location name →
+   *  (as-of date → on-hand). When present, computeLedger re-anchors + validates
+   *  at each. */
+  correctionsByLocName?: Map<string, Map<string, number>>;
 }
 
 export function assembleItem(lines: RawTxnLine[], qohRows: RawQoh[], anchor?: OpeningAnchor): AssembledItem {
@@ -168,5 +175,21 @@ export function assembleItem(lines: RawTxnLine[], qohRows: RawQoh[], anchor?: Op
     }
   }
 
-  return { transactions, openings, residuals, dateMin, dateMax };
+  // Build re-anchor corrections (later trusted snapshots), keyed by location id.
+  // nameByLoc is locId→name; we need name→id to translate the snapshot keys.
+  const corrections: CorrectionMap = new Map();
+  if (anchor?.correctionsByLocName) {
+    const idByName = new Map<string, string>();
+    for (const [id, name] of nameByLoc) idByName.set(name, id);
+    for (const [locName, dateQty] of anchor.correctionsByLocName) {
+      const locId = idByName.get(locName) ?? locName; // synthetic id if loc has no activity
+      const pts = [...dateQty.entries()]
+        .filter(([date]) => date > anchor.cutoffDate)
+        .map(([date, qty]) => ({ date, qty }))
+        .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+      if (pts.length) corrections.set(locId, pts);
+    }
+  }
+
+  return { transactions, openings, residuals, corrections, dateMin, dateMax };
 }

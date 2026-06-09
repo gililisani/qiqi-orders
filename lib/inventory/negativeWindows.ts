@@ -37,6 +37,12 @@ export interface NegativeWindow {
   status: 'Ongoing' | 'Closed';
   crossedClosedPeriod: boolean;
   tier: Tier;
+  /** Trust against the dated trusted snapshots:
+   *  true  = window sits entirely within snapshot-to-snapshot spans that
+   *          reconciled (numbers are trustworthy);
+   *  false = overlaps a span NetSuite couldn't reconcile (approximate);
+   *  undefined = not evaluated (no dated snapshots covered this item). */
+  verified?: boolean;
 }
 
 export interface WindowItemMeta {
@@ -101,8 +107,27 @@ function buildWindow(
   };
 }
 
+/** Is a window [start, end) trustworthy given the lane's unreconciled spans?
+ *  undefined when no dated snapshots covered this item (can't judge). */
+function windowVerified(
+  lane: LocationLedger,
+  start: string,
+  end: string | null,
+  snapshotsApplied: boolean,
+): boolean | undefined {
+  if (!snapshotsApplied) return undefined;
+  const endRef = end ?? '9999-12-31';
+  const overlaps = lane.unverifiedSegments.some((seg) => seg.to >= start && seg.from <= endRef);
+  return !overlaps;
+}
+
 /** Every negative window for an item, across all locations. */
-export function computeItemWindows(meta: WindowItemMeta, ledger: Ledger): NegativeWindow[] {
+export function computeItemWindows(
+  meta: WindowItemMeta,
+  ledger: Ledger,
+  opts?: { snapshotsApplied?: boolean },
+): NegativeWindow[] {
+  const snapshotsApplied = opts?.snapshotsApplied ?? false;
   // Latest date in the item's data (for ongoing-window duration / year-cross).
   let dateMax = '';
   for (const lane of Object.values(ledger.byLocation)) {
@@ -114,6 +139,11 @@ export function computeItemWindows(meta: WindowItemMeta, ledger: Ledger): Negati
     let inW = false;
     let start = '';
     let min = 0;
+    const emit = (end: string | null) => {
+      const w = buildWindow(lane, start, end, min, dateMax, meta);
+      w.verified = windowVerified(lane, start, end, snapshotsApplied);
+      out.push(w);
+    };
     for (const p of lane.eodTimeline) {
       if (p.eod < 0) {
         if (!inW) {
@@ -124,11 +154,11 @@ export function computeItemWindows(meta: WindowItemMeta, ledger: Ledger): Negati
           min = Math.min(min, p.eod);
         }
       } else if (inW) {
-        out.push(buildWindow(lane, start, p.date, min, dateMax, meta));
+        emit(p.date);
         inW = false;
       }
     }
-    if (inW) out.push(buildWindow(lane, start, null, min, dateMax, meta));
+    if (inW) emit(null);
   }
   return out;
 }

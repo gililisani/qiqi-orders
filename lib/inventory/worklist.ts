@@ -119,6 +119,11 @@ export interface WorklistRow {
    *  catalog pull; undefined on engine-only computation (e.g. unit tests). */
   feedStatus?: FeedStatus | null;
 
+  /** Trust of the historical depth against dated snapshots: true = verified,
+   *  false = approximate (overlaps an unreconciled span), undefined = no dated
+   *  snapshot covered this item. Mirrors the window's verified flag. */
+  verified?: boolean;
+
   // Headline recommendation (the first/best option).
   recommendationType: RecommendationType;
   category: Category;
@@ -314,6 +319,7 @@ function baseRow(meta: ItemMeta, t: WindowTarget, w: NegativeWindow): Omit<Workl
     depth: t.depth,
     since: w.start,
     tier: w.tier as Tier,
+    verified: w.verified,
   };
 }
 

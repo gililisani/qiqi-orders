@@ -28,6 +28,7 @@ interface Props {
   itemCode: string;
   txns: LedgerTxn[];
   openings: OpeningBalance[];
+  corrections?: Map<string, { date: string; qty: number }[]>;
   selectedTxnId: string | null;
   plannedTxnIds: Set<string>;
   onMarkersChanged: () => void | Promise<void>;
@@ -37,6 +38,7 @@ export function InventorySimulator({
   itemCode,
   txns,
   openings,
+  corrections,
   selectedTxnId,
   plannedTxnIds,
   onMarkersChanged,
@@ -89,7 +91,7 @@ export function InventorySimulator({
   const runSimulate = () => {
     const change = buildChange();
     if (!change) return;
-    setResult(simulate(txns, openings, change));
+    setResult(simulate(txns, openings, change, corrections));
   };
 
   const reset = () => {

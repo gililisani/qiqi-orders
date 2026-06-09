@@ -70,7 +70,25 @@ export interface LocationLedger {
   rows: AnnotatedTxn[];
   eodTimeline: EodPoint[];
   final: number; // final running balance (= currentQoh by construction of opening)
+  /** Snapshot-to-snapshot spans whose forward replay failed to reconcile to the
+   *  trusted snapshot (empty if all verified or no dated snapshots supplied). */
+  unverifiedSegments: UnverifiedSegment[];
 }
+
+/** A span between two trusted snapshots whose forward replay did NOT reconcile
+ *  to the later snapshot — NetSuite has movements we can't see here, so any
+ *  balance shown inside it is approximate. `gap` = trusted − reconstructed. */
+export interface UnverifiedSegment {
+  from: string; // previous anchor date (exclusive) — or first activity if none
+  to: string; // the snapshot date where the mismatch was detected
+  gap: number;
+}
+
+/** Trusted re-anchor points per location id: date → on-hand at end of that date.
+ *  When supplied to computeLedger, the running balance is corrected to the
+ *  trusted value at each date (and the pre-correction gap is recorded). */
+export type Correction = { date: string; qty: number };
+export type CorrectionMap = Map<string, Correction[]>; // locationNsId → sorted corrections
 
 export interface Ledger {
   byLocation: Record<string, LocationLedger>;
@@ -168,7 +186,11 @@ export function sortTxns(txns: LedgerTxn[]): LedgerTxn[] {
  * (a) and (b) unify to: eod(day) < 0 AND eod(day) < priorEod. On such a
  * "problem day", every outbound row that day is flagged.
  */
-export function computeLedger(txns: LedgerTxn[], openings: OpeningBalance[]): Ledger {
+export function computeLedger(
+  txns: LedgerTxn[],
+  openings: OpeningBalance[],
+  corrections?: CorrectionMap,
+): Ledger {
   const openingByLoc = new Map<string, OpeningBalance>();
   for (const o of openings) openingByLoc.set(o.locationNsId, o);
 
@@ -180,6 +202,8 @@ export function computeLedger(txns: LedgerTxn[], openings: OpeningBalance[]): Le
   }
   // Make sure locations that only have an opening (no rows) still appear.
   for (const o of openings) if (!byLoc.has(o.locationNsId)) byLoc.set(o.locationNsId, []);
+  // …and locations that only have correction points.
+  if (corrections) for (const locId of corrections.keys()) if (!byLoc.has(locId)) byLoc.set(locId, []);
 
   const result: Ledger = { byLocation: {}, suspectRowIds: new Set() };
 
@@ -188,15 +212,27 @@ export function computeLedger(txns: LedgerTxn[], openings: OpeningBalance[]): Le
     const opening = openingByLoc.get(locId)?.openingQty ?? 0;
     const locationName =
       openingByLoc.get(locId)?.locationName || sorted[0]?.locationName || locId;
+    const corr = corrections?.get(locId) ?? [];
 
     const annotated: AnnotatedTxn[] = [];
     const eodTimeline: EodPoint[] = [];
+    const unverifiedSegments: UnverifiedSegment[] = [];
     let running = opening;
     let priorEod = opening;
     let i = 0;
+    let ci = 0;
+    // "from" anchor for the next correction segment (last trusted point we held);
+    // set to the first event date lazily on the first iteration.
+    let prevAnchor = '';
 
-    while (i < sorted.length) {
-      const date = sorted[i].tranDate;
+    // Walk the merged stream of transaction dates and correction dates.
+    while (i < sorted.length || ci < corr.length) {
+      const txnDate = i < sorted.length ? sorted[i].tranDate : null;
+      const corrDate = ci < corr.length ? corr[ci].date : null;
+      const date =
+        txnDate !== null && (corrDate === null || txnDate <= corrDate) ? txnDate : corrDate!;
+      if (prevAnchor === '') prevAnchor = date;
+
       const bucket: AnnotatedTxn[] = [];
       while (i < sorted.length && sorted[i].tranDate === date) {
         running += sorted[i].signedQty;
@@ -205,7 +241,20 @@ export function computeLedger(txns: LedgerTxn[], openings: OpeningBalance[]): Le
         annotated.push(row);
         i++;
       }
-      const eod = running;
+      let eod = running;
+
+      // Trusted snapshot on this date → validate the span since the last anchor,
+      // then re-anchor the running balance to the trusted value.
+      if (corrDate === date) {
+        const trusted = corr[ci].qty;
+        const gap = Math.round((trusted - eod) * 100) / 100;
+        if (gap !== 0) unverifiedSegments.push({ from: prevAnchor, to: date, gap });
+        running = trusted;
+        eod = trusted;
+        prevAnchor = date;
+        ci++;
+      }
+
       const problemDay = eod < 0 && eod < priorEod;
       if (problemDay) {
         for (const row of bucket) {
@@ -226,6 +275,7 @@ export function computeLedger(txns: LedgerTxn[], openings: OpeningBalance[]): Le
       rows: annotated,
       eodTimeline,
       final: running,
+      unverifiedSegments,
     };
   }
 
@@ -371,8 +421,9 @@ export function simulate(
   txns: LedgerTxn[],
   openings: OpeningBalance[],
   change: SimChange,
+  corrections?: CorrectionMap,
 ): SimResult {
-  return simulateMany(txns, openings, [change]);
+  return simulateMany(txns, openings, [change], corrections);
 }
 
 /** Multi-change variant — applies all changes together, then diffs. */
@@ -380,9 +431,10 @@ export function simulateMany(
   txns: LedgerTxn[],
   openings: OpeningBalance[],
   changes: SimChange[],
+  corrections?: CorrectionMap,
 ): SimResult {
-  const current = summarizeNegatives(computeLedger(txns, openings));
-  const after = summarizeNegatives(computeLedger(applyChanges(txns, changes), openings));
+  const current = summarizeNegatives(computeLedger(txns, openings, corrections));
+  const after = summarizeNegatives(computeLedger(applyChanges(txns, changes), openings, corrections));
 
   const delta: SimDelta = { fixed: [], stillNegative: [], newProblem: [] };
   const locIds = new Set([...Object.keys(current), ...Object.keys(after)]);

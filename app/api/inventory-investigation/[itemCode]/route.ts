@@ -15,7 +15,12 @@ export async function GET(
 
     const cached = await readCache(code);
     if (!cached) return NextResponse.json({ cached: false, itemCode: code });
-    return NextResponse.json({ cached: true, ...cached });
+    // corrections is a Map — JSON would drop it; send as a plain object.
+    return NextResponse.json({
+      ...cached,
+      cached: true,
+      corrections: Object.fromEntries(cached.corrections),
+    });
   } catch (err: any) {
     if (err instanceof Response) return err;
     console.error('[inventory-investigation GET]', err);

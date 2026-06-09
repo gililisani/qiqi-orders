@@ -67,6 +67,7 @@ export async function writeWorklist(comp: WorklistComputation, durationMs: numbe
       confidence: r.category,
       tier: r.tier,
       feed_status: r.feedStatus ?? null,
+      verified: r.verified ?? null,
       notes: r.notes,
       status,
       computed_at: now,
@@ -124,6 +125,7 @@ export async function readWorklist(): Promise<{ rows: WorklistRecord[]; meta: Wo
     suspectDate: r.suspect_date,
     tier: (Number(r.tier) || 4) as Tier,
     feedStatus: r.feed_status ?? null,
+    verified: r.verified ?? undefined,
     notes: r.notes,
     status: r.status,
   }));
@@ -177,6 +179,7 @@ export async function writeNegativeWindows(windows: NegativeWindow[]): Promise<v
     status: w.status,
     crossed_closed_period: w.crossedClosedPeriod,
     tier: w.tier,
+    verified: w.verified ?? null,
     computed_at: now,
   }));
   for (let i = 0; i < rows.length; i += CHUNK) {
@@ -203,6 +206,7 @@ export async function readNegativeWindows(): Promise<NegativeWindow[]> {
     status: r.status,
     crossedClosedPeriod: !!r.crossed_closed_period,
     tier: (Number(r.tier) || 4) as Tier,
+    verified: r.verified ?? undefined,
   }));
 }
 

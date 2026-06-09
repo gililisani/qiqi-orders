@@ -17,7 +17,8 @@
 import { createNetSuiteAPI } from '@/lib/netsuite';
 import { assembleItem, type OpeningAnchor } from '@/lib/inventory/assemble';
 import { resolveOpeningAnchor } from '@/lib/inventory/asOfAnchor';
-import type { LedgerTxn, OpeningBalance } from '@/lib/inventory/balanceEngine';
+import { readItemSnapshots, buildDatedAnchor } from '@/lib/inventory/datedSnapshots';
+import type { LedgerTxn, OpeningBalance, CorrectionMap } from '@/lib/inventory/balanceEngine';
 
 export interface PulledItem {
   itemCode: string;
@@ -27,6 +28,10 @@ export interface PulledItem {
   transactions: LedgerTxn[];
   openings: OpeningBalance[];
   residuals: import('@/lib/inventory/assemble').LocationResidual[];
+  /** Re-anchor corrections from dated snapshots (locationNsId → points). */
+  corrections: CorrectionMap;
+  /** True when dated snapshots anchored this item (enables verified flags). */
+  snapshotsApplied: boolean;
   dateMin: string | null;
   dateMax: string | null;
 }
@@ -64,19 +69,31 @@ export async function pullItemInventory(itemCode: string): Promise<PulledItem> {
       GROUP BY il.location, BUILTIN.DF(il.location)`,
   );
 
-  // Anchor on NetSuite's measured as-of on-hand (RESTlet) or the uploaded CSV
-  // snapshot if one exists (else zero-anchor).
-  const { lookup, cutoffDate } = await resolveOpeningAnchor();
+  // Anchor preference: dated trusted-report snapshots (multi-date, re-anchored +
+  // validated) → legacy single-cutoff RESTlet/CSV → zero-anchor.
+  const dated = await readItemSnapshots(itemCode);
   let anchor: OpeningAnchor | undefined;
-  if (cutoffDate && lookup.size > 0) {
-    const openingByLocName = new Map<string, number>();
-    const prefix = `${itemCode.toUpperCase()}|`;
-    for (const [k, v] of lookup) {
-      if (k.startsWith(prefix)) openingByLocName.set(k.slice(prefix.length), v);
+  let snapshotsApplied = false;
+  if (dated) {
+    anchor = buildDatedAnchor(dated);
+    snapshotsApplied = !!anchor;
+  } else {
+    const { lookup, cutoffDate } = await resolveOpeningAnchor();
+    if (cutoffDate && lookup.size > 0) {
+      const openingByLocName = new Map<string, number>();
+      const prefix = `${itemCode.toUpperCase()}|`;
+      for (const [k, v] of lookup) {
+        if (k.startsWith(prefix)) openingByLocName.set(k.slice(prefix.length), v);
+      }
+      anchor = { cutoffDate, openingByLocName };
     }
-    anchor = { cutoffDate, openingByLocName };
   }
 
-  const { transactions, openings, residuals, dateMin, dateMax } = assembleItem(lines, qohRows, anchor);
-  return { itemCode: itemCode.toUpperCase(), nsItemId, itemName, itemType, transactions, openings, residuals, dateMin, dateMax };
+  const { transactions, openings, residuals, corrections, dateMin, dateMax } = assembleItem(lines, qohRows, anchor);
+  return {
+    itemCode: itemCode.toUpperCase(),
+    nsItemId, itemName, itemType,
+    transactions, openings, residuals, corrections, snapshotsApplied,
+    dateMin, dateMax,
+  };
 }

@@ -13,6 +13,7 @@ import { createNetSuiteAPI } from '@/lib/netsuite';
 import { computeLedger } from '@/lib/inventory/balanceEngine';
 import { assembleItem, type RawTxnLine, type RawQoh, type OpeningAnchor } from '@/lib/inventory/assemble';
 import { resolveOpeningAnchor } from '@/lib/inventory/asOfAnchor';
+import { readAllDatedSnapshots, buildDatedAnchor } from '@/lib/inventory/datedSnapshots';
 import {
   computeWorklistForItem,
   type WorklistRow,
@@ -132,9 +133,16 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
     });
   }
 
-  // Load the opening anchor once (RESTlet measured on-hand, else CSV snapshot).
-  const { lookup: snapLookup, cutoffDate } = await resolveOpeningAnchor();
-  const anchorFor = (itemCode: string): OpeningAnchor | undefined => {
+  // Opening anchor. PREFER the dated trusted-report snapshots (multi-date,
+  // re-anchored + validated each segment). Fall back to the legacy single-cutoff
+  // anchor (RESTlet/CSV) only if no dated snapshots have been captured.
+  const datedByItem = await readAllDatedSnapshots();
+  const hasDated = datedByItem.size > 0;
+  const { lookup: snapLookup, cutoffDate } = hasDated
+    ? { lookup: new Map<string, number>(), cutoffDate: null }
+    : await resolveOpeningAnchor();
+
+  const anchorFromLegacy = (itemCode: string): OpeningAnchor | undefined => {
     if (!cutoffDate || snapLookup.size === 0) return undefined;
     const prefix = `${itemCode.toUpperCase()}|`;
     const openingByLocName = new Map<string, number>();
@@ -143,18 +151,25 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
     }
     return { cutoffDate, openingByLocName };
   };
+  const anchorFor = (itemCode: string): OpeningAnchor | undefined => {
+    const dated = datedByItem.get(itemCode.toUpperCase());
+    return dated ? buildDatedAnchor(dated) : anchorFromLegacy(itemCode);
+  };
 
   // First pass: assemble + link chains + build ledgers → CatalogContext.
   const ctx: CatalogContext = { byItemId: new Map<string, ItemContext>(), componentsByBuildTxId };
   const residuals: WorklistComputation['residuals'] = [];
+  const snapshotsAppliedByItemId = new Map<string, boolean>();
   for (const [itemId, lines] of linesByItem) {
     const meta = metaById.get(itemId) ?? { itemCode: itemId, itemName: null, nsItemId: itemId };
-    const assembled = assembleItem(lines, qohByItem.get(itemId) ?? [], anchorFor(meta.itemCode));
+    const anchor = anchorFor(meta.itemCode);
+    snapshotsAppliedByItemId.set(itemId, hasDated && datedByItem.has(meta.itemCode.toUpperCase()));
+    const assembled = assembleItem(lines, qohByItem.get(itemId) ?? [], anchor);
     for (const r of assembled.residuals) {
       residuals.push({ ...r, itemCode: meta.itemCode, nsItemId: meta.nsItemId, itemName: meta.itemName });
     }
     const txns = linkChains(assembled.transactions, pairs);
-    const ledger = computeLedger(txns, assembled.openings);
+    const ledger = computeLedger(txns, assembled.openings, assembled.corrections);
     ctx.byItemId.set(itemId, {
       meta,
       txns,
@@ -171,9 +186,11 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
   const rows: WorklistRow[] = [];
   const windows: NegativeWindow[] = [];
   let itemsWithLines = 0;
-  for (const [, ic] of ctx.byItemId) {
+  for (const [itemId, ic] of ctx.byItemId) {
     itemsWithLines++;
-    const itemWindows = computeItemWindows(ic.meta, ic.ledger);
+    const itemWindows = computeItemWindows(ic.meta, ic.ledger, {
+      snapshotsApplied: snapshotsAppliedByItemId.get(itemId) ?? false,
+    });
     windows.push(...itemWindows);
     rows.push(...computeWorklistForItem(ic.meta, ic.txns, ic.openings, ic.ledger, itemWindows, ctx));
   }

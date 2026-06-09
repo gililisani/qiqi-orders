@@ -9,7 +9,7 @@
  */
 import { createServiceRoleClient } from '@/platform/auth/guards';
 import type { PulledItem } from '@/lib/inventory/netsuitePull';
-import type { LedgerTxn, OpeningBalance } from '@/lib/inventory/balanceEngine';
+import type { LedgerTxn, OpeningBalance, CorrectionMap, Correction } from '@/lib/inventory/balanceEngine';
 
 export interface PlanMarker {
   id: string;
@@ -31,6 +31,10 @@ export interface CachedItem {
   lastRefreshedAt: string | null;
   transactions: LedgerTxn[];
   openings: OpeningBalance[];
+  /** Re-anchor corrections from dated snapshots; pass to computeLedger. */
+  corrections: CorrectionMap;
+  /** True when dated snapshots anchored this item (enables verified flags). */
+  snapshotsApplied: boolean;
   planMarkers: PlanMarker[];
 }
 
@@ -48,6 +52,8 @@ export async function writeCache(p: PulledItem): Promise<void> {
       item_type: p.itemType,
       date_min: p.dateMin,
       date_max: p.dateMax,
+      corrections: Object.fromEntries(p.corrections), // CorrectionMap → jsonb
+      snapshots_applied: p.snapshotsApplied,
       last_refreshed_at: now,
       updated_at: now,
     },
@@ -148,6 +154,13 @@ export async function readCache(itemCode: string): Promise<CachedItem | null> {
     createdAt: r.created_at,
   }));
 
+  // Rebuild the CorrectionMap from the stored jsonb object.
+  const corrections: CorrectionMap = new Map();
+  const rawCorr = (item.corrections ?? {}) as Record<string, Correction[]>;
+  for (const [locId, pts] of Object.entries(rawCorr)) {
+    if (Array.isArray(pts) && pts.length) corrections.set(locId, pts);
+  }
+
   return {
     itemCode: item.item_code,
     nsItemId: item.ns_item_id,
@@ -158,6 +171,8 @@ export async function readCache(itemCode: string): Promise<CachedItem | null> {
     lastRefreshedAt: item.last_refreshed_at,
     transactions,
     openings,
+    corrections,
+    snapshotsApplied: !!item.snapshots_applied,
     planMarkers,
   };
 }

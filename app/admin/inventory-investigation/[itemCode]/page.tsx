@@ -30,6 +30,8 @@ interface Payload {
   lastRefreshedAt?: string | null;
   transactions?: LedgerTxn[];
   openings?: OpeningBalance[];
+  corrections?: Record<string, { date: string; qty: number }[]>;
+  snapshotsApplied?: boolean;
   planMarkers?: { nsTransactionId: string }[];
 }
 
@@ -98,7 +100,15 @@ export default function InventoryInvestigationPage() {
     [data],
   );
 
-  const ledger = useMemo(() => computeLedger(txns, openings), [txns, openings]);
+  // Re-anchor corrections from dated trusted snapshots (sent as a plain object).
+  const corrections = useMemo(() => {
+    const raw = data?.corrections ?? {};
+    const m = new Map<string, { date: string; qty: number }[]>();
+    for (const [locId, pts] of Object.entries(raw)) if (Array.isArray(pts) && pts.length) m.set(locId, pts);
+    return m;
+  }, [data]);
+
+  const ledger = useMemo(() => computeLedger(txns, openings, corrections), [txns, openings, corrections]);
   const negatives = useMemo(() => summarizeNegatives(ledger), [ledger]);
   const tableRows = useMemo(() => buildTableRows(ledger), [ledger]);
   const negList = useMemo(
@@ -274,6 +284,7 @@ export default function InventoryInvestigationPage() {
                   itemCode={itemCode}
                   txns={txns}
                   openings={openings}
+                  corrections={corrections}
                   selectedTxnId={selectedTxnId}
                   plannedTxnIds={plannedTxnIds}
                   onMarkersChanged={load}
