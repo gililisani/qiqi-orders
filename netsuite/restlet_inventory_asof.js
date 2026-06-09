@@ -95,17 +95,24 @@ define(['N/search', 'N/error'], function (search, error) {
       tryStep('C: + posting + taxline filters', function () {
         return search.create({ type: search.Type.TRANSACTION, filters: [['posting', 'is', 'T'], 'AND', ['mainline', 'is', 'F'], 'AND', ['taxline', 'is', 'F']], columns: [search.createColumn({ name: 'item' }), search.createColumn({ name: 'location' }), search.createColumn({ name: 'quantity' })] });
       });
-      tryStep('D: + trandate onorbefore (Date object)', function () {
-        return search.create({ type: search.Type.TRANSACTION, filters: [['posting', 'is', 'T'], 'AND', ['mainline', 'is', 'F'], 'AND', ['trandate', 'onorbefore', asOfDateObj]], columns: [search.createColumn({ name: 'item' })] });
+      var mmdd = p[1] + '/' + p[2] + '/' + p[0]; // MM/DD/YYYY
+      var ddmm = p[2] + '/' + p[1] + '/' + p[0]; // DD/MM/YYYY
+      tryStep('D1: trandate onorbefore MM/DD via createFilter', function () {
+        return search.create({ type: search.Type.TRANSACTION, filters: [search.createFilter({ name: 'trandate', operator: search.Operator.ONORBEFORE, values: [mmdd] })], columns: [search.createColumn({ name: 'item' })] });
       });
-      tryStep('E: + trandate onorbefore (MM/DD/YYYY string)', function () {
-        var mmdd = p[1] + '/' + p[2] + '/' + p[0];
-        return search.create({ type: search.Type.TRANSACTION, filters: [['posting', 'is', 'T'], 'AND', ['mainline', 'is', 'F'], 'AND', ['trandate', 'onorbefore', mmdd]], columns: [search.createColumn({ name: 'item' })] });
+      tryStep('D2: trandate onorbefore DD/MM via createFilter', function () {
+        return search.create({ type: search.Type.TRANSACTION, filters: [search.createFilter({ name: 'trandate', operator: search.Operator.ONORBEFORE, values: [ddmm] })], columns: [search.createColumn({ name: 'item' })] });
       });
-      tryStep('F: + item.itemid filter', function () {
-        return search.create({ type: search.Type.TRANSACTION, filters: [['mainline', 'is', 'F'], 'AND', ['item.itemid', 'is', context.item || 'FPS0017']], columns: [search.createColumn({ name: 'item' })] });
+      tryStep('D3: trandate before MM/DD (operator before)', function () {
+        return search.create({ type: search.Type.TRANSACTION, filters: [search.createFilter({ name: 'trandate', operator: search.Operator.BEFORE, values: [mmdd] })], columns: [search.createColumn({ name: 'item' })] });
       });
-      return { debug: true, steps: steps };
+      tryStep('D4: trandate within (onorbefore via within range)', function () {
+        return search.create({ type: search.Type.TRANSACTION, filters: [search.createFilter({ name: 'trandate', operator: search.Operator.WITHIN, values: ['01/01/2000', mmdd] })], columns: [search.createColumn({ name: 'item' })] });
+      });
+      tryStep('D5: formuladate onorbefore TO_DATE', function () {
+        return search.create({ type: search.Type.TRANSACTION, filters: [search.createFilter({ name: 'formuladate', operator: search.Operator.ONORBEFORE, formula: "{trandate}", values: [mmdd] })], columns: [search.createColumn({ name: 'item' })] });
+      });
+      return { debug: true, mmdd: mmdd, ddmm: ddmm, steps: steps };
     }
 
     // NON-grouped search; aggregate by (item, location) in JS.
