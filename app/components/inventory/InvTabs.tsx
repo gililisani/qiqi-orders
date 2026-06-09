@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 
 const TABS = [
   { label: 'Worklist', href: '/admin/inventory-investigation' },
+  { label: 'Document Impact', href: '/admin/inventory-investigation/document-impact' },
   { label: 'Negatives History', href: '/admin/inventory-investigation/negatives-history' },
   { label: 'Data Integrity', href: '/admin/inventory-investigation/data-integrity' },
 ];

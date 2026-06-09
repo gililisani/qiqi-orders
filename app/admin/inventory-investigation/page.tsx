@@ -464,7 +464,17 @@ export default function WorklistPage() {
                                 {e.manual && <span className="mr-1 rounded bg-amber-100 px-1 text-[10px] font-medium text-amber-800">NetSuite UI</span>}
                                 {e.doc && (
                                   <span className="font-mono font-medium">
-                                    {e.doc}
+                                    {e.manual ? (
+                                      e.doc
+                                    ) : (
+                                      <button
+                                        onClick={() => router.push(`/admin/inventory-investigation/document-impact?doc=${encodeURIComponent(e.doc!)}`)}
+                                        className="text-accent hover:underline"
+                                        title="Analyze this document's full multi-item impact"
+                                      >
+                                        {e.doc}
+                                      </button>
+                                    )}
                                     <span className="font-sans font-normal text-muted-foreground"> · {NS_TYPE_LABEL[e.docType ?? ''] ?? e.docType} · </span>
                                   </span>
                                 )}
