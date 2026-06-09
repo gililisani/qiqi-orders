@@ -68,21 +68,20 @@ define(['N/search', 'N/error'], function (search, error) {
       filters.push(['item.itemid', 'is', context.item]);
     }
 
-    // Group by item + location (both are direct fields on the transaction line);
-    // sum quantity. Names come from getText() on the grouped columns.
-    var itemCol = search.createColumn({ name: 'item', summary: search.Summary.GROUP });
-    var locCol = search.createColumn({ name: 'location', summary: search.Summary.GROUP });
-    var qtyCol = search.createColumn({ name: 'quantity', summary: search.Summary.SUM });
+    // NON-grouped search (summary/grouped searches threw generic internal
+    // errors on this account). Pull raw line rows and aggregate by (item,
+    // location) in JS — robust and trivial.
+    var itemCol = search.createColumn({ name: 'item' });
+    var locCol = search.createColumn({ name: 'location' });
+    var qtyCol = search.createColumn({ name: 'quantity' });
 
-    var rows = [];
     var s = search.create({
       type: search.Type.TRANSACTION,
       filters: filters,
       columns: [itemCol, locCol, qtyCol],
     });
 
-    // Page with run().getRange() (older, most reliable API; runPaged with
-    // grouped columns can throw a generic UNEXPECTED_ERROR on some accounts).
+    var agg = {}; // key "itemId|locId" -> {itemId,itemCode,locationId,locationName,qty}
     var runner = s.run();
     var start = 0;
     var PAGE = 1000;
@@ -91,16 +90,28 @@ define(['N/search', 'N/error'], function (search, error) {
       if (!slice || slice.length === 0) break;
       for (var i = 0; i < slice.length; i++) {
         var r = slice[i];
-        rows.push({
-          itemId: r.getValue(itemCol),
-          itemCode: r.getText(itemCol),
-          locationId: r.getValue(locCol),
-          locationName: r.getText(locCol),
-          qty: Number(r.getValue(qtyCol)) || 0,
-        });
+        var itemId = r.getValue(itemCol);
+        var locId = r.getValue(locCol);
+        if (!itemId) continue;
+        var key = itemId + '|' + (locId || '');
+        if (!agg[key]) {
+          agg[key] = {
+            itemId: itemId,
+            itemCode: r.getText(itemCol) || '',
+            locationId: locId || '',
+            locationName: r.getText(locCol) || '',
+            qty: 0,
+          };
+        }
+        agg[key].qty += Number(r.getValue(qtyCol)) || 0;
       }
       if (slice.length < PAGE) break;
       start += PAGE;
+    }
+
+    var rows = [];
+    for (var k in agg) {
+      if (agg.hasOwnProperty(k)) rows.push(agg[k]);
     }
 
     return { asOfDate: asOfDate, count: rows.length, rows: rows };
