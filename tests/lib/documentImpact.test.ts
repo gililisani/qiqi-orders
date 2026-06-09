@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateDocChange, findBestDate, type DocumentContext, type DocItem } from '@/lib/inventory/documentImpact';
+import { evaluateDocChange, findBestDate, planReduceToClearSource, recommendDoc, type DocumentContext, type DocItem } from '@/lib/inventory/documentImpact';
 import type { LedgerTxn, OpeningBalance } from '@/lib/inventory/balanceEngine';
 
 let seq = 0;
@@ -118,5 +118,53 @@ describe('document impact — multi-item', () => {
     const impact = evaluateDocChange(ctx, { kind: 'changeDate', newDate: '2024-09-01' });
     expect(impact.created.some((c) => c.itemCode === 'ITEMX' && c.locationName === 'PK')).toBe(true);
     expect(impact.clean).toBe(false);
+  });
+});
+
+describe('reduce-to-clear-source + ranked recommendation', () => {
+  // SQ has only 30 of ITEMQ but the transfer ships 50 → SQ goes to -20.
+  // Reducing the line to 30 clears SQ; PK then short 20 → compensating transfer.
+  function buildReduceCtx(): DocumentContext {
+    let s = 0;
+    const t = (tx: string, loc: string, date: string, qty: number): LedgerTxn => ({
+      id: `q${++s}`, nsTransactionId: tx, lineId: String(s), docNumber: tx, tranDate: date,
+      tranType: qty >= 0 ? 'IR' : 'IF', nsTypeCode: qty >= 0 ? 'ItemRcpt' : 'ItemShip',
+      locationNsId: loc, locationName: loc, signedQty: qty,
+    });
+    const item: DocItem = {
+      nsItemId: 'Q', itemCode: 'ITEMQ', itemName: 'Q',
+      transactions: [
+        t('RQ', 'SQ', '2024-07-01', 30),
+        t('DOC', 'SQ', '2024-07-11', -50),
+        t('DOC', 'PK', '2024-07-11', 50),
+        t('USE', 'PK', '2024-08-01', -50),
+      ],
+      openings: [
+        { locationNsId: 'SQ', locationName: 'SQ', openingQty: 0 },
+        { locationNsId: 'PK', locationName: 'PK', openingQty: 0 },
+      ],
+    };
+    return { docNumber: 'DOC', nsTransactionId: 'DOC', nsType: 'InvTrnfr', tranDate: '2024-07-11', legs: [], items: [item], itemCount: 1, locationNames: ['SQ', 'PK'] };
+  }
+
+  it('reduces the line to what the source can spare and clears the source', () => {
+    const plan = planReduceToClearSource(buildReduceCtx())!;
+    const r = plan.reductions.find((x) => x.itemCode === 'ITEMQ')!;
+    expect(r.originalQty).toBe(50);
+    expect(r.newQty).toBe(30); // SQ had 30
+    expect(plan.sourceCleared).toBe(true);
+  });
+
+  it('quantifies the destination compensating transfer for the shortfall', () => {
+    const plan = planReduceToClearSource(buildReduceCtx())!;
+    const c = plan.compensatingTransfers.find((x) => x.itemCode === 'ITEMQ' && x.destLocation === 'PK');
+    expect(c?.needQty).toBe(20); // PK consumes 50 but only receives 30 now
+  });
+
+  it('recommendDoc prefers the source-clearing reduce when no date is clean', () => {
+    const { recommendation } = recommendDoc(buildReduceCtx());
+    expect(recommendation.strategy).toBe('reduceQty');
+    expect(recommendation.sourceCleared).toBe(true);
+    expect(recommendation.compensatingTransfers?.length).toBeGreaterThan(0);
   });
 });

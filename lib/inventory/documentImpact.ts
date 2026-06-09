@@ -49,7 +49,11 @@ export interface DocumentContext {
 
 export type DocChange =
   | { kind: 'delete' }
-  | { kind: 'changeDate'; newDate: string };
+  | { kind: 'changeDate'; newDate: string }
+  // Per-item reduction: newQtyByItem maps itemCode → new transfer MAGNITUDE for
+  // that item's line. Items not listed are unchanged. (A transfer's lines are
+  // edited independently in NetSuite, so reductions are per item.)
+  | { kind: 'reduceQty'; newQtyByItem: Record<string, number> };
 
 export interface NegativeRef {
   itemCode: string;
@@ -73,6 +77,8 @@ export interface DocImpact {
   netResolved: number; // fixed.length − created.length
   clean: boolean; // created.length === 0 && fixed.length > 0
   adjustments: AdjustmentSuggestion[]; // to clear everything still/newly negative after the change
+  beforeNegArea: number; // total negative area across all items/locations BEFORE
+  afterNegArea: number; // total negative area AFTER (lower = better; the ranking metric)
 }
 
 // ── Pure evaluation ──────────────────────────────────────────────────────────
@@ -119,15 +125,26 @@ function statsFor(items: DocItem[], txnsByItem: Map<string, LedgerTxn[]>): Map<s
   return out;
 }
 
-/** Apply a document-level change to a single item's transactions. The doc is
- *  identified by nsTransactionId across all items (transfer legs of the SAME
- *  document share it). */
-function applyDocChangeToItem(txns: LedgerTxn[], nsTransactionId: string, change: DocChange): LedgerTxn[] {
-  const simChange: SimChange =
-    change.kind === 'delete'
-      ? { kind: 'delete', nsTransactionId }
-      : { kind: 'changeDate', nsTransactionId, newDate: change.newDate };
-  return applyChanges(txns, [simChange]);
+/** Apply a document-level change to ONE item's transactions. The doc is
+ *  identified by nsTransactionId across all items (legs of the SAME document
+ *  share it). reduceQty is per item, so the item's code selects its new qty. */
+function applyDocChangeToItem(it: DocItem, nsTransactionId: string, change: DocChange): LedgerTxn[] {
+  if (change.kind === 'delete') {
+    return applyChanges(it.transactions, [{ kind: 'delete', nsTransactionId }]);
+  }
+  if (change.kind === 'changeDate') {
+    return applyChanges(it.transactions, [{ kind: 'changeDate', nsTransactionId, newDate: change.newDate }]);
+  }
+  // reduceQty: rewrite BOTH legs of this item's transfer line to the new
+  // magnitude (source negative, dest positive), preserving direction.
+  const mag = change.newQtyByItem[it.itemCode];
+  if (mag == null) return it.transactions; // item unchanged
+  const m = Math.abs(mag);
+  return it.transactions.map((t) => {
+    if (t.nsTransactionId !== nsTransactionId) return t;
+    const sign = t.signedQty < 0 ? -1 : 1;
+    return { ...t, signedQty: sign * m };
+  });
 }
 
 const EPS = 0.001;
@@ -137,7 +154,7 @@ export function evaluateDocChange(ctx: DocumentContext, change: DocChange): DocI
 
   const afterTxns = new Map<string, LedgerTxn[]>();
   for (const it of ctx.items) {
-    afterTxns.set(it.nsItemId, applyDocChangeToItem(it.transactions, ctx.nsTransactionId, change));
+    afterTxns.set(it.nsItemId, applyDocChangeToItem(it, ctx.nsTransactionId, change));
   }
   const after = statsFor(ctx.items, afterTxns);
 
@@ -173,6 +190,8 @@ export function evaluateDocChange(ctx: DocumentContext, change: DocChange): DocI
     addQty: Math.abs(n.depth),
   }));
 
+  const areaSum = (m: Map<string, LocStat>) => [...m.values()].reduce((s, x) => s + x.area, 0);
+
   return {
     change,
     fixed,
@@ -181,6 +200,8 @@ export function evaluateDocChange(ctx: DocumentContext, change: DocChange): DocI
     netResolved: fixed.length - created.length,
     clean: created.length === 0 && fixed.length > 0,
     adjustments,
+    beforeNegArea: areaSum(before),
+    afterNegArea: areaSum(after),
   };
 }
 
@@ -212,9 +233,199 @@ export function findBestDate(ctx: DocumentContext): { best: DocImpact | null; cl
       best = impact;
       break; // earliest clean date wins
     }
-    if (!best || impact.netResolved > best.netResolved) best = impact;
+    // Best-effort = lowest remaining negativity (afterNegArea), not "net count".
+    if (!best || impact.afterNegArea < best.afterNegArea - EPS) best = impact;
   }
   return { best, cleanDate };
+}
+
+// ── Reduce-quantity strategy (clear the SOURCE, quantify dest top-ups) ─────────
+
+export interface ItemReduction {
+  itemCode: string;
+  sourceLocation: string;
+  destLocation: string;
+  originalQty: number;
+  newQty: number; // reduced magnitude
+  reducedBy: number;
+}
+export interface CompensatingTransfer {
+  itemCode: string;
+  destLocation: string;
+  needQty: number; // units the destination still needs
+  byDate: string; // when it first falls short
+}
+export interface ReducePlan {
+  reductions: ItemReduction[];
+  impact: DocImpact;
+  compensatingTransfers: CompensatingTransfer[];
+  sourceCleared: boolean; // true if no source location is left/made negative
+  sourceCreatedArea: number; // new negativity at SOURCE locations (the only "damage" for reduce)
+}
+
+/** Lowest end-of-day at a location across the item's whole post-cutoff timeline. */
+function lowestEod(it: DocItem, locationName: string, txns: LedgerTxn[]): number {
+  const lane = Object.values(computeLedger(txns, it.openings).byLocation).find((l) => l.locationName === locationName);
+  if (!lane) return 0;
+  let lo = lane.opening;
+  for (const p of lane.eodTimeline) if (p.eod < lo) lo = p.eod;
+  return lo;
+}
+
+/**
+ * For a transfer document, reduce each item's line just enough that the SOURCE
+ * location never goes negative, then quantify what the DESTINATION then needs
+ * (to be brought in separately). This is the holistic step-3 plan: minimize
+ * source damage, list the compensating dest transfers.
+ */
+export function planReduceToClearSource(ctx: DocumentContext): ReducePlan | null {
+  // Identify, per item, the source (negative leg) and dest (positive leg) on THIS doc.
+  const newQtyByItem: Record<string, number> = {};
+  const reductions: ItemReduction[] = [];
+
+  for (const it of ctx.items) {
+    const legs = it.transactions.filter((t) => t.nsTransactionId === ctx.nsTransactionId);
+    const src = legs.find((l) => l.signedQty < 0);
+    const dst = legs.find((l) => l.signedQty > 0);
+    if (!src || !dst) continue; // not a 2-leg transfer line for this item
+    const origQty = Math.abs(src.signedQty);
+
+    // How negative does the source get at its worst (with the transfer present)?
+    const srcLow = lowestEod(it, src.locationName, it.transactions);
+    if (srcLow >= 0) continue; // source never negative → no reduction needed for it
+    // Reducing the line by `r` lifts the source by `r` everywhere after the
+    // transfer date. To clear the source, reduce by |srcLow| (capped at origQty).
+    const reduceBy = Math.min(origQty, Math.abs(srcLow));
+    const newQty = origQty - reduceBy;
+    newQtyByItem[it.itemCode] = newQty;
+    reductions.push({
+      itemCode: it.itemCode,
+      sourceLocation: src.locationName,
+      destLocation: dst.locationName,
+      originalQty: origQty,
+      newQty,
+      reducedBy: reduceBy,
+    });
+  }
+
+  if (reductions.length === 0) return null;
+
+  const impact = evaluateDocChange(ctx, { kind: 'reduceQty', newQtyByItem });
+
+  // Compensating transfers = dest shortfalls AFTER the reduction (the dest now
+  // receives less, so it may fall short — bring that in from elsewhere).
+  const destLocs = new Set(reductions.map((r) => r.destLocation));
+  const srcLocs = new Set(reductions.map((r) => r.sourceLocation));
+
+  const compensatingTransfers: CompensatingTransfer[] = impact.created
+    .concat(impact.remaining)
+    .filter((n) => destLocs.has(n.locationName))
+    .map((n) => ({ itemCode: n.itemCode, destLocation: n.locationName, needQty: Math.abs(n.depth), byDate: n.since }));
+
+  // The ONLY real damage from a reduce is new negativity at a SOURCE location;
+  // destination shortfalls are the expected compensating-transfer to-do list.
+  const sourceCreatedArea = impact.created
+    .filter((n) => srcLocs.has(n.locationName))
+    .reduce((s, n) => s + Math.abs(n.depth), 0);
+
+  return { reductions, impact, compensatingTransfers, sourceCleared: sourceCreatedArea < EPS, sourceCreatedArea };
+}
+
+// ── Ranked recommendation (always returns a best action) ──────────────────────
+
+export type StrategyKind = 'changeDate' | 'delete' | 'reduceQty';
+
+export interface DocRecommendation {
+  strategy: StrategyKind;
+  headline: string;
+  impact: DocImpact;
+  newDate?: string;
+  reductions?: ItemReduction[];
+  compensatingTransfers?: CompensatingTransfer[];
+  rationale: string;
+  // The damage metric this strategy is judged on (lower = better). For reduce,
+  // this is SOURCE-side new negativity only (dest shortfalls are compensating
+  // transfers, not damage); for date/delete it's total remaining negativity.
+  score: number;
+  sourceCleared?: boolean; // reduce only
+}
+
+/**
+ * Always return a ranked best recommendation. Preference:
+ *   1. a CLEAN single-date move (least invasive, no quantity surgery)
+ *   2. otherwise the option with the LEAST collateral, measured by total new
+ *      negative area; ties broken by fewest created locations then by strategy
+ *      order (reduce ≺ date ≺ delete, since reduce is the most surgical).
+ * The reduce plan always carries its compensating-transfer list so the residual
+ * is fully spelled out.
+ */
+export function recommendDoc(ctx: DocumentContext): {
+  recommendation: DocRecommendation;
+  alternatives: DocRecommendation[];
+} {
+  const options: DocRecommendation[] = [];
+
+  const { best: bestDateImpact, cleanDate } = findBestDate(ctx);
+  // Only offer the date option if it actually IMPROVES things (a no-op 1-day
+  // shift that fixes nothing is worthless and must never be "recommended").
+  if (
+    bestDateImpact &&
+    bestDateImpact.change.kind === 'changeDate' &&
+    (bestDateImpact.fixed.length > 0 || bestDateImpact.afterNegArea < bestDateImpact.beforeNegArea - EPS)
+  ) {
+    options.push({
+      strategy: 'changeDate',
+      newDate: bestDateImpact.change.newDate,
+      headline: cleanDate ? `Move to ${cleanDate}` : `Best date: move to ${bestDateImpact.change.newDate}`,
+      impact: bestDateImpact,
+      score: bestDateImpact.afterNegArea, // date collateral is real damage → total negativity
+      rationale: cleanDate
+        ? 'A single date that resolves the document with no new negatives anywhere.'
+        : 'No date is fully clean; this date reduces total negativity the most.',
+    });
+  }
+
+  const del = evaluateDocChange(ctx, { kind: 'delete' });
+  options.push({
+    strategy: 'delete',
+    headline: 'Delete the whole document',
+    impact: del,
+    score: del.afterNegArea, // delete collateral is real damage
+    rationale: 'Removes every leg of the transfer.',
+  });
+
+  const reduce = planReduceToClearSource(ctx);
+  if (reduce) {
+    options.push({
+      strategy: 'reduceQty',
+      headline: reduce.sourceCleared
+        ? 'Reduce quantities — clears the source cleanly'
+        : 'Reduce quantities to minimize source negatives',
+      impact: reduce.impact,
+      reductions: reduce.reductions,
+      compensatingTransfers: reduce.compensatingTransfers,
+      // Reduce is judged on SOURCE damage only; dest shortfalls are the
+      // compensating-transfer to-do list, not collateral.
+      score: reduce.sourceCreatedArea,
+      sourceCleared: reduce.sourceCleared,
+      rationale:
+        'Lower each item line to what the source can spare (so the source never goes negative), then bring the listed shortfalls into the destination separately.',
+    });
+  }
+
+  // Rank: a fully-CLEAN option first; otherwise lowest score (each strategy's
+  // own damage metric); ties → strategy preference (reduce is most surgical).
+  const stratRank: Record<StrategyKind, number> = { reduceQty: 0, changeDate: 1, delete: 2 };
+  const cleanish = (o: DocRecommendation) => o.impact.clean || (o.strategy === 'reduceQty' && o.sourceCleared);
+  options.sort((a, b) => {
+    const ca = cleanish(a);
+    const cb = cleanish(b);
+    if (ca !== cb) return ca ? -1 : 1;
+    if (Math.abs(a.score - b.score) > EPS) return a.score - b.score;
+    return stratRank[a.strategy] - stratRank[b.strategy];
+  });
+
+  return { recommendation: options[0], alternatives: options.slice(1) };
 }
 
 // ── Server data pull ─────────────────────────────────────────────────────────

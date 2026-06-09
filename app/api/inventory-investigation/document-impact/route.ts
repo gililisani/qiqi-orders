@@ -3,7 +3,7 @@ import { requireWithPermission } from '@/platform/auth/guards';
 import {
   pullDocumentContext,
   evaluateDocChange,
-  findBestDate,
+  recommendDoc,
   type DocChange,
 } from '@/lib/inventory/documentImpact';
 
@@ -18,8 +18,7 @@ export async function GET(request: NextRequest) {
     if (!doc) return NextResponse.json({ error: 'doc query param required' }, { status: 400 });
 
     const ctx = await pullDocumentContext(doc);
-    const deleteImpact = evaluateDocChange(ctx, { kind: 'delete' });
-    const { best, cleanDate } = findBestDate(ctx);
+    const { recommendation, alternatives } = recommendDoc(ctx);
 
     return NextResponse.json({
       document: {
@@ -30,9 +29,8 @@ export async function GET(request: NextRequest) {
         locationNames: ctx.locationNames,
         legs: ctx.legs,
       },
-      deleteImpact,
-      bestDate: best,
-      cleanDate,
+      recommendation,
+      alternatives,
     });
   } catch (err: any) {
     if (err instanceof Response) return err;
