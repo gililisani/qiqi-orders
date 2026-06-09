@@ -81,10 +81,16 @@ define(['N/search', 'N/error'], function (search, error) {
       columns: [itemCol, locCol, qtyCol],
     });
 
-    var paged = s.runPaged({ pageSize: 1000 });
-    paged.pageRanges.forEach(function (range) {
-      var page = paged.fetch({ index: range.index });
-      page.data.forEach(function (r) {
+    // Page with run().getRange() (older, most reliable API; runPaged with
+    // grouped columns can throw a generic UNEXPECTED_ERROR on some accounts).
+    var runner = s.run();
+    var start = 0;
+    var PAGE = 1000;
+    for (;;) {
+      var slice = runner.getRange({ start: start, end: start + PAGE });
+      if (!slice || slice.length === 0) break;
+      for (var i = 0; i < slice.length; i++) {
+        var r = slice[i];
         rows.push({
           itemId: r.getValue(itemCol),
           itemCode: r.getText(itemCol),
@@ -92,8 +98,10 @@ define(['N/search', 'N/error'], function (search, error) {
           locationName: r.getText(locCol),
           qty: Number(r.getValue(qtyCol)) || 0,
         });
-      });
-    });
+      }
+      if (slice.length < PAGE) break;
+      start += PAGE;
+    }
 
     return { asOfDate: asOfDate, count: rows.length, rows: rows };
   }
