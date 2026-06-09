@@ -18,6 +18,7 @@ import { createNetSuiteAPI } from '@/lib/netsuite';
 import { assembleItem, type OpeningAnchor } from '@/lib/inventory/assemble';
 import { resolveOpeningAnchor } from '@/lib/inventory/asOfAnchor';
 import { readItemSnapshots, buildDatedAnchor } from '@/lib/inventory/datedSnapshots';
+import { linkChains, type TOrdCostPair } from '@/lib/inventory/chains';
 import type { LedgerTxn, OpeningBalance, CorrectionMap } from '@/lib/inventory/balanceEngine';
 
 export interface PulledItem {
@@ -89,7 +90,18 @@ export async function pullItemInventory(itemCode: string): Promise<PulledItem> {
     }
   }
 
-  const { transactions, openings, residuals, corrections, dateMin, dateMax } = assembleItem(lines, qohRows, anchor);
+  const assembled = assembleItem(lines, qohRows, anchor);
+  const { openings, residuals, corrections, dateMin, dateMax } = assembled;
+
+  // Stamp TOrdCost chain linkage so the cause analysis can tell an Item
+  // Fulfillment generated from a Transfer Order (editable) from a client
+  // shipment (not editable). Cheap: ~94 pairs account-wide.
+  const linkRows = await ns.suiteQLPaged<any>(
+    `SELECT previousdoc AS if_tx, nextdoc AS ir_tx FROM nexttransactionlink WHERE linktype='TOrdCost'`,
+  );
+  const pairs: TOrdCostPair[] = linkRows.map((r: any) => ({ ifTxId: String(r.if_tx), irTxId: String(r.ir_tx) }));
+  const transactions = linkChains(assembled.transactions, pairs);
+
   return {
     itemCode: itemCode.toUpperCase(),
     nsItemId, itemName, itemType,

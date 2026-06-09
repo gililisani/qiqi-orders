@@ -21,6 +21,7 @@ import { buildTableRows, fmtQty } from '../../../components/inventory/inventoryV
 import { InventoryTimeline } from '../../../components/inventory/InventoryTimeline';
 import { InventoryTransactionTable } from '../../../components/inventory/InventoryTransactionTable';
 import { InventorySimulator } from '../../../components/inventory/InventorySimulator';
+import { NegativeWorkbench } from '../../../components/inventory/NegativeWorkbench';
 
 interface Payload {
   cached: boolean;
@@ -272,6 +273,20 @@ export default function InventoryInvestigationPage() {
                     </ul>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Negative windows — cause &amp; replenishment</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <NegativeWorkbench
+                  ledger={ledger}
+                  snapshotsApplied={!!data?.snapshotsApplied}
+                  selectedTxnId={selectedTxnId}
+                  onSelectTxn={setSelectedTxnId}
+                />
               </CardContent>
             </Card>
 

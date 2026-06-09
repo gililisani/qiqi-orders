@@ -76,6 +76,9 @@ export async function writeCache(p: PulledItem): Promise<void> {
     signed_qty: t.signedQty,
     transfer_group: t.transferGroup ?? null,
     transfer_leg: t.transferLeg ?? null,
+    ns_type_code: t.nsTypeCode ?? null,
+    chain_role: t.chainRole ?? null,
+    chain_partner_tx_id: t.chainPartnerTxId ?? null,
     memo: t.memo ?? null,
   }));
   for (let i = 0; i < txRows.length; i += CHUNK) {
@@ -129,11 +132,14 @@ export async function readCache(itemCode: string): Promise<CachedItem | null> {
     tranDate: r.tran_date,
     tranType: r.tran_type,
     nsType: r.ns_type,
+    nsTypeCode: r.ns_type_code ?? null,
     locationNsId: r.location_ns_id,
     locationName: r.location_name ?? r.location_ns_id,
     signedQty: Number(r.signed_qty),
     transferGroup: r.transfer_group,
     transferLeg: r.transfer_leg,
+    chainRole: r.chain_role ?? null,
+    chainPartnerTxId: r.chain_partner_tx_id ?? null,
     memo: r.memo ?? undefined,
   }));
 
