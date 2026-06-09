@@ -35,7 +35,7 @@
  * phantom units included. (Validate against a known value, e.g. FPS0017 @
  * Packable-Qiqi-INC = 5 on 2024-09-30, before trusting it.)
  */
-define(['N/search', 'N/format', 'N/error'], function (search, format, error) {
+define(['N/search', 'N/error'], function (search, error) {
   function get(context) {
     var asOf = context.date;
     if (!asOf || !/^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
@@ -43,14 +43,11 @@ define(['N/search', 'N/format', 'N/error'], function (search, format, error) {
     }
     var asOfDate = asOf;
 
-    // LOCALE-SAFE date: parse the ISO date into a real Date via N/format. The
-    // search engine accepts a Date object regardless of the account's display
-    // format (MM/DD vs DD/MM), so we never have to hardcode a format string.
+    // LOCALE-SAFE date: build a JS Date from the ISO parts and hand it to the
+    // search. The search engine accepts a Date object regardless of the
+    // account's display format (MM/DD vs DD/MM), so we never hardcode a format.
     var p = asOf.split('-');
-    var asOfDateObj = format.parse({
-      value: new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])),
-      type: format.Type.DATE,
-    });
+    var asOfDateObj = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
 
     var filters = [
       ['posting', 'is', 'T'],
