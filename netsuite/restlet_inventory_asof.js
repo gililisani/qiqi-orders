@@ -49,12 +49,18 @@ define(['N/search', 'N/error'], function (search, error) {
     var p = asOf.split('-');
     var asOfDateObj = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
 
+    // posting=T + mainline=F + non-tax = the inventory ledger lines. (The
+    // line-level "inventory affecting" flag isn't a valid search filter id in
+    // this account; we validate the resulting on-hand against a known value
+    // instead — see RESTLET_DEPLOY.md.)
     var filters = [
       ['posting', 'is', 'T'],
       'AND',
-      ['trandate', 'onorbefore', asOfDateObj],
+      ['mainline', 'is', 'F'],
       'AND',
-      ['inventory', 'is', 'T'], // inventory-affecting lines only
+      ['taxline', 'is', 'F'],
+      'AND',
+      ['trandate', 'onorbefore', asOfDateObj],
     ];
     if (context.item) {
       filters.push('AND');
