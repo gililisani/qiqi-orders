@@ -50,9 +50,11 @@ it's off, we adjust the search formula (the date format / "inventory" filter are
 the usual culprits on a given account) before relying on it.
 
 ## Notes / gotchas
-- **Date format:** the script formats the as-of date as `DD/MM/YYYY` to match
-  this account's UI locale. If the search rejects it, that's the first thing to
-  change.
+- **Date format:** locale-safe. The script parses the ISO `date` param into a
+  real Date via `N/format` and passes the Date object to the search, so it works
+  regardless of the account's display format (this account's UI is MM/DD/YYYY;
+  the external SuiteQL API separately returns DD/MM — the two surfaces differ,
+  which is why we avoid hardcoding either).
 - **"inventory affecting" filter:** uses the transaction-line `inventory` flag,
   mirroring the `isinventoryaffecting='T'` we use elsewhere.
 - Nothing here writes to NetSuite — it's read-only.

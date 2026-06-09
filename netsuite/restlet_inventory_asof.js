@@ -35,22 +35,27 @@
  * phantom units included. (Validate against a known value, e.g. FPS0017 @
  * Packable-Qiqi-INC = 5 on 2024-09-30, before trusting it.)
  */
-define(['N/search', 'N/error'], function (search, error) {
+define(['N/search', 'N/format', 'N/error'], function (search, format, error) {
   function get(context) {
     var asOf = context.date;
     if (!asOf || !/^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
       throw error.create({ name: 'BAD_DATE', message: 'date=YYYY-MM-DD required' });
     }
-    // NetSuite saved-search date filters use the account date format; the
-    // onorbefore operator accepts a formatted date string. We pass YYYY-MM-DD
-    // and rely on the search engine; if your account rejects it, switch the
-    // formula to use TO_DATE — see notes in the deploy guide.
     var asOfDate = asOf;
+
+    // LOCALE-SAFE date: parse the ISO date into a real Date via N/format. The
+    // search engine accepts a Date object regardless of the account's display
+    // format (MM/DD vs DD/MM), so we never have to hardcode a format string.
+    var p = asOf.split('-');
+    var asOfDateObj = format.parse({
+      value: new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])),
+      type: format.Type.DATE,
+    });
 
     var filters = [
       ['posting', 'is', 'T'],
       'AND',
-      ['trandate', 'onorbefore', formatForSearch(asOfDate)],
+      ['trandate', 'onorbefore', asOfDateObj],
       'AND',
       ['inventory', 'is', 'T'], // inventory-affecting lines only
     ];
@@ -88,12 +93,6 @@ define(['N/search', 'N/error'], function (search, error) {
     });
 
     return { asOfDate: asOfDate, count: rows.length, rows: rows };
-  }
-
-  // NetSuite UI date format is account-specific; this account uses DD/MM/YYYY.
-  function formatForSearch(iso) {
-    var p = iso.split('-');
-    return p[2] + '/' + p[1] + '/' + p[0]; // DD/MM/YYYY
   }
 
   return { get: get };
