@@ -69,6 +69,15 @@ export type RecommendationType =
 export type Category = 'CLEAN' | 'PARTIAL' | 'MANUAL' | 'CLOSED';
 export type Tier = 1 | 2 | 3 | 4;
 
+/**
+ * How this row relates to the trusted NetSuite report feed:
+ *  - 'confirmed' — ongoing negative the report agrees with; depth is the report's.
+ *  - 'surfaced'  — report says negative but the engine had no case → shown as MANUAL.
+ *  - 'unmatched' — engine ongoing negative the report has no row for (verify mapping).
+ *  - null        — not reconciled (closed/historical row, or feed was unavailable).
+ */
+export type FeedStatus = 'confirmed' | 'surfaced' | 'unmatched';
+
 export interface ItemMeta {
   itemCode: string;
   nsItemId: string | null;
@@ -105,6 +114,10 @@ export interface WorklistRow {
   depth: number;
   since: string | null;
   tier: Tier;
+
+  /** Reconciliation with the trusted NetSuite report feed. Set during the
+   *  catalog pull; undefined on engine-only computation (e.g. unit tests). */
+  feedStatus?: FeedStatus | null;
 
   // Headline recommendation (the first/best option).
   recommendationType: RecommendationType;

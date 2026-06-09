@@ -66,6 +66,7 @@ export async function writeWorklist(comp: WorklistComputation, durationMs: numbe
       suspect_date: r.suspectDate,
       confidence: r.category,
       tier: r.tier,
+      feed_status: r.feedStatus ?? null,
       notes: r.notes,
       status,
       computed_at: now,
@@ -122,6 +123,7 @@ export async function readWorklist(): Promise<{ rows: WorklistRecord[]; meta: Wo
     suspectType: r.suspect_type,
     suspectDate: r.suspect_date,
     tier: (Number(r.tier) || 4) as Tier,
+    feedStatus: r.feed_status ?? null,
     notes: r.notes,
     status: r.status,
   }));

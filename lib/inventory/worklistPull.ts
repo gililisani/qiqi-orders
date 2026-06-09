@@ -24,6 +24,12 @@ import {
 import { computeItemWindows, type NegativeWindow } from '@/lib/inventory/negativeWindows';
 import { linkChains, buildItemChains, type TOrdCostPair } from '@/lib/inventory/chains';
 import type { LocationResidual } from '@/lib/inventory/assemble';
+import { fetchStockMatrix, type StockRow } from '@/lib/inventory/webQuery';
+import {
+  reconcileWorklistWithFeed,
+  normalizeLocationName,
+  type ReconcileSummary,
+} from '@/lib/inventory/feedReconcile';
 
 export interface WorklistComputation {
   rows: WorklistRow[];
@@ -37,6 +43,9 @@ export interface WorklistComputation {
     windowCount: number;
     chainPairs: number;
     residualItems: number; // items where NS on-hand disagrees with its tx history
+    /** Reconciliation against the trusted NetSuite report feed. null if the
+     *  feed was unavailable (then rows are engine-only — legacy behavior). */
+    feed: ReconcileSummary | null;
   };
 }
 
@@ -169,20 +178,89 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
     rows.push(...computeWorklistForItem(ic.meta, ic.txns, ic.openings, ic.ledger, itemWindows, ctx));
   }
 
-  rows.sort((a, b) => a.depth - b.depth);
+  // ── Reconcile against the TRUSTED NetSuite report feed ────────────────────
+  // The feed is authoritative for what's negative NOW; the engine supplies the
+  // fix plan. Confirmed negatives take the feed's depth; engine "ongoing"
+  // negatives the feed says are fine now are dropped; feed-only negatives are
+  // surfaced as MANUAL so none is ever lost. Feed failure → engine-only.
+  let feedSummary: ReconcileSummary | null = null;
+  let finalRows = rows;
+  try {
+    const feed = await fetchStockMatrix();
+
+    // Which (itemCode, locationNsId) pairs are still OPEN per the engine.
+    const ongoingKeys = new Set<string>();
+    for (const w of windows) {
+      if (w.end === null) ongoingKeys.add(`${w.itemCode.toUpperCase()}|${w.locationNsId}`);
+    }
+
+    // itemCode → meta, and tolerant location NAME → ns id (built from the data
+    // NetSuite already gave us), for constructing surfaced feed-only rows.
+    const metaByCode = new Map<string, ItemMeta>();
+    for (const m of metaById.values()) metaByCode.set(m.itemCode.toUpperCase(), m);
+    const locIdByName = new Map<string, string>();
+    for (const r of [...lineRows, ...qohRows]) {
+      const name = r.loc_name ?? r.location ?? r.loc;
+      const id = r.location ?? r.loc;
+      if (name != null && id != null) locIdByName.set(normalizeLocationName(String(name)), String(id));
+    }
+
+    const result = reconcileWorklistWithFeed({
+      rows,
+      feed,
+      isOngoing: (row) => ongoingKeys.has(`${row.itemCode.toUpperCase()}|${row.locationNsId}`),
+      buildFeedOnlyRow: (neg: StockRow): WorklistRow => {
+        const meta = metaByCode.get(neg.itemCode.trim().toUpperCase());
+        const locId = locIdByName.get(normalizeLocationName(neg.location)) ?? neg.location;
+        return {
+          itemCode: neg.itemCode,
+          nsItemId: meta?.nsItemId ?? null,
+          itemName: meta?.itemName ?? neg.displayName ?? null,
+          locationNsId: locId,
+          locationName: neg.location,
+          depth: neg.qoh,
+          since: null,
+          tier: 3,
+          feedStatus: 'surfaced',
+          recommendationType: 'Manual review',
+          category: 'MANUAL',
+          editsRequired: [],
+          prerequisiteSummary: 'None',
+          isBrokenChain: false,
+          notes:
+            'Surfaced from the trusted NetSuite report; the engine had no ongoing case here ' +
+            '(its reconstruction shows this location as non-negative). Investigate in NetSuite.',
+          options: [],
+          suspectNsTransactionId: null,
+          suspectDoc: null,
+          suspectType: null,
+          suspectDate: null,
+        };
+      },
+    });
+    finalRows = result.rows;
+    feedSummary = result.summary;
+  } catch (err) {
+    // Feed unavailable (URL not set, hash expired, format drift) — fall back to
+    // engine-only rows so the worklist never goes dark. Surfaced via feed=null.
+    console.warn(`[worklist] feed reconciliation skipped: ${(err as Error).message}`);
+  }
+
+  finalRows.sort((a, b) => a.depth - b.depth);
 
   return {
-    rows,
+    rows: finalRows,
     windows,
     residuals,
     stats: {
       itemsScanned: metaById.size,
       itemsWithLines,
-      cases: rows.length,
-      cleanCount: rows.filter((r) => r.category === 'CLEAN').length,
+      cases: finalRows.length,
+      cleanCount: finalRows.filter((r) => r.category === 'CLEAN').length,
       windowCount: windows.length,
       chainPairs: pairs.length,
       residualItems: residualItemCount,
+      feed: feedSummary,
     },
   };
 }

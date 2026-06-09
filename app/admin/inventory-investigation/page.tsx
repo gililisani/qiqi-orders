@@ -22,6 +22,7 @@ import { InvTabs, TierBadge } from '../../components/inventory/InvTabs';
 
 type Category = 'CLEAN' | 'PARTIAL' | 'MANUAL' | 'CLOSED';
 type Status = 'todo' | 'done' | 'skipped';
+type FeedStatus = 'confirmed' | 'surfaced' | 'unmatched';
 
 interface EditStep {
   order: number;
@@ -47,6 +48,7 @@ interface Row {
   depth: number;
   since: string | null;
   tier: number;
+  feedStatus: FeedStatus | null;
   recommendationType: string;
   category: Category;
   editsRequired: EditStep[];
@@ -455,7 +457,12 @@ export default function WorklistPage() {
                       </div>
                     </TableCell>
                     <TableCell className="py-2 text-xs align-top">{r.locationName}</TableCell>
-                    <TableCell className="py-2 text-right font-mono text-xs text-destructive font-semibold align-top">{r.depth ? fmt(r.depth) : ''}</TableCell>
+                    <TableCell className="py-2 text-right align-top">
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="font-mono text-xs text-destructive font-semibold">{r.depth ? fmt(r.depth) : ''}</span>
+                        <FeedBadge s={r.feedStatus} />
+                      </div>
+                    </TableCell>
                     <TableCell className="py-2 font-mono text-xs whitespace-nowrap align-top">{r.since ?? ''}</TableCell>
                     <TableCell className="py-2 align-top"><TierBadge tier={r.tier} /></TableCell>
                     <TableCell className="py-2 text-xs whitespace-nowrap align-top">
@@ -533,6 +540,39 @@ export default function WorklistPage() {
       )}
     </div>
   );
+}
+
+// Reconciliation against the trusted NetSuite report feed. Shown under Depth
+// because the feed is what makes the depth (and the negative itself) trustworthy.
+function FeedBadge({ s }: { s: FeedStatus | null }) {
+  if (s === 'confirmed')
+    return (
+      <span
+        className="rounded bg-green-100 px-1.5 text-[10px] font-medium text-green-800"
+        title="Current on-hand confirmed by the NetSuite report"
+      >
+        ✓ NetSuite
+      </span>
+    );
+  if (s === 'surfaced')
+    return (
+      <span
+        className="rounded bg-blue-100 px-1.5 text-[10px] font-medium text-blue-800"
+        title="Negative per the NetSuite report; the engine had no reconstructed case — investigate manually"
+      >
+        report-only
+      </span>
+    );
+  if (s === 'unmatched')
+    return (
+      <span
+        className="rounded bg-amber-100 px-1.5 text-[10px] font-medium text-amber-800"
+        title="Engine flagged this as ongoing-negative but the report has no matching row — verify the location name"
+      >
+        unverified
+      </span>
+    );
+  return null;
 }
 
 function CategoryBadge({ c }: { c: Category }) {

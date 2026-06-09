@@ -67,6 +67,14 @@ async function main() {
   console.log(
     `[worklist] scanned=${comp.stats.itemsScanned} withLines=${comp.stats.itemsWithLines} cases=${comp.stats.cases} windows=${comp.windows.length} chainPairs=${comp.stats.chainPairs} residualItems=${comp.stats.residualItems} | cat=${JSON.stringify(byCat)} tier=${JSON.stringify(byTier)} in ${(durationMs / 1000).toFixed(1)}s`,
   );
+  if (comp.stats.feed) {
+    const f = comp.stats.feed;
+    console.log(
+      `[worklist] feed reconcile: confirmed=${f.confirmed} falsePositive(dropped)=${f.falsePositive} feedOnly(surfaced)=${f.feedOnly} unmatched(flagged)=${f.unmatched}`,
+    );
+  } else {
+    console.log('[worklist] feed reconcile: SKIPPED (feed unavailable — engine-only rows)');
+  }
 
   const ok = selfCheck(comp.rows);
 
