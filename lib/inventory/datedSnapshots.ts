@@ -51,17 +51,27 @@ export async function deleteSnapshot(asOfDate: string): Promise<void> {
 /** All captured dates with row counts (most recent first). */
 export async function listSnapshotDates(): Promise<SnapshotDateInfo[]> {
   const sb = createServiceRoleClient();
-  // Pull just the columns we need and aggregate in JS (Supabase has no GROUP BY).
-  const { data, error } = await sb
-    .from('inv_inv_dated_snapshots')
-    .select('as_of_date, captured_at');
-  if (error) throw new Error(error.message);
+  // Aggregate in JS (Supabase has no GROUP BY). MUST paginate — PostgREST caps a
+  // plain select at 1000 rows, and the table holds ~525 rows PER captured date,
+  // so without paging only the first ~2 dates would ever be seen.
+  const PAGE = 1000;
+  let from = 0;
   const byDate = new Map<string, { count: number; capturedAt: string | null }>();
-  for (const r of data ?? []) {
-    const e = byDate.get(r.as_of_date) ?? { count: 0, capturedAt: null };
-    e.count++;
-    if (!e.capturedAt || (r.captured_at && r.captured_at > e.capturedAt)) e.capturedAt = r.captured_at;
-    byDate.set(r.as_of_date, e);
+  for (;;) {
+    const { data, error } = await sb
+      .from('inv_inv_dated_snapshots')
+      .select('as_of_date, captured_at')
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+    for (const r of data) {
+      const e = byDate.get(r.as_of_date) ?? { count: 0, capturedAt: null };
+      e.count++;
+      if (!e.capturedAt || (r.captured_at && r.captured_at > e.capturedAt)) e.capturedAt = r.captured_at;
+      byDate.set(r.as_of_date, e);
+    }
+    if (data.length < PAGE) break;
+    from += PAGE;
   }
   return [...byDate.entries()]
     .map(([asOfDate, v]) => ({ asOfDate, rowCount: v.count, capturedAt: v.capturedAt }))
@@ -91,15 +101,25 @@ export function buildDatedAnchor(item: ItemSnapshots | undefined): OpeningAnchor
 export async function readItemSnapshots(itemCode: string): Promise<ItemSnapshots | null> {
   const sb = createServiceRoleClient();
   const code = itemCode.toUpperCase();
-  const { data, error } = await sb
-    .from('inv_inv_dated_snapshots')
-    .select('as_of_date, location_name, qoh')
-    .eq('item_code', code);
-  if (error) throw new Error(error.message);
-  if (!data || data.length === 0) return null;
-  const dates = [...new Set(data.map((r) => r.as_of_date))].sort();
+  const PAGE = 1000;
+  let from = 0;
+  const all: { as_of_date: string; location_name: string; qoh: number }[] = [];
+  for (;;) {
+    const { data, error } = await sb
+      .from('inv_inv_dated_snapshots')
+      .select('as_of_date, location_name, qoh')
+      .eq('item_code', code)
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  if (all.length === 0) return null;
+  const dates = [...new Set(all.map((r) => r.as_of_date))].sort();
   const byLoc = new Map<string, Map<string, number>>();
-  for (const r of data) {
+  for (const r of all) {
     let loc = byLoc.get(r.location_name);
     if (!loc) {
       loc = new Map();
