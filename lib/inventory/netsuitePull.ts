@@ -16,7 +16,7 @@
  */
 import { createNetSuiteAPI } from '@/lib/netsuite';
 import { assembleItem, type OpeningAnchor } from '@/lib/inventory/assemble';
-import { readSnapshotLookup } from '@/lib/inventory/openingSnapshot';
+import { resolveOpeningAnchor } from '@/lib/inventory/asOfAnchor';
 import type { LedgerTxn, OpeningBalance } from '@/lib/inventory/balanceEngine';
 
 export interface PulledItem {
@@ -64,8 +64,9 @@ export async function pullItemInventory(itemCode: string): Promise<PulledItem> {
       GROUP BY il.location, BUILTIN.DF(il.location)`,
   );
 
-  // Anchor on the imported opening snapshot if one exists (else zero-anchor).
-  const { lookup, cutoffDate } = await readSnapshotLookup();
+  // Anchor on NetSuite's measured as-of on-hand (RESTlet) or the uploaded CSV
+  // snapshot if one exists (else zero-anchor).
+  const { lookup, cutoffDate } = await resolveOpeningAnchor();
   let anchor: OpeningAnchor | undefined;
   if (cutoffDate && lookup.size > 0) {
     const openingByLocName = new Map<string, number>();

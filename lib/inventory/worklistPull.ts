@@ -12,7 +12,7 @@
 import { createNetSuiteAPI } from '@/lib/netsuite';
 import { computeLedger } from '@/lib/inventory/balanceEngine';
 import { assembleItem, type RawTxnLine, type RawQoh, type OpeningAnchor } from '@/lib/inventory/assemble';
-import { readSnapshotLookup } from '@/lib/inventory/openingSnapshot';
+import { resolveOpeningAnchor } from '@/lib/inventory/asOfAnchor';
 import {
   computeWorklistForItem,
   type WorklistRow,
@@ -123,8 +123,8 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
     });
   }
 
-  // Load the opening snapshot once; build a per-item anchor from it.
-  const { lookup: snapLookup, cutoffDate } = await readSnapshotLookup();
+  // Load the opening anchor once (RESTlet measured on-hand, else CSV snapshot).
+  const { lookup: snapLookup, cutoffDate } = await resolveOpeningAnchor();
   const anchorFor = (itemCode: string): OpeningAnchor | undefined => {
     if (!cutoffDate || snapLookup.size === 0) return undefined;
     const prefix = `${itemCode.toUpperCase()}|`;

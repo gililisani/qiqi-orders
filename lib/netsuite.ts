@@ -69,6 +69,15 @@ export interface NSInventoryItem {
   quantityAvailable: number;
 }
 
+// One row from the as-of-date inventory RESTlet.
+export interface AsOfInventoryRow {
+  itemId: string;
+  itemCode: string;
+  locationId: string;
+  locationName: string;
+  qty: number;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -212,6 +221,45 @@ export class NetSuiteAPI {
       offset += 1000;
     }
     return out;
+  }
+
+  // ---------------------------------------------------------------------------
+  // RESTlet: as-of-date inventory (deployed in NetSuite, see netsuite/).
+  // RESTlets live on a DIFFERENT host than SuiteTalk REST, and OAuth must sign
+  // the FULL url incl. query params. Returns NetSuite's own measured on-hand per
+  // (item, location) as of a date — the authoritative anchor for the engine.
+  // ---------------------------------------------------------------------------
+  async getInventoryAsOf(
+    dateIso: string,
+    opts?: { itemCode?: string },
+  ): Promise<{ asOfDate: string; rows: AsOfInventoryRow[] }> {
+    const scriptId = process.env.NETSUITE_ASOF_SCRIPT_ID;
+    const deployId = process.env.NETSUITE_ASOF_DEPLOY_ID;
+    if (!scriptId || !deployId) {
+      throw new Error('RESTlet not configured: set NETSUITE_ASOF_SCRIPT_ID and NETSUITE_ASOF_DEPLOY_ID');
+    }
+    const urlAccountId = this.config.accountId.toLowerCase().replace(/_/g, '-');
+    const base = `https://${urlAccountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl`;
+    const params = new URLSearchParams({ script: scriptId, deploy: deployId, date: dateIso });
+    if (opts?.itemCode) params.set('item', opts.itemCode);
+    const url = `${base}?${params.toString()}`;
+
+    const authHeader = this.getAuthHeader(url, 'GET');
+    const response = await axios({
+      method: 'GET',
+      url,
+      headers: { Authorization: authHeader, Accept: 'application/json', 'Content-Type': 'application/json' },
+      validateStatus: () => true,
+    });
+    if (response.status >= 400) {
+      const msg = response.data?.['o:message'] || response.data?.message || JSON.stringify(response.data) || `HTTP ${response.status}`;
+      throw new Error(`RESTlet ${response.status}: ${msg}`);
+    }
+    return response.data as { asOfDate: string; rows: AsOfInventoryRow[] };
+  }
+
+  isAsOfConfigured(): boolean {
+    return !!process.env.NETSUITE_ASOF_SCRIPT_ID && !!process.env.NETSUITE_ASOF_DEPLOY_ID;
   }
 
   // ---------------------------------------------------------------------------

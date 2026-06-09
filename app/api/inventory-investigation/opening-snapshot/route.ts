@@ -6,12 +6,14 @@ import {
   readSnapshotStatus,
 } from '@/lib/inventory/openingSnapshot';
 
-// GET — current snapshot status (cutoff date, row count, uploaded time).
+// GET — current snapshot status (cutoff date, row count, uploaded time) plus
+// whether the as-of RESTlet is configured (which supersedes CSV uploads).
 export async function GET(request: NextRequest) {
   try {
     await requireWithPermission(request, 'netsuite');
     const status = await readSnapshotStatus();
-    return NextResponse.json(status);
+    const restletConfigured = !!process.env.NETSUITE_ASOF_SCRIPT_ID && !!process.env.NETSUITE_ASOF_DEPLOY_ID;
+    return NextResponse.json({ ...status, restletConfigured });
   } catch (err: any) {
     if (err instanceof Response) return err;
     console.error('[opening-snapshot GET]', err);

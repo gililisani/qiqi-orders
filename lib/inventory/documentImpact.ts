@@ -17,7 +17,7 @@ import {
   type OpeningBalance,
   type SimChange,
 } from '@/lib/inventory/balanceEngine';
-import { readSnapshotLookup } from '@/lib/inventory/openingSnapshot';
+import { resolveOpeningAnchor } from '@/lib/inventory/asOfAnchor';
 
 const ITEM_TYPES = `('InvtPart','Assembly')`;
 
@@ -484,8 +484,8 @@ export async function pullDocumentContext(docNumber: string): Promise<DocumentCo
       GROUP BY il.item, il.location, BUILTIN.DF(il.location)`,
   );
 
-  // Snapshot anchor (same as the rest of the tool).
-  const { lookup, cutoffDate } = await readSnapshotLookup();
+  // Opening anchor (RESTlet measured on-hand, else CSV snapshot).
+  const { lookup, cutoffDate } = await resolveOpeningAnchor();
 
   const linesByItem = new Map<string, any[]>();
   for (const r of lineRows) (linesByItem.get(String(r.item_id)) ?? linesByItem.set(String(r.item_id), []).get(String(r.item_id))!).push(r);

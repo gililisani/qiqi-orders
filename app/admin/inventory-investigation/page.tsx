@@ -101,7 +101,7 @@ export default function WorklistPage() {
   const [search, setSearch] = useState('');
   const [year, setYear] = useState('all');
 
-  const [snapshot, setSnapshot] = useState<{ cutoffDate: string | null; rowCount: number; uploadedAt: string | null } | null>(null);
+  const [snapshot, setSnapshot] = useState<{ cutoffDate: string | null; rowCount: number; uploadedAt: string | null; restletConfigured?: boolean } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [cutoffDate, setCutoffDate] = useState('2023-12-31');
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
@@ -266,13 +266,20 @@ export default function WorklistPage() {
 
       <InvTabs />
 
-      {/* Opening-balance snapshot — anchors balances so they match NetSuite. */}
-      <div className={`mb-4 rounded-md border px-4 py-3 text-sm ${snapshot?.cutoffDate ? 'border-border bg-card' : 'border-amber-300 bg-amber-50'}`}>
+      {/* Opening-balance anchor — RESTlet (automatic) or CSV snapshot or none. */}
+      <div className={`mb-4 rounded-md border px-4 py-3 text-sm ${snapshot?.restletConfigured ? 'border-green-300 bg-green-50' : snapshot?.cutoffDate ? 'border-border bg-card' : 'border-amber-300 bg-amber-50'}`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            {snapshot?.cutoffDate ? (
+            {snapshot?.restletConfigured ? (
               <>
-                <span className="font-medium">Opening snapshot active</span>
+                <span className="font-medium text-green-800">✓ Live NetSuite anchor active (RESTlet)</span>
+                <span className="text-green-800">
+                  {' '}— openings pulled directly from NetSuite&apos;s measured on-hand. No uploads needed; balances reconcile to NetSuite.
+                </span>
+              </>
+            ) : snapshot?.cutoffDate ? (
+              <>
+                <span className="font-medium">Opening snapshot active (CSV)</span>
                 <span className="text-muted-foreground">
                   {' '}— {snapshot.rowCount.toLocaleString()} item/location openings as of {snapshot.cutoffDate}
                   {snapshot.uploadedAt ? ` · uploaded ${new Date(snapshot.uploadedAt).toLocaleDateString()}` : ''}
@@ -280,10 +287,10 @@ export default function WorklistPage() {
               </>
             ) : (
               <>
-                <span className="font-semibold text-amber-900">⚠️ No opening snapshot</span>
+                <span className="font-semibold text-amber-900">⚠️ No opening anchor</span>
                 <span className="text-amber-900">
                   {' '}— balances run from zero, so items with pre-2024 stock (e.g. FPS0017) won&apos;t match NetSuite.
-                  Upload a NetSuite on-hand export (Item · Location · Quantity On Hand) as of the cutoff to anchor them.
+                  Deploy the as-of RESTlet (best) or upload a NetSuite on-hand export to anchor them.
                 </span>
               </>
             )}
