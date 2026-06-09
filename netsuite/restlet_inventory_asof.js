@@ -58,33 +58,33 @@ define(['N/search', 'N/error'], function (search, error) {
     ];
     if (context.item) {
       filters.push('AND');
-      filters.push(['item.nameinternal', 'is', context.item]); // by SKU if provided
+      // Filter by SKU via the item join's itemid field.
+      filters.push(['item.itemid', 'is', context.item]);
     }
+
+    // Group by item + location (both are direct fields on the transaction line);
+    // sum quantity. Names come from getText() on the grouped columns.
+    var itemCol = search.createColumn({ name: 'item', summary: search.Summary.GROUP });
+    var locCol = search.createColumn({ name: 'location', summary: search.Summary.GROUP });
+    var qtyCol = search.createColumn({ name: 'quantity', summary: search.Summary.SUM });
 
     var rows = [];
     var s = search.create({
       type: search.Type.TRANSACTION,
       filters: filters,
-      columns: [
-        search.createColumn({ name: 'internalid', join: 'item', summary: search.Summary.GROUP }),
-        search.createColumn({ name: 'itemid', join: 'item', summary: search.Summary.GROUP }),
-        search.createColumn({ name: 'internalid', join: 'inventoryLocation', summary: search.Summary.GROUP }),
-        search.createColumn({ name: 'name', join: 'inventoryLocation', summary: search.Summary.GROUP }),
-        search.createColumn({ name: 'quantity', summary: search.Summary.SUM }),
-      ],
+      columns: [itemCol, locCol, qtyCol],
     });
 
     var paged = s.runPaged({ pageSize: 1000 });
     paged.pageRanges.forEach(function (range) {
       var page = paged.fetch({ index: range.index });
       page.data.forEach(function (r) {
-        var c = r.columns;
         rows.push({
-          itemId: r.getValue(c[0]),
-          itemCode: r.getValue(c[1]),
-          locationId: r.getValue(c[2]),
-          locationName: r.getValue(c[3]),
-          qty: Number(r.getValue(c[4])) || 0,
+          itemId: r.getValue(itemCol),
+          itemCode: r.getText(itemCol),
+          locationId: r.getValue(locCol),
+          locationName: r.getText(locCol),
+          qty: Number(r.getValue(qtyCol)) || 0,
         });
       });
     });
