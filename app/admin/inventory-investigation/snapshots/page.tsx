@@ -38,8 +38,15 @@ function suggestedDates(): string[] {
   return out;
 }
 
+// Render the ISO date as-is, pinned to UTC — otherwise a behind-UTC local
+// timezone shifts midnight-UTC back a day (May 31 → "May 30").
 const fmtDate = (d: string) =>
-  new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 
 export default function SnapshotsPage() {
   const [captured, setCaptured] = useState<SnapInfo[]>([]);
