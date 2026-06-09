@@ -43,76 +43,23 @@ define(['N/search', 'N/error'], function (search, error) {
     }
     var asOfDate = asOf;
 
-    // LOCALE-SAFE date: build a JS Date from the ISO parts and hand it to the
-    // search. The search engine accepts a Date object regardless of the
-    // account's display format (MM/DD vs DD/MM), so we never hardcode a format.
-    var p = asOf.split('-');
-    var asOfDateObj = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    // The trandate filter must be built with search.createFilter using the
+    // ONORBEFORE operator and a DD/MM/YYYY string. (Empirically validated on
+    // this account: the array form, a Date object, and an MM/DD string all throw
+    // a generic UNEXPECTED_ERROR; only createFilter + DD/MM works. Note that's
+    // DD/MM even though the UI displays MM/DD — a NetSuite search quirk.)
+    var p = asOf.split('-'); // [YYYY, MM, DD]
+    var ddmm = p[2] + '/' + p[1] + '/' + p[0];
 
-    // posting=T + mainline=F + non-tax = the inventory ledger lines. (The
-    // line-level "inventory affecting" flag isn't a valid search filter id in
-    // this account; we validate the resulting on-hand against a known value
-    // instead — see RESTLET_DEPLOY.md.)
+    // posting=T + mainline=F + non-tax = the inventory ledger lines.
     var filters = [
-      ['posting', 'is', 'T'],
-      'AND',
-      ['mainline', 'is', 'F'],
-      'AND',
-      ['taxline', 'is', 'F'],
-      'AND',
-      ['trandate', 'onorbefore', asOfDateObj],
+      search.createFilter({ name: 'posting', operator: search.Operator.IS, values: ['T'] }),
+      search.createFilter({ name: 'mainline', operator: search.Operator.IS, values: ['F'] }),
+      search.createFilter({ name: 'taxline', operator: search.Operator.IS, values: ['F'] }),
+      search.createFilter({ name: 'trandate', operator: search.Operator.ONORBEFORE, values: [ddmm] }),
     ];
     if (context.item) {
-      filters.push('AND');
-      // Filter by SKU via the item join's itemid field.
-      filters.push(['item.itemid', 'is', context.item]);
-    }
-
-    // ── Self-diagnosing probe ────────────────────────────────────────────────
-    // NetSuite returns an opaque "UNEXPECTED_ERROR" with no detail, so we run a
-    // sequence of progressively-fuller searches inside try/catch and, with
-    // ?debug=1, return WHICH step fails and its real .message. Remove once the
-    // working combination is confirmed.
-    if (context.debug) {
-      var steps = [];
-      function tryStep(label, build) {
-        try {
-          var ss = build();
-          var n = ss.run().getRange({ start: 0, end: 5 }).length;
-          steps.push({ step: label, ok: true, sampleRows: n });
-          return true;
-        } catch (e) {
-          steps.push({ step: label, ok: false, error: (e && (e.message || e.toString())) || 'unknown' });
-          return false;
-        }
-      }
-      tryStep('A: minimal type=item only', function () {
-        return search.create({ type: search.Type.TRANSACTION, filters: [['mainline', 'is', 'F']], columns: [search.createColumn({ name: 'internalid' })] });
-      });
-      tryStep('B: + item/location/quantity columns', function () {
-        return search.create({ type: search.Type.TRANSACTION, filters: [['mainline', 'is', 'F']], columns: [search.createColumn({ name: 'item' }), search.createColumn({ name: 'location' }), search.createColumn({ name: 'quantity' })] });
-      });
-      tryStep('C: + posting + taxline filters', function () {
-        return search.create({ type: search.Type.TRANSACTION, filters: [['posting', 'is', 'T'], 'AND', ['mainline', 'is', 'F'], 'AND', ['taxline', 'is', 'F']], columns: [search.createColumn({ name: 'item' }), search.createColumn({ name: 'location' }), search.createColumn({ name: 'quantity' })] });
-      });
-      var mmdd = p[1] + '/' + p[2] + '/' + p[0]; // MM/DD/YYYY
-      var ddmm = p[2] + '/' + p[1] + '/' + p[0]; // DD/MM/YYYY
-      tryStep('D1: trandate onorbefore MM/DD via createFilter', function () {
-        return search.create({ type: search.Type.TRANSACTION, filters: [search.createFilter({ name: 'trandate', operator: search.Operator.ONORBEFORE, values: [mmdd] })], columns: [search.createColumn({ name: 'item' })] });
-      });
-      tryStep('D2: trandate onorbefore DD/MM via createFilter', function () {
-        return search.create({ type: search.Type.TRANSACTION, filters: [search.createFilter({ name: 'trandate', operator: search.Operator.ONORBEFORE, values: [ddmm] })], columns: [search.createColumn({ name: 'item' })] });
-      });
-      tryStep('D3: trandate before MM/DD (operator before)', function () {
-        return search.create({ type: search.Type.TRANSACTION, filters: [search.createFilter({ name: 'trandate', operator: search.Operator.BEFORE, values: [mmdd] })], columns: [search.createColumn({ name: 'item' })] });
-      });
-      tryStep('D4: trandate within (onorbefore via within range)', function () {
-        return search.create({ type: search.Type.TRANSACTION, filters: [search.createFilter({ name: 'trandate', operator: search.Operator.WITHIN, values: ['01/01/2000', mmdd] })], columns: [search.createColumn({ name: 'item' })] });
-      });
-      tryStep('D5: formuladate onorbefore TO_DATE', function () {
-        return search.create({ type: search.Type.TRANSACTION, filters: [search.createFilter({ name: 'formuladate', operator: search.Operator.ONORBEFORE, formula: "{trandate}", values: [mmdd] })], columns: [search.createColumn({ name: 'item' })] });
-      });
-      return { debug: true, mmdd: mmdd, ddmm: ddmm, steps: steps };
+      filters.push(search.createFilter({ name: 'itemid', join: 'item', operator: search.Operator.IS, values: [context.item] }));
     }
 
     // NON-grouped search; aggregate by (item, location) in JS.
