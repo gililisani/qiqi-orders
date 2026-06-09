@@ -55,37 +55,79 @@ export function parseSnapshotCsv(text: string): { rows: OpeningSnapshotRow[]; er
     return out.map((s) => s.trim());
   };
 
-  const header = parseLine(lines[0]).map((h) => h.toLowerCase());
-  const findCol = (...names: string[]) =>
-    header.findIndex((h) => names.some((n) => h === n || h.includes(n)));
-
-  const itemIdx = findCol('item', 'sku', 'name');
-  const locIdx = findCol('location');
-  const qtyIdx = findCol('quantity on hand', 'on hand', 'quantityonhand', 'qty', 'quantity');
-
-  if (itemIdx === -1) errors.push('Could not find an Item/SKU column.');
-  if (locIdx === -1) errors.push('Could not find a Location column.');
-  if (qtyIdx === -1) errors.push('Could not find a Quantity On Hand column.');
-  if (errors.length) return { rows: [], errors };
+  const parseNum = (raw: string): number => Number((raw ?? '').replace(/,/g, '').trim());
+  const header = parseLine(lines[0]);
+  const headerLc = header.map((h) => h.toLowerCase());
+  const findCol = (cells: string[], ...names: string[]) =>
+    cells.findIndex((h) => names.some((n) => h === n || h.includes(n)));
 
   const rows: OpeningSnapshotRow[] = [];
   const seen = new Set<string>();
-  for (let i = 1; i < lines.length; i++) {
-    const cells = parseLine(lines[i]);
-    const itemCode = (cells[itemIdx] ?? '').trim();
-    const locationName = (cells[locIdx] ?? '').trim();
-    const qtyRaw = (cells[qtyIdx] ?? '').replace(/,/g, '').trim();
-    if (!itemCode || !locationName) continue;
-    const qty = Number(qtyRaw);
-    if (!Number.isFinite(qty)) {
-      errors.push(`Row ${i + 1}: non-numeric quantity "${cells[qtyIdx]}" for ${itemCode} @ ${locationName}`);
-      continue;
-    }
+  const push = (itemCode: string, locationName: string, qty: number) => {
     const key = openingKey(itemCode, locationName);
-    if (seen.has(key)) continue; // first wins; a snapshot should be one row per pair
+    if (seen.has(key)) return; // first wins
     seen.add(key);
     rows.push({ itemCode, locationName, qty });
+  };
+
+  // ── Shape A: LONG (Item, Location, Quantity columns) ────────────────────────
+  const locIdx = findCol(headerLc, 'location');
+  const qtyIdx = findCol(headerLc, 'quantity on hand', 'on hand', 'quantityonhand', 'qty', 'quantity');
+  const itemIdxLong = findCol(headerLc, 'item', 'sku', 'name');
+  if (locIdx !== -1 && qtyIdx !== -1 && itemIdxLong !== -1) {
+    for (let i = 1; i < lines.length; i++) {
+      const cells = parseLine(lines[i]);
+      const itemCode = (cells[itemIdxLong] ?? '').trim();
+      const locationName = (cells[locIdx] ?? '').trim();
+      if (!itemCode || !locationName || itemCode.toLowerCase() === 'total') continue;
+      const qtyRaw = (cells[qtyIdx] ?? '').trim();
+      if (qtyRaw === '') continue;
+      const qty = parseNum(qtyRaw);
+      if (!Number.isFinite(qty)) {
+        errors.push(`Row ${i + 1}: non-numeric quantity "${cells[qtyIdx]}" for ${itemCode} @ ${locationName}`);
+        continue;
+      }
+      push(itemCode, locationName, qty);
+    }
+    return { rows, errors };
   }
+
+  // ── Shape B: MATRIX / pivot (one column per location; a "Quantity On Hand"
+  //    sub-header row marks the location columns) ──────────────────────────────
+  const itemColM = findCol(headerLc, 'name', 'item', 'sku'); // e.g. "Name (Grouped)"
+  const subRow = lines[1] ? parseLine(lines[1]).map((c) => c.toLowerCase()) : [];
+  const qtyCols = subRow
+    .map((c, i) => (c.includes('quantity on hand') || c.includes('on hand') ? i : -1))
+    .filter((i) => i >= 0 && i !== itemColM);
+
+  if (itemColM !== -1 && qtyCols.length > 0) {
+    const locationByCol = new Map<number, string>();
+    for (const c of qtyCols) {
+      const name = (header[c] ?? '').trim();
+      if (name) locationByCol.set(c, name);
+    }
+    // Data starts after the sub-header row.
+    for (let i = 2; i < lines.length; i++) {
+      const cells = parseLine(lines[i]);
+      const itemCode = (cells[itemColM] ?? '').trim();
+      if (!itemCode || itemCode.toLowerCase() === 'total') continue;
+      for (const [c, locationName] of locationByCol) {
+        const raw = (cells[c] ?? '').trim();
+        if (raw === '') continue; // blank = no measured stock → treated as opening 0 by omission
+        const qty = parseNum(raw);
+        if (!Number.isFinite(qty)) {
+          errors.push(`Row ${i + 1}: non-numeric quantity "${cells[c]}" for ${itemCode} @ ${locationName}`);
+          continue;
+        }
+        push(itemCode, locationName, qty);
+      }
+    }
+    return { rows, errors };
+  }
+
+  errors.push(
+    'Could not recognize the CSV. Expected either (a) Item/Location/Quantity-On-Hand columns, or (b) a matrix with one location per column and a "Quantity On Hand" sub-header row.',
+  );
   return { rows, errors };
 }
 
