@@ -18,8 +18,9 @@ import { computeCatalogWorklist } from '../lib/inventory/worklistPull';
 import { validateWorklist, NS_TYPE_LABEL, type WorklistRow } from '../lib/inventory/worklist';
 
 function printRow(r: WorklistRow) {
+  const trust = r.verified === true ? 'VERIFIED' : r.verified === false ? 'APPROXIMATE' : 'unjudged';
   console.log(
-    `\n  ${r.itemCode} @ ${r.locationName}  depth=${r.depth}  since=${r.since}  TIER ${r.tier}  [${r.category}] ${r.recommendationType}`,
+    `\n  ${r.itemCode} @ ${r.locationName}  depth=${r.depth}  since=${r.since}  TIER ${r.tier}  [${r.category}] ${r.recommendationType}  <${trust}>`,
   );
   console.log(`    prerequisite: ${r.prerequisiteSummary}`);
   if (r.editsRequired.length) {
@@ -75,6 +76,13 @@ async function main() {
   } else {
     console.log('[worklist] feed reconcile: SKIPPED (feed unavailable — engine-only rows)');
   }
+  const trust = { verified: 0, approximate: 0, unjudged: 0 };
+  for (const r of comp.rows) {
+    if (r.verified === true) trust.verified++;
+    else if (r.verified === false) trust.approximate++;
+    else trust.unjudged++;
+  }
+  console.log(`[worklist] trust: verified=${trust.verified} approximate=${trust.approximate} unjudged=${trust.unjudged}`);
 
   const ok = selfCheck(comp.rows);
 

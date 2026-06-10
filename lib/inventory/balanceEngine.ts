@@ -73,6 +73,9 @@ export interface LocationLedger {
   /** Snapshot-to-snapshot spans whose forward replay failed to reconcile to the
    *  trusted snapshot (empty if all verified or no dated snapshots supplied). */
   unverifiedSegments: UnverifiedSegment[];
+  /** Dates of trusted correction points applied to this lane (sorted asc).
+   *  A window starting on/after one of these is anchored by trusted truth. */
+  correctionDates: string[];
 }
 
 /** A span between two trusted snapshots whose forward replay did NOT reconcile
@@ -276,6 +279,7 @@ export function computeLedger(
       eodTimeline,
       final: running,
       unverifiedSegments,
+      correctionDates: corr.map((c) => c.date),
     };
   }
 

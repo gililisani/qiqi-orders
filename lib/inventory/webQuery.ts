@@ -116,10 +116,40 @@ function resolveUrl(explicit?: string): string {
 }
 
 /**
+ * Shape guard: the feed has NO embedded as-of date or scope, so if someone
+ * leaves the report on a past date or a narrower subsidiary view (it happened —
+ * 538 rows/17 locations collapsed to 198/7 after a capture session), the feed
+ * silently serves wrong data. A healthy full-catalog consolidated pull has had
+ * 400+ rows across 14+ locations; reject anything far below that rather than
+ * anchor the whole tool on a misconfigured report.
+ */
+export const FEED_MIN_ROWS = 350;
+export const FEED_MIN_LOCATIONS = 10;
+
+export class FeedShapeError extends Error {}
+
+function assertFeedShape(rows: StockRow[]): void {
+  const locations = new Set(rows.map((r) => r.location)).size;
+  if (rows.length < FEED_MIN_ROWS || locations < FEED_MIN_LOCATIONS) {
+    throw new FeedShapeError(
+      `NetSuite report feed looks misconfigured: ${rows.length} rows / ${locations} locations ` +
+        `(expected ≥${FEED_MIN_ROWS} rows / ≥${FEED_MIN_LOCATIONS} locations). The "Qiqi ALL Stock ` +
+        `Matrix" report is probably saved with a past "As of" date or a narrower subsidiary view — ` +
+        `open it in NetSuite, set As of = Today and Subsidiary Context = Qiqi Global Ltd. ` +
+        `(Consolidated), and save.`,
+    );
+  }
+}
+
+/**
  * Fetch the full stock matrix from NetSuite and return every (item, location)
  * row that has a value. SERVER-ONLY.
+ *
+ * The shape guard rejects a misconfigured report (see above); pass
+ * `skipShapeGuard` only for deliberate historical captures where the caller
+ * eyeballs the result.
  */
-export async function fetchStockMatrix(opts?: { url?: string }): Promise<StockRow[]> {
+export async function fetchStockMatrix(opts?: { url?: string; skipShapeGuard?: boolean }): Promise<StockRow[]> {
   const url = resolveUrl(opts?.url);
   const res = await axios.get<string>(url, {
     headers: { 'User-Agent': BROWSER_UA },
@@ -146,6 +176,7 @@ export async function fetchStockMatrix(opts?: { url?: string }): Promise<StockRo
         'format may have changed (parser expects QoH | itemCode | name | location).',
     );
   }
+  if (!opts?.skipShapeGuard) assertFeedShape(rows);
   return rows;
 }
 

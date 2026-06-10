@@ -11,9 +11,9 @@
  */
 import { createNetSuiteAPI } from '@/lib/netsuite';
 import { computeLedger } from '@/lib/inventory/balanceEngine';
-import { assembleItem, type RawTxnLine, type RawQoh, type OpeningAnchor } from '@/lib/inventory/assemble';
-import { resolveOpeningAnchor } from '@/lib/inventory/asOfAnchor';
-import { readAllDatedSnapshots, buildDatedAnchor } from '@/lib/inventory/datedSnapshots';
+import { assembleItem, type RawTxnLine, type RawQoh } from '@/lib/inventory/assemble';
+import { applyTodayAnchor, buildPointCorrections, feedQohForItem } from '@/lib/inventory/todayAnchor';
+import { readAllTrustedPoints } from '@/lib/inventory/trustedPoints';
 import {
   computeWorklistForItem,
   type WorklistRow,
@@ -133,47 +133,48 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
     });
   }
 
-  // Opening anchor. PREFER the dated trusted-report snapshots (multi-date,
-  // re-anchored + validated each segment). Fall back to the legacy single-cutoff
-  // anchor (RESTlet/CSV) only if no dated snapshots have been captured.
-  const datedByItem = await readAllDatedSnapshots();
-  const hasDated = datedByItem.size > 0;
-  const { lookup: snapLookup, cutoffDate } = hasDated
-    ? { lookup: new Map<string, number>(), cutoffDate: null }
-    : await resolveOpeningAnchor();
-
-  const anchorFromLegacy = (itemCode: string): OpeningAnchor | undefined => {
-    if (!cutoffDate || snapLookup.size === 0) return undefined;
-    const prefix = `${itemCode.toUpperCase()}|`;
-    const openingByLocName = new Map<string, number>();
-    for (const [k, v] of snapLookup) {
-      if (k.startsWith(prefix)) openingByLocName.set(k.slice(prefix.length), v);
-    }
-    return { cutoffDate, openingByLocName };
-  };
-  const anchorFor = (itemCode: string): OpeningAnchor | undefined => {
-    const dated = datedByItem.get(itemCode.toUpperCase());
-    return dated ? buildDatedAnchor(dated) : anchorFromLegacy(itemCode);
-  };
+  // ── DYNAMIC ANCHORING (no stored foundations) ──────────────────────────────
+  // Base anchor = TODAY's trusted on-hand from the web-query feed, fetched
+  // fresh right here — so every recompute self-heals after any NetSuite fix.
+  // Trusted points (read from the native Review Negative Inventory page) layer
+  // on top as per-date corrections. Dated snapshots are NO LONGER used as
+  // anchors (they go stale the moment history is edited). Feed failure →
+  // zero-anchor fallback with verified=undefined (can't judge).
+  let feed: StockRow[] = [];
+  let feedOk = false;
+  try {
+    feed = await fetchStockMatrix();
+    feedOk = true;
+  } catch (err) {
+    console.warn(`[worklist] feed unavailable — zero-anchor fallback: ${(err as Error).message}`);
+  }
+  const pointsByItem = await readAllTrustedPoints();
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   // First pass: assemble + link chains + build ledgers → CatalogContext.
   const ctx: CatalogContext = { byItemId: new Map<string, ItemContext>(), componentsByBuildTxId };
   const residuals: WorklistComputation['residuals'] = [];
-  const snapshotsAppliedByItemId = new Map<string, boolean>();
   for (const [itemId, lines] of linesByItem) {
     const meta = metaById.get(itemId) ?? { itemCode: itemId, itemName: null, nsItemId: itemId };
-    const anchor = anchorFor(meta.itemCode);
-    snapshotsAppliedByItemId.set(itemId, hasDated && datedByItem.has(meta.itemCode.toUpperCase()));
-    const assembled = assembleItem(lines, qohByItem.get(itemId) ?? [], anchor);
+    // No OpeningAnchor: residual diagnostics stay zero-anchored vs inventorybalance.
+    const assembled = assembleItem(lines, qohByItem.get(itemId) ?? []);
     for (const r of assembled.residuals) {
       residuals.push({ ...r, itemCode: meta.itemCode, nsItemId: meta.nsItemId, itemName: meta.itemName });
     }
     const txns = linkChains(assembled.transactions, pairs);
-    const ledger = computeLedger(txns, assembled.openings, assembled.corrections);
+    const openings = feedOk
+      ? applyTodayAnchor(txns, assembled.openings, feedQohForItem(feed, meta.itemCode), todayIso)
+      : assembled.openings;
+    const corrections = buildPointCorrections(
+      pointsByItem.get(meta.itemCode.toUpperCase()) ?? [],
+      txns,
+      openings,
+    );
+    const ledger = computeLedger(txns, openings, corrections);
     ctx.byItemId.set(itemId, {
       meta,
       txns,
-      openings: assembled.openings,
+      openings,
       ledger,
       chains: buildItemChains(txns),
     });
@@ -186,10 +187,10 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
   const rows: WorklistRow[] = [];
   const windows: NegativeWindow[] = [];
   let itemsWithLines = 0;
-  for (const [itemId, ic] of ctx.byItemId) {
+  for (const [, ic] of ctx.byItemId) {
     itemsWithLines++;
     const itemWindows = computeItemWindows(ic.meta, ic.ledger, {
-      snapshotsApplied: snapshotsAppliedByItemId.get(itemId) ?? false,
+      snapshotsApplied: feedOk, // trusted today-anchor applied → verified flags meaningful
     });
     windows.push(...itemWindows);
     rows.push(...computeWorklistForItem(ic.meta, ic.txns, ic.openings, ic.ledger, itemWindows, ctx));
@@ -203,7 +204,7 @@ export async function computeCatalogWorklist(): Promise<WorklistComputation> {
   let feedSummary: ReconcileSummary | null = null;
   let finalRows = rows;
   try {
-    const feed = await fetchStockMatrix();
+    if (!feedOk) throw new Error('feed unavailable (anchoring already fell back)');
 
     // Which (itemCode, locationNsId) pairs are still OPEN per the engine.
     const ongoingKeys = new Set<string>();

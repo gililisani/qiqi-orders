@@ -30,7 +30,9 @@ export async function POST(request: NextRequest) {
     if (!ISO_DATE.test(asOfDate)) {
       return NextResponse.json({ error: 'asOfDate must be YYYY-MM-DD' }, { status: 400 });
     }
-    const rows = await fetchStockMatrix();
+    // Deliberate historical capture — the owner sets the date and eyeballs the
+    // returned counts, so the misconfigured-report shape guard doesn't apply.
+    const rows = await fetchStockMatrix({ skipShapeGuard: true });
     const count = await captureSnapshot(asOfDate, rows);
     const negatives = rows.filter((r) => r.qoh < 0).length;
     return NextResponse.json({ success: true, asOfDate, count, negatives });

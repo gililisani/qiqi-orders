@@ -18,6 +18,7 @@
  * "during the window" is trustworthy wherever the window is verified.
  */
 import type { LocationLedger, AnnotatedTxn } from '@/lib/inventory/balanceEngine';
+import { laneAnchoredBefore } from '@/lib/inventory/negativeWindows';
 
 export interface AnalyzedTxn {
   id: string;
@@ -144,9 +145,13 @@ export function analyzeNegativeWindow(lane: LocationLedger, start: string, end: 
   }
   const durationDays = daysBetween(start, end ?? lastDate);
 
-  // Approximate if any unreconciled span touches this window.
+  // Approximate if an unreconciled span touches this window, OR the lane has an
+  // unexplained opening with no trusted point on/before the window start (the
+  // residual could sit anywhere in time, so these dates are unconfirmed).
   const endRef = end ?? '9999-12-31';
-  const unreconciled = (lane.unverifiedSegments ?? []).some((seg) => seg.to >= start && seg.from <= endRef);
+  const unreconciled =
+    (lane.unverifiedSegments ?? []).some((seg) => seg.to >= start && seg.from <= endRef) ||
+    !laneAnchoredBefore(lane, start);
 
   // CAUSED BY: every outbound line inside the window. Most-impactful first.
   const causedBy = lane.rows

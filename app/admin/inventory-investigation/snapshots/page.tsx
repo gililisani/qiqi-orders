@@ -124,8 +124,17 @@ export default function SnapshotsPage() {
 
   return (
     <div className="px-6 py-8">
-      <PageHeader title="Trusted snapshots" description="Capture the NetSuite report's on-hand at past dates to anchor history accurately." />
+      <PageHeader title="Trusted snapshots (legacy)" description="No longer used for anchoring — the tool now anchors on today's live report feed and self-heals after every NetSuite fix." />
       <InvTabs />
+
+      <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <p className="font-medium">⚠️ These snapshots no longer drive the numbers.</p>
+        <p className="mt-1">
+          History is now anchored on <strong>today&apos;s</strong> trusted feed (always fresh, survives your fixes) plus
+          per-date <strong>trusted points</strong> read from NetSuite&apos;s Review Negative Inventory page. Snapshots
+          captured here are kept for reference only — no need to re-capture anything after making fixes.
+        </p>
+      </div>
 
       <div className="mb-5 rounded-md border border-border bg-card px-4 py-3 text-sm">
         <p className="font-medium mb-1">How to capture a date</p>

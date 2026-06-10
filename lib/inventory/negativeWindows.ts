@@ -107,18 +107,30 @@ function buildWindow(
   };
 }
 
-/** Is a window [start, end) trustworthy given the lane's unreconciled spans?
- *  undefined when no dated snapshots covered this item (can't judge). */
+/** Is the lane anchored by trusted truth at/before this date? True when the
+ *  visible transactions fully explain today's balance (opening ≈ 0 under the
+ *  today-anchor), or a trusted correction point sits on/before the date. */
+export function laneAnchoredBefore(lane: LocationLedger, date: string): boolean {
+  if (Math.abs(lane.opening) < 0.005) return true;
+  return (lane.correctionDates ?? []).some((d) => d <= date);
+}
+
+/** Is a window [start, end) trustworthy?
+ *  - undefined when no trusted anchor was applied at all (can't judge);
+ *  - false when the lane has an unexplained opening with no trusted point on/
+ *    before the window start (the residual could sit anywhere in time), or the
+ *    window overlaps a span where a trusted point failed to reconcile;
+ *  - true otherwise. */
 function windowVerified(
   lane: LocationLedger,
   start: string,
   end: string | null,
-  snapshotsApplied: boolean,
+  trustedAnchorApplied: boolean,
 ): boolean | undefined {
-  if (!snapshotsApplied) return undefined;
+  if (!trustedAnchorApplied) return undefined;
   const endRef = end ?? '9999-12-31';
-  const overlaps = lane.unverifiedSegments.some((seg) => seg.to >= start && seg.from <= endRef);
-  return !overlaps;
+  const overlaps = (lane.unverifiedSegments ?? []).some((seg) => seg.to >= start && seg.from <= endRef);
+  return !overlaps && laneAnchoredBefore(lane, start);
 }
 
 /** Every negative window for an item, across all locations. */

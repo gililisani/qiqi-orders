@@ -15,9 +15,10 @@
  *   - opening(item,loc) = currentQOH - SUM(signed)
  */
 import { createNetSuiteAPI } from '@/lib/netsuite';
-import { assembleItem, type OpeningAnchor } from '@/lib/inventory/assemble';
-import { resolveOpeningAnchor } from '@/lib/inventory/asOfAnchor';
-import { readItemSnapshots, buildDatedAnchor } from '@/lib/inventory/datedSnapshots';
+import { assembleItem } from '@/lib/inventory/assemble';
+import { fetchStockMatrix } from '@/lib/inventory/webQuery';
+import { applyTodayAnchor, buildPointCorrections, feedQohForItem } from '@/lib/inventory/todayAnchor';
+import { readTrustedPoints } from '@/lib/inventory/trustedPoints';
 import { linkChains, type TOrdCostPair } from '@/lib/inventory/chains';
 import type { LedgerTxn, OpeningBalance, CorrectionMap } from '@/lib/inventory/balanceEngine';
 
@@ -29,9 +30,10 @@ export interface PulledItem {
   transactions: LedgerTxn[];
   openings: OpeningBalance[];
   residuals: import('@/lib/inventory/assemble').LocationResidual[];
-  /** Re-anchor corrections from dated snapshots (locationNsId → points). */
+  /** Re-anchor corrections from trusted points (locationNsId → points). */
   corrections: CorrectionMap;
-  /** True when dated snapshots anchored this item (enables verified flags). */
+  /** True when the trusted TODAY-anchor (web-query feed) was applied —
+   *  enables verified/approximate flags. (Field name is legacy.) */
   snapshotsApplied: boolean;
   dateMin: string | null;
   dateMax: string | null;
@@ -70,28 +72,11 @@ export async function pullItemInventory(itemCode: string): Promise<PulledItem> {
       GROUP BY il.location, BUILTIN.DF(il.location)`,
   );
 
-  // Anchor preference: dated trusted-report snapshots (multi-date, re-anchored +
-  // validated) → legacy single-cutoff RESTlet/CSV → zero-anchor.
-  const dated = await readItemSnapshots(itemCode);
-  let anchor: OpeningAnchor | undefined;
-  let snapshotsApplied = false;
-  if (dated) {
-    anchor = buildDatedAnchor(dated);
-    snapshotsApplied = !!anchor;
-  } else {
-    const { lookup, cutoffDate } = await resolveOpeningAnchor();
-    if (cutoffDate && lookup.size > 0) {
-      const openingByLocName = new Map<string, number>();
-      const prefix = `${itemCode.toUpperCase()}|`;
-      for (const [k, v] of lookup) {
-        if (k.startsWith(prefix)) openingByLocName.set(k.slice(prefix.length), v);
-      }
-      anchor = { cutoffDate, openingByLocName };
-    }
-  }
-
-  const assembled = assembleItem(lines, qohRows, anchor);
-  const { openings, residuals, corrections, dateMin, dateMax } = assembled;
+  // DYNAMIC ANCHORING: today's trusted feed on-hand (fetched fresh — self-heals
+  // after every NetSuite fix) + trusted points as corrections. No stored
+  // snapshot anchors (they go stale the moment history is edited).
+  const assembled = assembleItem(lines, qohRows);
+  const { residuals, dateMin, dateMax } = assembled;
 
   // Stamp TOrdCost chain linkage so the cause analysis can tell an Item
   // Fulfillment generated from a Transfer Order (editable) from a client
@@ -101,6 +86,19 @@ export async function pullItemInventory(itemCode: string): Promise<PulledItem> {
   );
   const pairs: TOrdCostPair[] = linkRows.map((r: any) => ({ ifTxId: String(r.if_tx), irTxId: String(r.ir_tx) }));
   const transactions = linkChains(assembled.transactions, pairs);
+
+  let openings = assembled.openings;
+  let snapshotsApplied = false; // = trusted today-anchor applied
+  try {
+    const feed = await fetchStockMatrix();
+    const todayIso = new Date().toISOString().slice(0, 10);
+    openings = applyTodayAnchor(transactions, assembled.openings, feedQohForItem(feed, itemCode), todayIso);
+    snapshotsApplied = true;
+  } catch (err) {
+    console.warn(`[netsuitePull] feed unavailable — zero-anchor fallback: ${(err as Error).message}`);
+  }
+  const points = await readTrustedPoints(itemCode);
+  const corrections = buildPointCorrections(points, transactions, openings);
 
   return {
     itemCode: itemCode.toUpperCase(),
