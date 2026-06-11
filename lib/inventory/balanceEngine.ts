@@ -271,6 +271,21 @@ export function computeLedger(
       priorEod = eod;
     }
 
+    // ENDPOINT VALIDATION: when trusted points re-anchored this lane, the replay
+    // must still land on today's trusted on-hand (currentQoh, from the feed).
+    // A mismatch means a phantom movement sits AFTER the last point — so
+    // everything downstream of it is unconfirmed. Tolerance ±2 units (the feed
+    // rounds; account phantoms are 100s–1000s, never 1–2).
+    if (corr.length > 0) {
+      const cq = openingByLoc.get(locId)?.currentQoh;
+      if (cq != null) {
+        const gap = Math.round((cq - running) * 100) / 100;
+        if (Math.abs(gap) > 2) {
+          unverifiedSegments.push({ from: prevAnchor, to: '9999-12-31', gap });
+        }
+      }
+    }
+
     result.byLocation[locId] = {
       locationNsId: locId,
       locationName,

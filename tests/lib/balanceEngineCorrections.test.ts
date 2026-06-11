@@ -37,9 +37,11 @@ describe('computeLedger re-anchoring + validation', () => {
   it('re-anchors to a trusted snapshot and flags an unreconciled segment', () => {
     // A trusted snapshot on 10-31 says 600, but replay reaches 487 (gap +113):
     // NetSuite has movements we can't see → record an unverified segment, and
-    // the eod on the snapshot date becomes the trusted value.
+    // the eod on the snapshot date becomes the trusted value. (currentQoh 600 =
+    // trusted today matches the corrected final, so no endpoint segment.)
     const corrections: CorrectionMap = new Map([['L1', [{ date: '2024-10-31', qty: 600 }]]]);
-    const ledger = computeLedger(txns, opening(5), corrections);
+    const openings = [{ locationNsId: 'L1', locationName: 'Loc 1', openingQty: 5, currentQoh: 600 }];
+    const ledger = computeLedger(txns, openings, corrections);
     const lane = ledger.byLocation['L1'];
     expect(lane.eodTimeline.find((p) => p.date === '2024-10-31')?.eod).toBe(600);
     expect(lane.final).toBe(600);
@@ -47,9 +49,11 @@ describe('computeLedger re-anchoring + validation', () => {
   });
 
   it('records NO unverified segment when replay reconciles exactly', () => {
-    // Replay reaches 487 on 10-08; a trusted snapshot of 487 on 10-31 matches.
+    // Replay reaches 487 on 10-08; a trusted snapshot of 487 on 10-31 matches,
+    // and trusted today (currentQoh 487) matches the endpoint too.
     const corrections: CorrectionMap = new Map([['L1', [{ date: '2024-10-31', qty: 487 }]]]);
-    const ledger = computeLedger(txns, opening(5), corrections);
+    const openings = [{ locationNsId: 'L1', locationName: 'Loc 1', openingQty: 5, currentQoh: 487 }];
+    const ledger = computeLedger(txns, openings, corrections);
     expect(ledger.byLocation['L1'].unverifiedSegments).toEqual([]);
     expect(ledger.byLocation['L1'].final).toBe(487);
   });
@@ -66,5 +70,26 @@ describe('computeLedger re-anchoring + validation', () => {
     const b = computeLedger(txns, opening(5), new Map());
     expect(b.byLocation['L1'].eodTimeline).toEqual(a.byLocation['L1'].eodTimeline);
     expect(a.byLocation['L1'].unverifiedSegments).toEqual([]);
+  });
+
+  it('flags an endpoint mismatch after the last point (phantom after it)', () => {
+    // Replay from the 10-31 point (600) has no further txns, but trusted today
+    // (currentQoh) says 1100 → +500 phantom after the point → everything
+    // downstream of 10-31 is unconfirmed.
+    const openings = [{ locationNsId: 'L1', locationName: 'Loc 1', openingQty: 5, currentQoh: 1100 }];
+    const corrections: CorrectionMap = new Map([['L1', [{ date: '2024-10-31', qty: 600 }]]]);
+    const ledger = computeLedger(txns, openings, corrections);
+    expect(ledger.byLocation['L1'].unverifiedSegments).toContainEqual({
+      from: '2024-10-31',
+      to: '9999-12-31',
+      gap: 500,
+    });
+  });
+
+  it('tolerates a tiny endpoint gap (≤2 units = feed rounding noise)', () => {
+    const openings = [{ locationNsId: 'L1', locationName: 'Loc 1', openingQty: 5, currentQoh: 601 }];
+    const corrections: CorrectionMap = new Map([['L1', [{ date: '2024-10-31', qty: 600 }]]]);
+    const ledger = computeLedger(txns, openings, corrections);
+    expect(ledger.byLocation['L1'].unverifiedSegments.some((s) => s.to === '9999-12-31')).toBe(false);
   });
 });
