@@ -149,8 +149,10 @@ export function analyzeNegativeWindow(lane: LocationLedger, start: string, end: 
   // unexplained opening with no trusted point on/before the window start (the
   // residual could sit anywhere in time, so these dates are unconfirmed).
   const endRef = end ?? '9999-12-31';
+  // seg.to = the correction date where truth was restored; strictly-before
+  // mismatches don't pollute a window starting exactly on it.
   const unreconciled =
-    (lane.unverifiedSegments ?? []).some((seg) => seg.to >= start && seg.from <= endRef) ||
+    (lane.unverifiedSegments ?? []).some((seg) => seg.to > start && seg.from <= endRef) ||
     !laneAnchoredBefore(lane, start);
 
   // CAUSED BY: every outbound line inside the window. Most-impactful first.

@@ -99,7 +99,11 @@ export default function WorklistPage() {
   const [recomputing, setRecomputing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [active, setActive] = useState<Set<Category>>(new Set<Category>(['CLEAN'])); // default CLEAN only
+  // Default ALL categories visible — a default that hides rows made the owner
+  // believe a real 2024 negative window was missing (FPS0019 @ Square1, PARTIAL).
+  const [active, setActive] = useState<Set<Category>>(
+    new Set<Category>(['CLEAN', 'PARTIAL', 'MANUAL', 'CLOSED']),
+  );
   const [hideDone, setHideDone] = useState(true);
   const [search, setSearch] = useState('');
   const [year, setYear] = useState('all');
@@ -391,7 +395,12 @@ export default function WorklistPage() {
           <input type="checkbox" checked={hideDone} onChange={(e) => setHideDone(e.target.checked)} />
           Hide done
         </label>
-        <span className="ml-auto text-xs text-muted-foreground">{filtered.length} shown</span>
+        <span className="ml-auto text-xs text-muted-foreground">
+          {filtered.length} shown
+          {rows.length - filtered.length > 0 && (
+            <span className="text-amber-700 font-medium"> · {rows.length - filtered.length} hidden by filters</span>
+          )}
+        </span>
       </div>
 
       {error && (

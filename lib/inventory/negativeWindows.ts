@@ -129,7 +129,9 @@ function windowVerified(
 ): boolean | undefined {
   if (!trustedAnchorApplied) return undefined;
   const endRef = end ?? '9999-12-31';
-  const overlaps = (lane.unverifiedSegments ?? []).some((seg) => seg.to >= start && seg.from <= endRef);
+  // seg.to is the correction date where truth was RESTORED (the mismatch lies
+  // strictly before it), so a window starting exactly on seg.to is clean.
+  const overlaps = (lane.unverifiedSegments ?? []).some((seg) => seg.to > start && seg.from <= endRef);
   return !overlaps && laneAnchoredBefore(lane, start);
 }
 
