@@ -124,6 +124,19 @@ export default function NewCompanyPage() {
       setError('Company name and NetSuite number are required.');
       return;
     }
+    // CSF guardrail: when on, the location MUST be a different subsidiary's
+    // (it becomes the SO Inventory Location). Block the inconsistent state.
+    if (formData.cross_subsidiary_fulfillment) {
+      const loc = options.locations.find((l) => l.id === formData.location_id);
+      if (!loc) {
+        setError('Cross-Subsidiary Fulfillment is on — choose a fulfillment location from another subsidiary.');
+        return;
+      }
+      if (loc.subsidiaryId === formData.subsidiary_id) {
+        setError('Cross-Subsidiary Fulfillment requires a location in a DIFFERENT subsidiary than the client.');
+        return;
+      }
+    }
     setSaving(true);
     setError(null);
 
