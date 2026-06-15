@@ -309,12 +309,44 @@ export class NetSuiteAPI {
     return 'ILY – Sales Export';
   }
 
+  /**
+   * Look up an existing Sales Order by its Hub external id. We stamp
+   * `externalId = Hub order.id` on every SO we create, and NetSuite enforces
+   * external-id uniqueness per record type — so this both detects a prior
+   * (possibly un-recorded) push and lets us link to it instead of duplicating.
+   * Tolerates 404 (no such SO) without throwing.
+   */
+  async findSalesOrderByExternalId(externalId: string): Promise<NSSalesOrderResult | null> {
+    const url = `${this.baseUrl}/record/v1/salesOrder/eid:${encodeURIComponent(externalId)}`;
+    const authHeader = this.getAuthHeader(url, 'GET');
+    const res = await axios({
+      method: 'GET',
+      url,
+      headers: { Authorization: authHeader, Accept: 'application/json' },
+      validateStatus: () => true,
+    });
+    if (res.status === 404) return null;
+    if (res.status >= 400) {
+      throw new Error(`NetSuite lookup by external id failed: HTTP ${res.status}`);
+    }
+    const data = res.data as { id?: string; tranId?: string } | undefined;
+    if (!data?.id) return null;
+    return { nsSOId: String(data.id), soNumber: data.tranId || String(data.id) };
+  }
+
   // ---------------------------------------------------------------------------
   // Push Hub order → NetSuite Sales Order
   // Returns { nsSOId, soNumber }
   // ---------------------------------------------------------------------------
   async pushOrderToNetSuite(order: HubOrderForSync): Promise<NSSalesOrderResult> {
     const company = order.company;
+
+    // IDEMPOTENCY GUARD: if an SO already exists for this Hub order (we stamp
+    // externalId = order.id), link to it instead of creating a duplicate. This
+    // covers retries after a transient post-create failure and double-clicks —
+    // the exact cause of the SOUS16616/16617 duplicate.
+    const existingSO = await this.findSalesOrderByExternalId(order.id);
+    if (existingSO) return existingSO;
 
     if (!company.netsuite_internal_id) {
       throw new Error(
@@ -412,6 +444,9 @@ export class NetSuiteAPI {
     const tranDate = orderDate.toISOString().split('T')[0];
 
     const payload: Record<string, unknown> = {
+      // Idempotency key — NetSuite enforces uniqueness, so even a race can't
+      // create two SOs for the same Hub order.
+      externalId: order.id,
       entity: { id: company.netsuite_internal_id },
       subsidiary: { id: company.subsidiary.netsuite_id },
       tranDate,
@@ -457,6 +492,11 @@ export class NetSuiteAPI {
     });
 
     if (createResponse.status !== 204 && createResponse.status !== 200 && createResponse.status !== 201) {
+      // A concurrent push may have created it first — NetSuite then rejects this
+      // one for duplicate externalId. If an SO now exists for this order, link
+      // to it rather than surfacing an error.
+      const raced = await this.findSalesOrderByExternalId(order.id);
+      if (raced) return raced;
       const msg =
         createResponse.data?.['o:message'] ||
         createResponse.data?.message ||
@@ -473,9 +513,21 @@ export class NetSuiteAPI {
       throw new Error('NetSuite created the SO but did not return an ID in the Location header.');
     }
 
-    // Fetch the SO to get the readable SO number (tranId)
-    const soData = await this.request<{ tranId: string }>(`/record/v1/salesOrder/${nsSOId}`);
-    const soNumber = soData.tranId || nsSOId;
+    // Read back the human-readable SO number (tranId). This is COSMETIC: NetSuite
+    // is briefly inconsistent right after create and this GET can fail with a
+    // transient/non-JSON response. Previously that exception was thrown and the
+    // just-created SO was discarded — the Hub never recorded it, the admin
+    // re-clicked, and a DUPLICATE SO was created. Never discard a created SO:
+    // fall back to the internal id; the reconcile path backfills the number.
+    let soNumber = nsSOId;
+    try {
+      const soData = await this.request<{ tranId: string }>(`/record/v1/salesOrder/${nsSOId}`);
+      if (soData?.tranId) soNumber = soData.tranId;
+    } catch (err) {
+      console.warn(
+        `SO ${nsSOId} created but reading its number failed (will reconcile later): ${(err as Error).message}`,
+      );
+    }
 
     return { nsSOId, soNumber };
   }
