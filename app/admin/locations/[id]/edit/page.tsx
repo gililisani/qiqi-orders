@@ -101,6 +101,10 @@ export default function EditLocationPage() {
       onCancel={() => router.push('/admin/locations')}
       submitLabel="Save changes"
     >
+      {loading ? (
+        <p className="text-sm text-muted-foreground py-4">Loading…</p>
+      ) : (
+        <>
       <FormField label="Location name" required>
         <Input
           value={locationName}
@@ -149,6 +153,8 @@ export default function EditLocationPage() {
           placeholder="e.g. 5"
         />
       </FormField>
+        </>
+      )}
     </AdminFormShell>
   );
 }
