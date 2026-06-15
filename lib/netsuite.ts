@@ -394,10 +394,14 @@ export class NetSuiteAPI {
       }
     }
 
-    // Cross-subsidiary fulfillment detection: when the fulfilling location
-    // belongs to a different subsidiary than the customer, NetSuite needs
-    // per-line `location` so it can auto-populate the inventory subsidiary.
-    // Falls through to the simpler header-only location when same-subsidiary.
+    // Cross-Subsidiary Fulfillment (CSF) detection: the chosen fulfilling
+    // location belongs to a DIFFERENT subsidiary than the selling customer
+    // (e.g. Qiqi INC customer fulfilled from Qiqi Global's Brandfox). In that
+    // case NetSuite needs the line's INVENTORY LOCATION set to that location —
+    // it then auto-populates inventorysubsidiary and runs cross-sub fulfillment
+    // + intercompany accounting. The selling `location` is left BLANK (it's
+    // meaningless for CSF and must sit in the selling subsidiary anyway).
+    // Same-subsidiary orders fall through to the simpler header-only location.
     const locationSubsidiaryNsId = company.location.subsidiary?.netsuite_id;
     const isCrossSubsidiary =
       !!locationSubsidiaryNsId &&
@@ -411,7 +415,7 @@ export class NetSuiteAPI {
         rate: item.rate,
       };
       if (isCrossSubsidiary) {
-        line.location = { id: company.location.netsuite_id };
+        line.inventorylocation = { id: company.location.netsuite_id };
       }
       lineItems.push(line);
     }
@@ -434,7 +438,7 @@ export class NetSuiteAPI {
         description: 'Distributor Support Fund',
       };
       if (isCrossSubsidiary) {
-        discountLine.location = { id: company.location.netsuite_id };
+        discountLine.inventorylocation = { id: company.location.netsuite_id };
       }
       lineItems.push(discountLine);
     }

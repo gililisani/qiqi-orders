@@ -23,6 +23,7 @@ import { useToast } from '../../../../components/ui/ToastProvider';
 interface Option {
   id: string;
   name: string;
+  subsidiaryId?: string; // populated for locations, to filter by subsidiary (CSF)
 }
 interface SupportFundOption {
   id: string;
@@ -97,6 +98,7 @@ export default function EditCompanyPage() {
     subsidiary_id: '',
     class_id: '',
     location_id: '',
+    cross_subsidiary_fulfillment: false,
     incoterm_id: '',
     payment_terms_id: '',
     company_address: '',
@@ -132,7 +134,7 @@ export default function EditCompanyPage() {
             supabase.from('support_fund_levels').select('id, percent').order('percent'),
             supabase.from('subsidiaries').select('id, name').order('name'),
             supabase.from('classes').select('id, name').order('name'),
-            supabase.from('Locations').select('id, location_name').order('location_name'),
+            supabase.from('Locations').select('id, location_name, subsidiary_id').order('location_name'),
             supabase.from('incoterms').select('id, name').order('name'),
             supabase.from('payment_terms').select('id, name').order('name'),
             supabase.rpc('get_countries_list'),
@@ -149,6 +151,7 @@ export default function EditCompanyPage() {
           subsidiary_id: c.subsidiary_id || '',
           class_id: c.class_id || '',
           location_id: c.location_id || '',
+          cross_subsidiary_fulfillment: c.cross_subsidiary_fulfillment ?? false,
           incoterm_id: c.incoterm_id || '',
           payment_terms_id: c.payment_terms_id || '',
           company_address: c.company_address || '',
@@ -182,7 +185,7 @@ export default function EditCompanyPage() {
           supportFunds: supportFunds.data || [],
           subsidiaries: subsidiaries.data || [],
           classes: classes.data || [],
-          locations: (locations.data || []).map((l: any) => ({ id: l.id, name: l.location_name })),
+          locations: (locations.data || []).map((l: any) => ({ id: l.id, name: l.location_name, subsidiaryId: l.subsidiary_id })),
           incoterms: incoterms.data || [],
           paymentTerms: paymentTerms.data || [],
         });
@@ -213,6 +216,24 @@ export default function EditCompanyPage() {
 
   const setSelect = (key: keyof typeof formData) => (value: string) =>
     setFormData((p) => ({ ...p, [key]: value === NONE ? '' : value }));
+
+  // CSF: scope the Location list to the client's own subsidiary — or, when
+  // Cross-Subsidiary Fulfillment is on, to the OTHER subsidiaries' locations
+  // (e.g. a Qiqi INC client fulfilled from Qiqi Global's Brandfox warehouse).
+  const filteredLocations = options.locations.filter((l) =>
+    !formData.subsidiary_id
+      ? false
+      : formData.cross_subsidiary_fulfillment
+        ? l.subsidiaryId !== formData.subsidiary_id
+        : l.subsidiaryId === formData.subsidiary_id,
+  );
+
+  // Changing the subsidiary or toggling CSF can invalidate the chosen location,
+  // so clear it — the admin re-picks from the now-correct filtered list.
+  const onChangeSubsidiary = (value: string) =>
+    setFormData((p) => ({ ...p, subsidiary_id: value === NONE ? '' : value, location_id: '' }));
+  const onToggleCsf = (checked: boolean) =>
+    setFormData((p) => ({ ...p, cross_subsidiary_fulfillment: checked, location_id: '' }));
 
   // ---- Territories ----
   const handleTerritoryInput = (value: string) => {
@@ -295,6 +316,7 @@ export default function EditCompanyPage() {
           subsidiary_id: formData.subsidiary_id || null,
           class_id: formData.class_id || null,
           location_id: formData.location_id || null,
+          cross_subsidiary_fulfillment: formData.cross_subsidiary_fulfillment,
           incoterm_id: formData.incoterm_id || null,
           payment_terms_id: formData.payment_terms_id || null,
           company_address: formData.company_address.trim() || null,
@@ -415,7 +437,7 @@ export default function EditCompanyPage() {
           <SelectField
             label="Subsidiary"
             value={formData.subsidiary_id}
-            onChange={setSelect('subsidiary_id')}
+            onChange={onChangeSubsidiary}
             options={options.subsidiaries}
           />
           <SelectField
@@ -424,12 +446,30 @@ export default function EditCompanyPage() {
             onChange={setSelect('class_id')}
             options={options.classes}
           />
-          <SelectField
-            label="Location"
-            value={formData.location_id}
-            onChange={setSelect('location_id')}
-            options={options.locations}
-          />
+          <div>
+            <SelectField
+              label="Location"
+              value={formData.location_id}
+              onChange={setSelect('location_id')}
+              options={filteredLocations}
+            />
+            <label className="mt-2 flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={formData.cross_subsidiary_fulfillment}
+                onChange={(e) => onToggleCsf(e.target.checked)}
+                className="h-4 w-4 rounded border-input"
+              />
+              Cross-Subsidiary Fulfillment
+            </label>
+            {!formData.subsidiary_id ? (
+              <p className="mt-1 text-xs text-amber-700">Choose a subsidiary first.</p>
+            ) : formData.cross_subsidiary_fulfillment ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Showing other subsidiaries&apos; locations — orders use this as the Inventory Location (fulfilled on this client&apos;s behalf).
+              </p>
+            ) : null}
+          </div>
           <SelectField
             label="Support fund %"
             value={formData.support_fund_id}

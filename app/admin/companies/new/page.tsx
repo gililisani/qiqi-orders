@@ -21,6 +21,7 @@ import { useToast } from '../../../components/ui/ToastProvider';
 interface Option {
   id: string;
   name: string;
+  subsidiaryId?: string; // populated for locations, to filter by subsidiary (CSF)
 }
 interface SupportFundOption {
   id: string;
@@ -41,6 +42,7 @@ export default function NewCompanyPage() {
     subsidiary_id: '',
     class_id: '',
     location_id: '',
+    cross_subsidiary_fulfillment: false,
     incoterm_id: '',
     payment_terms_id: '',
     company_address: '',
@@ -78,7 +80,7 @@ export default function NewCompanyPage() {
             supabase.from('support_fund_levels').select('id, percent').order('percent'),
             supabase.from('subsidiaries').select('id, name').order('name'),
             supabase.from('classes').select('id, name').order('name'),
-            supabase.from('Locations').select('id, location_name').order('location_name'),
+            supabase.from('Locations').select('id, location_name, subsidiary_id').order('location_name'),
             supabase.from('incoterms').select('id, name').order('name'),
             supabase.from('payment_terms').select('id, name').order('name'),
           ]);
@@ -86,7 +88,7 @@ export default function NewCompanyPage() {
           supportFunds: supportFunds.data || [],
           subsidiaries: subsidiaries.data || [],
           classes: classes.data || [],
-          locations: (locations.data || []).map((l: any) => ({ id: l.id, name: l.location_name })),
+          locations: (locations.data || []).map((l: any) => ({ id: l.id, name: l.location_name, subsidiaryId: l.subsidiary_id })),
           incoterms: incoterms.data || [],
           paymentTerms: paymentTerms.data || [],
         });
@@ -101,6 +103,20 @@ export default function NewCompanyPage() {
 
   const setSelect = (key: keyof typeof formData) => (value: string) =>
     setFormData((p) => ({ ...p, [key]: value === NONE ? '' : value }));
+
+  // CSF: scope the Location list to the client's own subsidiary — or, when
+  // Cross-Subsidiary Fulfillment is on, to the OTHER subsidiaries' locations.
+  const filteredLocations = options.locations.filter((l) =>
+    !formData.subsidiary_id
+      ? false
+      : formData.cross_subsidiary_fulfillment
+        ? l.subsidiaryId !== formData.subsidiary_id
+        : l.subsidiaryId === formData.subsidiary_id,
+  );
+  const onChangeSubsidiary = (value: string) =>
+    setFormData((p) => ({ ...p, subsidiary_id: value === NONE ? '' : value, location_id: '' }));
+  const onToggleCsf = (checked: boolean) =>
+    setFormData((p) => ({ ...p, cross_subsidiary_fulfillment: checked, location_id: '' }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,6 +151,7 @@ export default function NewCompanyPage() {
           subsidiary_id: formData.subsidiary_id || null,
           class_id: formData.class_id || null,
           location_id: formData.location_id || null,
+          cross_subsidiary_fulfillment: formData.cross_subsidiary_fulfillment,
           incoterm_id: formData.incoterm_id || null,
           payment_terms_id: formData.payment_terms_id || null,
           company_address: formData.company_address.trim() || null,
@@ -211,7 +228,7 @@ export default function NewCompanyPage() {
           <SelectField
             label="Subsidiary"
             value={formData.subsidiary_id}
-            onChange={setSelect('subsidiary_id')}
+            onChange={onChangeSubsidiary}
             options={options.subsidiaries}
           />
           <SelectField
@@ -220,12 +237,30 @@ export default function NewCompanyPage() {
             onChange={setSelect('class_id')}
             options={options.classes}
           />
-          <SelectField
-            label="Location"
-            value={formData.location_id}
-            onChange={setSelect('location_id')}
-            options={options.locations}
-          />
+          <div>
+            <SelectField
+              label="Location"
+              value={formData.location_id}
+              onChange={setSelect('location_id')}
+              options={filteredLocations}
+            />
+            <label className="mt-2 flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={formData.cross_subsidiary_fulfillment}
+                onChange={(e) => onToggleCsf(e.target.checked)}
+                className="h-4 w-4 rounded border-input"
+              />
+              Cross-Subsidiary Fulfillment
+            </label>
+            {!formData.subsidiary_id ? (
+              <p className="mt-1 text-xs text-amber-700">Choose a subsidiary first.</p>
+            ) : formData.cross_subsidiary_fulfillment ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Showing other subsidiaries&apos; locations — orders use this as the Inventory Location (fulfilled on this client&apos;s behalf).
+              </p>
+            ) : null}
+          </div>
           <SelectField
             label="Support fund %"
             value={formData.support_fund_id}
