@@ -30,6 +30,7 @@ import {
   FileDown,
   Truck,
   Trash2,
+  Loader2,
 } from 'lucide-react';
 
 import { supabase } from '../../../lib/supabaseClient';
@@ -541,6 +542,11 @@ export default function AdminOrderDetailsView({
   // --------------------------------------------------------------------------
   // Derived: primary contextual NetSuite action
   // --------------------------------------------------------------------------
+  // True while the lazy on-view reconcile is checking NetSuite for an invoice
+  // that was created there directly (SO linked, but no invoice cached yet).
+  const detectingInvoice =
+    reconciling && !!order.netsuite_so_id && !order.netsuite_invoice_id;
+
   const nsPrimary = (() => {
     if (order.status === 'Draft') return null;
     // While reconciliation is in flight on an order with so_number but no
@@ -558,6 +564,12 @@ export default function AdminOrderDetailsView({
         action: 'push-so' as const,
         label: nsLoading === 'push-so' ? 'Pushing…' : 'Push to NetSuite',
       };
+    }
+    // While checking NetSuite for an existing invoice, suppress the Create
+    // button — we may be about to discover one already exists, and showing
+    // Create then swapping it out would flicker.
+    if (detectingInvoice) {
+      return null;
     }
     if (!order.netsuite_invoice_id) {
       return {
@@ -838,6 +850,17 @@ export default function AdminOrderDetailsView({
                   />
                 ) : adminInvoiceNumber ? (
                   <span className="font-mono">{adminInvoiceNumber}</span>
+                ) : detectingInvoice ? (
+                  // SO is linked but no invoice cached — we're checking NetSuite
+                  // for one created there directly. Show a quiet inline loader so
+                  // the card doesn't suddenly pop in if/when one is found.
+                  <span
+                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+                    title="Checking NetSuite for an invoice"
+                  >
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Checking NetSuite…
+                  </span>
                 ) : (
                   <span className="text-muted-foreground">—</span>
                 )}
