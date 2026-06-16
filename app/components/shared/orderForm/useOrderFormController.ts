@@ -123,6 +123,18 @@ export function useOrderFormController(params: {
         if (isNewMode) {
           const poNumber = generatePoNumber((order && order.po_number) || null);
 
+          // Snapshot the company's CURRENT fulfilling location. Re-fetch it from
+          // the DB rather than trusting the page's in-memory company list, which
+          // can be stale if the company's Location was changed after the form
+          // loaded — that staleness froze the old Packable-INC onto a CSF order
+          // instead of Brandfox, defeating cross-subsidiary fulfillment.
+          const { data: freshCompany } = await supabase
+            .from('companies')
+            .select('location_id')
+            .eq('id', company.id)
+            .single();
+          const snapshotLocationId = freshCompany?.location_id ?? (company as any).location_id ?? null;
+
           // Log order creation details for debugging
           console.log('Creating order with details:', {
             company_id: company.id,
@@ -131,6 +143,7 @@ export function useOrderFormController(params: {
             po_number: poNumber,
             status: asDraft ? 'Draft' : 'Open',
             role: role,
+            location_id: snapshotLocationId,
           });
 
           // Create new order — snapshot location_id from company so the
@@ -143,7 +156,7 @@ export function useOrderFormController(params: {
               user_id: user.id,
               po_number: poNumber,
               status: asDraft ? 'Draft' : 'Open',
-              location_id: (company as any).location_id ?? null,
+              location_id: snapshotLocationId,
             })
             .select()
             .single();
