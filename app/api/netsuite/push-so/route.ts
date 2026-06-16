@@ -13,11 +13,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceRoleClient();
 
-    // Fetch order with all NS-relevant fields. We pull BOTH the snapshot
-    // fulfilling location (orders.location_id, set at order creation time)
-    // AND the company's current location, so we can fall back to the
-    // company's location for any legacy order that pre-dates the
-    // location_id snapshot column.
+    // Fetch order with all NS-relevant fields. We pull the company's CURRENT
+    // location (companies.location_id → Locations) which is what we actually
+    // push, plus the order's frozen snapshot (orders.location_id) as a
+    // legacy fallback for companies that have no location set.
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(`
@@ -37,6 +36,7 @@ export async function POST(request: NextRequest) {
           company_name,
           netsuite_number,
           netsuite_internal_id,
+          location_id,
           subsidiary:subsidiaries(name, netsuite_id),
           location:Locations(
             location_name,
@@ -67,28 +67,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Pick the location that drives fulfillment: prefer the snapshot on the
-    // order (frozen at creation), fall back to the company's current
-    // location. The fallback covers orders created before the snapshot
-    // column existed; new orders always have location_id populated.
+    // Re-resolve the fulfilling location from the company's CURRENT location
+    // at push time. A (re)push recreates the SO *now*, so it must reflect the
+    // client's current config — NOT orders.location_id, which is frozen at
+    // creation. The freeze protects already-pushed historical orders from
+    // later 3PL re-pointing, but it also caused the CSF bug: unlink → delete
+    // NS SO → re-push re-used the stale snapshot (Packable-INC) and cross-sub
+    // never fired. We push the company's current location; fall back to the
+    // frozen snapshot only when the company has no location set (legacy).
     const orderForNs: any = { ...order };
-    if (orderForNs.snapshot_location && orderForNs.company) {
+    const companyLocation = orderForNs.company?.location ?? null;
+    const resolvedLocation = companyLocation ?? orderForNs.snapshot_location ?? null;
+    if (orderForNs.company) {
       orderForNs.company = {
         ...orderForNs.company,
-        location: orderForNs.snapshot_location,
+        location: resolvedLocation,
       };
     }
+    // The location_id we stamp back onto the order so it reflects what was
+    // actually pushed: the company's current location, falling back to the
+    // existing snapshot if the company has none.
+    const resolvedLocationId =
+      (order as any).company?.location_id ?? order.location_id ?? null;
 
     const ns = createNetSuiteAPI();
     const { nsSOId, soNumber } = await ns.pushOrderToNetSuite(orderForNs);
 
-    // Write SO ID + number back, and advance status to "In Process"
+    // Write SO ID + number back, advance status to "In Process", and snapshot
+    // the location actually pushed so the order record stays in sync.
     const { error: updateError } = await supabase
       .from('orders')
       .update({
         netsuite_so_id: nsSOId,
         so_number: soNumber,
         status: 'In Process',
+        location_id: resolvedLocationId,
       })
       .eq('id', orderId);
 
