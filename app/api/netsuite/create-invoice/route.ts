@@ -38,26 +38,53 @@ export async function POST(request: NextRequest) {
     }
 
     const ns = createNetSuiteAPI();
+
+    // DETECT-FIRST: an invoice may already exist in NetSuite for this SO —
+    // created directly in NS (not via the Hub), or by a prior partial run.
+    // If so, link to it instead of transforming the SO again, which would
+    // create a DUPLICATE invoice. This is the invoice analogue of the
+    // externalId guard that prevents duplicate Sales Orders.
     let result;
+    let linked = false;
+    let existing = null;
     try {
-      result = await ns.createInvoiceFromSO(order.netsuite_so_id);
+      existing = await ns.findInvoiceForSalesOrder(order.netsuite_so_id);
     } catch (e: any) {
-      // If the SO no longer exists in NS (e.g. deleted manually), clear the stale
-      // link so the admin can push the order to NetSuite again.
-      if (e?.message?.includes('NetSuite 404')) {
-        await supabase
-          .from('orders')
-          .update({ netsuite_so_id: null, so_number: null })
-          .eq('id', orderId);
-        return NextResponse.json(
-          {
-            error:
-              'The Sales Order no longer exists in NetSuite. The link has been cleared — refresh the page and click "Push to NetSuite" to recreate it.',
-          },
-          { status: 410 }
-        );
+      // Non-fatal — fall through to create. Worst case we attempt a transform.
+      console.error('create-invoice: existing-invoice lookup failed:', e?.message);
+    }
+
+    if (existing) {
+      linked = true;
+      // findInvoiceForSalesOrder returns null amountRemaining/dueDate; enrich
+      // via the REST record. Non-fatal — fall back to the basic fields.
+      try {
+        result = await ns.getInvoiceDetails(existing.nsInvoiceId);
+      } catch (e: any) {
+        console.error('create-invoice: getInvoiceDetails failed for existing invoice:', e?.message);
+        result = existing;
       }
-      throw e;
+    } else {
+      try {
+        result = await ns.createInvoiceFromSO(order.netsuite_so_id);
+      } catch (e: any) {
+        // If the SO no longer exists in NS (e.g. deleted manually), clear the stale
+        // link so the admin can push the order to NetSuite again.
+        if (e?.message?.includes('NetSuite 404')) {
+          await supabase
+            .from('orders')
+            .update({ netsuite_so_id: null, so_number: null })
+            .eq('id', orderId);
+          return NextResponse.json(
+            {
+              error:
+                'The Sales Order no longer exists in NetSuite. The link has been cleared — refresh the page and click "Push to NetSuite" to recreate it.',
+            },
+            { status: 410 }
+          );
+        }
+        throw e;
+      }
     }
 
     await supabase
@@ -77,12 +104,14 @@ export async function POST(request: NextRequest) {
       order_id: orderId,
       status_from: order.status,
       status_to: 'Ready',
-      notes: `NetSuite Invoice created: ${result.invoiceNumber}`,
+      notes: linked
+        ? `NetSuite Invoice linked (already existed in NetSuite): ${result.invoiceNumber}`
+        : `NetSuite Invoice created: ${result.invoiceNumber}`,
       changed_by_name: 'System',
       changed_by_role: 'admin',
     }]);
 
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json({ success: true, linked, ...result });
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('create-invoice error:', error);

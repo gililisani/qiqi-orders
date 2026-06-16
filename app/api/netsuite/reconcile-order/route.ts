@@ -15,7 +15,13 @@ import { createNetSuiteAPI } from '../../../../lib/netsuite';
  * "Push to NetSuite" button forever even when the SO actually existed in NS.
  *
  * Behavior:
- *   - If netsuite_so_id already set → no-op (nothing to reconcile).
+ *   - If netsuite_so_id AND netsuite_invoice_id both set → no-op (fully synced).
+ *   - Else if netsuite_so_id set but no invoice yet → look for an invoice
+ *     created from the SO in NetSuite (e.g. transformed directly in NS, not
+ *     via the Hub). Found → cache the invoice fields and advance In Process →
+ *     Ready. Not found → noop (the invoice simply doesn't exist yet). This is
+ *     the lazy, on-view detection of NS-created invoices — one cheap SuiteQL,
+ *     and only while the invoice is still unknown.
  *   - Else if so_number is set → look up the SO in NS by tranid.
  *       - Found → write netsuite_so_id; then look for an invoice created from
  *         it and write netsuite_invoice_id + invoice_number +
@@ -27,6 +33,34 @@ import { createNetSuiteAPI } from '../../../../lib/netsuite';
  * The response includes the updated fields so the caller can refresh its
  * local order state without a second round-trip.
  */
+
+/**
+ * Build the orders-table patch for a detected invoice. The SuiteQL finder
+ * gives us id/number/date/status; we hit the REST record endpoint for
+ * amountRemaining + dueDate (and prefer its date/status when present).
+ * The enrichment is non-fatal — we still cache the basic fields on failure.
+ */
+async function buildInvoicePatch(
+  ns: ReturnType<typeof createNetSuiteAPI>,
+  invoice: NonNullable<Awaited<ReturnType<ReturnType<typeof createNetSuiteAPI>['findInvoiceForSalesOrder']>>>,
+): Promise<Record<string, unknown>> {
+  const patch: Record<string, unknown> = {
+    netsuite_invoice_id: invoice.nsInvoiceId,
+    invoice_number: invoice.invoiceNumber,
+    netsuite_invoice_date: invoice.invoiceDate || null,
+    netsuite_invoice_status: invoice.status || null,
+  };
+  try {
+    const full = await ns.getInvoiceDetails(invoice.nsInvoiceId);
+    patch.invoice_amount_remaining = full.amountRemaining;
+    patch.invoice_due_date = full.dueDate;
+    if (full.invoiceDate) patch.netsuite_invoice_date = full.invoiceDate;
+    if (full.status) patch.netsuite_invoice_status = full.status;
+  } catch (e: any) {
+    console.error('reconcile-order: getInvoiceDetails post-fetch failed:', e?.message);
+  }
+  return patch;
+}
 export async function POST(request: NextRequest) {
   try {
     await requireAdmin(request);
@@ -44,7 +78,7 @@ export async function POST(request: NextRequest) {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(
-        'id, so_number, netsuite_so_id, netsuite_invoice_id',
+        'id, status, so_number, netsuite_so_id, netsuite_invoice_id',
       )
       .eq('id', orderId)
       .single();
@@ -53,15 +87,82 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    // Nothing to do.
+    const ns = createNetSuiteAPI();
+
+    // ========================================================================
+    // Case A: SO already linked.
+    // ========================================================================
     if (order.netsuite_so_id) {
-      return NextResponse.json({ noop: true, reason: 'already-linked' });
+      // Fully synced — nothing to reconcile.
+      if (order.netsuite_invoice_id) {
+        return NextResponse.json({ noop: true, reason: 'already-linked' });
+      }
+
+      // SO known but no invoice cached yet. Detect an invoice created from the
+      // SO directly in NetSuite (one cheap SuiteQL). This is the lazy, on-view
+      // sync of NS-created invoices — fires at most once per order-open while
+      // the invoice is still unknown, then never again once cached.
+      let invoice;
+      try {
+        invoice = await ns.findInvoiceForSalesOrder(order.netsuite_so_id);
+      } catch (e: any) {
+        return NextResponse.json(
+          { error: `NetSuite invoice lookup failed: ${e?.message ?? 'unknown error'}` },
+          { status: 502 },
+        );
+      }
+
+      if (!invoice) {
+        // No invoice exists in NetSuite yet — silent no-op.
+        return NextResponse.json({ noop: true, reason: 'no-invoice-yet' });
+      }
+
+      const patch = await buildInvoicePatch(ns, invoice);
+      // An order with an invoice is "Ready". Only advance from In Process so we
+      // never move a Done/Cancelled order backwards.
+      const advanceToReady = order.status === 'In Process';
+      if (advanceToReady) patch.status = 'Ready';
+
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update(patch)
+        .eq('id', orderId);
+      if (updateError) {
+        return NextResponse.json(
+          { error: `Failed to update order: ${updateError.message}` },
+          { status: 500 },
+        );
+      }
+
+      if (advanceToReady) {
+        await supabase.from('order_history').insert([{
+          order_id: orderId,
+          status_from: order.status,
+          status_to: 'Ready',
+          notes: `NetSuite Invoice detected (created in NetSuite): ${invoice.invoiceNumber}`,
+          changed_by_name: 'System',
+          changed_by_role: 'admin',
+        }]);
+      }
+
+      return NextResponse.json({
+        reconciled: true,
+        so: null,
+        invoice: {
+          nsInvoiceId: invoice.nsInvoiceId,
+          invoiceNumber: invoice.invoiceNumber,
+          invoiceDate: invoice.invoiceDate,
+          status: invoice.status,
+        },
+      });
     }
+
+    // ========================================================================
+    // Case B: legacy — only a manually-entered so_number, no netsuite_so_id.
+    // ========================================================================
     if (!order.so_number) {
       return NextResponse.json({ noop: true, reason: 'no-so-number' });
     }
-
-    const ns = createNetSuiteAPI();
 
     // --- 1. Find the SO by tranid ---
     let so;
@@ -100,32 +201,11 @@ export async function POST(request: NextRequest) {
       so_number: so.soNumber, // normalize to whatever NS canonical value is
     };
     if (invoice) {
-      patch.netsuite_invoice_id = invoice.nsInvoiceId;
-      patch.invoice_number = invoice.invoiceNumber;
-      patch.netsuite_invoice_date = invoice.invoiceDate || null;
-      patch.netsuite_invoice_status = invoice.status || null;
-
-      // SuiteQL doesn't expose amountRemaining / dueDate cleanly, so fetch
-      // the full invoice record via REST to populate those fields too.
-      // Non-fatal — reconciliation still succeeds with the basic fields.
-      try {
-        const fullInvoice = await ns.getInvoiceDetails(invoice.nsInvoiceId);
-        patch.invoice_amount_remaining = fullInvoice.amountRemaining;
-        patch.invoice_due_date = fullInvoice.dueDate;
-        // Prefer the REST date if it differs (SuiteQL has locale issues).
-        if (fullInvoice.invoiceDate) {
-          patch.netsuite_invoice_date = fullInvoice.invoiceDate;
-        }
-        if (fullInvoice.status) {
-          patch.netsuite_invoice_status = fullInvoice.status;
-        }
-      } catch (e: any) {
-        console.error(
-          'reconcile-order: getInvoiceDetails post-fetch failed:',
-          e?.message,
-        );
-      }
+      Object.assign(patch, await buildInvoicePatch(ns, invoice));
     }
+
+    const advanceToReady = !!invoice && order.status === 'In Process';
+    if (advanceToReady) patch.status = 'Ready';
 
     const { error: updateError } = await supabase
       .from('orders')
@@ -137,6 +217,17 @@ export async function POST(request: NextRequest) {
         { error: `Failed to update order: ${updateError.message}` },
         { status: 500 },
       );
+    }
+
+    if (advanceToReady) {
+      await supabase.from('order_history').insert([{
+        order_id: orderId,
+        status_from: order.status,
+        status_to: 'Ready',
+        notes: `NetSuite Invoice detected (created in NetSuite): ${invoice!.invoiceNumber}`,
+        changed_by_name: 'System',
+        changed_by_role: 'admin',
+      }]);
     }
 
     return NextResponse.json({

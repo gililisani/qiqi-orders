@@ -412,12 +412,16 @@ export default function AdminOrderDetailsView({
 
   useEffect(() => {
     if (!order || !order.id) return;
-    if (order.netsuite_so_id) return;       // already linked, nothing to do
-    if (!order.so_number) return;           // no number to look up
+    // Two lazy-reconcile triggers, both at most once per order-open:
+    //   (a) legacy backfill — a manually-entered so_number with no netsuite_so_id
+    //   (b) NS-created invoice detection — SO linked but no invoice cached yet
+    const needsSoBackfill = !order.netsuite_so_id && !!order.so_number;
+    const needsInvoiceDetect = !!order.netsuite_so_id && !order.netsuite_invoice_id;
+    if (!needsSoBackfill && !needsInvoiceDetect) return;
     if (reconcileStartedFor.current === order.id) return;
     reconcileStartedFor.current = order.id;
     runReconcile();
-  }, [order?.id, order?.netsuite_so_id, order?.so_number, runReconcile]);
+  }, [order?.id, order?.netsuite_so_id, order?.so_number, order?.netsuite_invoice_id, runReconcile]);
   const handleNsAction = async (action: 'push-so' | 'create-invoice' | 'sync-invoice') => {
     if (action === 'push-so') {
       const ok = await confirm({
