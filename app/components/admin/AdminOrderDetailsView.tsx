@@ -1058,7 +1058,7 @@ export default function AdminOrderDetailsView({
             {/* Total (incl. shipping) with the shipping control inline to the
                 right, to keep this summary box compact. */}
             <Field label="Total">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
                 <span className="text-base font-semibold font-mono">{formatCurrency(effectiveTotal)}</span>
                 {editingShipping ? (
                   <div className="flex items-center gap-1.5">
