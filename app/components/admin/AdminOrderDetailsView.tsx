@@ -1055,52 +1055,58 @@ export default function AdminOrderDetailsView({
             <CardTitle className="text-sm">Order Summary</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
+            {/* Total (incl. shipping) with the shipping control inline to the
+                right, to keep this summary box compact. */}
             <Field label="Total">
-              <span className="text-base font-semibold font-mono">{formatCurrency(effectiveTotal)}</span>
-            </Field>
-            {/* Shipping — admin-only. Editable inline; included in Total above. */}
-            <div className="flex items-start justify-between gap-2">
-              <span className="text-sm text-muted-foreground">Shipping</span>
-              {editingShipping ? (
-                <div className="flex items-center gap-1.5">
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                    <Input
-                      autoFocus
-                      inputMode="decimal"
-                      value={shippingDraft}
-                      onChange={(e) => setShippingDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveShipping();
-                        if (e.key === 'Escape') setEditingShipping(false);
-                      }}
-                      placeholder="0.00"
-                      className="h-8 w-24 pl-5 text-right font-mono"
-                    />
-                  </div>
-                  <Button size="sm" onClick={handleSaveShipping} loading={savingShipping}>
-                    Save
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setEditingShipping(false)}
-                    disabled={savingShipping}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <span className="font-mono">{shippingAmount > 0 ? formatCurrency(shippingAmount) : '—'}</span>
-                  {canEditShipping && (
-                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={openShippingEditor}>
-                      {shippingAmount > 0 ? 'Edit' : 'Add Shipping'}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <span className="text-base font-semibold font-mono">{formatCurrency(effectiveTotal)}</span>
+                {editingShipping ? (
+                  <div className="flex items-center gap-1.5">
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                      <Input
+                        autoFocus
+                        inputMode="decimal"
+                        value={shippingDraft}
+                        onChange={(e) => setShippingDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveShipping();
+                          if (e.key === 'Escape') setEditingShipping(false);
+                        }}
+                        placeholder="0.00"
+                        className="h-7 w-20 pl-5 text-right font-mono"
+                      />
+                    </div>
+                    <Button size="sm" className="h-7 px-2 text-xs" onClick={handleSaveShipping} loading={savingShipping}>
+                      Save
                     </Button>
-                  )}
-                </div>
-              )}
-            </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setEditingShipping(false)}
+                      disabled={savingShipping}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : shippingAmount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={canEditShipping ? openShippingEditor : undefined}
+                    disabled={!canEditShipping}
+                    className={`text-xs text-muted-foreground ${canEditShipping ? 'hover:text-foreground underline-offset-4 hover:underline' : 'cursor-default'}`}
+                    title={canEditShipping ? 'Edit shipping' : undefined}
+                  >
+                    incl. {formatCurrency(shippingAmount)} shipping
+                  </button>
+                ) : canEditShipping ? (
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={openShippingEditor}>
+                    Add Shipping
+                  </Button>
+                ) : null}
+              </div>
+            </Field>
             <Field label="Credit Earned">
               <span className="font-mono text-emerald-700">{formatCurrency(order.credit_earned || 0)}</span>
             </Field>
