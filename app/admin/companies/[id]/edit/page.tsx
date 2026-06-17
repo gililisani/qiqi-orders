@@ -99,6 +99,8 @@ export default function EditCompanyPage() {
     class_id: '',
     location_id: '',
     cross_subsidiary_fulfillment: false,
+    enable_credit_card_payments: false,
+    credit_card_fee_percent: '',
     incoterm_id: '',
     payment_terms_id: '',
     company_address: '',
@@ -152,6 +154,9 @@ export default function EditCompanyPage() {
           class_id: c.class_id || '',
           location_id: c.location_id || '',
           cross_subsidiary_fulfillment: c.cross_subsidiary_fulfillment ?? false,
+          enable_credit_card_payments: c.enable_credit_card_payments ?? false,
+          credit_card_fee_percent:
+            c.credit_card_fee_percent != null ? String(c.credit_card_fee_percent) : '',
           incoterm_id: c.incoterm_id || '',
           payment_terms_id: c.payment_terms_id || '',
           company_address: c.company_address || '',
@@ -316,6 +321,14 @@ export default function EditCompanyPage() {
         return;
       }
     }
+    // Credit-card fee must be a valid percent when card payments are enabled.
+    if (formData.enable_credit_card_payments && formData.credit_card_fee_percent.trim() !== '') {
+      const fee = Number(formData.credit_card_fee_percent);
+      if (!Number.isFinite(fee) || fee < 0 || fee > 100) {
+        setError('Credit Card Fee % must be a number between 0 and 100.');
+        return;
+      }
+    }
     setSaving(true);
     setError(null);
     try {
@@ -330,6 +343,11 @@ export default function EditCompanyPage() {
           class_id: formData.class_id || null,
           location_id: formData.location_id || null,
           cross_subsidiary_fulfillment: formData.cross_subsidiary_fulfillment,
+          enable_credit_card_payments: formData.enable_credit_card_payments,
+          credit_card_fee_percent:
+            formData.enable_credit_card_payments && formData.credit_card_fee_percent.trim() !== ''
+              ? Number(formData.credit_card_fee_percent)
+              : null,
           incoterm_id: formData.incoterm_id || null,
           payment_terms_id: formData.payment_terms_id || null,
           company_address: formData.company_address.trim() || null,
@@ -501,6 +519,42 @@ export default function EditCompanyPage() {
             onChange={setSelect('payment_terms_id')}
             options={options.paymentTerms}
           />
+          <div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={formData.enable_credit_card_payments}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    enable_credit_card_payments: e.target.checked,
+                    credit_card_fee_percent: e.target.checked ? p.credit_card_fee_percent : '',
+                  }))
+                }
+                className="h-4 w-4 rounded border-input"
+              />
+              Enable Credit Card Payments
+            </label>
+            {formData.enable_credit_card_payments && (
+              <div className="mt-2">
+                <FormField label="Credit Card Fee %">
+                  <div className="relative">
+                    <Input
+                      inputMode="decimal"
+                      value={formData.credit_card_fee_percent}
+                      onChange={set('credit_card_fee_percent')}
+                      placeholder="3"
+                      className="pr-7"
+                    />
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                  </div>
+                </FormField>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Surcharge added to the invoice + card charge (e.g. 3, or 4.5 for higher-fee cards).
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </Section>
 
