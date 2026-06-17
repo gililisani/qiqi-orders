@@ -575,6 +575,63 @@ export class NetSuiteAPI {
   }
 
   // ---------------------------------------------------------------------------
+  // Invoice charge lines (shipping, CC fee) — add / update / remove a single
+  // line carrying a fixed-amount "Other Charge" item. Verified against the live
+  // REST API: a merge-PATCH adds or updates a line while preserving the others;
+  // removal needs ?replace=item with the full remaining line set.
+  // ---------------------------------------------------------------------------
+
+  /** Read the invoice's current line set in a writable shape (line id + item + qty + rate). */
+  private async getInvoiceLines(
+    nsInvoiceId: string,
+  ): Promise<Array<{ line?: number; itemId: string; quantity: number; rate: number }>> {
+    const inv = await this.request<{
+      item?: { items?: Array<{ line?: number; item?: { id?: string | number }; quantity?: number; rate?: number }> };
+    }>(`/record/v1/invoice/${nsInvoiceId}?expandSubResources=true`);
+    return (inv.item?.items ?? [])
+      .filter((l) => l.item?.id != null)
+      .map((l) => ({
+        line: l.line,
+        itemId: String(l.item!.id),
+        quantity: l.quantity ?? 1,
+        rate: l.rate ?? 0,
+      }));
+  }
+
+  /**
+   * Add the charge line if absent, or update its rate if present. Idempotent:
+   * one line per item id. `amount` is the line's rate (quantity is always 1).
+   */
+  async upsertInvoiceChargeLine(
+    nsInvoiceId: string,
+    itemId: string,
+    amount: number,
+  ): Promise<void> {
+    const existing = (await this.getInvoiceLines(nsInvoiceId)).find((l) => l.itemId === itemId);
+    const line: Record<string, unknown> = { item: { id: itemId }, quantity: 1, rate: amount };
+    if (existing?.line != null) line.line = existing.line; // update in place
+    await this.request(
+      `/record/v1/invoice/${nsInvoiceId}`,
+      'PATCH',
+      { item: { items: [line] } },
+    );
+  }
+
+  /** Remove the charge line for the given item id, preserving every other line. */
+  async removeInvoiceChargeLine(nsInvoiceId: string, itemId: string): Promise<void> {
+    const lines = await this.getInvoiceLines(nsInvoiceId);
+    if (!lines.some((l) => l.itemId === itemId)) return; // nothing to remove
+    const keep = lines
+      .filter((l) => l.itemId !== itemId)
+      .map((l) => ({ line: l.line, item: { id: l.itemId }, quantity: l.quantity, rate: l.rate }));
+    await this.request(
+      `/record/v1/invoice/${nsInvoiceId}?replace=item`,
+      'PATCH',
+      { item: { items: keep } },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Sync invoice data back from NetSuite
   // ---------------------------------------------------------------------------
   async getInvoiceDetails(nsInvoiceId: string): Promise<NSInvoiceResult> {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 import { createNetSuiteAPI } from '../../../../lib/netsuite';
+import { getNetSuiteItem } from '../../../../lib/netsuiteItemMap';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, status, netsuite_so_id, netsuite_invoice_id')
+      .select('id, status, netsuite_so_id, netsuite_invoice_id, shipping_amount')
       .eq('id', orderId)
       .single();
 
@@ -84,6 +85,20 @@ export async function POST(request: NextRequest) {
           );
         }
         throw e;
+      }
+    }
+
+    // Add the shipping line to a freshly-created invoice (shipping lives on the
+    // invoice, never the SO). Skip for a linked existing invoice — its lines
+    // already reflect whatever was set in NetSuite. Non-fatal: a failure here
+    // shouldn't discard the just-created invoice; admin can re-apply shipping.
+    if (!linked && order.shipping_amount && order.shipping_amount > 0) {
+      try {
+        const ship = await getNetSuiteItem(supabase, 'shipping');
+        await ns.upsertInvoiceChargeLine(result.nsInvoiceId, ship.nsId, order.shipping_amount);
+        result = await ns.getInvoiceDetails(result.nsInvoiceId); // refresh totals w/ shipping
+      } catch (e: any) {
+        console.error('create-invoice: failed to add shipping line:', e?.message);
       }
     }
 

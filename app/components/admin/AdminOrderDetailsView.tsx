@@ -114,6 +114,7 @@ interface Order {
   netsuite_invoice_date?: string | null;
   invoice_amount_remaining?: number | null;
   invoice_due_date?: string | null;
+  shipping_amount?: number | null;
   company?: {
     company_name: string;
     netsuite_number: string;
@@ -198,6 +199,11 @@ export default function AdminOrderDetailsView({
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [isReordering, setIsReordering] = useState(false);
   const [documentsRefreshKey, setDocumentsRefreshKey] = useState(0);
+
+  // Shipping — admin-only charge added after order creation.
+  const [editingShipping, setEditingShipping] = useState(false);
+  const [shippingDraft, setShippingDraft] = useState('');
+  const [savingShipping, setSavingShipping] = useState(false);
 
   const validateRequiredFields = (status: string) =>
     validateRequiredFieldsForStatus({
@@ -513,6 +519,61 @@ export default function AdminOrderDetailsView({
     }
   };
 
+  // Shipping editor: open with the current value, save through the API (which
+  // also updates the NS invoice if one exists), or clear by saving blank.
+  const openShippingEditor = () => {
+    setShippingDraft(order?.shipping_amount ? String(order.shipping_amount) : '');
+    setEditingShipping(true);
+  };
+
+  const handleSaveShipping = async () => {
+    if (!order) return;
+    const trimmed = shippingDraft.trim();
+    // Validate: blank => clear; otherwise a non-negative number with ≤2 decimals.
+    let amount: number | null = null;
+    if (trimmed !== '') {
+      if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) {
+        toast.error('Enter a dollar amount like 125 or 125.50.');
+        return;
+      }
+      amount = Math.round(parseFloat(trimmed) * 100) / 100;
+    }
+
+    // Warn before touching NetSuite when an invoice exists.
+    if (order.netsuite_invoice_id) {
+      const ok = await confirm({
+        title: 'Update NetSuite invoice?',
+        description:
+          'This order has a NetSuite invoice. Saving shipping will update that invoice in NetSuite. Continue?',
+        confirmLabel: 'Update NetSuite',
+      });
+      if (!ok) return;
+    }
+
+    setSavingShipping(true);
+    try {
+      const res = await fetchWithAuth('/api/orders/shipping', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order.id, shippingAmount: amount }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+      toast.success(
+        amount === null
+          ? 'Shipping removed.'
+          : `Shipping set to ${formatCurrency(amount)}${data.invoiceUpdated ? ' (NetSuite invoice updated)' : ''}.`,
+      );
+      setEditingShipping(false);
+      await fetchOrder();
+      await fetchOrderHistory();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save shipping.');
+    } finally {
+      setSavingShipping(false);
+    }
+  };
+
   // --------------------------------------------------------------------------
   // Loading / error
   // --------------------------------------------------------------------------
@@ -546,6 +607,15 @@ export default function AdminOrderDetailsView({
   // that was created there directly (SO linked, but no invoice cached yet).
   const detectingInvoice =
     reconciling && !!order.netsuite_so_id && !order.netsuite_invoice_id;
+
+  // Shipping — admin-only charge, included in the effective order total.
+  const shippingAmount = order.shipping_amount || 0;
+  const effectiveTotal = (order.total_value || 0) + shippingAmount;
+  const invoicePaid =
+    (order.netsuite_invoice_status || '').toLowerCase().includes('paid') ||
+    (order.netsuite_invoice_id != null && order.invoice_amount_remaining === 0);
+  const canEditShipping =
+    ['Draft', 'Open', 'In Process', 'Ready'].includes(order.status) && !invoicePaid;
 
   const nsPrimary = (() => {
     if (order.status === 'Draft') return null;
@@ -986,8 +1056,51 @@ export default function AdminOrderDetailsView({
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <Field label="Total">
-              <span className="text-base font-semibold font-mono">{formatCurrency(order.total_value)}</span>
+              <span className="text-base font-semibold font-mono">{formatCurrency(effectiveTotal)}</span>
             </Field>
+            {/* Shipping — admin-only. Editable inline; included in Total above. */}
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-sm text-muted-foreground">Shipping</span>
+              {editingShipping ? (
+                <div className="flex items-center gap-1.5">
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                    <Input
+                      autoFocus
+                      inputMode="decimal"
+                      value={shippingDraft}
+                      onChange={(e) => setShippingDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveShipping();
+                        if (e.key === 'Escape') setEditingShipping(false);
+                      }}
+                      placeholder="0.00"
+                      className="h-8 w-24 pl-5 text-right font-mono"
+                    />
+                  </div>
+                  <Button size="sm" onClick={handleSaveShipping} loading={savingShipping}>
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditingShipping(false)}
+                    disabled={savingShipping}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="font-mono">{shippingAmount > 0 ? formatCurrency(shippingAmount) : '—'}</span>
+                  {canEditShipping && (
+                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={openShippingEditor}>
+                      {shippingAmount > 0 ? 'Edit' : 'Add Shipping'}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
             <Field label="Credit Earned">
               <span className="font-mono text-emerald-700">{formatCurrency(order.credit_earned || 0)}</span>
             </Field>
@@ -1102,10 +1215,13 @@ export default function AdminOrderDetailsView({
                 <Row label="Regular items" value={formatCurrency(regularSubtotal)} />
                 <Row label="Credit used" value={formatCurrency(creditUsed)} valueClass="text-green-700" />
                 <Row label="Balance" value={formatCurrency(balance)} valueClass="text-brand-magenta" />
+                {shippingAmount > 0 && (
+                  <Row label="Shipping" value={formatCurrency(shippingAmount)} />
+                )}
                 <Separator />
                 <Row
                   label="Total order value"
-                  value={formatCurrency(order.total_value)}
+                  value={formatCurrency(effectiveTotal)}
                   valueClass="text-base font-semibold"
                   labelClass="text-base font-semibold text-foreground"
                 />

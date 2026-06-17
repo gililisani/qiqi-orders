@@ -75,6 +75,7 @@ interface Order {
   netsuite_invoice_status?: string | null;
   invoice_amount_remaining?: number | null;
   invoice_due_date?: string | null;
+  shipping_amount?: number | null;
 }
 
 interface OrderItem {
@@ -201,6 +202,10 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
   const regularSubtotal = regularItems.reduce((s, i) => s + (i.total_price || 0), 0);
   const supportSubtotal = supportItems.reduce((s, i) => s + (i.total_price || 0), 0);
   const balance = (order.support_fund_used || 0) - supportSubtotal;
+  // Shipping is admin-set; the client sees it (read-only) once present, and the
+  // effective total includes it.
+  const shippingAmount = order.shipping_amount || 0;
+  const effectiveTotal = (order.total_value || 0) + shippingAmount;
 
   return (
     <div className="px-6 py-8 space-y-6">
@@ -296,9 +301,14 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
           <CardContent className="space-y-3 text-sm">
             <Field label="Total">
               <span className="text-base font-semibold font-mono">
-                {formatCurrency(order.total_value || 0)}
+                {formatCurrency(effectiveTotal)}
               </span>
             </Field>
+            {shippingAmount > 0 && (
+              <Field label="Shipping">
+                <span className="font-mono">{formatCurrency(shippingAmount)}</span>
+              </Field>
+            )}
             <Field label="Credit earned">
               <span className="font-mono text-green-700">
                 {formatCurrency(order.credit_earned || 0)}
@@ -415,10 +425,13 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
               />
             </>
           )}
+          {shippingAmount > 0 && (
+            <Row label="Shipping" value={formatCurrency(shippingAmount)} />
+          )}
           <Separator />
           <Row
             label="Total order value"
-            value={formatCurrency(order.total_value)}
+            value={formatCurrency(effectiveTotal)}
             bold
           />
         </CardContent>
