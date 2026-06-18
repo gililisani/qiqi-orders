@@ -471,6 +471,28 @@ export default function AdminOrderDetailsView({
       }
       await fetchOrder();
     } catch (err: any) {
+      // A push can "fail" on the client (timeout → non-JSON response) even
+      // though the SO was created in NetSuite. Recover by externalId: link the
+      // existing SO instead of leaving the order looking unpushed (which tempts
+      // a duplicate push). recover-so can never create a duplicate.
+      if (action === 'push-so') {
+        try {
+          const r = await fetchWithAuth('/api/netsuite/recover-so', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId }),
+          });
+          const rd = await r.json();
+          if (r.ok && rd.recovered) {
+            toast.success(`Sales Order ${rd.soNumber} was created in NetSuite (recovered after a slow push).`);
+            await fetchOrder();
+            await fetchOrderHistory();
+            return;
+          }
+        } catch {
+          /* fall through to the original error */
+        }
+      }
       toast.error(err.message || 'NetSuite request failed.');
     } finally {
       setNsLoading(null);
