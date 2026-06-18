@@ -85,6 +85,10 @@ export default function EditCompanyPage() {
     paymentTerms: [] as Option[],
   });
 
+  // Credit-card payments are Qiqi-INC-only (the Stripe deposit account is
+  // INC-specific). Track which subsidiary row is Qiqi INC (NetSuite id 3).
+  const [incSubsidiaryId, setIncSubsidiaryId] = useState<string | null>(null);
+
   const [allCountries, setAllCountries] = useState<Country[]>([]);
   const [territoryInput, setTerritoryInput] = useState('');
   const [territorySuggestions, setTerritorySuggestions] = useState<Country[]>([]);
@@ -134,7 +138,7 @@ export default function EditCompanyPage() {
             supabase.from('company_territories').select('*').eq('company_id', companyId),
             supabase.from('target_periods').select('*').eq('company_id', companyId).order('start_date'),
             supabase.from('support_fund_levels').select('id, percent').order('percent'),
-            supabase.from('subsidiaries').select('id, name').order('name'),
+            supabase.from('subsidiaries').select('id, name, netsuite_id').order('name'),
             supabase.from('classes').select('id, name').order('name'),
             supabase.from('Locations').select('id, location_name, subsidiary_id').order('location_name'),
             supabase.from('incoterms').select('id, name').order('name'),
@@ -186,6 +190,9 @@ export default function EditCompanyPage() {
           territories: territoriesRes.data?.map((t: any) => t.country_code) || [],
         });
 
+        const incSub = (subsidiaries.data || []).find((s: any) => String(s.netsuite_id) === '3');
+        setIncSubsidiaryId(incSub?.id ?? null);
+
         setOptions({
           supportFunds: supportFunds.data || [],
           subsidiaries: subsidiaries.data || [],
@@ -225,6 +232,8 @@ export default function EditCompanyPage() {
   // CSF: scope the Location list to the client's own subsidiary — or, when
   // Cross-Subsidiary Fulfillment is on, to the OTHER subsidiaries' locations
   // (e.g. a Qiqi INC client fulfilled from Qiqi Global's Brandfox warehouse).
+  const isIncCompany = !!incSubsidiaryId && formData.subsidiary_id === incSubsidiaryId;
+
   const filteredLocations = options.locations.filter((l) =>
     !formData.subsidiary_id
       ? false
@@ -235,8 +244,18 @@ export default function EditCompanyPage() {
 
   // Changing the subsidiary or toggling CSF can invalidate the chosen location,
   // so clear it — the admin re-picks from the now-correct filtered list.
-  const onChangeSubsidiary = (value: string) =>
-    setFormData((p) => ({ ...p, subsidiary_id: value === NONE ? '' : value, location_id: '' }));
+  const onChangeSubsidiary = (value: string) => {
+    const newSub = value === NONE ? '' : value;
+    const stillInc = !!incSubsidiaryId && newSub === incSubsidiaryId;
+    setFormData((p) => ({
+      ...p,
+      subsidiary_id: newSub,
+      location_id: '',
+      // Card payments are INC-only — clear them if the company isn't Qiqi INC.
+      enable_credit_card_payments: stillInc ? p.enable_credit_card_payments : false,
+      credit_card_fee_percent: stillInc ? p.credit_card_fee_percent : '',
+    }));
+  };
   const onToggleCsf = (checked: boolean) =>
     setFormData((p) => ({ ...p, cross_subsidiary_fulfillment: checked, location_id: '' }));
 
@@ -343,9 +362,10 @@ export default function EditCompanyPage() {
           class_id: formData.class_id || null,
           location_id: formData.location_id || null,
           cross_subsidiary_fulfillment: formData.cross_subsidiary_fulfillment,
-          enable_credit_card_payments: formData.enable_credit_card_payments,
+          // Card payments are Qiqi-INC-only — never persist them for other subs.
+          enable_credit_card_payments: isIncCompany && formData.enable_credit_card_payments,
           credit_card_fee_percent:
-            formData.enable_credit_card_payments && formData.credit_card_fee_percent.trim() !== ''
+            isIncCompany && formData.enable_credit_card_payments && formData.credit_card_fee_percent.trim() !== ''
               ? Number(formData.credit_card_fee_percent)
               : null,
           incoterm_id: formData.incoterm_id || null,
@@ -519,6 +539,7 @@ export default function EditCompanyPage() {
             onChange={setSelect('payment_terms_id')}
             options={options.paymentTerms}
           />
+          {isIncCompany && (
           <div>
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -555,6 +576,7 @@ export default function EditCompanyPage() {
               </div>
             )}
           </div>
+          )}
         </div>
       </Section>
 

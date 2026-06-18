@@ -73,6 +73,8 @@ export default function NewCompanyPage() {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Card payments are Qiqi-INC-only — track which subsidiary is INC (NS id 3).
+  const [incSubsidiaryId, setIncSubsidiaryId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -80,12 +82,14 @@ export default function NewCompanyPage() {
         const [supportFunds, subsidiaries, classes, locations, incoterms, paymentTerms] =
           await Promise.all([
             supabase.from('support_fund_levels').select('id, percent').order('percent'),
-            supabase.from('subsidiaries').select('id, name').order('name'),
+            supabase.from('subsidiaries').select('id, name, netsuite_id').order('name'),
             supabase.from('classes').select('id, name').order('name'),
             supabase.from('Locations').select('id, location_name, subsidiary_id').order('location_name'),
             supabase.from('incoterms').select('id, name').order('name'),
             supabase.from('payment_terms').select('id, name').order('name'),
           ]);
+        const incSub = (subsidiaries.data || []).find((s: any) => String(s.netsuite_id) === '3');
+        setIncSubsidiaryId(incSub?.id ?? null);
         setOptions({
           supportFunds: supportFunds.data || [],
           subsidiaries: subsidiaries.data || [],
@@ -115,8 +119,19 @@ export default function NewCompanyPage() {
         ? l.subsidiaryId !== formData.subsidiary_id
         : l.subsidiaryId === formData.subsidiary_id,
   );
-  const onChangeSubsidiary = (value: string) =>
-    setFormData((p) => ({ ...p, subsidiary_id: value === NONE ? '' : value, location_id: '' }));
+  const onChangeSubsidiary = (value: string) => {
+    const newSub = value === NONE ? '' : value;
+    const stillInc = !!incSubsidiaryId && newSub === incSubsidiaryId;
+    setFormData((p) => ({
+      ...p,
+      subsidiary_id: newSub,
+      location_id: '',
+      enable_credit_card_payments: stillInc ? p.enable_credit_card_payments : false,
+      credit_card_fee_percent: stillInc ? p.credit_card_fee_percent : '',
+    }));
+  };
+
+  const isIncCompany = !!incSubsidiaryId && formData.subsidiary_id === incSubsidiaryId;
   const onToggleCsf = (checked: boolean) =>
     setFormData((p) => ({ ...p, cross_subsidiary_fulfillment: checked, location_id: '' }));
 
@@ -175,9 +190,10 @@ export default function NewCompanyPage() {
           class_id: formData.class_id || null,
           location_id: formData.location_id || null,
           cross_subsidiary_fulfillment: formData.cross_subsidiary_fulfillment,
-          enable_credit_card_payments: formData.enable_credit_card_payments,
+          // Card payments are Qiqi-INC-only.
+          enable_credit_card_payments: isIncCompany && formData.enable_credit_card_payments,
           credit_card_fee_percent:
-            formData.enable_credit_card_payments && formData.credit_card_fee_percent.trim() !== ''
+            isIncCompany && formData.enable_credit_card_payments && formData.credit_card_fee_percent.trim() !== ''
               ? Number(formData.credit_card_fee_percent)
               : null,
           incoterm_id: formData.incoterm_id || null,
@@ -307,6 +323,7 @@ export default function NewCompanyPage() {
             onChange={setSelect('payment_terms_id')}
             options={options.paymentTerms}
           />
+          {isIncCompany && (
           <div>
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -343,6 +360,7 @@ export default function NewCompanyPage() {
               </div>
             )}
           </div>
+          )}
         </div>
       </Section>
 

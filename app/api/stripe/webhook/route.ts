@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '../../../../platform/auth/guards';
 import { createStripeClient } from '../../../../lib/stripe';
+import { createNetSuiteAPI } from '../../../../lib/netsuite';
+import { getNetSuiteItem } from '../../../../lib/netsuiteItemMap';
 
 /**
  * POST /api/stripe/webhook
@@ -48,18 +50,38 @@ export async function POST(request: NextRequest) {
         const supabase = createServiceRoleClient();
         const { data: order } = await supabase
           .from('orders')
-          .select('id, status, payment_status')
+          .select('id, status, payment_status, netsuite_invoice_id, ns_customer_payment_id')
           .eq('stripe_invoice_id', stripeInvoiceId)
           .maybeSingle();
 
         // Idempotent: ignore if unknown or already paid.
         if (order && order.payment_status !== 'paid') {
+          // Phase 2: record a NetSuite Customer Payment against the invoice so
+          // NS AR shows it paid. Non-fatal — the Stripe money is real regardless;
+          // a failure just means the owner records it manually (we note that).
+          // Guarded by ns_customer_payment_id so a retry can't double-record.
+          let nsPaymentId: string | null = order.ns_customer_payment_id ?? null;
+          let nsNote = '';
+          if (order.netsuite_invoice_id && !nsPaymentId) {
+            try {
+              const ns = createNetSuiteAPI();
+              const account = await getNetSuiteItem(supabase, 'stripe_deposit_account');
+              const { paymentId } = await ns.recordCustomerPayment(order.netsuite_invoice_id, account.nsId);
+              nsPaymentId = paymentId;
+              nsNote = ` NetSuite payment ${paymentId} recorded.`;
+            } catch (e: any) {
+              console.error('stripe webhook: NetSuite payment recording failed:', e?.message);
+              nsNote = ' ⚠️ NetSuite payment NOT recorded — record it manually.';
+            }
+          }
+
           await supabase
             .from('orders')
             .update({
               payment_status: 'paid',
               paid_at: new Date().toISOString(),
               invoice_amount_remaining: 0,
+              ns_customer_payment_id: nsPaymentId,
             })
             .eq('id', order.id);
 
@@ -67,7 +89,7 @@ export async function POST(request: NextRequest) {
             order_id: order.id,
             status_from: order.status,
             status_to: order.status,
-            notes: 'Credit card payment received (Stripe). Order is Paid in Full.',
+            notes: `Credit card payment received (Stripe). Order is Paid in Full.${nsNote}`,
             changed_by_name: 'System',
             changed_by_role: 'admin',
           }]);

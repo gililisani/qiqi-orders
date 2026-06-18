@@ -5,7 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  * live in the `netsuite_item_map` table so they're editable (future mapping
  * page) and tenant-swappable. Read server-side only (service role).
  */
-export type NetSuiteItemPurpose = 'shipping' | 'cc_processing_fee';
+export type NetSuiteItemPurpose = 'shipping' | 'cc_processing_fee' | 'stripe_deposit_account';
 
 export interface NetSuiteMappedItem {
   purpose: NetSuiteItemPurpose;

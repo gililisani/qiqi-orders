@@ -647,6 +647,45 @@ export class NetSuiteAPI {
     }
   }
 
+  /**
+   * Record a Customer Payment applied in full to an invoice, deposited to the
+   * given account. Uses the invoice→customerpayment transform (NetSuite pre-fills
+   * the customer + apply line; we just set the deposit account). Verified on
+   * QiqiIL: marks the invoice Paid In Full. Returns the new payment's internal id.
+   */
+  async recordCustomerPayment(
+    nsInvoiceId: string,
+    depositAccountId: string,
+  ): Promise<{ paymentId: string }> {
+    const url = `${this.baseUrl}/record/v1/invoice/${nsInvoiceId}/!transform/customerpayment`;
+    const authHeader = this.getAuthHeader(url, 'POST');
+    const response = await axios({
+      method: 'POST',
+      url,
+      headers: {
+        Authorization: authHeader,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      data: JSON.stringify({ account: { id: depositAccountId } }),
+      validateStatus: () => true,
+    });
+    if (response.status >= 400) {
+      const msg =
+        response.data?.['o:message'] ||
+        response.data?.message ||
+        JSON.stringify(response.data) ||
+        `HTTP ${response.status}`;
+      throw new Error(`NetSuite record payment failed: ${msg}`);
+    }
+    const location = response.headers['location'] as string | undefined;
+    const paymentId = location ? location.split('/').pop() ?? '' : '';
+    if (!paymentId) {
+      throw new Error('NetSuite created the payment but did not return an ID.');
+    }
+    return { paymentId };
+  }
+
   // ---------------------------------------------------------------------------
   // Sync invoice data back from NetSuite
   // ---------------------------------------------------------------------------
