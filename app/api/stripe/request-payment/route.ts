@@ -69,6 +69,38 @@ export async function POST(request: NextRequest) {
     }
 
     const ns = createNetSuiteAPI();
+
+    // --- 0. Validate the cached NetSuite links still exist (records can be
+    // deleted directly in NetSuite, leaving the Hub pointing at a ghost). ---
+    if (!(await ns.recordExists('salesOrder', order.netsuite_so_id))) {
+      // SO is gone — clear the whole NS link so the admin can re-push cleanly.
+      await supabase
+        .from('orders')
+        .update({
+          netsuite_so_id: null,
+          so_number: null,
+          netsuite_invoice_id: null,
+          invoice_number: null,
+          netsuite_invoice_status: null,
+          invoice_amount_remaining: null,
+          invoice_due_date: null,
+        })
+        .eq('id', orderId);
+      return NextResponse.json(
+        {
+          error:
+            'The NetSuite Sales Order for this order no longer exists (it was deleted in NetSuite). The link has been cleared — refresh the page, click "Push to NetSuite" to recreate the SO, then Send for Payment again.',
+        },
+        { status: 409 },
+      );
+    }
+    // If an invoice link is cached but the invoice was deleted in NS, drop it so
+    // we recreate a fresh one below instead of failing on a ghost reference.
+    if (order.netsuite_invoice_id && !(await ns.recordExists('invoice', order.netsuite_invoice_id))) {
+      order.netsuite_invoice_id = null;
+      await supabase.from('orders').update({ netsuite_invoice_id: null }).eq('id', orderId);
+    }
+
     const shipItem = await getNetSuiteItem(supabase, 'shipping');
     const feeItem = await getNetSuiteItem(supabase, 'cc_processing_fee');
 

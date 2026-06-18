@@ -631,6 +631,22 @@ export class NetSuiteAPI {
     );
   }
 
+  /**
+   * Does a NetSuite record still exist? A single cheap GET — returns false on a
+   * 404 (deleted in NetSuite), true if found. Other errors (auth, etc.) rethrow
+   * so we never mistake a transient failure for "deleted". recordType is the
+   * REST path segment, e.g. 'salesOrder' | 'invoice'.
+   */
+  async recordExists(recordType: string, id: string): Promise<boolean> {
+    try {
+      await this.request(`/record/v1/${recordType}/${id}`);
+      return true;
+    } catch (e: any) {
+      if (typeof e?.message === 'string' && e.message.includes('NetSuite 404')) return false;
+      throw e;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Sync invoice data back from NetSuite
   // ---------------------------------------------------------------------------
