@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
     try {
       const { error: historyError } = await supabase.from('order_history').insert([
         {
+          action_type: 'order_updated',
           order_id: orderId,
           status_from: null,
           status_to: order.status,

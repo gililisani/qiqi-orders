@@ -155,6 +155,7 @@ export async function POST(request: NextRequest) {
     const next = shippingAmount ?? 0;
     const verb = next === 0 ? 'removed' : prior === 0 ? 'added' : 'updated';
     await supabase.from('order_history').insert([{
+      action_type: 'order_updated',
       order_id: orderId,
       status_from: order.status,
       status_to: order.status,

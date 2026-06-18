@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
             .eq('id', order.id);
 
           await supabase.from('order_history').insert([{
+            action_type: 'order_updated',
             order_id: order.id,
             status_from: order.status,
             status_to: order.status,

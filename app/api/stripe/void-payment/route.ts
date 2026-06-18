@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
     await supabase.from('orders').update(patch).eq('id', orderId);
 
     await supabase.from('order_history').insert([{
+      action_type: 'order_updated',
       order_id: orderId,
       status_from: order.status,
       status_to: order.status,

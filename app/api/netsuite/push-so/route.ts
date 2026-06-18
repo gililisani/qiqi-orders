@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
 
     // Log to order history
     await supabase.from('order_history').insert([{
+      action_type: 'status_change',
       order_id: orderId,
       status_from: order.status,
       status_to: 'In Process',

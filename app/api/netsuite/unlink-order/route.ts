@@ -102,6 +102,7 @@ export async function POST(request: NextRequest) {
         noteParts.length > 0 ? ` (was: ${noteParts.join(', ')})` : '';
       await supabase.from('order_history').insert([
         {
+          action_type: 'order_updated',
           order_id: orderId,
           status_from: order.status,
           status_to: order.status,

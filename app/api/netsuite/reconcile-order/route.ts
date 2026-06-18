@@ -136,6 +136,7 @@ export async function POST(request: NextRequest) {
 
       if (advanceToReady) {
         await supabase.from('order_history').insert([{
+          action_type: 'status_change',
           order_id: orderId,
           status_from: order.status,
           status_to: 'Ready',
@@ -221,6 +222,7 @@ export async function POST(request: NextRequest) {
 
     if (advanceToReady) {
       await supabase.from('order_history').insert([{
+        action_type: 'status_change',
         order_id: orderId,
         status_from: order.status,
         status_to: 'Ready',
