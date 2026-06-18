@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
       customerId,
       lines,
       daysUntilDue: 2,
-      description: `Order ${order.po_number} — NetSuite invoice ${details.invoiceNumber}`,
+      description: `Qiqi Invoice ${details.invoiceNumber}`,
       metadata: { order_id: order.id, ns_invoice_id: nsInvoiceId },
     });
 
