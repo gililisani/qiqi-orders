@@ -76,6 +76,9 @@ interface Order {
   invoice_amount_remaining?: number | null;
   invoice_due_date?: string | null;
   shipping_amount?: number | null;
+  payment_status?: string | null;
+  stripe_hosted_url?: string | null;
+  paid_at?: string | null;
 }
 
 interface OrderItem {
@@ -325,6 +328,36 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Credit-card payment — Pay Now while pending, Paid badge once settled. */}
+      {(order.payment_status === 'pending' || order.payment_status === 'paid') && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Payment</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm">
+            {order.payment_status === 'paid' ? (
+              <div className="flex items-center justify-between">
+                <Badge variant="success">Paid in Full</Badge>
+                {order.paid_at && (
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(order.paid_at).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="text-muted-foreground">Payment is required to release this order.</span>
+                {order.stripe_hosted_url && (
+                  <a href={order.stripe_hosted_url} target="_blank" rel="noopener noreferrer">
+                    <Button size="sm">Pay Now</Button>
+                  </a>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Invoice (NetSuite-synced) — only shown when this order has been
           invoiced. Surfaces the document number, status, dates, and

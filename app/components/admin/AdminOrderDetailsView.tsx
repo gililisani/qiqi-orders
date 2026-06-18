@@ -115,10 +115,15 @@ interface Order {
   invoice_amount_remaining?: number | null;
   invoice_due_date?: string | null;
   shipping_amount?: number | null;
+  payment_status?: string | null;
+  stripe_invoice_number?: string | null;
+  stripe_hosted_url?: string | null;
+  paid_at?: string | null;
   company?: {
     company_name: string;
     netsuite_number: string;
     ship_to?: string;
+    enable_credit_card_payments?: boolean;
     incoterm?: { name: string };
     payment_term?: { name: string };
   };
@@ -233,7 +238,7 @@ export default function AdminOrderDetailsView({
         const { data: c } = await scopedSupabase
           .from('companies')
           .select(
-            'company_name, netsuite_number, ship_to, incoterm:incoterms(name), payment_term:payment_terms(name)'
+            'company_name, netsuite_number, ship_to, enable_credit_card_payments, incoterm:incoterms(name), payment_term:payment_terms(name)'
           )
           .eq('id', orderData.company_id)
           .maybeSingle();
@@ -574,6 +579,70 @@ export default function AdminOrderDetailsView({
     }
   };
 
+  // Stripe payment actions.
+  const [paymentLoading, setPaymentLoading] = useState<null | 'send' | 'void'>(null);
+
+  const handleSendForPayment = async () => {
+    if (!order) return;
+    const ok = await confirm({
+      title: 'Send for payment?',
+      description:
+        'This creates the NetSuite invoice (with the credit-card fee) and a Stripe invoice, and emails the client a Pay Now link.',
+      confirmLabel: 'Send for Payment',
+    });
+    if (!ok) return;
+    setPaymentLoading('send');
+    try {
+      const res = await fetchWithAuth('/api/stripe/request-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+      toast.success(
+        data.alreadyPending
+          ? 'A payment request is already pending for this order.'
+          : `Sent for payment — Stripe invoice ${data.stripeNumber} ($${Number(data.total).toFixed(2)}).`,
+      );
+      await fetchOrder();
+      await fetchOrderHistory();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send for payment.');
+    } finally {
+      setPaymentLoading(null);
+    }
+  };
+
+  const handleVoidPayment = async () => {
+    if (!order) return;
+    const ok = await confirm({
+      title: 'Void payment request?',
+      description:
+        'This voids the Stripe invoice and removes the card fee from the NetSuite invoice. The client’s current Pay Now link will stop working. You can Send for Payment again afterward.',
+      confirmLabel: 'Void payment',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    setPaymentLoading('void');
+    try {
+      const res = await fetchWithAuth('/api/stripe/void-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+      toast.success('Payment request voided.');
+      await fetchOrder();
+      await fetchOrderHistory();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to void payment.');
+    } finally {
+      setPaymentLoading(null);
+    }
+  };
+
   // --------------------------------------------------------------------------
   // Loading / error
   // --------------------------------------------------------------------------
@@ -616,6 +685,12 @@ export default function AdminOrderDetailsView({
     (order.netsuite_invoice_id != null && order.invoice_amount_remaining === 0);
   const canEditShipping =
     ['Draft', 'Open', 'In Process', 'Ready'].includes(order.status) && !invoicePaid;
+
+  // Stripe credit-card payment state.
+  const ccEnabled = !!order.company?.enable_credit_card_payments;
+  const paymentPaid = order.payment_status === 'paid';
+  const paymentPending = order.payment_status === 'pending';
+  const canSendForPayment = ccEnabled && !paymentPaid && !paymentPending && !!order.netsuite_so_id;
 
   const nsPrimary = (() => {
     if (order.status === 'Draft') return null;
@@ -1124,6 +1199,72 @@ export default function AdminOrderDetailsView({
           been invoiced through NS. Admin sees the same fields as the
           client view, with NS deep-links (clients see plain text). */}
       {order.invoice_number && <AdminInvoiceCard order={order} />}
+
+      {/* Credit-card payment (Stripe) — only for companies with it enabled. */}
+      {ccEnabled && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Credit Card Payment</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {paymentPaid ? (
+              <div className="flex items-center justify-between">
+                <Badge variant="success">Paid in Full</Badge>
+                {order.paid_at && (
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(order.paid_at).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            ) : paymentPending ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="text-sm">Pending Stripe Payment</span>
+                  {order.stripe_invoice_number && (
+                    <span className="text-xs text-muted-foreground font-mono">{order.stripe_invoice_number}</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {order.stripe_hosted_url && (
+                    <a
+                      href={order.stripe_hosted_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent text-sm underline-offset-4 hover:underline"
+                    >
+                      Open Pay Now page ↗
+                    </a>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleVoidPayment}
+                    loading={paymentLoading === 'void'}
+                  >
+                    Void payment request
+                  </Button>
+                </div>
+              </div>
+            ) : canSendForPayment ? (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">
+                  Create the invoice + Stripe payment request and email the client.
+                </p>
+                <Button size="sm" onClick={handleSendForPayment} loading={paymentLoading === 'send'}>
+                  Send for Payment
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {order.netsuite_so_id
+                  ? 'No payment requested.'
+                  : 'Push the order to NetSuite first to enable payment.'}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Items */}
       <SectionHeader title="Items">

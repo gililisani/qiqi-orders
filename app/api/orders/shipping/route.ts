@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(
-        'id, status, shipping_amount, netsuite_invoice_id, netsuite_invoice_status, invoice_amount_remaining',
+        'id, status, shipping_amount, netsuite_invoice_id, netsuite_invoice_status, invoice_amount_remaining, stripe_invoice_id, payment_status',
       )
       .eq('id', orderId)
       .single();
@@ -110,6 +110,35 @@ export async function POST(request: NextRequest) {
       if (invoiceTotals.status) patch.netsuite_invoice_status = invoiceTotals.status;
     }
 
+    // If a Stripe payment is PENDING, its amount is now stale — void it so the
+    // client can't pay the old total, and drop the fee line. Admin re-sends.
+    let paymentVoided = false;
+    if (order.payment_status === 'pending' && order.stripe_invoice_id) {
+      try {
+        const { createStripeClient, voidInvoice } = await import('../../../../lib/stripe');
+        await voidInvoice(createStripeClient(), order.stripe_invoice_id);
+      } catch (e: any) {
+        console.error('shipping: Stripe void failed (continuing):', e?.message);
+      }
+      if (order.netsuite_invoice_id) {
+        try {
+          const ns = createNetSuiteAPI();
+          const feeItem = await getNetSuiteItem(supabase, 'cc_processing_fee');
+          await ns.removeInvoiceChargeLine(order.netsuite_invoice_id, feeItem.nsId);
+          const details = await ns.getInvoiceDetails(order.netsuite_invoice_id);
+          patch.invoice_amount_remaining = details.amountRemaining;
+          if (details.status) patch.netsuite_invoice_status = details.status;
+        } catch (e: any) {
+          console.error('shipping: fee removal after void failed:', e?.message);
+        }
+      }
+      patch.stripe_invoice_id = null;
+      patch.stripe_invoice_number = null;
+      patch.stripe_hosted_url = null;
+      patch.payment_status = null;
+      paymentVoided = true;
+    }
+
     const { error: updateError } = await supabase
       .from('orders')
       .update(patch)
@@ -131,7 +160,8 @@ export async function POST(request: NextRequest) {
       status_to: order.status,
       notes:
         `Shipping ${verb}: $${prior.toFixed(2)} → $${next.toFixed(2)}` +
-        (order.netsuite_invoice_id ? ' (NetSuite invoice updated)' : ''),
+        (order.netsuite_invoice_id ? ' (NetSuite invoice updated)' : '') +
+        (paymentVoided ? ' — pending Stripe payment voided' : ''),
       changed_by_name: 'System',
       changed_by_role: 'admin',
     }]);
@@ -140,6 +170,7 @@ export async function POST(request: NextRequest) {
       success: true,
       shippingAmount,
       invoiceUpdated: !!order.netsuite_invoice_id,
+      paymentVoided,
       ...(invoiceTotals ? { invoiceAmountRemaining: invoiceTotals.amountRemaining } : {}),
     });
   } catch (error: any) {
