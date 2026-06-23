@@ -335,7 +335,6 @@ export default function AdminOrderDetailsView({
     handleStatusChange,
     handleSendCustomEmail,
     handleDownloadCSV,
-    handleDownload3PLXLSX,
     handleDeleteOrder,
   } = useOrderDetailsController({
     supabase: scopedSupabase,
@@ -760,7 +759,6 @@ export default function AdminOrderDetailsView({
   const canEdit = order.status === 'Draft' || order.status === 'Open';
 
   const showPackingSlipBtn = ['Ready', 'Done'].includes(originalStatus);
-  const canDownload3PL = !!order.so_number && ['In Process', 'Ready', 'Done'].includes(order.status);
   const canSLI = ['Ready', 'Done'].includes(order.status);
 
   // --------------------------------------------------------------------------
@@ -850,12 +848,6 @@ export default function AdminOrderDetailsView({
                     <Download className="h-4 w-4 mr-2" /> Download CSV
                   </DropdownMenuItem>
                 )}
-                {canDownload3PL && (
-                  <DropdownMenuItem onClick={handleDownload3PLXLSX}>
-                    <FileDown className="h-4 w-4 mr-2" /> Download 3PL XLSX
-                  </DropdownMenuItem>
-                )}
-
                 {canSLI && (
                   <>
                     <DropdownMenuItem onClick={() => setShowSLIModal(true)} disabled={sliLoading}>

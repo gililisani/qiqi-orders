@@ -331,7 +331,7 @@ export default function CompanyViewPage() {
                 company.ship_to_country) && (
                 <div className="pt-2 mt-2 border-t border-border">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                    Structured address (3PL export)
+                    Structured address
                   </h4>
                   <div className="text-sm space-y-0.5">
                     {company.ship_to_street_line_1 && <div>{company.ship_to_street_line_1}</div>}

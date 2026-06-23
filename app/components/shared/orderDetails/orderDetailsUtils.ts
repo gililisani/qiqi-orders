@@ -57,28 +57,3 @@ export function getStatusChangeEmailType(status: string): StatusChangeEmailType 
   return null;
 }
 
-export function build3PLExportPayload(params: {
-  orderData: { id: string; so_number: string; created_at: string };
-  company: any;
-  items: any[];
-}): {
-  id: string;
-  so_number: string;
-  created_at: string;
-  company: any;
-  order_items: any[];
-} {
-  return {
-    id: params.orderData.id,
-    so_number: params.orderData.so_number,
-    created_at: params.orderData.created_at,
-    company: params.company,
-    order_items: params.items,
-  };
-}
-
-export function build3PLFilename(orderData: { so_number?: string | null; id: string }): string {
-  const soNumber = orderData.so_number || orderData.id.substring(0, 6);
-  return `3PL_Order_${soNumber}.xlsx`;
-}
-

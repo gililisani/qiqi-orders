@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
-import { build3PLExportPayload, build3PLFilename, getStatusChangeEmailType } from './orderDetailsUtils';
+import { getStatusChangeEmailType } from './orderDetailsUtils';
 import { useConfirm } from '../../ui/ConfirmProvider';
 import { useToast } from '../../ui/ToastProvider';
 import { salesOrderUrl, invoiceUrl } from '../../../../lib/netsuiteUrls';
@@ -58,7 +58,6 @@ export function useOrderDetailsController(params: {
   handleStatusChange: (newStatus: string) => void;
   handleSendCustomEmail: () => Promise<void>;
   handleDownloadCSV: () => Promise<void>;
-  handleDownload3PLXLSX: () => Promise<void>;
   handleDeleteOrder: () => Promise<void>;
 } {
   const {
@@ -454,55 +453,6 @@ export function useOrderDetailsController(params: {
     }
   }, [orderId, role, supabase, toast]);
 
-  const handleDownload3PLXLSX = useCallback(async () => {
-    try {
-      // admin-only action
-      if (role !== 'admin') return;
-
-      const { generate3PLXLSX, download3PLXLSX } = await import('../../../../lib/threePLExport');
-
-      // Fetch order with company and items
-      const { data: orderData, error } = await supabase.from('orders').select('*').eq('id', orderId).single();
-
-      if (error) throw error;
-      if (!orderData) throw new Error('Order not found');
-      if (!orderData.so_number) throw new Error('SO Number is required for 3PL export');
-
-      // Fetch company
-      const { data: company, error: companyError } = await supabase.from('companies').select('*').eq('id', orderData.company_id).single();
-
-      if (companyError) throw companyError;
-
-      // Fetch order items
-      const { data: items, error: itemsError } = await supabase
-        .from('order_items')
-        .select(
-          `
-          quantity,
-          unit_price,
-          product:Products(sku)
-        `
-        )
-        .eq('order_id', orderId);
-
-      if (itemsError) throw itemsError;
-      if (!items?.length) throw new Error('No order items found');
-
-      // Build order object for export
-      const orderFor3PL = build3PLExportPayload({ orderData, company, items });
-
-      // Generate XLSX
-      const xlsxBuffer = generate3PLXLSX(orderFor3PL);
-
-      // Download
-      const filename = build3PLFilename(orderData);
-      download3PLXLSX(xlsxBuffer, filename);
-    } catch (err: any) {
-      console.error('3PL XLSX error:', err);
-      toast.error(`Failed to export 3PL XLSX: ${err.message}`);
-    }
-  }, [orderId, role, supabase, toast]);
-
   const handleDeleteOrder = useCallback(async () => {
     const nsSoId = (order as any)?.netsuite_so_id as string | null;
     const nsInvoiceId = (order as any)?.netsuite_invoice_id as string | null;
@@ -596,7 +546,6 @@ export function useOrderDetailsController(params: {
     handleStatusChange,
     handleSendCustomEmail,
     handleDownloadCSV,
-    handleDownload3PLXLSX,
     handleDeleteOrder,
   };
 }
