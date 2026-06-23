@@ -378,6 +378,7 @@ export default function AdminOrderDetailsView({
   // NetSuite actions (push / create invoice / sync invoice) — same as before
   // --------------------------------------------------------------------------
   const [nsLoading, setNsLoading] = useState<string | null>(null);
+  const [shipHeroLoading, setShipHeroLoading] = useState(false);
 
   // Reconciliation runs once per (orderId) when an order has a so_number set
   // but no netsuite_so_id linkage yet. Hides the Push button while it runs
@@ -542,6 +543,35 @@ export default function AdminOrderDetailsView({
       toast.error(err.message || 'Unlink failed.');
     } finally {
       setNsLoading(null);
+    }
+  };
+
+  // Send the order to ShipHero (3PL) for fulfillment. Manual admin action,
+  // mirroring the NetSuite push. Idempotent server-side; respects the dry-run
+  // gate (in dry-run nothing is sent and we surface the would-send payload).
+  const handleSendToShipHero = async () => {
+    if (!order || shipHeroLoading) return;
+    setShipHeroLoading(true);
+    try {
+      const res = await fetchWithAuth('/api/fulfillment/shiphero/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send to ShipHero.');
+
+      if (data.dryRun) {
+        toast.success('Dry-run: order NOT sent. Payload validated (see server logs). Set SHIPHERO_DRY_RUN=false to go live.');
+        console.log('[ShipHero dry-run] would send:', data.request);
+      } else {
+        toast.success(`Sent to ShipHero (id ${data.externalId}).${data.warning ? ` ⚠️ ${data.warning}` : ''}`);
+      }
+      await fetchOrder();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send to ShipHero.');
+    } finally {
+      setShipHeroLoading(false);
     }
   };
 
@@ -760,6 +790,10 @@ export default function AdminOrderDetailsView({
 
   const showPackingSlipBtn = ['Ready', 'Done'].includes(originalStatus);
   const canSLI = ['Ready', 'Done'].includes(order.status);
+  // ShipHero (3PL) fulfillment: offer the push once the order is confirmed
+  // (past Draft/Open). Once sent, show the link instead of the action.
+  const alreadyInShipHero = !!(order as any).external_fulfillment_id;
+  const canSendToShipHero = ['In Process', 'Ready', 'Done'].includes(order.status) && !alreadyInShipHero;
 
   // --------------------------------------------------------------------------
   // Render
@@ -846,6 +880,18 @@ export default function AdminOrderDetailsView({
                 {order.status !== 'Draft' && (
                   <DropdownMenuItem onClick={handleDownloadCSV}>
                     <Download className="h-4 w-4 mr-2" /> Download CSV
+                  </DropdownMenuItem>
+                )}
+                {canSendToShipHero && (
+                  <DropdownMenuItem onClick={handleSendToShipHero} disabled={shipHeroLoading}>
+                    <Truck className="h-4 w-4 mr-2" />
+                    {shipHeroLoading ? 'Sending…' : 'Send to ShipHero'}
+                  </DropdownMenuItem>
+                )}
+                {alreadyInShipHero && (
+                  <DropdownMenuItem disabled>
+                    <Truck className="h-4 w-4 mr-2" />
+                    {`In ShipHero${(order as any).fulfillment_status ? ` — ${(order as any).fulfillment_status.replace(/_/g, ' ')}` : ''}`}
                   </DropdownMenuItem>
                 )}
                 {canSLI && (
