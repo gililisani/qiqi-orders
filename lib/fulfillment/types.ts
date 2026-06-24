@@ -69,6 +69,16 @@ export interface CreateOrderResult {
   raw?: unknown;
 }
 
+/** Current fulfillment state pulled on demand from the WMS (vs. pushed via webhook). */
+export interface FulfillmentSnapshot {
+  status: FulfillmentStatus;
+  trackingNumber?: string | null;
+  carrier?: string | null;
+  shippingMethod?: string | null;
+  trackingUrl?: string | null;
+  raw?: unknown;
+}
+
 export type FulfillmentEventType = 'shipment_update' | 'order_cancelled' | 'other';
 
 /**
@@ -117,4 +127,14 @@ export interface FulfillmentProvider {
 
   /** Register our webhook endpoint with the provider. Respects the dry-run gate. */
   registerWebhook?(url: string): Promise<{ id: string | null; dryRun: boolean; raw?: unknown }>;
+
+  /** Cancel the order in the WMS by its provider id. Respects the dry-run gate. */
+  cancelOrder?(externalId: string, reason?: string): Promise<{ dryRun: boolean; raw?: unknown }>;
+
+  /**
+   * Pull the order's current fulfillment state from the WMS (read-only — works
+   * regardless of the dry-run gate). Lets the Hub show status on demand without
+   * waiting on the webhook.
+   */
+  getFulfillment?(externalId: string): Promise<FulfillmentSnapshot>;
 }

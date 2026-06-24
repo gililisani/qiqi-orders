@@ -4,6 +4,7 @@ import {
   isPickupShipment,
   buildShipHeroOrderInput,
   parseShipHeroWebhook,
+  parseShipHeroOrderFulfillment,
 } from '@/lib/fulfillment/shiphero/mapping';
 import type { ShipHeroConfig } from '@/lib/fulfillment/shiphero/config';
 
@@ -93,9 +94,11 @@ describe('isPickupShipment (tolerant)', () => {
   });
 });
 
+const PUSH_DATE = '2026-06-24T17:00:00.000Z';
+
 describe('buildShipHeroOrderInput', () => {
   it('produces a valid create input scoped to the customer account', () => {
-    const input = buildShipHeroOrderInput(buildNormalizedOrder(hubOrder), cfg());
+    const input = buildShipHeroOrderInput(buildNormalizedOrder(hubOrder), cfg(), PUSH_DATE);
     expect(input.order_number).toBe('SO-555');
     expect(input.partner_order_id).toBe('uuid-123');
     expect(input.customer_account_id).toBe('97016');
@@ -104,16 +107,47 @@ describe('buildShipHeroOrderInput', () => {
     expect(input.line_items[0]).toMatchObject({ sku: 'SKU-A', quantity: 2, price: '12.50', partner_line_item_id: 'li-1' });
   });
 
+  it('uses the passed submission date as order_date, not the hub creation date', () => {
+    const input = buildShipHeroOrderInput(buildNormalizedOrder(hubOrder), cfg(), PUSH_DATE);
+    expect(input.order_date).toBe(PUSH_DATE);
+    expect(input.order_date).not.toBe(hubOrder.order.created_at);
+  });
+
   it('omits customer_account_id when not configured', () => {
-    const input = buildShipHeroOrderInput(buildNormalizedOrder(hubOrder), cfg({ customerAccountId: null }));
+    const input = buildShipHeroOrderInput(buildNormalizedOrder(hubOrder), cfg({ customerAccountId: null }), PUSH_DATE);
     expect(input.customer_account_id).toBeUndefined();
   });
 
   it('pins line-item warehouse_id only when configured', () => {
-    const without = buildShipHeroOrderInput(buildNormalizedOrder(hubOrder), cfg());
+    const without = buildShipHeroOrderInput(buildNormalizedOrder(hubOrder), cfg(), PUSH_DATE);
     expect(without.line_items[0].warehouse_id).toBeUndefined();
-    const withWh = buildShipHeroOrderInput(buildNormalizedOrder(hubOrder), cfg({ warehouseId: 'V2FyZWhvdXNlOjgxODkz' }));
+    const withWh = buildShipHeroOrderInput(buildNormalizedOrder(hubOrder), cfg({ warehouseId: 'V2FyZWhvdXNlOjgxODkz' }), PUSH_DATE);
     expect(withWh.line_items[0].warehouse_id).toBe('V2FyZWhvdXNlOjgxODkz');
+  });
+});
+
+describe('parseShipHeroOrderFulfillment (pull)', () => {
+  it('maps a generic-carrier shipment to ready_for_pickup, no tracking', () => {
+    const snap = parseShipHeroOrderFulfillment({
+      fulfillment_status: 'Tomorrow',
+      shipments: [{ shipping_labels: { carrier: 'Wholesale Generic', shipping_method: 'genericlabel', tracking_number: 'X' } }],
+    });
+    expect(snap).toMatchObject({ status: 'ready_for_pickup', trackingNumber: null });
+  });
+
+  it('maps a real-carrier shipment to shipped with tracking', () => {
+    const snap = parseShipHeroOrderFulfillment({
+      shipments: [{ shipping_labels: [{ carrier: 'UPS', shipping_method: 'Ground', tracking_number: '1Z9', tracking_url: 'http://x' }] }],
+    });
+    expect(snap).toMatchObject({ status: 'shipped', trackingNumber: '1Z9', carrier: 'UPS', trackingUrl: 'http://x' });
+  });
+
+  it('reads cancellation from order-level status when there are no shipments', () => {
+    expect(parseShipHeroOrderFulfillment({ fulfillment_status: 'canceled', shipments: [] }).status).toBe('cancelled');
+  });
+
+  it('defaults to pending with no shipments and a custom batch tag', () => {
+    expect(parseShipHeroOrderFulfillment({ fulfillment_status: 'QMS-Large', shipments: [] }).status).toBe('pending');
   });
 });
 

@@ -1,12 +1,13 @@
 import type { ShipHeroConfig } from './config';
 import { getShipHeroConfig } from './config';
 import { ShipHeroClient } from './client';
-import { buildShipHeroOrderInput, parseShipHeroWebhook } from './mapping';
+import { buildShipHeroOrderInput, parseShipHeroWebhook, parseShipHeroOrderFulfillment } from './mapping';
 import type {
   FulfillmentProvider,
   NormalizedOrder,
   CreateOrderResult,
   NormalizedFulfillmentEvent,
+  FulfillmentSnapshot,
 } from '../types';
 
 /**
@@ -37,6 +38,37 @@ const WEBHOOK_CREATE = /* GraphQL */ `
   }
 `;
 
+const ORDER_CANCEL = /* GraphQL */ `
+  mutation($data: CancelOrderInput!) {
+    order_cancel(data: $data) {
+      request_id
+      complexity
+    }
+  }
+`;
+
+const ORDER_FULFILLMENT = /* GraphQL */ `
+  query($id: String!) {
+    order(id: $id) {
+      request_id
+      data {
+        fulfillment_status
+        shipments {
+          id
+          created_date
+          shipping_labels {
+            tracking_number
+            carrier
+            shipping_method
+            tracking_url
+            delivered
+          }
+        }
+      }
+    }
+  }
+`;
+
 // ShipHero's webhook type string for the fulfillment/ready signal.
 const SHIPMENT_UPDATE_WEBHOOK_NAME = 'Shipment Update';
 
@@ -52,7 +84,8 @@ export class ShipHeroProvider implements FulfillmentProvider {
   }
 
   async createOrder(order: NormalizedOrder): Promise<CreateOrderResult> {
-    const data = buildShipHeroOrderInput(order, this.config);
+    // Record the submission date (now) as the ShipHero order_date — see mapping.
+    const data = buildShipHeroOrderInput(order, this.config, new Date().toISOString());
 
     if (this.dryRun) {
       return { externalId: null, dryRun: true, request: data };
@@ -100,6 +133,23 @@ export class ShipHeroProvider implements FulfillmentProvider {
       return null;
     }
     return parseShipHeroWebhook(payload);
+  }
+
+  async cancelOrder(externalId: string, reason = 'Cancelled from Qiqi Hub'): Promise<{ dryRun: boolean; raw?: unknown }> {
+    const data: Record<string, unknown> = { order_id: externalId, reason };
+    if (this.config.customerAccountId) data.customer_account_id = this.config.customerAccountId;
+
+    if (this.dryRun) {
+      return { dryRun: true, raw: data };
+    }
+    const res = await this.client.graphql(ORDER_CANCEL, { data });
+    return { dryRun: false, raw: res };
+  }
+
+  async getFulfillment(externalId: string): Promise<FulfillmentSnapshot> {
+    // Read-only — not gated by dry-run, so the Hub can show status pre-go-live.
+    const res = await this.client.graphql<{ order: { data: any } }>(ORDER_FULFILLMENT, { id: externalId });
+    return parseShipHeroOrderFulfillment(res.order?.data);
   }
 
   async registerWebhook(url: string): Promise<{ id: string | null; dryRun: boolean; raw?: unknown }> {

@@ -1,5 +1,5 @@
 import type { ShipHeroConfig } from './config';
-import type { NormalizedOrder, NormalizedFulfillmentEvent, FulfillmentStatus } from '../types';
+import type { NormalizedOrder, NormalizedFulfillmentEvent, FulfillmentStatus, FulfillmentSnapshot } from '../types';
 import { splitContactName } from '../normalize';
 
 /**
@@ -71,7 +71,15 @@ function money(n: number): string {
   return (Number.isFinite(n) ? n : 0).toFixed(2);
 }
 
-export function buildShipHeroOrderInput(order: NormalizedOrder, config: ShipHeroConfig): ShipHeroOrderInput {
+export function buildShipHeroOrderInput(
+  order: NormalizedOrder,
+  config: ShipHeroConfig,
+  // The date to record as the ShipHero order_date. This is the SUBMISSION date
+  // (when we push to the WMS), NOT the Hub's original order-creation date — a
+  // warehouse cares when the order arrived with them, and it keeps freshly
+  // pushed orders at the top of ShipHero's date-sorted list.
+  orderDate: string,
+): ShipHeroOrderInput {
   const { firstName, lastName } = splitContactName(order.shipTo.name);
 
   const input: ShipHeroOrderInput = {
@@ -79,7 +87,7 @@ export function buildShipHeroOrderInput(order: NormalizedOrder, config: ShipHero
     partner_order_id: order.orderId,
     shop_name: config.shopName,
     fulfillment_status: 'pending',
-    order_date: order.orderDate,
+    order_date: orderDate,
     total_tax: '0.00',
     total_discounts: '0.00',
     currency: order.currency || 'USD',
@@ -198,4 +206,48 @@ export function parseShipHeroWebhook(payload: any): NormalizedFulfillmentEvent |
     trackingNumber,
     raw: payload,
   };
+}
+
+// ---------------------------------------------------------------------------
+// ShipHero order (pulled) → normalized fulfillment snapshot
+// ---------------------------------------------------------------------------
+//
+// Used by the on-demand status sync. We deliberately do NOT trust ShipHero's
+// order-level `fulfillment_status` for ready/shipped — BrandFox puts custom
+// batch tags there ("Tomorrow", "QMS-Large"). We trust shipments (a real
+// shipment + its label carrier) and only read `fulfillment_status` to detect
+// cancellation.
+export function parseShipHeroOrderFulfillment(orderData: any): FulfillmentSnapshot {
+  if (!orderData || typeof orderData !== 'object') return { status: 'unknown' };
+
+  const shipments = Array.isArray(orderData.shipments)
+    ? orderData.shipments
+    : orderData.shipments
+      ? [orderData.shipments]
+      : [];
+
+  const labels = shipments.flatMap((s: any) => {
+    const l = s?.shipping_labels;
+    return Array.isArray(l) ? l : l ? [l] : [];
+  });
+
+  if (labels.length) {
+    const label = labels[0];
+    const carrier = pickString(label.carrier);
+    const method = pickString(label.shipping_method);
+    const pickup = isPickupShipment(carrier, method);
+    return {
+      status: pickup ? 'ready_for_pickup' : 'shipped',
+      trackingNumber: pickup ? null : pickString(label.tracking_number),
+      carrier,
+      shippingMethod: method,
+      trackingUrl: pickString(label.tracking_url),
+      raw: orderData,
+    };
+  }
+
+  if (norm(orderData.fulfillment_status).includes('cancel')) {
+    return { status: 'cancelled', raw: orderData };
+  }
+  return { status: 'pending', raw: orderData };
 }

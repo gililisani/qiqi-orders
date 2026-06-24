@@ -31,6 +31,8 @@ import {
   Truck,
   Trash2,
   Loader2,
+  RefreshCw,
+  XCircle,
 } from 'lucide-react';
 
 import { supabase } from '../../../lib/supabaseClient';
@@ -575,6 +577,56 @@ export default function AdminOrderDetailsView({
     }
   };
 
+  // Pull the latest fulfillment status from ShipHero into the Hub. Read-only on
+  // ShipHero's side, so it works even before the webhook is registered.
+  const handleSyncShipHero = async () => {
+    if (!order || shipHeroLoading) return;
+    setShipHeroLoading(true);
+    try {
+      const res = await fetchWithAuth('/api/fulfillment/shiphero/sync-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to sync status.');
+      toast.success(`ShipHero status: ${String(data.status).replace(/_/g, ' ')}.`);
+      await fetchOrder();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to sync ShipHero status.');
+    } finally {
+      setShipHeroLoading(false);
+    }
+  };
+
+  const handleCancelShipHero = async () => {
+    if (!order || shipHeroLoading) return;
+    const ok = await confirm({
+      title: 'Cancel in ShipHero?',
+      description: 'This cancels the order in ShipHero (BrandFox). It does not change the order status in the Hub or NetSuite.',
+      confirmLabel: 'Cancel in ShipHero',
+      cancelLabel: 'Keep',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    setShipHeroLoading(true);
+    try {
+      const res = await fetchWithAuth('/api/fulfillment/shiphero/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to cancel.');
+      toast.success(data.dryRun ? 'Dry-run: not cancelled (set SHIPHERO_DRY_RUN=false to go live).' : 'Cancelled in ShipHero.');
+      await fetchOrder();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to cancel in ShipHero.');
+    } finally {
+      setShipHeroLoading(false);
+    }
+  };
+
   // Shipping editor: open with the current value, save through the API (which
   // also updates the NS invoice if one exists), or clear by saving blank.
   const openShippingEditor = () => {
@@ -889,10 +941,16 @@ export default function AdminOrderDetailsView({
                   </DropdownMenuItem>
                 )}
                 {alreadyInShipHero && (
-                  <DropdownMenuItem disabled>
-                    <Truck className="h-4 w-4 mr-2" />
-                    {`In ShipHero${(order as any).fulfillment_status ? ` — ${(order as any).fulfillment_status.replace(/_/g, ' ')}` : ''}`}
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem onClick={handleSyncShipHero} disabled={shipHeroLoading}>
+                      <RefreshCw className="h-4 w-4 mr-2" /> Refresh ShipHero status
+                    </DropdownMenuItem>
+                    {(order as any).fulfillment_status !== 'cancelled' && (
+                      <DropdownMenuItem onClick={handleCancelShipHero} disabled={shipHeroLoading}>
+                        <XCircle className="h-4 w-4 mr-2" /> Cancel in ShipHero
+                      </DropdownMenuItem>
+                    )}
+                  </>
                 )}
                 {canSLI && (
                   <>
@@ -945,6 +1003,30 @@ export default function AdminOrderDetailsView({
           </>
         }
       />
+
+      {/* ShipHero fulfillment status */}
+      {alreadyInShipHero && (
+        <Alert>
+          <AlertDescription className="flex flex-wrap items-center gap-2">
+            <Truck className="h-4 w-4" />
+            <span className="font-medium">ShipHero:</span>
+            <Badge variant="secondary">
+              {String((order as any).fulfillment_status || 'pending').replace(/_/g, ' ')}
+            </Badge>
+            {(order as any).tracking_number && (
+              <span className="text-sm text-muted-foreground">
+                Tracking: {(order as any).tracking_carrier ? `${(order as any).tracking_carrier} ` : ''}
+                {(order as any).tracking_number}
+              </span>
+            )}
+            {(order as any).fulfillment_synced_at && (
+              <span className="text-xs text-muted-foreground">
+                · synced {new Date((order as any).fulfillment_synced_at).toLocaleString()}
+              </span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* NetSuite reconcile feedback (notFound / error) */}
       {!order.netsuite_so_id &&
