@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
         po_number,
         created_at,
         status,
+        netsuite_so_id,
         external_fulfillment_id,
         company:companies(
           company_name,
@@ -61,6 +62,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: `This order was already sent to ShipHero (${order.external_fulfillment_id}).` },
         { status: 409 },
+      );
+    }
+
+    // NetSuite-first is a hard requirement: the order must have a NetSuite Sales
+    // Order before it can go to the warehouse.
+    if (!order.netsuite_so_id) {
+      return NextResponse.json(
+        { error: 'Create the NetSuite Sales Order before sending this order to ShipHero.' },
+        { status: 400 },
       );
     }
 

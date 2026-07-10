@@ -472,6 +472,19 @@ export default function AdminOrderDetailsView({
         toast.success(`Invoice synced from NetSuite (status: ${data.status}).`);
       }
       await fetchOrder();
+
+      // Step in the flow: right after a successful NS push, offer to send the
+      // order to the warehouse. "No" leaves it in NS only; the manual "Send to
+      // ShipHero" menu item remains available later.
+      if (action === 'push-so') {
+        const send = await confirm({
+          title: 'Send to warehouse?',
+          description: 'Would you like to send this order to the warehouse (ShipHero) for fulfillment now?',
+          confirmLabel: 'Send to ShipHero',
+          cancelLabel: 'Not now',
+        });
+        if (send) await handleSendToShipHero();
+      }
     } catch (err: any) {
       // A push can "fail" on the client (timeout → non-JSON response) even
       // though the SO was created in NetSuite. Recover by externalId: link the
@@ -579,25 +592,41 @@ export default function AdminOrderDetailsView({
 
   // Pull the latest fulfillment status from ShipHero into the Hub. Read-only on
   // ShipHero's side, so it works even before the webhook is registered.
-  const handleSyncShipHero = async () => {
-    if (!order || shipHeroLoading) return;
-    setShipHeroLoading(true);
-    try {
-      const res = await fetchWithAuth('/api/fulfillment/shiphero/sync-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to sync status.');
-      toast.success(`ShipHero status: ${String(data.status).replace(/_/g, ' ')}.`);
-      await fetchOrder();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to sync ShipHero status.');
-    } finally {
-      setShipHeroLoading(false);
-    }
-  };
+  // `silent` mode is used by the on-load auto-refresh (no toast, no spinner).
+  const syncShipHeroStatus = useCallback(
+    async (silent: boolean) => {
+      try {
+        if (!silent) setShipHeroLoading(true);
+        const res = await fetchWithAuth('/api/fulfillment/shiphero/sync-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to sync status.');
+        if (!silent) toast.success(`ShipHero status: ${String(data.status).replace(/_/g, ' ')}.`);
+        await fetchOrder();
+      } catch (err: any) {
+        if (!silent) toast.error(err.message || 'Failed to sync ShipHero status.');
+      } finally {
+        if (!silent) setShipHeroLoading(false);
+      }
+    },
+    [orderId, fetchOrder, toast],
+  );
+
+  const handleSyncShipHero = () => syncShipHeroStatus(false);
+
+  // Auto-refresh status once when opening an order that's already in ShipHero,
+  // so the admin always sees current status without clicking Refresh.
+  const autoSyncedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const inShipHero = !!(order as any)?.external_fulfillment_id;
+    if (!order?.id || !inShipHero) return;
+    if (autoSyncedRef.current === order.id) return;
+    autoSyncedRef.current = order.id;
+    void syncShipHeroStatus(true);
+  }, [order, syncShipHeroStatus]);
 
   const handleCancelShipHero = async () => {
     if (!order || shipHeroLoading) return;
@@ -842,10 +871,14 @@ export default function AdminOrderDetailsView({
 
   const showPackingSlipBtn = ['Ready', 'Done'].includes(originalStatus);
   const canSLI = ['Ready', 'Done'].includes(order.status);
-  // ShipHero (3PL) fulfillment: offer the push once the order is confirmed
-  // (past Draft/Open). Once sent, show the link instead of the action.
+  // ShipHero (3PL) fulfillment: NetSuite-first is a hard requirement, so the
+  // push is only offered once the order has a NetSuite SO (which also moves it
+  // to In Process). Once sent, show status/actions instead of the push.
   const alreadyInShipHero = !!(order as any).external_fulfillment_id;
-  const canSendToShipHero = ['In Process', 'Ready', 'Done'].includes(order.status) && !alreadyInShipHero;
+  const canSendToShipHero =
+    !!order.netsuite_so_id &&
+    ['In Process', 'Ready', 'Done'].includes(order.status) &&
+    !alreadyInShipHero;
 
   // --------------------------------------------------------------------------
   // Render
