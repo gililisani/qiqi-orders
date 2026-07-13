@@ -4,8 +4,9 @@
  * Admin Dashboard.
  *
  * Stats tiles up top + recent orders table. Stats reflect the actual
- * order workflow stages (Today / Open / In Process / Ready) so admins
- * can see at a glance what needs attention.
+ * order workflow stages (This Month / Open / In Process / Ready) so admins
+ * can see at a glance what needs attention. The workflow tiles are
+ * clickable and filter the orders table below to that status.
  */
 
 import { useEffect, useState } from 'react';
@@ -18,6 +19,7 @@ import {
   Download,
   Eye,
   MoreHorizontal,
+  X,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabaseClient';
@@ -54,20 +56,25 @@ interface RecentOrder {
 }
 
 interface DashboardStats {
-  todayCount: number;
-  todayValue: number;
+  monthCount: number;
+  monthValue: number;
   open: number;
   inProcess: number;
   ready: number;
 }
 
 const ZERO_STATS: DashboardStats = {
-  todayCount: 0,
-  todayValue: 0,
+  monthCount: 0,
+  monthValue: 0,
   open: 0,
   inProcess: 0,
   ready: 0,
 };
+
+/** Tolerant status comparison — trims and ignores case. */
+function statusIs(status: string | null | undefined, expected: string): boolean {
+  return (status || '').trim().toLowerCase() === expected.trim().toLowerCase();
+}
 
 function formatCurrency(amount: number): string {
   return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -84,7 +91,8 @@ export default function AdminDashboard() {
   const router = useRouter();
   const toast = useToast();
   const [stats, setStats] = useState<DashboardStats>(ZERO_STATS);
-  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [allOrders, setAllOrders] = useState<RecentOrder[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -94,7 +102,7 @@ export default function AdminDashboard() {
   async function fetchDashboardData() {
     setLoading(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const thisMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
       const { data: orders, error } = await supabase
         .from('orders')
@@ -104,18 +112,24 @@ export default function AdminDashboard() {
 
       const all = (orders || []) as unknown as RecentOrder[];
 
-      const todays = all.filter((o) => o.created_at.split('T')[0] === today);
-      const todayValue = todays.reduce((sum, o) => sum + (o.total_value || 0), 0);
+      // Month totals count real sales only — drafts and cancelled excluded.
+      const monthOrders = all.filter(
+        (o) =>
+          o.created_at.slice(0, 7) === thisMonth &&
+          !statusIs(o.status, 'Draft') &&
+          !statusIs(o.status, 'Cancelled')
+      );
+      const monthValue = monthOrders.reduce((sum, o) => sum + (o.total_value || 0), 0);
 
       setStats({
-        todayCount: todays.length,
-        todayValue,
-        open: all.filter((o) => o.status === 'Open').length,
-        inProcess: all.filter((o) => o.status === 'In Process').length,
-        ready: all.filter((o) => o.status === 'Ready').length,
+        monthCount: monthOrders.length,
+        monthValue,
+        open: all.filter((o) => statusIs(o.status, 'Open')).length,
+        inProcess: all.filter((o) => statusIs(o.status, 'In Process')).length,
+        ready: all.filter((o) => statusIs(o.status, 'Ready')).length,
       });
 
-      setRecentOrders(all.slice(0, 5));
+      setAllOrders(all);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       toast.error('Could not load dashboard data.');
@@ -149,6 +163,14 @@ export default function AdminDashboard() {
     }
   }
 
+  function toggleFilter(status: string) {
+    setStatusFilter((current) => (current === status ? null : status));
+  }
+
+  const displayedOrders = statusFilter
+    ? allOrders.filter((o) => statusIs(o.status, statusFilter))
+    : allOrders.slice(0, 5);
+
   return (
     <div className="px-6 py-8">
       <PageHeader
@@ -167,58 +189,79 @@ export default function AdminDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <Stat
-          label="Today"
-          value={loading ? '—' : String(stats.todayCount)}
-          delta={loading ? undefined : formatCurrency(stats.todayValue) + ' total'}
+          label="This Month"
+          value={loading ? '—' : formatCurrency(stats.monthValue)}
+          delta={loading ? undefined : `${stats.monthCount} order${stats.monthCount === 1 ? '' : 's'}`}
         />
         <Stat
           label="Open"
           value={loading ? '—' : String(stats.open)}
           delta={loading ? undefined : 'Awaiting push to NetSuite'}
+          onClick={loading ? undefined : () => toggleFilter('Open')}
+          active={statusFilter === 'Open'}
         />
         <Stat
           label="In Process"
           value={loading ? '—' : String(stats.inProcess)}
           delta={loading ? undefined : 'Pushed, awaiting invoice'}
+          onClick={loading ? undefined : () => toggleFilter('In Process')}
+          active={statusFilter === 'In Process'}
         />
         <Stat
           label="Ready"
           value={loading ? '—' : String(stats.ready)}
           delta={loading ? undefined : 'Invoice created'}
+          onClick={loading ? undefined : () => toggleFilter('Ready')}
+          active={statusFilter === 'Ready'}
         />
       </div>
 
-      {/* Recent orders */}
+      {/* Recent / filtered orders */}
       <Card>
         <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border">
-          <h2 className="text-sm font-semibold">Recent orders</h2>
-          <Link href="/admin/orders">
-            <Button variant="ghost" size="sm">
-              View all
-              <ArrowRight className="h-4 w-4" />
+          <h2 className="text-sm font-semibold">
+            {statusFilter ? `${statusFilter} orders (${displayedOrders.length})` : 'Recent orders'}
+          </h2>
+          {statusFilter ? (
+            <Button variant="ghost" size="sm" onClick={() => setStatusFilter(null)}>
+              <X className="h-4 w-4" />
+              Clear filter
             </Button>
-          </Link>
+          ) : (
+            <Link href="/admin/orders">
+              <Button variant="ghost" size="sm">
+                View all
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          )}
         </div>
 
         {loading ? (
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             Loading recent orders…
           </CardContent>
-        ) : recentOrders.length === 0 ? (
-          <EmptyState
-            icon={<Inbox />}
-            title="No orders yet"
-            description="When distributors place orders, they'll show up here."
-            action={
-              <Link href="/admin/orders/new">
-                <Button size="sm">
-                  <Plus className="h-4 w-4" />
-                  New order
-                </Button>
-              </Link>
-            }
-            className="border-0 shadow-none"
-          />
+        ) : displayedOrders.length === 0 ? (
+          statusFilter ? (
+            <CardContent className="py-12 text-center text-sm text-muted-foreground">
+              No {statusFilter.toLowerCase()} orders right now.
+            </CardContent>
+          ) : (
+            <EmptyState
+              icon={<Inbox />}
+              title="No orders yet"
+              description="When distributors place orders, they'll show up here."
+              action={
+                <Link href="/admin/orders/new">
+                  <Button size="sm">
+                    <Plus className="h-4 w-4" />
+                    New order
+                  </Button>
+                </Link>
+              }
+              className="border-0 shadow-none"
+            />
+          )
         ) : (
           <Table>
             <TableHeader>
@@ -235,7 +278,7 @@ export default function AdminDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentOrders.map((order) => (
+              {displayedOrders.map((order) => (
                 <TableRow
                   key={order.id}
                   className="cursor-pointer"
@@ -300,11 +343,34 @@ export default function AdminDashboard() {
 // -----------------------------------------------------------------------------
 // Stat tile
 // -----------------------------------------------------------------------------
-function Stat({ label, value, delta }: { label: string; value: string; delta?: string }) {
+function Stat({
+  label,
+  value,
+  delta,
+  onClick,
+  active,
+}: {
+  label: string;
+  value: string;
+  delta?: string;
+  onClick?: () => void;
+  active?: boolean;
+}) {
   return (
-    <Card className="p-4">
+    <Card className={`p-4 ${active ? 'ring-2 ring-ring' : ''}`}>
       <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+      {onClick ? (
+        <button
+          type="button"
+          onClick={onClick}
+          aria-pressed={active}
+          className="mt-1 text-2xl font-semibold tabular-nums underline decoration-dotted underline-offset-4 hover:decoration-solid cursor-pointer"
+        >
+          {value}
+        </button>
+      ) : (
+        <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+      )}
       {delta && <p className="mt-1 text-xs text-muted-foreground truncate">{delta}</p>}
     </Card>
   );
