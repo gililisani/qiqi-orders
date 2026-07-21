@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import { SLIConfig, SLISigner, getSLIRenderContext } from './sliConfig';
 
 interface SelectedProduct {
   product_id?: string;
@@ -24,6 +25,7 @@ interface StandaloneSLIRecord {
   consignee_address_line3?: string;
   consignee_country?: string;
   selected_products?: SelectedProduct[] | string;
+  signer_id?: string | null;
 }
 
 interface GeneratorProduct {
@@ -52,6 +54,8 @@ interface GeneratorData {
   ship_to_country: string;
   products: GeneratorProduct[];
   creation_date: string;
+  config: SLIConfig;
+  signer: SLISigner;
 }
 
 export async function buildStandaloneSLIData(
@@ -110,7 +114,11 @@ export async function buildStandaloneSLIData(
     })
     .filter((product) => product.quantity > 0);
 
+  const { config, signer } = await getSLIRenderContext(supabaseAdmin, sli.signer_id);
+
   return {
+    config,
+    signer,
     forwarding_agent_line1: sli.forwarding_agent_line1 || '',
     forwarding_agent_line2: sli.forwarding_agent_line2 || '',
     forwarding_agent_line3: sli.forwarding_agent_line3 || '',

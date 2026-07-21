@@ -44,6 +44,13 @@ export interface SLIProduct {
   made_in?: string;
 }
 
+export interface SLISignerOption {
+  id: string;
+  name: string;
+  title?: string;
+  is_default?: boolean;
+}
+
 export interface SLISelectedProduct {
   product_id: string;
   product_name: string;
@@ -136,6 +143,10 @@ interface SLIFormFieldsProps {
   /** Initial value for the company search input — passed by edit-page to seed the field. */
   initialCompanySearch?: string;
   onProductAddError?: (msg: string) => void;
+  /** Signer picker (boxes 42-46). Hidden when no signers exist yet. */
+  signers?: SLISignerOption[];
+  selectedSignerId?: string;
+  onChangeSelectedSignerId?: (id: string) => void;
 }
 
 export function SLIFormFields({
@@ -151,6 +162,9 @@ export function SLIFormFields({
   onChangeSelectedCompanyId,
   initialCompanySearch = '',
   onProductAddError,
+  signers = [],
+  selectedSignerId = '',
+  onChangeSelectedSignerId,
 }: SLIFormFieldsProps) {
   const [companySearch, setCompanySearch] = useState(initialCompanySearch);
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
@@ -349,6 +363,23 @@ export function SLIFormFields({
                 onChange={setStr('date_of_export')}
               />
             </FormField>
+            {signers.length > 0 && (
+              <FormField label="Signer (boxes 42–46)">
+                <select
+                  value={selectedSignerId}
+                  onChange={(e) => onChangeSelectedSignerId?.(e.target.value)}
+                  className="w-full h-9 px-3 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+                >
+                  {signers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                      {s.title ? ` — ${s.title}` : ''}
+                      {s.is_default ? ' (default)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            )}
           </div>
         </CardContent>
       </Card>

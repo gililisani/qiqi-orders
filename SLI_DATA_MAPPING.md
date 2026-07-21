@@ -11,17 +11,25 @@
 
 ## Data Categories
 
-### 🔹 **HARD CODED** (Never changes)
-- **Box 1**: USPPI Name = `Qiqi INC`
-- **Box 2**: USPPI Address = `4625 West Nevso Drive, Suite 2, Las Vegas, NV 89103, United States`
-- **Box 3**: Freight Location Co Name = `PACKABLE / Webb Enterprises`
-- **Box 4**: Freight Location Address = `1516 Motor Parkway, Islandia. New York. 11749., United States`
-- **Box 7**: USPPI EIN = `86-2244756`
-- **Box 14**: State of Origin = `NY`
-- **Box 42**: USPPI Email = `aaron@qiqiglobal.com`
-- **Box 43**: USPPI Phone = `00972-54-6248884`
-- **Box 44**: Printed Name = `Aaron Lisani`
-- **Box 46**: Title = `CPO`
+### 🔹 **CONFIG** (was hard-coded; now data, edited at /admin/sli/settings)
+Since July 2026 these live in DB tables (`sli_config` singleton + `sli_signers`),
+loaded server-side via `lib/sli/sliConfig.ts` (falls back to the legacy values
+if the row/table is missing). See migration `20260721120000_sli_config_and_signers.sql`.
+
+From `sli_config`:
+- **Box 1**: USPPI Name
+- **Box 2**: USPPI Address
+- **Box 3**: Freight Location Co Name
+- **Box 4**: Freight Location Address
+- **Box 7**: USPPI EIN
+- **Box 14**: State of Origin
+
+From `sli_signers` (per-document `signer_id`, falls back to the default signer):
+- **Box 42**: E-mail
+- **Box 43**: Phone
+- **Box 44**: Printed Name
+- **Box 45**: Signature image (app path or uploaded data: URL)
+- **Box 46**: Title
 
 ### 🟡 **ADMIN INPUT** (Popup form - 4 fields)
 1. **Box 5**: Forwarding Agent - Line 1

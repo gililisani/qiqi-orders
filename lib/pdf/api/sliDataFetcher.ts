@@ -1,6 +1,23 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SLIDocumentData } from '../components/SLIDocument';
 import { aggregateProductsByHS } from '../../sli/productAggregator';
+import { getSLIRenderContext } from '../../sli/sliConfig';
+
+/** Config + signer fields shared by both fetchers (boxes 1-4, 7, 14, 42-46). */
+async function fetchConfigFields(
+  supabaseAdmin: SupabaseClient,
+  signerId?: string | null
+): Promise<Partial<SLIDocumentData>> {
+  const { config, signer } = await getSLIRenderContext(supabaseAdmin, signerId);
+  return {
+    ...config,
+    usppi_email: signer.email,
+    usppi_phone: signer.phone,
+    printed_name: signer.name,
+    signer_title: signer.title,
+    signature_url: signer.signature_url,
+  };
+}
 
 /**
  * Fetch standalone SLI data and transform it for PDF generation
@@ -64,6 +81,7 @@ export async function fetchStandaloneSLIData(sliId: string): Promise<SLIDocument
   });
 
   return {
+    ...(await fetchConfigFields(supabaseAdmin, sli.signer_id)),
     sli_number: sli.sli_number,
     invoice_number: sli.invoice_number,
     consignee_name: sli.consignee_name,
@@ -171,6 +189,7 @@ export async function fetchOrderSLIData(orderId: string, authToken: string): Pro
   const company = order.companies as any;
 
   return {
+    ...(await fetchConfigFields(supabaseAdmin, sli.signer_id)),
     sli_number: 0, // Order-based SLIs don't have SLI numbers
     invoice_number: order.invoice_number,
     consignee_name: company?.company_name || '',

@@ -20,6 +20,7 @@ import {
   type SLISelectedProduct,
   type SLIFormData,
   type SLICheckboxStates,
+  type SLISignerOption,
 } from '../../../components/admin/SLIFormFields';
 
 export default function CreateStandaloneSLIPage() {
@@ -35,10 +36,12 @@ export default function CreateStandaloneSLIPage() {
   const [selectedProducts, setSelectedProducts] = useState<SLISelectedProduct[]>([]);
   const [formData, setFormData] = useState<SLIFormData>(DEFAULT_SLI_FORM);
   const [checkboxes, setCheckboxes] = useState<SLICheckboxStates>(DEFAULT_SLI_CHECKBOXES);
+  const [signers, setSigners] = useState<SLISignerOption[]>([]);
+  const [signerId, setSignerId] = useState('');
 
   useEffect(() => {
     (async () => {
-      const [c, p] = await Promise.all([
+      const [c, p, s] = await Promise.all([
         supabase
           .from('companies')
           .select(
@@ -46,9 +49,14 @@ export default function CreateStandaloneSLIPage() {
           )
           .order('company_name'),
         supabase.from('Products').select('id, item_name, hs_code, case_weight, made_in').order('item_name'),
+        supabase.from('sli_signers').select('id, name, title, is_default').order('created_at'),
       ]);
       setCompanies(c.data || []);
       setProducts(p.data || []);
+      const signerList = (s.data || []) as SLISignerOption[];
+      setSigners(signerList);
+      const def = signerList.find((x) => x.is_default) || signerList[0];
+      if (def) setSignerId(def.id);
     })();
   }, []);
 
@@ -69,6 +77,7 @@ export default function CreateStandaloneSLIPage() {
           company_id: selectedCompanyId || null,
           checkbox_states: checkboxes,
           selected_products: selectedProducts,
+          ...(signerId ? { signer_id: signerId } : {}),
         }),
       });
       const data = await res.json();
@@ -117,6 +126,9 @@ export default function CreateStandaloneSLIPage() {
           selectedCompanyId={selectedCompanyId}
           onChangeSelectedCompanyId={setSelectedCompanyId}
           onProductAddError={(msg) => setError(msg)}
+          signers={signers}
+          selectedSignerId={signerId}
+          onChangeSelectedSignerId={setSignerId}
         />
 
         <div className="flex items-center justify-end gap-2 pt-2">

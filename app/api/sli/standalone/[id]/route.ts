@@ -62,6 +62,7 @@ export async function PUT(
       instructions_to_forwarder,
       checkbox_states,
       selected_products,
+      signer_id,
     } = body;
 
     // Validate required fields
@@ -94,6 +95,7 @@ export async function PUT(
         instructions_to_forwarder: instructions_to_forwarder || null,
         selected_products,
         checkbox_states: checkbox_states || {},
+        ...(signer_id !== undefined ? { signer_id: signer_id || null } : {}),
       })
       .eq('id', sliId)
       .select()

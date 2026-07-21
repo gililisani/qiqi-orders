@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { Eye, Trash2 } from 'lucide-react';
+import { Eye, Settings, Trash2 } from 'lucide-react';
 
 import { supabase } from '../../../../lib/supabaseClient';
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import { AdminListPage } from '../../../components/admin/AdminListPage';
+import { Button } from '../../../components/qq/button';
 import { DropdownMenuItem } from '../../../components/qq/dropdown-menu';
 import { useToast } from '../../../components/ui/ToastProvider';
 import { useConfirm } from '../../../components/ui/ConfirmProvider';
@@ -65,6 +66,14 @@ export default function SLIDocumentsPage() {
       description="Standalone Shipper's Letter of Instruction documents."
       newUrl="/admin/sli/create"
       newLabel="Create SLI"
+      extraHeaderActions={
+        <Link href="/admin/sli/settings">
+          <Button variant="outline" size="sm">
+            <Settings className="h-4 w-4" />
+            Settings
+          </Button>
+        </Link>
+      }
       editUrl={(id) => `/admin/sli/${id}/edit`}
       fetch={fetchSLIs}
       searchPlaceholder="Search by SLI number or consignee…"

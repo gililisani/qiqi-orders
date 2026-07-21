@@ -20,6 +20,7 @@ import {
   type SLISelectedProduct,
   type SLIFormData,
   type SLICheckboxStates,
+  type SLISignerOption,
 } from '../../../../components/admin/SLIFormFields';
 
 export default function EditStandaloneSLIPage() {
@@ -40,11 +41,13 @@ export default function EditStandaloneSLIPage() {
   const [checkboxes, setCheckboxes] = useState<SLICheckboxStates>(DEFAULT_SLI_CHECKBOXES);
   const [initialCompanySearch, setInitialCompanySearch] = useState('');
   const [sliNumber, setSliNumber] = useState<number | null>(null);
+  const [signers, setSigners] = useState<SLISignerOption[]>([]);
+  const [signerId, setSignerId] = useState('');
 
   // Load static data first
   useEffect(() => {
     (async () => {
-      const [c, p] = await Promise.all([
+      const [c, p, s] = await Promise.all([
         supabase
           .from('companies')
           .select(
@@ -52,9 +55,11 @@ export default function EditStandaloneSLIPage() {
           )
           .order('company_name'),
         supabase.from('Products').select('id, item_name, hs_code, case_weight, made_in').order('item_name'),
+        supabase.from('sli_signers').select('id, name, title, is_default').order('created_at'),
       ]);
       setCompanies(c.data || []);
       setProducts(p.data || []);
+      setSigners((s.data || []) as SLISignerOption[]);
     })();
   }, []);
 
@@ -96,6 +101,7 @@ export default function EditStandaloneSLIPage() {
 
         setCheckboxes((prev) => ({ ...prev, ...(sli.checkbox_states || {}) }));
         setSelectedProducts(sli.selected_products || []);
+        setSignerId(sli.signer_id || '');
       } catch (err: any) {
         setError(err.message || 'Failed to load SLI.');
       } finally {
@@ -121,6 +127,7 @@ export default function EditStandaloneSLIPage() {
           company_id: selectedCompanyId || null,
           checkbox_states: checkboxes,
           selected_products: selectedProducts,
+          signer_id: signerId || null,
         }),
       });
       const data = await res.json();
@@ -178,6 +185,9 @@ export default function EditStandaloneSLIPage() {
           onChangeSelectedCompanyId={setSelectedCompanyId}
           initialCompanySearch={initialCompanySearch}
           onProductAddError={(msg) => setError(msg)}
+          signers={signers}
+          selectedSignerId={signerId || signers.find((s) => s.is_default)?.id || ''}
+          onChangeSelectedSignerId={setSignerId}
         />
 
         <div className="flex items-center justify-end gap-2 pt-2">

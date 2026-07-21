@@ -1,8 +1,20 @@
 import { readFileSync } from 'fs';
 import path from 'path';
 import { aggregateProductsByHS } from './sli/productAggregator';
+import { escapeHtml } from './htmlEscape';
+import {
+  SLIConfig,
+  SLISigner,
+  mergeSLIConfig,
+  mergeSLISigner,
+} from './sli/sliConfig';
 
 interface SLIData {
+  // Config + signer (from sli_config / sli_signers). Optional — falls back to
+  // the legacy defaults so callers that predate the config layer still work.
+  config?: SLIConfig;
+  signer?: SLISigner;
+
   // From SLI table
   forwarding_agent_line1: string;
   forwarding_agent_line2: string;
@@ -46,7 +58,33 @@ export function generateSLIHTML(data: SLIData): string {
   // Read the HTML template
   const templatePath = path.join(process.cwd(), 'public', 'templates', 'sli-nested-tables.html');
   let html = readFileSync(templatePath, 'utf-8');
-  
+
+  // Fill config + signer placeholders (boxes 1-4, 7, 14, 42-46) first — these
+  // are simple {{token}} swaps and don't interfere with the positional
+  // empty-cell replacements below.
+  const config = mergeSLIConfig(data.config);
+  const signer = mergeSLISigner(data.signer);
+  const placeholders: Record<string, string> = {
+    usppi_name: config.usppi_name,
+    usppi_address_line1: config.usppi_address_line1,
+    usppi_address_line2: config.usppi_address_line2,
+    usppi_country: config.usppi_country,
+    usppi_ein: config.usppi_ein,
+    freight_location_name: config.freight_location_name,
+    freight_location_address_line1: config.freight_location_address_line1,
+    freight_location_address_line2: config.freight_location_address_line2,
+    freight_location_country: config.freight_location_country,
+    state_of_origin: config.state_of_origin,
+    signer_name: signer.name,
+    signer_title: signer.title,
+    signer_email: signer.email,
+    signer_phone: signer.phone,
+    signature_url: signer.signature_url,
+  };
+  for (const [token, value] of Object.entries(placeholders)) {
+    html = html.replace(new RegExp(`\\{\\{${token}\\}\\}`, 'g'), escapeHtml(value));
+  }
+
   // Format today's date
   const today = new Date().toLocaleDateString('en-US', { 
     year: 'numeric', 

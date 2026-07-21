@@ -244,8 +244,8 @@
                 <td class="w-40 label-cell">5. Forwarding Agent:</td>
               </tr>
               <tr>
-                <td class="w-30">Qiqi INC</td>
-                <td class="w-30">PACKABLE / Webb Enterprises</td>
+                <td class="w-30">{{usppi_name}}</td>
+                <td class="w-30">{{freight_location_name}}</td>
                 <td class="w-40"></td>
               </tr>
               <tr>
@@ -254,18 +254,18 @@
                 <td class="w-40"></td>
               </tr>
               <tr>
-                <td class="w-30">4625 West Nevso Drive, Suite 2</td>
-                <td class="w-30">1516 Motor Parkway</td>
+                <td class="w-30">{{usppi_address_line1}}</td>
+                <td class="w-30">{{freight_location_address_line1}}</td>
                 <td class="w-40"></td>
               </tr>
               <tr>
-                <td class="w-30">Las Vegas, NV 89103</td>
-                <td class="w-30">Islandia. New York. 11749.</td>
+                <td class="w-30">{{usppi_address_line2}}</td>
+                <td class="w-30">{{freight_location_address_line2}}</td>
                 <td class="w-40"></td>
               </tr>
               <tr>
-                <td class="w-30">United States</td>
-                <td class="w-30">United States</td>
+                <td class="w-30">{{usppi_country}}</td>
+                <td class="w-30">{{freight_location_country}}</td>
                 <td class="w-40">
                   <table class="nested-table">
                     <tr>
@@ -285,7 +285,7 @@
             <table class="nested-table">
               <tr>
                 <td class="w-20 label-cell">7. USPPI EIN (IRS) No:</td>
-                <td class="w-20">86-2244756</td>
+                <td class="w-20">{{usppi_ein}}</td>
                 <td class="w-25 label-cell">8. Related Party Indicator:</td>
                 <td class="w-15">[CHECKBOX] Related</td>
                 <td class="w-20">[CHECKBOX] Non-Related</td>
@@ -340,7 +340,7 @@
             <table class="nested-table">
               <tr>
                 <td class="w-25 label-cell">14. State of Origin:</td>
-                <td class="w-20">NY</td>
+                <td class="w-20">{{state_of_origin}}</td>
                 <td class="w-15 label-cell">17. In-Bond Code:</td>
                 <td class="w-15"></td>
                 <td class="w-25 label-cell">20. TIB / Carnet?</td>
@@ -547,9 +547,9 @@
             <table class="nested-table">
               <tr>
                 <td class="w-25 label-cell">42. USPPI E-mail Address:</td>
-                <td class="w-25">aaron@qiqiglobal.com</td>
+                <td class="w-25">{{signer_email}}</td>
                 <td class="w-30 label-cell">43. USPPI Telephone No.:</td>
-                <td class="w-20">00972-54-6248884</td>
+                <td class="w-20">{{signer_phone}}</td>
               </tr>
             </table>
           </td>
@@ -561,7 +561,7 @@
             <table class="nested-table">
               <tr>
                 <td class="w-50 label-cell">44. Printed Name of Duly authorized officer or employee:</td>
-                <td class="w-50">Aaron Lisani</td>
+                <td class="w-50">{{signer_name}}</td>
               </tr>
             </table>
           </td>
@@ -574,10 +574,10 @@
               <tr>
                 <td class="w-15 label-cell">45. Signature:</td>
                 <td class="w-30" style="position: relative;">
-                  <img src="/templates/Sig.png" alt="Signature" style="position: absolute; height: 100px; left: -10px; top: 50%; transform: translateY(-50%); z-index: 10;">
+                  <img src="{{signature_url}}" alt="Signature" style="position: absolute; height: 100px; left: -10px; top: 50%; transform: translateY(-50%); z-index: 10;">
                 </td>
                 <td class="w-15 label-cell">46. Title:</td>
-                <td class="w-15">CPO</td>
+                <td class="w-15">{{signer_title}}</td>
                 <td class="w-10 label-cell">47. Date:</td>
                 <td class="w-15">[DATE OF THE DOCUMENT]</td>
               </tr>

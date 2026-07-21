@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateSLIHTML } from '../../../../../../lib/sliGenerator';
+import { getSLIRenderContext } from '../../../../../../lib/sli/sliConfig';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -113,7 +114,10 @@ export async function GET(
 
     // Prepare data for HTML generation
     const company = order.companies as any;
+    const { config, signer } = await getSLIRenderContext(supabaseAdmin, sli.signer_id);
     const sliData = {
+      config,
+      signer,
       forwarding_agent_line1: sli.forwarding_agent_line1 || '',
       forwarding_agent_line2: sli.forwarding_agent_line2 || '',
       forwarding_agent_line3: sli.forwarding_agent_line3 || '',

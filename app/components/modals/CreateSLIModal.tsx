@@ -1,7 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSupabase } from '../../../lib/supabase-provider';
+
+interface SignerOption {
+  id: string;
+  name: string;
+  title: string;
+  is_default: boolean;
+}
 
 interface CreateSLIModalProps {
   orderId: string;
@@ -23,6 +30,26 @@ export default function CreateSLIModal({
   const { supabase } = useSupabase();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [signers, setSigners] = useState<SignerOption[]>([]);
+  const [signerId, setSignerId] = useState<string>(existingSLI?.signer_id || '');
+
+  // Load signers when the modal opens; preselect the default signer.
+  useEffect(() => {
+    if (!isOpen) return;
+    (async () => {
+      const { data } = await supabase
+        .from('sli_signers')
+        .select('id, name, title, is_default')
+        .order('created_at', { ascending: true });
+      const list = (data || []) as SignerOption[];
+      setSigners(list);
+      if (!existingSLI?.signer_id) {
+        const def = list.find((s) => s.is_default) || list[0];
+        if (def) setSignerId(def.id);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const [formData, setFormData] = useState({
     forwarding_agent_line1: existingSLI?.forwarding_agent_line1 || '',
@@ -90,6 +117,7 @@ export default function CreateSLIModal({
         body: JSON.stringify({
           ...formData,
           checkbox_states: checkboxes,
+          ...(signerId ? { signer_id: signerId } : {}),
         }),
       });
 
@@ -203,6 +231,28 @@ export default function CreateSLIModal({
                 className="w-full px-3 py-2 border rounded"
               />
             </div>
+
+            {/* Signer */}
+            {signers.length > 0 && (
+              <div>
+                <label className="block font-semibold mb-2">
+                  Signer (Boxes 42–46)
+                </label>
+                <select
+                  value={signerId}
+                  onChange={(e) => setSignerId(e.target.value)}
+                  className="w-full px-3 py-2 border rounded bg-white"
+                >
+                  {signers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                      {s.title ? ` — ${s.title}` : ''}
+                      {s.is_default ? ' (default)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Info about auto-filled data */}
             <div className="bg-blue-50 border border-blue-200 rounded p-4">

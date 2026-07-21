@@ -18,7 +18,8 @@ export async function PUT(
       date_of_export,
       in_bond_code,
       instructions_to_forwarder,
-      checkbox_states
+      checkbox_states,
+      signer_id
     } = await request.json();
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
@@ -76,6 +77,7 @@ export async function PUT(
     if (in_bond_code !== undefined) updateData.in_bond_code = in_bond_code;
     if (instructions_to_forwarder !== undefined) updateData.instructions_to_forwarder = instructions_to_forwarder;
     if (checkbox_states !== undefined) updateData.checkbox_states = checkbox_states;
+    if (signer_id !== undefined) updateData.signer_id = signer_id || null;
 
     const { data: updatedSLI, error: updateError } = await supabaseAdmin
       .from('slis')

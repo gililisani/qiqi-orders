@@ -15,7 +15,8 @@ export async function POST(
       date_of_export,
       in_bond_code,
       instructions_to_forwarder,
-      checkbox_states
+      checkbox_states,
+      signer_id
     } = await request.json();
 
     const supabaseAdmin = createServiceRoleClient();
@@ -87,7 +88,9 @@ export async function POST(
         date_of_export,
         in_bond_code,
         instructions_to_forwarder,
-        checkbox_states: checkbox_states || {}
+        checkbox_states: checkbox_states || {},
+        // Only include when set — keeps inserts working before the migration runs.
+        ...(signer_id ? { signer_id } : {})
       })
       .select()
       .single();

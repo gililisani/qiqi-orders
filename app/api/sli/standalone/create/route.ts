@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       instructions_to_forwarder,
       checkbox_states,
       selected_products,
+      signer_id,
     } = body;
 
     // Validate required fields
@@ -73,6 +74,8 @@ export async function POST(request: NextRequest) {
         selected_products,
         checkbox_states: checkbox_states || {},
         created_by: userId,
+        // Only include when set — keeps inserts working before the migration runs.
+        ...(signer_id ? { signer_id } : {}),
       })
       .select()
       .single();
