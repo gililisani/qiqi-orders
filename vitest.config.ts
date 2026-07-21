@@ -1,7 +1,20 @@
 import { defineConfig } from 'vitest/config';
+import { transform } from 'esbuild';
 import path from 'path';
 
 export default defineConfig({
+  plugins: [
+    {
+      // lib/pdf/components/*.js contain JSX (Next transpiles them in the app
+      // build); teach vitest's pipeline to do the same so tests can render them.
+      name: 'jsx-in-js',
+      async transform(code: string, id: string) {
+        if (!/lib\/pdf\/components\/.*\.js$/.test(id)) return null;
+        const result = await transform(code, { loader: 'jsx', jsx: 'transform', sourcefile: id });
+        return { code: result.code, map: null };
+      },
+    },
+  ],
   test: {
     environment: 'node',
     globals: true,
