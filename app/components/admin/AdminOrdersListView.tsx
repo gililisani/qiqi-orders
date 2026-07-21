@@ -13,16 +13,16 @@
  *    Push to NetSuite flow lives on the order detail page.
  *  - Removed the inline "Mark Complete" button — also handled on the
  *    detail page after invoice creation.
- *  - Row actions consolidated into a dropdown menu (View, Download CSV)
- *    instead of a row of bare links.
+ *  - No per-row actions column: the whole row navigates to the order, and
+ *    Download CSV lives on the order detail page.
  *  - All visual components are qq primitives; native popups replaced by
- *    Alert / toast.
+ *    Alert.
  */
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Plus, MoreHorizontal, Eye, Download, X } from 'lucide-react';
+import { Search, Plus, X } from 'lucide-react';
 
 import { useSupabase } from '../../../lib/supabase-provider';
 
@@ -50,13 +50,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../qq/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../qq/dropdown-menu';
-import { useToast } from '../ui/ToastProvider';
+import { Label } from '../qq/label';
 
 // ----------------------------------------------------------------------------
 // Types
@@ -86,7 +80,6 @@ export default function AdminOrdersListView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { supabase } = useSupabase();
-  const toast = useToast();
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [clientsMap, setClientsMap] = useState<Map<string, ClientLite>>(new Map());
@@ -97,6 +90,8 @@ export default function AdminOrdersListView() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalOrders, setTotalOrders] = useState(0);
@@ -131,7 +126,7 @@ export default function AdminOrdersListView() {
   useEffect(() => {
     fetchOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, pageSize, statusFilter, companyIdFilter]);
+  }, [currentPage, pageSize, statusFilter, companyIdFilter, dateFrom, dateTo]);
 
   // Debounced search — resets to page 1
   useEffect(() => {
@@ -155,6 +150,12 @@ export default function AdminOrdersListView() {
       if (statusFilter) {
         // Admins always see Drafts even when filtering by another status
         query = query.in('status', [statusFilter, 'Draft']);
+      }
+      if (dateFrom) {
+        query = query.gte('created_at', `${dateFrom}T00:00:00`);
+      }
+      if (dateTo) {
+        query = query.lte('created_at', `${dateTo}T23:59:59`);
       }
 
       if (searchTerm) {
@@ -182,7 +183,10 @@ export default function AdminOrdersListView() {
             if (!isNaN(numericValue) && numericValue > 0) {
               query = query.gte('total_value', numericValue - 0.01).lte('total_value', numericValue + 0.01);
             } else {
-              query = query.ilike('po_number', `%${searchTerm}%`);
+              // Match either identifier the column can display. Strip characters
+              // that would break PostgREST's or() filter syntax.
+              const term = searchTerm.replace(/[(),]/g, '');
+              query = query.or(`po_number.ilike.%${term}%,so_number.ilike.%${term}%`);
             }
           }
         }
@@ -220,37 +224,6 @@ export default function AdminOrdersListView() {
       setError(err.message || 'Failed to load orders.');
     } finally {
       setLoading(false);
-    }
-  }
-
-  // -------------------------------------------------------------------------
-  // Row action — Download CSV (admin convenience, no NetSuite involvement)
-  // -------------------------------------------------------------------------
-  async function handleDownloadCSV(orderId: string) {
-    try {
-      const { generateNetSuiteCSV, downloadCSV } = await import('../../../lib/csvExport');
-      const { data: orderData, error: e } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          company:companies(company_name, netsuite_number, class:classes(name), subsidiary:subsidiaries(name), location:Locations(location_name)),
-          order_items(quantity, unit_price, total_price, product:Products(sku, item_name, netsuite_name))
-        `)
-        .eq('id', orderId)
-        .single();
-      if (e) throw e;
-      if (!orderData?.company) throw new Error('Company not found.');
-      if (!orderData.order_items?.length) throw new Error('No order items found.');
-      for (const item of orderData.order_items) {
-        if (!item.product?.sku) throw new Error('Product SKU missing.');
-      }
-      const csv = generateNetSuiteCSV(orderData as any);
-      const date = new Date(orderData.created_at).toISOString().split('T')[0];
-      const po = orderData.po_number || orderData.id.substring(0, 6);
-      downloadCSV(csv, `Order_${po}_${date}.csv`);
-      toast.success('CSV downloaded.');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to export CSV.');
     }
   }
 
@@ -299,7 +272,7 @@ export default function AdminOrdersListView() {
         <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Search PO, company, date, amount…"
+            placeholder="Search PO/SO, company, date, amount…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9"
@@ -324,6 +297,51 @@ export default function AdminOrdersListView() {
             </SelectContent>
           </Select>
         </div>
+        {/* Date range filter on created_at */}
+        <div className="flex items-center gap-2">
+          <Label htmlFor="orders-date-from" className="text-sm text-muted-foreground shrink-0">
+            From
+          </Label>
+          <Input
+            id="orders-date-from"
+            type="date"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(e) => {
+              setDateFrom(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full sm:w-36"
+          />
+          <Label htmlFor="orders-date-to" className="text-sm text-muted-foreground shrink-0">
+            To
+          </Label>
+          <Input
+            id="orders-date-to"
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(e) => {
+              setDateTo(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full sm:w-36"
+          />
+          {(dateFrom || dateTo) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Clear date filter"
+              onClick={() => {
+                setDateFrom('');
+                setDateTo('');
+                setCurrentPage(1);
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -331,20 +349,22 @@ export default function AdminOrdersListView() {
         {showEmpty ? (
           <EmptyState
             icon={<Search />}
-            title={searchTerm || statusFilter ? 'No orders match your filters' : 'No orders yet'}
+            title={searchTerm || statusFilter || dateFrom || dateTo ? 'No orders match your filters' : 'No orders yet'}
             description={
-              searchTerm || statusFilter
+              searchTerm || statusFilter || dateFrom || dateTo
                 ? 'Try a different search or clear the filters.'
                 : 'When distributors place orders, they\'ll show up here.'
             }
             action={
-              searchTerm || statusFilter ? (
+              searchTerm || statusFilter || dateFrom || dateTo ? (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
                     setSearchTerm('');
                     setStatusFilter('');
+                    setDateFrom('');
+                    setDateTo('');
                     setCurrentPage(1);
                   }}
                 >
@@ -368,10 +388,10 @@ export default function AdminOrdersListView() {
                 <TableRow>
                   <TableHead>
                     {/* Same column holds different content on mobile vs desktop, so the label
-                        adapts: "Order" (PO + Company + Client stacked) on mobile, plain
-                        "PO Number" on md+ where Client and Company live in their own columns. */}
+                        adapts: "Order" (PO/SO + Company + Client stacked) on mobile, plain
+                        "PO/SO" on md+ where Client and Company live in their own columns. */}
                     <span className="md:hidden">Order</span>
-                    <span className="hidden md:inline">PO Number</span>
+                    <span className="hidden md:inline">PO/SO</span>
                   </TableHead>
                   <TableHead className="hidden md:table-cell">Client</TableHead>
                   <TableHead className="hidden md:table-cell">Company</TableHead>
@@ -379,7 +399,6 @@ export default function AdminOrdersListView() {
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="hidden lg:table-cell">Support fund</TableHead>
                   <TableHead className="hidden lg:table-cell">Created</TableHead>
-                  <TableHead className="w-12" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -415,12 +434,14 @@ export default function AdminOrdersListView() {
                               native right-click → "Open in new tab" works. The row's
                               onClick still handles plain left-click anywhere else in
                               the row. stopPropagation prevents double-navigation. */}
+                          {/* NetSuite SO number takes precedence once the order is pushed;
+                              until then the client's PO number identifies the order. */}
                           <Link
                             href={`/admin/orders/${order.id}`}
                             onClick={(e) => e.stopPropagation()}
                             className="block truncate hover:underline"
                           >
-                            {order.po_number || order.id.substring(0, 6)}
+                            {order.so_number || order.po_number || order.id.substring(0, 6)}
                           </Link>
                           {/* Mobile-only stacked context: NS number, company, client */}
                           <div className="md:hidden mt-1 font-sans space-y-0.5">
@@ -485,25 +506,6 @@ export default function AdminOrdersListView() {
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                         {new Date(order.created_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="Row actions">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => router.push(`/admin/orders/${order.id}`)}>
-                              <Eye className="h-4 w-4 mr-2" /> View
-                            </DropdownMenuItem>
-                            {order.status !== 'Draft' && (
-                              <DropdownMenuItem onClick={() => handleDownloadCSV(order.id)}>
-                                <Download className="h-4 w-4 mr-2" /> Download CSV
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   );
