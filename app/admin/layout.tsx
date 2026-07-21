@@ -74,7 +74,6 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Dashboard',  href: '/admin',                 icon: <LayoutDashboard />, permission: 'orders' },
       { label: 'Orders',     href: '/admin/orders',          icon: <ShoppingCart />,    permission: 'orders' },
       { label: 'SLI Documents', href: '/admin/sli/documents', icon: <FileText />,       permission: 'orders' },
-      { label: 'Companies',  href: '/admin/companies',       icon: <Building2 />,       permission: 'companies:manage' },
     ],
   },
   {
@@ -110,12 +109,14 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Configuration',
     items: [
+      { label: 'Companies',      href: '/admin/companies',     icon: <Building2 />,  permission: 'companies:manage' },
       { label: 'Subsidiaries',   href: '/admin/subsidiaries',  icon: <Building />,   permission: 'settings' },
       { label: 'Locations',      href: '/admin/locations',     icon: <MapPin />,     permission: 'settings' },
       { label: 'Classes',        href: '/admin/classes',       icon: <Tag />,        permission: 'settings' },
       { label: 'Incoterms',      href: '/admin/incoterms',     icon: <FileBadge />,  permission: 'settings' },
       { label: 'Payment Terms',  href: '/admin/payment-terms', icon: <CreditCard />, permission: 'settings' },
       { label: 'Support Funds',  href: '/admin/support-funds', icon: <DollarSign />, permission: 'settings' },
+      { label: 'SLI Settings',   href: '/admin/sli/settings',  icon: <Settings />,   permission: 'settings' },
       { label: 'DAM Settings',   href: '/admin/dam/settings',  icon: <Settings />,   permission: 'dam' },
     ],
   },
