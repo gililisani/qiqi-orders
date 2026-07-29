@@ -287,6 +287,8 @@ export async function pushMonthToNetSuite(
     const billId = await ensureRecord(ns, results, 'vendorBill', 'vendorBill', `AMAZON-FBA-FEES-${input.period}`, () =>
       ns.createRecord('vendorBill', {
         externalId: `AMAZON-FBA-FEES-${input.period}`,
+        // "Invoice Number" (vendor reference) is mandatory on this account.
+        tranId: `AMAZON-FBA-FEES-${input.period}`,
         entity: { id: config.vendor_ns_id },
         subsidiary: { id: config.subsidiary_ns_id },
         currency: { id: config.currency_ns_id || '1' },
