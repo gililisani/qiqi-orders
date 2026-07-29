@@ -9,8 +9,8 @@
  * idempotent via AMAZON-FBA-* external IDs + a batch registry.
  */
 
-import { useRef, useState } from 'react';
-import { FileUp, Settings2, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { BadgeCheck, FileUp, Settings2, Trash2, XCircle } from 'lucide-react';
 
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import type { MonthPreview } from '../../../../lib/amazonFba/parseReport';
@@ -47,6 +47,18 @@ interface Batch {
   period: string;
   status: string;
   ns_refs: Record<string, { nsId?: string; tranId?: string; status: string }>;
+  error?: string | null;
+  pushed_by?: string | null;
+  created_at?: string;
+}
+
+function periodLabel(period: string): string {
+  const [y, m] = period.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 }
 
 export default function AmazonFbaPage() {
@@ -69,6 +81,22 @@ export default function AmazonFbaPage() {
   const [mapItem, setMapItem] = useState<NsItem | null>(null);
   const [mapPrice, setMapPrice] = useState('');
   const [savingMap, setSavingMap] = useState(false);
+
+  // Import history — loaded on mount so admins see what's already pushed
+  // BEFORE uploading anything (prevents a second admin re-importing a month).
+  useEffect(() => {
+    loadBatches();
+  }, []);
+
+  async function loadBatches() {
+    try {
+      const res = await fetchWithAuth('/api/netsuite/amazon-fba/batches');
+      const data = await res.json();
+      if (res.ok) setBatches(data.batches || []);
+    } catch {
+      // non-fatal — the per-month guard still blocks double pushes
+    }
+  }
 
   async function parse(text: string) {
     setParsing(true);
@@ -96,6 +124,7 @@ export default function AmazonFbaPage() {
   }
 
   async function refreshBatches() {
+    await loadBatches();
     if (csvText) await parse(csvText);
   }
 
@@ -205,6 +234,68 @@ export default function AmazonFbaPage() {
               </span>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Import history — always visible so nobody re-imports a month */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Import history</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {batches.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nothing imported yet. Months that get pushed to NetSuite will be listed here for
+              every admin to see.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Month</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden md:table-cell">NetSuite records</TableHead>
+                  <TableHead className="hidden sm:table-cell">By</TableHead>
+                  <TableHead className="hidden sm:table-cell">When</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {batches.map((b) => (
+                  <TableRow key={b.period}>
+                    <TableCell className="text-sm font-medium">{periodLabel(b.period)}</TableCell>
+                    <TableCell>
+                      {b.status === 'pushed' ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                          <BadgeCheck className="h-3.5 w-3.5" /> Pushed
+                        </span>
+                      ) : b.status === 'failed' ? (
+                        <span
+                          className="inline-flex items-center gap-1 text-xs font-medium text-destructive bg-destructive/5 border border-destructive/30 rounded-full px-2 py-0.5"
+                          title={b.error || undefined}
+                        >
+                          <XCircle className="h-3.5 w-3.5" /> Failed — retry by re-uploading
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">In progress…</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {Object.values(b.ns_refs || {})
+                          .map((r) => r.tranId)
+                          .filter(Boolean)
+                          .join(' · ') || '—'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm">{b.pushed_by || '—'}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                      {b.created_at ? new Date(b.created_at).toLocaleDateString() : '—'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
