@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
+import { createNetSuiteAPI } from '../../../../../lib/netsuite';
 
 // GET - list all Amazon product → NS item mappings
 export async function GET(request: NextRequest) {
@@ -19,20 +20,46 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - upsert a mapping (keyed by amazon_name)
+//
+// Two ways to identify the NetSuite item:
+//   { sku }                    — preferred: a Hub catalog product's SKU; the
+//                                internal ID is resolved via the same lookup
+//                                the Sales Order push uses.
+//   { ns_item_id, ns_item_name } — direct NS internal id (the fallback
+//                                "search NetSuite" path in the modal).
 export async function POST(request: NextRequest) {
   try {
     await requireAdmin(request);
-    const { amazon_name, ns_item_id, ns_item_name, unit_price } = await request.json();
+    const body = await request.json();
+    const { amazon_name, sku, unit_price } = body;
+    let { ns_item_id, ns_item_name } = body;
 
     if (!amazon_name || typeof amazon_name !== 'string' || !amazon_name.trim()) {
       return NextResponse.json({ error: 'Amazon product name is required.' }, { status: 400 });
     }
-    if (!ns_item_id || !ns_item_name) {
-      return NextResponse.json({ error: 'A NetSuite item is required.' }, { status: 400 });
-    }
     const price = Number(unit_price);
     if (!Number.isFinite(price) || price <= 0) {
       return NextResponse.json({ error: 'Unit price must be a positive number.' }, { status: 400 });
+    }
+
+    if (sku && typeof sku === 'string') {
+      const ns = createNetSuiteAPI();
+      const skuToId = await ns.resolveItemIdsBySku([sku.trim()]);
+      const resolvedId = skuToId.get(sku.trim());
+      if (!resolvedId) {
+        return NextResponse.json(
+          {
+            error: `SKU "${sku}" was not found as an item in NetSuite. The catalog's NetSuite name/SKU may be out of date — fix the product in the Hub or use "Search NetSuite directly".`,
+          },
+          { status: 400 }
+        );
+      }
+      ns_item_id = resolvedId;
+      if (!ns_item_name) ns_item_name = sku.trim();
+    }
+
+    if (!ns_item_id || !ns_item_name) {
+      return NextResponse.json({ error: 'A NetSuite item is required.' }, { status: 400 });
     }
 
     const supabaseAdmin = createServiceRoleClient();

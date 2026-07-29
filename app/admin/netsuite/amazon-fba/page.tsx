@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BadgeCheck, FileUp, Settings2, Trash2, XCircle } from 'lucide-react';
 
+import { supabase } from '../../../../lib/supabaseClient';
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import type { MonthPreview } from '../../../../lib/amazonFba/parseReport';
 import {
@@ -61,6 +62,32 @@ function periodLabel(period: string): string {
   });
 }
 
+interface CatalogProduct {
+  id: number;
+  item_name: string;
+  netsuite_name: string | null;
+  sku: string | null;
+}
+
+/** Best-guess catalog match for an Amazon product name (shared word tokens). */
+function guessCatalogMatch(amazonName: string, products: CatalogProduct[]): CatalogProduct | null {
+  const tokens = new Set(
+    amazonName.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((t) => t.length > 2)
+  );
+  let best: CatalogProduct | null = null;
+  let bestScore = 0;
+  for (const p of products) {
+    const hay = `${p.item_name} ${p.netsuite_name || ''}`.toLowerCase();
+    let score = 0;
+    for (const t of tokens) if (hay.includes(t)) score++;
+    if (score > bestScore) {
+      bestScore = score;
+      best = p;
+    }
+  }
+  return bestScore >= 2 ? best : null;
+}
+
 export default function AmazonFbaPage() {
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -78,9 +105,24 @@ export default function AmazonFbaPage() {
 
   // Map-product modal state
   const [mapModal, setMapModal] = useState<{ amazonName: string; suggestedPrice: number } | null>(null);
+  const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
+  const [mapProductId, setMapProductId] = useState<string>(''); // Hub catalog pick
+  const [useNsSearch, setUseNsSearch] = useState(false); // fallback path
   const [mapItem, setMapItem] = useState<NsItem | null>(null);
   const [mapPrice, setMapPrice] = useState('');
   const [savingMap, setSavingMap] = useState(false);
+
+  // Hub catalog — the primary mapping source (products carry the exact
+  // NetSuite name + SKU; the server resolves SKU → NS internal id).
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('Products')
+        .select('id, item_name, netsuite_name, sku')
+        .order('item_name');
+      setCatalog((data || []) as CatalogProduct[]);
+    })();
+  }, []);
 
   // Import history — loaded on mount so admins see what's already pushed
   // BEFORE uploading anything (prevents a second admin re-importing a month).
@@ -144,21 +186,31 @@ export default function AmazonFbaPage() {
   function openMapModal(amazonName: string, suggestedPrice: number) {
     setMapModal({ amazonName, suggestedPrice });
     setMapItem(null);
+    setUseNsSearch(false);
     setMapPrice(String(suggestedPrice || ''));
+    const guess = guessCatalogMatch(amazonName, catalog);
+    setMapProductId(guess ? String(guess.id) : '');
   }
 
   async function saveMapping() {
-    if (!mapModal || !mapItem) return;
+    if (!mapModal) return;
+    const product = catalog.find((p) => String(p.id) === mapProductId);
+    if (!useNsSearch && product && !product.sku) {
+      toast.error(`"${product.item_name}" has no SKU in the catalog — fix the product first or use direct NetSuite search.`);
+      return;
+    }
     setSavingMap(true);
     try {
+      const payload = useNsSearch
+        ? { ns_item_id: mapItem?.id, ns_item_name: mapItem?.itemid }
+        : { sku: product?.sku, ns_item_name: product?.netsuite_name || product?.item_name };
       const res = await fetchWithAuth('/api/netsuite/amazon-fba/item-map', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amazon_name: mapModal.amazonName,
-          ns_item_id: mapItem.id,
-          ns_item_name: mapItem.itemid,
           unit_price: parseFloat(mapPrice),
+          ...payload,
         }),
       });
       const data = await res.json();
@@ -380,12 +432,39 @@ export default function AmazonFbaPage() {
           <div className="bg-background border border-border rounded-lg max-w-lg w-full p-6 space-y-4">
             <h2 className="text-lg font-semibold">Map Amazon product</h2>
             <p className="text-sm text-muted-foreground">
-              “{mapModal.amazonName}” — pick the NetSuite item it corresponds to and confirm the
-              Amazon unit price (used to infer quantities).
+              “{mapModal.amazonName}” — pick the catalog product it corresponds to and confirm the
+              Amazon unit price (used to infer quantities). Remembered forever; if Amazon renames
+              the product it will simply show up here once more.
             </p>
-            <FormField label="NetSuite item" required>
-              <NsItemSearchInput selected={mapItem} onSelect={setMapItem} />
-            </FormField>
+            {!useNsSearch ? (
+              <FormField label="Product (NetSuite name from the catalog)" required>
+                <select
+                  value={mapProductId}
+                  onChange={(e) => setMapProductId(e.target.value)}
+                  className="w-full h-9 px-3 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">— choose a product —</option>
+                  {catalog.map((p) => (
+                    <option key={p.id} value={String(p.id)}>
+                      {p.netsuite_name || p.item_name}{p.sku ? ` (${p.sku})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            ) : (
+              <FormField label="NetSuite item (direct search)" required>
+                <NsItemSearchInput selected={mapItem} onSelect={setMapItem} />
+              </FormField>
+            )}
+            <button
+              type="button"
+              onClick={() => setUseNsSearch((v) => !v)}
+              className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            >
+              {useNsSearch
+                ? 'Back to the catalog list'
+                : 'Not in the catalog? Search NetSuite directly'}
+            </button>
             <FormField label="Amazon unit price (USD)" required>
               <Input
                 type="number"
@@ -402,7 +481,9 @@ export default function AmazonFbaPage() {
               <Button
                 onClick={saveMapping}
                 loading={savingMap}
-                disabled={!mapItem || !(parseFloat(mapPrice) > 0)}
+                disabled={
+                  (useNsSearch ? !mapItem : !mapProductId) || !(parseFloat(mapPrice) > 0)
+                }
               >
                 Save mapping
               </Button>
