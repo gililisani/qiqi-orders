@@ -919,6 +919,116 @@ export class NetSuiteAPI {
   }
 
   // ---------------------------------------------------------------------------
+  // Generic record helpers (used by the Amazon FBA import; reusable anywhere)
+  // ---------------------------------------------------------------------------
+
+  /** Look up any record's internal id by external id. 404 → null. */
+  async findRecordIdByExternalId(recordType: string, externalId: string): Promise<string | null> {
+    const url = `${this.baseUrl}/record/v1/${recordType}/eid:${encodeURIComponent(externalId)}?fields=id,tranId`;
+    const authHeader = this.getAuthHeader(url, 'GET');
+    const res = await axios({
+      method: 'GET',
+      url,
+      headers: { Authorization: authHeader, Accept: 'application/json' },
+      validateStatus: () => true,
+    });
+    if (res.status === 404) return null;
+    if (res.status >= 400) {
+      throw new Error(`NetSuite ${recordType} lookup by external id failed: HTTP ${res.status}`);
+    }
+    return res.data?.id ? String(res.data.id) : null;
+  }
+
+  /**
+   * Create any record via REST. Returns the new internal id (from the
+   * Location header). If the payload carries an externalId and creation is
+   * rejected, re-checks by external id — a concurrent/prior create wins
+   * instead of surfacing a duplicate error.
+   */
+  async createRecord(recordType: string, payload: Record<string, unknown>): Promise<string> {
+    const url = `${this.baseUrl}/record/v1/${recordType}`;
+    const authHeader = this.getAuthHeader(url, 'POST');
+    const res = await axios({
+      method: 'POST',
+      url,
+      headers: {
+        Authorization: authHeader,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      data: JSON.stringify(payload),
+      validateStatus: () => true,
+    });
+
+    if (res.status !== 204 && res.status !== 200 && res.status !== 201) {
+      if (typeof payload.externalId === 'string' && payload.externalId) {
+        const raced = await this.findRecordIdByExternalId(recordType, payload.externalId);
+        if (raced) return raced;
+      }
+      const msg =
+        res.data?.['o:errorDetails']?.map((d: any) => d.detail).join(' | ') ||
+        res.data?.['o:message'] ||
+        res.data?.message ||
+        JSON.stringify(res.data) ||
+        `HTTP ${res.status}`;
+      throw new Error(`NetSuite create ${recordType} failed: ${msg}`);
+    }
+
+    const location = res.headers['location'] as string | undefined;
+    const id = location ? location.split('/').pop() ?? '' : '';
+    if (!id) throw new Error(`NetSuite created the ${recordType} but returned no ID.`);
+    return id;
+  }
+
+  /** Transform one record into another (e.g. vendorBill → vendorPayment). */
+  async transformRecord(
+    fromType: string,
+    fromId: string,
+    toType: string,
+    body: Record<string, unknown>
+  ): Promise<string> {
+    const url = `${this.baseUrl}/record/v1/${fromType}/${fromId}/!transform/${toType}`;
+    const authHeader = this.getAuthHeader(url, 'POST');
+    const res = await axios({
+      method: 'POST',
+      url,
+      headers: {
+        Authorization: authHeader,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      data: JSON.stringify(body),
+      validateStatus: () => true,
+    });
+    if (res.status !== 204 && res.status !== 200 && res.status !== 201) {
+      if (typeof body.externalId === 'string' && body.externalId) {
+        const raced = await this.findRecordIdByExternalId(toType, body.externalId);
+        if (raced) return raced;
+      }
+      const msg =
+        res.data?.['o:errorDetails']?.map((d: any) => d.detail).join(' | ') ||
+        res.data?.['o:message'] ||
+        JSON.stringify(res.data) ||
+        `HTTP ${res.status}`;
+      throw new Error(`NetSuite transform ${fromType} → ${toType} failed: ${msg}`);
+    }
+    const location = res.headers['location'] as string | undefined;
+    const id = location ? location.split('/').pop() ?? '' : '';
+    if (!id) throw new Error(`NetSuite transform ${fromType} → ${toType} returned no ID.`);
+    return id;
+  }
+
+  /** Read one record's tranId (cosmetic; failures return the id unchanged). */
+  async getTranId(recordType: string, id: string): Promise<string> {
+    try {
+      const data = await this.request<{ tranId?: string }>(`/record/v1/${recordType}/${id}?fields=tranId`);
+      return data?.tranId || id;
+    } catch {
+      return id;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Connection test
   // ---------------------------------------------------------------------------
   async testConnection(): Promise<boolean> {

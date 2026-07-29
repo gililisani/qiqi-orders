@@ -25,6 +25,7 @@ import {
   DollarSign,
   Settings,
   MessageSquare,
+  ShoppingBag,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabaseClient';
@@ -103,6 +104,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Integrations',
     items: [
       { label: 'NetSuite',       href: '/admin/netsuite',  icon: <Plug />,    permission: 'netsuite' },
+      { label: 'Amazon FBA',     href: '/admin/netsuite/amazon-fba', icon: <ShoppingBag />, permission: 'netsuite' },
       { label: 'Inventory Sync', href: '/admin/inventory', icon: <Package />, permission: 'netsuite' },
     ],
   },
