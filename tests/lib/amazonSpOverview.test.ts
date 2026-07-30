@@ -47,7 +47,11 @@ const EVENTS = {
       ShipmentItemAdjustmentList: [
         {
           SellerSKU: 'FPS0030-FBA',
-          ItemChargeAdjustmentList: [{ ChargeType: 'Principal', ChargeAmount: money(-64) }],
+          ItemChargeAdjustmentList: [
+            { ChargeType: 'Principal', ChargeAmount: money(-64) },
+            // marketplace-facilitator tax reversal — must be ignored
+            { ChargeType: 'Tax', ChargeAmount: money(-5.6) },
+          ],
           ItemFeeAdjustmentList: [{ FeeType: 'Commission', FeeAmount: money(7.68) }],
         },
       ],
@@ -110,6 +114,33 @@ describe('summarizeFinancialEvents', () => {
 
   it('surfaces unrecognized event lists instead of dropping them', () => {
     expect(s.otherEvents).toEqual([{ list: 'ChargebackEventList', count: 1 }]);
+  });
+
+  it('nets Amazon-funded promos against the charges they offset (free shipping)', () => {
+    const freeShipping = summarizeFinancialEvents({
+      ShipmentEventList: [
+        {
+          AmazonOrderId: '111-X',
+          ShipmentItemList: [
+            {
+              SellerSKU: 'FPS0029-FBA',
+              QuantityShipped: 1,
+              ItemChargeList: [
+                { ChargeType: 'Principal', ChargeAmount: money(28) },
+                { ChargeType: 'Tax', ChargeAmount: money(2.45) }, // remitted by Amazon — ignored
+                { ChargeType: 'ShippingCharge', ChargeAmount: money(2.99) },
+              ],
+              ItemFeeList: [{ FeeType: 'Commission', FeeAmount: money(-4.2) }],
+              PromotionList: [
+                { PromotionType: 'PromotionMetaDataDefinitionValue', PromotionAmount: money(-2.99) },
+              ],
+            },
+          ],
+        },
+      ],
+    } as any);
+    expect(freeShipping.grossSales).toBe(28);
+    expect(freeShipping.promotions).toBe(0); // -2.99 promo + 2.99 shipping = wash
   });
 
   function round2(n: number) {

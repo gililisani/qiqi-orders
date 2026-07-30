@@ -74,26 +74,37 @@ export function summarizeFinancialEvents(events: FinancialEvents): FinanceOvervi
     buckets.set(type, b);
   };
 
+  // Charge types promos typically offset (e.g. "Free Rush Shipping": buyer is
+  // charged shipping and a promo waives it — net zero to the seller). Tax-type
+  // charges are excluded entirely: Amazon collects AND remits them
+  // (marketplace facilitator), so they never touch our books.
+  const OFFSET_CHARGE_TYPES = new Set(['ShippingCharge', 'GiftWrapCharge', 'GiftWrap']);
+
   let grossSales = 0;
   let unitsShipped = 0;
-  let promotions = 0;
+  let promoSum = 0; // raw promotion amounts (negative)
+  let offsetChargeSum = 0; // buyer-paid extras the promos offset (positive)
   const shipments = events.ShipmentEventList || [];
   for (const shipment of shipments) {
     for (const item of shipment.ShipmentItemList || []) {
       unitsShipped += Number(item.QuantityShipped) || 0;
       for (const charge of item.ItemChargeList || []) {
         if (charge.ChargeType === 'Principal') grossSales = round2(grossSales + amt(charge.ChargeAmount));
+        else if (OFFSET_CHARGE_TYPES.has(charge.ChargeType)) offsetChargeSum += amt(charge.ChargeAmount);
       }
       // ItemFeeList amounts are negative (what Amazon takes) — flip to cost.
       for (const fee of item.ItemFeeList || []) {
         addFee(fee.FeeType, -amt(fee.FeeAmount));
       }
-      // Promotions on the principal are seller-funded discounts (negative).
       for (const promo of item.PromotionList || []) {
-        promotions = round2(promotions + -amt(promo.PromotionAmount));
+        promoSum += amt(promo.PromotionAmount);
       }
     }
   }
+  // Seller-funded promotions = promo discounts NOT covered by an offsetting
+  // buyer charge. Positive = real discount cost; small negative = net extra
+  // income (e.g. buyer-paid shipping with no promo).
+  const promotions = round2(-(promoSum + offsetChargeSum)) || 0; // || 0 avoids -0
 
   // Refunds: product portion + fee give-backs (which net the fee buckets).
   const refunds: RefundRow[] = [];
@@ -105,8 +116,12 @@ export function summarizeFinancialEvents(events: FinancialEvents): FinanceOvervi
     for (const item of refund.ShipmentItemAdjustmentList || []) {
       if (item.SellerSKU) skus.add(item.SellerSKU);
       for (const charge of item.ItemChargeAdjustmentList || []) {
-        // negative = money going back to the buyer
-        productRefund = round2(productRefund + -amt(charge.ChargeAmount));
+        // negative = money going back to the buyer. Tax-type adjustments are
+        // excluded — the marketplace-facilitator tax never touched our books.
+        const type = charge.ChargeType || '';
+        if (type === 'Principal' || OFFSET_CHARGE_TYPES.has(type) || type === 'RestockingFee') {
+          productRefund = round2(productRefund + -amt(charge.ChargeAmount));
+        }
       }
       for (const fee of item.ItemFeeAdjustmentList || []) {
         // positive = Amazon returning part of its fee — net into buckets
