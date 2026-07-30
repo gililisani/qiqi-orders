@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { BadgeCheck, FileUp, Settings2, Trash2, XCircle } from 'lucide-react';
+import { BadgeCheck, CloudDownload, FileUp, Settings2, Trash2, XCircle } from 'lucide-react';
 
 import { supabase } from '../../../../lib/supabaseClient';
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
@@ -48,6 +48,8 @@ interface Mapping {
 interface Batch {
   period: string;
   status: string;
+  source?: string;
+  payload?: MonthPreview | null;
   ns_refs: Record<string, { nsId?: string; tranId?: string; status: string }>;
   error?: string | null;
   pushed_by?: string | null;
@@ -103,6 +105,10 @@ export default function AmazonFbaPage() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [config, setConfig] = useState<AmazonFbaConfigRow | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Fetch-from-Amazon state
+  const [fetchPeriod, setFetchPeriod] = useState('');
+  const [fetching, setFetching] = useState(false);
 
   // Map-product modal state
   const [mapModal, setMapModal] = useState<{ amazonName: string; suggestedPrice: number } | null>(null);
@@ -171,6 +177,39 @@ export default function AmazonFbaPage() {
     if (csvText) await parse(csvText);
   }
 
+  async function fetchMonthFromAmazon(period: string) {
+    if (!/^\d{4}-\d{2}$/.test(period)) {
+      setError('Pick a month first.');
+      return;
+    }
+    setFetching(true);
+    setError(null);
+    try {
+      const res = await fetchWithAuth('/api/netsuite/amazon-fba/fetch-month', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch from Amazon.');
+      toast.success(`${period} fetched from Amazon.`);
+      await loadBatches(); // prepared batch now carries the preview
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch from Amazon.');
+    } finally {
+      setFetching(false);
+    }
+  }
+
+  // API-prepared months render as month cards too (unless a CSV upload
+  // provides the same period — the freshly parsed CSV wins the display).
+  const csvPeriods = new Set(previews.map((p) => p.period));
+  const preparedPreviews = batches
+    .filter((b) => b.status !== 'pushed' && b.source === 'api' && b.payload?.period && !csvPeriods.has(b.payload.period))
+    .map((b) => b.payload as MonthPreview)
+    .sort((a, b) => a.period.localeCompare(b.period));
+  const allPreviews = [...previews, ...preparedPreviews];
+
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -219,6 +258,18 @@ export default function AmazonFbaPage() {
       toast.success('Product mapped.');
       setMapModal(null);
       if (csvText) await parse(csvText); // re-parse with the new mapping
+      // Re-resolve any API-prepared months so the new mapping takes effect there too.
+      const preparedPeriods = batches
+        .filter((b) => b.status !== 'pushed' && b.source === 'api' && b.payload?.period)
+        .map((b) => b.period);
+      for (const period of preparedPeriods) {
+        await fetchWithAuth('/api/netsuite/amazon-fba/fetch-month', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ period }),
+        });
+      }
+      if (preparedPeriods.length > 0) await loadBatches();
     } catch (err: any) {
       toast.error(err.message || 'Failed to save mapping.');
     } finally {
@@ -261,13 +312,29 @@ export default function AmazonFbaPage() {
         <AmazonFbaSettings config={config} onConfigChange={setConfig} />
       )}
 
-      {/* Upload */}
+      {/* Get data: fetch from Amazon (primary) or upload a CSV (fallback) */}
       <Card>
-        <CardContent className="py-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <Button onClick={() => fileInputRef.current?.click()} loading={parsing}>
+        <CardContent className="py-6 space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <Input
+              type="month"
+              value={fetchPeriod}
+              onChange={(e) => setFetchPeriod(e.target.value)}
+              className="w-full sm:w-44"
+            />
+            <Button onClick={() => fetchMonthFromAmazon(fetchPeriod)} loading={fetching}>
+              <CloudDownload className="h-4 w-4" />
+              Fetch from Amazon
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Pulls the month straight from the Amazon API — exact SKUs and quantities, no file
+              needed. The monthly job does this automatically on the 2nd.
+            </span>
+          </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 border-t border-border pt-4">
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()} loading={parsing}>
               <FileUp className="h-4 w-4" />
-              {csvText ? 'Upload a different file' : 'Upload Amazon CSV'}
+              {csvText ? 'Upload a different CSV' : 'Upload CSV instead'}
             </Button>
             <input
               ref={fileInputRef}
@@ -276,16 +343,11 @@ export default function AmazonFbaPage() {
               onChange={handleFile}
               className="hidden"
             />
-            {fileName ? (
-              <span className="text-sm text-muted-foreground">
-                {fileName} — {previews.length} month(s) found
-              </span>
-            ) : (
-              <span className="text-sm text-muted-foreground">
-                Seller Central → Payments → Reports repository → All Transactions (CSV). Any date
-                range works; each month is pushed separately and can never be double-booked.
-              </span>
-            )}
+            <span className="text-sm text-muted-foreground">
+              {fileName
+                ? `${fileName} — ${previews.length} month(s) found`
+                : 'Fallback: the All Transactions CSV from Seller Central still works as before.'}
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -373,7 +435,7 @@ export default function AmazonFbaPage() {
       </Card>
 
       {/* Month cards */}
-      {previews.map((preview) => (
+      {allPreviews.map((preview) => (
         <AmazonFbaMonthCard
           key={preview.period}
           preview={preview}
@@ -398,7 +460,7 @@ export default function AmazonFbaPage() {
       ))}
 
       {/* Product mappings */}
-      {csvText && (
+      {(csvText || allPreviews.length > 0) && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">Product mappings</CardTitle>

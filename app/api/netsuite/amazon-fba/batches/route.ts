@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     const { data: batches, error } = await supabaseAdmin
       .from('amazon_fba_batches')
-      .select('period, status, ns_refs, error, created_by, created_at, updated_at')
+      .select('period, status, source, payload, ns_refs, error, created_by, created_at, updated_at')
       .order('period', { ascending: false });
     if (error) {
       if (error.message?.includes('does not exist')) {

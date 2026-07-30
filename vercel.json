@@ -2,7 +2,24 @@
   "functions": {
     "app/api/**/*.ts": {
       "maxDuration": 60
+    },
+    "app/api/cron/amazon-fba-monthly/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/netsuite/amazon-fba/push/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/netsuite/amazon-fba/fetch-month/route.ts": {
+      "maxDuration": 120
+    },
+    "app/api/amazon/dashboard/route.ts": {
+      "maxDuration": 120
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/amazon-fba-monthly",
+      "schedule": "0 8 2 * *"
+    }
+  ]
 }
-
