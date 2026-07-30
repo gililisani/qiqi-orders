@@ -18,3 +18,23 @@ export function invoiceUrl(internalId: string | number): string | null {
   const b = baseUrl();
   return b ? `${b}/app/accounting/transactions/custinvc.nl?id=${internalId}` : null;
 }
+
+// Amazon FBA import record types → NS UI paths.
+const FBA_STEP_PATHS: Record<string, string> = {
+  cashSale: 'cashsale.nl',
+  cashRefund: 'cashrfnd.nl',
+  vendorBill: 'vendbill.nl',
+  billPayment: 'vendpymt.nl',
+  journal: 'journal.nl',
+};
+
+/** URL for a record created by the Amazon FBA import, by step name. */
+export function amazonFbaRecordUrl(
+  step: string,
+  internalId: string | number | undefined
+): string | null {
+  const b = baseUrl();
+  const path = FBA_STEP_PATHS[step];
+  if (!b || !path || !internalId) return null;
+  return `${b}/app/accounting/transactions/${path}?id=${internalId}`;
+}

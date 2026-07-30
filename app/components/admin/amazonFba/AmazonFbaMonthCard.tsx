@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
+import { amazonFbaRecordUrl } from '../../../../lib/netsuiteUrls';
 import type { MonthPreview, AttentionRow } from '../../../../lib/amazonFba/parseReport';
 import { applyResolutions, type RowResolution } from '../../../../lib/amazonFba/applyResolutions';
 import { Card, CardContent, CardHeader, CardTitle } from '../../qq/card';
@@ -411,14 +412,29 @@ export function AmazonFbaMonthCard({
           <div className="border border-green-200 bg-green-50 rounded-md px-4 py-3 text-sm text-green-900 space-y-1">
             {(pushResults ||
               Object.entries(batch?.ns_refs || {}).map(([step, ref]) => ({ step, ...ref }))
-            ).map((r: any, i: number) => (
-              <div key={i} className="flex items-center gap-2">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                <span className="capitalize">{r.step}</span>
-                <span className="text-xs opacity-70">{r.status}</span>
-                {r.tranId && <span className="font-mono text-xs">{r.tranId}</span>}
-              </div>
-            ))}
+            ).map((r: any, i: number) => {
+              const url = amazonFbaRecordUrl(r.step, r.nsId);
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span className="capitalize">{r.step}</span>
+                  <span className="text-xs opacity-70">{r.status}</span>
+                  {r.tranId &&
+                    (url ? (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-xs underline underline-offset-2 hover:opacity-70"
+                      >
+                        {r.tranId} ↗
+                      </a>
+                    ) : (
+                      <span className="font-mono text-xs">{r.tranId}</span>
+                    ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </CardContent>

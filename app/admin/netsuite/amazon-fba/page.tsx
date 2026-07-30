@@ -14,6 +14,7 @@ import { BadgeCheck, FileUp, Settings2, Trash2, XCircle } from 'lucide-react';
 
 import { supabase } from '../../../../lib/supabaseClient';
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
+import { amazonFbaRecordUrl } from '../../../../lib/netsuiteUrls';
 import type { MonthPreview } from '../../../../lib/amazonFba/parseReport';
 import {
   missingConfigFields,
@@ -333,10 +334,30 @@ export default function AmazonFbaPage() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <span className="font-mono text-xs text-muted-foreground">
-                        {Object.values(b.ns_refs || {})
-                          .map((r) => r.tranId)
-                          .filter(Boolean)
-                          .join(' · ') || '—'}
+                        {(() => {
+                          const refs = Object.entries(b.ns_refs || {}).filter(([, r]) => r.tranId);
+                          if (refs.length === 0) return '—';
+                          return refs.map(([step, r], i) => {
+                            const url = amazonFbaRecordUrl(step, r.nsId);
+                            return (
+                              <span key={step}>
+                                {i > 0 && ' · '}
+                                {url ? (
+                                  <a
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="underline underline-offset-2 hover:text-foreground"
+                                  >
+                                    {r.tranId}
+                                  </a>
+                                ) : (
+                                  r.tranId
+                                )}
+                              </span>
+                            );
+                          });
+                        })()}
                       </span>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-sm">{b.pushed_by || '—'}</TableCell>

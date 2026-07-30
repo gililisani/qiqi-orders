@@ -315,6 +315,9 @@ export async function pushMonthToNetSuite(
     await ensureRecord(ns, results, 'billPayment', 'vendorPayment', payExternalId, () =>
       ns.transformRecord('vendorBill', billId, 'vendorPayment', {
         externalId: payExternalId,
+        // Without an explicit tranId NS assigns a bare check number ("1")
+        // that is impossible to find later — stamp the period reference.
+        tranId: payExternalId,
         tranDate: input.tranDate,
         account: { id: config.bank_account_ns_id },
         memo: `Amazon ${input.periodLabel} fees payment`,
