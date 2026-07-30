@@ -169,12 +169,19 @@ export async function getFinancialEvents(
   postedAfterIso: string,
   postedBeforeIso: string
 ): Promise<FinancialEvents> {
+  // Amazon rejects PostedBefore later than ~2 minutes before now
+  // ("Date is not valid, should be no later than 2 minutes from now") —
+  // clamp so "this month up to today" queries work during the day.
+  const cap = Date.now() - 3 * 60_000;
+  const requested = new Date(postedBeforeIso).getTime();
+  const effectiveBefore = new Date(Math.min(requested, cap)).toISOString();
+
   const merged: FinancialEvents = {};
   let nextToken: string | undefined;
   do {
     const params: Record<string, string | number> = nextToken
       ? { NextToken: nextToken }
-      : { PostedAfter: postedAfterIso, PostedBefore: postedBeforeIso, MaxResultsPerPage: 100 };
+      : { PostedAfter: postedAfterIso, PostedBefore: effectiveBefore, MaxResultsPerPage: 100 };
     const data = await spGet<{
       payload: { FinancialEvents: FinancialEvents; NextToken?: string };
     }>('/finances/v0/financialEvents', params);
