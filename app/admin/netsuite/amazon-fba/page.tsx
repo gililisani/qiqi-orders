@@ -131,10 +131,20 @@ export default function AmazonFbaPage() {
     })();
   }, []);
 
-  // Import history — loaded on mount so admins see what's already pushed
-  // BEFORE uploading anything (prevents a second admin re-importing a month).
+  // Loaded on mount: import history (so admins see what's already pushed) and
+  // the NetSuite ID config (needed to enable pushing API-prepared months —
+  // previously it only arrived with a CSV parse).
   useEffect(() => {
     loadBatches();
+    (async () => {
+      try {
+        const res = await fetchWithAuth('/api/netsuite/amazon-fba/config');
+        const data = await res.json();
+        if (res.ok && data.config) setConfig(data.config);
+      } catch {
+        // settings panel + push guard will surface any real config problem
+      }
+    })();
   }, []);
 
   async function loadBatches() {
