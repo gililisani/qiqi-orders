@@ -85,8 +85,20 @@ describe('validatePushInput', () => {
 });
 
 describe('planLotAssignments', () => {
-  const nsWithLots = (rows: { item: string; inventorynumber: string; quantityavailable: string }[]) =>
-    ({ suiteQL: async () => rows }) as any;
+  // Mock answers both queries: the lot-flag lookup, then the balances.
+  const nsWithLots = (
+    rows: { item: string; inventorynumber: string; quantityavailable: string }[],
+    nonLotItems: string[] = []
+  ) =>
+    ({
+      suiteQL: async (query: string) => {
+        if (query.includes('islotitem')) {
+          const ids = [...new Set([...rows.map((r) => r.item), ...nonLotItems, '101', '102'])];
+          return ids.map((id) => ({ id, islotitem: nonLotItems.includes(id) ? 'F' : 'T' }));
+        }
+        return rows;
+      },
+    }) as any;
 
   it('assigns from a single lot when it has enough', async () => {
     const plan = await planLotAssignments(
@@ -130,5 +142,16 @@ describe('planLotAssignments', () => {
         INPUT.saleLines
       )
     ).rejects.toThrow(/Blowout: need 2.*\n.*Shampoo: need 1/s);
+  });
+
+  it('gives non-lot-tracked items an empty plan instead of lots or shortages', async () => {
+    // item 102 is not lot-tracked (like KIT0034) — no lots, no shortage check
+    const plan = await planLotAssignments(
+      nsWithLots([{ item: '101', inventorynumber: '900', quantityavailable: '10' }], ['102']),
+      '41',
+      INPUT.saleLines
+    );
+    expect(plan.get(0)).toEqual([{ lotId: '900', quantity: 2 }]);
+    expect(plan.get(1)).toEqual([]); // NS line gets no inventoryDetail
   });
 });

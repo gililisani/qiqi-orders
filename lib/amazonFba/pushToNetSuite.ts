@@ -118,7 +118,16 @@ export async function planLotAssignments(
   const itemIds = [...new Set(saleLines.map((l) => l.nsItemId))];
   if (itemIds.length === 0) return new Map();
 
-  const rows = await ns.suiteQL<{
+  // Not every item is lot-tracked (e.g. KIT0034 is a non-lot assembly) —
+  // NetSuite rejects an inventoryDetail on those. Only plan lots where the
+  // item actually tracks them; non-lot lines get an empty plan (no detail).
+  const flagRows = await ns.suiteQL<{ id: string; islotitem: string }>(
+    `SELECT id, islotitem FROM item WHERE id IN (${itemIds.map((i) => Number(i)).join(', ')})`
+  );
+  const lotTracked = new Set(flagRows.filter((r) => r.islotitem === 'T').map((r) => String(r.id)));
+  const lotItemIds = itemIds.filter((id) => lotTracked.has(String(id)));
+
+  const rows = lotItemIds.length === 0 ? [] : await ns.suiteQL<{
     item: string;
     inventorynumber: string;
     quantityavailable: string;
@@ -127,7 +136,7 @@ export async function planLotAssignments(
        FROM InventoryBalance
       WHERE location = ${Number(locationNsId)}
         AND quantityavailable > 0
-        AND item IN (${itemIds.map((i) => Number(i)).join(', ')})`
+        AND item IN (${lotItemIds.map((i) => Number(i)).join(', ')})`
   );
 
   // Pool of available lots per item ("any lot" rule — no FEFO, stable order).
@@ -144,6 +153,10 @@ export async function planLotAssignments(
   const plan = new Map<number, LotAssignment[]>();
   const shortages: string[] = [];
   saleLines.forEach((line, index) => {
+    if (!lotTracked.has(String(line.nsItemId))) {
+      plan.set(index, []); // non-lot item: no inventory detail on the line
+      return;
+    }
     const pool = pools.get(line.nsItemId) || [];
     let remaining = line.quantity;
     const assignments: LotAssignment[] = [];
@@ -210,20 +223,28 @@ export async function pushMonthToNetSuite(
   if (input.saleLines.length > 0 || input.discountTotal !== 0) {
     const lotPlan = await planLotAssignments(ns, config.location_ns_id, input.saleLines);
 
-    const items: Record<string, unknown>[] = input.saleLines.map((line, index) => ({
-      item: { id: line.nsItemId },
-      quantity: line.quantity,
-      rate: line.unitPrice,
-      description: line.orderId,
-      inventoryDetail: {
-        inventoryAssignment: {
-          items: (lotPlan.get(index) || []).map((a) => ({
-            issueInventoryNumber: { id: a.lotId },
-            quantity: a.quantity,
-          })),
-        },
-      },
-    }));
+    const items: Record<string, unknown>[] = input.saleLines.map((line, index) => {
+      const assignments = lotPlan.get(index) || [];
+      return {
+        item: { id: line.nsItemId },
+        quantity: line.quantity,
+        rate: line.unitPrice,
+        description: line.orderId,
+        // Only lot-tracked items may carry an inventory detail.
+        ...(assignments.length > 0
+          ? {
+              inventoryDetail: {
+                inventoryAssignment: {
+                  items: assignments.map((a) => ({
+                    issueInventoryNumber: { id: a.lotId },
+                    quantity: a.quantity,
+                  })),
+                },
+              },
+            }
+          : {}),
+      };
+    });
 
     if (input.discountTotal !== 0) {
       items.push({
