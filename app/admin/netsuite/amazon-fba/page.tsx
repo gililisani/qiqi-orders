@@ -16,6 +16,7 @@ import { supabase } from '../../../../lib/supabaseClient';
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import { amazonFbaRecordUrl } from '../../../../lib/netsuiteUrls';
 import type { MonthPreview } from '../../../../lib/amazonFba/parseReport';
+import { normalizeStoredPreview } from '../../../../lib/amazonFba/normalizeStoredPreview';
 import {
   missingConfigFields,
   type AmazonFbaConfig,
@@ -215,8 +216,9 @@ export default function AmazonFbaPage() {
   // provides the same period — the freshly parsed CSV wins the display).
   const csvPeriods = new Set(previews.map((p) => p.period));
   const preparedPreviews = batches
-    .filter((b) => b.status !== 'pushed' && b.source === 'api' && b.payload?.period && !csvPeriods.has(b.payload.period))
-    .map((b) => b.payload as MonthPreview)
+    .filter((b) => b.status !== 'pushed' && b.source === 'api' && !csvPeriods.has(b.period))
+    .map((b) => normalizeStoredPreview(b.payload))
+    .filter((p): p is MonthPreview => p !== null)
     .sort((a, b) => a.period.localeCompare(b.period));
   const allPreviews = [...previews, ...preparedPreviews];
 

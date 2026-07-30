@@ -37,7 +37,8 @@ export function applyResolutions(
   const extraLines: SaleLine[] = [];
   const remainingAttention: MonthPreview['needsAttention'] = [];
 
-  preview.needsAttention.forEach((attention, index) => {
+  // Stored batch payloads can be slimmer than a fresh parse — never assume.
+  (preview.needsAttention || []).forEach((attention, index) => {
     const resolution = byIndex.get(index);
     if (!resolution) {
       remainingAttention.push(attention);
@@ -81,7 +82,7 @@ export function applyResolutions(
     );
   });
 
-  const saleLines = [...preview.saleLines, ...extraLines];
+  const saleLines = [...(preview.saleLines || []), ...extraLines];
   const grossSales = round2(preview.grossSales + extraLines.reduce((s, l) => s + l.amount, 0));
 
   // Same reconciliation formula as the parser, over the updated state:
@@ -90,7 +91,7 @@ export function applyResolutions(
   const unresolvedSalesPortion = remainingAttention
     .filter((a) => a.reason !== 'unknown-type')
     .reduce((s, a) => s + a.row.productCharges, 0);
-  const unknownTotals = preview.needsAttention
+  const unknownTotals = (preview.needsAttention || [])
     .filter((a) => a.reason === 'unknown-type')
     .reduce((s, a) => s + a.row.total, 0);
   const computedNet = round2(

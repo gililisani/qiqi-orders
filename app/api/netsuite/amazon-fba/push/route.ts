@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     // here instead of duplicate NS records.
     const { data: existingBatch } = await supabaseAdmin
       .from('amazon_fba_batches')
-      .select('id, status')
+      .select('id, status, payload')
       .eq('period', input.period)
       .maybeSingle();
 
@@ -87,10 +87,17 @@ export async function POST(request: NextRequest) {
     }
 
     if (existingBatch) {
-      // retry of a failed batch
+      // Retry of a prepared/failed batch. Merge the pushed input OVER the
+      // stored preview instead of replacing it — a failed push must leave the
+      // batch renderable as a month card (preview fields like needsAttention).
       await supabaseAdmin
         .from('amazon_fba_batches')
-        .update({ status: 'pushing', payload: input, error: null, updated_at: new Date().toISOString() })
+        .update({
+          status: 'pushing',
+          payload: { ...(existingBatch.payload || {}), ...input },
+          error: null,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', existingBatch.id);
     } else {
       const { error: insertError } = await supabaseAdmin.from('amazon_fba_batches').insert({
