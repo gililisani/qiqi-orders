@@ -20,6 +20,7 @@ import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import { amazonFbaRecordUrl } from '../../../../lib/netsuiteUrls';
 import type { MonthPreview, AttentionRow } from '../../../../lib/amazonFba/parseReport';
 import { applyResolutions, type RowResolution } from '../../../../lib/amazonFba/applyResolutions';
+import { normalizeStoredPreview } from '../../../../lib/amazonFba/normalizeStoredPreview';
 import { Card, CardContent, CardHeader, CardTitle } from '../../qq/card';
 import { Button } from '../../qq/button';
 import { Input } from '../../qq/input';
@@ -78,6 +79,25 @@ export function AmazonFbaMonthCard({
   const pushed = batch?.status === 'pushed';
   const canPush =
     !pushed && effective.reconciles && missingConfig.length === 0 && !pushing;
+
+  // Audit mode: a CSV uploaded over an already-pushed month → compare the
+  // CSV-derived totals against what was actually pushed to NetSuite. This is
+  // the accounting team's independent verification (docs/AMAZON_CSV_VERIFICATION.md).
+  const pushedTotals = pushed ? normalizeStoredPreview((batch as any)?.payload) : null;
+  const auditRows = pushedTotals
+    ? ([
+        ['Cash Sale (sales + promo line)', effective.grossSales + effective.discountTotal, pushedTotals.grossSales + pushedTotals.discountTotal],
+        ['Cash Refund', Math.abs(effective.refundTotal), Math.abs(pushedTotals.refundTotal)],
+        ['Vendor Bill', effective.feeTotal, pushedTotals.feeTotal],
+        ['Reimbursement Journal', effective.reimbursementTotal, pushedTotals.reimbursementTotal],
+        ['Net', effective.computedNet, pushedTotals.computedNet],
+      ] as [string, number, number][]).map(([label, csv, ns]) => ({
+        label,
+        csv,
+        ns,
+        match: Math.abs(csv - ns) < 0.01,
+      }))
+    : null;
 
   function editorFor(index: number): EditorLine[] {
     return editors[index] || [{ item: null, quantity: 1, unitPrice: 0 }];
@@ -210,6 +230,42 @@ export function AmazonFbaMonthCard({
             )}
           </div>
         </div>
+
+        {/* Audit: uploaded CSV vs what was pushed to NetSuite */}
+        {auditRows && (
+          <div className="rounded-md border border-border overflow-hidden">
+            <div className="px-4 py-2 bg-muted/50 text-sm font-semibold">
+              CSV verification — report vs NetSuite records
+            </div>
+            <div className="px-4 py-2">
+              {auditRows.map((row) => (
+                <div key={row.label} className="flex items-center justify-between text-sm py-0.5">
+                  <span className="flex items-center gap-2">
+                    {row.match ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                    ) : (
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                    )}
+                    {row.label}
+                  </span>
+                  <span className="font-mono">
+                    {money(row.csv)} vs {money(row.ns)}
+                    {!row.match && (
+                      <span className="text-amber-700 ml-2">Δ {money(row.csv - row.ns)}</span>
+                    )}
+                  </span>
+                </div>
+              ))}
+              {auditRows.some((r) => !r.match) && (
+                <p className="text-xs text-muted-foreground pt-2">
+                  Differences at month edges are usually settlement-timing: an order near the 1st
+                  can sit in one month's CSV and the neighboring month's records. They must offset
+                  exactly across adjacent months — see docs/AMAZON_CSV_VERIFICATION.md.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {missingConfig.length > 0 && !pushed && (
           <div className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
