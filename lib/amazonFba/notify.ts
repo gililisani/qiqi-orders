@@ -33,12 +33,14 @@ const PAGE_URL = 'https://partners.qiqiglobal.com/admin/netsuite/amazon-fba';
 
 export async function notifyMonthPrepared(
   notifyEmail: string,
-  preview: MonthPreview
+  preview: MonthPreview,
+  options?: { reminder?: boolean }
 ): Promise<void> {
   const ready = preview.reconciles;
+  const prefix = options?.reminder ? 'Reminder: ' : '';
   const subject = ready
-    ? `Amazon ${preview.periodLabel} is ready to push to NetSuite`
-    : `Amazon ${preview.periodLabel} needs attention before pushing`;
+    ? `${prefix}Amazon ${preview.periodLabel} is ready to push to NetSuite`
+    : `${prefix}Amazon ${preview.periodLabel} needs attention before pushing`;
   const attention = preview.needsAttention
     .map((a) => `<li>${escapeHtml(a.reason)}: ${escapeHtml(a.row.product)} (${escapeHtml(a.row.orderId || '—')})</li>`)
     .join('');

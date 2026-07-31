@@ -20,6 +20,10 @@
     {
       "path": "/api/cron/amazon-fba-monthly",
       "schedule": "0 8 2 * *"
+    },
+    {
+      "path": "/api/cron/amazon-fba-monthly?mode=remind",
+      "schedule": "0 9 * * *"
     }
   ]
 }
