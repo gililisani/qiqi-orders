@@ -371,7 +371,7 @@ export default function CompanyPerformancePage() {
                   <TableRow key={r.periodId}>
                     <TableCell>
                       <Link
-                        href={`/admin/companies/${r.companyId}`}
+                        href={`/admin/reports/company-performance/${r.companyId}`}
                         className="font-medium text-foreground hover:underline"
                       >
                         {r.companyName}
