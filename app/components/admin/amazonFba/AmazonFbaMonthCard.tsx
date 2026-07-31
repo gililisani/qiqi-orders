@@ -6,7 +6,7 @@
  * couldn't decode, a reconciliation banner, and the push button.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -84,6 +84,7 @@ export function AmazonFbaMonthCard({
   // CSV-derived totals against what was actually pushed to NetSuite. This is
   // the accounting team's independent verification (docs/AMAZON_CSV_VERIFICATION.md).
   const pushedTotals = pushed ? normalizeStoredPreview((batch as any)?.payload) : null;
+  const lastRecordedAudit = useRef<string>('');
   const auditRows = pushedTotals
     ? ([
         ['Cash Sale (sales + promo line)', effective.grossSales + effective.discountTotal, pushedTotals.grossSales + pushedTotals.discountTotal],
@@ -163,6 +164,27 @@ export function AmazonFbaMonthCard({
       setPushing(false);
     }
   }
+
+  // Persist the verification outcome as the batch's audit trail (latest wins;
+  // the ref stops re-render spam). See docs/AMAZON_CSV_VERIFICATION.md.
+  useEffect(() => {
+    if (!auditRows || !pushed) return;
+    const signature = `${preview.period}:${JSON.stringify(auditRows)}`;
+    if (signature === lastRecordedAudit.current) return;
+    lastRecordedAudit.current = signature;
+    fetchWithAuth('/api/netsuite/amazon-fba/audit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        period: preview.period,
+        rows: auditRows,
+        all_green: auditRows.every((r) => r.match),
+      }),
+    }).catch(() => {
+      // audit recording is best-effort; the on-screen comparison is the source
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auditRows, pushed, preview.period]);
 
   // Which attention rows are still unresolved (index within original preview)?
   const resolvedIndexes = new Set(resolutions.map((r) => r.attentionIndex));

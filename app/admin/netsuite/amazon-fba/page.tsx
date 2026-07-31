@@ -52,6 +52,11 @@ interface Batch {
   source?: string;
   payload?: MonthPreview | null;
   ns_refs: Record<string, { nsId?: string; tranId?: string; status: string }>;
+  audit?: {
+    verified_at: string;
+    verified_by_name?: string;
+    all_green: boolean;
+  } | null;
   error?: string | null;
   pushed_by?: string | null;
   created_at?: string;
@@ -392,8 +397,25 @@ export default function AmazonFbaPage() {
                     <TableCell className="text-sm font-medium">{periodLabel(b.period)}</TableCell>
                     <TableCell>
                       {b.status === 'pushed' ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
-                          <BadgeCheck className="h-3.5 w-3.5" /> Pushed
+                        <span className="inline-flex items-center gap-1.5 flex-wrap">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                            <BadgeCheck className="h-3.5 w-3.5" /> Pushed
+                          </span>
+                          {b.audit && (
+                            <span
+                              className={`inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5 border ${
+                                b.audit.all_green
+                                  ? 'text-green-700 bg-green-50 border-green-200'
+                                  : 'text-amber-700 bg-amber-50 border-amber-300'
+                              }`}
+                              title={`CSV verification by ${b.audit.verified_by_name || 'admin'} on ${new Date(b.audit.verified_at).toLocaleString()}`}
+                            >
+                              {b.audit.all_green ? 'CSV verified ✓' : 'CSV verified — deltas'}
+                              <span className="opacity-70">
+                                {new Date(b.audit.verified_at).toLocaleDateString()}
+                              </span>
+                            </span>
+                          )}
                         </span>
                       ) : b.status === 'failed' ? (
                         <span

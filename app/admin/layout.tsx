@@ -18,11 +18,6 @@ import {
   Plug,
   Package,
   Building,
-  MapPin,
-  Tag,
-  FileBadge,
-  CreditCard,
-  DollarSign,
   Settings,
   MessageSquare,
   ShoppingBag,
@@ -73,9 +68,15 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
   {
     items: [
-      { label: 'Dashboard',  href: '/admin',                 icon: <LayoutDashboard />, permission: 'orders' },
-      { label: 'Orders',     href: '/admin/orders',          icon: <ShoppingCart />,    permission: 'orders' },
-      { label: 'SLI Documents', href: '/admin/sli/documents', icon: <FileText />,       permission: 'orders' },
+      { label: 'Dashboard',    href: '/admin',           icon: <LayoutDashboard />, permission: 'orders' },
+      { label: 'Distributors', href: '/admin/companies', icon: <Building2 />,       permission: 'companies:manage' },
+    ],
+  },
+  {
+    label: 'Orders',
+    items: [
+      { label: 'Orders',        href: '/admin/orders',        icon: <ShoppingCart />, permission: 'orders' },
+      { label: 'SLI Documents', href: '/admin/sli/documents', icon: <FileText />,     permission: 'orders' },
     ],
   },
   {
@@ -88,11 +89,17 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Catalog',
     items: [
-      { label: 'Products',             href: '/admin/products',              icon: <Box />,        permission: 'settings' },
-      { label: 'Highlighted Products', href: '/admin/highlighted-products',  icon: <Star />,       permission: 'settings' },
-      { label: 'Categories',           href: '/admin/categories',            icon: <FolderOpen />, permission: 'settings' },
-      { label: 'DAM',                  href: '/admin/dam',                   icon: <ImageIcon />,  permission: 'dam' },
-      { label: 'DAM Campaigns',        href: '/admin/dam/campaigns',         icon: <Megaphone />,  permission: 'dam' },
+      { label: 'Products',             href: '/admin/products',             icon: <Box />,        permission: 'settings' },
+      { label: 'Highlighted Products', href: '/admin/highlighted-products', icon: <Star />,       permission: 'settings' },
+      { label: 'Product Categories',   href: '/admin/categories',           icon: <FolderOpen />, permission: 'settings' },
+    ],
+  },
+  {
+    label: 'Assets',
+    items: [
+      { label: 'Media Assets',    href: '/admin/dam',           icon: <ImageIcon />, permission: 'dam' },
+      { label: 'Asset Campaigns', href: '/admin/dam/campaigns', icon: <Megaphone />, permission: 'dam' },
+      { label: 'Asset Settings',  href: '/admin/dam/settings',  icon: <Settings />,  permission: 'dam' },
     ],
   },
   {
@@ -102,26 +109,19 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Integrations',
+    label: 'Amazon',
     items: [
-      { label: 'NetSuite',       href: '/admin/netsuite',  icon: <Plug />,    permission: 'netsuite' },
-      { label: 'Amazon',         href: '/admin/amazon',    icon: <Store />,   permission: 'netsuite' },
-      { label: 'Amazon FBA',     href: '/admin/netsuite/amazon-fba', icon: <ShoppingBag />, permission: 'netsuite' },
-      { label: 'Inventory Sync', href: '/admin/inventory', icon: <Package />, permission: 'netsuite' },
+      { label: 'FBA Financials',  href: '/admin/netsuite/amazon-fba', icon: <ShoppingBag />, permission: 'netsuite' },
+      { label: 'Amazon Insights', href: '/admin/amazon',              icon: <Store />,       permission: 'netsuite' },
     ],
   },
   {
     label: 'Configuration',
     items: [
-      { label: 'Companies',      href: '/admin/companies',     icon: <Building2 />,  permission: 'companies:manage' },
-      { label: 'Subsidiaries',   href: '/admin/subsidiaries',  icon: <Building />,   permission: 'settings' },
-      { label: 'Locations',      href: '/admin/locations',     icon: <MapPin />,     permission: 'settings' },
-      { label: 'Classes',        href: '/admin/classes',       icon: <Tag />,        permission: 'settings' },
-      { label: 'Incoterms',      href: '/admin/incoterms',     icon: <FileBadge />,  permission: 'settings' },
-      { label: 'Payment Terms',  href: '/admin/payment-terms', icon: <CreditCard />, permission: 'settings' },
-      { label: 'Support Funds',  href: '/admin/support-funds', icon: <DollarSign />, permission: 'settings' },
-      { label: 'SLI Settings',   href: '/admin/sli/settings',  icon: <Settings />,   permission: 'settings' },
-      { label: 'DAM Settings',   href: '/admin/dam/settings',  icon: <Settings />,   permission: 'dam' },
+      { label: 'NetSuite Data',        href: '/admin/netsuite-data', icon: <Building />, permission: 'settings' },
+      { label: 'NetSuite Integration', href: '/admin/netsuite',      icon: <Plug />,     permission: 'netsuite' },
+      { label: 'NS Inventory Sync',    href: '/admin/inventory',     icon: <Package />,  permission: 'netsuite' },
+      { label: 'SLI Settings',         href: '/admin/sli/settings',  icon: <Settings />, permission: 'settings' },
     ],
   },
 ];
