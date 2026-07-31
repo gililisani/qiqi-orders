@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 
 import { supabase } from '../../../lib/supabaseClient';
+import { addOrderHistoryEntry } from '../../../lib/orderHistory';
 import { useSupabase } from '../../../lib/supabase-provider';
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 import { formatCurrency, formatQuantity } from '../../../lib/formatters';
@@ -368,7 +369,31 @@ export default function AdminOrderDetailsView({
     setShowPackingSlipForm,
     setPackingSlipData,
     validateRequiredFields,
-    addHistoryEntry: async () => {},
+    // Was a no-op stub after the admin/client view split — which meant admin
+    // status changes (incl. → Done) wrote NO order_history rows, making those
+    // orders invisible to Company Performance / target-period actuals.
+    addHistoryEntry: async (
+      actionType: string,
+      statusFrom?: string,
+      statusTo?: string,
+      notes?: string,
+      metadata?: any
+    ) => {
+      try {
+        await addOrderHistoryEntry({
+          supabase,
+          orderId,
+          actionType,
+          statusFrom,
+          statusTo,
+          notes,
+          metadata,
+          role: 'admin',
+        });
+      } catch (err) {
+        console.error('Order history logging failed:', err);
+      }
+    },
     fetchOrder,
     fetchOrderItems,
     fetchOrderHistory,

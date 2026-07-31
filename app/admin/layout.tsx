@@ -15,6 +15,10 @@ import {
   Image as ImageIcon,
   Megaphone,
   BarChart3,
+  TrendingUp,
+  PieChart,
+  DollarSign,
+  LineChart,
   Plug,
   Package,
   Building,
@@ -105,7 +109,11 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Insights',
     items: [
-      { label: 'Reports', href: '/admin/reports', icon: <BarChart3 />, permission: 'reports' },
+      { label: 'Executive Dashboard',  href: '/admin/reports',                     icon: <BarChart3 />,  permission: 'reports' },
+      { label: 'Company Performance',  href: '/admin/reports/company-performance', icon: <TrendingUp />, permission: 'reports' },
+      { label: 'Product Insights',     href: '/admin/reports/product-insights',    icon: <PieChart />,   permission: 'reports' },
+      { label: 'Support Funds',        href: '/admin/reports/support-funds',       icon: <DollarSign />, permission: 'reports' },
+      { label: 'Sales Explorer',       href: '/admin/reports/sales-explorer',      icon: <LineChart />,  permission: 'reports' },
     ],
   },
   {
