@@ -138,6 +138,9 @@ const NAV_GROUPS: NavGroup[] = [
 function isActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
   if (href === '/admin') return false; // dashboard only matches exactly
+  // Executive Dashboard is the parent path of the other Insights reports,
+  // which have their own menu items — highlight it only on exact match.
+  if (href === '/admin/reports') return false;
   return pathname.startsWith(`${href}/`);
 }
 
