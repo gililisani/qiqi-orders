@@ -31,7 +31,7 @@ export default function NewPaymentTermPage() {
       }]);
       if (insertError) throw insertError;
       toast.success('Payment term created.');
-      router.push('/admin/payment-terms');
+      router.push('/admin/netsuite-data?tab=payment-terms');
     } catch (err: any) {
       setError(err.message || 'Failed to create payment term.');
     } finally {
@@ -43,12 +43,12 @@ export default function NewPaymentTermPage() {
     <AdminFormShell
       title="New payment term"
       description="Payment term option assigned to companies."
-      backHref="/admin/payment-terms"
+      backHref="/admin/netsuite-data?tab=payment-terms"
       backLabel="Back to payment terms"
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/payment-terms')}
+      onCancel={() => router.push('/admin/netsuite-data?tab=payment-terms')}
       submitLabel="Create payment term"
     >
       <FormField label="Name" required>

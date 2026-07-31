@@ -27,7 +27,7 @@ export default function NewClassPage() {
       const { error: insertError } = await supabase.from('classes').insert([{ name: name.trim() }]);
       if (insertError) throw insertError;
       toast.success('Class created.');
-      router.push('/admin/classes');
+      router.push('/admin/netsuite-data?tab=classes');
     } catch (err: any) {
       setError(err.message || 'Failed to create class.');
     } finally {
@@ -39,12 +39,12 @@ export default function NewClassPage() {
     <AdminFormShell
       title="New class"
       description="NetSuite class for order classification."
-      backHref="/admin/classes"
+      backHref="/admin/netsuite-data?tab=classes"
       backLabel="Back to classes"
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/classes')}
+      onCancel={() => router.push('/admin/netsuite-data?tab=classes')}
       submitLabel="Create class"
     >
       <FormField label="Name" required>

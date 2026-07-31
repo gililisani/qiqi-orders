@@ -49,7 +49,7 @@ export default function EditClassPage() {
         .eq('id', id);
       if (updateError) throw updateError;
       toast.success('Class updated.');
-      router.push('/admin/classes');
+      router.push('/admin/netsuite-data?tab=classes');
     } catch (err: any) {
       setError(err.message || 'Failed to update class.');
     } finally {
@@ -60,12 +60,12 @@ export default function EditClassPage() {
   return (
     <AdminFormShell
       title="Edit class"
-      backHref="/admin/classes"
+      backHref="/admin/netsuite-data?tab=classes"
       backLabel="Back to classes"
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/classes')}
+      onCancel={() => router.push('/admin/netsuite-data?tab=classes')}
       submitLabel="Save changes"
     >
       <FormField label="Name" required>

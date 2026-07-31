@@ -31,7 +31,7 @@ export default function NewIncotermPage() {
       }]);
       if (insertError) throw insertError;
       toast.success('Incoterm created.');
-      router.push('/admin/incoterms');
+      router.push('/admin/netsuite-data?tab=incoterms');
     } catch (err: any) {
       setError(err.message || 'Failed to create incoterm.');
     } finally {
@@ -43,12 +43,12 @@ export default function NewIncotermPage() {
     <AdminFormShell
       title="New incoterm"
       description="International trade term used on shipping documents."
-      backHref="/admin/incoterms"
+      backHref="/admin/netsuite-data?tab=incoterms"
       backLabel="Back to incoterms"
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/incoterms')}
+      onCancel={() => router.push('/admin/netsuite-data?tab=incoterms')}
       submitLabel="Create incoterm"
     >
       <FormField label="Name" required>

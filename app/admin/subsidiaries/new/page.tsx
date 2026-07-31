@@ -55,7 +55,7 @@ export default function NewSubsidiaryPage() {
       }]);
       if (insertError) throw insertError;
       toast.success('Subsidiary created.');
-      router.push('/admin/subsidiaries');
+      router.push('/admin/netsuite-data?tab=subsidiaries');
     } catch (err: any) {
       setError(err.message || 'Failed to create subsidiary.');
     } finally {
@@ -67,12 +67,12 @@ export default function NewSubsidiaryPage() {
     <AdminFormShell
       title="New subsidiary"
       description="Qiqi legal entity used for order routing in NetSuite."
-      backHref="/admin/subsidiaries"
+      backHref="/admin/netsuite-data?tab=subsidiaries"
       backLabel="Back to subsidiaries"
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/subsidiaries')}
+      onCancel={() => router.push('/admin/netsuite-data?tab=subsidiaries')}
       submitLabel="Create subsidiary"
     >
       <FormField label="Subsidiary name" required>

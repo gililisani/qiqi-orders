@@ -82,7 +82,7 @@ export default function EditLocationPage() {
         .eq('id', id);
       if (updateError) throw updateError;
       toast.success('Location updated.');
-      router.push('/admin/locations');
+      router.push('/admin/netsuite-data?tab=locations');
     } catch (err: any) {
       setError(err.message || 'Failed to update location.');
     } finally {
@@ -93,12 +93,12 @@ export default function EditLocationPage() {
   return (
     <AdminFormShell
       title="Edit location"
-      backHref="/admin/locations"
+      backHref="/admin/netsuite-data?tab=locations"
       backLabel="Back to locations"
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/locations')}
+      onCancel={() => router.push('/admin/netsuite-data?tab=locations')}
       submitLabel="Save changes"
     >
       {loading ? (

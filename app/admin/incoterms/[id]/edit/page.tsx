@@ -55,7 +55,7 @@ export default function EditIncotermPage() {
         .eq('id', id);
       if (updateError) throw updateError;
       toast.success('Incoterm updated.');
-      router.push('/admin/incoterms');
+      router.push('/admin/netsuite-data?tab=incoterms');
     } catch (err: any) {
       setError(err.message || 'Failed to update incoterm.');
     } finally {
@@ -66,12 +66,12 @@ export default function EditIncotermPage() {
   return (
     <AdminFormShell
       title="Edit incoterm"
-      backHref="/admin/incoterms"
+      backHref="/admin/netsuite-data?tab=incoterms"
       backLabel="Back to incoterms"
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/incoterms')}
+      onCancel={() => router.push('/admin/netsuite-data?tab=incoterms')}
       submitLabel="Save changes"
     >
       <FormField label="Name" required>

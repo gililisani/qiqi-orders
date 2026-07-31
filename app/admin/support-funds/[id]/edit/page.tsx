@@ -54,7 +54,7 @@ export default function EditSupportFundPage() {
         .eq('id', id);
       if (updateError) throw updateError;
       toast.success('Support fund updated.');
-      router.push('/admin/support-funds');
+      router.push('/admin/netsuite-data?tab=support-funds');
     } catch (err: any) {
       setError(err.message || 'Failed to update support fund.');
     } finally {
@@ -65,12 +65,12 @@ export default function EditSupportFundPage() {
   return (
     <AdminFormShell
       title="Edit support fund"
-      backHref="/admin/support-funds"
+      backHref="/admin/netsuite-data?tab=support-funds"
       backLabel="Back to support funds"
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/support-funds')}
+      onCancel={() => router.push('/admin/netsuite-data?tab=support-funds')}
       submitLabel="Save changes"
     >
       <FormField label="Percent" required helper="Whole number, e.g. 10 for 10%.">

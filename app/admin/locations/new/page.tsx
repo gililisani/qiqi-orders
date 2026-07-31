@@ -58,7 +58,7 @@ export default function NewLocationPage() {
       ]);
       if (insertError) throw insertError;
       toast.success('Location created.');
-      router.push('/admin/locations');
+      router.push('/admin/netsuite-data?tab=locations');
     } catch (err: any) {
       setError(err.message || 'Failed to create location.');
     } finally {
@@ -70,12 +70,12 @@ export default function NewLocationPage() {
     <AdminFormShell
       title="New location"
       description="Warehouse or stocking location used in NetSuite."
-      backHref="/admin/locations"
+      backHref="/admin/netsuite-data?tab=locations"
       backLabel="Back to locations"
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/locations')}
+      onCancel={() => router.push('/admin/netsuite-data?tab=locations')}
       submitLabel="Create location"
     >
       <FormField label="Location name" required>

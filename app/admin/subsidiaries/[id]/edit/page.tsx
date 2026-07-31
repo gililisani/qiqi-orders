@@ -81,7 +81,7 @@ export default function EditSubsidiaryPage() {
         .eq('id', id);
       if (updateError) throw updateError;
       toast.success('Subsidiary updated.');
-      router.push('/admin/subsidiaries');
+      router.push('/admin/netsuite-data?tab=subsidiaries');
     } catch (err: any) {
       setError(err.message || 'Failed to update subsidiary.');
     } finally {
@@ -92,12 +92,12 @@ export default function EditSubsidiaryPage() {
   return (
     <AdminFormShell
       title="Edit subsidiary"
-      backHref="/admin/subsidiaries"
+      backHref="/admin/netsuite-data?tab=subsidiaries"
       backLabel="Back to subsidiaries"
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/subsidiaries')}
+      onCancel={() => router.push('/admin/netsuite-data?tab=subsidiaries')}
       submitLabel="Save changes"
     >
       <FormField label="Subsidiary name" required>

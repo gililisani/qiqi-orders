@@ -55,7 +55,7 @@ export default function EditPaymentTermPage() {
         .eq('id', id);
       if (updateError) throw updateError;
       toast.success('Payment term updated.');
-      router.push('/admin/payment-terms');
+      router.push('/admin/netsuite-data?tab=payment-terms');
     } catch (err: any) {
       setError(err.message || 'Failed to update payment term.');
     } finally {
@@ -66,12 +66,12 @@ export default function EditPaymentTermPage() {
   return (
     <AdminFormShell
       title="Edit payment term"
-      backHref="/admin/payment-terms"
+      backHref="/admin/netsuite-data?tab=payment-terms"
       backLabel="Back to payment terms"
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/payment-terms')}
+      onCancel={() => router.push('/admin/netsuite-data?tab=payment-terms')}
       submitLabel="Save changes"
     >
       <FormField label="Name" required>

@@ -28,7 +28,7 @@ export default function NewSupportFundPage() {
       const { error: insertError } = await supabase.from('support_fund_levels').insert([{ percent: n }]);
       if (insertError) throw insertError;
       toast.success('Support fund created.');
-      router.push('/admin/support-funds');
+      router.push('/admin/netsuite-data?tab=support-funds');
     } catch (err: any) {
       setError(err.message || 'Failed to create support fund.');
     } finally {
@@ -40,12 +40,12 @@ export default function NewSupportFundPage() {
     <AdminFormShell
       title="New support fund"
       description="Percentage that companies can earn back as credit on eligible orders."
-      backHref="/admin/support-funds"
+      backHref="/admin/netsuite-data?tab=support-funds"
       backLabel="Back to support funds"
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/support-funds')}
+      onCancel={() => router.push('/admin/netsuite-data?tab=support-funds')}
       submitLabel="Create support fund"
     >
       <FormField label="Percent" required helper="Whole number, e.g. 10 for 10%.">
