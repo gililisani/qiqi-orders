@@ -95,8 +95,8 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceRoleClient();
 
     // --- KPIs + sales trend: from mv_daily_sales (orders + historical). ---
-    const [{ data: dailyRows, error: dailyErr }, { data: prevRows, error: prevErr }] =
-      await Promise.all([
+    const fetchDaily = () =>
+      Promise.all([
         supabase
           .from('mv_daily_sales')
           .select('day, source, orders, revenue, support_fund_used')
@@ -110,8 +110,33 @@ export async function GET(request: NextRequest) {
           .lte('day', prevTo.toISOString().slice(0, 10)),
       ]);
 
+    let [{ data: dailyRows, error: dailyErr }, { data: prevRows, error: prevErr }] =
+      await fetchDaily();
+
     if (dailyErr) throw dailyErr;
     if (prevErr) throw prevErr;
+
+    // Self-healing: the MVs are refreshed by a nightly cron, but if that ever
+    // breaks (this exact bug froze the reports at 2026-05-21 once), detect
+    // staleness and refresh inline rather than serving zeros.
+    const { data: newestRow } = await supabase
+      .from('mv_daily_sales')
+      .select('day')
+      .order('day', { ascending: false })
+      .limit(1);
+    const newestDay = newestRow?.[0]?.day as string | undefined;
+    const staleCutoff = new Date(Date.now() - 3 * 86400_000).toISOString().slice(0, 10);
+    if (!newestDay || newestDay < staleCutoff) {
+      const { error: refreshErr } = await supabase.rpc('refresh_executive_reports');
+      if (!refreshErr) {
+        [{ data: dailyRows, error: dailyErr }, { data: prevRows, error: prevErr }] =
+          await fetchDaily();
+        if (dailyErr) throw dailyErr;
+        if (prevErr) throw prevErr;
+      } else {
+        console.error('executive report: stale MVs and refresh failed:', refreshErr.message);
+      }
+    }
 
     const dailyAgg = aggregateDaily((dailyRows ?? []) as DailyRow[]);
     const prevAgg = aggregateDaily((prevRows ?? []) as DailyRow[]);
