@@ -128,6 +128,7 @@ export default function OrderDocumentUpload({ orderId, onUploadComplete }: Order
           changed_by_id: user.id,
           changed_by_name: userName,
           changed_by_role: 'admin',
+          visible_to_client: true,
           metadata: {
             file_size: file.size,
             mime_type: file.type,

@@ -108,11 +108,27 @@ know:
   revenue now matches order revenue; SF activity lives in its own report.
 - Also deleted empty `admin/2fa`, `dashboard-new`, `dashboard-template` dirs.
 
+**FOLLOW-UP 2026-08-02 DONE (after WP2 applied): order_history client
+visibility** — this closes the "client-visible order-history filter" chip.
+WP2 made clients reliably see ALL history rows for their orders — including
+internal notes (NetSuite SO/invoice numbers, "Sent for payment — Stripe
+invoice N ($X) incl. Z% card fee", ShipHero, shipping edits). Owner decided:
+per-row `visible_to_client` boolean (default false), RLS-enforced; internal
+status hops (Open→In Process on SO push, →Ready on invoice) hidden entirely;
+visible = order create/update, UI status changes, documents, packing slip,
+completion+tracking. Card-payment-received stays hidden (Stripe emails the
+receipt). Migration `20260802170000_order_history_client_visibility.sql`
+(column + backfill + policy) — ✅ **applied by owner 2026-08-02, before the
+code deploy** (the reverse of push-first was required: new code inserts the
+column, old schema rejects it).
+Bonus fix: `/api/orders/complete` history insert had a phantom
+`netsuite_sync_status` column → it has been failing silently in prod
+(completion/tracking entries never written). Removed.
+
 **Remaining (Session 5): WP11** (single SLI renderer), **WP5** (duplicate
 flows — TopNavbar is ALIVE), **WP6** (dead code + dead routes), **WP12**
 (env.example completeness, dunning cron alert, plaintext setup tokens),
-**WP7** (consistency debt), ESLint config (WP8 remainder), and the deferred
-client-visible order-history filter (task chip exists).
+**WP7** (consistency debt), ESLint config (WP8 remainder).
 
 ---
 

@@ -37,10 +37,12 @@ Policies (admin = full CRUD on every table; client rules below):
 | `Locations`, `classes`, `subsidiaries`, `support_fund_levels` | only the row linked to client's company via `companies.{location_id,class_id,subsidiary_id,support_fund_id}` | none |
 | `note_replies` | own company's replies on notes with `visible_to_client` | INSERT own replies (verified in prod 2026-08-02; this table is **not** admin-only) |
 | `client_note_views` | own rows; admin sees all | own rows only |
+| `order_history` | own company's orders AND `visible_to_client = true` | INSERT on own-company orders, only as `changed_by_role='client'` |
 
 Notes:
 
 - Server-side routes use `createServiceRoleClient()` which **bypasses RLS** — RLS only protects the browser-direct query surface.
+- `order_history.visible_to_client` defaults to **false** — internal entries (NetSuite/Stripe/ShipHero/shipping/notification notes) stay hidden from the client timeline automatically. Client-appropriate writers must set it `true` explicitly: `lib/orderHistory.ts` does (default param), as do the document upload/delete components and `/api/orders/complete`. When adding a new history write site, decide visibility deliberately.
 - Admin-created orders display **"Qiqi"** as creator everywhere; client-created orders show the client name. Lookup pattern: try `clients.id = order.user_id`; if not found → "Qiqi". See `OrdersListView.tsx` and `OrderDetailsView.tsx`.
 
 ## Order lifecycle

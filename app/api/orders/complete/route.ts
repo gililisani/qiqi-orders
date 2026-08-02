@@ -67,7 +67,11 @@ export async function POST(request: NextRequest) {
         notes: `Order completed${trackingNumber ? ` - Tracking: ${trackingNumber}` : ''}${notes ? ` - ${notes}` : ''}`,
         changed_by_name: 'System',
         changed_by_role: 'system',
-        netsuite_sync_status: 'fulfilled'
+        // Completion + tracking is client-facing, unlike other System entries.
+        // (No netsuite_sync_status here: that column never existed on
+        // order_history and made this insert fail silently; the fulfilled
+        // flag lives on orders.netsuite_status.)
+        visible_to_client: true,
       }]);
 
     if (historyError) {

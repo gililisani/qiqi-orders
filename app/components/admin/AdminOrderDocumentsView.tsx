@@ -193,6 +193,7 @@ export default function AdminOrderDocumentsView({ orderId }: Props) {
         changed_by_id: user.id,
         changed_by_name: userName,
         changed_by_role: 'admin',
+        visible_to_client: true,
         metadata: {
           file_size: doc.file_size,
           mime_type: doc.mime_type,

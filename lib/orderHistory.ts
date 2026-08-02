@@ -20,10 +20,29 @@ export interface AddHistoryEntryParams {
   notes?: string;
   metadata?: any;
   role: 'admin' | 'client';
+  /**
+   * Whether the entry appears in the client-portal timeline (RLS-enforced via
+   * order_history.visible_to_client). Defaults to true because every caller of
+   * this helper is a UI-driven event (order create/update, status change,
+   * packing slip). Internal server-side entries (NetSuite/Stripe/ShipHero/…)
+   * insert directly with the service-role client and rely on the DB default
+   * of false — pass false here only if a UI action ever logs internal detail.
+   */
+  visibleToClient?: boolean;
 }
 
 export async function addOrderHistoryEntry(params: AddHistoryEntryParams): Promise<void> {
-  const { supabase, orderId, actionType, statusFrom, statusTo, notes, metadata, role } = params;
+  const {
+    supabase,
+    orderId,
+    actionType,
+    statusFrom,
+    statusTo,
+    notes,
+    metadata,
+    role,
+    visibleToClient = true,
+  } = params;
 
   const { data: userResult, error: authError } = await supabase.auth.getUser();
   if (authError) {
@@ -63,6 +82,7 @@ export async function addOrderHistoryEntry(params: AddHistoryEntryParams): Promi
       changed_by_name: userName,
       changed_by_role: userRole,
       metadata,
+      visible_to_client: visibleToClient,
     });
 
   if (insertError) {

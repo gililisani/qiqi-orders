@@ -73,4 +73,49 @@ describe('addOrderHistoryEntry', () => {
       addOrderHistoryEntry({ ...baseParams, supabase: supabase as any })
     ).resolves.toBeUndefined();
   });
+
+  // The RLS policy order_history_client_select only serves rows with
+  // visible_to_client = true, and the DB default is false. UI-driven entries
+  // must therefore opt in explicitly or they vanish from the client timeline.
+  function insertedRow(supabase: any): any {
+    const fromSpy = supabase.__spies.from;
+    const idx = fromSpy.mock.calls.findIndex(
+      ([table]: any[]) => table === 'order_history'
+    );
+    expect(idx).toBeGreaterThanOrEqual(0);
+    const insertSpy = fromSpy.mock.results[idx].value.insert;
+    expect(insertSpy).toHaveBeenCalledTimes(1);
+    return insertSpy.mock.calls[0][0];
+  }
+
+  function workingSupabase() {
+    return createMockSupabase({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: 'user-1' } },
+          error: null,
+        })),
+      },
+      tableResults: {
+        admins: { data: { name: 'Admin A' }, error: null },
+        order_history: { data: null, error: null },
+      },
+    });
+  }
+
+  it('marks entries visible to clients by default', async () => {
+    const supabase = workingSupabase();
+    await addOrderHistoryEntry({ ...baseParams, supabase: supabase as any });
+    expect(insertedRow(supabase).visible_to_client).toBe(true);
+  });
+
+  it('honors an explicit visibleToClient: false', async () => {
+    const supabase = workingSupabase();
+    await addOrderHistoryEntry({
+      ...baseParams,
+      supabase: supabase as any,
+      visibleToClient: false,
+    });
+    expect(insertedRow(supabase).visible_to_client).toBe(false);
+  });
 });

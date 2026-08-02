@@ -2,8 +2,10 @@
 
 /**
  * ClientOrderHistoryView — read-only timeline of order events for the
- * partner-facing portal. Same shape as AdminOrderHistoryView; the underlying
- * data has no role-specific fields so the visual is identical.
+ * partner-facing portal. Same shape as AdminOrderHistoryView, but RLS
+ * (order_history_client_select) only serves rows with visible_to_client =
+ * true — internal NetSuite/Stripe/ShipHero entries never reach the browser,
+ * so no filtering happens here.
  */
 
 import { useEffect, useState } from 'react';
