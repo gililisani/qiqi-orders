@@ -3,6 +3,7 @@ import { sendMail } from '../../../../lib/emailService';
 import { welcomeEmailTemplate } from '../../../../lib/emailTemplates';
 import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 import { createPasswordSetupLink, deletePasswordSetupToken } from '../../../../lib/passwordSetupTokens';
+import { ALL_PERMISSIONS, DEFAULT_CLIENT_PERMISSIONS } from '../../../../lib/permissions';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -33,7 +34,15 @@ export async function POST(request: NextRequest) {
   try {
     const admin = await requireAdmin(request);
 
-    const { name, email, companyId, enabled } = await request.json();
+    const { name, email, companyId, enabled, permissions: requestedPermissions } = await request.json();
+
+    // New clients must never start with an empty permission set — that's the
+    // "new user lands on /forbidden" bug. Honor a valid explicit selection,
+    // otherwise grant the standard client defaults.
+    const permissions =
+      Array.isArray(requestedPermissions) && requestedPermissions.length > 0
+        ? requestedPermissions.filter((p: string) => (ALL_PERMISSIONS as string[]).includes(p))
+        : DEFAULT_CLIENT_PERMISSIONS;
 
     if (!name || !email || !companyId) {
       return NextResponse.json(
@@ -95,6 +104,20 @@ export async function POST(request: NextRequest) {
       );
     }
     profileCreated = true;
+
+    // The RPC doesn't take permissions — set them right after. Failure is
+    // loud but non-fatal: the user exists and an admin can grant permissions
+    // from the edit page.
+    const { error: permErr } = await supabaseAdmin
+      .from('clients')
+      .update({ permissions })
+      .eq('id', authUserId);
+    if (permErr) {
+      console.error(
+        '[USER_CREATE] Setting permissions failed — user will hit /forbidden until fixed in the edit UI:',
+        { ...logContext, error: permErr.message },
+      );
+    }
 
     // Generate password setup link via OUR token system (not Supabase magic link,
     // which gets pre-consumed by corporate email scanners).

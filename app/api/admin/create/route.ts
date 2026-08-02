@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { DEFAULT_ADMIN_PERMISSIONS } from '../../../../lib/permissions';
 
 // Server-side route - can safely use service role key
 export async function POST(request: NextRequest) {
@@ -84,14 +85,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create admin account' }, { status: 500 });
     }
 
-    // Create the admin profile in the admins table
+    // Create the admin profile in the admins table. New admins get the full
+    // permission set (matching the "full access" note in the create UI) —
+    // an empty array would strand them on /forbidden.
     const { error: profileError } = await supabaseAdmin
       .from('admins')
       .insert([{
         id: authData.user.id,
         name: name,
         email: email,
-        enabled: enabled ?? true
+        enabled: enabled ?? true,
+        permissions: DEFAULT_ADMIN_PERMISSIONS
       }]);
 
     if (profileError) {
