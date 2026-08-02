@@ -7,13 +7,12 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export function createServiceRoleClient(): SupabaseClient {
+  // NOTE: no global `Prefer: return=minimal` header. supabase-js already
+  // defaults writes to minimal; forcing it globally conflicts with the
+  // `return=representation` that `.insert(...).select()` adds, and PostgREST
+  // can honor the wrong one — null payloads from successful inserts.
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
-    global: {
-      headers: {
-        Prefer: 'return=minimal',
-      },
-    },
   });
 }
 
