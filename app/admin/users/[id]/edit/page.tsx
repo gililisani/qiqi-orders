@@ -69,9 +69,9 @@ export default function EditUserPage() {
           email: c?.email || '',
           enabled: !!c?.enabled,
           company_id: c?.company_id || '',
-          permissions: Array.isArray(c?.permissions) && c.permissions.length > 0
-            ? c.permissions
-            : [...DEFAULT_CLIENT_PERMISSIONS],
+          // Show EXACTLY what's stored — pre-checking defaults on an empty
+          // array silently re-grants permissions on the next save.
+          permissions: Array.isArray(c?.permissions) ? c.permissions : [],
         });
         setOriginalEmail(c?.email || '');
         setCompanies(companiesRes.data || []);
@@ -92,24 +92,23 @@ export default function EditUserPage() {
     setSaving(true);
     setError(null);
     try {
-      const { error: profileError } = await supabase
-        .from('clients')
-        .update({
+      // Server-side route: updates the profile row AND the auth email with
+      // checked errors (the old browser-side auth.admin call always failed
+      // silently, so login emails never actually changed).
+      const res = await fetchWithAuth(`/api/users/${userId}/account`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'client',
           name: formData.name.trim(),
           email: formData.email.trim(),
           enabled: formData.enabled,
           company_id: formData.company_id,
           permissions: formData.permissions,
-        })
-        .eq('id', userId);
-      if (profileError) throw profileError;
-
-      if (formData.email !== originalEmail) {
-        await supabase.auth.admin.updateUserById(userId, {
-          email: formData.email.trim(),
-          user_metadata: { full_name: formData.name.trim() },
-        });
-      }
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to update user.');
       toast.success('User updated.');
       router.push('/admin/users');
     } catch (err: any) {

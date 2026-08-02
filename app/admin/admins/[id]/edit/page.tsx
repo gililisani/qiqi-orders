@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Trash2 } from 'lucide-react';
 import { supabase } from '../../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
 import { AdminFormShell } from '../../../../components/admin/AdminFormShell';
 import { FormField } from '../../../../components/qq/form-field';
 import { Input } from '../../../../components/qq/input';
@@ -50,9 +51,9 @@ export default function EditAdminPage() {
           enabled: !!data?.enabled,
           changePassword: false,
           newPassword: '',
-          permissions: Array.isArray(data?.permissions) && data.permissions.length > 0
-            ? data.permissions
-            : [...DEFAULT_ADMIN_PERMISSIONS],
+          // Show EXACTLY what's stored — pre-checking defaults on an empty
+          // array silently re-grants permissions on the next save.
+          permissions: Array.isArray(data?.permissions) ? data.permissions : [],
         });
         setOriginalEmail(data?.email || '');
       } catch (err: any) {
@@ -76,29 +77,25 @@ export default function EditAdminPage() {
     setSaving(true);
     setError(null);
     try {
-      const { error: profileError } = await supabase
-        .from('admins')
-        .update({
+      // Server-side route: updates the profile row AND the auth record
+      // (email/password) with checked errors. The old browser-side
+      // auth.admin calls always failed silently.
+      const res = await fetchWithAuth(`/api/users/${adminId}/account`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'admin',
           name: formData.name.trim(),
           email: formData.email.trim(),
           enabled: formData.enabled,
           permissions: formData.permissions,
-        })
-        .eq('id', adminId);
-      if (profileError) throw profileError;
-
-      if (formData.email !== originalEmail) {
-        await supabase.auth.admin.updateUserById(adminId, {
-          email: formData.email.trim(),
-          user_metadata: { full_name: formData.name.trim() },
-        });
-      }
-
-      if (formData.changePassword && formData.newPassword) {
-        await supabase.auth.admin.updateUserById(adminId, {
-          password: formData.newPassword,
-        });
-      }
+          ...(formData.changePassword && formData.newPassword
+            ? { password: formData.newPassword }
+            : {}),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to update admin.');
 
       toast.success('Admin updated.');
       router.push('/admin/admins');
@@ -120,12 +117,11 @@ export default function EditAdminPage() {
     if (!ok) return;
     setDeleting(true);
     try {
-      const { error: profileError } = await supabase
-        .from('admins')
-        .delete()
-        .eq('id', adminId);
-      if (profileError) throw profileError;
-      await supabase.auth.admin.deleteUser(adminId);
+      const res = await fetchWithAuth(`/api/users/${adminId}/account?kind=admin`, {
+        method: 'DELETE',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to delete admin.');
       toast.success('Admin deleted.');
       router.push('/admin/admins');
     } catch (err: any) {

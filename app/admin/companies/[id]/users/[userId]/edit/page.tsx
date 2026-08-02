@@ -73,22 +73,20 @@ export default function EditCompanyUserPage() {
     setSaving(true);
     setError(null);
     try {
-      const { error: profileError } = await supabase
-        .from('clients')
-        .update({
+      // Server-side route with checked errors — the old browser-side
+      // auth.admin email change always failed silently.
+      const res = await fetchWithAuth(`/api/users/${userId}/account`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'client',
           name: formData.name.trim(),
           email: formData.email.trim(),
           enabled: formData.enabled,
-        })
-        .eq('id', userId);
-      if (profileError) throw profileError;
-
-      if (formData.email !== originalEmail) {
-        await supabase.auth.admin.updateUserById(userId, {
-          email: formData.email.trim(),
-          user_metadata: { full_name: formData.name.trim() },
-        });
-      }
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to update user.');
       toast.success('User updated.');
       router.push(`/admin/companies/${companyId}`);
     } catch (err: any) {
