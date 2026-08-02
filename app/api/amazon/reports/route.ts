@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '../../../../platform/auth/guards';
+import { requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { createReport, isAmazonSpConfigured, REPORT_TYPES } from '../../../../lib/amazonSp/client';
 
 /**
@@ -9,7 +9,7 @@ import { createReport, isAmazonSpConfigured, REPORT_TYPES } from '../../../../li
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'netsuite');
     if (!isAmazonSpConfigured()) {
       return NextResponse.json({ error: 'Amazon SP-API is not configured.' }, { status: 400 });
     }

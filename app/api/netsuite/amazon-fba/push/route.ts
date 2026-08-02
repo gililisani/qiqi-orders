@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../platform/auth/guards';
 import { createNetSuiteAPI } from '../../../../../lib/netsuite';
 import {
   missingConfigFields,
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   const supabaseAdmin = createServiceRoleClient();
   let period: string | undefined;
   try {
-    const admin = await requireAdmin(request);
+    const admin = await requireAdminWithPermission(request, 'netsuite');
     const body = await request.json();
 
     const input: MonthPushInput = {

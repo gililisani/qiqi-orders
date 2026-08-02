@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createServiceRoleClient,
-  requireAdmin,
+  requireAdminWithPermission,
 } from '../../../../platform/auth/guards';
 import { createNetSuiteAPI } from '../../../../lib/netsuite';
 
@@ -30,7 +30,7 @@ const CONCURRENCY = 5;
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'netsuite');
 
     const body = await request.json().catch(() => ({}));
     const onlyMissing = body?.onlyMissing === true;

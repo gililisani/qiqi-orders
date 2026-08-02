@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../platform/auth/guards';
 import { buildCompanyPerformance, resolveWindowRange } from '../../../../../lib/companyPerformance';
 
 /**
@@ -18,7 +18,7 @@ export async function GET(
   { params }: { params: { companyId: string } }
 ) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'reports');
     const { searchParams } = new URL(request.url);
     const window = searchParams.get('window') ?? 'this-month';
     const { from, to } = resolveWindowRange(window, searchParams.get('from'), searchParams.get('to'));

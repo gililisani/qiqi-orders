@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '../../../../platform/auth/guards';
+import { requireAdminWithPermission } from '../../../../platform/auth/guards';
 import {
   isAmazonSpConfigured,
   getOrderMetrics,
@@ -24,7 +24,7 @@ function amazonToday(): string {
  */
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'netsuite');
     if (!isAmazonSpConfigured()) {
       return NextResponse.json(
         { error: 'Amazon SP-API credentials are not configured (AMAZON_SP_* env vars).' },

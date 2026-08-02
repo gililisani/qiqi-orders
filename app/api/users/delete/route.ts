@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../platform/auth/guards';
 
 export async function DELETE(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'users:manage');
 
     const { userId } = await request.json();
 

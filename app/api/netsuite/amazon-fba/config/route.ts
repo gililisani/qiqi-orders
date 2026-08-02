@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../platform/auth/guards';
 
 const CONFIG_FIELDS = [
   'customer_ns_id',
@@ -19,7 +19,7 @@ const CONFIG_FIELDS = [
 // GET - current config
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'netsuite');
     const supabaseAdmin = createServiceRoleClient();
     const { data, error } = await supabaseAdmin
       .from('amazon_fba_config')
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 // PUT - update config fields (only known fields, strings)
 export async function PUT(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'netsuite');
     const body = await request.json();
     const row: Record<string, string> = {};
     for (const key of CONFIG_FIELDS) {

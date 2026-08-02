@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../platform/auth/guards';
 
 /**
  * GET /api/reports/executive?window=30d|90d|ytd|custom&from=YYYY-MM-DD&to=YYYY-MM-DD
@@ -90,7 +90,7 @@ function aggregateDaily(rows: DailyRow[]): Map<string, DailyAgg> {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'reports');
     const { searchParams } = new URL(request.url);
     const window = (searchParams.get('window') ?? 'this-month') as WindowKey;
     const fromParam = searchParams.get('from');

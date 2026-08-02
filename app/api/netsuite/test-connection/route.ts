@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '../../../../platform/auth/guards';
+import { requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { createNetSuiteAPI } from '../../../../lib/netsuite';
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'netsuite');
 
     // Check env vars are set before trying to connect
     const missing: string[] = [];

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createServiceRoleClient,
-  requireAdmin,
+  requireAdminWithPermission,
 } from '../../../../platform/auth/guards';
 import {
   buildFirstDoneMap,
@@ -74,7 +74,7 @@ function monthKey(d: Date): { key: string; label: string } {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'reports');
     const sp = new URL(request.url).searchParams;
     const window = (sp.get('window') ?? 'this-month') as WindowKey;
     const fromParam = sp.get('from');

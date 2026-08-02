@@ -86,6 +86,41 @@ async function fetchUserPermissions(
  * Honors SUPER_ADMIN_IDS env var (comma-separated user IDs that bypass
  * every permission check). Use sparingly — typically just the owner's id.
  */
+/**
+ * Require an ADMIN who also holds the named permission. Use this for
+ * admin-only route families (netsuite, reports, user management) —
+ * requireWithPermission alone would admit a client granted the same
+ * permission string (clients legitimately hold 'reports' for their own
+ * portal pages, which must not open admin APIs).
+ */
+export async function requireAdminWithPermission(
+  request: NextRequest,
+  permission: string,
+): Promise<AuthUser & { permissions: string[] }> {
+  const user = await requireAdmin(request);
+
+  const superIds = (process.env.SUPER_ADMIN_IDS ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (superIds.includes(user.id)) {
+    return { ...user, permissions: ['*'] };
+  }
+
+  const supabase = createServiceRoleClient();
+  const permissions = await fetchUserPermissions(supabase, user.id);
+  if (!permissions.includes(permission)) {
+    throw NextResponse.json(
+      {
+        error: 'Not authorized for this area.',
+        missingPermission: permission,
+      },
+      { status: 403 },
+    );
+  }
+  return { ...user, permissions };
+}
+
 export async function requireWithPermission(
   request: NextRequest,
   permission: string,

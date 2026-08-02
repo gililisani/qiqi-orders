@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createServiceRoleClient,
-  requireAdmin,
+  requireAdminWithPermission,
 } from '../../../../platform/auth/guards';
 
 /**
@@ -25,7 +25,7 @@ import {
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'netsuite');
 
     const { orderId } = await request.json();
     if (!orderId) {

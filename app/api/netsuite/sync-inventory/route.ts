@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { createNetSuiteAPI } from '../../../../lib/netsuite';
 
 // POST body: { locationId: string } — Hub Locations.id (UUID)
 // Fetches inventory from NS for that location and updates Products table
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'netsuite');
 
     const { locationId } = await request.json();
     if (!locationId) {
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
 // GET — return current inventory levels for a location
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'netsuite');
 
     const { searchParams } = new URL(request.url);
     const locationId = searchParams.get('locationId');

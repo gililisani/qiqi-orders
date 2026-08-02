@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../platform/auth/guards';
 
 /**
  * POST { period, rows, all_green } — record a CSV verification result on a
@@ -8,7 +8,7 @@ import { createServiceRoleClient, requireAdmin } from '../../../../../platform/a
  */
 export async function POST(request: NextRequest) {
   try {
-    const admin = await requireAdmin(request);
+    const admin = await requireAdminWithPermission(request, 'netsuite');
     const { period, rows, all_green } = await request.json();
     if (!/^\d{4}-\d{2}$/.test(period || '') || !Array.isArray(rows)) {
       return NextResponse.json({ error: 'Invalid audit payload.' }, { status: 400 });

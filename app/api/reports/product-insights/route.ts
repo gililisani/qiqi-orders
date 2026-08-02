@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createServiceRoleClient,
-  requireAdmin,
+  requireAdminWithPermission,
 } from '../../../../platform/auth/guards';
 
 /**
@@ -59,7 +59,7 @@ function periodRange(
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'reports');
     const { searchParams } = new URL(request.url);
     const window = (searchParams.get('window') ?? 'this-month') as WindowKey;
     const fromParam = searchParams.get('from');
@@ -86,10 +86,15 @@ export async function GET(request: NextRequest) {
     }
 
     // ---- 2. Pull all line items for those orders ----
+    // Support-fund lines are excluded: they're free redeemed goods carried at
+    // full catalog price, so counting them overstated product/category revenue
+    // vs order totals by ~8-10% (audit 9.3). SF activity has its own report.
+    // (`IS NOT TRUE` keeps legacy rows where the flag is null.)
     const { data: items, error: itemsErr } = await supabase
       .from('order_items')
       .select('order_id, product_id, quantity, total_price')
-      .in('order_id', orderIds);
+      .in('order_id', orderIds)
+      .not('is_support_fund_item', 'is', true);
     if (itemsErr) throw itemsErr;
 
     // ---- 3. Build per-product aggregates ----

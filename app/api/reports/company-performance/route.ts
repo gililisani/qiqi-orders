@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createServiceRoleClient,
-  requireAdmin,
+  requireAdminWithPermission,
 } from '../../../../platform/auth/guards';
 import {
   buildSfUsedByOrder,
@@ -70,7 +70,7 @@ interface PeriodRow {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'reports');
     const { searchParams } = new URL(request.url);
     const scope = (searchParams.get('scope') ?? 'active') as Scope;
     const companyIdFilter = searchParams.get('companyId') || null;

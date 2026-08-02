@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../platform/auth/guards';
 
 /**
  * GET — import history: every month ever pushed (or attempted), newest first,
@@ -8,7 +8,7 @@ import { createServiceRoleClient, requireAdmin } from '../../../../../platform/a
  */
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'netsuite');
     const supabaseAdmin = createServiceRoleClient();
 
     const { data: batches, error } = await supabaseAdmin

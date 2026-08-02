@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '../../../../../platform/auth/guards';
+import { requireAdminWithPermission } from '../../../../../platform/auth/guards';
 import { getReportStatus, downloadReportRows } from '../../../../../lib/amazonSp/client';
 import {
   parseReturnsReportRows,
@@ -18,7 +18,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'netsuite');
     const type = request.nextUrl.searchParams.get('type');
     const status = await getReportStatus(params.id);
 

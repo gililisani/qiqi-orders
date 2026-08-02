@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createServiceRoleClient,
-  requireAdmin,
+  requireAdminWithPermission,
 } from '../../../../platform/auth/guards';
 
 /**
@@ -84,7 +84,7 @@ function quarterKey(d: Date): { key: string; label: string } {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'reports');
     const sp = new URL(request.url).searchParams;
 
     const row = (sp.get('row') ?? 'company') as Dim;
@@ -144,12 +144,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(emptyPayload(row, col, metric, from, to));
     }
 
-    // 2. Items for those orders
+    // 2. Items for those orders — support-fund lines excluded (free redeemed
+    // goods at catalog price; counting them overstated revenue, audit 9.3).
     const orderIds = orders.map((o) => o.id);
     const { data: itemsRaw, error: itemsErr } = await supabase
       .from('order_items')
       .select('order_id, product_id, quantity, total_price')
-      .in('order_id', orderIds);
+      .in('order_id', orderIds)
+      .not('is_support_fund_item', 'is', true);
     if (itemsErr) throw itemsErr;
     const items = itemsRaw ?? [];
 

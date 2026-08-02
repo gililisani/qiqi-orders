@@ -1,46 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { DEFAULT_ADMIN_PERMISSIONS } from '../../../../lib/permissions';
 
 // Server-side route - can safely use service role key
 export async function POST(request: NextRequest) {
   try {
-    // Verify the requesting user is an admin
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Create client with anon key to verify the requesting user
-    const supabaseAnon = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: authHeader
-          }
-        }
-      }
-    );
-
-    const { data: { user }, error: userError } = await supabaseAnon.auth.getUser();
-    
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Verify the user is an admin
-    const { data: adminData, error: adminError } = await supabaseAnon
-      .from('admins')
-      .select('id')
-      .eq('id', user.id)
-      .eq('enabled', true)
-      .single();
-
-    if (adminError || !adminData) {
-      return NextResponse.json({ error: 'Not authorized - admin access required' }, { status: 403 });
-    }
+    await requireAdminWithPermission(request, 'admins:manage');
 
     // Parse request body
     const { name, email, password, enabled } = await request.json();
@@ -115,6 +81,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error creating admin:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to create admin' },

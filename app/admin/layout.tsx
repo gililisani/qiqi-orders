@@ -30,6 +30,7 @@ import {
 
 import { supabase } from '../../lib/supabaseClient';
 import { fetchWithAuth } from '../../lib/fetchWithAuth';
+import { firstAllowedAdminArea } from '../../lib/permissions';
 
 import { AppShell } from '../components/qq/app-shell';
 import { Sidebar } from '../components/qq/sidebar';
@@ -134,6 +135,49 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
+// ----------------------------------------------------------------------------
+// Route-level permission guard. EXPLICIT table (not derived from NAV_GROUPS)
+// because ~a dozen admin routes aren't in the nav. Deepest prefix wins;
+// unmatched paths DENY by default — add new areas here when adding pages.
+// ----------------------------------------------------------------------------
+const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: string }> = [
+  { prefix: '/admin/orders', permission: 'orders' },
+  { prefix: '/admin/sli/settings', permission: 'settings' },
+  { prefix: '/admin/sli', permission: 'orders' },
+  { prefix: '/admin/companies', permission: 'companies:manage' },
+  { prefix: '/admin/users', permission: 'users:manage' },
+  { prefix: '/admin/admins', permission: 'admins:manage' },
+  { prefix: '/admin/products', permission: 'settings' },
+  { prefix: '/admin/highlighted-products', permission: 'settings' },
+  { prefix: '/admin/categories', permission: 'settings' },
+  { prefix: '/admin/classes', permission: 'settings' },
+  { prefix: '/admin/locations', permission: 'settings' },
+  { prefix: '/admin/subsidiaries', permission: 'settings' },
+  { prefix: '/admin/incoterms', permission: 'settings' },
+  { prefix: '/admin/payment-terms', permission: 'settings' },
+  { prefix: '/admin/support-funds', permission: 'settings' },
+  { prefix: '/admin/netsuite-data', permission: 'settings' },
+  { prefix: '/admin/design', permission: 'settings' },
+  { prefix: '/admin/dam', permission: 'dam' },
+  { prefix: '/admin/reports', permission: 'reports' },
+  { prefix: '/admin/netsuite', permission: 'netsuite' },
+  { prefix: '/admin/inventory', permission: 'netsuite' },
+  { prefix: '/admin/amazon', permission: 'netsuite' },
+];
+
+function isAdminPathAllowed(pathname: string, permissions: string[]): boolean {
+  if (pathname === '/admin') return permissions.includes('orders');
+  let best: { prefix: string; permission: string } | null = null;
+  for (const entry of ROUTE_PERMISSIONS) {
+    const matches = pathname === entry.prefix || pathname.startsWith(`${entry.prefix}/`);
+    if (matches && (!best || entry.prefix.length > best.prefix.length)) {
+      best = entry;
+    }
+  }
+  if (!best) return false; // unknown admin path → deny by default
+  return permissions.includes(best.permission);
+}
+
 // Active-route helper: exact match OR pathname starts with href+'/'
 function isActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
@@ -193,6 +237,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setLoading(false);
     })();
   }, [router]);
+
+  // Route-level guard: bounce admins off pages their permissions don't
+  // cover, to their first allowed area (or /forbidden if none).
+  useEffect(() => {
+    if (loading || !isAuthenticated) return;
+    if (isAdminPathAllowed(pathname, permissions)) return;
+    const target = firstAllowedAdminArea(permissions);
+    if (target && target !== pathname) {
+      router.replace(target);
+    } else if (!target) {
+      router.replace('/forbidden');
+    }
+  }, [loading, isAuthenticated, pathname, permissions, router]);
 
   // Close the mobile drawer on route change
   useEffect(() => {

@@ -17,7 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendMail } from '../../../../lib/emailService';
 import { passwordResetEmailTemplate, welcomeEmailTemplate } from '../../../../lib/emailTemplates';
-import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { createPasswordSetupLink, deletePasswordSetupToken } from '../../../../lib/passwordSetupTokens';
 import {
   SEND_RESET_LINK_RATE,
@@ -28,7 +28,7 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const admin = await requireAdmin(request);
+    const admin = await requireAdminWithPermission(request, 'users:manage');
 
     const body = await request.json();
     const { userId, userName, companyId, companyName } = body;

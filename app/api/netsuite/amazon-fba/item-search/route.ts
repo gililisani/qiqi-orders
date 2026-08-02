@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '../../../../../platform/auth/guards';
+import { requireAdminWithPermission } from '../../../../../platform/auth/guards';
 import { createNetSuiteAPI } from '../../../../../lib/netsuite';
 
 /**
@@ -8,7 +8,7 @@ import { createNetSuiteAPI } from '../../../../../lib/netsuite';
  */
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'netsuite');
     const q = (request.nextUrl.searchParams.get('q') || '').trim();
     const type = request.nextUrl.searchParams.get('type');
     const ns = createNetSuiteAPI();

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../platform/auth/guards';
 import { isAmazonSpConfigured } from '../../../../../lib/amazonSp/client';
 import { prepareMonthFromAmazon } from '../../../../../lib/amazonFba/prepareMonth';
 
@@ -13,7 +13,7 @@ export const maxDuration = 120;
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'netsuite');
     if (!isAmazonSpConfigured()) {
       return NextResponse.json({ error: 'Amazon SP-API is not configured.' }, { status: 400 });
     }

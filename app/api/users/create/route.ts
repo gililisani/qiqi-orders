@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendMail } from '../../../../lib/emailService';
 import { welcomeEmailTemplate } from '../../../../lib/emailTemplates';
-import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { createPasswordSetupLink, deletePasswordSetupToken } from '../../../../lib/passwordSetupTokens';
 import { ALL_PERMISSIONS, DEFAULT_CLIENT_PERMISSIONS } from '../../../../lib/permissions';
 
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   let setupToken: string | null = null;
 
   try {
-    const admin = await requireAdmin(request);
+    const admin = await requireAdminWithPermission(request, 'users:manage');
 
     const { name, email, companyId, enabled, permissions: requestedPermissions } = await request.json();
 
