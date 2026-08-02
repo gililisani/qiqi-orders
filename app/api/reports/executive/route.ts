@@ -17,7 +17,7 @@ import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth
  * live (slower, exact, admin-only so volume is low).
  */
 
-type WindowKey = '30d' | '90d' | 'ytd' | 'custom';
+type WindowKey = '30d' | '90d' | 'this-month' | 'last-month' | 'ytd' | 'custom';
 
 const COMMITTED_STATUSES = ['Open', 'In Process', 'Ready', 'Done'];
 
@@ -30,6 +30,11 @@ function periodRange(window: WindowKey, fromParam: string | null, toParam: strin
     from.setUTCDate(from.getUTCDate() - 30);
   } else if (window === '90d') {
     from.setUTCDate(from.getUTCDate() - 90);
+  } else if (window === 'this-month') {
+    from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  } else if (window === 'last-month') {
+    from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+    to.setTime(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0, 23, 59, 59, 999));
   } else if (window === 'ytd') {
     from = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
   } else {
@@ -87,7 +92,7 @@ export async function GET(request: NextRequest) {
   try {
     await requireAdmin(request);
     const { searchParams } = new URL(request.url);
-    const window = (searchParams.get('window') ?? '30d') as WindowKey;
+    const window = (searchParams.get('window') ?? 'this-month') as WindowKey;
     const fromParam = searchParams.get('from');
     const toParam = searchParams.get('to');
 

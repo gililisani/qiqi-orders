@@ -64,7 +64,7 @@ const OTHER_REPORTS = [
 
 export default function ExecutiveDashboardPage() {
   const sp = useSearchParams();
-  const window = sp.get('window') ?? '30d';
+  const window = sp.get('window') ?? 'this-month';
 
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [loading, setLoading] = useState(true);

@@ -12,9 +12,9 @@ import { cn } from '../../../../lib/utils';
  * are cleared. Default `basePath` is /admin/reports, override per page.
  */
 
-const PRESETS: Array<{ key: '30d' | '90d' | 'ytd'; label: string }> = [
-  { key: '30d', label: 'Last 30d' },
-  { key: '90d', label: 'Last 90d' },
+const PRESETS: Array<{ key: 'this-month' | 'last-month' | 'ytd'; label: string }> = [
+  { key: 'this-month', label: 'This Month' },
+  { key: 'last-month', label: 'Last Month' },
   { key: 'ytd', label: 'YTD' },
 ];
 

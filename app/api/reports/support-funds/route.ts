@@ -28,7 +28,7 @@ import {
  * as a separate count for visibility.
  */
 
-type WindowKey = '30d' | '90d' | 'ytd' | 'custom';
+type WindowKey = '30d' | '90d' | 'this-month' | 'last-month' | 'ytd' | 'custom';
 
 function periodRange(
   window: WindowKey,
@@ -40,6 +40,11 @@ function periodRange(
   let from = new Date(now);
   if (window === '30d') from.setUTCDate(from.getUTCDate() - 30);
   else if (window === '90d') from.setUTCDate(from.getUTCDate() - 90);
+  else if (window === 'this-month') from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  else if (window === 'last-month') {
+    from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+    to.setTime(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0, 23, 59, 59, 999));
+  }
   else if (window === 'ytd') from = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
   else {
     if (!fromParam || !toParam)
@@ -67,7 +72,7 @@ export async function GET(request: NextRequest) {
   try {
     await requireAdmin(request);
     const sp = new URL(request.url).searchParams;
-    const window = (sp.get('window') ?? '90d') as WindowKey;
+    const window = (sp.get('window') ?? 'this-month') as WindowKey;
     const fromParam = sp.get('from');
     const toParam = sp.get('to');
     const companyIdFilter = sp.get('companyId') || null;

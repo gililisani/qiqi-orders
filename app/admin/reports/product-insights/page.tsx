@@ -39,7 +39,7 @@ import {
 import { Input } from '../../../components/qq/input';
 import PeriodSelector from '../_components/PeriodSelector';
 
-type WindowKey = '30d' | '90d' | 'ytd' | 'custom';
+type WindowKey = '30d' | '90d' | 'this-month' | 'last-month' | 'ytd' | 'custom';
 
 interface ProductRow {
   productId: number;
@@ -124,7 +124,7 @@ const CATEGORY_COLORS = [
 
 export default function ProductInsightsPage() {
   const sp = useSearchParams();
-  const window = (sp.get('window') as WindowKey) ?? '90d';
+  const window = (sp.get('window') as WindowKey) ?? 'this-month';
 
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);

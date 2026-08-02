@@ -34,7 +34,7 @@ type Dim =
   | 'quarter';
 type DimOrNone = Dim | 'none';
 type Metric = 'revenue' | 'units' | 'orders';
-type WindowKey = '30d' | '90d' | 'ytd' | 'custom';
+type WindowKey = '30d' | '90d' | 'this-month' | 'last-month' | 'ytd' | 'custom';
 
 interface Payload {
   period: { window: string; from: string; to: string };
@@ -77,7 +77,7 @@ export default function SalesExplorerPage() {
   const row = (sp.get('row') as Dim) ?? 'company';
   const col = (sp.get('col') as DimOrNone) ?? 'month';
   const metric = (sp.get('metric') as Metric) ?? 'revenue';
-  const window = (sp.get('window') as WindowKey) ?? '90d';
+  const window = (sp.get('window') as WindowKey) ?? 'this-month';
   const companyId = sp.get('companyId') ?? '';
   const subsidiaryId = sp.get('subsidiaryId') ?? '';
 
