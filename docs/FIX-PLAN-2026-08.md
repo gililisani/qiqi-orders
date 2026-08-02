@@ -108,6 +108,33 @@ know:
   revenue now matches order revenue; SF activity lives in its own report.
 - Also deleted empty `admin/2fa`, `dashboard-new`, `dashboard-template` dirs.
 
+**SESSION 5 IS DONE — cleanup half (commits `754732b`..`c35d827`, rebased
+onto the order-history follow-up below):**
+- ✅ WP11 — both SLI preview pages render the download's exact PDF (same
+  SLIDocument, blob in iframe); legacy HTML renderer + its 3 routes + the
+  orphaned `/admin/sli/preview` page + template + tests deleted. One renderer.
+- ✅ WP6 — all verified-dead code deleted: welcomeUserTemplate (plaintext
+  passwords), lib/auth-utils.ts, 8 dead service-role routes (incl.
+  auto-save-draft/complete/notifications), app/components/reports (+
+  apexcharts/react-apexcharts/deepmerge uninstalled), platform/queue, dead
+  lib/pdf files, ContractInfo, OrderStatusBadge, charts-config. KEPT:
+  shiphero/register-webhook (pending launch), TopNavbar (alive).
+- ✅ WP12 — password-setup tokens stored SHA-256-hashed (also fixed:
+  mark-used matched the RAW token so it NEVER matched — used tokens were
+  replayable until expiry); password floor 6→8; env.example documents all
+  ~40 vars (was 13). Outstanding pre-hash reset links invalidated (24h TTL).
+- ✅ WP7 (partial) — csvExport doubles embedded quotes (RFC 4180).
+- ✅ WP8 remainder — .eslintrc.json (next/core-web-vitals); builds don't
+  gate on lint yet (ignoreDuringBuilds until backlog worked down).
+
+**STILL OPEN (no urgency, all quality-tier):** WP5 duplicate flows —
+including the order-details/history fork consolidation that was deferred to
+avoid colliding with the order-history session (now unblocked) — WP7
+remainder (formatCurrency/formatDate/ORDER_STATUSES consolidation, guard
+coverage test), ESLint backlog, jspdf + fast-xml-parser major bumps, DAM
+routes → uniform 'dam' permission guard, MFA for admins (none exists),
+service-role RPC for order writes (P3 follow-through).
+
 **FOLLOW-UP 2026-08-02 DONE (after WP2 applied): order_history client
 visibility** — this closes the "client-visible order-history filter" chip.
 WP2 made clients reliably see ALL history rows for their orders — including
