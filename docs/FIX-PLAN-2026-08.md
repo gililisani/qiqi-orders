@@ -11,14 +11,95 @@ The only code change in this whole session was an unrelated cleanup
 
 ---
 
+## UPDATE 2026-08-02 (second sweep) — read this first
+
+A second sweep covered everything the "Scope and limits" section below listed as
+unexamined: NetSuite correctness, Stripe, order money math, the DAM pipeline and
+storage, documents and email, build/infra/secrets, and dependency versions.
+Results are in audit Parts 8–12 and Part 7.
+
+**The priority order changed.** The five findings below outrank every work
+package in this document. Do them first, in this order.
+
+### P1 — `/api/users/send-reset-link` account takeover (audit 12.1)
+Ignore the body's `userEmail`; send to `authUser.user.email`. One line. Today any
+admin can mint a password-setup link for any account — including the owner's —
+delivered to an address of their choosing, with no notice to the victim.
+
+### P2 — `next@14.2.4` → `14.2.35` (audit 7.4)
+Same minor line, no framework migration. Closes two critical CVEs (cache
+poisoning, image-optimization DoS) on the public production framework. Then
+`axios`, `svg2pdf.js`, `dompurify` (all semver-compatible) and delete the unused
+`nodemailer`.
+
+### P3 — Client-controlled pricing (audit 8.1 / 9.1)
+The browser writes `order_items.unit_price`, `orders.total_value`,
+`credit_earned` and `support_fund_used` directly; RLS cannot restrict columns and
+there is no `CHECK`, trigger, or server-side recompute. Those values become the
+NetSuite Sales Order rate and the Stripe charge base. Fix in `push-so` first
+(re-resolve rates from `Products` × company class and reject on mismatch), then
+move order writes behind a service-role RPC.
+
+### P4 — Stripe money-loss paths (audit 8.2, 8.3)
+Three changes, all small:
+- `void-payment/route.ts:42-46` — stop clearing local state when the Stripe void
+  fails, and retrieve the invoice to refuse voiding anything already captured.
+- `webhook/route.ts:78-86` and `request-payment/route.ts:169-183` — check the
+  update error. supabase-js does **not** throw, so today a failed write returns
+  200, Stripe never retries, and the order stays unpaid while NetSuite shows paid.
+- `request-payment` — pass a Stripe `idempotencyKey`, and write the intent row
+  *before* creating and emailing the invoice.
+
+### P5 — `case_pack = 0` under-billing (audit 9.2)
+`bulk-upload/page.tsx:134` stores `0` for a blank cell; both order forms treat
+`0` as `1`. A 12-pack SKU imported that way bills 3 units instead of 36 — a 12×
+revenue loss per line, silently. Add `NOT NULL CHECK (case_pack > 0)`, make the
+field required, and replace the `|| 1` fallbacks with a hard error.
+
+### Then, before writing the RLS migration (WP2), get answers to two questions
+1. **Is all-partners-see-all-DAM-assets intentional?** (audit 10.2) The code says
+   "removed by product decision"; `CLAUDE.md` says the opposite. The fix differs
+   completely depending on the answer.
+2. **Run the storage-policy queries** (audit Part 10 preamble). No
+   `storage.objects` policy exists in any migration — the reconstruction is from
+   deleted git history, so 10.1 and 10.3 are unconfirmed until checked:
+   ```sql
+   select id, public, file_size_limit, allowed_mime_types from storage.buckets;
+   select policyname, cmd, roles, qual, with_check
+   from pg_policies where schemaname = 'storage';
+   ```
+
+### New work packages from the second sweep
+- **WP8 — CI.** There is none. `next build`'s typecheck is the entire deploy
+  safety net; the 15 Vitest files never run, and ESLint has no config file so it
+  never runs either. Add a GitHub Action (`npm ci && npx tsc --noEmit && npm test`)
+  and `.eslintrc.json`.
+- **WP9 — Security headers.** No CSP, `X-Frame-Options`, or `Referrer-Policy`.
+  The sharp edge is password-setup tokens leaking via `Referer`.
+- **WP10 — Reporting definition.** Item-level revenue counts free support-fund
+  goods while order-level revenue doesn't — a systematic 8–10% overstatement in
+  every product/category view (audit 9.3). Decide the definition, then apply it
+  to the four queries and `mv_product_sales`.
+- **WP11 — SLI single renderer.** Preview (HTML) and download (react-pdf) are
+  independent implementations that disagree on weight, checkboxes, address and
+  export date. Render the preview from `SLIDocument` and delete
+  `lib/sliGenerator.ts` — one change, four findings (audit 12.3).
+- **WP12 — DR and ops hygiene.** `env.example` documents 13 of 30 variables;
+  `backups/` is not gitignored while `dump.sh` defaults there; password-setup
+  tokens are stored in plaintext while login codes are hashed; the
+  `refresh-reports` cron has no failure alert.
+
 ## Scope and limits — read before treating this as a clean bill of health
 
 This plan addresses what five specific audits found: duplicate UI flows, API auth
 guards, the permission model, duplicated/dead code, and browser data-access
 patterns. The findings are verified. **Coverage is the limitation, not accuracy.**
 
-Not examined at all — each is a plausible home for problems of the same severity
-as the ones above:
+**Superseded by the second sweep — items 1–6 below have now been audited (see
+Parts 8–12). Item 7 still stands: nothing has been verified at runtime.** The
+list is kept because it records what the *first* sweep did not cover.
+
+Not examined in the first sweep:
 
 1. **Supabase Storage policies.** The audit covered table RLS, never
    `storage.objects`. `company-notes` is read directly from the browser
