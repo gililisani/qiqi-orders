@@ -180,6 +180,18 @@ export function computePeriodMetrics(
   };
 }
 
+/** First-Done timestamp per order — "first Done wins" is the canonical
+ *  done-date rule everywhere. Rows must be sorted created_at ascending. */
+export function buildFirstDoneMap(
+  historyRows: Array<{ order_id: string; created_at: string }>
+): Map<string, Date> {
+  const map = new Map<string, Date>();
+  for (const h of historyRows) {
+    if (!map.has(h.order_id)) map.set(h.order_id, new Date(h.created_at));
+  }
+  return map;
+}
+
 /** Sum SF line items per order — the canonical "what the client claimed". */
 export function buildSfUsedByOrder(
   sfItems: Array<{ order_id: string; total_price: number | string | null }>
@@ -435,7 +447,7 @@ export async function fetchRevenueInputs(
   const doneOrders = (ordersRes.data ?? []) as RevenueInputs['doneOrders'];
   const orderIds = doneOrders.map((o) => o.id);
 
-  const firstDone = new Map<string, Date>();
+  let firstDone = new Map<string, Date>();
   let sfItems: RevenueInputs['sfItems'] = [];
   if (orderIds.length > 0) {
     const [historyRes, sfRes] = await Promise.all([
@@ -454,9 +466,7 @@ export async function fetchRevenueInputs(
     if (historyRes.error) throw new Error(`history: ${historyRes.error.message}`);
     if (sfRes.error) throw new Error(`sf items: ${sfRes.error.message}`);
 
-    for (const h of historyRes.data ?? []) {
-      if (!firstDone.has(h.order_id)) firstDone.set(h.order_id, new Date(h.created_at));
-    }
+    firstDone = buildFirstDoneMap(historyRes.data ?? []);
     sfItems = (sfRes.data ?? []) as RevenueInputs['sfItems'];
   }
 

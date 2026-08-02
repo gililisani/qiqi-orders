@@ -3,6 +3,10 @@ import {
   createServiceRoleClient,
   requireAdmin,
 } from '../../../../platform/auth/guards';
+import {
+  buildFirstDoneMap,
+  buildSfUsedByOrder,
+} from '../../../../lib/companyPerformance';
 
 /**
  * GET /api/reports/support-funds
@@ -189,12 +193,8 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true });
     if (histErr) throw histErr;
 
-    const firstDone = new Map<string, Date>();
-    for (const h of history ?? []) {
-      if (!firstDone.has(h.order_id)) {
-        firstDone.set(h.order_id, new Date(h.created_at));
-      }
-    }
+    // Shared "first Done wins" rule — same helper as Company Performance.
+    const firstDone = buildFirstDoneMap(history ?? []);
 
     const inPeriodOrders = doneOrders.filter((o) => {
       const d = firstDone.get(o.id);
@@ -220,20 +220,20 @@ export async function GET(request: NextRequest) {
       .eq('is_support_fund_item', true);
     if (sfItemsErr) throw sfItemsErr;
 
-    const claimedByOrder = new Map<string, number>();
+    // Shared "claimed = sum of SF line items" rule — same helper as
+    // Company Performance.
+    const claimedByOrder = buildSfUsedByOrder(sfItems ?? []);
     const sfItemsByOrder = new Map<
       string,
       Array<{ productId: number | null; quantity: number; price: number }>
     >();
     for (const it of sfItems ?? []) {
       const oid = it.order_id as string;
-      const price = Number(it.total_price) || 0;
-      claimedByOrder.set(oid, (claimedByOrder.get(oid) ?? 0) + price);
       const list = sfItemsByOrder.get(oid) ?? [];
       list.push({
         productId: it.product_id as number | null,
         quantity: Number(it.quantity) || 0,
-        price,
+        price: Number(it.total_price) || 0,
       });
       sfItemsByOrder.set(oid, list);
     }

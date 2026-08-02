@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  buildFirstDoneMap,
   buildSfUsedByOrder,
   computeCompanyMetrics,
   computePeriodMetrics,
@@ -210,6 +211,19 @@ describe('computePeriodMetrics', () => {
       HISTORICAL
     );
     expect(m.actual).toBe(136234); // all counted orders + all historical
+  });
+});
+
+describe('buildFirstDoneMap', () => {
+  it('keeps the EARLIEST Done timestamp when an order was marked Done twice', () => {
+    const map = buildFirstDoneMap([
+      { order_id: 'o1', created_at: '2026-01-01T10:00:00Z' },
+      { order_id: 'o1', created_at: '2026-03-01T10:00:00Z' }, // re-done later — ignored
+      { order_id: 'o2', created_at: '2026-02-01T10:00:00Z' },
+    ]);
+    expect(map.get('o1')).toEqual(new Date('2026-01-01T10:00:00Z'));
+    expect(map.get('o2')).toEqual(new Date('2026-02-01T10:00:00Z'));
+    expect(map.size).toBe(2);
   });
 });
 
