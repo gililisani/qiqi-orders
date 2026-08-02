@@ -74,8 +74,9 @@ export interface CompanyPerformance {
   };
 }
 
-// Same thresholds as the Company Performance report.
-function classifyStatus(
+/** Single source of truth for period status — used by the Company
+ *  Performance report route AND this builder. Change thresholds here only. */
+export function classifyStatus(
   now: Date,
   startDate: Date,
   endDate: Date,

@@ -4,6 +4,7 @@ import {
   requireAdmin,
 } from '../../../../platform/auth/guards';
 import { calculateTargetPeriodProgress } from '../../../../lib/targetPeriods';
+import { classifyStatus, type PeriodStatus } from '../../../../lib/companyPerformance';
 
 /**
  * GET /api/reports/company-performance
@@ -32,13 +33,7 @@ import { calculateTargetPeriodProgress } from '../../../../lib/targetPeriods';
 
 type Scope = 'active' | 'all';
 
-type Status =
-  | 'Not Started'
-  | 'Ahead'
-  | 'On Track'
-  | 'Slipping'
-  | 'Complete'
-  | 'At Risk';
+type Status = PeriodStatus;
 
 interface PeriodRow {
   periodId: string;
@@ -64,21 +59,8 @@ interface PeriodRow {
   sfBalance: number;    // = sfEarned − sfUsed
 }
 
-function classifyStatus(
-  now: Date,
-  startDate: Date,
-  endDate: Date,
-  target: number,
-  actual: number,
-  progressPct: number,
-  expectedPct: number,
-): Status {
-  if (now < startDate) return 'Not Started';
-  if (now > endDate) return actual >= target ? 'Complete' : 'At Risk';
-  if (progressPct >= expectedPct + 5) return 'Ahead';
-  if (progressPct < expectedPct - 20) return 'Slipping';
-  return 'On Track';
-}
+// classifyStatus imported from lib/companyPerformance — shared with the
+// per-company drill-down so both views always agree on a period's status.
 
 export async function GET(request: NextRequest) {
   try {

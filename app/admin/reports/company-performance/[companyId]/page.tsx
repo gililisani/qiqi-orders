@@ -23,6 +23,7 @@ import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from '../../../../components/qq/table';
 import TopTable from '../../_components/TopTable';
+import { StatusPill, ProgressBar } from '../../_components/PeriodStatus';
 
 const money = (n: number) =>
   `$${(n || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -33,15 +34,6 @@ const WINDOWS = [
   { key: 'this-year', label: 'This Year' },
   { key: 'last-year', label: 'Last Year' },
 ] as const;
-
-const STATUS_STYLE: Record<string, string> = {
-  'Ahead': 'text-green-700 bg-green-50 border-green-200',
-  'On Track': 'text-green-700 bg-green-50 border-green-200',
-  'Complete': 'text-green-700 bg-green-50 border-green-200',
-  'Slipping': 'text-amber-700 bg-amber-50 border-amber-300',
-  'At Risk': 'text-destructive bg-destructive/5 border-destructive/30',
-  'Not Started': 'text-muted-foreground bg-muted border-border',
-};
 
 function fmtDate(d: string | null) {
   return d ? new Date(`${d}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', year: 'numeric', day: 'numeric' }) : '—';
@@ -179,23 +171,11 @@ export default function CompanyPerformancePage() {
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm">{money(p.target)}</TableCell>
                     <TableCell className="text-right font-mono text-sm">{money(p.actual)}</TableCell>
-                    <TableCell className="min-w-[140px]">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className={`h-full ${p.progressPct >= p.expectedPct ? 'bg-green-500' : 'bg-amber-500'}`}
-                            style={{ width: `${Math.min(100, p.progressPct)}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-mono tabular-nums w-10 text-right">
-                          {p.progressPct.toFixed(0)}%
-                        </span>
-                      </div>
+                    <TableCell className="min-w-[160px]">
+                      <ProgressBar pct={p.progressPct} expectedPct={p.expectedPct} />
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex text-xs font-medium border rounded-full px-2 py-0.5 ${STATUS_STYLE[p.status] || ''}`}>
-                        {p.status}
-                      </span>
+                      <StatusPill status={p.status} />
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-right font-mono text-xs text-muted-foreground">
                       {money(p.sfEarned)} / {money(p.sfUsed)}
