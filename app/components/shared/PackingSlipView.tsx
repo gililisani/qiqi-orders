@@ -836,8 +836,10 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
   }
 
   // Check if user can edit packing slip (only when order is locked from editing)
-  // Open orders cannot create/edit packing slips because the order can still be edited
-  const canEdit = ['Ready', 'Done'].includes(order.status);
+  // Open orders cannot create/edit packing slips because the order can still be edited.
+  // Admin-only: clients get a read-only view (RLS blocks their writes too —
+  // packing_slips_client_select is SELECT-only as of the tier-2 cleanup).
+  const canEdit = role === 'admin' && ['Ready', 'Done'].includes(order.status);
 
   // Extract country from company address
   const getDestinationCountry = () => {
