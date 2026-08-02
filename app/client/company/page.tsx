@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 import { supabase } from '../../../lib/supabaseClient';
 import { formatCurrency } from '../../../lib/formatters';
@@ -9,7 +10,6 @@ import TerritoryList from '../../components/shared/TerritoryList';
 import { PageHeader } from '../../components/qq/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/qq/card';
 import { Badge } from '../../components/qq/badge';
-import { Separator } from '../../components/qq/separator';
 import { Alert, AlertDescription } from '../../components/qq/alert';
 import {
   Table,
@@ -48,15 +48,6 @@ interface Territory {
   country_name: string;
 }
 
-interface TargetPeriod {
-  id: string;
-  period_name: string;
-  start_date: string;
-  end_date: string;
-  target_amount: number;
-  current_progress: number;
-}
-
 interface User {
   id: string;
   name: string;
@@ -74,7 +65,6 @@ interface Stats {
 export default function YourCompanyPage() {
   const [company, setCompany] = useState<Company | null>(null);
   const [territories, setTerritories] = useState<Territory[]>([]);
-  const [targetPeriods, setTargetPeriods] = useState<TargetPeriod[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<Stats>({
     ordersThisYear: 0,
@@ -99,7 +89,6 @@ export default function YourCompanyPage() {
         await Promise.all([
           fetchCompany(clientData.company_id),
           fetchTerritories(clientData.company_id),
-          fetchTargetPeriods(clientData.company_id),
           fetchUsers(clientData.company_id),
           fetchStats(clientData.company_id),
         ]);
@@ -128,28 +117,6 @@ export default function YourCompanyPage() {
       .eq('company_id', companyId);
     if (error) throw error;
     setTerritories(data || []);
-  };
-
-  const fetchTargetPeriods = async (companyId: string) => {
-    const { data, error } = await supabase
-      .from('target_periods')
-      .select('*')
-      .eq('company_id', companyId)
-      .order('start_date', { ascending: true });
-    if (error) throw error;
-    const { calculateTargetPeriodProgress } = await import('../../../lib/targetPeriods');
-    const withProgress = await Promise.all(
-      (data || []).map(async (p) => ({
-        ...p,
-        current_progress: await calculateTargetPeriodProgress(
-          supabase,
-          companyId,
-          p.start_date,
-          p.end_date
-        ),
-      }))
-    );
-    setTargetPeriods(withProgress);
   };
 
   const fetchUsers = async (companyId: string) => {
@@ -302,9 +269,7 @@ export default function YourCompanyPage() {
           <CardTitle className="text-sm">Contract</CardTitle>
         </CardHeader>
         <CardContent>
-          {company.contract_execution_date ||
-          company.contract_duration_months ||
-          targetPeriods.length > 0 ? (
+          {company.contract_execution_date || company.contract_duration_months ? (
             <div className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 {company.contract_execution_date && (
@@ -324,77 +289,16 @@ export default function YourCompanyPage() {
                 )}
               </div>
 
-              {targetPeriods.length > 0 && (
-                <>
-                  <Separator />
-                  <div>
-                    <p className="text-sm font-medium mb-3">Annual targets</p>
-                    <div className="space-y-3">
-                      {targetPeriods.map((p) => {
-                        const endDate = new Date(p.end_date);
-                        endDate.setHours(23, 59, 59, 999);
-                        const startDate = new Date(p.start_date);
-                        const now = new Date();
-                        const isEnded = now > endDate;
-                        const hasStarted = now >= startDate;
-                        const daysRemaining = isEnded
-                          ? 0
-                          : Math.ceil(
-                              (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-                            );
-                        const progressPct =
-                          p.target_amount > 0
-                            ? Math.min(
-                                100,
-                                ((p.current_progress || 0) / p.target_amount) * 100
-                              )
-                            : 0;
-                        return (
-                          <div
-                            key={p.id}
-                            className="border border-border rounded-md p-4"
-                          >
-                            <div className="flex justify-between items-start mb-2 gap-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <p className="text-sm font-medium">{p.period_name}</p>
-                                  {isEnded && <Badge variant="muted">Ended</Badge>}
-                                  {!isEnded && hasStarted && (
-                                    <Badge variant="accent">
-                                      {daysRemaining}{' '}
-                                      {daysRemaining === 1 ? 'day' : 'days'} left
-                                    </Badge>
-                                  )}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {new Date(p.start_date).toLocaleDateString()} —{' '}
-                                  {new Date(p.end_date).toLocaleDateString()}
-                                </p>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <p className="text-sm font-semibold font-mono">
-                                  {formatCurrency(p.target_amount)}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Progress: {formatCurrency(p.current_progress || 0)}
-                                </p>
-                              </div>
-                            </div>
-                            {p.target_amount > 0 && (
-                              <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
-                                <div
-                                  className="bg-foreground h-full rounded-full transition-all"
-                                  style={{ width: `${progressPct}%` }}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </>
-              )}
+              <p className="text-sm text-muted-foreground">
+                Annual targets and progress are on the{' '}
+                <Link
+                  href="/client/performance"
+                  className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
+                >
+                  Performance page
+                </Link>
+                .
+              </p>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">No contract information available.</p>

@@ -108,7 +108,34 @@ export default function CompanyViewPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [companyRes, territoriesRes, periodsRes, usersRes] = await Promise.all([
+        // Target progress comes from the batched Company Performance API —
+        // same Done-based math as the report, one round-trip for all periods.
+        const fetchPeriods = async (): Promise<TargetPeriod[]> => {
+          try {
+            const res = await fetchWithAuth(`/api/reports/company-performance/${companyId}`);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to load performance.');
+            return (data.periods || [])
+              .map((p: any) => ({
+                id: p.periodId,
+                period_name: p.periodName,
+                start_date: p.startDate,
+                end_date: p.endDate,
+                target_amount: p.target,
+                current_progress: p.actual,
+              }))
+              .sort((a: TargetPeriod, b: TargetPeriod) =>
+                a.start_date.localeCompare(b.start_date)
+              );
+          } catch (err) {
+            // Progress is supplementary — render the company page without it
+            // rather than failing the whole view.
+            console.error('Failed to load target-period progress:', err);
+            return [];
+          }
+        };
+
+        const [companyRes, territoriesRes, periods, usersRes] = await Promise.all([
           supabase
             .from('companies')
             .select(`
@@ -123,30 +150,17 @@ export default function CompanyViewPage() {
             .eq('id', companyId)
             .single(),
           supabase.from('company_territories').select('*').eq('company_id', companyId),
-          supabase
-            .from('target_periods')
-            .select('*')
-            .eq('company_id', companyId)
-            .order('start_date', { ascending: true }),
+          fetchPeriods(),
           supabase.from('clients').select('id, name, email, enabled').eq('company_id', companyId).order('name'),
         ]);
 
         if (cancelled) return;
         if (companyRes.error) throw companyRes.error;
 
-        const { calculateTargetPeriodProgress } = await import('../../../../lib/targetPeriods');
-        const periodsWithProgress = await Promise.all(
-          (periodsRes.data || []).map(async (p) => {
-            const progress = await calculateTargetPeriodProgress(supabase, companyId, p.start_date, p.end_date);
-            return { ...p, current_progress: progress };
-          })
-        );
-
-        if (cancelled) return;
         setCompany({
           ...(companyRes.data as any),
           territories: territoriesRes.data || [],
-          target_periods: periodsWithProgress,
+          target_periods: periods,
         });
         setUsers(usersRes.data || []);
       } catch (err: any) {
