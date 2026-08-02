@@ -1,6 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * Standalone SLI preview — renders the EXACT PDF the download produces
+ * (same SLIDocument, same bytes, shown in an iframe). The old HTML
+ * renderer disagreed with the PDF on weights, checkboxes, address and
+ * export date — audit 12.3. One renderer now.
+ */
+
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Download, Edit } from 'lucide-react';
@@ -10,7 +17,10 @@ import { PageHeader } from '../../../../components/qq/page-header';
 import { Button } from '../../../../components/qq/button';
 import { Alert, AlertDescription } from '../../../../components/qq/alert';
 import { useToast } from '../../../../components/ui/ToastProvider';
-import { generateAndDownloadSLIPDF } from '../../../../../lib/pdf/generators/sliPDFGenerator';
+import {
+  generateAndDownloadSLIPDF,
+  generateSLIPDFBlob,
+} from '../../../../../lib/pdf/generators/sliPDFGenerator';
 import type { SLIDocumentData } from '../../../../../lib/pdf/components/SLIDocument';
 
 export default function StandaloneSLIPreviewPage() {
@@ -18,35 +28,36 @@ export default function StandaloneSLIPreviewPage() {
   const sliId = params.id as string;
   const toast = useToast();
 
-  const [htmlContent, setHtmlContent] = useState('');
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [sliData, setSliData] = useState<SLIDocumentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generatingPDF, setGeneratingPDF] = useState(false);
-  const [sliData, setSliData] = useState<SLIDocumentData | null>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!sliId) return;
+    let objectUrl: string | null = null;
     (async () => {
       try {
-        const [htmlRes, dataRes] = await Promise.all([
-          fetchWithAuth(`/api/sli/${sliId}/html`),
-          fetchWithAuth(`/api/sli/${sliId}/data`),
-        ]);
-        if (!htmlRes.ok) {
-          const data = await htmlRes.json().catch(() => ({}));
+        const res = await fetchWithAuth(`/api/sli/${sliId}/data`);
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
           throw new Error(data.error || 'Failed to fetch SLI.');
         }
-        setHtmlContent(await htmlRes.text());
-        if (dataRes.ok) {
-          setSliData(await dataRes.json());
-        }
+        const data: SLIDocumentData = await res.json();
+        setSliData(data);
+        const blob = await generateSLIPDFBlob(data);
+        objectUrl = URL.createObjectURL(blob);
+        setPdfUrl(objectUrl);
       } catch (err: any) {
         setError(err.message || 'Failed to load SLI.');
       } finally {
         setLoading(false);
       }
     })();
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
   }, [sliId]);
 
   const heading = useMemo(() => {
@@ -56,20 +67,10 @@ export default function StandaloneSLIPreviewPage() {
   }, [sliData, sliId]);
 
   const handleDownloadPDF = async () => {
+    if (!sliData) return;
     try {
       setGeneratingPDF(true);
-      let data = sliData;
-      if (!data) {
-        const res = await fetchWithAuth(`/api/sli/${sliId}/data`);
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.error || 'Failed to fetch SLI data.');
-        }
-        data = await res.json();
-        setSliData(data);
-      }
-      if (!data) throw new Error('SLI data is unavailable.');
-      await generateAndDownloadSLIPDF(data);
+      await generateAndDownloadSLIPDF(sliData);
     } catch (err: any) {
       toast.error('Failed to generate PDF: ' + (err.message || 'unknown error'));
     } finally {
@@ -102,55 +103,41 @@ export default function StandaloneSLIPreviewPage() {
   }
 
   return (
-    <>
-      <style jsx global>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          body {
-            margin: 0;
-            padding: 0;
-          }
-        }
-      `}</style>
-
-      <div className="px-6 py-8 space-y-6">
-        <div className="no-print">
-          <Link
-            href="/admin/sli/documents"
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" /> Back to SLI documents
-          </Link>
-        </div>
-
-        <div className="no-print">
-          <PageHeader
-            title={heading}
-            description={sliData?.consignee_name || undefined}
-            actions={
-              <>
-                <Link href={`/admin/sli/${sliId}/edit`}>
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4" /> Edit
-                  </Button>
-                </Link>
-                <Button size="sm" onClick={handleDownloadPDF} loading={generatingPDF}>
-                  <Download className="h-4 w-4" />
-                  {generatingPDF ? 'Generating…' : 'Download PDF'}
-                </Button>
-              </>
-            }
-          />
-        </div>
-
-        <div
-          ref={contentRef}
-          id="sli-content"
-          dangerouslySetInnerHTML={{ __html: htmlContent }}
-        />
+    <div className="px-6 py-8 space-y-6">
+      <div>
+        <Link
+          href="/admin/sli/documents"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to SLI documents
+        </Link>
       </div>
-    </>
+
+      <PageHeader
+        title={heading}
+        description={sliData?.consignee_name || undefined}
+        actions={
+          <>
+            <Link href={`/admin/sli/${sliId}/edit`}>
+              <Button variant="outline" size="sm">
+                <Edit className="h-4 w-4" /> Edit
+              </Button>
+            </Link>
+            <Button size="sm" onClick={handleDownloadPDF} loading={generatingPDF}>
+              <Download className="h-4 w-4" />
+              {generatingPDF ? 'Generating…' : 'Download PDF'}
+            </Button>
+          </>
+        }
+      />
+
+      {pdfUrl && (
+        <iframe
+          src={pdfUrl}
+          title="SLI preview"
+          className="w-full h-[80vh] border border-border rounded-md bg-muted"
+        />
+      )}
+    </div>
   );
 }

@@ -1,82 +1,64 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+/**
+ * Order SLI preview — renders the EXACT PDF the download produces
+ * (same SLIDocument, same bytes, shown in an iframe). The old HTML
+ * renderer (lib/sliGenerator.ts) disagreed with the PDF on weights,
+ * checkboxes, address and export date — audit 12.3. One renderer now.
+ */
+
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useSupabase } from '../../../../../lib/supabase-provider';
-import { generateAndDownloadSLIPDF } from '../../../../../lib/pdf/generators/sliPDFGenerator';
+import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
+import {
+  generateAndDownloadSLIPDF,
+  generateSLIPDFBlob,
+} from '../../../../../lib/pdf/generators/sliPDFGenerator';
 import type { SLIDocumentData } from '../../../../../lib/pdf/components/SLIDocument';
 
 export default function SLIPreviewPage() {
   const params = useParams();
   const orderId = params.id as string;
-  const { supabase } = useSupabase();
-  const [htmlContent, setHtmlContent] = useState<string>('');
+
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [sliData, setSliData] = useState<SLIDocumentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generatingPDF, setGeneratingPDF] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchSLIHTML();
+    if (!orderId) return;
+    let objectUrl: string | null = null;
+    (async () => {
+      try {
+        const response = await fetchWithAuth(`/api/orders/${orderId}/sli/data`);
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || 'Failed to load SLI data');
+        }
+        const data: SLIDocumentData = await response.json();
+        setSliData(data);
+        const blob = await generateSLIPDFBlob(data);
+        objectUrl = URL.createObjectURL(blob);
+        setPdfUrl(objectUrl);
+      } catch (err: any) {
+        setError(err.message || 'Failed to generate SLI preview.');
+      } finally {
+        setLoading(false);
+      }
+    })();
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
   }, [orderId]);
 
-  const fetchSLIHTML = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('Not authenticated');
-        return;
-      }
-
-      const response = await fetch(`/api/orders/${orderId}/sli/html`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to generate SLI');
-      }
-
-      const { html } = await response.json();
-      setHtmlContent(html);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleDownloadPDF = async () => {
+    if (!sliData) return;
     try {
       setGeneratingPDF(true);
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        alert('Not authenticated');
-        return;
-      }
-
-      // Fetch SLI data for React-PDF generation
-      const response = await fetch(`/api/orders/${orderId}/sli/data`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch SLI data');
-      }
-      
-      const sliData: SLIDocumentData = await response.json();
-      
-      // Generate PDF using React-PDF
       await generateAndDownloadSLIPDF(sliData);
     } catch (err: any) {
-      console.error('Error generating PDF:', err);
-      alert('Failed to generate PDF: ' + err.message);
+      setError('Failed to download PDF: ' + (err.message || 'unknown error'));
     } finally {
       setGeneratingPDF(false);
     }
@@ -85,7 +67,7 @@ export default function SLIPreviewPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p>Generating SLI...</p>
+        <p>Generating SLI…</p>
       </div>
     );
   }
@@ -107,83 +89,25 @@ export default function SLIPreviewPage() {
   }
 
   return (
-    <>
-      <style jsx global>{`
-        @media print {
-          /* Hide all admin layout elements */
-          nav,
-          header,
-          aside,
-          [role="navigation"],
-          [class*="sidenav"],
-          [class*="sidebar"],
-          [class*="breadcrumb"],
-          [class*="navbar"],
-          [class*="header"],
-          [class*="admin-layout"],
-          [class*="layout-wrapper"],
-          [class*="sticky"],
-          [class*="top-0"],
-          /* Hide the print button */
-          .print\\:hidden,
-          button {
-            display: none !important;
-            visibility: hidden !important;
-          }
-          
-          /* Reset body margins for printing */
-          @page {
-            margin: 0;
-          }
-          
-          body {
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          
-          /* Hide everything except SLI content */
-          body * {
-            visibility: hidden;
-          }
-          
-          /* Make SLI content visible and properly positioned */
-          #sli-content,
-          #sli-content * {
-            visibility: visible !important;
-          }
-          
-          #sli-content {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-        }
-      `}</style>
-      
-      <div>
-        {/* Print button - only visible on screen, hidden when printing */}
-        <div className="print:hidden fixed top-4 right-4 z-50 space-x-2">
-          <button
-            onClick={handleDownloadPDF}
-            disabled={generatingPDF}
-            className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-lg disabled:opacity-50"
-          >
-            {generatingPDF ? 'Generating PDF...' : 'Download as PDF'}
-          </button>
-          <button
-            onClick={() => window.close()}
-            className="px-6 py-3 bg-gray-600 text-white rounded hover:bg-gray-700 shadow-lg"
-          >
-            Close
-          </button>
-        </div>
-
-        {/* SLI Content */}
-        <div ref={contentRef} id="sli-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+    <div className="fixed inset-0 flex flex-col">
+      <div className="flex items-center justify-end gap-2 p-3 bg-gray-900">
+        <button
+          onClick={handleDownloadPDF}
+          disabled={generatingPDF || !sliData}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+        >
+          {generatingPDF ? 'Downloading…' : 'Download PDF'}
+        </button>
+        <button
+          onClick={() => window.close()}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        >
+          Close
+        </button>
       </div>
-    </>
+      {pdfUrl && (
+        <iframe src={pdfUrl} title="SLI preview" className="flex-1 w-full border-0" />
+      )}
+    </div>
   );
 }
