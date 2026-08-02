@@ -11,6 +11,69 @@ The only code change in this whole session was an unrelated cleanup
 
 ---
 
+## Scope and limits — read before treating this as a clean bill of health
+
+This plan addresses what five specific audits found: duplicate UI flows, API auth
+guards, the permission model, duplicated/dead code, and browser data-access
+patterns. The findings are verified. **Coverage is the limitation, not accuracy.**
+
+Not examined at all — each is a plausible home for problems of the same severity
+as the ones above:
+
+1. **Supabase Storage policies.** The audit covered table RLS, never
+   `storage.objects`. `company-notes` is read directly from the browser
+   (`app/components/shared/NotesView.tsx:190`), and order documents and DAM files
+   also live in buckets. Whether those policies scope per company is unverified —
+   exactly the class of bug that findings 3.1 and 3.8 turned out to be.
+   `20260516120000_revoke_anon_and_bucket_listing.sql` only dropped listing on the
+   two public image buckets.
+2. **NetSuite integration correctness.** ~$2M/year flows through
+   order → SO → invoice → reconcile. Audited only for auth guards; the logic was
+   never reviewed, and `tests/` has nothing covering `push-so`, `create-invoice`,
+   `sync-invoice` or `reconcile-order`.
+3. **Stripe.** Same: guards only. Webhook idempotency, double-charge protection,
+   refund/void handling — all unreviewed.
+4. **The DAM upload pipeline** — S3 multipart flow, `supabase/functions/dam-upload`,
+   `legacy/worker/`. Untouched.
+5. **Order pricing and totals correctness**, beyond noticing the math is
+   duplicated in three places. Nobody verified the numbers are right.
+6. **Data integrity right now.** The bugs found imply damaged data nobody has
+   counted: how many client rows currently have `permissions = '{}'`; how many
+   companies were created without target periods; how many products were bulk
+   imported without `qualifies_for_credit_earning`. See WP0.
+7. **Runtime verification.** Everything here is read from source and from policy
+   definitions. No finding was reproduced by logging in and performing the action.
+   "The policy permits it" is not the same as "I demonstrated it."
+
+**And one thing that is missing rather than broken: there is no error monitoring.**
+No Sentry, Datadog, or equivalent in `package.json`. Several findings here
+(the unauthenticated recalculate calls, the unchecked `updateUserById`, swallowed
+history writes) share a shape: something fails, nothing is reported, and a wrong
+number surfaces months later. That is what happened with the $265k order-history
+bug in July. Fixing the individual instances doesn't fix the blindness — for a
+system this size, adding error reporting is probably higher leverage than any
+single item in WP5–WP7.
+
+## WP0 — Count the damage before fixing the causes
+
+Cheap, and it tells you how urgent the rest is. In the SQL editor:
+
+```sql
+select count(*) filter (where permissions = '{}') as clients_no_perms,
+       count(*)                                   as clients_total
+from public.clients where enabled = true;
+
+select count(*) from public.companies c
+where not exists (select 1 from public.target_periods t where t.company_id = c.id);
+
+select count(*) filter (where category_id is null)                as no_category,
+       count(*) filter (where qualifies_for_credit_earning is null) as no_credit_flag
+from public."Products" where enable = true;
+```
+
+If the first query returns a large number, WP4.1 plus a backfill is the single
+most urgent item in this document.
+
 ## Read first
 
 1. `docs/AUDIT-2026-08-02.md` — all findings, verified, with file:line refs.
