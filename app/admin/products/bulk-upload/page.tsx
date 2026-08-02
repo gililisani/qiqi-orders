@@ -125,13 +125,25 @@ export default function BulkUploadProducts() {
           );
           return;
         }
+        // case_pack is money-critical: order quantity = cases × case_pack, so a
+        // 0 (silently coerced from a blank cell) makes every order for the SKU
+        // bill 1 unit per case instead of the real pack size. Hard error.
+        const casePackRaw = (values[headers.indexOf('case_pack')] || '').trim();
+        const casePack = parseInt(casePackRaw, 10);
+        if (!Number.isFinite(casePack) || casePack <= 0) {
+          setError(
+            `Row ${i + 1} (${values[headers.indexOf('sku')] || 'no SKU'}): case_pack ` +
+              `"${casePackRaw}" must be a positive whole number.`
+          );
+          return;
+        }
         parsed.push({
           item_name: values[headers.indexOf('item_name')] || '',
           netsuite_name: values[headers.indexOf('netsuite_name')] || '',
           sku: values[headers.indexOf('sku')] || '',
           upc: values[headers.indexOf('upc')] || '',
           size: values[headers.indexOf('size')] || '',
-          case_pack: parseInt(values[headers.indexOf('case_pack')]) || 0,
+          case_pack: casePack,
           price_international: parseFloat(values[headers.indexOf('price_international')]) || 0,
           price_americas: parseFloat(values[headers.indexOf('price_americas')]) || 0,
           enable: values[headers.indexOf('enable')].toLowerCase() === 'true',

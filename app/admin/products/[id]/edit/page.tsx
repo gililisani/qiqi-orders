@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 import { supabase } from '../../../../../lib/supabaseClient';
+import { requirePositiveCasePack } from '../../../../../lib/utils';
 import { PageHeader } from '../../../../components/qq/page-header';
 import { Button } from '../../../../components/qq/button';
 import { Alert, AlertDescription } from '../../../../components/qq/alert';
@@ -100,7 +101,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           sku: formData.sku,
           upc: formData.upc || null,
           size: formData.size || null,
-          case_pack: formData.case_pack ? parseInt(formData.case_pack) : null,
+          case_pack: requirePositiveCasePack(formData.case_pack),
           price_international: parseFloat(formData.price_international),
           price_americas: parseFloat(formData.price_americas),
           enable: formData.enable,
