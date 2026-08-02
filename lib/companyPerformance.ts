@@ -1,15 +1,25 @@
 /**
- * Company performance drill-down — batched builder.
+ * Company performance — single source of truth for Done-based revenue math.
  *
- * Loads everything about one company in a FIXED number of queries (6),
- * regardless of how many periods/orders it has — deliberately unlike the
- * report route's per-period query pattern. All revenue on this page is
+ * Every consumer of "how much did a company sell in a date range" goes
+ * through this module: the Company Performance report (multi-company), the
+ * per-company drill-down, and target-period recalculation. All revenue is
  * DONE-based (an order counts when it was first marked Done, per
- * order_history) plus historical_sales — the same definition as the
- * Company Performance report and target periods, so numbers always agree.
+ * order_history) plus historical_sales — so numbers always agree across
+ * views.
  *
- * The pure computation over the fetched rows lives in computeCompanyMetrics
- * (unit-tested); the async wrapper only fetches.
+ * Design: `fetchRevenueInputs` loads everything in a FIXED number of
+ * queries regardless of how many companies/periods/orders are involved,
+ * and THROWS on any query error — no silent partial zeros (that failure
+ * mode caused the 2026-07 reporting incident). The math over the fetched
+ * rows is pure and unit-tested (`computePeriodMetrics`,
+ * `computeCompanyMetrics`, `computeSfBehaviorDistribution`).
+ *
+ * Support-fund semantics (see useOrderFormController.ts):
+ * `orders.support_fund_used` is CAPPED at `credit_earned`, so what the
+ * client actually claimed lives in the SF line items —
+ * `order_items.total_price` WHERE `is_support_fund_item = true`.
+ * Balance = earned − claimed. Positive → leftover, negative → top-up.
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -75,7 +85,8 @@ export interface CompanyPerformance {
 }
 
 /** Single source of truth for period status — used by the Company
- *  Performance report route AND this builder. Change thresholds here only. */
+ *  Performance report route AND the drill-down builder. Change thresholds
+ *  here only. */
 export function classifyStatus(
   now: Date,
   startDate: Date,
@@ -92,6 +103,163 @@ export function classifyStatus(
   if (progressPct >= expectedPct + 5) return 'Ahead';
   if (progressPct < expectedPct - 20) return 'Slipping';
   return 'On Track';
+}
+
+export interface PeriodMetrics {
+  target: number;
+  actual: number;
+  sfEarned: number;
+  sfUsed: number;
+  sfBalance: number;
+  daysTotal: number;
+  daysElapsed: number;
+  daysRemaining: number;
+  progressPct: number;
+  expectedPct: number;
+  paceDeltaPct: number;
+  status: PeriodStatus;
+}
+
+/**
+ * Pure per-period math. `doneOrders` and `historical` must already be
+ * scoped to the period's company; an order counts when its first-Done
+ * timestamp falls inside the period (orders with Done status but no
+ * history row are excluded — not countable).
+ */
+export function computePeriodMetrics(
+  now: Date,
+  period: { start_date: string; end_date: string; target_amount: number | string | null },
+  doneOrders: Array<{ id: string; total_value?: number | null; credit_earned?: number | null }>,
+  firstDone: Map<string, Date>,
+  sfUsedByOrder: Map<string, number>,
+  historical: Array<{ amount: number | string | null; sale_date: string }>
+): PeriodMetrics {
+  const startDate = new Date(`${period.start_date}T00:00:00.000Z`);
+  const endDate = new Date(`${period.end_date}T23:59:59.999Z`);
+  const target = Number(period.target_amount) || 0;
+
+  let actual = 0;
+  let sfEarned = 0;
+  let sfUsed = 0;
+  for (const order of doneOrders) {
+    const doneAt = firstDone.get(order.id);
+    if (!doneAt || doneAt < startDate || doneAt > endDate) continue;
+    actual += Number(order.total_value) || 0;
+    sfEarned += Number(order.credit_earned) || 0;
+    sfUsed += sfUsedByOrder.get(order.id) ?? 0;
+  }
+  for (const sale of historical) {
+    if (sale.sale_date >= period.start_date && sale.sale_date <= period.end_date) {
+      actual += Number(sale.amount) || 0;
+    }
+  }
+
+  const daysTotal = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000));
+  const daysElapsed = Math.max(
+    0,
+    Math.min(daysTotal, Math.ceil((Math.min(now.getTime(), endDate.getTime()) - startDate.getTime()) / 86400000))
+  );
+  const daysRemaining = Math.max(0, daysTotal - daysElapsed);
+  const progressPct = target > 0 ? (actual / target) * 100 : 0;
+  const expectedPct = (daysElapsed / daysTotal) * 100;
+  const paceDeltaPct = progressPct - expectedPct;
+
+  return {
+    target,
+    actual,
+    sfEarned,
+    sfUsed,
+    sfBalance: sfEarned - sfUsed,
+    daysTotal,
+    daysElapsed,
+    daysRemaining,
+    progressPct,
+    expectedPct,
+    paceDeltaPct,
+    status: classifyStatus(now, startDate, endDate, target, actual, progressPct, expectedPct),
+  };
+}
+
+/** Sum SF line items per order — the canonical "what the client claimed". */
+export function buildSfUsedByOrder(
+  sfItems: Array<{ order_id: string; total_price: number | string | null }>
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const item of sfItems) {
+    map.set(item.order_id, (map.get(item.order_id) ?? 0) + (Number(item.total_price) || 0));
+  }
+  return map;
+}
+
+export interface SfBehaviorDistribution {
+  underRedeemedPct: number;
+  fullyRedeemedPct: number;
+  toppedUpPct: number;
+  avgTopUp: number;
+  avgLeftover: number;
+  sampleSize: number;
+}
+
+/**
+ * Per-ORDER redemption behavior across enrolled companies. An order counts
+ * when its first-Done date falls inside one of its company's enrolled
+ * periods. Orders with zero earned AND zero claimed carry no signal and
+ * are skipped.
+ */
+export function computeSfBehaviorDistribution(
+  enrolledPeriods: Array<{ company_id: string; start_date: string; end_date: string }>,
+  doneOrders: Array<{ id: string; company_id: string; credit_earned?: number | null }>,
+  firstDone: Map<string, Date>,
+  sfUsedByOrder: Map<string, number>
+): SfBehaviorDistribution {
+  const periodsByCompany = new Map<string, Array<{ s: Date; e: Date }>>();
+  for (const p of enrolledPeriods) {
+    const list = periodsByCompany.get(p.company_id) ?? [];
+    list.push({
+      s: new Date(`${p.start_date}T00:00:00.000Z`),
+      e: new Date(`${p.end_date}T23:59:59.999Z`),
+    });
+    periodsByCompany.set(p.company_id, list);
+  }
+
+  let under = 0,
+    full = 0,
+    over = 0;
+  let topUpSum = 0,
+    leftoverSum = 0;
+  let total = 0;
+
+  for (const o of doneOrders) {
+    const doneAt = firstDone.get(o.id);
+    if (!doneAt) continue;
+    const ranges = periodsByCompany.get(o.company_id) ?? [];
+    if (!ranges.some((r) => doneAt >= r.s && doneAt <= r.e)) continue;
+
+    const earned = Number(o.credit_earned) || 0;
+    const claimed = sfUsedByOrder.get(o.id) ?? 0;
+    if (earned === 0 && claimed === 0) continue;
+
+    total += 1;
+    const delta = earned - claimed;
+    if (Math.abs(delta) < 0.01) {
+      full += 1;
+    } else if (delta > 0) {
+      under += 1;
+      leftoverSum += delta;
+    } else {
+      over += 1;
+      topUpSum += -delta;
+    }
+  }
+
+  return {
+    underRedeemedPct: total > 0 ? (under / total) * 100 : 0,
+    fullyRedeemedPct: total > 0 ? (full / total) * 100 : 0,
+    toppedUpPct: total > 0 ? (over / total) * 100 : 0,
+    avgTopUp: over > 0 ? topUpSum / over : 0,
+    avgLeftover: under > 0 ? leftoverSum / under : 0,
+    sampleSize: total,
+  };
 }
 
 interface RawInputs {
@@ -113,13 +281,7 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
     sfItems, productItems, windowFrom, windowTo,
   } = inputs;
 
-  const sfUsedByOrder = new Map<string, number>();
-  for (const item of sfItems) {
-    sfUsedByOrder.set(
-      item.order_id,
-      (sfUsedByOrder.get(item.order_id) ?? 0) + (Number(item.total_price) || 0)
-    );
-  }
+  const sfUsedByOrder = buildSfUsedByOrder(sfItems);
 
   // ---- To-date totals -----------------------------------------------------
   let toDateSales = 0;
@@ -137,47 +299,20 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
 
   // ---- Per-period rows ----------------------------------------------------
   const periodRows: CompanyPeriodRow[] = periods.map((p) => {
-    const startDate = new Date(`${p.start_date}T00:00:00.000Z`);
-    const endDate = new Date(`${p.end_date}T23:59:59.999Z`);
-    const target = Number(p.target_amount) || 0;
-
-    let actual = 0;
-    let sfEarned = 0;
-    let sfUsed = 0;
-    for (const order of doneOrders) {
-      const doneAt = firstDone.get(order.id);
-      if (!doneAt || doneAt < startDate || doneAt > endDate) continue;
-      actual += Number(order.total_value) || 0;
-      sfEarned += Number(order.credit_earned) || 0;
-      sfUsed += sfUsedByOrder.get(order.id) ?? 0;
-    }
-    for (const sale of historical) {
-      if (sale.sale_date >= p.start_date && sale.sale_date <= p.end_date) {
-        actual += Number(sale.amount) || 0;
-      }
-    }
-
-    const daysTotal = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000));
-    const daysElapsed = Math.max(
-      0,
-      Math.min(daysTotal, Math.ceil((Math.min(now.getTime(), endDate.getTime()) - startDate.getTime()) / 86400000))
-    );
-    const progressPct = target > 0 ? (actual / target) * 100 : 0;
-    const expectedPct = (daysElapsed / daysTotal) * 100;
-
+    const m = computePeriodMetrics(now, p, doneOrders, firstDone, sfUsedByOrder, historical);
     return {
       periodId: p.id,
       periodName: p.period_name ?? '',
       startDate: p.start_date,
       endDate: p.end_date,
-      target,
-      actual,
-      progressPct,
-      expectedPct,
-      status: classifyStatus(now, startDate, endDate, target, actual, progressPct, expectedPct),
-      sfEarned,
-      sfUsed,
-      sfBalance: sfEarned - sfUsed,
+      target: m.target,
+      actual: m.actual,
+      progressPct: m.progressPct,
+      expectedPct: m.expectedPct,
+      status: m.status,
+      sfEarned: m.sfEarned,
+      sfUsed: m.sfUsed,
+      sfBalance: m.sfBalance,
     };
   });
 
@@ -257,48 +392,53 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
   };
 }
 
-/** Fetch everything for one company (6 queries) and compute. Throws on any
- *  query error — no silent partial numbers. */
-export async function buildCompanyPerformance(
-  supabase: SupabaseClient,
-  companyId: string,
-  windowFrom: Date,
-  windowTo: Date
-): Promise<CompanyPerformance> {
-  const { data: company, error: companyErr } = await supabase
-    .from('companies')
-    .select('id, company_name, netsuite_number, support_fund_id, subsidiary:subsidiaries(name)')
-    .eq('id', companyId)
-    .single();
-  if (companyErr) throw new Error(`company: ${companyErr.message}`);
+export interface RevenueInputs {
+  doneOrders: Array<{
+    id: string;
+    company_id: string;
+    total_value: number | null;
+    credit_earned: number | null;
+  }>;
+  firstDone: Map<string, Date>; // order_id → first Done timestamp
+  sfItems: Array<{ order_id: string; total_price: number | null }>;
+  historical: Array<{ company_id: string; amount: number | string | null; sale_date: string }>;
+}
 
-  const [periodsRes, ordersRes, historicalRes] = await Promise.all([
-    supabase
-      .from('target_periods')
-      .select('id, period_name, start_date, end_date, target_amount')
-      .eq('company_id', companyId),
+/**
+ * Batched fetch of everything needed to compute Done-based revenue for a
+ * set of companies — 4 queries total, regardless of company/period/order
+ * count. Throws on any query error: callers must never render partial
+ * zeros as real numbers.
+ */
+export async function fetchRevenueInputs(
+  supabase: SupabaseClient,
+  companyIds: string[]
+): Promise<RevenueInputs> {
+  if (companyIds.length === 0) {
+    return { doneOrders: [], firstDone: new Map(), sfItems: [], historical: [] };
+  }
+
+  const [ordersRes, historicalRes] = await Promise.all([
     supabase
       .from('orders')
-      .select('id, total_value, credit_earned')
-      .eq('company_id', companyId)
-      .eq('status', 'Done'),
+      .select('id, company_id, total_value, credit_earned')
+      .eq('status', 'Done')
+      .in('company_id', companyIds),
     supabase
       .from('historical_sales')
-      .select('amount, sale_date')
-      .eq('company_id', companyId),
+      .select('company_id, amount, sale_date')
+      .in('company_id', companyIds),
   ]);
-  if (periodsRes.error) throw new Error(`periods: ${periodsRes.error.message}`);
   if (ordersRes.error) throw new Error(`orders: ${ordersRes.error.message}`);
   if (historicalRes.error) throw new Error(`historical: ${historicalRes.error.message}`);
 
-  const doneOrders = ordersRes.data ?? [];
-  const orderIds = doneOrders.map((o: any) => o.id);
+  const doneOrders = (ordersRes.data ?? []) as RevenueInputs['doneOrders'];
+  const orderIds = doneOrders.map((o) => o.id);
 
-  let firstDone = new Map<string, Date>();
-  let sfItems: any[] = [];
-  let productItems: any[] = [];
+  const firstDone = new Map<string, Date>();
+  let sfItems: RevenueInputs['sfItems'] = [];
   if (orderIds.length > 0) {
-    const [historyRes, sfRes, itemsRes] = await Promise.all([
+    const [historyRes, sfRes] = await Promise.all([
       supabase
         .from('order_history')
         .select('order_id, created_at')
@@ -310,30 +450,61 @@ export async function buildCompanyPerformance(
         .select('order_id, total_price')
         .in('order_id', orderIds)
         .eq('is_support_fund_item', true),
-      supabase
-        .from('order_items')
-        .select('order_id, product_id, quantity, total_price, product:Products(sku, item_name)')
-        .in('order_id', orderIds),
     ]);
     if (historyRes.error) throw new Error(`history: ${historyRes.error.message}`);
     if (sfRes.error) throw new Error(`sf items: ${sfRes.error.message}`);
-    if (itemsRes.error) throw new Error(`items: ${itemsRes.error.message}`);
 
     for (const h of historyRes.data ?? []) {
       if (!firstDone.has(h.order_id)) firstDone.set(h.order_id, new Date(h.created_at));
     }
-    sfItems = sfRes.data ?? [];
+    sfItems = (sfRes.data ?? []) as RevenueInputs['sfItems'];
+  }
+
+  return { doneOrders, firstDone, sfItems, historical: historicalRes.data ?? [] };
+}
+
+/** Fetch everything for one company's drill-down and compute. Throws on
+ *  any query error — no silent partial numbers. */
+export async function buildCompanyPerformance(
+  supabase: SupabaseClient,
+  companyId: string,
+  windowFrom: Date,
+  windowTo: Date
+): Promise<CompanyPerformance> {
+  const [companyRes, periodsRes, inputs] = await Promise.all([
+    supabase
+      .from('companies')
+      .select('id, company_name, netsuite_number, support_fund_id, subsidiary:subsidiaries(name)')
+      .eq('id', companyId)
+      .single(),
+    supabase
+      .from('target_periods')
+      .select('id, period_name, start_date, end_date, target_amount')
+      .eq('company_id', companyId),
+    fetchRevenueInputs(supabase, [companyId]),
+  ]);
+  if (companyRes.error) throw new Error(`company: ${companyRes.error.message}`);
+  if (periodsRes.error) throw new Error(`periods: ${periodsRes.error.message}`);
+
+  const orderIds = inputs.doneOrders.map((o) => o.id);
+  let productItems: any[] = [];
+  if (orderIds.length > 0) {
+    const itemsRes = await supabase
+      .from('order_items')
+      .select('order_id, product_id, quantity, total_price, product:Products(sku, item_name)')
+      .in('order_id', orderIds);
+    if (itemsRes.error) throw new Error(`items: ${itemsRes.error.message}`);
     productItems = itemsRes.data ?? [];
   }
 
   return computeCompanyMetrics({
     now: new Date(),
-    company,
+    company: companyRes.data,
     periods: periodsRes.data ?? [],
-    doneOrders,
-    firstDone,
-    historical: historicalRes.data ?? [],
-    sfItems,
+    doneOrders: inputs.doneOrders,
+    firstDone: inputs.firstDone,
+    historical: inputs.historical,
+    sfItems: inputs.sfItems,
     productItems,
     windowFrom,
     windowTo,

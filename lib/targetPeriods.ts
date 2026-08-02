@@ -1,8 +1,18 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import {
+  buildSfUsedByOrder,
+  computePeriodMetrics,
+  fetchRevenueInputs,
+} from './companyPerformance';
 
 /**
  * Calculate current progress for a target period by summing all Done orders
- * that were marked Done within the period's date range
+ * that were marked Done within the period's date range.
+ *
+ * BROWSER-LEGACY: only the admin company page and the client company page
+ * still call this (per-period, RLS-scoped client, swallows errors to keep
+ * those pages rendering). Server-side code must NOT use it — use the
+ * batched, strict builders in lib/companyPerformance instead.
  */
 export async function calculateTargetPeriodProgress(
   supabase: SupabaseClient,
@@ -95,59 +105,46 @@ export async function calculateTargetPeriodProgress(
 }
 
 /**
- * Recalculate and update current_progress for all target periods of a company
- * Call this when an order status changes to/from Done
+ * Recalculate and update current_progress for all target periods of a
+ * company. Call this when an order status changes to/from Done.
+ *
+ * Batched: a fixed number of queries regardless of period count, via
+ * lib/companyPerformance. THROWS on any fetch/update error instead of
+ * writing zeros — a transient query failure must never persist wrong
+ * progress. Both callers (orders/complete, target-periods/recalculate)
+ * already guard with try/catch.
  */
 export async function recalculateCompanyTargetPeriods(
   supabase: SupabaseClient,
   companyId: string
 ): Promise<void> {
-  try {
-    // Get all target periods for this company
-    const { data: targetPeriods, error: periodsError } = await supabase
-      .from('target_periods')
-      .select('id, start_date, end_date')
-      .eq('company_id', companyId);
+  const { data: targetPeriods, error: periodsError } = await supabase
+    .from('target_periods')
+    .select('id, start_date, end_date, target_amount')
+    .eq('company_id', companyId);
+  if (periodsError) throw new Error(`periods: ${periodsError.message}`);
+  if (!targetPeriods || targetPeriods.length === 0) return;
 
-    if (periodsError) {
-      console.error('Error fetching target periods:', periodsError);
-      return;
-    }
+  const inputs = await fetchRevenueInputs(supabase, [companyId]);
+  const sfUsedByOrder = buildSfUsedByOrder(inputs.sfItems);
+  const now = new Date();
 
-    if (!targetPeriods || targetPeriods.length === 0) {
-      return;
-    }
-
-    // Recalculate progress for each period
-    const updates = await Promise.all(
-      targetPeriods.map(async (period) => {
-        const progress = await calculateTargetPeriodProgress(
-          supabase,
-          companyId,
-          period.start_date,
-          period.end_date
-        );
-
-        return {
-          id: period.id,
-          current_progress: progress,
-        };
-      })
+  for (const period of targetPeriods) {
+    const metrics = computePeriodMetrics(
+      now,
+      period,
+      inputs.doneOrders,
+      inputs.firstDone,
+      sfUsedByOrder,
+      inputs.historical
     );
 
-    // Batch update all periods
-    for (const update of updates) {
-      const { error: updateError } = await supabase
-        .from('target_periods')
-        .update({ current_progress: update.current_progress })
-        .eq('id', update.id);
-
-      if (updateError) {
-        console.error(`Error updating target period ${update.id}:`, updateError);
-      }
+    const { error: updateError } = await supabase
+      .from('target_periods')
+      .update({ current_progress: metrics.actual })
+      .eq('id', period.id);
+    if (updateError) {
+      throw new Error(`update period ${period.id}: ${updateError.message}`);
     }
-  } catch (error) {
-    console.error('Error recalculating company target periods:', error);
   }
 }
-

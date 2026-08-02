@@ -3,8 +3,14 @@ import {
   createServiceRoleClient,
   requireAdmin,
 } from '../../../../platform/auth/guards';
-import { calculateTargetPeriodProgress } from '../../../../lib/targetPeriods';
-import { classifyStatus, type PeriodStatus } from '../../../../lib/companyPerformance';
+import {
+  buildSfUsedByOrder,
+  computePeriodMetrics,
+  computeSfBehaviorDistribution,
+  fetchRevenueInputs,
+  type PeriodStatus,
+  type RevenueInputs,
+} from '../../../../lib/companyPerformance';
 
 /**
  * GET /api/reports/company-performance
@@ -12,8 +18,11 @@ import { classifyStatus, type PeriodStatus } from '../../../../lib/companyPerfor
  *   &companyId=<uuid>        (optional)
  *   &subsidiaryId=<uuid>     (optional)
  *
- * One row per target_period. Actuals use calculateTargetPeriodProgress
- * so this report stays in sync with /admin/reports/company-goals.
+ * One row per target_period. All the revenue/SF math lives in
+ * lib/companyPerformance (batched: a fixed number of queries regardless
+ * of period count, throws on any query error — never silent zeros). The
+ * per-company drill-down and target-period recalculation use the same
+ * builder, so every view agrees.
  *
  * Support-fund semantics (important — see useOrderFormController.ts):
  *   `orders.support_fund_used` is CAPPED at `orders.credit_earned`, so
@@ -58,9 +67,6 @@ interface PeriodRow {
   sfUsed: number;       // = sum of SF line items (what client claimed)
   sfBalance: number;    // = sfEarned − sfUsed
 }
-
-// classifyStatus imported from lib/companyPerformance — shared with the
-// per-company drill-down so both views always agree on a period's status.
 
 export async function GET(request: NextRequest) {
   try {
@@ -159,139 +165,74 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // ---- Per-period rows ----
-    const rows: PeriodRow[] = await Promise.all(
-      periods.map(async (p: any) => {
-        const target = Number(p.target_amount) || 0;
-        const company = Array.isArray(p.company) ? p.company[0] : p.company;
-        const isEnrolled = company?.support_fund_id != null;
+    // ---- Batched inputs: fixed query count regardless of period count ----
+    const companyIds = Array.from(new Set(periods.map((p: any) => p.company_id)));
+    const inputs = await fetchRevenueInputs(supabase, companyIds);
+    const sfUsedByOrder = buildSfUsedByOrder(inputs.sfItems);
 
-        const actual = await calculateTargetPeriodProgress(
-          supabase,
-          p.company_id,
-          p.start_date,
-          p.end_date,
-        );
+    const ordersByCompany = new Map<string, RevenueInputs['doneOrders']>();
+    for (const o of inputs.doneOrders) {
+      const list = ordersByCompany.get(o.company_id) ?? [];
+      list.push(o);
+      ordersByCompany.set(o.company_id, list);
+    }
+    const historicalByCompany = new Map<string, RevenueInputs['historical']>();
+    for (const h of inputs.historical) {
+      const list = historicalByCompany.get(h.company_id) ?? [];
+      list.push(h);
+      historicalByCompany.set(h.company_id, list);
+    }
 
-        // Find Done orders for this company, filtered to those whose Done-date
-        // falls in the period. For each: credit_earned (already on order) and
-        // sum of order_items.total_price WHERE is_support_fund_item = true
-        // (what the client actually claimed under their support fund).
-        let sfEarned = 0;
-        let sfUsed = 0;
+    // ---- Per-period rows (pure — no queries) ----
+    const rows: PeriodRow[] = periods.map((p: any) => {
+      const company = Array.isArray(p.company) ? p.company[0] : p.company;
+      const isEnrolled = company?.support_fund_id != null;
 
-        if (isEnrolled) {
-          const { data: doneOrders, error: doneErr } = await supabase
-            .from('orders')
-            .select('id, credit_earned')
-            .eq('company_id', p.company_id)
-            .eq('status', 'Done');
-          if (doneErr) throw doneErr;
+      const m = computePeriodMetrics(
+        now,
+        p,
+        ordersByCompany.get(p.company_id) ?? [],
+        inputs.firstDone,
+        sfUsedByOrder,
+        historicalByCompany.get(p.company_id) ?? [],
+      );
 
-          if (doneOrders && doneOrders.length > 0) {
-            const allOrderIds = doneOrders.map((o: any) => o.id);
-            const { data: history, error: historyErr } = await supabase
-              .from('order_history')
-              .select('order_id, created_at')
-              .in('order_id', allOrderIds)
-              .eq('status_to', 'Done')
-              .order('created_at', { ascending: true });
-            if (historyErr) throw historyErr;
-
-            const periodStart = new Date(p.start_date);
-            const periodEnd = new Date(p.end_date);
-            periodEnd.setHours(23, 59, 59, 999);
-
-            const firstDone = new Map<string, Date>();
-            for (const h of history ?? []) {
-              if (!firstDone.has(h.order_id)) {
-                firstDone.set(h.order_id, new Date(h.created_at));
-              }
-            }
-
-            const inPeriodOrderIds: string[] = [];
-            const earnedByOrder = new Map<string, number>();
-            for (const o of doneOrders as any[]) {
-              const doneAt = firstDone.get(o.id);
-              if (doneAt && doneAt >= periodStart && doneAt <= periodEnd) {
-                inPeriodOrderIds.push(o.id);
-                const earned = Number(o.credit_earned) || 0;
-                earnedByOrder.set(o.id, earned);
-                sfEarned += earned;
-              }
-            }
-
-            if (inPeriodOrderIds.length > 0) {
-              const { data: sfItems, error: sfItemsErr } = await supabase
-                .from('order_items')
-                .select('order_id, total_price')
-                .in('order_id', inPeriodOrderIds)
-                .eq('is_support_fund_item', true);
-              if (sfItemsErr) throw sfItemsErr;
-              for (const it of sfItems ?? []) {
-                sfUsed += Number(it.total_price) || 0;
-              }
-            }
-          }
-        }
-
-        const startDate = new Date(p.start_date);
-        const endDate = new Date(p.end_date);
-        endDate.setHours(23, 59, 59, 999);
-
-        const daysTotal = Math.max(
-          1,
-          Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000),
-        );
-        const daysElapsedRaw = Math.ceil(
-          (Math.min(now.getTime(), endDate.getTime()) - startDate.getTime()) /
-            86400000,
-        );
-        const daysElapsed = Math.max(0, Math.min(daysTotal, daysElapsedRaw));
-        const daysRemaining = Math.max(0, daysTotal - daysElapsed);
-
-        const progressPct = target > 0 ? (actual / target) * 100 : 0;
-        const expectedPct = (daysElapsed / daysTotal) * 100;
-        const paceDeltaPct = progressPct - expectedPct;
-
-        const status = classifyStatus(
-          now,
-          startDate,
-          endDate,
-          target,
-          actual,
-          progressPct,
-          expectedPct,
-        );
-
-        return {
-          periodId: p.id,
-          companyId: p.company_id,
-          companyName: company?.company_name ?? 'Unknown',
-          netsuiteNumber: company?.netsuite_number ?? null,
-          subsidiaryId: company?.subsidiary_id ?? null,
-          isEnrolled,
-          periodName: p.period_name ?? '',
-          startDate: p.start_date,
-          endDate: p.end_date,
-          daysTotal,
-          daysElapsed,
-          daysRemaining,
-          target,
-          actual,
-          progressPct,
-          expectedPct,
-          paceDeltaPct,
-          status,
-          sfEarned,
-          sfUsed,
-          sfBalance: sfEarned - sfUsed,
-        };
-      }),
-    );
+      return {
+        periodId: p.id,
+        companyId: p.company_id,
+        companyName: company?.company_name ?? 'Unknown',
+        netsuiteNumber: company?.netsuite_number ?? null,
+        subsidiaryId: company?.subsidiary_id ?? null,
+        isEnrolled,
+        periodName: p.period_name ?? '',
+        startDate: p.start_date,
+        endDate: p.end_date,
+        daysTotal: m.daysTotal,
+        daysElapsed: m.daysElapsed,
+        daysRemaining: m.daysRemaining,
+        target: m.target,
+        actual: m.actual,
+        progressPct: m.progressPct,
+        expectedPct: m.expectedPct,
+        paceDeltaPct: m.paceDeltaPct,
+        status: m.status,
+        // SF only applies to enrolled companies — keep zeros otherwise.
+        sfEarned: isEnrolled ? m.sfEarned : 0,
+        sfUsed: isEnrolled ? m.sfUsed : 0,
+        sfBalance: isEnrolled ? m.sfBalance : 0,
+      };
+    });
 
     const kpis = aggregateKpis(rows);
-    const sfBehavior = await computeSfBehavior(supabase, periods, companyOptionsMap);
+    const enrolledPeriods = periods.filter(
+      (p: any) => companyOptionsMap.get(p.company_id)?.isEnrolled,
+    );
+    const sfBehavior = computeSfBehaviorDistribution(
+      enrolledPeriods,
+      inputs.doneOrders,
+      inputs.firstDone,
+      sfUsedByOrder,
+    );
 
     return NextResponse.json({ rows, kpis, sfBehavior, filterOptions });
   } catch (err: any) {
@@ -410,107 +351,5 @@ function aggregateKpis(rows: PeriodRow[]) {
     avgTopUp: toppingUpCount > 0 ? topUpTotal / toppingUpCount : 0,
     leftoverTotal,
     topUpTotal,
-  };
-}
-
-async function computeSfBehavior(
-  supabase: any,
-  periods: any[],
-  companyOptions: Map<string, { isEnrolled: boolean }>,
-) {
-  // Only enrolled companies count toward behavior distribution.
-  const enrolledPeriods = periods.filter(
-    (p: any) => companyOptions.get(p.company_id)?.isEnrolled,
-  );
-  const companyIds = Array.from(new Set(enrolledPeriods.map((p) => p.company_id)));
-  if (companyIds.length === 0) return emptySfBehavior();
-
-  const { data: doneOrders, error } = await supabase
-    .from('orders')
-    .select('id, company_id, credit_earned')
-    .eq('status', 'Done')
-    .in('company_id', companyIds);
-  if (error) throw error;
-  if (!doneOrders || doneOrders.length === 0) return emptySfBehavior();
-
-  const orderIds = doneOrders.map((o: any) => o.id);
-  const [historyRes, sfItemsRes] = await Promise.all([
-    supabase
-      .from('order_history')
-      .select('order_id, created_at')
-      .in('order_id', orderIds)
-      .eq('status_to', 'Done')
-      .order('created_at', { ascending: true }),
-    supabase
-      .from('order_items')
-      .select('order_id, total_price')
-      .in('order_id', orderIds)
-      .eq('is_support_fund_item', true),
-  ]);
-  if (historyRes.error) throw historyRes.error;
-  if (sfItemsRes.error) throw sfItemsRes.error;
-
-  const firstDone = new Map<string, Date>();
-  for (const h of historyRes.data ?? []) {
-    if (!firstDone.has(h.order_id)) {
-      firstDone.set(h.order_id, new Date(h.created_at));
-    }
-  }
-
-  const claimedByOrder = new Map<string, number>();
-  for (const it of sfItemsRes.data ?? []) {
-    claimedByOrder.set(
-      it.order_id,
-      (claimedByOrder.get(it.order_id) ?? 0) + (Number(it.total_price) || 0),
-    );
-  }
-
-  const periodsByCompany = new Map<string, Array<{ s: Date; e: Date }>>();
-  for (const p of enrolledPeriods) {
-    const s = new Date(p.start_date);
-    const e = new Date(p.end_date);
-    e.setHours(23, 59, 59, 999);
-    const list = periodsByCompany.get(p.company_id) ?? [];
-    list.push({ s, e });
-    periodsByCompany.set(p.company_id, list);
-  }
-
-  let under = 0,
-    full = 0,
-    over = 0;
-  let topUpSum = 0,
-    leftoverSum = 0;
-  let total = 0;
-
-  for (const o of doneOrders as any[]) {
-    const doneAt = firstDone.get(o.id);
-    if (!doneAt) continue;
-    const ranges = periodsByCompany.get(o.company_id) ?? [];
-    if (!ranges.some((r) => doneAt >= r.s && doneAt <= r.e)) continue;
-
-    const earned = Number(o.credit_earned) || 0;
-    const claimed = claimedByOrder.get(o.id) ?? 0;
-    if (earned === 0 && claimed === 0) continue;
-
-    total += 1;
-    const delta = earned - claimed;
-    if (Math.abs(delta) < 0.01) {
-      full += 1;
-    } else if (delta > 0) {
-      under += 1;
-      leftoverSum += delta;
-    } else {
-      over += 1;
-      topUpSum += -delta;
-    }
-  }
-
-  return {
-    underRedeemedPct: total > 0 ? (under / total) * 100 : 0,
-    fullyRedeemedPct: total > 0 ? (full / total) * 100 : 0,
-    toppedUpPct: total > 0 ? (over / total) * 100 : 0,
-    avgTopUp: over > 0 ? topUpSum / over : 0,
-    avgLeftover: under > 0 ? leftoverSum / under : 0,
-    sampleSize: total,
   };
 }
