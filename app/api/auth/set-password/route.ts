@@ -18,8 +18,9 @@ import {
   SET_PASSWORD_PER_TOKEN_RATE,
   enforceRateLimit,
 } from '../../../../platform/rateLimit';
+import { hashPasswordSetupToken } from '../../../../lib/passwordSetupTokens';
 
-const MIN_PASSWORD_LENGTH = 6;
+const MIN_PASSWORD_LENGTH = 8;
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,11 +51,13 @@ export async function POST(request: NextRequest) {
     });
     if (!limited.ok) return limited.response;
 
-    // Fetch the token row
+    // Fetch the token row — tokens are stored hashed; the raw token lives
+    // only in the emailed URL. (Outstanding pre-hashing links become
+    // invalid; they expire within 24h anyway.)
     const { data: tokenRow, error: tokenError } = await supabaseAdmin
       .from('password_setup_tokens')
       .select('token, user_id, expires_at, used_at')
-      .eq('token', token)
+      .eq('token', hashPasswordSetupToken(token))
       .maybeSingle();
 
     if (tokenError) {
@@ -104,10 +107,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Mark token used so it can never be replayed
-    await supabaseAdmin
+    const { error: markUsedErr } = await supabaseAdmin
       .from('password_setup_tokens')
       .update({ used_at: new Date().toISOString() })
-      .eq('token', token);
+      .eq('token', hashPasswordSetupToken(token));
+    if (markUsedErr) {
+      // Password is already set — log loudly, the token will still expire.
+      console.error('[set-password] failed to mark token used:', markUsedErr.message);
+    }
 
     // Auto-login: sign in with the password we just set, return session tokens.
     // We use a non-service-role client because signInWithPassword is a "user"-

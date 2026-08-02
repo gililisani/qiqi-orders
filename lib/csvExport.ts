@@ -169,9 +169,11 @@ export function generateNetSuiteCSV(order: OrderForExport): string {
 
   console.log('CSV Generation - Generated', rows.length, 'total rows');
 
-  // Convert to CSV format
+  // Convert to CSV format. Embedded quotes must be doubled per RFC 4180 —
+  // a company or product name containing " previously corrupted the whole
+  // NetSuite import row.
   const csvContent = [headers, ...rows]
-    .map(row => row.map(field => `"${field}"`).join(','))
+    .map(row => row.map(field => `"${String(field ?? '').replace(/"/g, '""')}"`).join(','))
     .join('\n');
 
   console.log('CSV Generation - CSV content generated successfully');

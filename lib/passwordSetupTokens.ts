@@ -13,6 +13,15 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 export const PASSWORD_SETUP_TOKEN_TTL_HOURS = 24;
 
+/**
+ * Tokens are stored HASHED (like login codes) — a leaked table dump or
+ * read-only credential must never yield live password-reset links. The
+ * raw token exists only in the emailed URL.
+ */
+export function hashPasswordSetupToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
 export interface CreatedPasswordSetupLink {
   token: string;
   url: string;
@@ -39,7 +48,7 @@ export async function createPasswordSetupLink(
   const { error } = await supabaseAdmin
     .from('password_setup_tokens')
     .insert({
-      token,
+      token: hashPasswordSetupToken(token),
       user_id: params.userId,
       expires_at: expiresAt,
       created_by: params.createdBy ?? null,
@@ -65,5 +74,8 @@ export async function deletePasswordSetupToken(
   supabaseAdmin: SupabaseClient,
   token: string
 ): Promise<void> {
-  await supabaseAdmin.from('password_setup_tokens').delete().eq('token', token);
+  await supabaseAdmin
+    .from('password_setup_tokens')
+    .delete()
+    .eq('token', hashPasswordSetupToken(token));
 }
