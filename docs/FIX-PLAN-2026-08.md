@@ -56,18 +56,38 @@ Three changes, all small:
 revenue loss per line, silently. Add `NOT NULL CHECK (case_pack > 0)`, make the
 field required, and replace the `|| 1` fallbacks with a hard error.
 
-### Then, before writing the RLS migration (WP2), get answers to two questions
-1. **Is all-partners-see-all-DAM-assets intentional?** (audit 10.2) The code says
-   "removed by product decision"; `CLAUDE.md` says the opposite. The fix differs
-   completely depending on the answer.
-2. **Run the storage-policy queries** (audit Part 10 preamble). No
-   `storage.objects` policy exists in any migration — the reconstruction is from
-   deleted git history, so 10.1 and 10.3 are unconfirmed until checked:
-   ```sql
-   select id, public, file_size_limit, allowed_mime_types from storage.buckets;
-   select policyname, cmd, roles, qual, with_check
-   from pg_policies where schemaname = 'storage';
-   ```
+### P6 — Baseline the real schema (audit Part 13)
+Do this early; it makes every later task cheaper and stops the next agent
+reasoning from a repo that doesn't match production.
+
+```bash
+pg_dump --schema-only --no-owner --no-privileges "$SUPABASE_DB_URL" > supabase/schema-baseline.sql
+```
+
+`supabase/migrations/` is **not** authoritative: the RLS policies for ten
+client-facing tables, every `storage.objects` policy, the money columns
+themselves, and the bodies of `generate_sli_number()` and `is_admin()` exist only
+in production or in deleted git history. This already caused one false-critical
+in the first sweep. Add `backups/` to `.gitignore` before running anything that
+dumps data.
+
+### Answered — do not re-litigate
+**DAM is deliberately open to every partner** (owner, 2026-08-02): distributors
+should see the whole library so they can build campaigns. Audit 10.2 is resolved
+as "not a defect", audit 3.8's blanket read on the asset tables is intentional,
+`CLAUDE.md` has been corrected, and `company_dam_audiences` is confirmed dead and
+can be dropped. **Do not restore per-company asset scoping.**
+
+### Still open — needs a production query before WP2
+Run the storage-policy queries (audit Part 10 preamble). No `storage.objects`
+policy exists in any migration, so 10.1 (possible cross-company read of note
+attachments) and 10.3 (possibly writable public image buckets) are **unconfirmed
+reconstructions from deleted git history**:
+```sql
+select id, public, file_size_limit, allowed_mime_types from storage.buckets;
+select policyname, cmd, roles, qual, with_check
+from pg_policies where schemaname = 'storage';
+```
 
 ### New work packages from the second sweep
 - **WP8 — CI.** There is none. `next build`'s typecheck is the entire deploy

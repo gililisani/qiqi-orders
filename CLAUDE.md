@@ -5,7 +5,7 @@ B2B order management portal for Qiqi Global. Next.js 14 App Router, Supabase (Po
 ## Audiences
 
 - **Admin** — Qiqi staff. Full CRUD on companies, users, products, orders, DAM. Uses `/admin/*`.
-- **Client** — partner/customer users scoped to a single company. Uses `/client/*`. Can create/edit own orders, browse DAM assets entitled to their company, view their company's notes.
+- **Client** — partner/customer users scoped to a single company. Uses `/client/*`. Can create/edit own orders, view their company's notes, and browse **the entire DAM library**. DAM is deliberately open to every partner (confirmed 2026-08-02) so distributors can build their own campaigns — there is no per-company asset entitlement, and `company_dam_audiences` is dead. Don't "restore" scoping there.
 
 ## Auth & role model
 
@@ -35,7 +35,7 @@ Policies (admin = full CRUD on every table; client rules below):
 | `order_items` | parent order in own company | CRUD when parent order is own-company AND status in (`Draft`,`Open`) |
 | `Products` | all (catalog) | none |
 | `Locations`, `classes`, `subsidiaries`, `support_fund_levels` | only the row linked to client's company via `companies.{location_id,class_id,subsidiary_id,support_fund_id}` | none |
-| `note_replies` | admin-only | admin-only |
+| `note_replies` | own company's replies on notes with `visible_to_client` | INSERT own replies (verified in prod 2026-08-02; this table is **not** admin-only) |
 | `client_note_views` | own rows; admin sees all | own rows only |
 
 Notes:
@@ -55,7 +55,9 @@ Notes:
 - Outbound mail goes through Microsoft Graph (`lib/emailService.ts`). Sender is locked to `orders@qiqiglobal.com`.
 - HTML email bodies must HTML-escape every user-supplied field — use `lib/htmlEscape.ts`. Header fields (subject) must also strip CR/LF.
 - DAM uses AWS S3. Storage path: `{assetId}/{timestamp}-{sanitizedFileName}`. Filename sanitization lives inline in `app/api/dam/assets/init/route.ts`.
-- NetSuite (`lib/netsuite.ts`) — scaffolding exists but **nothing is wired up yet**. This is the next major feature.
+- NetSuite (`lib/netsuite.ts`) — **fully wired**: order → Sales Order → Invoice → reconcile, cross-subsidiary fulfilment, Amazon FBA monthly import. ~19 API routes under `app/api/netsuite/*`.
+- **Stripe card payments are LIVE** (`lib/stripe.ts`, `app/api/stripe/{request-payment,void-payment,webhook}`). Admin sends a payment request → NetSuite invoice gets shipping + card-fee lines → Stripe invoice is created, finalised and emailed → `invoice.paid` webhook flips the order to paid and records a NetSuite Customer Payment. Gated to Qiqi INC companies via `companies.enable_credit_card_payments`. **See `docs/AUDIT-2026-08-02.md` Part 8 before touching this — there are known unfixed money-loss paths.**
+- ShipHero / 3PL (`lib/fulfillment/`) — provider-adapter scaffolding; correctness **not yet audited**.
 
 ## Workflow conventions (project owner's preferences)
 
