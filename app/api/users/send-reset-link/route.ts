@@ -31,17 +31,35 @@ export async function POST(request: NextRequest) {
     const admin = await requireAdmin(request);
 
     const body = await request.json();
-    const { userId, userEmail, userName, companyId, companyName } = body;
+    const { userId, userName, companyId, companyName } = body;
 
-    if (!userId || !userEmail) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Missing required fields: userId and userEmail' },
+        { error: 'Missing required field: userId' },
         { status: 400 }
       );
     }
 
     const supabaseAdmin = createServiceRoleClient();
-    const normalizedEmail = normalizeEmailForRateLimit(userEmail);
+
+    // The destination email ALWAYS comes from the auth record — never from
+    // the request body. A body-supplied address would let any admin mint a
+    // set-password link for any account and deliver it to themselves.
+    const { data: authUser, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (userError || !authUser?.user) {
+      console.error('[send-reset-link] failed to fetch user:', userError);
+      return NextResponse.json(
+        { error: `Failed to fetch user: ${userError?.message || 'unknown'}` },
+        { status: 500 }
+      );
+    }
+    if (!authUser.user.email) {
+      return NextResponse.json(
+        { error: 'This account has no email address on record.' },
+        { status: 400 }
+      );
+    }
+    const normalizedEmail = normalizeEmailForRateLimit(authUser.user.email);
 
     const limited = await enforceRateLimit(supabaseAdmin, {
       key: `send-reset-link:actor:${admin.id}:email:${normalizedEmail}`,
@@ -57,15 +75,6 @@ export async function POST(request: NextRequest) {
     });
     if (!globalLimit.ok) return globalLimit.response;
 
-    // Determine whether this is a new user (welcome flow) or an existing user (reset flow)
-    const { data: authUser, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
-    if (userError || !authUser?.user) {
-      console.error('[send-reset-link] failed to fetch user:', userError);
-      return NextResponse.json(
-        { error: `Failed to fetch user: ${userError?.message || 'unknown'}` },
-        { status: 500 }
-      );
-    }
     const isNewUser = !authUser.user.last_sign_in_at;
 
     let setupLink: { url: string; token: string };

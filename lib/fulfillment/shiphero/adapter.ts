@@ -120,9 +120,11 @@ export class ShipHeroProvider implements FulfillmentProvider {
     urlToken?: string | null;
   }): NormalizedFulfillmentEvent | null {
     // Verify the shared secret carried in the callback URL before trusting the
-    // payload. (ShipHero also exposes a per-webhook shared_signature_secret for
-    // HMAC verification — a future hardening once we capture the header scheme.)
-    if (this.config.webhookSecret && args.urlToken !== this.config.webhookSecret) {
+    // payload. Fail CLOSED: with no secret configured we cannot verify the
+    // caller, so nothing is trusted. (ShipHero also exposes a per-webhook
+    // shared_signature_secret for HMAC verification — a future hardening once
+    // we capture the header scheme.)
+    if (!this.config.webhookSecret || args.urlToken !== this.config.webhookSecret) {
       return null;
     }
 
