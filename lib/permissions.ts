@@ -85,14 +85,14 @@ export function userHasPermission(
  *  access at all (caller should redirect to /forbidden). */
 export function firstAllowedClientArea(
   permissions: string[] | null | undefined,
-): '/client' | '/client/assets' | '/client/company' | null {
+): '/client' | '/client/assets' | '/client/performance' | null {
   const perms = Array.isArray(permissions) ? permissions : [];
   // /client (the dashboard) is orders-centric, so 'orders' is the natural home.
   if (perms.includes('orders')) return '/client';
   // DAM library lives at /client/assets in this app.
   if (perms.includes('dam')) return '/client/assets';
-  // "Your company" surfaces company-level info gated on the reports permission.
-  if (perms.includes('reports')) return '/client/company';
+  // Reports-only clients land on their performance page.
+  if (perms.includes('reports')) return '/client/performance';
   return null;
 }
 

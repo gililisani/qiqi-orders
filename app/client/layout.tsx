@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   ShoppingCart,
+  TrendingUp,
   Image as ImageIcon,
   StickyNote,
   Building2,
@@ -60,10 +61,11 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
   {
     items: [
-      { label: 'Dashboard', href: '/client',         icon: <LayoutDashboard />, permission: 'orders' },
-      { label: 'Orders',    href: '/client/orders',  icon: <ShoppingCart />,    permission: 'orders' },
-      { label: 'Assets',    href: '/client/assets',  icon: <ImageIcon />,       permission: 'dam' },
-      { label: 'Notes',     href: '/client/notes',   icon: <StickyNote />, key: 'notes', permission: 'orders' },
+      { label: 'Dashboard',   href: '/client',             icon: <LayoutDashboard />, permission: 'orders' },
+      { label: 'Orders',      href: '/client/orders',      icon: <ShoppingCart />,    permission: 'orders' },
+      { label: 'Performance', href: '/client/performance', icon: <TrendingUp />,      permission: 'reports' },
+      { label: 'Assets',      href: '/client/assets',      icon: <ImageIcon />,       permission: 'dam' },
+      { label: 'Notes',       href: '/client/notes',       icon: <StickyNote />, key: 'notes', permission: 'orders' },
     ],
   },
   {

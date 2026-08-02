@@ -180,6 +180,37 @@ export function computePeriodMetrics(
   };
 }
 
+/** Resolve a drill-down window key (this-month / last-month / this-year /
+ *  last-year / custom) to a concrete UTC range. Shared by the admin
+ *  drill-down route and the client performance route. */
+export function resolveWindowRange(
+  window: string,
+  fromParam: string | null,
+  toParam: string | null
+): { from: Date; to: Date } {
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth();
+
+  if (window === 'last-month') {
+    return { from: new Date(Date.UTC(y, m - 1, 1)), to: new Date(Date.UTC(y, m, 0, 23, 59, 59, 999)) };
+  }
+  if (window === 'this-year') {
+    return { from: new Date(Date.UTC(y, 0, 1)), to: now };
+  }
+  if (window === 'last-year') {
+    return { from: new Date(Date.UTC(y - 1, 0, 1)), to: new Date(Date.UTC(y - 1, 11, 31, 23, 59, 59, 999)) };
+  }
+  if (window === 'custom') {
+    if (!fromParam || !toParam || !/^\d{4}-\d{2}-\d{2}$/.test(fromParam) || !/^\d{4}-\d{2}-\d{2}$/.test(toParam)) {
+      throw new Error('custom window requires valid from and to dates');
+    }
+    return { from: new Date(`${fromParam}T00:00:00.000Z`), to: new Date(`${toParam}T23:59:59.999Z`) };
+  }
+  // default: this-month
+  return { from: new Date(Date.UTC(y, m, 1)), to: now };
+}
+
 /** First-Done timestamp per order — "first Done wins" is the canonical
  *  done-date rule everywhere. Rows must be sorted created_at ascending. */
 export function buildFirstDoneMap(
