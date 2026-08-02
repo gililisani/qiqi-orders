@@ -157,7 +157,7 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
     if (!ok) return;
     setDeleting(true);
     try {
-      const res = await fetchWithAuth(`/api/orders/${orderId}`, { method: 'DELETE' });
+      const res = await fetchWithAuth(`/api/orders/delete?orderId=${orderId}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to delete order.');
       toast.success('Draft deleted.');

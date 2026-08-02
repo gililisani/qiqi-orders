@@ -82,9 +82,15 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (admin) {
-      return NextResponse.json({ 
-        success: true, 
-        user: { ...admin, role: 'Admin' } 
+      // A disabled account must not be able to bootstrap a session.
+      // (Admins looking up OTHER users still see disabled profiles — needed
+      // for the edit pages.)
+      if (admin.enabled !== true && requester.id === userId) {
+        return NextResponse.json({ error: 'Account disabled' }, { status: 403 });
+      }
+      return NextResponse.json({
+        success: true,
+        user: { ...admin, role: 'Admin' }
       });
     }
 
@@ -95,9 +101,12 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (client) {
-      return NextResponse.json({ 
-        success: true, 
-        user: { ...client, role: 'Client' } 
+      if (client.enabled !== true && requester.id === userId) {
+        return NextResponse.json({ error: 'Account disabled' }, { status: 403 });
+      }
+      return NextResponse.json({
+        success: true,
+        user: { ...client, role: 'Client' }
       });
     }
 

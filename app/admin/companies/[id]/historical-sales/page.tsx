@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Plus, Pencil, Trash2 } from 'lucide-react';
 
 import { supabase } from '../../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
 import { PageHeader } from '../../../../components/qq/page-header';
 import { Card } from '../../../../components/qq/card';
 import { Button } from '../../../../components/qq/button';
@@ -94,13 +95,19 @@ export default function CompanyHistoricalSalesPage() {
 
   const recalcTargets = async () => {
     try {
-      await fetch('/api/target-periods/recalculate', {
+      // fetchWithAuth, not fetch — plain fetch 401'd silently and progress
+      // never recalculated after historical-sales edits.
+      const res = await fetchWithAuth('/api/target-periods/recalculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ companyId }),
       });
-    } catch {
-      /* non-fatal */
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        console.error('Target-period recalculation failed:', d.error || res.status);
+      }
+    } catch (err) {
+      console.error('Target-period recalculation failed:', err);
     }
   };
 

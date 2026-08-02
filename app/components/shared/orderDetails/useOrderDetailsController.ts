@@ -219,11 +219,18 @@ export function useOrderDetailsController(params: {
         const statusChangedFromDone = oldStatus === 'Done' && order.status !== 'Done';
         if ((statusChangedToDone || statusChangedFromDone) && order.company_id) {
           try {
-            await fetch('/api/target-periods/recalculate', {
+            // fetchWithAuth, not fetch — the route requires a Bearer token,
+            // so the plain-fetch version failed 401 on every call and
+            // target-period progress never recalculated on completion.
+            const recalcRes = await fetchWithAuth('/api/target-periods/recalculate', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ companyId: order.company_id }),
             });
+            if (!recalcRes.ok) {
+              const d = await recalcRes.json().catch(() => ({}));
+              console.error('Failed to recalculate target periods:', d.error || recalcRes.status);
+            }
           } catch (recalcError) {
             // Log but don't throw - recalculation failure shouldn't block status change
             console.error('Failed to recalculate target periods:', recalcError);
