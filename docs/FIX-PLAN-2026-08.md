@@ -47,8 +47,25 @@ know:
 - ⏳ WP0 damage-count SQL handed to owner; P5 (`case_pack`) NOT done yet —
   it's the first item of the next session.
 
-**Next up: Session 2 (money path)** — P5, P3, P4, WP4.1, plus the
-`Prefer: return=minimal` verification/fix.
+**SESSION 2 IS DONE** (commits `998b1ac`..`117d54f`):
+- ✅ P4 — Stripe: webhook mark-paid checked + reordered before NS recording
+  (retry can't double-record); void-payment refuses paid invoices and fails
+  closed; request-payment has idempotency keys + persist-before-email.
+- ✅ P3 — `lib/orderPricing.ts` recomputes every money field from the catalog;
+  `push-so` 409s on mismatch (10 unit tests). Order writes are still
+  browser-direct — the service-role RPC move remains open (WP3-adjacent).
+- ✅ P5 — case_pack: bulk-upload hard-errors, both product forms require a
+  positive integer, migration `20260802140000_products_case_pack_constraint.sql`
+  awaits the owner (run its check query first).
+- ✅ WP4.1 — users/admins created WITH permissions (WP0 showed 0 damaged rows,
+  no backfill needed). The false "full access" alert is now true.
+- ✅ `Prefer: return=minimal` removed from guards.ts + 5 DAM local factories.
+- WP0 results (owner-run): 0/55 clients without permissions; 6 companies
+  without target periods (list query below — likely house accounts, review);
+  0 products missing category/credit flag.
+
+**Next up: Session 3 (make the repo true)** — P6 schema baseline, storage-policy
+queries, WP2 RLS cleanup migration.
 
 ---
 
