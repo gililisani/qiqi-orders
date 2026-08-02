@@ -78,36 +78,52 @@ export async function createOrderInvoice(
     daysUntilDue?: number;
     description?: string;
     metadata?: Record<string, string>;
+    /** Stable key for this request attempt. With it, a crash/network retry of
+     *  the same attempt makes Stripe return the SAME invoice instead of
+     *  minting a duplicate. */
+    idempotencyKey?: string;
   },
 ): Promise<CreatedStripeInvoice> {
   const currency = opts.currency || 'usd';
+  const requestOpts = (suffix: string): Stripe.RequestOptions | undefined =>
+    opts.idempotencyKey ? { idempotencyKey: `${opts.idempotencyKey}-${suffix}` } : undefined;
 
   // 1. Create the invoice shell (send_invoice = hosted link + emailable, due
   //    in N days so the client can pay later). Exclude stray pending items.
-  const invoice = await stripe.invoices.create({
-    customer: opts.customerId,
-    collection_method: 'send_invoice',
-    days_until_due: opts.daysUntilDue ?? 2,
-    auto_advance: false,
-    description: opts.description,
-    metadata: opts.metadata,
-    pending_invoice_items_behavior: 'exclude',
-  });
+  const invoice = await stripe.invoices.create(
+    {
+      customer: opts.customerId,
+      collection_method: 'send_invoice',
+      days_until_due: opts.daysUntilDue ?? 2,
+      auto_advance: false,
+      description: opts.description,
+      metadata: opts.metadata,
+      pending_invoice_items_behavior: 'exclude',
+    },
+    requestOpts('inv'),
+  );
   const invoiceId = invoice.id as string;
 
   // 2. Attach the line items to this specific invoice.
-  for (const line of opts.lines) {
-    await stripe.invoiceItems.create({
-      customer: opts.customerId,
-      invoice: invoiceId,
-      amount: Math.round(line.amountCents),
-      currency,
-      description: line.description,
-    });
+  for (const [i, line] of opts.lines.entries()) {
+    await stripe.invoiceItems.create(
+      {
+        customer: opts.customerId,
+        invoice: invoiceId,
+        amount: Math.round(line.amountCents),
+        currency,
+        description: line.description,
+      },
+      requestOpts(`item${i}`),
+    );
   }
 
   // 3. Finalize → hosted_invoice_url + number become available.
-  const finalized = await stripe.invoices.finalizeInvoice(invoiceId, { auto_advance: false });
+  const finalized = await stripe.invoices.finalizeInvoice(
+    invoiceId,
+    { auto_advance: false },
+    requestOpts('fin'),
+  );
 
   return {
     invoiceId: finalized.id as string,

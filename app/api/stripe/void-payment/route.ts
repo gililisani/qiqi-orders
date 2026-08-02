@@ -37,12 +37,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No pending Stripe payment to void.' }, { status: 400 });
     }
 
-    // Void the Stripe invoice (non-fatal if it's already void/uncollectible).
+    // Ask Stripe for the invoice's REAL status first. Our local paid-check
+    // above can race the webhook: if the client paid seconds ago, voiding is
+    // impossible and clearing stripe_invoice_id below would orphan the
+    // payment (the webhook matches orders by that id — it could never mark
+    // this order paid).
     const stripe = createStripeClient();
-    try {
-      await voidInvoice(stripe, order.stripe_invoice_id);
-    } catch (e: any) {
-      console.error('void-payment: Stripe void failed (continuing):', e?.message);
+    const stripeInvoice = await stripe.invoices.retrieve(order.stripe_invoice_id);
+    if (stripeInvoice.status === 'paid') {
+      return NextResponse.json(
+        {
+          error:
+            'Stripe reports this invoice as already PAID — it cannot be voided. ' +
+            'The payment will sync to the order shortly; refresh in a minute.',
+        },
+        { status: 409 },
+      );
+    }
+
+    // Void unless Stripe says it's already void. On failure, change NOTHING
+    // locally — a cleared local state with a live open invoice means the
+    // client can still pay an invoice we no longer track.
+    if (stripeInvoice.status !== 'void') {
+      try {
+        await voidInvoice(stripe, order.stripe_invoice_id);
+      } catch (e: any) {
+        console.error('void-payment: Stripe void failed:', e?.message);
+        return NextResponse.json(
+          { error: `Stripe void failed: ${e?.message}. Nothing was changed — try again.` },
+          { status: 502 },
+        );
+      }
     }
 
     // Remove the card-fee line from the NetSuite invoice + refresh totals.
@@ -65,7 +90,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await supabase.from('orders').update(patch).eq('id', orderId);
+    const { error: updateErr } = await supabase.from('orders').update(patch).eq('id', orderId);
+    if (updateErr) {
+      console.error('void-payment: local update failed after Stripe void:', updateErr.message);
+      return NextResponse.json(
+        {
+          error:
+            `The Stripe invoice was voided but updating the order failed (${updateErr.message}). ` +
+            'Click Void again to finish clearing the order.',
+        },
+        { status: 500 },
+      );
+    }
 
     await supabase.from('order_history').insert([{
       action_type: 'order_updated',

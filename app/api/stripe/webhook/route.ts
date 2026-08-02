@@ -56,6 +56,25 @@ export async function POST(request: NextRequest) {
 
         // Idempotent: ignore if unknown or already paid.
         if (order && order.payment_status !== 'paid') {
+          // Mark paid FIRST, and check the write. supabase-js does not throw on
+          // errors — an unchecked failure here would return 200, Stripe would
+          // never retry, and the order would stay unpaid locally while paid in
+          // Stripe. Ordering also matters: paid-status is the idempotency gate
+          // above, so persisting it before the NetSuite call means a retry
+          // after any later failure can never double-record the NS payment.
+          const { error: paidErr } = await supabase
+            .from('orders')
+            .update({
+              payment_status: 'paid',
+              paid_at: new Date().toISOString(),
+              invoice_amount_remaining: 0,
+            })
+            .eq('id', order.id);
+          if (paidErr) {
+            console.error('stripe webhook: failed to mark order paid:', paidErr.message);
+            return NextResponse.json({ error: 'DB update failed' }, { status: 500 });
+          }
+
           // Phase 2: record a NetSuite Customer Payment against the invoice so
           // NS AR shows it paid. Non-fatal — the Stripe money is real regardless;
           // a failure just means the owner records it manually (we note that).
@@ -69,23 +88,23 @@ export async function POST(request: NextRequest) {
               const { paymentId } = await ns.recordCustomerPayment(order.netsuite_invoice_id, account.nsId);
               nsPaymentId = paymentId;
               nsNote = ` NetSuite payment ${paymentId} recorded.`;
+
+              const { error: nsIdErr } = await supabase
+                .from('orders')
+                .update({ ns_customer_payment_id: nsPaymentId })
+                .eq('id', order.id);
+              if (nsIdErr) {
+                // Order is already paid, so no retry path can double-record —
+                // this only loses the NS payment reference. Log loudly.
+                console.error('stripe webhook: failed to persist ns_customer_payment_id:', nsIdErr.message);
+              }
             } catch (e: any) {
               console.error('stripe webhook: NetSuite payment recording failed:', e?.message);
               nsNote = ' ⚠️ NetSuite payment NOT recorded — record it manually.';
             }
           }
 
-          await supabase
-            .from('orders')
-            .update({
-              payment_status: 'paid',
-              paid_at: new Date().toISOString(),
-              invoice_amount_remaining: 0,
-              ns_customer_payment_id: nsPaymentId,
-            })
-            .eq('id', order.id);
-
-          await supabase.from('order_history').insert([{
+          const { error: histErr } = await supabase.from('order_history').insert([{
             action_type: 'order_updated',
             order_id: order.id,
             status_from: order.status,
@@ -94,6 +113,11 @@ export async function POST(request: NextRequest) {
             changed_by_name: 'System',
             changed_by_role: 'admin',
           }]);
+          if (histErr) {
+            // Order is marked paid — history is secondary. Log, don't retry
+            // (a 500 here would re-run nothing: the paid gate skips it all).
+            console.error('stripe webhook: history insert failed:', histErr.message);
+          }
         }
       } catch (e: any) {
         // Log and still 200 — Stripe retries on non-2xx; a DB hiccup shouldn't

@@ -150,23 +150,30 @@ export async function POST(request: NextRequest) {
     if (shippingCents > 0) lines.push({ description: 'Shipping', amountCents: shippingCents });
     if (feeCents > 0) lines.push({ description: `Credit Card Processing Fee (${feePercent}%)`, amountCents: feeCents });
 
+    // Idempotency key stable across crash-retries of the SAME attempt: it is
+    // derived from the count of prior successful sends, which only increments
+    // after persist+history succeed below. A retry after a mid-flight crash
+    // reuses the key, so Stripe returns the same invoice instead of minting a
+    // duplicate; a legitimate re-send after a void gets a fresh key.
+    const { count: priorSends, error: sendsErr } = await supabase
+      .from('order_history')
+      .select('id', { count: 'exact', head: true })
+      .eq('order_id', orderId)
+      .like('notes', 'Sent for payment%');
+    if (sendsErr) throw new Error(`history count: ${sendsErr.message}`);
+
     const stripeInvoice = await createOrderInvoice(stripe, {
       customerId,
       lines,
       daysUntilDue: 2,
       description: `Qiqi Invoice ${details.invoiceNumber}`,
       metadata: { order_id: order.id, ns_invoice_id: nsInvoiceId },
+      idempotencyKey: `req-pay-${orderId}-a${priorSends ?? 0}`,
     });
 
-    // Email the hosted link to the client (non-fatal).
-    try {
-      await sendInvoiceEmail(stripe, stripeInvoice.invoiceId);
-    } catch (e: any) {
-      console.error('request-payment: sendInvoiceEmail failed:', e?.message);
-    }
-
-    // --- 6. Persist ---
-    await supabase
+    // --- 6. Persist BEFORE emailing — an emailed invoice we have no record of
+    // is unrecoverable; an un-emailed invoice we know about is a button click.
+    const { error: persistErr } = await supabase
       .from('orders')
       .update({
         netsuite_invoice_id: nsInvoiceId,
@@ -181,8 +188,23 @@ export async function POST(request: NextRequest) {
         status: 'Ready',
       })
       .eq('id', orderId);
+    if (persistErr) {
+      console.error(
+        `request-payment: PERSIST FAILED for order ${orderId} — Stripe invoice ` +
+          `${stripeInvoice.number} (${stripeInvoice.invoiceId}) exists but is not linked locally:`,
+        persistErr.message,
+      );
+      return NextResponse.json(
+        {
+          error:
+            `Stripe invoice ${stripeInvoice.number} was created but saving it to the order failed ` +
+            `(${persistErr.message}). Click "Send for Payment" again — the same invoice will be reused.`,
+        },
+        { status: 500 },
+      );
+    }
 
-    await supabase.from('order_history').insert([{
+    const { error: histErr } = await supabase.from('order_history').insert([{
       action_type: 'status_change',
       order_id: orderId,
       status_from: order.status,
@@ -193,6 +215,19 @@ export async function POST(request: NextRequest) {
       changed_by_name: 'System',
       changed_by_role: 'admin',
     }]);
+    if (histErr) {
+      // Order is fully linked — losing the history line is bad but not
+      // money-affecting. Log loudly and continue.
+      console.error('request-payment: history insert failed:', histErr.message);
+    }
+
+    // Email the hosted link to the client (non-fatal — the admin sees the
+    // link and can resend from Stripe if this fails).
+    try {
+      await sendInvoiceEmail(stripe, stripeInvoice.invoiceId);
+    } catch (e: any) {
+      console.error('request-payment: sendInvoiceEmail failed:', e?.message);
+    }
 
     return NextResponse.json({
       success: true,
