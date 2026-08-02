@@ -4,10 +4,58 @@ Companion to `docs/AUDIT-2026-08-02.md` (the findings). This file is the **plan*
 what to do, in what order, with the context a new session needs so it doesn't
 have to re-derive any of it.
 
-**Current state: nothing is fixed.** The audit is complete and committed
-(`04b6d42`, `9b9b7c3`). No application code has been changed in response to it.
-The only code change in this whole session was an unrelated cleanup
-(`6fd9cb1` — deleted `calculateTargetPeriodProgress`, migrated its two callers).
+## VERIFICATION + SESSION 1 STATUS (2026-08-02, second session) — read first
+
+A separate session adversarially re-verified ~35 of this plan's claims with five
+parallel review agents. **Nearly all confirmed.** Corrections the executor MUST
+know:
+
+- **`TopNavbar.tsx` is NOT dead** — imported by the live `/admin/design/form-kit`
+  page (WP6 list is wrong on this one item; deleting it breaks the build).
+- **1.2 (packing slip)**: UI bug certain, but whether client writes persist
+  depends on live `packing_slips` RLS (table predates tracked migrations) —
+  resolve with the WP2 production queries before calling it exposure.
+- **1.3 (disabled users)**: guards + RLS helpers DO check `enabled`; the real
+  gaps are `user-profile` GET, both layouts, and hand-rolled lookups (e.g. the
+  SLI route ignores `enabled`). Fix list unchanged, severity lower.
+- **1.5 has a 4th instance**: `admins/[id]/edit` `handleDelete` also calls
+  browser-side `auth.admin.deleteUser` unchecked — "deleted" admins keep a live
+  credential.
+- Verified-good (do not re-audit): Stripe webhook signature check, cron-route
+  auth, no tracked secrets, token validation, rate limiting on all public auth
+  endpoints, orders RLS.
+- New findings folded in: `Prefer: return=minimal` on `createServiceRoleClient`
+  (guards.ts:15) likely nulls `.insert().select()` results (SLI signers, Amazon
+  item-map — needs one live test); no MFA exists at all (2FA dirs were empty
+  scaffolding, now deleted); password floor is 6 chars (set-password);
+  feedback route trusts body identity; email subjects use `escapeHtml` instead
+  of `sanitizeEmailHeader`; root `middleware.ts` gates nothing (vestigial).
+
+**SESSION 1 IS DONE** (commits `64728e5`..`deaafc3`):
+- ✅ P1 — send-reset-link now ignores body email, sends to auth-record email.
+- ✅ ShipHero webhook — fails closed without secret, `.or()` injection guarded,
+  tracking preserved, failed writes return 500 (was silent 200).
+- ✅ P2 — `next@14.2.35`, axios/svg2pdf bumped, `nodemailer` removed.
+  Remaining npm-audit criticals (jspdf major, fast-xml-parser via aws-sdk)
+  deferred — breaking upgrades.
+- ✅ Sentry wired (server captures `console.error` too) — **inert until the
+  owner sets `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` in Vercel.**
+- ✅ CI — GitHub Action: `tsc --noEmit` + `npm test` on every push/PR.
+  ESLint config still deferred (rest of WP8).
+- ✅ `/_next/image` host pinned to our Supabase project (was `*.supabase.co`).
+- ✅ Stale June docs deleted; empty 2FA dirs deleted.
+- ⏳ WP0 damage-count SQL handed to owner; P5 (`case_pack`) NOT done yet —
+  it's the first item of the next session.
+
+**Next up: Session 2 (money path)** — P5, P3, P4, WP4.1, plus the
+`Prefer: return=minimal` verification/fix.
+
+---
+
+**Original state note: nothing below reflects Session 1.** The audit is complete
+and committed (`04b6d42`, `9b9b7c3`). The only code change in the audit session
+was an unrelated cleanup (`6fd9cb1` — deleted `calculateTargetPeriodProgress`,
+migrated its two callers).
 
 ---
 
