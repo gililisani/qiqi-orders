@@ -114,8 +114,32 @@ Write it, push it, and hand the owner the file to run — do not assume it ran.
 - `slis`: drop the four granular admin policies, keep "Admins can manage all
   SLIs" rewritten with `auth_is_admin()`.
 
-Before writing it, re-run the policy-body query for `orders` and the DAM tables
-(see "Open analysis" below) so the migration covers them in one pass.
+DAM (from audit 3.8–3.10 — these were confirmed after the first draft of this
+plan):
+- `dam_assets_read_authenticated` and the blanket-authenticated reads on
+  `dam_asset_audience_map`, `dam_asset_locale_map`, `dam_asset_region_map`,
+  `dam_asset_renditions`, `dam_asset_tag_map`, `dam_asset_versions` give **every
+  logged-in user the entire asset catalogue plus the entitlement map**. Replace
+  the asset/map policies with company-entitlement-scoped ones (reuse the logic in
+  `list_client_dam_assets_entitled`), or drop client read entirely and keep DAM
+  strictly API-mediated — the client Assets page already only uses the API, so
+  dropping is low-risk and the safer default.
+  Taxonomy tables (`dam_locales`, `dam_regions`, `dam_tags`, `dam_audiences`,
+  `dam_asset_types`, `dam_asset_subtypes`) are lookup lists; blanket read there
+  is defensible — decide explicitly rather than by accident.
+- `dam_job_queue_read` is `USING (true)` with **no auth check at all**. Fix, and
+  check `information_schema.role_table_grants` to see whether `anon` holds SELECT
+  on it.
+- All `dam_*_admin_full` policies call `is_admin()`, whose EXECUTE was revoked
+  from `authenticated` (`20260514210000_lock_down_definer_functions.sql:16`) —
+  they're inert for browser sessions. Standardise on `auth_is_admin()` (checks
+  `enabled`, and `authenticated` can execute it) and retire `is_admin()`. Its
+  body isn't in any migration; read it in the dashboard before deleting.
+- `dam_download_events_user_insert` lets any authenticated user write arbitrary
+  audit rows.
+
+`orders` was verified clean — all five policies check `auth_company_id()` **and**
+`auth_has_permission('orders')`. No change needed there.
 
 ## WP3 — Make permissions real
 
@@ -254,46 +278,29 @@ design reference, so decide with the owner: guard them or move them under
 
 ---
 
-## Open analysis — do this before writing WP2
+## Open analysis
 
-Two gaps I flagged but couldn't close:
+Both gaps from the first draft are **closed** — `orders` is clean, and the DAM
+findings are written up as audit 3.8–3.10 and folded into WP2 above.
 
-**1. `orders` policy bodies.** Its five policy names all come from the
-permissions migration, so it *looks* clean, but I never read the bodies. Given
-`order_items` had a leftover `FOR ALL` policy that defeats the permission gate,
-confirm `orders` doesn't.
+What remains unverified, all lower stakes:
 
-**2. DAM taxonomy policies.** The state query showed ~14 `dam_*` tables with
-`*_read_authenticated` policies. If those are `USING (true)`, **any authenticated
-user can read all DAM asset metadata directly from the browser**, bypassing the
-company-entitlement model that `/api/dam/assets/client` and
-`list_client_dam_assets_entitled` enforce. The client Assets page is fully
-API-mediated so the UI is fine — the question is whether a direct browser query
-bypasses entitlement.
-
-One query answers both:
-
-```sql
-select
-  c.relname as table_name,
-  p.polname as policy_name,
-  case p.polcmd
-    when 'r' then 'SELECT' when 'a' then 'INSERT'
-    when 'w' then 'UPDATE' when 'd' then 'DELETE'
-    when '*' then 'ALL' end as command,
-  pg_get_expr(p.polqual, p.polrelid)      as using_clause,
-  pg_get_expr(p.polwithcheck, p.polrelid) as with_check_clause
-from pg_policy p
-join pg_class c on c.oid = p.polrelid
-join pg_namespace n on n.oid = c.relnamespace
-where n.nspname = 'public'
-  and (c.relname = 'orders' or c.relname like 'dam\_%')
-order by c.relname, p.polname;
-```
-
-Also unverified, lower stakes: the client policies on `company_notes`,
-`note_attachments`, `company_territories`, `target_periods`, `highlighted_products`
-— whether they check `enabled = true` and `visible_to_client`.
+1. **Client policy bodies on** `company_notes`, `note_attachments`,
+   `company_territories`, `target_periods`, `highlighted_products`, `categories`,
+   `incoterms`, `payment_terms` — do they check `enabled = true` and, where
+   relevant, `visible_to_client`? Same query shape as the ones already run, with
+   those table names.
+2. **`anon` role SELECT grants.** `CLAUDE.md` records that anon has no DML on
+   `public.*`, which doesn't cover SELECT. Given `dam_job_queue_read` is
+   `USING (true)`, check:
+   ```sql
+   select table_name, privilege_type
+   from information_schema.role_table_grants
+   where grantee = 'anon' and table_schema = 'public'
+   order by table_name;
+   ```
+3. **The body of `is_admin()`** — not in any migration; read it in the dashboard
+   before retiring it, in case something else depends on its exact semantics.
 
 ## Suggested sequencing
 
