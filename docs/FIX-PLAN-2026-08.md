@@ -466,11 +466,28 @@ What remains unverified, all lower stakes:
 3. **The body of `is_admin()`** — not in any migration; read it in the dashboard
    before retiring it, in case something else depends on its exact semantics.
 
-## Suggested sequencing
+## Suggested sequencing (updated after the second sweep)
 
-WP1 (code, ship immediately) → run the query above → WP2 (SQL, owner applies) →
-WP4.1 (unblocks user onboarding) → WP3 → WP4.2/4.3 → WP5 → WP6 → WP7.
+**Session 1 — stop the bleeding.** P1 (account takeover, one line) → P2
+(`next@14.2.35` + the three semver-compatible bumps + delete `nodemailer`) →
+WP0 (count the damage) → P5 (`case_pack` constraint). All small, all independent,
+all with active daily cost.
 
-WP1 and WP4.1 are the ones with active daily cost. WP2 is the one with the
-largest security surface. WP5–WP7 are debt paydown and can proceed at whatever
-pace suits.
+**Session 2 — the money path.** P3 (server-side price re-resolution in `push-so`)
+→ P4 (the three Stripe fixes) → WP4.1 (users created with no permissions). Verify
+each against a real test order before and after; nothing in this audit has been
+reproduced at runtime.
+
+**Session 3 — make the repo true.** P6 (schema baseline) → run the storage-policy
+queries → WP2 (the RLS cleanup migration, now informed by both).
+
+**Session 4 onwards — structure and prevention.** WP8 (CI) and WP9 (security
+headers) first, because they stop regressions in everything above. Then WP3
+(real permission enforcement), WP10 (reporting definition), WP11 (one SLI
+renderer), WP5/WP6 (duplicate flows, dead code), WP12 (DR hygiene), WP7
+(consistency debt).
+
+Rules of thumb for whoever picks this up: ship code first and hand the owner any
+SQL to run manually; keep `npx tsc --noEmit` and `npm test` green; never
+`git add -A`; and verify against production before concluding anything about
+schema or policies (Part 13).
