@@ -12,8 +12,8 @@ import {
  * Batched: a fixed number of queries regardless of period count, via
  * lib/companyPerformance. THROWS on any fetch/update error instead of
  * writing zeros — a transient query failure must never persist wrong
- * progress. Both callers (orders/complete, target-periods/recalculate)
- * already guard with try/catch.
+ * progress. The sole caller (the target-periods/recalculate route)
+ * catches and reports.
  */
 export async function recalculateCompanyTargetPeriods(
   supabase: SupabaseClient,
