@@ -3,6 +3,12 @@ import { withSentryConfig } from '@sentry/nextjs';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  eslint: {
+    // Lint exists for editors/CI (`npm run lint`), but years of pre-lint
+    // code means gating deploys on it would block main today. Tighten
+    // after the backlog is worked down.
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     // Required on Next 14 for instrumentation.ts (Sentry) to load.
     instrumentationHook: true,
