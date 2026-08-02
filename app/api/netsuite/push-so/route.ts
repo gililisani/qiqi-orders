@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
 import { createNetSuiteAPI } from '../../../../lib/netsuite';
+import { validateOrderPricing } from '../../../../lib/orderPricing';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +25,8 @@ export async function POST(request: NextRequest) {
         po_number,
         created_at,
         status,
+        total_value,
+        credit_earned,
         support_fund_used,
         netsuite_so_id,
         location_id,
@@ -43,14 +46,15 @@ export async function POST(request: NextRequest) {
             netsuite_id,
             subsidiary:subsidiaries(netsuite_id)
           ),
-          class:classes(name)
+          class:classes(name),
+          support_fund:support_fund_levels(percent)
         ),
         order_items(
           quantity,
           unit_price,
           total_price,
           is_support_fund_item,
-          product:Products(sku, item_name, netsuite_name)
+          product:Products(sku, item_name, netsuite_name, price_americas, price_international, qualifies_for_credit_earning)
         )
       `)
       .eq('id', orderId)
@@ -64,6 +68,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'This order already has a NetSuite SO (ID: ' + order.netsuite_so_id + ').' },
         { status: 409 }
+      );
+    }
+
+    // --- Server-side price validation. The stored prices were written by the
+    // browser (RLS restricts rows, not columns) and become the NetSuite SO
+    // rates — so recompute everything from the catalog and refuse to push a
+    // number we can't reproduce. ---
+    const companyRaw: any = Array.isArray(order.company) ? order.company[0] : order.company;
+    const pricingCheck = validateOrderPricing({
+      items: (order.order_items ?? []) as any[],
+      companyClassName: companyRaw?.class?.name ?? null,
+      supportFundPercent: companyRaw?.support_fund?.percent ?? null,
+      orderTotalValue: (order as any).total_value,
+      orderCreditEarned: (order as any).credit_earned,
+      orderSupportFundUsed: order.support_fund_used,
+    });
+    if (!pricingCheck.ok) {
+      console.error(
+        `push-so: pricing validation failed for order ${orderId}:`,
+        pricingCheck.violations.map((v) => v.detail).join(' | '),
+      );
+      return NextResponse.json(
+        {
+          error:
+            'Order pricing does not match the catalog — push blocked. ' +
+            'If a product price legitimately changed since this order was created, ' +
+            'open the order, re-save it to reprice, and push again.',
+          violations: pricingCheck.violations.map((v) => v.detail),
+        },
+        { status: 409 },
       );
     }
 
