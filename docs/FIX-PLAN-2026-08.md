@@ -83,13 +83,36 @@ know:
   and admin DAM page.
 - ✅ WP1.2 applied (PackingSlipView admin-only edit) to match the new RLS.
 
-**Next up: Session 4** — WP3 (real permission enforcement: admin route guard,
-requireWithPermission on route families, browser permission writes → API),
-WP10 (SF reporting definition), WP11 (single SLI renderer), then WP5/WP6
-(duplicate flows, dead code — remember TopNavbar is ALIVE), WP12, WP7.
-Remaining WP1 items: 1.1 (SLI data IDOR), 1.3 (disabled-user surfaces),
-1.4 (unauth recalculate calls), 1.5 (browser updateUserById), 1.6 (client
-delete endpoint).
+**SESSION 4 IS DONE — security + enforcement + reporting (commits
+`60c86a1`..`7bed967`):**
+- ✅ WP1 remainder: 1.1 (SLI data route admin-only), 1.3 (user-profile blocks
+  disabled self-lookup), 1.4 (both recalculate callers use fetchWithAuth —
+  they had been 401ing silently), 1.5 (see below), 1.6 (client delete points
+  at the real endpoint).
+- ✅ WP1.5 + WP3.2/3.5: new PATCH/DELETE `/api/users/[id]/account` (checked
+  auth-record updates, admins:manage / users:manage gated, self-disable and
+  self-delete blocked); all three edit pages rewired; permission editors no
+  longer re-grant defaults on empty arrays.
+- ✅ WP3: `requireAdminWithPermission` guard (admin AND permission — plain
+  requireWithPermission would admit clients holding e.g. 'reports');
+  netsuite+amazon (21 routes) → 'netsuite', reports (6) → 'reports', user
+  routes → 'users:manage'/'admins:manage'; admin layout route guard with
+  explicit route→permission table (~30 areas incl. off-nav), deny-by-default,
+  firstAllowedAdminArea wired. Pre-verified in prod: all 5 admins hold sets;
+  **Lori + Sophia lack 'netsuite' — now actually enforced.** DAM API routes
+  keep their existing admin checks (uniform 'dam' conversion deferred — zero
+  behavior delta today since every admin holds 'dam').
+- ✅ WP10: SF lines excluded from Product Insights + Sales Explorer +
+  `mv_product_sales` (migration `20260802160000`, dry-run verified; **owner
+  must apply**). Definition: SF items are free redeemed goods — product
+  revenue now matches order revenue; SF activity lives in its own report.
+- Also deleted empty `admin/2fa`, `dashboard-new`, `dashboard-template` dirs.
+
+**Remaining (Session 5): WP11** (single SLI renderer), **WP5** (duplicate
+flows — TopNavbar is ALIVE), **WP6** (dead code + dead routes), **WP12**
+(env.example completeness, dunning cron alert, plaintext setup tokens),
+**WP7** (consistency debt), ESLint config (WP8 remainder), and the deferred
+client-visible order-history filter (task chip exists).
 
 ---
 
