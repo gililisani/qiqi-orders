@@ -64,8 +64,32 @@ know:
   without target periods (list query below — likely house accounts, review);
   0 products missing category/credit flag.
 
-**Next up: Session 3 (make the repo true)** — P6 schema baseline, storage-policy
-queries, WP2 RLS cleanup migration.
+**SESSION 3 IS DONE — code side (commit `447bda3`):**
+- ✅ P6 — `supabase/schema-baseline.sql` (pg_dump of production 2026-08-02).
+  Direct DB access now works from the owner's machine (`SUPABASE_DB_URL` in
+  `.env.local`, libpq installed).
+- ✅ Storage/policy queries run directly against prod. Resolved: 10.1
+  CONFIRMED (company-notes bucket was readable by ANY authenticated user);
+  10.3 CONFIRMED for writes (product/category image buckets writable by any
+  authenticated user); order-documents client storage policy was broken
+  (matched `foldername(clients.name)`) — clients use the API anyway; anon has
+  ZERO grants (better than feared); `is_admin()` also skipped `enabled`.
+  New finds: company_notes/note_attachments table policies missed
+  `visible_to_client` — internal notes readable by direct query.
+- ✅ WP2 — `20260802150000_rls_cleanup_tier2.sql`, **dry-run verified against
+  production (BEGIN…ROLLBACK, every statement passed)**. 134 → ~90 policies.
+  ⏳ **owner must apply it in the SQL editor**, then smoke-test client portal
+  (orders, notes with attachment, order docs list, packing slip read-only)
+  and admin DAM page.
+- ✅ WP1.2 applied (PackingSlipView admin-only edit) to match the new RLS.
+
+**Next up: Session 4** — WP3 (real permission enforcement: admin route guard,
+requireWithPermission on route families, browser permission writes → API),
+WP10 (SF reporting definition), WP11 (single SLI renderer), then WP5/WP6
+(duplicate flows, dead code — remember TopNavbar is ALIVE), WP12, WP7.
+Remaining WP1 items: 1.1 (SLI data IDOR), 1.3 (disabled-user surfaces),
+1.4 (unauth recalculate calls), 1.5 (browser updateUserById), 1.6 (client
+delete endpoint).
 
 ---
 
