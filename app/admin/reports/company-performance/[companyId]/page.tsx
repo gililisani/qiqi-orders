@@ -89,6 +89,7 @@ export default function CompanyPerformancePage() {
   };
 
   const company = data?.company;
+  const todayISO = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="px-6 py-8 space-y-6">
@@ -165,7 +166,18 @@ export default function CompanyPerformancePage() {
               <TableBody>
                 {(data?.periods ?? []).map((p) => (
                   <TableRow key={p.periodId}>
-                    <TableCell className="text-sm font-medium">{p.periodName || '—'}</TableCell>
+                    <TableCell className="text-sm font-medium">
+                      {p.periodName || '—'}
+                      {p.endDate < todayISO ? (
+                        <span className="ml-2 inline-flex text-[10px] font-medium uppercase tracking-wide text-muted-foreground border border-border rounded-sm px-1.5 py-0.5">
+                          Ended
+                        </span>
+                      ) : p.startDate <= todayISO ? (
+                        <span className="ml-2 inline-flex text-[10px] font-medium uppercase tracking-wide text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-sm px-1.5 py-0.5">
+                          Active
+                        </span>
+                      ) : null}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                       {fmtDate(p.startDate)} → {fmtDate(p.endDate)}
                     </TableCell>

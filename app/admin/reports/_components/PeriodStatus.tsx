@@ -8,11 +8,11 @@
  */
 
 import {
-  AlertTriangle,
   CheckCircle2,
   Clock,
   TrendingDown,
   TrendingUp,
+  XCircle,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
 import type { PeriodStatus } from '../../../../lib/companyPerformance';
@@ -21,7 +21,7 @@ const STATUS_STYLES: Record<PeriodStatus, { className: string; Icon: any }> = {
   Ahead: { className: 'bg-emerald-50 text-emerald-700 border-emerald-200', Icon: TrendingUp },
   'On Track': { className: 'bg-secondary text-muted-foreground border-border', Icon: CheckCircle2 },
   Slipping: { className: 'bg-amber-50 text-amber-700 border-amber-200', Icon: TrendingDown },
-  'At Risk': { className: 'bg-rose-50 text-rose-700 border-rose-200', Icon: AlertTriangle },
+  Fail: { className: 'bg-rose-50 text-rose-700 border-rose-200', Icon: XCircle },
   Complete: { className: 'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]', Icon: CheckCircle2 },
   'Not Started': { className: 'bg-secondary text-muted-foreground border-border', Icon: Clock },
 };

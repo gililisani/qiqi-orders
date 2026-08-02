@@ -20,7 +20,7 @@ export type PeriodStatus =
   | 'On Track'
   | 'Slipping'
   | 'Complete'
-  | 'At Risk';
+  | 'Fail';
 
 export interface CompanyPeriodRow {
   periodId: string;
@@ -86,7 +86,9 @@ export function classifyStatus(
   expectedPct: number
 ): PeriodStatus {
   if (now < startDate) return 'Not Started';
-  if (now > endDate) return actual >= target ? 'Complete' : 'At Risk';
+  // Ended periods have a verdict, not a forecast: target met → Complete,
+  // target missed → Fail (never Slipping/At Risk — those are for live periods).
+  if (now > endDate) return actual >= target ? 'Complete' : 'Fail';
   if (progressPct >= expectedPct + 5) return 'Ahead';
   if (progressPct < expectedPct - 20) return 'Slipping';
   return 'On Track';
@@ -241,7 +243,8 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
       sfUsed: toDateSfUsed,
       sfBalance: toDateSfEarned - toDateSfUsed,
     },
-    periods: periodRows.sort((a, b) => (a.startDate < b.startDate ? -1 : 1)),
+    // Newest first: the active year on top, ended years below.
+    periods: periodRows.sort((a, b) => (a.startDate > b.startDate ? -1 : 1)),
     window: {
       from: windowFrom.toISOString(),
       to: windowTo.toISOString(),

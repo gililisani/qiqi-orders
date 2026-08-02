@@ -38,7 +38,7 @@ type Status =
   | 'On Track'
   | 'Slipping'
   | 'Complete'
-  | 'At Risk';
+  | 'Fail';
 
 interface PeriodRow {
   periodId: string;
@@ -126,7 +126,7 @@ type SortKey =
 export default function CompanyPerformancePage() {
   const router = useRouter();
   const sp = useSearchParams();
-  const scope = (sp.get('scope') as Scope) ?? 'active';
+  const scope: Scope = 'active'; // report is active-periods-only; history is per-company
   const companyId = sp.get('companyId') ?? '';
   const subsidiaryId = sp.get('subsidiaryId') ?? '';
 
@@ -268,23 +268,8 @@ export default function CompanyPerformancePage() {
                 </option>
               ))}
             </select>
-            <div className="inline-flex rounded-md border border-border bg-card p-1">
-              {(['active', 'all'] as Scope[]).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => updateParam('scope', s === 'active' ? null : s)}
-                  className={cn(
-                    'px-3 py-1.5 text-sm rounded transition-colors',
-                    scope === s
-                      ? 'bg-foreground text-background'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary',
-                  )}
-                >
-                  {s === 'active' ? 'Active' : 'All periods'}
-                </button>
-              ))}
-            </div>
+            {/* Scope toggle removed — this report shows ACTIVE periods only.
+                Full period history lives on each company's drill-down page. */}
           </div>
         }
       />
@@ -307,7 +292,7 @@ export default function CompanyPerformancePage() {
         <StatusKpi
           label="Slipping"
           value={loading ? null : data?.kpis.slipping ?? 0}
-          subtext={loading ? '' : `${data?.kpis.atRisk ?? 0} at risk`}
+          subtext={loading ? '' : `${data?.kpis.atRisk ?? 0} failed`}
           tone="negative"
           Icon={TrendingDown}
         />

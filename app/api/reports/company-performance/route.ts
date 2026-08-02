@@ -379,7 +379,7 @@ function aggregateKpis(rows: PeriodRow[]) {
       case 'Ahead':
         ahead += 1;
         break;
-      case 'At Risk':
+      case 'Fail':
         atRisk += 1;
         break;
       case 'Complete':
