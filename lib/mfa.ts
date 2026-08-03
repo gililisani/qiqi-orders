@@ -29,6 +29,29 @@ export interface MfaStatus {
   lastVerifiedAt: number | null;
 }
 
+/** Latest 'totp' entry in an amr claim array (unix SECONDS), or null.
+ *  Shared by the client-side status check and the server-side guard. */
+export function latestTotpTimestampSeconds(
+  amr: Array<{ method: string; timestamp: number }> | null | undefined
+): number | null {
+  const entry = (amr ?? [])
+    .filter((m) => m.method === 'totp' && typeof m.timestamp === 'number')
+    .sort((a, b) => b.timestamp - a.timestamp)[0];
+  return entry ? entry.timestamp : null;
+}
+
+/** True when a totp verification is older than MFA_MAX_AGE_DAYS. A missing
+ *  timestamp is NOT stale — soft behavior, a claims quirk must not lock
+ *  anyone out. */
+export function isTotpStale(
+  amr: Array<{ method: string; timestamp: number }> | null | undefined,
+  nowMs: number = Date.now()
+): boolean {
+  const ts = latestTotpTimestampSeconds(amr);
+  if (ts === null) return false;
+  return nowMs - ts * 1000 > MFA_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+}
+
 export async function getMfaStatus(supabase: SupabaseClient): Promise<MfaStatus> {
   const [{ data: aal }, { data: factors }] = await Promise.all([
     supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
@@ -45,17 +68,10 @@ export async function getMfaStatus(supabase: SupabaseClient): Promise<MfaStatus>
 
   // amr entries carry unix-second timestamps of each auth method used on
   // this session; the totp entry marks the last time a code was accepted.
-  const totpEntry = (aal?.currentAuthenticationMethods ?? [])
-    .filter((m) => m.method === 'totp')
-    .sort((a, b) => b.timestamp - a.timestamp)[0];
-  const lastVerifiedAt = totpEntry ? totpEntry.timestamp * 1000 : null;
-
-  // Missing amr entry on an aal2 session shouldn't happen; treat as fresh so a
-  // quirk can't lock every page behind an unpassable prompt (Phase 1 is soft).
-  const isStale =
-    !needsChallenge && lastVerifiedAt !== null
-      ? Date.now() - lastVerifiedAt > MFA_MAX_AGE_DAYS * 24 * 60 * 60 * 1000
-      : false;
+  const amr = aal?.currentAuthenticationMethods ?? [];
+  const ts = latestTotpTimestampSeconds(amr);
+  const lastVerifiedAt = ts !== null ? ts * 1000 : null;
+  const isStale = !needsChallenge && isTotpStale(amr);
 
   return { factorId: verified.id, needsChallenge, isStale, lastVerifiedAt };
 }

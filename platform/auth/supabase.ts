@@ -46,6 +46,26 @@ function extractToken(request: NextRequest): string | null {
   return null;
 }
 
+/** Read aal/amr from the JWT payload. Only called AFTER auth.getUser() has
+ *  validated the token with the auth server — this is a claims read, not a
+ *  signature check. */
+function decodeJwtClaims(token: string): {
+  aal: string | null;
+  amr: Array<{ method: string; timestamp: number }>;
+} {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split('.')[1], 'base64url').toString('utf8'),
+    );
+    return {
+      aal: typeof payload.aal === 'string' ? payload.aal : null,
+      amr: Array.isArray(payload.amr) ? payload.amr : [],
+    };
+  } catch {
+    return { aal: null, amr: [] };
+  }
+}
+
 function createSupabaseAnonClient(token: string) {
   return createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
     global: {
@@ -115,12 +135,15 @@ export function createSupabaseAuth(): AuthAdapter {
       }
 
       const { roles, locale, region } = await resolveRoles(user.id);
+      const { aal, amr } = decodeJwtClaims(token);
 
       return {
         id: user.id,
         roles,
         locale,
         region,
+        aal,
+        amr,
       };
     },
 

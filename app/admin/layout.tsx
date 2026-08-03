@@ -215,6 +215,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // mfa_required admins without a factor are held on /admin/security until
   // they enroll ("pushed" 2FA — set on the admin edit page).
   const [mfaEnrollRequired, setMfaEnrollRequired] = useState(false);
+  // Bumped after the verify gate passes, to re-run the init effect (the
+  // profile fetch is only valid AFTER verification — server enforcement
+  // rejects unverified sessions of enrolled admins).
+  const [authEpoch, setAuthEpoch] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -223,6 +227,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         router.push('/');
         return;
       }
+
+      // MFA FIRST: these calls go to the auth server and work on an
+      // unverified session; our own APIs would reject it (Phase 2).
+      let mfaFactorId: string | null = null;
+      try {
+        const mfa = await getMfaStatus(supabase);
+        mfaFactorId = mfa.factorId;
+        if (mfa.factorId && (mfa.needsChallenge || mfa.isStale)) {
+          setMfaGate({ factorId: mfa.factorId, stale: mfa.isStale });
+          setLoading(false);
+          return; // profile + permissions load after the code passes
+        }
+      } catch {
+        // An MFA status hiccup must not lock the portal; the server-side
+        // guard still protects every API.
+      }
+
       try {
         const res = await fetchWithAuth(`/api/user-profile?userId=${user.id}`);
         const data = await res.json().catch(() => ({}));
@@ -242,18 +263,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         setPermissions(
           Array.isArray(adminRow?.permissions) ? adminRow!.permissions : [],
         );
-        // Enrolled admins: require a code on unverified sessions (other
-        // device / pre-enrollment session) and every MFA_MAX_AGE_DAYS.
         // mfa_required admins without a factor: hold on /admin/security.
-        try {
-          const mfa = await getMfaStatus(supabase);
-          if (mfa.factorId && (mfa.needsChallenge || mfa.isStale)) {
-            setMfaGate({ factorId: mfa.factorId, stale: mfa.isStale });
-          } else if (!mfa.factorId && adminRow?.mfa_required) {
-            setMfaEnrollRequired(true);
-          }
-        } catch {
-          // Phase 1 is soft — an MFA status hiccup must not lock the portal.
+        if (!mfaFactorId && adminRow?.mfa_required) {
+          setMfaEnrollRequired(true);
         }
       } catch {
         router.push('/');
@@ -262,7 +274,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setIsAuthenticated(true);
       setLoading(false);
     })();
-  }, [router]);
+  }, [router, authEpoch]);
 
   // Route-level guard: bounce admins off pages their permissions don't
   // cover, to their first allowed area (or /forbidden if none).
@@ -312,6 +324,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/');
   };
 
+  // The gate renders BEFORE the auth checks: when it's up, loading is done
+  // but isAuthenticated is still false (profile loads after the code passes).
+  if (mfaGate) {
+    return (
+      <MfaVerifyGate
+        factorId={mfaGate.factorId}
+        stale={mfaGate.stale}
+        onVerified={() => {
+          setMfaGate(null);
+          setLoading(true);
+          setAuthEpoch((e) => e + 1);
+        }}
+        onSignOut={handleSignOut}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -321,17 +350,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   if (!isAuthenticated) return null;
-
-  if (mfaGate) {
-    return (
-      <MfaVerifyGate
-        factorId={mfaGate.factorId}
-        stale={mfaGate.stale}
-        onVerified={() => setMfaGate(null)}
-        onSignOut={handleSignOut}
-      />
-    );
-  }
 
   const sidebarContent = (
     <NavContent pathname={pathname} permissions={permissions} />

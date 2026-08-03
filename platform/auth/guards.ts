@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createAuth, type AuthUser } from './index';
+import { isTotpStale } from '../../lib/mfa';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -22,7 +23,52 @@ export async function requireAuthenticatedUser(request: NextRequest): Promise<Au
   if (!user) {
     throw NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
+  await enforceAdminMfa(user);
   return user;
+}
+
+/**
+ * MFA Phase 2 (2026-08): an ADMIN with a verified factor must be on an
+ * aal2 session whose last code entry is younger than MFA_MAX_AGE_DAYS.
+ * Sits in requireAuthenticatedUser so every guard path — including mixed
+ * admin/client routes — inherits it. Admins without a factor pass (the
+ * mfa_required hold pushes them to enroll); clients are untouched.
+ */
+async function enforceAdminMfa(user: AuthUser): Promise<void> {
+  if (!user.roles.includes('admin')) return;
+
+  const mfaRequired = () =>
+    NextResponse.json(
+      { error: 'Two-factor verification required.', code: 'mfa_required' },
+      { status: 401 },
+    );
+
+  if (user.aal === 'aal2') {
+    // Enforce the 30-day MFA life server-side too — the client gate prompts,
+    // but a stolen long-lived session talking straight to the API must not
+    // outlive it.
+    if (isTotpStale(user.amr)) {
+      throw mfaRequired();
+    }
+    return;
+  }
+
+  // aal1 admin: blocked iff enrolled. The lookup is service-role-only SQL
+  // (user_has_verified_mfa, migration 20260803210000). Steady-state this
+  // path is cold — enrolled admins run aal2 sessions.
+  const { data, error } = await createServiceRoleClient().rpc('user_has_verified_mfa', {
+    target: user.id,
+  });
+  if (error) {
+    // Migration not applied yet → fail open, loudly. The SQL ships first by
+    // our deploy routine; this guard just prevents a bricked portal if the
+    // order ever slips.
+    console.error('[enforceAdminMfa] user_has_verified_mfa failed (migration missing?):', error.message);
+    return;
+  }
+  if (data === true) {
+    throw mfaRequired();
+  }
 }
 
 export async function requireAnyRole(request: NextRequest, roles: Array<'admin' | 'client'>): Promise<AuthUser> {

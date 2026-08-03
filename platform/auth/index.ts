@@ -6,6 +6,12 @@ export interface AuthUser {
   roles: string[];
   locale?: string | null;
   region?: string | null;
+  /** Authenticator assurance level from the validated JWT: 'aal2' after a
+   *  successful MFA code this session, 'aal1' otherwise. */
+  aal?: string | null;
+  /** Auth-method history from the JWT ({method, timestamp-seconds}); the
+   *  latest 'totp' entry is when a code was last accepted on this session. */
+  amr?: Array<{ method: string; timestamp: number }>;
 }
 
 export interface AuthAdapter {

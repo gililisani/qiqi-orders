@@ -42,7 +42,6 @@ export default function LoginPage() {
   // enrolled TOTP factor; the session stays half-open until the code passes.
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState('');
-  const [pendingRoute, setPendingRoute] = useState('/client');
 
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
@@ -66,8 +65,12 @@ export default function LoginPage() {
         if (cancelled) return;
 
         if (!profileRes.ok || !profile.success || !profile.user) {
+          // A half-open session (password ok, MFA never completed) lands
+          // here as code=mfa_required — drop it quietly and show the form.
           await supabase.auth.signOut();
-          setErrorMsg('Your session could not be verified. Please sign in again.');
+          if (profile?.code !== 'mfa_required') {
+            setErrorMsg('Your session could not be verified. Please sign in again.');
+          }
           setLoading(false);
           return;
         }
@@ -135,38 +138,40 @@ export default function LoginPage() {
         setErrorMsg('Sign-in succeeded but no user was returned.');
         return;
       }
-      const profileRes = await fetchWithAuth(`/api/user-profile?userId=${data.user.id}`);
-      const profile = await profileRes.json().catch(() => ({}));
-      if (!profileRes.ok || !profile.success || !profile.user) {
-        await supabase.auth.signOut();
-        setErrorMsg(
-          typeof profile.error === 'string'
-            ? profile.error
-            : 'Your account is not set up for this portal. Please contact support.'
-        );
-        return;
-      }
-      const r = profile.user.role;
-      const target =
-        typeof r === 'string' && r.toLowerCase() === 'admin' ? '/admin' : '/client';
-
-      // Accounts with two-factor enrolled: ask for the authenticator code
-      // before entering the portal.
+      // Accounts with two-factor enrolled: the authenticator code comes
+      // BEFORE the profile lookup — server-side enforcement rejects
+      // unverified sessions of enrolled admins on every API.
       const mfa = await getMfaStatus(supabase);
       if (mfa.factorId && mfa.needsChallenge) {
         setMfaFactorId(mfa.factorId);
-        setPendingRoute(target);
         setMfaCode('');
         setStep('mfa');
         return;
       }
 
-      router.push(target);
+      await finishLogin(data.user.id);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Sign-in failed.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Post-auth (and post-MFA when enrolled): resolve the profile and route.
+  const finishLogin = async (userId: string) => {
+    const profileRes = await fetchWithAuth(`/api/user-profile?userId=${userId}`);
+    const profile = await profileRes.json().catch(() => ({}));
+    if (!profileRes.ok || !profile.success || !profile.user) {
+      await supabase.auth.signOut();
+      setErrorMsg(
+        typeof profile.error === 'string'
+          ? profile.error
+          : 'Your account is not set up for this portal. Please contact support.'
+      );
+      return;
+    }
+    const r = profile.user.role;
+    router.push(typeof r === 'string' && r.toLowerCase() === 'admin' ? '/admin' : '/client');
   };
 
   // ---------------------------------------------------------------------------
@@ -179,7 +184,9 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       await verifyMfaCode(supabase, mfaFactorId, mfaCode);
-      router.push(pendingRoute);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Session lost — please sign in again.');
+      await finishLogin(user.id);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Verification failed.');
     } finally {
