@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { useSupabase } from '../../../lib/supabase-provider';
+import { canShowPackingSlip } from './orderDetails/orderDetailsUtils';
 import { Card } from '../qq/card';
 import { Alert, AlertDescription } from '../qq/alert';
 import { Button } from '../qq/button';
@@ -839,7 +840,7 @@ export default function PackingSlipView({ role, backUrl }: PackingSlipViewProps)
   // Open orders cannot create/edit packing slips because the order can still be edited.
   // Admin-only: clients get a read-only view (RLS blocks their writes too —
   // packing_slips_client_select is SELECT-only as of the tier-2 cleanup).
-  const canEdit = role === 'admin' && ['Ready', 'Done'].includes(order.status);
+  const canEdit = role === 'admin' && canShowPackingSlip(order.status);
 
   // Extract country from company address
   const getDestinationCountry = () => {

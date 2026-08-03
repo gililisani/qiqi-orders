@@ -46,6 +46,11 @@ import ClientOrderHistoryView from './ClientOrderHistoryView';
 
 import { useToast } from '../ui/ToastProvider';
 import { useConfirm } from '../ui/ConfirmProvider';
+import {
+  canDeleteOrder,
+  canEditOrder,
+  canShowPackingSlip,
+} from '../shared/orderDetails/orderDetailsUtils';
 
 interface OrderCompany {
   id: string;
@@ -160,7 +165,7 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
       const res = await fetchWithAuth(`/api/orders/delete?orderId=${orderId}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to delete order.');
-      toast.success('Draft deleted.');
+      toast.success('Order deleted.');
       router.push('/client/orders');
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete order.');
@@ -192,12 +197,12 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
     );
   }
 
-  // Product rule: edit only in Draft/Open; delete only when Cancelled.
-  // Drafts must be cancelled first then deleted — cleaner lifecycle and
-  // matches the admin and server-side gates.
-  const canEdit = order.status === 'Draft' || order.status === 'Open';
-  const canDelete = order.status === 'Cancelled';
-  const showPackingSlip = ['Ready', 'Done'].includes(order.status);
+  // Status gating — single source shared with the admin view (audit 1.8).
+  // Client delete stays Cancelled-only by product rule: drafts are
+  // cancelled first, then deleted.
+  const canEdit = canEditOrder(order.status);
+  const canDelete = canDeleteOrder('client', order.status);
+  const showPackingSlip = canShowPackingSlip(order.status);
 
   // Totals breakdown
   const regularItems = items.filter((i) => !i.is_support_fund_item);

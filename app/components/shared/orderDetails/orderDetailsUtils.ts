@@ -1,3 +1,39 @@
+// ---------------------------------------------------------------------------
+// Status gating — SINGLE SOURCE for what's allowed at each order status.
+// The admin and client detail views carried their own copies of these rules
+// and drifted (audit 1.8: three contradictory delete rules). The API route
+// /api/orders/delete enforces the same set server-side.
+// ---------------------------------------------------------------------------
+
+/** Orders that can still be edited (admin and client alike). */
+export const ORDER_EDITABLE_STATUSES = ['Draft', 'Open'] as const;
+
+/** Statuses where the packing slip exists / can be shown. */
+export const PACKING_SLIP_STATUSES = ['Ready', 'Done'] as const;
+
+/** Admins may delete dead-end orders directly (matches /api/orders/delete). */
+export const ADMIN_DELETABLE_STATUSES = ['Draft', 'Cancelled'] as const;
+
+/** Product rule (deliberate): clients delete only Cancelled orders — a
+ *  draft is cancelled first, then deleted. Cleaner lifecycle. */
+export const CLIENT_DELETABLE_STATUSES = ['Cancelled'] as const;
+
+export function canEditOrder(status: string | null | undefined): boolean {
+  return (ORDER_EDITABLE_STATUSES as readonly string[]).includes(status ?? '');
+}
+
+export function canShowPackingSlip(status: string | null | undefined): boolean {
+  return (PACKING_SLIP_STATUSES as readonly string[]).includes(status ?? '');
+}
+
+export function canDeleteOrder(
+  role: 'admin' | 'client',
+  status: string | null | undefined,
+): boolean {
+  const set = role === 'admin' ? ADMIN_DELETABLE_STATUSES : CLIENT_DELETABLE_STATUSES;
+  return (set as readonly string[]).includes(status ?? '');
+}
+
 export type OrderRecipientInfo = {
   client?: { email?: string | null } | null;
   company?: { ship_to_contact_email?: string | null; company_email?: string | null } | null;

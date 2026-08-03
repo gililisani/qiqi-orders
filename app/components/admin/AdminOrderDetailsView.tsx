@@ -91,7 +91,11 @@ import CreateSLIModal from '../modals/CreateSLIModal';
 import { useToast } from '../ui/ToastProvider';
 import { useConfirm } from '../ui/ConfirmProvider';
 import { salesOrderUrl, invoiceUrl } from '../../../lib/netsuiteUrls';
-import { validateRequiredFieldsForStatus } from '../shared/orderDetails/orderDetailsUtils';
+import {
+  canEditOrder,
+  canShowPackingSlip,
+  validateRequiredFieldsForStatus,
+} from '../shared/orderDetails/orderDetailsUtils';
 import { useOrderDetailsController } from '../shared/orderDetails/useOrderDetailsController';
 
 // ----------------------------------------------------------------------------
@@ -892,9 +896,9 @@ export default function AdminOrderDetailsView({
   // Product rule: edit is allowed only in Draft / Open. Once the order
   // moves to In Process / Ready / Done / Cancelled, the data is frozen
   // (it's been pushed to NS, fulfilled by 3PL, etc.).
-  const canEdit = order.status === 'Draft' || order.status === 'Open';
+  const canEdit = canEditOrder(order.status);
 
-  const showPackingSlipBtn = ['Ready', 'Done'].includes(originalStatus);
+  const showPackingSlipBtn = canShowPackingSlip(originalStatus);
   const canSLI = ['Ready', 'Done'].includes(order.status);
   // ShipHero (3PL) fulfillment: NetSuite-first is a hard requirement, so the
   // push is only offered once the order has a NetSuite SO (which also moves it
