@@ -63,9 +63,9 @@ Notes:
 
 ## Workflow conventions (project owner's preferences)
 
-- The owner uses `main` only (skips a Staging branch). **Direct pushes to main are expected.**
-- Vercel auto-deploys on push to main.
-- SQL migrations live in `supabase/migrations/`. The owner **runs them manually** in the Supabase SQL editor — there's no `supabase db push` step in the deploy pipeline. **Always: push code first, then user applies SQL** (so the deployed code is ready when the schema changes).
+- **Staging-first workflow (since 2026-08-03).** All work lands on the `staging` branch → Vercel auto-deploys it to `https://qiqi-orders-git-staging-qiqi-shop-hosting.vercel.app` → owner QAs there → merge `staging` into `main` → production deploy. Genuine one-line hotfixes may go straight to `main` at the owner's call. Keep `staging` fast-forwarded to `main` after each promotion so the branches never drift.
+- **Staging environment:** its own Supabase project (`ounnifpuwjeskdmgrtks`; connection string in `.env.local` as `SUPABASE_STAGING_DB_URL`). Schema = baseline + migrations; reference data copied from prod; synthetic test data only — **never copy real partner/order data into staging**. Test logins: `admin@staging.test` / `client@staging.test` (passwords with the owner). Deliberately unconfigured in staging: NetSuite, email (Graph), ShipHero, Amazon, Sentry; Stripe uses test-mode keys if set. Vercel env vars: Production scope = prod values, Preview scope = staging values.
+- **SQL migrations:** live in `supabase/migrations/`. Agents apply them to the STAGING database directly (staging data is disposable). Production SQL is applied **only by the owner, manually**, in the Supabase SQL editor, after staging QA. Push code before the owner runs production SQL unless the migration adds columns the new code writes (then SQL first — see order_history visible_to_client for precedent).
 - Commits use Conventional-Commit-ish prefixes (`fix:`, `migration:`, `test:`, etc.) and a `Co-Authored-By: Claude` trailer.
 - After significant changes, the owner smoke-tests in production manually. Tests via `npm test` (Vitest) supplement, not replace, manual checks.
 
