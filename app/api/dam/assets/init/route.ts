@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { createAuth } from '../../../../../platform/auth';
+import { requireAdminWithPermission } from '../../../../../platform/auth/guards';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -52,7 +53,7 @@ function createSupabaseAdminClient() {
 export async function POST(request: NextRequest) {
   try {
     const auth = createAuth();
-    const adminUser = await auth.requireRole(request, 'admin');
+    const adminUser = await requireAdminWithPermission(request, 'dam');
 
     const supabaseAdmin = createSupabaseAdminClient();
     const body = await request.json();

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createStorage } from '../../../../platform/storage';
 import { randomUUID } from 'crypto';
 import { createAuth } from '../../../../platform/auth';
+import { requireAdminWithPermission } from '../../../../platform/auth/guards';
 // Queue removed - all processing now happens client-side
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -49,7 +50,7 @@ type RegionOption = {
 export async function GET(request: NextRequest) {
   try {
     const auth = createAuth();
-    await auth.requireRole(request, 'admin');
+    await requireAdminWithPermission(request, 'dam');
 
     const supabaseAdmin = createSupabaseAdminClient();
     
@@ -485,7 +486,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = createAuth();
-    const adminUser = await auth.requireRole(request, 'admin');
+    const adminUser = await requireAdminWithPermission(request, 'dam');
 
     const supabaseAdmin = createSupabaseAdminClient();
     const storage = createStorage();

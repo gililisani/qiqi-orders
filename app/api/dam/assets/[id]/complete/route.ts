@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { createAuth } from '../../../../../../platform/auth';
+import { requireAdminWithPermission } from '../../../../../../platform/auth/guards';
 // Queue removed - all processing now happens client-side
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -19,7 +20,7 @@ function createSupabaseAdminClient() {
 
 async function getAdminUser(request: NextRequest): Promise<string> {
   const auth = createAuth();
-  const adminUser = await auth.requireRole(request, 'admin');
+  const adminUser = await requireAdminWithPermission(request, 'dam');
   return adminUser.id;
 }
 
