@@ -27,8 +27,6 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const typeRaw = String(formData.get('type') ?? '');
     const textRaw = String(formData.get('text') ?? '');
-    const userNameRaw = String(formData.get('userName') ?? '');
-    const userEmailRaw = String(formData.get('userEmail') ?? '');
     const screenshot = formData.get('screenshot') as File | null;
 
     if (!textRaw || !typeRaw) {
@@ -41,8 +39,17 @@ export async function POST(request: NextRequest) {
     const type = typeRaw as 'issue' | 'feedback';
 
     const text = textRaw.slice(0, MAX_TEXT_LENGTH);
-    const userName = userNameRaw.trim().slice(0, MAX_NAME_LENGTH) || 'Unknown';
-    const userEmail = userEmailRaw.trim().slice(0, 320);
+
+    // Sender identity comes from the SESSION, never the form — a logged-in
+    // user could otherwise make the internal email claim to be anyone.
+    const profileTable = user.roles.includes('admin') ? 'admins' : 'clients';
+    const { data: profile } = await supabaseAdmin
+      .from(profileTable)
+      .select('name, email')
+      .eq('id', user.id)
+      .maybeSingle();
+    const userName = (profile?.name || 'Unknown').trim().slice(0, MAX_NAME_LENGTH);
+    const userEmail = (profile?.email || '').trim().slice(0, 320);
 
     // Strip CR/LF from any field that lands in the subject line (header injection defense).
     const subjectName = userName.replace(/[\r\n]+/g, ' ');

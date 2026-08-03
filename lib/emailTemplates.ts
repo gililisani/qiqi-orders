@@ -5,7 +5,7 @@
  */
 
 import { formatCurrency, formatQuantity } from './formatters';
-import { escapeHtml } from './htmlEscape';
+import { escapeHtml, sanitizeEmailHeader } from './htmlEscape';
 
 interface OrderEmailData {
   poNumber: string; // Use PO number as the main order identifier
@@ -181,7 +181,7 @@ export function orderInProcessTemplate(data: OrderEmailData): { subject: string;
   `;
 
   return {
-    subject: `Your order ${escapeHtml(data.soNumber || data.poNumber)} is being processed`,
+    subject: `Your order ${sanitizeEmailHeader(data.soNumber || data.poNumber)} is being processed`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -221,7 +221,7 @@ export function orderReadyTemplate(data: OrderEmailData): { subject: string; htm
   `;
 
   return {
-    subject: `Order ${escapeHtml(data.soNumber || data.poNumber)} is ready for pickup!`,
+    subject: `Order ${sanitizeEmailHeader(data.soNumber || data.poNumber)} is ready for pickup!`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -261,7 +261,7 @@ export function orderCancelledTemplate(data: OrderEmailData): { subject: string;
   `;
 
   return {
-    subject: `Order ${escapeHtml(data.soNumber || data.poNumber)} has been cancelled`,
+    subject: `Order ${sanitizeEmailHeader(data.soNumber || data.poNumber)} has been cancelled`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -313,7 +313,7 @@ export function customUpdateTemplate(data: OrderEmailData): { subject: string; h
   `;
 
   return {
-    subject: `Order Update - ${escapeHtml(data.poNumber)}`,
+    subject: `Order Update - ${sanitizeEmailHeader(data.poNumber)}`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
@@ -608,7 +608,7 @@ export function orderUpdatedTemplate(data: OrderEmailData) {
   `;
 
   return {
-    subject: `Order ${escapeHtml(data.poNumber)} Updated - Qiqi Partners Hub`,
+    subject: `Order ${sanitizeEmailHeader(data.poNumber)} Updated - Qiqi Partners Hub`,
     html: emailWrapper(content, data.siteUrl),
   };
 }
