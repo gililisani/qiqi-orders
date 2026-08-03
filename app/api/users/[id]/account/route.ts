@@ -61,6 +61,9 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
     if (typeof body.name === 'string' && body.name.trim()) patch.name = body.name.trim();
     if (typeof body.email === 'string' && body.email.trim()) patch.email = body.email.trim();
     if (typeof body.enabled === 'boolean') patch.enabled = body.enabled;
+    if (kind === 'admin' && typeof body.mfa_required === 'boolean') {
+      patch.mfa_required = body.mfa_required;
+    }
     if (kind === 'client' && typeof body.company_id === 'string' && body.company_id) {
       patch.company_id = body.company_id;
     }

@@ -31,6 +31,7 @@ interface Admin {
   enabled: boolean;
   created_at: string;
   permissions: string[] | null;
+  mfa_required?: boolean;
 }
 
 export default function AdminViewPage() {
@@ -42,6 +43,9 @@ export default function AdminViewPage() {
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // null = still loading (the status comes from a service-role API,
+  // not the admins row).
+  const [mfaEnrolled, setMfaEnrolled] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!adminId) return;
@@ -58,6 +62,15 @@ export default function AdminViewPage() {
         setError(err.message || 'Failed to load admin.');
       } finally {
         setLoading(false);
+      }
+    })();
+    (async () => {
+      try {
+        const res = await fetchWithAuth(`/api/users/${adminId}/mfa`);
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) setMfaEnrolled(!!data.enrolled);
+      } catch {
+        /* leave as unknown */
       }
     })();
   }, [adminId]);
@@ -160,6 +173,21 @@ export default function AdminViewPage() {
                 ) : (
                   <Badge variant="muted">Disabled</Badge>
                 )}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider font-medium block">
+                Two-factor authentication
+              </Label>
+              <div className="mt-1 flex items-center gap-2">
+                {mfaEnrolled === null ? (
+                  <span className="text-sm text-muted-foreground">…</span>
+                ) : mfaEnrolled ? (
+                  <Badge variant="success">Enrolled</Badge>
+                ) : (
+                  <Badge variant="muted">Not enrolled</Badge>
+                )}
+                {admin.mfa_required && <Badge variant="outline">Required</Badge>}
               </div>
             </div>
             <ViewField label="Admin ID" value={admin.id} mono />

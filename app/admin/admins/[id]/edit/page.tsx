@@ -25,6 +25,7 @@ export default function EditAdminPage() {
     name: '',
     email: '',
     enabled: true,
+    mfa_required: false,
     changePassword: false,
     newPassword: '',
     permissions: [...DEFAULT_ADMIN_PERMISSIONS] as string[],
@@ -49,6 +50,7 @@ export default function EditAdminPage() {
           name: data?.name || '',
           email: data?.email || '',
           enabled: !!data?.enabled,
+          mfa_required: !!data?.mfa_required,
           changePassword: false,
           newPassword: '',
           // Show EXACTLY what's stored — pre-checking defaults on an empty
@@ -88,6 +90,7 @@ export default function EditAdminPage() {
           name: formData.name.trim(),
           email: formData.email.trim(),
           enabled: formData.enabled,
+          mfa_required: formData.mfa_required,
           permissions: formData.permissions,
           ...(formData.changePassword && formData.newPassword
             ? { password: formData.newPassword }
@@ -233,6 +236,23 @@ export default function EditAdminPage() {
         />
         <span className="text-sm">Admin is enabled</span>
       </label>
+
+      <div>
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={formData.mfa_required}
+            onChange={(e) => setFormData((p) => ({ ...p, mfa_required: e.target.checked }))}
+            disabled={loading}
+            className="h-4 w-4 accent-foreground"
+          />
+          <span className="text-sm">Require two-factor authentication</span>
+        </label>
+        <p className="mt-1 ml-6 text-xs text-muted-foreground">
+          Until they enroll, this admin is taken to the Security page at sign-in and
+          cannot use other admin pages.
+        </p>
+      </div>
 
       <div className="space-y-3 pt-2 border-t border-border">
         <label className="flex items-center gap-2 cursor-pointer select-none">

@@ -5,12 +5,40 @@ import {
 } from '../../../../../platform/auth/guards';
 
 /**
+ * GET    /api/users/[id]/mfa — the admin's enrollment status (for the view page).
  * DELETE /api/users/[id]/mfa — remove ALL of an admin's MFA factors.
  *
- * The lost-phone recovery path: another admin (admins:manage) resets the
- * target's two-factor, the target signs in with password only and re-enrolls
- * at /admin/security. Deleting when nothing is enrolled is a no-op success.
+ * DELETE is the lost-phone recovery path: another admin (admins:manage)
+ * resets the target's two-factor, the target signs in with password only and
+ * re-enrolls at /admin/security. Deleting when nothing is enrolled is a
+ * no-op success.
  */
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  try {
+    const targetId = params.id;
+    await requireAdminWithPermission(request, 'admins:manage');
+
+    const supabaseAdmin = createServiceRoleClient();
+    const { data: factors, error: listErr } =
+      await supabaseAdmin.auth.admin.mfa.listFactors({ userId: targetId });
+    if (listErr) throw new Error(`list factors: ${listErr.message}`);
+
+    const verified = (factors?.factors ?? []).find((f) => f.status === 'verified');
+    return NextResponse.json({
+      success: true,
+      enrolled: !!verified,
+      enrolledAt: verified?.created_at ?? null,
+    });
+  } catch (error: any) {
+    if (error instanceof Response) return error;
+    console.error('MFA status error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to load MFA status.' },
+      { status: 500 },
+    );
+  }
+}
 export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {

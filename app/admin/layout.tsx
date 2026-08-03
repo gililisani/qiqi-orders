@@ -212,6 +212,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // MFA gate: enrolled admins must have a verified, non-stale session.
   // null = no gate; otherwise the factor to challenge + why.
   const [mfaGate, setMfaGate] = useState<{ factorId: string; stale: boolean } | null>(null);
+  // mfa_required admins without a factor are held on /admin/security until
+  // they enroll ("pushed" 2FA — set on the admin edit page).
+  const [mfaEnrollRequired, setMfaEnrollRequired] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -233,7 +236,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         // Defaults to all-on if the column is missing/null (pre-migration).
         const { data: adminRow } = await supabase
           .from('admins')
-          .select('permissions')
+          .select('permissions, mfa_required')
           .eq('id', user.id)
           .maybeSingle();
         setPermissions(
@@ -241,10 +244,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         );
         // Enrolled admins: require a code on unverified sessions (other
         // device / pre-enrollment session) and every MFA_MAX_AGE_DAYS.
+        // mfa_required admins without a factor: hold on /admin/security.
         try {
           const mfa = await getMfaStatus(supabase);
           if (mfa.factorId && (mfa.needsChallenge || mfa.isStale)) {
             setMfaGate({ factorId: mfa.factorId, stale: mfa.isStale });
+          } else if (!mfa.factorId && adminRow?.mfa_required) {
+            setMfaEnrollRequired(true);
           }
         } catch {
           // Phase 1 is soft — an MFA status hiccup must not lock the portal.
@@ -275,6 +281,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  // "Pushed" 2FA: keep an mfa_required admin on the Security page until a
+  // factor exists. Re-checks before each bounce so the hold releases on the
+  // first navigation after they enroll.
+  useEffect(() => {
+    if (!mfaEnrollRequired) return;
+    if (pathname === '/admin/security' || pathname.startsWith('/admin/security/')) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const mfa = await getMfaStatus(supabase);
+        if (cancelled) return;
+        if (mfa.factorId) {
+          setMfaEnrollRequired(false);
+          return;
+        }
+      } catch {
+        /* fall through to the bounce */
+      }
+      if (!cancelled) router.replace('/admin/security');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mfaEnrollRequired, pathname, router]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

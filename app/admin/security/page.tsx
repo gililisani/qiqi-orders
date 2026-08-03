@@ -34,6 +34,7 @@ export default function AdminSecurityPage() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
   const [code, setCode] = useState('');
+  const [required, setRequired] = useState(false);
 
   const loadStatus = async () => {
     const { data, error: err } = await supabase.auth.mfa.listFactors();
@@ -45,6 +46,17 @@ export default function AdminSecurityPage() {
     const verified = data?.totp?.find((f) => f.status === 'verified');
     setFactorId(verified?.id ?? null);
     setView(verified ? 'enabled' : 'disabled');
+
+    // Is 2FA being pushed to this account? (admin edit page toggle)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: row } = await supabase
+        .from('admins')
+        .select('mfa_required')
+        .eq('id', user.id)
+        .maybeSingle();
+      setRequired(!!row?.mfa_required);
+    }
   };
 
   useEffect(() => {
@@ -65,8 +77,11 @@ export default function AdminSecurityPage() {
         }
       }
 
+      // issuer = what the authenticator app displays as the site name,
+      // with the user's email as the account label under it.
       const { data, error: err } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
+        issuer: 'Qiqi Partners Hub',
         friendlyName: 'Authenticator app',
       });
       if (err) throw err;
@@ -146,6 +161,15 @@ export default function AdminSecurityPage() {
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {required && view === 'disabled' && (
+        <Alert variant="info" className="mb-4">
+          <AlertDescription>
+            Two-factor authentication is required for your account. Enroll
+            below to continue to the rest of the admin portal.
+          </AlertDescription>
         </Alert>
       )}
 
@@ -253,9 +277,16 @@ export default function AdminSecurityPage() {
                 Lost your phone? Another admin can reset two-factor for you
                 from your admin profile, then you can re-enroll here.
               </p>
-              <Button variant="outline" onClick={handleDisable} loading={busy}>
-                <ShieldOff className="h-4 w-4" /> Turn off
-              </Button>
+              {required ? (
+                <p className="text-sm text-muted-foreground">
+                  Two-factor is required for your account and can&apos;t be
+                  turned off here.
+                </p>
+              ) : (
+                <Button variant="outline" onClick={handleDisable} loading={busy}>
+                  <ShieldOff className="h-4 w-4" /> Turn off
+                </Button>
+              )}
             </div>
           )}
         </CardContent>
