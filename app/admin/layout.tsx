@@ -31,6 +31,8 @@ import {
 import { supabase } from '../../lib/supabaseClient';
 import { fetchWithAuth } from '../../lib/fetchWithAuth';
 import { firstAllowedAdminArea } from '../../lib/permissions';
+import { getMfaStatus } from '../../lib/mfa';
+import { MfaVerifyGate } from '../components/admin/MfaVerifyGate';
 
 import { AppShell } from '../components/qq/app-shell';
 import { Sidebar } from '../components/qq/sidebar';
@@ -166,6 +168,11 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: string }> = [
 ];
 
 function isAdminPathAllowed(pathname: string, permissions: string[]): boolean {
+  // Self-service security (MFA enrollment) — every admin may reach it,
+  // whatever their permission set.
+  if (pathname === '/admin/security' || pathname.startsWith('/admin/security/')) {
+    return true;
+  }
   if (pathname === '/admin') return permissions.includes('orders');
   let best: { prefix: string; permission: string } | null = null;
   for (const entry of ROUTE_PERMISSIONS) {
@@ -202,6 +209,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [mobileOpen, setMobileOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const feedbackButtonRef = useRef<HTMLButtonElement>(null);
+  // MFA gate: enrolled admins must have a verified, non-stale session.
+  // null = no gate; otherwise the factor to challenge + why.
+  const [mfaGate, setMfaGate] = useState<{ factorId: string; stale: boolean } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -229,6 +239,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         setPermissions(
           Array.isArray(adminRow?.permissions) ? adminRow!.permissions : [],
         );
+        // Enrolled admins: require a code on unverified sessions (other
+        // device / pre-enrollment session) and every MFA_MAX_AGE_DAYS.
+        try {
+          const mfa = await getMfaStatus(supabase);
+          if (mfa.factorId && (mfa.needsChallenge || mfa.isStale)) {
+            setMfaGate({ factorId: mfa.factorId, stale: mfa.isStale });
+          }
+        } catch {
+          // Phase 1 is soft — an MFA status hiccup must not lock the portal.
+        }
       } catch {
         router.push('/');
         return;
@@ -270,6 +290,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   if (!isAuthenticated) return null;
+
+  if (mfaGate) {
+    return (
+      <MfaVerifyGate
+        factorId={mfaGate.factorId}
+        stale={mfaGate.stale}
+        onVerified={() => setMfaGate(null)}
+        onSignOut={handleSignOut}
+      />
+    );
+  }
 
   const sidebarContent = (
     <NavContent pathname={pathname} permissions={permissions} />
@@ -325,6 +356,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <DropdownMenuLabel className="normal-case tracking-normal text-xs">
                       {userEmail}
                     </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => router.push('/admin/security')}>
+                      <Shield className="h-4 w-4 mr-2" /> Security
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={handleSignOut}

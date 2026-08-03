@@ -106,6 +106,31 @@ export default function EditAdminPage() {
     }
   };
 
+  // Lost-phone recovery: wipe the target's MFA factors so they can sign in
+  // with password only and re-enroll at /admin/security.
+  const handleResetMfa = async () => {
+    const ok = await confirm({
+      title: 'Reset two-factor authentication?',
+      description:
+        'Removes this admin’s authenticator enrollment. They sign in with password only until they re-enroll under their Security page.',
+      variant: 'danger',
+      confirmLabel: 'Reset two-factor',
+    });
+    if (!ok) return;
+    try {
+      const res = await fetchWithAuth(`/api/users/${adminId}/mfa`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to reset two-factor.');
+      toast.success(
+        data.removed > 0
+          ? 'Two-factor reset. They can re-enroll at sign-in.'
+          : 'This admin has no two-factor enrollment.',
+      );
+    } catch (err: any) {
+      setError(err.message || 'Failed to reset two-factor.');
+    }
+  };
+
   const handleDelete = async () => {
     const ok = await confirm({
       title: 'Delete admin?',
@@ -142,17 +167,28 @@ export default function EditAdminPage() {
       onCancel={() => router.push('/admin/admins')}
       submitLabel="Save changes"
       headerActions={
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={handleDelete}
-          disabled={deleting || saving}
-          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-        >
-          <Trash2 className="h-4 w-4" />
-          {deleting ? 'Deleting…' : 'Delete'}
-        </Button>
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleResetMfa}
+            disabled={deleting || saving}
+          >
+            Reset two-factor
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleDelete}
+            disabled={deleting || saving}
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="h-4 w-4" />
+            {deleting ? 'Deleting…' : 'Delete'}
+          </Button>
+        </>
       }
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

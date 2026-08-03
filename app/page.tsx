@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { fetchWithAuth } from '../lib/fetchWithAuth';
+import { getMfaStatus, verifyMfaCode } from '../lib/mfa';
 
 import { Button } from './components/qq/button';
 import { Input } from './components/qq/input';
@@ -24,7 +25,7 @@ import { FormField } from './components/qq/form-field';
 import { Alert, AlertDescription } from './components/qq/alert';
 import { Separator } from './components/qq/separator';
 
-type Step = 'email' | 'password' | 'code';
+type Step = 'email' | 'password' | 'code' | 'mfa';
 type Role = 'admin' | 'client';
 
 export default function LoginPage() {
@@ -37,6 +38,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState('');
+  // Two-factor (authenticator app) — set when the signed-in account has an
+  // enrolled TOTP factor; the session stays half-open until the code passes.
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [pendingRoute, setPendingRoute] = useState('/client');
 
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
@@ -141,9 +147,41 @@ export default function LoginPage() {
         return;
       }
       const r = profile.user.role;
-      router.push(typeof r === 'string' && r.toLowerCase() === 'admin' ? '/admin' : '/client');
+      const target =
+        typeof r === 'string' && r.toLowerCase() === 'admin' ? '/admin' : '/client';
+
+      // Accounts with two-factor enrolled: ask for the authenticator code
+      // before entering the portal.
+      const mfa = await getMfaStatus(supabase);
+      if (mfa.factorId && mfa.needsChallenge) {
+        setMfaFactorId(mfa.factorId);
+        setPendingRoute(target);
+        setMfaCode('');
+        setStep('mfa');
+        return;
+      }
+
+      router.push(target);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Sign-in failed.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Step 2c — authenticator code (accounts with two-factor enrolled)
+  // ---------------------------------------------------------------------------
+  const handleVerifyMfa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfaFactorId || mfaCode.length !== 6) return;
+    setErrorMsg('');
+    setIsSubmitting(true);
+    try {
+      await verifyMfaCode(supabase, mfaFactorId, mfaCode);
+      router.push(pendingRoute);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Verification failed.');
     } finally {
       setIsSubmitting(false);
     }
@@ -226,12 +264,18 @@ export default function LoginPage() {
     }
   };
 
-  const handleBack = () => {
+  const handleBack = async () => {
     setErrorMsg('');
     setInfoMsg('');
     setPassword('');
     setCode('');
-    if (step === 'code') setStep('password');
+    if (step === 'mfa') {
+      // The password already succeeded — drop the half-open session.
+      setMfaCode('');
+      setMfaFactorId(null);
+      await supabase.auth.signOut();
+      setStep('password');
+    } else if (step === 'code') setStep('password');
     else if (step === 'password') setStep('email');
   };
 
@@ -438,6 +482,64 @@ export default function LoginPage() {
                       className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
                     >
                       Resend code
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+
+            {/* ============================================================== */}
+            {/* Step 4 — Authenticator code (two-factor)                        */}
+            {/* ============================================================== */}
+            {step === 'mfa' && (
+              <>
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold tracking-tight">
+                    Two-factor authentication
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Enter the 6-digit code from your authenticator app.
+                  </p>
+                </div>
+
+                <form onSubmit={handleVerifyMfa} className="space-y-4" noValidate>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                    disabled={isSubmitting}
+                    required
+                    autoFocus
+                    placeholder="000000"
+                    className="w-full px-3 py-3 text-center text-2xl font-mono tracking-[0.5em] border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 disabled:opacity-50"
+                  />
+
+                  {errorMsg && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{errorMsg}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    loading={isSubmitting}
+                    disabled={mfaCode.length !== 6}
+                  >
+                    {isSubmitting ? 'Verifying…' : 'Verify'}
+                  </Button>
+
+                  <div className="pt-1 text-sm">
+                    <button
+                      type="button"
+                      onClick={handleBack}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Back to sign in
                     </button>
                   </div>
                 </form>
