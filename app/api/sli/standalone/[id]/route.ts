@@ -3,10 +3,8 @@ import { createServiceRoleClient, requireAdmin } from '../../../../../platform/a
 // Do not keep a module-level service-role client; create per-request
 
 // GET - Fetch standalone SLI
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin(request);
     const sliId = params.id;
@@ -34,10 +32,8 @@ export async function GET(
 }
 
 // PUT - Update standalone SLI
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin(request);
     const sliId = params.id;
@@ -121,10 +117,8 @@ export async function PUT(
 }
 
 // DELETE - Delete standalone SLI
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin(request);
     const sliId = params.id;

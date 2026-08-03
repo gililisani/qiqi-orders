@@ -24,7 +24,7 @@ interface FormFieldProps {
   /** Pass-through id; auto-generated if omitted. */
   htmlFor?: string;
   className?: string;
-  children: React.ReactElement;
+  children: React.ReactElement<Record<string, unknown>>;
 }
 
 let counter = 0;

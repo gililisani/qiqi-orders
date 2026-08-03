@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Edit } from 'lucide-react';
 
@@ -35,7 +35,8 @@ interface Product {
   created_at: string;
 }
 
-export default function ProductViewPage({ params }: { params: { id: string } }) {
+export default function ProductViewPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

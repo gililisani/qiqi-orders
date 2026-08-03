@@ -22,7 +22,8 @@ async function getAdminUser(request: NextRequest): Promise<string> {
   return adminUser.id;
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const adminUserId = await getAdminUser(request);
     const supabaseAdmin = createSupabaseAdminClient();
@@ -70,7 +71,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await getAdminUser(request);
 

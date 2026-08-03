@@ -18,7 +18,8 @@ function createSupabaseAdminClient() {
 }
 
 // POST /api/campaigns/[id]/remove-asset - Remove an asset from campaign
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = createAuth();
     await auth.requireRole(request, 'admin');

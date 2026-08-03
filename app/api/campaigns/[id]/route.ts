@@ -37,7 +37,8 @@ function buildPreviewPath(assetId: string, versionId?: string | null, rendition?
 }
 
 // GET /api/campaigns/[id] - Get campaign details with assets
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = createAuth();
     await auth.requireRole(request, 'admin');
@@ -313,7 +314,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE /api/campaigns/[id] - Delete a campaign
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = createAuth();
     await auth.requireRole(request, 'admin');
@@ -337,7 +339,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 }
 
 // PATCH /api/campaigns/[id] - Update campaign
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = createAuth();
     await auth.requireRole(request, 'admin');

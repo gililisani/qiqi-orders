@@ -3,8 +3,9 @@ import { createServiceRoleClient, requireAuthenticatedUser } from '../../../../.
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; docId: string } }
+  props: { params: Promise<{ id: string; docId: string }> }
 ) {
+  const params = await props.params;
   try {
     const orderId = params.id;
     const docId = params.docId;

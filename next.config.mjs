@@ -1,17 +1,18 @@
 import { withSentryConfig } from '@sentry/nextjs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Pin the tracing root to this repo — a stray lockfile elsewhere on the
+  // machine otherwise makes Next guess the wrong workspace root.
+  outputFileTracingRoot: path.dirname(fileURLToPath(import.meta.url)),
   eslint: {
     // Lint exists for editors/CI (`npm run lint`), but years of pre-lint
     // code means gating deploys on it would block main today. Tighten
     // after the backlog is worked down.
     ignoreDuringBuilds: true,
-  },
-  experimental: {
-    // Required on Next 14 for instrumentation.ts (Sentry) to load.
-    instrumentationHook: true,
   },
   images: {
     remotePatterns: [

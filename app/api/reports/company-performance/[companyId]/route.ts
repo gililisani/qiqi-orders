@@ -13,10 +13,8 @@ import { buildCompanyPerformance, resolveWindowRange } from '../../../../../lib/
  * company locked to the caller's own).
  */
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { companyId: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ companyId: string }> }) {
+  const params = await props.params;
   try {
     await requireAdminWithPermission(request, 'reports');
     const { searchParams } = new URL(request.url);

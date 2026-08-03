@@ -26,8 +26,9 @@ async function getAdminUser(request: NextRequest): Promise<string> {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  props: { params: Promise<Promise<{ id: string }> | { id: string }> }
 ) {
+  const params = await props.params;
   try {
     // Handle both sync and async params (Next.js 14/15 compatibility)
     const resolvedParams = params instanceof Promise ? await params : params;

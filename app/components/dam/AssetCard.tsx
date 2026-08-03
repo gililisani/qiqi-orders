@@ -6,7 +6,7 @@
  * delete). Visually: qq Card-style tile with hover-overlay actions.
  */
 
-import { useState, useEffect, useRef, memo } from 'react';
+import { useState, useEffect, useRef, memo, type JSX } from 'react';
 import { Image as ImageIcon, Eye, Download, Trash2, Check, Loader2 } from 'lucide-react';
 import { AssetRecord } from './types';
 import { getFileTypeBadge, getStaticDocumentThumbnail, resolveSignedAssetUrl } from './utils';

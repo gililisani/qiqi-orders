@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '../../../../../../platform/auth/guards';
 import { fetchOrderSLIData } from '../../../../../../lib/pdf/api/sliDataFetcher';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Admin-only: this returns full customs data (addresses, HS codes,
     // values) for ANY order, and its sole caller is the admin SLI preview.

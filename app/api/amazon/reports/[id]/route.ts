@@ -13,10 +13,8 @@ export const maxDuration = 60;
  * While Amazon generates it: { status: 'IN_PROGRESS' }.
  * When done: { status: 'DONE', rows: [...] } parsed per report type.
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdminWithPermission(request, 'netsuite');
     const type = request.nextUrl.searchParams.get('type');

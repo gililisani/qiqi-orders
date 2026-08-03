@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, type JSX } from 'react';
 import {
   Image as ImageIcon,
   Film,

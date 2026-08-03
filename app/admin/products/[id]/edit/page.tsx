@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -39,7 +39,8 @@ const EMPTY_FORM: ProductFormData = {
   category_id: '',
 };
 
-export default function EditProductPage({ params }: { params: { id: string } }) {
+export default function EditProductPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const router = useRouter();
   const toast = useToast();
 

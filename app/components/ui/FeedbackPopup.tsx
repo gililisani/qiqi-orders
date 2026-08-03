@@ -33,7 +33,7 @@ interface FeedbackPopupProps {
   isOpen: boolean;
   onClose: () => void;
   /** @deprecated — no longer needed (Dialog is centered, not anchored). */
-  buttonRef?: React.RefObject<HTMLButtonElement>;
+  buttonRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 export default function FeedbackPopup({ isOpen, onClose }: FeedbackPopupProps) {

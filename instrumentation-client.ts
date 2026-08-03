@@ -6,3 +6,6 @@ Sentry.init({
   enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
   tracesSampleRate: 0,
 });
+
+// Required export since Sentry 10 / Next 15 — no-op while tracing is off.
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

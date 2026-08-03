@@ -5,7 +5,7 @@
  * Shared by admin and client surfaces (props gate admin-only affordances:
  * edit, delete, video URL editing).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type JSX } from 'react';
 import {
   X,
   Image as ImageIcon,

@@ -3,10 +3,8 @@ import { createServiceRoleClient, requireAdmin } from '../../../../../platform/a
 import { validateSignature } from '../../../../../lib/sli/signatureValidation';
 
 // PUT - update a signer (fields present in the body are updated)
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin(request);
     const body = await request.json();
@@ -60,10 +58,8 @@ export async function PUT(
 }
 
 // DELETE - remove a signer (existing SLIs keep rendering via the default signer)
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin(request);
     const supabaseAdmin = createServiceRoleClient();

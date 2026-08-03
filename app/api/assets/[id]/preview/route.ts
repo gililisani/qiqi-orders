@@ -3,7 +3,8 @@ import { createStorage } from '../../../../../platform/storage';
 import { createServiceRoleClient, requireAnyRole } from '../../../../../platform/auth/guards';
 import { assertDamAssetDeliveryEntitlement } from '../../../../../platform/auth/damAssetAccess';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const user = await requireAnyRole(request, ['admin', 'client']);
     const supabaseAdmin = createServiceRoleClient();
