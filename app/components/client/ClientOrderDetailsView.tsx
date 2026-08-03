@@ -18,7 +18,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Edit, Trash2, Package } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, Trash2, Package } from 'lucide-react';
 
 import { supabase } from '../../../lib/supabaseClient';
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
@@ -108,6 +108,7 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [items, setItems] = useState<OrderItem[]>([]);
+  const [hasSLI, setHasSLI] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -118,7 +119,7 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
     (async () => {
       setLoading(true);
       try {
-        const [orderRes, itemsRes] = await Promise.all([
+        const [orderRes, itemsRes, sliRes] = await Promise.all([
           supabase
             .from('orders')
             .select(
@@ -131,12 +132,16 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
             .select('*, product:Products(sku, item_name)')
             .eq('order_id', orderId)
             .order('sort_order', { ascending: true, nullsFirst: false }),
+          // Admin-created customs paperwork; RLS (slis_client_select) scopes
+          // it to the client's own company. Drives the "SLI document" button.
+          supabase.from('slis').select('id').eq('order_id', orderId).maybeSingle(),
         ]);
         if (orderRes.error) throw orderRes.error;
         if (itemsRes.error) throw itemsRes.error;
         if (!cancelled) {
           setOrder(orderRes.data as Order);
           setItems((itemsRes.data as OrderItem[]) || []);
+          setHasSLI(!!sliRes.data);
         }
       } catch (err: any) {
         if (!cancelled) setError(err.message || 'Failed to load order.');
@@ -239,6 +244,13 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
               <Link href={`/client/orders/${orderId}/packing-slip`}>
                 <Button variant="outline" size="sm">
                   <Package className="h-4 w-4" /> Packing slip
+                </Button>
+              </Link>
+            )}
+            {hasSLI && (
+              <Link href={`/client/orders/${orderId}/sli`}>
+                <Button variant="outline" size="sm">
+                  <FileText className="h-4 w-4" /> SLI document
                 </Button>
               </Link>
             )}

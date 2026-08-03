@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '../../../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAuthenticatedUser } from '../../../../../../platform/auth/guards';
+import { assertOrderAccess } from '../../../../../../platform/auth/orderAccess';
 import { fetchOrderSLIData } from '../../../../../../lib/pdf/api/sliDataFetcher';
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    // Admin-only: this returns full customs data (addresses, HS codes,
-    // values) for ANY order, and its sole caller is the admin SLI preview.
-    // Previously any authenticated user could read any order here (IDOR).
-    await requireAdmin(request);
-
+    // Admin OR a client of the order's own company (owner decision
+    // 2026-08-03: clients see their order's SLI document). Anything broader
+    // re-opens the original IDOR — this returns full customs data
+    // (addresses, HS codes, values) for the order.
     const orderId = params.id;
+    const user = await requireAuthenticatedUser(request);
+    const access = await assertOrderAccess(createServiceRoleClient(), user, orderId);
+    if (!access.ok) return access.response;
+
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
