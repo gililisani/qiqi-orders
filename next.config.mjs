@@ -31,6 +31,24 @@ const nextConfig = {
     return config;
   },
   transpilePackages: ['@react-pdf/renderer'],
+  // WP9 — baseline security headers. Referrer-Policy is the sharp edge:
+  // password-setup tokens ride in /set-password?token=... URLs and must
+  // never leak via the Referer header. A full CSP needs nonce plumbing
+  // through Next's inline scripts — deferred, tracked in the fix plan.
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+        ],
+      },
+    ];
+  },
 };
 
 // Sentry build wrapper: injects the client config and (only when
