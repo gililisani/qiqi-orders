@@ -89,6 +89,9 @@ export default function CompanyPerformancePage() {
   };
 
   const company = data?.company;
+  // Mirror the client performance page: SF tiles/columns are hidden
+  // entirely for non-enrolled companies instead of showing dead zeros.
+  const isEnrolled = company?.isEnrolled ?? false;
   const todayISO = new Date().toISOString().slice(0, 10);
 
   return (
@@ -130,16 +133,20 @@ export default function CompanyPerformancePage() {
       </div>
 
       {/* To-date tiles */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className={`grid grid-cols-2 ${isEnrolled ? 'lg:grid-cols-5' : 'lg:grid-cols-2'} gap-3 sm:gap-4`}>
         <Tile label="Total sales to date" value={loading && !data ? '—' : money(data?.toDate.sales ?? 0)} />
         <Tile label="Orders to date" value={loading && !data ? '—' : String(data?.toDate.orders ?? 0)} />
-        <Tile label="SF earned to date" value={loading && !data ? '—' : money(data?.toDate.sfEarned ?? 0)} />
-        <Tile label="SF redeemed to date" value={loading && !data ? '—' : money(data?.toDate.sfUsed ?? 0)} />
-        <Tile
-          label="SF balance"
-          value={loading && !data ? '—' : money(data?.toDate.sfBalance ?? 0)}
-          sub={data && data.toDate.sfBalance < 0 ? 'topped up beyond earned' : undefined}
-        />
+        {isEnrolled && (
+          <>
+            <Tile label="SF earned to date" value={loading && !data ? '—' : money(data?.toDate.sfEarned ?? 0)} />
+            <Tile label="SF redeemed to date" value={loading && !data ? '—' : money(data?.toDate.sfUsed ?? 0)} />
+            <Tile
+              label="SF balance"
+              value={loading && !data ? '—' : money(data?.toDate.sfBalance ?? 0)}
+              sub={data && data.toDate.sfBalance < 0 ? 'topped up beyond earned' : undefined}
+            />
+          </>
+        )}
       </div>
 
       {/* Periods (Years) */}
@@ -160,7 +167,9 @@ export default function CompanyPerformancePage() {
                   <TableHead className="text-right">Actual</TableHead>
                   <TableHead>Progress</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="hidden lg:table-cell text-right">SF earned / used</TableHead>
+                  {isEnrolled && (
+                    <TableHead className="hidden lg:table-cell text-right">SF earned / used</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -189,9 +198,11 @@ export default function CompanyPerformancePage() {
                     <TableCell>
                       <StatusPill status={p.status} />
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell text-right font-mono text-xs text-muted-foreground">
-                      {money(p.sfEarned)} / {money(p.sfUsed)}
-                    </TableCell>
+                    {isEnrolled && (
+                      <TableCell className="hidden lg:table-cell text-right font-mono text-xs text-muted-foreground">
+                        {money(p.sfEarned)} / {money(p.sfUsed)}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
