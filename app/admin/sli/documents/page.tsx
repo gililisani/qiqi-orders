@@ -104,6 +104,14 @@ export default function SLIDocumentsPage() {
           </Button>
         </Link>
       }
+      // Row click opens the DOCUMENT (owner QA feedback 2026-08-03);
+      // Edit stays in the dropdown — for order SLIs editing happens on the
+      // order page (the SLI modal lives there).
+      rowClickUrl={(id, row) =>
+        row.type === 'order'
+          ? `/admin/orders/${row.order_id}/sli-preview`
+          : `/admin/sli/${id}/preview`
+      }
       editUrl={(id, row) =>
         row?.type === 'order' ? `/admin/orders/${row.order_id}` : `/admin/sli/${id}/edit`
       }

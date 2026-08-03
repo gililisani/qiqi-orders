@@ -62,9 +62,12 @@ export interface AdminListPageProps<T extends { id: string | number }> {
   description?: string;
   newUrl: string;
   newLabel?: string;
-  /** Row-click / "Edit" target. Receives the full row as a second argument
+  /** "Edit" dropdown target. Receives the full row as a second argument
    *  for lists whose rows route to different places (e.g. SLI documents). */
   editUrl: (id: T['id'], row: T) => string;
+  /** Row-click target when it should differ from "Edit" (e.g. a view page).
+   *  Defaults to editUrl. */
+  rowClickUrl?: (id: T['id'], row: T) => string;
 
   /** Returns { data, error } the same shape Supabase returns.
    *  PromiseLike (not Promise) so the Supabase query builder is accepted
@@ -95,6 +98,7 @@ export function AdminListPage<T extends { id: string | number }>({
   newUrl,
   newLabel = 'Add new',
   editUrl,
+  rowClickUrl,
   fetch,
   filterRow,
   searchPlaceholder = 'Search…',
@@ -237,7 +241,7 @@ export function AdminListPage<T extends { id: string | number }>({
                   <TableRow
                     key={String(row.id)}
                     className="cursor-pointer"
-                    onClick={() => router.push(editUrl(row.id, row))}
+                    onClick={() => router.push((rowClickUrl ?? editUrl)(row.id, row))}
                   >
                     {columns.map((col, i) => (
                       <TableCell

@@ -3,14 +3,14 @@
 import { useParams } from 'next/navigation';
 import { SLIDocumentView } from '../../../../components/shared/SLIDocumentView';
 
-export default function OrderSLIPreviewPage() {
+export default function ClientOrderSLIPage() {
   const params = useParams();
   const orderId = params.id as string;
 
   return (
     <SLIDocumentView
       dataUrl={`/api/orders/${orderId}/sli/data`}
-      backUrl={`/admin/orders/${orderId}`}
+      backUrl={`/client/orders/${orderId}`}
       backLabel="Back to order"
     />
   );

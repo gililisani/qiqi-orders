@@ -1024,7 +1024,8 @@ export default function AdminOrderDetailsView({
                       <DropdownMenuItem
                         onClick={() => window.open(`/admin/orders/${orderId}/sli-preview`, '_blank')}
                       >
-                        <FileDown className="h-4 w-4 mr-2" /> Download SLI PDF
+                        <FileDown className="h-4 w-4 mr-2" />
+                        {`View SLI${sliData.sli_number ? ` #${sliData.sli_number}` : ''}`}
                       </DropdownMenuItem>
                     )}
                   </>
