@@ -48,9 +48,10 @@ Notes:
 ## Order lifecycle
 
 - Client buttons: **Create Order** (→ `status='Open'`), **Save as Draft** (→ `status='Draft'`), **Cancel** (discard).
-- Drafts: both admin and client can read, edit (save as draft or promote to Open), and delete.
-- Open: admin and client can edit. **Only admins can delete or move past Open.**
+- Drafts: both admin and client can read and edit (save as draft or promote to Open).
+- Open: admin and client can edit. **Only admins can move past Open.**
 - Past Open (`Processing`, `Done`, etc.): client read-only.
+- **Deletion** (single source: `orderDetailsUtils.ts` + `/api/orders/delete`): admins delete `Draft` or `Cancelled`; clients delete **`Cancelled` only** (product rule — a draft is cancelled first, then deleted).
 
 ## Email / files / integrations
 
