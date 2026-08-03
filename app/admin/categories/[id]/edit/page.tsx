@@ -36,7 +36,6 @@ export default function EditCategoryPage() {
         setFormData({
           name: data.name || '',
           description: data.description || '',
-          sort_order: data.sort_order?.toString() || '0',
           visible_to_americas: data.visible_to_americas ?? true,
           visible_to_international: data.visible_to_international ?? true,
           image_url: data.image_url || '',
@@ -63,7 +62,7 @@ export default function EditCategoryPage() {
         .update({
           name: formData.name.trim(),
           description: formData.description.trim() || null,
-          sort_order: formData.sort_order ? parseInt(formData.sort_order) : 0,
+          // sort_order untouched here — the reorder page is the only writer.
           visible_to_americas: formData.visible_to_americas,
           visible_to_international: formData.visible_to_international,
           image_url: formData.image_url || null,

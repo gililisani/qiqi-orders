@@ -32,7 +32,9 @@ export default function NewCategoryPage() {
         {
           name: formData.name.trim(),
           description: formData.description.trim() || null,
-          sort_order: formData.sort_order ? parseInt(formData.sort_order) : 0,
+          // New categories land at position 0; ordering is managed solely by
+          // the drag-and-drop reorder page.
+          sort_order: 0,
           visible_to_americas: formData.visible_to_americas,
           visible_to_international: formData.visible_to_international,
           image_url: formData.image_url || null,

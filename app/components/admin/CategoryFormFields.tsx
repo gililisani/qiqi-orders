@@ -14,7 +14,6 @@ import { Separator } from '../qq/separator';
 export interface CategoryFormData {
   name: string;
   description: string;
-  sort_order: string;
   visible_to_americas: boolean;
   visible_to_international: boolean;
   image_url: string;
@@ -23,7 +22,6 @@ export interface CategoryFormData {
 export const EMPTY_CATEGORY_FORM: CategoryFormData = {
   name: '',
   description: '',
-  sort_order: '',
   visible_to_americas: true,
   visible_to_international: true,
   image_url: '',
@@ -56,14 +54,10 @@ export function CategoryFormFields({ formData, onChange }: CategoryFormFieldsPro
         />
       </FormField>
 
-      <FormField label="Sort order" helper="Lower numbers appear first (0 = first position).">
-        <Input
-          type="number"
-          value={formData.sort_order}
-          onChange={(e) => onChange({ sort_order: e.target.value })}
-          placeholder="0"
-        />
-      </FormField>
+      {/* Sort order deliberately has NO input here — the drag-and-drop
+          reorder page (/admin/categories/reorder) is the ONLY writer.
+          Two writers meant the number typed here silently fought the
+          drag ordering (audit WP5.7). */}
 
       <div>
         <CategoryImageUpload
