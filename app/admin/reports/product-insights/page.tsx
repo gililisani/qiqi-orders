@@ -15,11 +15,18 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { AlertTriangle, Search, Sparkles } from 'lucide-react';
+import { AlertTriangle, Download, Search, Sparkles } from 'lucide-react';
 
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import { formatCurrency, formatNumber } from '../../../../lib/formatters';
+import {
+  exportToCSV,
+  exportToExcel,
+  generateFilename,
+  type ColumnDef,
+} from '../../../../lib/reportExport';
 import { cn } from '../../../../lib/utils';
+import { Button } from '../../../components/qq/button';
 import { PageHeader } from '../../../components/qq/page-header';
 import {
   Card,
@@ -204,6 +211,26 @@ export default function ProductInsightsPage() {
     }
   };
 
+  // Exports the products table AS FILTERED AND SORTED on screen — same
+  // "export the cut you're looking at" behavior as Sales Explorer.
+  const exportColumns: ColumnDef[] = [
+    { key: 'sku', label: 'SKU' },
+    { key: 'name', label: 'Product' },
+    { key: 'category', label: 'Category' },
+    { key: 'units', label: 'Units', format: (v) => formatNumber(Number(v) || 0) },
+    { key: 'revenue', label: 'Revenue', format: (v) => formatCurrency(Number(v) || 0) },
+    { key: 'orders', label: 'Orders', format: (v) => formatNumber(Number(v) || 0) },
+    { key: 'buyers', label: 'Buyers', format: (v) => formatNumber(Number(v) || 0) },
+    { key: 'topBuyer', label: 'Top buyer' },
+  ];
+
+  const handleExport = (kind: 'csv' | 'xlsx') => {
+    if (filteredSortedProducts.length === 0) return;
+    const filename = generateFilename(`product-insights-${window}`);
+    if (kind === 'csv') exportToCSV(filteredSortedProducts, exportColumns, filename);
+    else exportToExcel(filteredSortedProducts, exportColumns, filename);
+  };
+
   return (
     <div className="px-6 py-8">
       <PageHeader
@@ -218,10 +245,27 @@ export default function ProductInsightsPage() {
           </Link>
         }
         actions={
-          <PeriodSelector
-            current={window}
-            basePath="/admin/reports/product-insights"
-          />
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport('csv')}
+              disabled={loading || filteredSortedProducts.length === 0}
+            >
+              <Download className="h-4 w-4" /> CSV
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => handleExport('xlsx')}
+              disabled={loading || filteredSortedProducts.length === 0}
+            >
+              <Download className="h-4 w-4" /> Excel
+            </Button>
+            <PeriodSelector
+              current={window}
+              basePath="/admin/reports/product-insights"
+            />
+          </div>
         }
       />
 

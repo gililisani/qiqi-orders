@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowDownRight,
   ArrowUpRight,
+  Download,
   Minus,
   TrendingDown,
   TrendingUp,
@@ -13,6 +14,13 @@ import {
 
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import { formatCurrency, formatNumber } from '../../../../lib/formatters';
+import {
+  exportToCSV,
+  exportToExcel,
+  generateFilename,
+  type ColumnDef,
+} from '../../../../lib/reportExport';
+import { Button } from '../../../components/qq/button';
 import { PageHeader } from '../../../components/qq/page-header';
 import {
   Card,
@@ -211,6 +219,33 @@ export default function CompanyPerformancePage() {
     }
   };
 
+  // Exports the periods table AS FILTERED (scope/company/subsidiary) AND
+  // SORTED on screen — same behavior as the Sales Explorer export.
+  const exportColumns: ColumnDef[] = [
+    { key: 'companyName', label: 'Company' },
+    { key: 'netsuiteNumber', label: 'NetSuite #' },
+    { key: 'periodName', label: 'Period' },
+    { key: 'startDate', label: 'Start' },
+    { key: 'endDate', label: 'End' },
+    { key: 'daysRemaining', label: 'Days left', format: (v) => formatNumber(Number(v) || 0) },
+    { key: 'target', label: 'Target', format: (v) => formatCurrency(Number(v) || 0) },
+    { key: 'actual', label: 'Actual', format: (v) => formatCurrency(Number(v) || 0) },
+    { key: 'progressPct', label: 'Progress %', format: (v) => `${(Number(v) || 0).toFixed(1)}%` },
+    { key: 'expectedPct', label: 'Expected %', format: (v) => `${(Number(v) || 0).toFixed(1)}%` },
+    { key: 'paceDeltaPct', label: 'Pace Δ %', format: (v) => `${(Number(v) || 0).toFixed(1)}%` },
+    { key: 'status', label: 'Status' },
+    { key: 'sfEarned', label: 'SF earned', format: (v) => formatCurrency(Number(v) || 0) },
+    { key: 'sfUsed', label: 'SF used', format: (v) => formatCurrency(Number(v) || 0) },
+    { key: 'sfBalance', label: 'SF balance', format: (v) => formatCurrency(Number(v) || 0) },
+  ];
+
+  const handleExport = (kind: 'csv' | 'xlsx') => {
+    if (sortedRows.length === 0) return;
+    const filename = generateFilename(`company-performance-${scope}`);
+    if (kind === 'csv') exportToCSV(sortedRows, exportColumns, filename);
+    else exportToExcel(sortedRows, exportColumns, filename);
+  };
+
   return (
     <div className="px-6 py-8">
       <PageHeader
@@ -226,6 +261,21 @@ export default function CompanyPerformancePage() {
         }
         actions={
           <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport('csv')}
+              disabled={loading || sortedRows.length === 0}
+            >
+              <Download className="h-4 w-4" /> CSV
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => handleExport('xlsx')}
+              disabled={loading || sortedRows.length === 0}
+            >
+              <Download className="h-4 w-4" /> Excel
+            </Button>
             <select
               value={subsidiaryId}
               onChange={(e) => {
