@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import { AdminFormShell } from '../../../components/admin/AdminFormShell';
@@ -27,11 +27,19 @@ export default function NewUserPage() {
   const router = useRouter();
   const toast = useToast();
 
+  // THE user-creation page — reached from the Users list AND from a
+  // company's Users tab (?companyId=... preselects the company and returns
+  // there afterwards). The old company-scoped duplicate is deleted (WP5.1).
+  const searchParams = useSearchParams();
+  const presetCompanyId = searchParams?.get('companyId') || '';
+  const returnHref = presetCompanyId ? `/admin/companies/${presetCompanyId}` : '/admin/users';
+  const returnLabel = presetCompanyId ? 'Back to company' : 'Back to users';
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     enabled: true,
-    company_id: '',
+    company_id: presetCompanyId,
   });
   const [companies, setCompanies] = useState<Company[]>([]);
   const [saving, setSaving] = useState(false);
@@ -73,7 +81,7 @@ export default function NewUserPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to create user.');
       toast.success('User created. A password setup email has been sent.');
-      router.push('/admin/users');
+      router.push(returnHref);
     } catch (err: any) {
       setError(err.message || 'Failed to create user.');
     } finally {
@@ -85,12 +93,12 @@ export default function NewUserPage() {
     <AdminFormShell
       title="New user"
       description="Add a client user with access to the partner portal."
-      backHref="/admin/users"
-      backLabel="Back to users"
+      backHref={returnHref}
+      backLabel={returnLabel}
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/users')}
+      onCancel={() => router.push(returnHref)}
       submitLabel="Create user"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

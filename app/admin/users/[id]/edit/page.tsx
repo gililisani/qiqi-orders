@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Trash2, Mail } from 'lucide-react';
 import { supabase } from '../../../../../lib/supabaseClient';
 import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
@@ -38,6 +38,16 @@ export default function EditUserPage() {
   const userId = params?.id as string;
   const toast = useToast();
   const confirm = useConfirm();
+
+  // This page is THE user editor — reached from the Users list AND from a
+  // company's Users tab (?from=company&companyId=...). The only difference
+  // is where back/save/delete return to. (The old separate company-scoped
+  // edit page was a drifting duplicate — audit WP5.1 — deleted.)
+  const searchParams = useSearchParams();
+  const fromCompanyId =
+    searchParams?.get('from') === 'company' ? searchParams.get('companyId') : null;
+  const returnHref = fromCompanyId ? `/admin/companies/${fromCompanyId}` : '/admin/users';
+  const returnLabel = fromCompanyId ? 'Back to company' : 'Back to users';
 
   const [formData, setFormData] = useState({
     name: '',
@@ -110,7 +120,7 @@ export default function EditUserPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to update user.');
       toast.success('User updated.');
-      router.push('/admin/users');
+      router.push(returnHref);
     } catch (err: any) {
       setError(err.message || 'Failed to update user.');
     } finally {
@@ -164,7 +174,7 @@ export default function EditUserPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete user.');
       toast.success('User deleted.');
-      router.push('/admin/users');
+      router.push(returnHref);
     } catch (err: any) {
       setError(err.message || 'Failed to delete user.');
       setDeleting(false);
@@ -174,12 +184,12 @@ export default function EditUserPage() {
   return (
     <AdminFormShell
       title="Edit user"
-      backHref="/admin/users"
-      backLabel="Back to users"
+      backHref={returnHref}
+      backLabel={returnLabel}
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/users')}
+      onCancel={() => router.push(returnHref)}
       submitLabel="Save changes"
       headerActions={
         <Button

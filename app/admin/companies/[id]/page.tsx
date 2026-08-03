@@ -494,7 +494,7 @@ export default function CompanyViewPage() {
         <h2 className="text-lg font-semibold tracking-tight text-foreground">
           Users <span className="text-muted-foreground font-normal">({users.length})</span>
         </h2>
-        <Link href={`/admin/companies/${company.id}/users/new`}>
+        <Link href={`/admin/users/new?companyId=${company.id}`}>
           <Button size="sm">
             <Plus className="h-4 w-4" /> Add user
           </Button>
@@ -508,7 +508,7 @@ export default function CompanyViewPage() {
               title="No users yet"
               description="Add a client user so they can place orders."
               action={
-                <Link href={`/admin/companies/${company.id}/users/new`}>
+                <Link href={`/admin/users/new?companyId=${company.id}`}>
                   <Button size="sm">
                     <Plus className="h-4 w-4" /> Add user
                   </Button>
@@ -534,7 +534,7 @@ export default function CompanyViewPage() {
                       <Badge variant="muted">Disabled</Badge>
                     )}
                     <Link
-                      href={`/admin/companies/${company.id}/users/${user.id}/edit`}
+                      href={`/admin/users/${user.id}/edit?from=company&companyId=${company.id}`}
                     >
                       <Button variant="outline" size="sm">
                         <Edit className="h-3.5 w-3.5" /> Edit
