@@ -229,7 +229,10 @@ export default function ClientOrderFormView({ orderId, backUrl }: ClientOrderFor
       .from('Products')
       .select('*, category:categories(*)')
       .eq('enable', true)
-      .order('item_name');
+      // Same ordering as the admin Products page — the drag-reorder there
+      // is the single source of product ordering everywhere.
+      .order('sort_order', { ascending: true, nullsFirst: false })
+      .order('item_name', { ascending: true });
     if (error) throw error;
     setProducts((data || []) as Product[]);
   };
