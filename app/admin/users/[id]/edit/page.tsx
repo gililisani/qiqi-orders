@@ -184,6 +184,7 @@ export default function EditUserPage() {
   return (
     <AdminFormShell
       title="Edit user"
+      width="wide"
       backHref={returnHref}
       backLabel={returnLabel}
       saving={saving}

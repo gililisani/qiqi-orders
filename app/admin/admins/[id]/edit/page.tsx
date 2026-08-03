@@ -70,8 +70,8 @@ export default function EditAdminPage() {
       setError('Name and email are required.');
       return;
     }
-    if (formData.changePassword && formData.newPassword.length < 6) {
-      setError('New password must be at least 6 characters.');
+    if (formData.changePassword && formData.newPassword.length < 8) {
+      setError('New password must be at least 8 characters.');
       return;
     }
     setSaving(true);
@@ -133,6 +133,7 @@ export default function EditAdminPage() {
   return (
     <AdminFormShell
       title="Edit admin"
+      width="wide"
       backHref="/admin/admins"
       backLabel="Back to admins"
       saving={saving}

@@ -18,7 +18,7 @@ export default function AdminsPage() {
       description="Qiqi staff with access to the Partners Hub admin portal."
       newUrl="/admin/admins/new"
       newLabel="Add admin"
-      editUrl={(id) => `/admin/admins/${id}/edit`}
+      editUrl={(id) => `/admin/admins/${id}`}
       fetch={() => supabase.from('admins').select('*').order('name')}
       searchPlaceholder="Search admins…"
       filterRow={(a, q) =>

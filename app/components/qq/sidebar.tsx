@@ -95,7 +95,7 @@ Sidebar.Group = function SidebarGroup({
   return (
     <div className={cn('space-y-0.5', className)}>
       {label && !collapsed && (
-        <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
           {label}
         </p>
       )}

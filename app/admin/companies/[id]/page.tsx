@@ -59,6 +59,8 @@ interface Company {
   location?: { location_name: string };
   incoterm?: { name: string };
   payment_term?: { name: string };
+  enable_credit_card_payments?: boolean;
+  credit_card_fee_percent?: number | null;
   territories?: Territory[];
   target_periods?: TargetPeriod[];
 }
@@ -289,6 +291,12 @@ export default function CompanyViewPage() {
             {company.incoterm?.name && <View label="Incoterm" value={company.incoterm.name} />}
             {company.payment_term?.name && (
               <View label="Payment terms" value={company.payment_term.name} />
+            )}
+            {company.enable_credit_card_payments && (
+              <View
+                label="Card payments"
+                value={`Enabled (Stripe) · ${Number(company.credit_card_fee_percent) || 0}% fee`}
+              />
             )}
             {company.company_tax_number && (
               <View label="Tax / VAT number" value={company.company_tax_number} mono />

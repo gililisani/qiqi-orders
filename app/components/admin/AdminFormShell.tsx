@@ -36,6 +36,10 @@ interface AdminFormShellProps {
   description?: string;
   backHref: string;
   backLabel?: string;
+  /** 'narrow' (default) = centered max-w-3xl, right for simple forms.
+   *  'wide' = full-width like the rest of the admin pages — use for big
+   *  multi-section forms so they don't become a scroll tunnel. */
+  width?: 'narrow' | 'wide';
   saving?: boolean;
   error?: string | null;
   onSubmit: (e: React.FormEvent) => void;
@@ -54,6 +58,7 @@ export function AdminFormShell({
   description,
   backHref,
   backLabel = 'Back',
+  width = 'narrow',
   saving = false,
   error,
   onSubmit,
@@ -65,7 +70,7 @@ export function AdminFormShell({
   children,
 }: AdminFormShellProps) {
   return (
-    <div className="px-6 py-8 max-w-3xl mx-auto">
+    <div className={width === 'wide' ? 'px-6 py-8' : 'px-6 py-8 max-w-3xl mx-auto'}>
       <Link
         href={backHref}
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-3"

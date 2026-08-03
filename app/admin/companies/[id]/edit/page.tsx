@@ -450,12 +450,16 @@ export default function EditCompanyPage() {
       description={formData.company_name || undefined}
       backHref={`/admin/companies/${companyId}`}
       backLabel="Back to company"
+      width="wide"
       saving={saving}
       error={error}
       onSubmit={handleSubmit}
       onCancel={() => router.push(`/admin/companies/${companyId}`)}
       submitLabel="Save changes"
     >
+      {/* Two-column layout on wide screens — paired sections side by side,
+          the big editors (Contract, Territories) spanning full width. */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-10 gap-y-6 items-start">
       {/* ----- Basics ----- */}
       <Section title="Basics">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -639,6 +643,7 @@ export default function EditCompanyPage() {
       </Section>
 
       {/* ----- Contract ----- */}
+      <div className="xl:col-span-2">
       <Section title="Contract">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField label="Execution date">
@@ -740,8 +745,10 @@ export default function EditCompanyPage() {
           </div>
         )}
       </Section>
+      </div>
 
       {/* ----- Territories ----- */}
+      <div className="xl:col-span-2">
       <Section title="Territories">
         <div ref={territoryRef} className="relative">
           <Label className="text-sm font-medium">Add territory</Label>
@@ -798,6 +805,8 @@ export default function EditCompanyPage() {
           </div>
         )}
       </Section>
+      </div>
+      </div>
     </AdminFormShell>
   );
 }

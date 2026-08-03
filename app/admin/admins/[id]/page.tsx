@@ -1,10 +1,28 @@
 'use client';
 
+/**
+ * Admin detail view — the landing page when clicking an admin in the list
+ * (Edit is one click deeper). Rebuilt 2026-08 on the qq design system:
+ * the old version used legacy components, a broken container, and a
+ * HARDCODED "Full Access" permissions card that became misleading once
+ * permissions were actually enforced. This one shows the real grants.
+ */
+
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { supabase } from '../../../../lib/supabaseClient';
-import Card from '../../../components/ui/Card';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { ArrowLeft, Check, Edit, X } from 'lucide-react';
+
+import { supabase } from '../../../../lib/supabaseClient';
+import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
+import { PageHeader } from '../../../components/qq/page-header';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/qq/card';
+import { Button } from '../../../components/qq/button';
+import { Badge } from '../../../components/qq/badge';
+import { Alert, AlertDescription } from '../../../components/qq/alert';
+import { Label } from '../../../components/qq/label';
+import { useToast } from '../../../components/ui/ToastProvider';
+import { PERMISSIONS, type Permission } from '../../../../lib/permissions';
 
 interface Admin {
   id: string;
@@ -12,188 +30,183 @@ interface Admin {
   email: string;
   enabled: boolean;
   created_at: string;
+  permissions: string[] | null;
 }
 
 export default function AdminViewPage() {
   const params = useParams();
-  const adminId = params.id as string;
-  
+  const adminId = params?.id as string;
+  const toast = useToast();
+
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [toggling, setToggling] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (adminId) {
-      fetchAdmin();
-    }
-  }, [adminId]);
-  
-  // Set breadcrumb when admin is loaded
-  useEffect(() => {
-    if (admin && (window as any).__setBreadcrumbs) {
-      (window as any).__setBreadcrumbs([
-        { label: admin.name }
-      ]);
-    }
-    return () => {
-      if ((window as any).__setBreadcrumbs) {
-        (window as any).__setBreadcrumbs([]);
+    if (!adminId) return;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('admins')
+          .select('*')
+          .eq('id', adminId)
+          .single();
+        if (error) throw error;
+        setAdmin(data as Admin);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load admin.');
+      } finally {
+        setLoading(false);
       }
-    };
-  }, [admin]);
-
-  const fetchAdmin = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('admins')
-        .select('*')
-        .eq('id', adminId)
-        .single();
-
-      if (error) throw error;
-      setAdmin(data);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    })();
+  }, [adminId]);
 
   const handleToggleEnabled = async () => {
     if (!admin) return;
-
+    setToggling(true);
     try {
-      const { error } = await supabase
-        .from('admins')
-        .update({ enabled: !admin.enabled })
-        .eq('id', adminId);
-
-      if (error) throw error;
-      setAdmin(prev => prev ? { ...prev, enabled: !prev.enabled } : null);
+      // Through the account API: checked errors + you can't disable yourself.
+      const res = await fetchWithAuth(`/api/users/${admin.id}/account`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'admin', enabled: !admin.enabled }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to update admin.');
+      setAdmin((prev) => (prev ? { ...prev, enabled: !prev.enabled } : prev));
+      toast.success(`Admin ${admin.enabled ? 'disabled' : 'enabled'}.`);
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message || 'Failed to update admin.');
+    } finally {
+      setToggling(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="p-6">
-          <p>Loading admin...</p>
-        </div>
+      <div className="px-6 py-8">
+        <p className="text-sm text-muted-foreground">Loading admin…</p>
+      </div>
     );
   }
 
   if (error || !admin) {
     return (
-      <div className="p-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Admin Not Found</h1>
-            <p className="text-gray-600 mb-4">{error || 'The admin you are looking for does not exist.'}</p>
-            <Link
-              href="/admin/admins"
-              className="bg-black text-white px-4 py-2 rounded hover:opacity-90 transition"
-            >
-              Back to Admins
-            </Link>
-          </div>
-        </div>
+      <div className="px-6 py-8">
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error || 'Admin not found.'}</AlertDescription>
+        </Alert>
+        <Link href="/admin/admins">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4" /> Back to admins
+          </Button>
+        </Link>
+      </div>
     );
   }
 
+  const grants = Array.isArray(admin.permissions) ? admin.permissions : [];
+
   return (
-    <div className="mt-8 mb-4 space-y-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-semibold text-gray-900">{admin.name}</h2>
-          <div className="flex space-x-2">
-            <Link
-              href={`/admin/admins/${admin.id}/edit`}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-            >
-              Edit Admin
-            </Link>
-            <Link
-              href="/admin/admins"
-              className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition"
-            >
-              Back to Admins
-            </Link>
-          </div>
-        </div>
+    <div className="px-6 py-8 space-y-6">
+      <div>
+        <Link
+          href="/admin/admins"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to admins
+        </Link>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Admin Details */}
-          <Card header={<h2 className="font-semibold">Admin Details</h2>}>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium text-gray-500">Full Name</label>
-                <p className="text-lg">{admin.name}</p>
+      <PageHeader
+        title={admin.name || admin.email}
+        description={admin.email}
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleToggleEnabled}
+              loading={toggling}
+            >
+              {admin.enabled ? 'Disable admin' : 'Enable admin'}
+            </Button>
+            <Link href={`/admin/admins/${admin.id}/edit`}>
+              <Button size="sm">
+                <Edit className="h-4 w-4" /> Edit admin
+              </Button>
+            </Link>
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Admin details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <ViewField label="Full name" value={admin.name || '—'} />
+            <ViewField label="Email" value={admin.email} mono />
+            <div>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider font-medium block">
+                Status
+              </Label>
+              <div className="mt-1">
+                {admin.enabled ? (
+                  <Badge variant="success">Enabled</Badge>
+                ) : (
+                  <Badge variant="muted">Disabled</Badge>
+                )}
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Email Address</label>
-                <p className="text-lg">{admin.email}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Status</label>
-                <div className="flex items-center space-x-2">
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    admin.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {admin.enabled ? 'Enabled' : 'Disabled'}
+            </div>
+            <ViewField label="Admin ID" value={admin.id} mono />
+            <ViewField
+              label="Created"
+              value={new Date(admin.created_at).toLocaleDateString()}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Access</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {(Object.keys(PERMISSIONS) as Permission[]).map((key) => {
+              const has = grants.includes(key);
+              return (
+                <div key={key} className="flex items-center justify-between gap-3">
+                  <span className={has ? '' : 'text-muted-foreground'}>
+                    {PERMISSIONS[key]}
                   </span>
-                  <button
-                    onClick={handleToggleEnabled}
-                    className="text-sm text-blue-600 hover:text-blue-800"
-                  >
-                    {admin.enabled ? 'Disable' : 'Enable'}
-                  </button>
+                  {has ? (
+                    <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <X className="h-4 w-4 text-muted-foreground shrink-0" />
+                  )}
                 </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Admin ID</label>
-                <p className="text-sm font-mono text-gray-600">{admin.id}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Created</label>
-                <p className="text-lg">{new Date(admin.created_at).toLocaleDateString()}</p>
-              </div>
-            </div>
-          </Card>
+              );
+            })}
+            <p className="pt-2 text-xs text-muted-foreground border-t border-border">
+              Access is enforced on pages and APIs. Change grants via Edit admin.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
 
-          {/* Permissions */}
-          <Card header={<h2 className="font-semibold">Admin Permissions</h2>}>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">Manage Products</span>
-                <span className="text-green-600 text-sm font-medium">✓ Full Access</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">Manage Companies</span>
-                <span className="text-green-600 text-sm font-medium">✓ Full Access</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">Manage Users</span>
-                <span className="text-green-600 text-sm font-medium">✓ Full Access</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">Manage Admins</span>
-                <span className="text-green-600 text-sm font-medium">✓ Full Access</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">View Orders</span>
-                <span className="text-green-600 text-sm font-medium">✓ Full Access</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">System Settings</span>
-                <span className="text-green-600 text-sm font-medium">✓ Full Access</span>
-              </div>
-            </div>
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
-              <p className="text-sm text-blue-800">
-                <strong>Note:</strong> Admins have complete access to all system features and data.
-              </p>
-            </div>
-          </Card>
-        </div>
+function ViewField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div>
+      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-medium block">
+        {label}
+      </Label>
+      <p className={`mt-1 text-sm ${mono ? 'font-mono' : ''}`}>{value}</p>
     </div>
   );
 }

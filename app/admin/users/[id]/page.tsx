@@ -86,7 +86,7 @@ export default function UserViewPage() {
 
   if (loading) {
     return (
-      <div className="px-6 py-8 max-w-5xl mx-auto">
+      <div className="px-6 py-8">
         <p className="text-sm text-muted-foreground">Loading user…</p>
       </div>
     );
@@ -94,7 +94,7 @@ export default function UserViewPage() {
 
   if (error || !client) {
     return (
-      <div className="px-6 py-8 max-w-5xl mx-auto">
+      <div className="px-6 py-8">
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error || 'User not found.'}</AlertDescription>
         </Alert>
@@ -108,7 +108,7 @@ export default function UserViewPage() {
   }
 
   return (
-    <div className="px-6 py-8 max-w-5xl mx-auto space-y-6">
+    <div className="px-6 py-8 space-y-6">
       <div>
         <Link
           href="/admin/users"
