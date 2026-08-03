@@ -24,6 +24,15 @@ import { ArrowLeft, ChevronDown, Gift, Minus, Plus, RotateCcw } from 'lucide-rea
 
 import { useSupabase } from '../../../lib/supabase-provider';
 import { useOrderFormController } from '../shared/orderForm/useOrderFormController';
+import {
+  applyCaseQtyChange,
+  computeOrderTotals,
+  computeSupportFundTotals,
+  filterProductsForRegion,
+  groupProductsByCategory,
+  productPriceForClass,
+  resolveSupportFundPercent,
+} from '../shared/orderForm/orderFormLogic';
 
 import { PageHeader } from '../qq/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../qq/card';
@@ -261,7 +270,12 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
         .order('sort_order', { ascending: true, nullsFirst: false })
         .order('item_name', { ascending: true });
       if (error) throw error;
-      setProducts((data || []) as Product[]);
+      // Region visibility: an admin ordering FOR a company sees exactly the
+      // catalog that company's class is allowed to see — same rule as the
+      // client form (flags were configured for years but applied nowhere).
+      setProducts(
+        filterProductsForRegion((data || []) as Product[], companyData.class?.name),
+      );
     } catch (err: any) {
       console.error('Failed to fetch products', err);
     }
@@ -337,70 +351,20 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
     }
   };
 
-  // ---- Pricing helpers ----
-  // Pick the correct price column based on the company's NetSuite class.
-  // Class names in NS are things like "North America Distributors" or
-  // "International Distributors"; we test by substring so we don't depend
-  // on exact wording. Any class whose name mentions "america" maps to
-  // price_americas; everything else (including no class at all) falls
-  // back to price_international, matching the historical default.
-  const getProductPrice = (product: Product) => {
-    const className = (company?.class?.name || '').toLowerCase();
-    if (className.includes('america')) return product.price_americas || 0;
-    return product.price_international || 0;
-  };
+  // ---- Shared order-form logic (single source with the client form) ----
+  const getProductPrice = (product: Product) =>
+    productPriceForClass(company?.class?.name, product);
 
-  // ---- Group products by category ----
-  const getProductsByCategory = () => {
-    const grouped: { category: Category | null; products: Product[] }[] = [];
-    const map = new Map<number | string, { category: Category | null; products: Product[] }>();
-    for (const p of products) {
-      const key = p.category?.id ?? 'no-category';
-      if (!map.has(key)) {
-        map.set(key, { category: p.category ?? null, products: [] });
-      }
-      map.get(key)!.products.push(p);
-    }
-    // Sort by category sort_order (no-category last)
-    return Array.from(map.values()).sort((a, b) => {
-      const aOrder = a.category?.sort_order ?? 9999;
-      const bOrder = b.category?.sort_order ?? 9999;
-      return aOrder - bOrder;
-    });
-  };
+  const getProductsByCategory = () => groupProductsByCategory(products);
 
   // ---- Mutators ----
   const handleCaseQtyChange = (productId: number, newCaseQty: number) => {
     setHasUnsavedChanges(true);
     setOrderItems((prev) => {
       const product = products.find((p) => p.id === productId);
-      if (!product) return prev;
-      const unitPrice = getProductPrice(product);
-      const quantity = newCaseQty * (product.case_pack || 1);
-      const totalPrice = quantity * unitPrice;
-      const existing = prev.find((i) => i.product_id === productId);
-
-      if (newCaseQty === 0) {
-        return prev.filter((i) => i.product_id !== productId);
-      }
-      if (existing) {
-        return prev.map((i) =>
-          i.product_id === productId
-            ? { ...i, case_qty: newCaseQty, quantity, unit_price: unitPrice, total_price: totalPrice }
-            : i
-        );
-      }
-      return [
-        ...prev,
-        {
-          product_id: productId,
-          product,
-          case_qty: newCaseQty,
-          quantity,
-          unit_price: unitPrice,
-          total_price: totalPrice,
-        },
-      ];
+      return product
+        ? applyCaseQtyChange(prev, product, newCaseQty, getProductPrice(product))
+        : prev;
     });
   };
 
@@ -408,63 +372,22 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
     setHasUnsavedChanges(true);
     setSupportFundItems((prev) => {
       const product = products.find((p) => p.id === productId);
-      if (!product) return prev;
-      const unitPrice = getProductPrice(product);
-      const quantity = newCaseQty * (product.case_pack || 1);
-      const totalPrice = quantity * unitPrice;
-      const existing = prev.find((i) => i.product_id === productId);
-      if (newCaseQty === 0) {
-        return prev.filter((i) => i.product_id !== productId);
-      }
-      if (existing) {
-        return prev.map((i) =>
-          i.product_id === productId
-            ? { ...i, case_qty: newCaseQty, quantity, unit_price: unitPrice, total_price: totalPrice }
-            : i
-        );
-      }
-      return [
-        ...prev,
-        {
-          product_id: productId,
-          product,
-          case_qty: newCaseQty,
-          quantity,
-          unit_price: unitPrice,
-          total_price: totalPrice,
-        },
-      ];
+      return product
+        ? applyCaseQtyChange(prev, product, newCaseQty, getProductPrice(product))
+        : prev;
     });
   };
 
-  // ---- Totals (local; same shape the controller expects via getter fns) ----
-  const supportFundPercent = (() => {
-    const rawSf = company?.support_fund as any;
-    if (Array.isArray(rawSf)) return rawSf[0]?.percent || 0;
-    return rawSf?.percent || 0;
-  })();
+  // ---- Totals (shared math; same shape the controller expects) ----
+  const supportFundPercent = resolveSupportFundPercent(company);
 
-  const getOrderTotals = () => {
-    const subtotal = orderItems.reduce((s, i) => s + i.total_price, 0);
-    const creditEarningItems = orderItems.filter((i) => i.product.qualifies_for_credit_earning);
-    const creditEarningSubtotal = creditEarningItems.reduce((s, i) => s + i.total_price, 0);
-    const supportFundEarned = creditEarningSubtotal * (supportFundPercent / 100);
-    return { subtotal, supportFundPercent, supportFundEarned, total: subtotal };
-  };
+  const getOrderTotals = () => computeOrderTotals(orderItems, supportFundPercent);
 
-  const getSupportFundTotals = () => {
-    const subtotal = supportFundItems.reduce((s, i) => s + i.total_price, 0);
-    const supportFundEarned = getOrderTotals().supportFundEarned;
-    const remainingCredit = supportFundEarned - subtotal;
-    const finalTotal = remainingCredit < 0 ? Math.abs(remainingCredit) : 0;
-    return {
-      subtotal,
-      supportFundEarned,
-      remainingCredit,
-      finalTotal,
-      itemCount: supportFundItems.length,
-    };
-  };
+  const getSupportFundTotals = () =>
+    computeSupportFundTotals(
+      supportFundItems,
+      computeOrderTotals(orderItems, supportFundPercent).supportFundEarned,
+    );
 
   const totals = getOrderTotals();
   const supportFundTotals = getSupportFundTotals();
