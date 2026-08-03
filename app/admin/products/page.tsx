@@ -160,9 +160,16 @@ export default function ProductsPage() {
       next.splice(toIdx, 0, moved);
       const reordered = next.map((p, i) => ({ ...p, sort_order: i + 1 }));
       setProducts(reordered);
-      const updates = reordered.map((p) => ({ id: p.id, sort_order: p.sort_order }));
-      const { error } = await supabase.from('Products').upsert(updates, { onConflict: 'id' });
-      if (error) throw error;
+      // Per-row UPDATEs, not upsert: upsert's INSERT stage must satisfy every
+      // NOT NULL column (case_pack has no default since the 2026-08
+      // constraint), so partial-row upserts started violating it.
+      const results = await Promise.all(
+        reordered.map((p) =>
+          supabase.from('Products').update({ sort_order: p.sort_order }).eq('id', p.id),
+        ),
+      );
+      const failed = results.find((r) => r.error);
+      if (failed?.error) throw failed.error;
     } catch (err: any) {
       toast.error(err.message || 'Failed to save order.');
       fetchData();
