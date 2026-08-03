@@ -1,30 +1,60 @@
 'use client';
 
 import Link from 'next/link';
-import { Eye, Settings, Trash2 } from 'lucide-react';
+import { Eye, ExternalLink, Settings, Trash2 } from 'lucide-react';
 
 import { supabase } from '../../../../lib/supabaseClient';
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import { AdminListPage } from '../../../components/admin/AdminListPage';
+import { Badge } from '../../../components/qq/badge';
 import { Button } from '../../../components/qq/button';
 import { DropdownMenuItem } from '../../../components/qq/dropdown-menu';
 import { useToast } from '../../../components/ui/ToastProvider';
 import { useConfirm } from '../../../components/ui/ConfirmProvider';
 
-interface StandaloneSLI {
+/** One merged list: standalone SLIs + order SLIs (numbered since 2026-08). */
+interface SLIListRow {
   id: string;
   sli_number: number;
   created_at: string;
-  company_id: string | null;
+  type: 'standalone' | 'order';
   consignee_name: string;
+  /** Set for order SLIs — row click and actions route to the order. */
+  order_id?: string;
 }
 
-async function fetchSLIs(): Promise<{ data: StandaloneSLI[] | null; error: any }> {
-  const { data, error } = await supabase
-    .from('standalone_slis')
-    .select('id, sli_number, created_at, company_id, consignee_name')
-    .order('created_at', { ascending: false });
-  return { data: data as StandaloneSLI[] | null, error };
+async function fetchSLIs(): Promise<{ data: SLIListRow[] | null; error: any }> {
+  const [standalone, order] = await Promise.all([
+    supabase
+      .from('standalone_slis')
+      .select('id, sli_number, created_at, consignee_name'),
+    supabase
+      .from('slis')
+      .select('id, sli_number, created_at, order_id, orders(companies(company_name))'),
+  ]);
+
+  const error = standalone.error || order.error;
+  if (error) return { data: null, error };
+
+  const rows: SLIListRow[] = [
+    ...(standalone.data || []).map((s: any) => ({
+      id: s.id,
+      sli_number: s.sli_number,
+      created_at: s.created_at,
+      type: 'standalone' as const,
+      consignee_name: s.consignee_name || '',
+    })),
+    ...(order.data || []).map((s: any) => ({
+      id: s.id,
+      sli_number: s.sli_number,
+      created_at: s.created_at,
+      type: 'order' as const,
+      consignee_name: s.orders?.companies?.company_name || '',
+      order_id: s.order_id,
+    })),
+  ].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+
+  return { data: rows, error: null };
 }
 
 function formatDate(dateString: string) {
@@ -39,7 +69,7 @@ export default function SLIDocumentsPage() {
   const toast = useToast();
   const confirm = useConfirm();
 
-  const handleDelete = async (sli: StandaloneSLI) => {
+  const handleDelete = async (sli: SLIListRow) => {
     const ok = await confirm({
       title: 'Delete SLI?',
       description: `Permanently delete SLI #${sli.sli_number} (${sli.consignee_name}). This cannot be undone.`,
@@ -61,9 +91,9 @@ export default function SLIDocumentsPage() {
   };
 
   return (
-    <AdminListPage<StandaloneSLI>
+    <AdminListPage<SLIListRow>
       title="SLI documents"
-      description="Standalone Shipper's Letter of Instruction documents."
+      description="All Shipper's Letter of Instruction documents — standalone and order-based."
       newUrl="/admin/sli/create"
       newLabel="Create SLI"
       extraHeaderActions={
@@ -74,7 +104,9 @@ export default function SLIDocumentsPage() {
           </Button>
         </Link>
       }
-      editUrl={(id) => `/admin/sli/${id}/edit`}
+      editUrl={(id, row) =>
+        row?.type === 'order' ? `/admin/orders/${row.order_id}` : `/admin/sli/${id}/edit`
+      }
       fetch={fetchSLIs}
       searchPlaceholder="Search by SLI number or consignee…"
       filterRow={(s, q) =>
@@ -85,6 +117,15 @@ export default function SLIDocumentsPage() {
         {
           header: 'SLI #',
           cell: (s) => <span className="font-mono text-sm">{s.sli_number}</span>,
+        },
+        {
+          header: 'Type',
+          cell: (s) =>
+            s.type === 'order' ? (
+              <Badge variant="accent">Order</Badge>
+            ) : (
+              <Badge variant="outline">Standalone</Badge>
+            ),
         },
         {
           header: 'Created',
@@ -101,16 +142,30 @@ export default function SLIDocumentsPage() {
       extraRowActions={(s) => (
         <>
           <DropdownMenuItem asChild>
-            <Link href={`/admin/sli/${s.id}/preview`}>
+            <Link
+              href={
+                s.type === 'order'
+                  ? `/admin/orders/${s.order_id}/sli-preview`
+                  : `/admin/sli/${s.id}/preview`
+              }
+            >
               <Eye className="h-4 w-4 mr-2" /> View
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => handleDelete(s)}
-            className="text-destructive focus:text-destructive"
-          >
-            <Trash2 className="h-4 w-4 mr-2" /> Delete
-          </DropdownMenuItem>
+          {s.type === 'order' ? (
+            <DropdownMenuItem asChild>
+              <Link href={`/admin/orders/${s.order_id}`}>
+                <ExternalLink className="h-4 w-4 mr-2" /> Open order
+              </Link>
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem
+              onClick={() => handleDelete(s)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" /> Delete
+            </DropdownMenuItem>
+          )}
         </>
       )}
     />

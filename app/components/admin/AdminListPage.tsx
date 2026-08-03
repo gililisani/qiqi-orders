@@ -62,7 +62,9 @@ export interface AdminListPageProps<T extends { id: string | number }> {
   description?: string;
   newUrl: string;
   newLabel?: string;
-  editUrl: (id: T['id']) => string;
+  /** Row-click / "Edit" target. Receives the full row as a second argument
+   *  for lists whose rows route to different places (e.g. SLI documents). */
+  editUrl: (id: T['id'], row: T) => string;
 
   /** Returns { data, error } the same shape Supabase returns.
    *  PromiseLike (not Promise) so the Supabase query builder is accepted
@@ -235,7 +237,7 @@ export function AdminListPage<T extends { id: string | number }>({
                   <TableRow
                     key={String(row.id)}
                     className="cursor-pointer"
-                    onClick={() => router.push(editUrl(row.id))}
+                    onClick={() => router.push(editUrl(row.id, row))}
                   >
                     {columns.map((col, i) => (
                       <TableCell
@@ -255,7 +257,7 @@ export function AdminListPage<T extends { id: string | number }>({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => router.push(editUrl(row.id))}>
+                          <DropdownMenuItem onClick={() => router.push(editUrl(row.id, row))}>
                             <Edit className="h-4 w-4 mr-2" /> Edit
                           </DropdownMenuItem>
                           {extraRowActions?.(row)}

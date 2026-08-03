@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useSupabase } from '../../../lib/supabase-provider';
+import { SLICheckboxesSection } from '../admin/SLICheckboxesSection';
+import {
+  DEFAULT_SLI_CHECKBOXES,
+  normalizeSLICheckboxStates,
+  type SLICheckboxStates,
+} from '../../../lib/sli/checkboxStates';
 
 interface SignerOption {
   id: string;
@@ -60,28 +66,31 @@ export default function CreateSLIModal({
     instructions_to_forwarder: existingSLI?.instructions_to_forwarder || '',
   });
 
-  // Fixed checkboxes - most are hardcoded, no need for state
-  const [checkboxes] = useState({
-    related_party_related: false,
-    related_party_non_related: true, // Always checked
-    routed_export_yes: false,
-    routed_export_no: false,
-    consignee_type_government: false,
-    consignee_type_direct_consumer: false,
-    consignee_type_other_unknown: false,
-    consignee_type_reseller: true, // Always checked
-    hazardous_material_yes: false,
-    hazardous_material_no: true, // Always checked
-    tib_carnet_yes: false,
-    tib_carnet_no: false,
-    insurance_yes: false,
-    insurance_no: false,
-    payment_prepaid: false,
-    payment_collect: false,
-    checkbox_39: false,
-    checkbox_40: true, // Always checked
-    checkbox_48: true, // Always checked
-  });
+  const [checkboxes, setCheckboxes] = useState<SLICheckboxStates>(
+    DEFAULT_SLI_CHECKBOXES
+  );
+
+  // The modal stays mounted while the parent fetches the SLI, so the state
+  // initializers above run with existingSLI still null. Re-seed everything
+  // each time the modal opens.
+  useEffect(() => {
+    if (!isOpen) return;
+    setFormData({
+      forwarding_agent_line1: existingSLI?.forwarding_agent_line1 || '',
+      forwarding_agent_line2: existingSLI?.forwarding_agent_line2 || '',
+      forwarding_agent_line3: existingSLI?.forwarding_agent_line3 || '',
+      forwarding_agent_line4: existingSLI?.forwarding_agent_line4 || '',
+      in_bond_code: existingSLI?.in_bond_code || '',
+      instructions_to_forwarder: existingSLI?.instructions_to_forwarder || '',
+    });
+    setCheckboxes(
+      existingSLI
+        ? normalizeSLICheckboxStates(existingSLI.checkbox_states)
+        : DEFAULT_SLI_CHECKBOXES
+    );
+    if (existingSLI?.signer_id) setSignerId(existingSLI.signer_id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -145,7 +154,9 @@ export default function CreateSLIModal({
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">
-              {isEditMode ? 'Edit SLI' : 'Create SLI'}
+              {isEditMode
+                ? `Edit SLI${existingSLI?.sli_number ? ` #${existingSLI.sli_number}` : ''}`
+                : 'Create SLI'}
             </h2>
             <button
               onClick={onClose}
@@ -254,6 +265,17 @@ export default function CreateSLIModal({
               </div>
             )}
 
+            {/* Checkboxes */}
+            <div>
+              <h3 className="font-semibold mb-3">Checkbox options</h3>
+              <SLICheckboxesSection
+                checkboxes={checkboxes}
+                onChangeCheckbox={(key) =>
+                  setCheckboxes((prev) => ({ ...prev, [key]: !prev[key] }))
+                }
+              />
+            </div>
+
             {/* Info about auto-filled data */}
             <div className="bg-blue-50 border border-blue-200 rounded p-4">
               <h3 className="font-semibold text-blue-900 mb-2">Auto-filled Information</h3>
@@ -261,10 +283,10 @@ export default function CreateSLIModal({
                 The following will be automatically populated from the order:
               </p>
               <ul className="text-sm text-blue-800 list-disc list-inside mt-2 space-y-1">
+                <li>SLI number (assigned on creation)</li>
                 <li>Company name and ship-to address</li>
                 <li>Invoice number from order</li>
                 <li>Product details (HS codes, quantities, weights, values)</li>
-                <li>Pre-selected checkboxes (Non-Related, Re-Seller, No Hazmat, etc.)</li>
                 <li>Date will be set to today's date</li>
               </ul>
             </div>

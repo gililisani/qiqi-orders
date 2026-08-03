@@ -2,6 +2,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SLIDocumentData } from '../components/SLIDocument';
 import { aggregateProductsByHS } from '../../sli/productAggregator';
 import { getSLIRenderContext } from '../../sli/sliConfig';
+import { normalizeSLICheckboxStates } from '../../sli/checkboxStates';
 
 /** Config + signer fields shared by both fetchers (boxes 1-4, 7, 14, 42-46). */
 async function fetchConfigFields(
@@ -101,7 +102,9 @@ export async function fetchStandaloneSLIData(sliId: string): Promise<SLIDocument
       ...productsWithHS,
       ...productsWithoutHS,
     ],
-    checkbox_states: sli.checkbox_states || {},
+    // Older rows stored three keys under legacy names the PDF never read
+    // (Box 24/40/48 always rendered unchecked) — normalize maps them.
+    checkbox_states: normalizeSLICheckboxStates(sli.checkbox_states),
   };
 }
 
@@ -190,7 +193,7 @@ export async function fetchOrderSLIData(orderId: string, authToken: string): Pro
 
   return {
     ...(await fetchConfigFields(supabaseAdmin, sli.signer_id)),
-    sli_number: 0, // Order-based SLIs don't have SLI numbers
+    sli_number: sli.sli_number,
     invoice_number: order.invoice_number,
     consignee_name: company?.company_name || '',
     consignee_address_line1: company?.ship_to_street_line_1 || '',
@@ -203,13 +206,13 @@ export async function fetchOrderSLIData(orderId: string, authToken: string): Pro
     forwarding_agent_line4: sli.forwarding_agent_line4,
     in_bond_code: sli.in_bond_code,
     instructions_to_forwarder: sli.instructions_to_forwarder,
-    sli_date: sli.date_of_export,
+    sli_date: sli.sli_date || sli.date_of_export,
     date_of_export: sli.date_of_export || new Date().toLocaleDateString('en-US'),
     products: [
       ...productsWithHS,
       ...productsWithoutHS,
     ],
-    checkbox_states: sli.checkbox_states || {},
+    checkbox_states: normalizeSLICheckboxStates(sli.checkbox_states),
   };
 }
 

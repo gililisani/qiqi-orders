@@ -23,6 +23,12 @@ import {
   TableHead,
   TableCell,
 } from '../qq/table';
+import { SLICheckboxesSection } from './SLICheckboxesSection';
+import type { SLICheckboxStates } from '../../../lib/sli/checkboxStates';
+
+// Re-exported so the create/edit pages keep a single import site for the form.
+export { DEFAULT_SLI_CHECKBOXES, normalizeSLICheckboxStates } from '../../../lib/sli/checkboxStates';
+export type { SLICheckboxStates } from '../../../lib/sli/checkboxStates';
 
 export interface SLICompany {
   id: string;
@@ -76,24 +82,6 @@ export interface SLIFormData {
   instructions_to_forwarder: string;
 }
 
-export interface SLICheckboxStates {
-  related_party_related: boolean;
-  related_party_non_related: boolean;
-  routed_export_yes: boolean;
-  routed_export_no: boolean;
-  consignee_type_government: boolean;
-  consignee_type_direct_consumer: boolean;
-  consignee_type_other_unknown: boolean;
-  consignee_type_reseller: boolean;
-  hazardous_material_yes: boolean;
-  hazardous_material_no: boolean;
-  tib_carnet_yes: boolean;
-  tib_carnet_no: boolean;
-  deliver_to_checkbox: boolean;
-  declaration_statement_checkbox: boolean;
-  signature_checkbox: boolean;
-}
-
 export const DEFAULT_SLI_FORM: SLIFormData = {
   consignee_name: '',
   consignee_address_line1: '',
@@ -109,24 +97,6 @@ export const DEFAULT_SLI_FORM: SLIFormData = {
   forwarding_agent_line4: '',
   in_bond_code: '',
   instructions_to_forwarder: '',
-};
-
-export const DEFAULT_SLI_CHECKBOXES: SLICheckboxStates = {
-  related_party_related: false,
-  related_party_non_related: true,
-  routed_export_yes: false,
-  routed_export_no: false,
-  consignee_type_government: false,
-  consignee_type_direct_consumer: false,
-  consignee_type_other_unknown: false,
-  consignee_type_reseller: true,
-  hazardous_material_yes: false,
-  hazardous_material_no: true,
-  tib_carnet_yes: false,
-  tib_carnet_no: false,
-  deliver_to_checkbox: false,
-  declaration_statement_checkbox: true,
-  signature_checkbox: true,
 };
 
 interface SLIFormFieldsProps {
@@ -554,133 +524,12 @@ export function SLIFormFields({
           <CardTitle className="text-sm">Checkbox options</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <CheckGroup title="Box 8: Related party indicator">
-              <CheckRow
-                checked={checkboxes.related_party_related}
-                onChange={() => onChangeCheckbox('related_party_related')}
-                label="Related"
-              />
-              <CheckRow
-                checked={checkboxes.related_party_non_related}
-                onChange={() => onChangeCheckbox('related_party_non_related')}
-                label="Non-related"
-              />
-            </CheckGroup>
-
-            <CheckGroup title="Box 10: Routed export transaction">
-              <CheckRow
-                checked={checkboxes.routed_export_yes}
-                onChange={() => onChangeCheckbox('routed_export_yes')}
-                label="Yes"
-              />
-              <CheckRow
-                checked={checkboxes.routed_export_no}
-                onChange={() => onChangeCheckbox('routed_export_no')}
-                label="No"
-              />
-            </CheckGroup>
-
-            <CheckGroup title="Box 12: Type of consignee">
-              <CheckRow
-                checked={checkboxes.consignee_type_government}
-                onChange={() => onChangeCheckbox('consignee_type_government')}
-                label="Government"
-              />
-              <CheckRow
-                checked={checkboxes.consignee_type_direct_consumer}
-                onChange={() => onChangeCheckbox('consignee_type_direct_consumer')}
-                label="Direct consumer"
-              />
-              <CheckRow
-                checked={checkboxes.consignee_type_other_unknown}
-                onChange={() => onChangeCheckbox('consignee_type_other_unknown')}
-                label="Other / unknown"
-              />
-              <CheckRow
-                checked={checkboxes.consignee_type_reseller}
-                onChange={() => onChangeCheckbox('consignee_type_reseller')}
-                label="Re-seller"
-              />
-            </CheckGroup>
-
-            <CheckGroup title="Box 16: Hazardous material">
-              <CheckRow
-                checked={checkboxes.hazardous_material_yes}
-                onChange={() => onChangeCheckbox('hazardous_material_yes')}
-                label="Yes"
-              />
-              <CheckRow
-                checked={checkboxes.hazardous_material_no}
-                onChange={() => onChangeCheckbox('hazardous_material_no')}
-                label="No"
-              />
-            </CheckGroup>
-
-            <CheckGroup title="Box 21: TIB / carnet">
-              <CheckRow
-                checked={checkboxes.tib_carnet_yes}
-                onChange={() => onChangeCheckbox('tib_carnet_yes')}
-                label="Yes"
-              />
-              <CheckRow
-                checked={checkboxes.tib_carnet_no}
-                onChange={() => onChangeCheckbox('tib_carnet_no')}
-                label="No"
-              />
-            </CheckGroup>
-
-            <CheckGroup title="Other checkboxes">
-              <CheckRow
-                checked={checkboxes.deliver_to_checkbox}
-                onChange={() => onChangeCheckbox('deliver_to_checkbox')}
-                label="Box 24: Deliver to"
-              />
-              <CheckRow
-                checked={checkboxes.declaration_statement_checkbox}
-                onChange={() => onChangeCheckbox('declaration_statement_checkbox')}
-                label="Box 40: Declaration statement"
-              />
-              <CheckRow
-                checked={checkboxes.signature_checkbox}
-                onChange={() => onChangeCheckbox('signature_checkbox')}
-                label="Box 48: Signature"
-              />
-            </CheckGroup>
-          </div>
+          <SLICheckboxesSection
+            checkboxes={checkboxes}
+            onChangeCheckbox={onChangeCheckbox}
+          />
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function CheckGroup({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="text-sm font-medium mb-2">{title}</p>
-      <div className="space-y-2">{children}</div>
-    </div>
-  );
-}
-
-function CheckRow({
-  checked,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  onChange: () => void;
-  label: string;
-}) {
-  return (
-    <label className="flex items-center gap-2 cursor-pointer select-none">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        className="h-4 w-4 accent-foreground"
-      />
-      <span className="text-sm">{label}</span>
-    </label>
   );
 }

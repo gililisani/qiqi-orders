@@ -15,6 +15,7 @@ import {
   SLIFormFields,
   DEFAULT_SLI_FORM,
   DEFAULT_SLI_CHECKBOXES,
+  normalizeSLICheckboxStates,
   type SLICompany,
   type SLIProduct,
   type SLISelectedProduct,
@@ -99,7 +100,9 @@ export default function EditStandaloneSLIPage() {
           : null;
         setInitialCompanySearch(matchedCompany?.company_name || sli.consignee_name || '');
 
-        setCheckboxes((prev) => ({ ...prev, ...(sli.checkbox_states || {}) }));
+        // Older rows stored three checkbox keys under legacy names the PDF
+        // never read — normalize maps them onto the canonical key set.
+        setCheckboxes(normalizeSLICheckboxStates(sli.checkbox_states));
         setSelectedProducts(sli.selected_products || []);
         setSignerId(sli.signer_id || '');
       } catch (err: any) {

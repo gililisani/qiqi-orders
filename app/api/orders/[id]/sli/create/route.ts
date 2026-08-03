@@ -75,11 +75,24 @@ export async function POST(
       );
     }
 
+    // Mint the SLI number (shared sequence with standalone SLIs — owner
+    // decision 2026-08-03: order SLIs are numbered and tracked in the
+    // documents list like any other customs paperwork).
+    const { data: sliNumber, error: sliNumberError } = await supabaseAdmin
+      .rpc('generate_sli_number');
+
+    if (sliNumberError || !sliNumber) {
+      console.error('Error generating SLI number:', sliNumberError);
+      return NextResponse.json({ error: 'Failed to generate SLI number' }, { status: 500 });
+    }
+
     // Create SLI
     const { data: sli, error: sliError } = await supabaseAdmin
       .from('slis')
       .insert({
         order_id: orderId,
+        sli_number: sliNumber,
+        sli_date: new Date().toISOString().split('T')[0],
         created_by: user.id,
         forwarding_agent_line1,
         forwarding_agent_line2,
