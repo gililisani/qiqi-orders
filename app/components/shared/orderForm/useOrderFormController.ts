@@ -1,12 +1,5 @@
 import React from 'react';
-import { addOrderHistoryEntry } from '../../../../lib/orderHistory';
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
-import {
-  buildAutoSaveDraftBody,
-  buildOrderItemsInsertData,
-  buildOrderItemsUpdateData,
-  generatePoNumber,
-} from './orderPayload';
 import { validatePerformSave } from './orderValidation';
 
 // ---------------------------------------------------------------------------
@@ -103,12 +96,6 @@ export function useOrderFormController(params: {
       }
       performSaveInFlightRef.current = true;
       try {
-        // Get current user
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) throw new Error('No user found');
-
         const validationError = validatePerformSave({
           company,
           orderItemsCount: orderItems.length,
@@ -120,218 +107,71 @@ export function useOrderFormController(params: {
           throw new Error('No company selected');
         }
 
-        if (isNewMode) {
-          const poNumber = generatePoNumber((order && order.po_number) || null);
+        // Server-side save (audit P3 follow-through): the browser sends only
+        // product ids + quantities in DISPLAY order (regular items first,
+        // support-fund items after — sort_order is positional). Every money
+        // field is computed server-side from the catalog, and the write is
+        // one transaction. The on-screen totals (getOrderTotals) are display
+        // only — the server's math is the same, but the server's is the one
+        // that's stored.
+        const itemsPayload = [
+          ...orderItems.map((item: any) => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            case_qty: item.case_qty || 0,
+            is_support_fund_item: false,
+          })),
+          ...supportFundItems.map((item: any) => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            case_qty: item.case_qty || 0,
+            is_support_fund_item: true,
+          })),
+        ];
 
-          // Snapshot the company's CURRENT fulfilling location. Re-fetch it from
-          // the DB rather than trusting the page's in-memory company list, which
-          // can be stale if the company's Location was changed after the form
-          // loaded — that staleness froze the old Packable-INC onto a CSF order
-          // instead of Brandfox, defeating cross-subsidiary fulfillment.
-          const { data: freshCompany } = await supabase
-            .from('companies')
-            .select('location_id')
-            .eq('id', company.id)
-            .single();
-          const snapshotLocationId = freshCompany?.location_id ?? (company as any).location_id ?? null;
-
-          // Log order creation details for debugging
-          console.log('Creating order with details:', {
-            company_id: company.id,
-            company_name: company.company_name,
-            user_id: user.id,
-            po_number: poNumber,
-            status: asDraft ? 'Draft' : 'Open',
-            role: role,
-            location_id: snapshotLocationId,
-          });
-
-          // Create new order — snapshot location_id from company so the
-          // fulfilling location is frozen even if the company is later
-          // re-pointed to a different location (e.g. the 3PL relocation).
-          const { data: newOrder, error: orderError } = await supabase
-            .from('orders')
-            .insert({
-              company_id: company.id,
-              user_id: user.id,
-              po_number: poNumber,
-              status: asDraft ? 'Draft' : 'Open',
-              location_id: snapshotLocationId,
-            })
-            .select()
-            .single();
-
-          if (orderError) throw orderError;
-
-          console.log('Order created successfully:', {
-            order_id: newOrder.id,
-            company_id: newOrder.company_id,
-          });
-
-          const allItemsData = buildOrderItemsInsertData(newOrder.id, orderItems as any, supportFundItems as any);
-
-          if (allItemsData.length > 0) {
-            const { error: insertError } = await supabase.from('order_items').insert(allItemsData);
-
-            if (insertError) throw insertError;
-          }
-
-          // Calculate and update order totals
-          const originalTotals = getOrderTotals();
-          const supportTotals = getSupportFundTotals();
-
-          const supportFundUsed = Math.min(supportTotals.subtotal, originalTotals.supportFundEarned);
-          const additionalCost = Math.max(0, supportTotals.subtotal - originalTotals.supportFundEarned);
-          const finalTotal = originalTotals.total + additionalCost;
-
-          const { error: updateTotalsError } = await supabase
-            .from('orders')
-            .update({
-              total_value: finalTotal,
-              support_fund_used: supportFundUsed,
-              credit_earned: originalTotals.supportFundEarned,
-            })
-            .eq('id', newOrder.id);
-
-          if (updateTotalsError) throw updateTotalsError;
-
-          // Add history entry for order creation
-          try {
-            await addOrderHistoryEntry({
-              supabase,
-              orderId: newOrder.id,
-              actionType: 'order_created',
-              statusFrom: undefined,
-              statusTo: asDraft ? 'Draft' : 'Open',
-              notes: `Order created with ${allItemsData.length} items`,
-              metadata: {
-                po_number: poNumber,
-                total_items: allItemsData.length,
-                total_value: finalTotal,
-                support_fund_used: supportFundUsed,
-                credit_earned: originalTotals.supportFundEarned,
-              },
-              role: role as any,
-            });
-          } catch (historyError) {
-            console.error('Failed to create history entry:', historyError);
-            // Don't block order creation if history fails
-          }
-
-          // Send order created emails (fire and forget — don't block redirect).
-          // Only when this is a real Open submission, not a Draft.
-          //
-          // We fire both calls IN PARALLEL with keepalive:true so that:
-          //   (a) a slow first call doesn't starve the second,
-          //   (b) the browser keeps the requests in flight even though
-          //       router.push happens immediately after this.
-          if (!asDraft) {
-            setTimeout(() => {
-              fireOrderCreatedEmails(newOrder.id);
-            }, 1000); // 1s delay to make sure the order row is committed
-          }
-
-          // Clear unsaved changes flag
-          setHasUnsavedChanges(false);
-
-          // Redirect to order view
-          router.push(`/${role}/orders/${newOrder.id}`);
-        } else {
-          // Update existing order
-          const originalTotals = getOrderTotals();
-          const supportTotals = getSupportFundTotals();
-
-          const supportFundUsed = Math.min(supportTotals.subtotal, originalTotals.supportFundEarned);
-          const additionalCost = Math.max(0, supportTotals.subtotal - originalTotals.supportFundEarned);
-          const finalTotal = originalTotals.total + additionalCost;
-
-          // Determine status: if current is Draft, allow conversion to Open or Draft
-          const newStatus = asDraft ? 'Draft' : order?.status === 'Draft' ? 'Open' : order?.status;
-
-          const { error: updateError } = await supabase
-            .from('orders')
-            .update({
-              po_number: (order && order.po_number) || null,
-              status: newStatus,
-              total_value: finalTotal,
-              support_fund_used: supportFundUsed,
-              credit_earned: originalTotals.supportFundEarned,
-            })
-            .eq('id', orderId);
-
-          if (updateError) throw updateError;
-
-          // Delete existing order items
-          const { error: deleteError } = await supabase.from('order_items').delete().eq('order_id', orderId);
-
-          if (deleteError) throw deleteError;
-
-          const allItemsData = buildOrderItemsUpdateData(orderId, orderItems as any, supportFundItems as any);
-
-          if (allItemsData.length > 0) {
-            const { error: insertError } = await supabase.from('order_items').insert(allItemsData);
-
-            if (insertError) throw insertError;
-          }
-
-          // Add history entry for order update
-          try {
-            const oldStatus = order?.status;
-            await addOrderHistoryEntry({
-              supabase,
-              orderId: orderId,
-              actionType: oldStatus !== newStatus ? 'status_change' : 'order_updated',
-              statusFrom: oldStatus !== newStatus ? oldStatus : undefined,
-              statusTo: oldStatus !== newStatus ? newStatus : undefined,
-              notes:
-                oldStatus !== newStatus
-                  ? `Status changed from ${oldStatus} to ${newStatus}`
-                  : `Order updated with ${allItemsData.length} items`,
-              metadata: {
-                total_items: allItemsData.length,
-                total_value: finalTotal,
-                support_fund_used: supportFundUsed,
-                credit_earned: originalTotals.supportFundEarned,
-              },
-              role: role as any,
-            });
-          } catch (historyError) {
-            console.error('Failed to create history entry:', historyError);
-            // Don't block order update if history fails
-          }
-
-          // Send order email notifications (fire and forget — don't block redirect).
-          //
-          // Two distinct cases:
-          //  (a) Draft → Open transition. This is functionally a "new order"
-          //      from the admin team's perspective — they didn't see the
-          //      Draft. Send BOTH the customer email AND the admin
-          //      notification, identical to the create-as-Open path.
-          //  (b) Open → Open edit (or any other non-Draft → non-Draft).
-          //      The order is being updated, not newly opened. Send only
-          //      the customer "updated" email; admin already got their
-          //      original notification when the order first opened.
-          //
-          // We never email on transitions to Draft.
-          const wasDraft = order?.status === 'Draft';
-          const goingOpenForFirstTime = wasDraft && newStatus === 'Open';
-
-          if (newStatus !== 'Draft') {
-            setTimeout(() => {
-              if (goingOpenForFirstTime) {
-                fireOrderCreatedEmails(orderId);
-              } else {
-                fireOrderUpdatedEmail(orderId);
-              }
-            }, 1000);
-          }
-
-          // Clear unsaved changes flag
-          setHasUnsavedChanges(false);
-
-          // Redirect back to order view
-          router.push(`/${role}/orders/${orderId}`);
+        const res = await fetchWithAuth('/api/orders/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: isNewMode ? 'create' : 'update',
+            ...(isNewMode ? {} : { orderId }),
+            companyId: company.id,
+            poNumber: (order && order.po_number) || null,
+            asDraft,
+            items: itemsPayload,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Failed to save order.');
         }
+
+        const savedOrderId: string = data.orderId;
+        const newStatus: string = data.status;
+
+        // Email triggers (fire and forget — don't block redirect).
+        //
+        //  (a) Created as Open, or Draft → Open promotion: functionally a
+        //      "new order" for the admin team — customer email AND admin
+        //      notification.
+        //  (b) Open → Open edit: customer "updated" email only.
+        //  We never email on Drafts.
+        if (newStatus !== 'Draft') {
+          const goingOpenForFirstTime = isNewMode || (data.wasDraft && newStatus === 'Open');
+          setTimeout(() => {
+            if (goingOpenForFirstTime) {
+              fireOrderCreatedEmails(savedOrderId);
+            } else {
+              fireOrderUpdatedEmail(savedOrderId);
+            }
+          }, 1000); // 1s delay to make sure the order row is committed
+        }
+
+        // Clear unsaved changes flag
+        setHasUnsavedChanges(false);
+
+        // Redirect to order view
+        router.push(`/${role}/orders/${savedOrderId}`);
       } catch (error: any) {
         console.error('Error saving order:', error);
         // Log more details for debugging
@@ -346,7 +186,6 @@ export function useOrderFormController(params: {
     },
     [
       performSaveInFlightRef,
-      supabase,
       company,
       orderItems,
       supportFundItems,
@@ -355,8 +194,6 @@ export function useOrderFormController(params: {
       role,
       router,
       orderId,
-      getOrderTotals,
-      getSupportFundTotals,
       setHasUnsavedChanges,
       setError,
       setSaving,
