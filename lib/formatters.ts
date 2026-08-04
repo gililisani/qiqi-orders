@@ -65,3 +65,39 @@ export function formatPercentage(value: number | null | undefined, decimals: num
   return `${formatNumber(percentage, decimals)}%`;
 }
 
+
+/**
+ * Format a date (no time) — "Aug 4, 2026". The single date format for
+ * lists and reports (WP7: this was copy-pasted per page before).
+ */
+export function formatDate(iso: string | null | undefined): string {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+/**
+ * Format a date with time — "Aug 4, 2026, 02:35 PM". Used by history
+ * timelines, documents lists and notes.
+ */
+export function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/**
+ * Currency without cents — "$1,234". Dashboard KPIs round to whole dollars.
+ */
+export function formatCurrencyWhole(value: number | null | undefined): string {
+  if (value === null || value === undefined || isNaN(value)) return '$0';
+  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}

@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { ORDER_STATUSES } from '../shared/orderDetails/orderDetailsUtils';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, Plus, MoreHorizontal, Eye } from 'lucide-react';
@@ -58,7 +59,7 @@ interface Order {
   company_id?: string;
 }
 
-const STATUS_OPTIONS = ['Draft', 'Open', 'In Process', 'Ready', 'Done', 'Cancelled'] as const;
+const STATUS_OPTIONS = ORDER_STATUSES;
 const ALL_STATUSES = '__all__';
 
 export default function ClientOrdersListView() {

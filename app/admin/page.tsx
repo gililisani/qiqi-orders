@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { formatCurrencyWhole } from '../../lib/formatters';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -74,10 +75,6 @@ const ZERO_STATS: DashboardStats = {
 /** Tolerant status comparison — trims and ignores case. */
 function statusIs(status: string | null | undefined, expected: string): boolean {
   return (status || '').trim().toLowerCase() === expected.trim().toLowerCase();
-}
-
-function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 function companyNameOf(order: RecentOrder): string {
@@ -190,7 +187,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <Stat
           label="This Month"
-          value={loading ? '—' : formatCurrency(stats.monthValue)}
+          value={loading ? '—' : formatCurrencyWhole(stats.monthValue)}
           delta={loading ? undefined : `${stats.monthCount} order${stats.monthCount === 1 ? '' : 's'}`}
         />
         <Stat

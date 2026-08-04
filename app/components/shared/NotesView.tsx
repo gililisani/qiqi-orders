@@ -8,6 +8,7 @@
  * fetch (clients only see notes flagged visible_to_client).
  */
 
+import { formatDateTime } from '../../../lib/formatters';
 import { useEffect, useState, useCallback } from 'react';
 import {
   FileText,
@@ -97,16 +98,6 @@ const NOTE_TYPE_VARIANT: Record<
   general_note: 'muted',
   internal_note: 'destructive',
 };
-
-function formatDate(s: string) {
-  return new Date(s).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 export default function NotesView({
   companyId,
@@ -452,7 +443,7 @@ export default function NotesView({
                             ? 'By Qiqi'
                             : 'Created'}
                         {' · '}
-                        {formatDate(note.created_at)}
+                        {formatDateTime(note.created_at)}
                       </span>
                     </div>
                   </div>
@@ -568,7 +559,7 @@ export default function NotesView({
                                 {reply.created_by_admin?.name || 'Admin'}
                               </span>
                               <span>·</span>
-                              <span>{formatDate(reply.created_at)}</span>
+                              <span>{formatDateTime(reply.created_at)}</span>
                             </div>
                             <p className="text-sm text-foreground whitespace-pre-wrap">
                               {reply.content}

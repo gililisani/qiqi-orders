@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
-import { formatCurrency, formatNumber } from '../../../../lib/formatters';
+import { formatCurrency, formatDate, formatNumber } from '../../../../lib/formatters';
 import {
   exportToCSV,
   exportToExcel,
@@ -484,15 +484,6 @@ export default function CompanyPerformancePage() {
 // ----------------------------------------------------------------------------
 // Small in-file components
 // ----------------------------------------------------------------------------
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
 
 function SortableHead({
   label,

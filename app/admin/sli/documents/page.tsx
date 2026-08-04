@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Eye, ExternalLink, Settings, Trash2 } from 'lucide-react';
 
 import { supabase } from '../../../../lib/supabaseClient';
+import { formatDate } from '../../../../lib/formatters';
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 import { AdminListPage } from '../../../components/admin/AdminListPage';
 import { Badge } from '../../../components/qq/badge';
@@ -55,14 +56,6 @@ async function fetchSLIs(): Promise<{ data: SLIListRow[] | null; error: any }> {
   ].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 
   return { data: rows, error: null };
-}
-
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
 }
 
 export default function SLIDocumentsPage() {

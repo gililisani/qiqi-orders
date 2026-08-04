@@ -180,7 +180,7 @@ export default function NewCompanyPage() {
         return;
       }
 
-      const { error: insertError } = await supabase.from('companies').insert([
+      const { data: created, error: insertError } = await supabase.from('companies').insert([
         {
           company_name: formData.company_name.trim(),
           netsuite_number: formData.netsuite_number.trim(),
@@ -212,7 +212,7 @@ export default function NewCompanyPage() {
           ship_to_postal_code: formData.ship_to_postal_code.trim() || null,
           ship_to_country: formData.ship_to_country.trim() || null,
         },
-      ]);
+      ]).select('id').single();
 
       if (insertError) {
         if (insertError.code === '23505') {
@@ -223,8 +223,16 @@ export default function NewCompanyPage() {
         return;
       }
 
-      toast.success('Company created.');
-      router.push('/admin/companies');
+      // Land on the edit page, not the list: contract, territories and
+      // target periods only exist there, and a company without a target
+      // period is invisible to Company Performance (audit WP5). The edit
+      // page is where creation is FINISHED, not an optional follow-up.
+      toast.success('Company created — now add the contract, territories and target period.');
+      if (created?.id) {
+        router.push(`/admin/companies/${created.id}/edit`);
+      } else {
+        router.push('/admin/companies');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to create company.');
     } finally {

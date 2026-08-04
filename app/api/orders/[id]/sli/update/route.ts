@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { createServiceRoleClient, requireAdmin } from '../../../../../../platform/auth/guards';
 
 export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -20,36 +17,10 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       signer_id
     } = await request.json();
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
-
-    // Get current user (admin)
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Verify user is admin
-    const { data: admin, error: adminError } = await supabaseAdmin
-      .from('admins')
-      .select('id')
-      .eq('id', user.id)
-      .single();
-
-    if (adminError || !admin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    // Standard admin guard (was a hand-rolled token+admins lookup that
+    // skipped the enabled check — audit 1.3 pattern).
+    await requireAdmin(request);
+    const supabaseAdmin = createServiceRoleClient();
 
     // Check if SLI exists
     const { data: existingSLI, error: checkError } = await supabaseAdmin
@@ -91,8 +62,8 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
 
     return NextResponse.json({ success: true, sli: updatedSLI }, { status: 200 });
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error in SLI update API:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

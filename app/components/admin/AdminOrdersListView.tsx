@@ -20,6 +20,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { NON_DRAFT_ORDER_STATUSES } from '../shared/orderDetails/orderDetailsUtils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Search, Plus, X } from 'lucide-react';
@@ -70,7 +71,7 @@ interface Order {
 interface ClientLite { id: string; name: string; email: string }
 interface CompanyLite { id: string; company_name: string; netsuite_number: string }
 
-const STATUS_OPTIONS = ['Open', 'In Process', 'Ready', 'Done', 'Cancelled'] as const;
+const STATUS_OPTIONS = NON_DRAFT_ORDER_STATUSES;
 const ALL_STATUSES = '__all__';
 
 // ----------------------------------------------------------------------------

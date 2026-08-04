@@ -22,7 +22,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import { Badge } from '../qq/badge';
 import { Alert, AlertDescription } from '../qq/alert';
 import { StatusBadge } from '../qq/status-badge';
-import { formatNumber } from '../../../lib/formatters';
+import { formatNumber, formatDateTime } from '../../../lib/formatters';
 
 interface OrderHistoryEntry {
   id: string;
@@ -75,16 +75,6 @@ function actionIcon(type: string) {
     default:
       return <Info className={`${cls} text-muted-foreground`} />;
   }
-}
-
-function formatDate(s: string): string {
-  return new Date(s).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 export default function AdminOrderHistoryView({ orderId }: Props) {
@@ -182,7 +172,7 @@ export default function AdminOrderHistoryView({ orderId }: Props) {
             )}
 
             <p className="text-xs text-muted-foreground mt-2">
-              By {entry.changed_by_name} · {formatDate(entry.created_at)}
+              By {entry.changed_by_name} · {formatDateTime(entry.created_at)}
             </p>
           </div>
         </li>

@@ -14,6 +14,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+import { formatCurrency } from '../../../lib/formatters';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronDown, Gift, Minus, Plus, RotateCcw } from 'lucide-react';
 
@@ -115,12 +116,6 @@ interface ClientOrderFormViewProps {
   orderId?: string | null;
   backUrl: string;
 }
-
-const formatCurrency = (amount: number) =>
-  `$${(amount || 0).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
 
 // ----------------------------------------------------------------------------
 // Main

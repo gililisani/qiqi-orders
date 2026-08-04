@@ -35,6 +35,10 @@ interface ProductData {
   list_in_support_funds: boolean;
   visible_to_americas: boolean;
   visible_to_international: boolean;
+  qualifies_for_credit_earning: boolean;
+  case_weight?: number | null;
+  hs_code?: string | null;
+  made_in?: string | null;
   picture_url?: string;
 }
 
@@ -137,6 +141,41 @@ export default function BulkUploadProducts() {
           );
           return;
         }
+        // Optional columns (audit: the upload used to write 13 of 18
+        // columns; qualifies_for_credit_earning is money-relevant — silent
+        // defaults skew support-fund accrual, so a present column must
+        // contain a valid value).
+        const opt = (name: string) =>
+          headers.includes(name) ? (values[headers.indexOf(name)] || '').trim() : '';
+
+        const creditRaw = opt('qualifies_for_credit_earning');
+        let qualifiesForCredit = true; // DB default — most SKUs earn credit
+        if (creditRaw) {
+          const lower = creditRaw.toLowerCase();
+          if (lower !== 'true' && lower !== 'false') {
+            setError(
+              `Row ${i + 1} (${values[headers.indexOf('sku')] || 'no SKU'}): ` +
+                `qualifies_for_credit_earning "${creditRaw}" must be true or false.`
+            );
+            return;
+          }
+          qualifiesForCredit = lower === 'true';
+        }
+
+        const caseWeightRaw = opt('case_weight');
+        let caseWeight: number | null = null;
+        if (caseWeightRaw) {
+          const w = parseFloat(caseWeightRaw);
+          if (!Number.isFinite(w) || w < 0) {
+            setError(
+              `Row ${i + 1} (${values[headers.indexOf('sku')] || 'no SKU'}): ` +
+                `case_weight "${caseWeightRaw}" must be a non-negative number (kg).`
+            );
+            return;
+          }
+          caseWeight = w;
+        }
+
         parsed.push({
           item_name: values[headers.indexOf('item_name')] || '',
           netsuite_name: values[headers.indexOf('netsuite_name')] || '',
@@ -153,6 +192,10 @@ export default function BulkUploadProducts() {
             values[headers.indexOf('visible_to_americas')].toLowerCase() === 'true',
           visible_to_international:
             values[headers.indexOf('visible_to_international')].toLowerCase() === 'true',
+          qualifies_for_credit_earning: qualifiesForCredit,
+          case_weight: caseWeight,
+          hs_code: opt('hs_code') || null,
+          made_in: opt('made_in') || null,
           picture_url: values[headers.indexOf('picture_url')] || undefined,
         });
       }
@@ -187,7 +230,14 @@ export default function BulkUploadProducts() {
   };
 
   const downloadTemplate = () => {
-    const headers = [...REQUIRED_HEADERS, 'picture_url'];
+    const headers = [
+      ...REQUIRED_HEADERS,
+      'qualifies_for_credit_earning',
+      'case_weight',
+      'hs_code',
+      'made_in',
+      'picture_url',
+    ];
     const sample = [
       'Sample Product',
       'Sample NetSuite Name',
@@ -201,6 +251,10 @@ export default function BulkUploadProducts() {
       'true',
       'true',
       'true',
+      'true',
+      '4.20',
+      '3305.10.00',
+      'Israel',
       'https://example.com/image.jpg',
     ];
     const csv = [headers, sample].map((r) => r.join(',')).join('\n');
@@ -297,6 +351,7 @@ export default function BulkUploadProducts() {
                   <TableHead>International</TableHead>
                   <TableHead className="hidden lg:table-cell">Enabled</TableHead>
                   <TableHead className="hidden lg:table-cell">Support funds</TableHead>
+                  <TableHead className="hidden lg:table-cell">Earns credit</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -329,6 +384,13 @@ export default function BulkUploadProducts() {
                         <Badge variant="muted">No</Badge>
                       )}
                     </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {p.qualifies_for_credit_earning ? (
+                        <Badge variant="success">Yes</Badge>
+                      ) : (
+                        <Badge variant="muted">No</Badge>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -356,6 +418,10 @@ export default function BulkUploadProducts() {
             <li><span className="font-mono text-foreground">list_in_support_funds</span> — true/false (required)</li>
             <li><span className="font-mono text-foreground">visible_to_americas</span> — true/false (required)</li>
             <li><span className="font-mono text-foreground">visible_to_international</span> — true/false (required)</li>
+            <li><span className="font-mono text-foreground">qualifies_for_credit_earning</span> — true/false (optional; default true — set false for testers/POS items that must not earn support-fund credit)</li>
+            <li><span className="font-mono text-foreground">case_weight</span> — case weight in kg, number (optional; used by packing lists and SLIs)</li>
+            <li><span className="font-mono text-foreground">hs_code</span> — customs HS code (optional; used by SLIs)</li>
+            <li><span className="font-mono text-foreground">made_in</span> — country of origin (optional; used by SLIs)</li>
             <li><span className="font-mono text-foreground">picture_url</span> — image URL (optional)</li>
           </ul>
         </CardContent>

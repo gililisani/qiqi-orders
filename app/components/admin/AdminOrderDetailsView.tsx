@@ -95,6 +95,7 @@ import {
   canEditOrder,
   canShowPackingSlip,
   validateRequiredFieldsForStatus,
+  NON_DRAFT_ORDER_STATUSES,
 } from '../shared/orderDetails/orderDetailsUtils';
 import { useOrderDetailsController } from '../shared/orderDetails/useOrderDetailsController';
 
@@ -157,7 +158,7 @@ interface AdminOrderDetailsViewProps {
   packingSlipUrl: string;
 }
 
-const STATUS_OPTIONS = ['Open', 'In Process', 'Ready', 'Done', 'Cancelled'] as const;
+const STATUS_OPTIONS = NON_DRAFT_ORDER_STATUSES;
 
 // ============================================================================
 // Component

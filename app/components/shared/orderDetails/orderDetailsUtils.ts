@@ -5,6 +5,22 @@
 // /api/orders/delete enforces the same set server-side.
 // ---------------------------------------------------------------------------
 
+/** Every order status, in lifecycle order. */
+export const ORDER_STATUSES = [
+  'Draft',
+  'Open',
+  'In Process',
+  'Ready',
+  'Done',
+  'Cancelled',
+] as const;
+
+/** Statuses an admin can set / filter by — Draft is client-side only
+ *  (an admin never moves an order BACK to Draft). */
+export const NON_DRAFT_ORDER_STATUSES = ORDER_STATUSES.filter(
+  (s) => s !== 'Draft',
+) as readonly string[];
+
 /** Orders that can still be edited (admin and client alike). */
 export const ORDER_EDITABLE_STATUSES = ['Draft', 'Open'] as const;
 

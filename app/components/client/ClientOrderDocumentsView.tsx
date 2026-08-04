@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { FileText, Download, Eye } from 'lucide-react';
 
 import { supabase } from '../../../lib/supabaseClient';
-import { formatNumber } from '../../../lib/formatters';
+import { formatNumber, formatDateTime } from '../../../lib/formatters';
 
 import { Button } from '../qq/button';
 import { Badge } from '../qq/badge';
@@ -56,16 +56,6 @@ function formatFileSize(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return formatNumber(bytes / Math.pow(k, i), 2) + ' ' + sizes[i];
-}
-
-function formatDate(s: string): string {
-  return new Date(s).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 export default function ClientOrderDocumentsView({ orderId }: Props) {
@@ -182,7 +172,7 @@ export default function ClientOrderDocumentsView({ orderId }: Props) {
                   <span>·</span>
                   <span className="truncate">By {doc.uploaded_by_name}</span>
                   <span className="hidden sm:inline">·</span>
-                  <span className="hidden sm:inline">{formatDate(doc.created_at)}</span>
+                  <span className="hidden sm:inline">{formatDateTime(doc.created_at)}</span>
                 </div>
                 {doc.description && (
                   <p className="text-xs text-muted-foreground mt-1">{doc.description}</p>
