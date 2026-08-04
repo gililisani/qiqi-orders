@@ -808,7 +808,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                 {!showSupportFundTab && orderItems.length > 0 && (
                   <div className="space-y-1 text-xs">
                     <Row
-                      label="Subtotal"
+                      label="Order subtotal"
                       value={formatCurrency(orderItems.reduce((s, i) => s + i.total_price, 0))}
                       small
                     />
@@ -826,7 +826,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                 {showSupportFundTab && supportFundItems.length > 0 && (
                   <div className="space-y-1 text-xs">
                     <Row
-                      label="Subtotal"
+                      label="Support fund subtotal"
                       value={formatCurrency(supportFundTotals.subtotal)}
                       small
                       valueClass="text-green-700"
@@ -854,6 +854,29 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
 
                 {/* Grand total (always visible) */}
                 <div className="pt-2 border-t border-border">
+                  {/* Derivation: grand total = order subtotal + support top-up.
+                      The order-subtotal line shows on the Support tab (where it
+                      isn't visible above); the top-up line shows whenever SF
+                      items exceed earned credit. In the common fully-covered
+                      case the grand total visibly equals the order subtotal. */}
+                  {(showSupportFundTab || supportFundTotals.finalTotal > 0) && (
+                    <div className="space-y-1 text-xs pb-1">
+                      {showSupportFundTab && (
+                        <Row
+                          label="Order subtotal"
+                          value={formatCurrency(orderItems.reduce((s, i) => s + i.total_price, 0))}
+                          small
+                        />
+                      )}
+                      {supportFundTotals.finalTotal > 0 && (
+                        <Row
+                          label="Support top-up"
+                          value={`+${formatCurrency(supportFundTotals.finalTotal)}`}
+                          small
+                        />
+                      )}
+                    </div>
+                  )}
                   <Row
                     label="Grand total"
                     value={formatCurrency(orderGrandTotal)}
