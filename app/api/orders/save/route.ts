@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireWithPermission } from '../../../../platform/auth/guards';
-import { computeOrderMoney, type SaveItemInput } from '../../../../lib/orderSave';
+import {
+  computeOrderMoney,
+  PACKING_FOR_OPTIONS,
+  type SaveItemInput,
+} from '../../../../lib/orderSave';
 
 /**
  * POST /api/orders/save — THE order write path (create + update).
@@ -55,6 +59,14 @@ export async function POST(request: NextRequest) {
     }
     if (rawItems.length === 0) {
       return NextResponse.json({ error: 'The order needs at least one item.' }, { status: 400 });
+    }
+    const packingFor =
+      typeof body.packingFor === 'string' ? body.packingFor : null;
+    if (!packingFor || !(PACKING_FOR_OPTIONS as readonly string[]).includes(packingFor)) {
+      return NextResponse.json(
+        { error: 'Please select what the order is packed for (Air or Ocean shipping).' },
+        { status: 400 },
+      );
     }
 
     const supabase = createServiceRoleClient();
@@ -134,6 +146,7 @@ export async function POST(request: NextRequest) {
           po_number: poNumber,
           status,
           location_id: company.location_id ?? null,
+          packing_for: packingFor,
           total_value: money.total_value,
           support_fund_used: money.support_fund_used,
           credit_earned: money.credit_earned,
@@ -196,6 +209,7 @@ export async function POST(request: NextRequest) {
       p_order: {
         po_number: poNumber,
         status: newStatus,
+        packing_for: packingFor,
         total_value: money.total_value,
         support_fund_used: money.support_fund_used,
         credit_earned: money.credit_earned,

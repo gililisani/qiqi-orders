@@ -63,6 +63,7 @@ interface OrderCompany {
 interface Order {
   id: string;
   po_number?: string;
+  packing_for?: string;
   status: string;
   total_value: number;
   credit_earned: number;
@@ -285,6 +286,9 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
                 {order.po_number || order.id.substring(0, 8)}
               </span>
             </Field>
+            {order.packing_for && (
+              <Field label="Packing for">{order.packing_for}</Field>
+            )}
             {order.so_number && (
               <Field label="Sales order #">
                 {/* Plain text on the client side — clients have no NetSuite

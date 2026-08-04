@@ -45,6 +45,14 @@ import {
   DialogFooter,
 } from '../qq/dialog';
 import { Tabs, TabsList, TabsTrigger } from '../qq/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../qq/select';
+import { PACKING_FOR_OPTIONS } from '../../../lib/orderSave';
 
 // ---------------- Types ----------------
 interface Category {
@@ -97,6 +105,7 @@ interface SupportFundItem extends OrderItem {}
 interface Order {
   id: string;
   po_number?: string;
+  packing_for?: string;
   status: string;
   company_id: string;
   company?: Company;
@@ -472,8 +481,9 @@ export default function ClientOrderFormView({ orderId, backUrl }: ClientOrderFor
               </CardContent>
             </Card>
 
-            {/* PO Number (new mode) */}
-            {isNewMode && (
+            {/* PO number (new mode) + mandatory Packing For (both modes) */}
+            <div className="flex items-center gap-3">
+              {isNewMode && (
               <div className="flex items-center gap-3">
                 <Label htmlFor="po-number" className="text-sm font-medium shrink-0">
                   PO number
@@ -497,7 +507,43 @@ export default function ClientOrderFormView({ orderId, backUrl }: ClientOrderFor
                   placeholder="Optional"
                 />
               </div>
-            )}
+              )}
+
+              {/* Packing differs between air and ocean freight — the
+                  warehouse needs this on every order (mandatory). */}
+              <div className="flex items-center gap-3 ml-auto">
+                <Label htmlFor="packing-for" className="text-sm font-medium shrink-0">
+                  Packing for <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={order?.packing_for || ''}
+                  onValueChange={(v) =>
+                    setOrder((prev) =>
+                      prev
+                        ? { ...prev, packing_for: v }
+                        : {
+                            id: '',
+                            po_number: '',
+                            packing_for: v,
+                            status: 'Open',
+                            company_id: company.id,
+                          }
+                    )
+                  }
+                >
+                  <SelectTrigger id="packing-for" className="w-44">
+                    <SelectValue placeholder="Select…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PACKING_FOR_OPTIONS.map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             {/* Tabs + products */}
             <Card

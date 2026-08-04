@@ -100,6 +100,7 @@ export function useOrderFormController(params: {
           company,
           orderItemsCount: orderItems.length,
           supportFundItemsCount: supportFundItems.length,
+          packingFor: (order && order.packing_for) || null,
         });
         if (validationError) throw new Error(validationError);
         // Keep explicit guard for type narrowing (and to preserve original structure).
@@ -137,6 +138,7 @@ export function useOrderFormController(params: {
             ...(isNewMode ? {} : { orderId }),
             companyId: company.id,
             poNumber: (order && order.po_number) || null,
+            packingFor: (order && order.packing_for) || null,
             asDraft,
             items: itemsPayload,
           }),
