@@ -86,6 +86,7 @@ export default function ImageUpload({ onImageUploaded, currentImageUrl, classNam
         {previewUrl ? (
         <div className={`${largerImage ? 'w-full' : 'space-y-2'}`}>
           <div className={`relative ${largerImage ? 'w-full' : 'inline-block w-full flex justify-center'}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={previewUrl}
               alt="Product preview"

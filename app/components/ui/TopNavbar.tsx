@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
 import { fetchWithAuth } from "../../../lib/fetchWithAuth";
 import FeedbackPopup from "./FeedbackPopup";
@@ -76,14 +77,15 @@ export default function TopNavbar() {
       <div className="bg-white border-b border-[#e5e5e5] px-3 py-2">
         <div className="h-14 flex items-center justify-between">
           {/* Left: Logo / Title */}
-          <a href="/admin" className="flex items-center gap-3 hover:opacity-90 transition cursor-pointer">
+          <Link href="/admin" className="flex items-center gap-3 hover:opacity-90 transition cursor-pointer">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/QIQI-Logo.svg" alt="Qiqi Logo" className="h-10 w-auto" />
             <span className="text-sm font-semibold tracking-tight">Qiqi Partners Hub</span>
-          </a>
+          </Link>
 
           {/* Center: Nav */}
           <nav className="hidden lg:flex items-center gap-6 text-sm whitespace-nowrap">
-            <a className="text-gray-700 hover:text-gray-900" href="/admin">Dashboard</a>
+            <Link className="text-gray-700 hover:text-gray-900" href="/admin">Dashboard</Link>
 
             {/* Orders */}
             <div className="relative" onMouseEnter={() => onEnter("orders")} onMouseLeave={onLeave}>
@@ -101,10 +103,10 @@ export default function TopNavbar() {
                   onMouseLeave={onLeave}
                 >
                   <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
-                    <a href="/admin/orders" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Orders</a>
-                    <a href="/admin/orders/new" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">New Order (Admin)</a>
+                    <Link href="/admin/orders" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Orders</Link>
+                    <Link href="/admin/orders/new" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">New Order (Admin)</Link>
                     <div className="my-1 border-t border-gray-200"></div>
-                    <a href="/admin/sli/create" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Create Standalone SLI</a>
+                    <Link href="/admin/sli/create" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Create Standalone SLI</Link>
                   </div>
                 </div>
             </div>
@@ -125,9 +127,9 @@ export default function TopNavbar() {
                   onMouseLeave={onLeave}
                 >
                   <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
-                    <a href="/admin/products" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Products</a>
-                    <a href="/admin/highlighted-products" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Highlighted Products</a>
-                    <a href="/admin/categories" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Categories</a>
+                    <Link href="/admin/products" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Products</Link>
+                    <Link href="/admin/highlighted-products" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Highlighted Products</Link>
+                    <Link href="/admin/categories" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Categories</Link>
                   </div>
                 </div>
             </div>
@@ -148,20 +150,20 @@ export default function TopNavbar() {
                 onMouseLeave={onLeave}
               >
                 <div className="border border-[#e5e5e5] rounded-xl bg-white p-2 grid grid-cols-1">
-                  <a href="/admin/companies" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Companies</a>
-                  <a href="/admin/users" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Users</a>
-                  <a href="/admin/admins" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Admins</a>
-                  <a href="/admin/subsidiaries" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Subsidiaries</a>
-                  <a href="/admin/support-funds" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Support Funds</a>
-                  <a href="/admin/locations" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Locations</a>
-                  <a href="/admin/classes" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Classes</a>
-                  <a href="/admin/incoterms" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Incoterms</a>
-                  <a href="/admin/payment-terms" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Payment Terms</a>
-                  <a href="/admin/netsuite" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">NetSuite</a>
-                  <a href="/admin/inventory" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Inventory Sync</a>
+                  <Link href="/admin/companies" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Companies</Link>
+                  <Link href="/admin/users" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Users</Link>
+                  <Link href="/admin/admins" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Admins</Link>
+                  <Link href="/admin/subsidiaries" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Subsidiaries</Link>
+                  <Link href="/admin/support-funds" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Support Funds</Link>
+                  <Link href="/admin/locations" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Locations</Link>
+                  <Link href="/admin/classes" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Classes</Link>
+                  <Link href="/admin/incoterms" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Incoterms</Link>
+                  <Link href="/admin/payment-terms" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Payment Terms</Link>
+                  <Link href="/admin/netsuite" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">NetSuite</Link>
+                  <Link href="/admin/inventory" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Inventory Sync</Link>
                   <div className="my-1 border-t border-gray-200"></div>
-                  <a href="/admin/dam" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Digital Asset Manager</a>
-                  <a href="/admin/dam/campaigns" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Campaigns</a>
+                  <Link href="/admin/dam" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Digital Asset Manager</Link>
+                  <Link href="/admin/dam/campaigns" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Campaigns</Link>
                 </div>
               </div>
             </div>
@@ -182,11 +184,11 @@ export default function TopNavbar() {
                 onMouseLeave={onLeave}
               >
                 <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
-                  <a href="/admin/dam/settings/product-lines" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Product Lines</a>
-                  <a href="/admin/dam/settings/locales" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Locales</a>
-                  <a href="/admin/dam/settings/asset-types" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Asset Types</a>
-                  <a href="/admin/dam/settings/asset-subtypes" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Asset Sub-Types</a>
-                  <a href="/admin/dam/settings/tags" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Tags</a>
+                  <Link href="/admin/dam/settings/product-lines" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Product Lines</Link>
+                  <Link href="/admin/dam/settings/locales" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Locales</Link>
+                  <Link href="/admin/dam/settings/asset-types" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Asset Types</Link>
+                  <Link href="/admin/dam/settings/asset-subtypes" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Asset Sub-Types</Link>
+                  <Link href="/admin/dam/settings/tags" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Tags</Link>
                 </div>
               </div>
             </div>
@@ -234,49 +236,49 @@ export default function TopNavbar() {
         {mobileOpen && (
           <div className="lg:hidden border-t border-[#e5e5e5] py-2 text-sm">
             <div className="grid gap-1 py-2">
-              <a className="px-2 py-2 rounded hover:bg-gray-50" href="/admin">Dashboard</a>
+              <Link className="px-2 py-2 rounded hover:bg-gray-50" href="/admin">Dashboard</Link>
               <details>
                 <summary className="px-2 py-2 rounded hover:bg-gray-50 cursor-pointer">Orders</summary>
                 <div className="pl-4 py-1 grid">
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/orders">All Orders</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/orders/new">New Order (Admin)</a>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/orders">All Orders</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/orders/new">New Order (Admin)</Link>
                 </div>
               </details>
               <details>
                 <summary className="px-2 py-2 rounded hover:bg-gray-50 cursor-pointer">Products</summary>
                 <div className="pl-4 py-1 grid">
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/products">All Products</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/highlighted-products">Highlighted Products</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/categories">Categories</a>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/products">All Products</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/highlighted-products">Highlighted Products</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/categories">Categories</Link>
                 </div>
               </details>
               <details>
                 <summary className="px-2 py-2 rounded hover:bg-gray-50 cursor-pointer">System</summary>
                 <div className="pl-4 py-1 grid">
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/companies">Companies</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/users">Users</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/admins">Admins</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/subsidiaries">Subsidiaries</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/support-funds">Support Funds</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/locations">Locations</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/classes">Classes</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/incoterms">Incoterms</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/payment-terms">Payment Terms</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/netsuite">NetSuite</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/inventory">Inventory Sync</a>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/companies">Companies</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/users">Users</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/admins">Admins</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/subsidiaries">Subsidiaries</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/support-funds">Support Funds</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/locations">Locations</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/classes">Classes</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/incoterms">Incoterms</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/payment-terms">Payment Terms</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/netsuite">NetSuite</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/inventory">Inventory Sync</Link>
                   <div className="my-1 border-t border-gray-200"></div>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam">Digital Asset Manager</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/campaigns">Campaigns</a>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam">Digital Asset Manager</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/campaigns">Campaigns</Link>
                 </div>
               </details>
               <details>
                 <summary className="px-2 py-2 rounded hover:bg-gray-50 cursor-pointer">Settings</summary>
                 <div className="pl-4 py-1 grid">
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/product-lines">Product Lines</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/locales">Locales</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/asset-types">Asset Types</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/asset-subtypes">Asset Sub-Types</a>
-                  <a className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/tags">Tags</a>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/product-lines">Product Lines</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/locales">Locales</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/asset-types">Asset Types</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/asset-subtypes">Asset Sub-Types</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/settings/tags">Tags</Link>
                 </div>
               </details>
             </div>

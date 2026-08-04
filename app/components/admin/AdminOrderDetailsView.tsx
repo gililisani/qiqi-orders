@@ -466,6 +466,7 @@ export default function AdminOrderDetailsView({
     if (reconcileStartedFor.current === order.id) return;
     reconcileStartedFor.current = order.id;
     runReconcile();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only fetch; fn identity changes every render
   }, [order?.id, order?.netsuite_so_id, order?.so_number, order?.netsuite_invoice_id, runReconcile]);
   const handleNsAction = async (action: 'push-so' | 'create-invoice' | 'sync-invoice') => {
     if (action === 'push-so') {

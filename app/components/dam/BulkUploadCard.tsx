@@ -108,6 +108,7 @@ export default function BulkUploadCard({
     // Show thumbnail if available (images or PDFs)
     if (file.previewUrl) {
       return (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={file.previewUrl}
           alt={file.file.name}

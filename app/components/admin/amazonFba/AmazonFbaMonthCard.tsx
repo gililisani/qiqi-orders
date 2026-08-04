@@ -281,7 +281,7 @@ export function AmazonFbaMonthCard({
               {auditRows.some((r) => !r.match) && (
                 <p className="text-xs text-muted-foreground pt-2">
                   Differences at month edges are usually settlement-timing: an order near the 1st
-                  can sit in one month's CSV and the neighboring month's records. They must offset
+                  can sit in one month&apos;s CSV and the neighboring month&apos;s records. They must offset
                   exactly across adjacent months — see docs/AMAZON_CSV_VERIFICATION.md.
                 </p>
               )}

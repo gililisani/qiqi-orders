@@ -509,6 +509,7 @@ export default function AdminDigitalAssetManagerPage() {
         console.error('Failed to restore uploads from localStorage', e);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only fetch; fn identity changes every render
   }, [accessToken]);
 
   // Save active uploads to localStorage whenever they change
@@ -985,6 +986,7 @@ export default function AdminDigitalAssetManagerPage() {
       fetchAssets(accessToken, searchTerm || undefined, 1);
     }, 300); // Debounce search by 300ms
     return () => clearTimeout(timeoutId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only fetch; fn identity changes every render
   }, [
     accessToken,
     searchTerm,

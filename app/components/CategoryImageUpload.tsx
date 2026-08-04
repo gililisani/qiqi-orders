@@ -188,6 +188,7 @@ export default function CategoryImageUpload({ onImageUploaded, currentImageUrl, 
         {previewUrl ? (
           <div className="space-y-2">
             <div className="relative inline-block">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewUrl}
                 alt="Category preview"

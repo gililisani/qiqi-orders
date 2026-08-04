@@ -287,7 +287,7 @@ export default function CreateSLIModal({
                 <li>Company name and ship-to address</li>
                 <li>Invoice number from order</li>
                 <li>Product details (HS codes, quantities, weights, values)</li>
-                <li>Date will be set to today's date</li>
+                <li>Date will be set to today&apos;s date</li>
               </ul>
             </div>
 

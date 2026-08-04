@@ -9,10 +9,8 @@ const nextConfig = {
   // machine otherwise makes Next guess the wrong workspace root.
   outputFileTracingRoot: path.dirname(fileURLToPath(import.meta.url)),
   eslint: {
-    // Lint exists for editors/CI (`npm run lint`), but years of pre-lint
-    // code means gating deploys on it would block main today. Tighten
-    // after the backlog is worked down.
-    ignoreDuringBuilds: true,
+    // Backlog worked down to zero 2026-08-04 — lint now gates the build.
+    ignoreDuringBuilds: false,
   },
   images: {
     remotePatterns: [

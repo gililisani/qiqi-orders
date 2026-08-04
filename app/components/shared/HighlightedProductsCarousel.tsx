@@ -183,6 +183,7 @@ export default function HighlightedProductsCarousel() {
               return (
                 <div key={hp.id} className="min-w-full h-full relative flex-shrink-0">
                   {productImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={productImageUrl}
                       alt={productTitle}

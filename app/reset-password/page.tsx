@@ -65,7 +65,7 @@ export default function ResetPasswordPage() {
                   If an account exists for <span className="text-foreground">{email}</span>, a reset link is on the way.
                 </p>
                 <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
-                  The link expires in 24 hours. Check your spam folder if you don't see it within a few minutes.
+                  The link expires in 24 hours. Check your spam folder if you don&apos;t see it within a few minutes.
                 </p>
                 <Link
                   href="/"
@@ -79,7 +79,7 @@ export default function ResetPasswordPage() {
                 <div className="mb-6">
                   <h2 className="text-xl font-semibold tracking-tight">Reset password</h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Enter your email and we'll send you a link to reset your password.
+                    Enter your email and we&apos;ll send you a link to reset your password.
                   </p>
                 </div>
 

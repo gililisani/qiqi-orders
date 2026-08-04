@@ -807,7 +807,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                     <p>No support fund items yet.</p>
                     {totals.supportFundEarned > 0 ? (
                       <p>
-                        You've earned{' '}
+                        You&apos;ve earned{' '}
                         <span className="font-medium text-green-700">
                           {formatCurrency(totals.supportFundEarned)}
                         </span>{' '}
@@ -980,10 +980,10 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
       <Dialog open={showSupportFundReminder} onOpenChange={setShowSupportFundReminder}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Don't forget your support funds</DialogTitle>
+            <DialogTitle>Don&apos;t forget your support funds</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground py-2">
-            You've earned{' '}
+            You&apos;ve earned{' '}
             <span className="font-medium text-foreground">
               {formatCurrency(totals.supportFundEarned)}
             </span>{' '}

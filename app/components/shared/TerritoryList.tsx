@@ -34,6 +34,7 @@ export default function TerritoryList({
     if (companyId) {
       fetchTerritories();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only fetch; fn identity changes every render
   }, [companyId]);
 
   const fetchTerritories = async () => {

@@ -24,6 +24,7 @@ export function useAuth(requiredRole?: UserRole) {
 
   useEffect(() => {
     checkAuth();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only fetch; fn identity changes every render
   }, []);
 
   const checkAuth = async () => {

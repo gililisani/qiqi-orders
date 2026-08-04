@@ -186,7 +186,7 @@ export default function FormKitPage() {
                   10%
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-2">The solid lime-400 is vibrant green (like on Tailscan). At 20% opacity, it's 80% transparent!</p>
+              <p className="text-xs text-gray-500 mt-2">The solid lime-400 is vibrant green (like on Tailscan). At 20% opacity, it&apos;s 80% transparent!</p>
             </div>
             
             <div>
@@ -210,7 +210,7 @@ export default function FormKitPage() {
                 <li>On <a href="https://tailscan.com/tailwind/backgrounds/bg-lime-400" target="_blank" className="text-blue-600 underline">Tailscan</a>, you see <strong>solid</strong> lime-400 (100% opacity)</li>
                 <li>In the Tailwind UI example, they use <code className="bg-gray-100 px-1 rounded">bg-lime-400/20</code> which is only <strong>20% opacity</strong></li>
                 <li>20% opacity = 80% transparent, making it look very pale and subtle</li>
-                <li>This is intentional for a "glow effect" background, not a bold color</li>
+                <li>This is intentional for a &quot;glow effect&quot; background, not a bold color</li>
               </ul>
             </div>
           </div>

@@ -94,6 +94,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only fetch; fn identity changes every render
   }, []);
 
   async function fetchDashboardData() {

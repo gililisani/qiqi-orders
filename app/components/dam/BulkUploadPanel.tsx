@@ -235,6 +235,7 @@ export default function BulkUploadPanel({
     }));
     
     onFilesChange([...files, ...newFiles]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only fetch; fn identity changes every render
   }, [files, globalDefaults, locales, onFilesChange, assetTypes, assetSubtypes]);
 
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
