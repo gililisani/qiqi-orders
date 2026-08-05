@@ -142,7 +142,7 @@ export default function ClientDashboard() {
       {/* Activity feed + admin-controlled news box. Mode "nothing" hides
           the box and the feed takes the full width (owner spec). */}
       <div
-        className={`grid grid-cols-1 gap-4 items-start ${
+        className={`grid grid-cols-1 gap-4 items-stretch ${
           homeSettings && homeSettings.news_mode !== 'nothing' ? 'md:grid-cols-2' : ''
         }`}
       >

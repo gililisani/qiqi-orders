@@ -57,9 +57,10 @@ function NewRelease({ s }: { s: HomeSettings }) {
     : 'bg-gradient-to-t from-black/70 via-black/15 to-black/35';
 
   return (
-    <Card className="overflow-hidden">
-      {/* Full-bleed media with everything overlaid (owner spec). */}
-      <div className="relative aspect-video w-full bg-black">
+    <Card className="overflow-hidden h-full">
+      {/* Full-bleed media with everything overlaid. Height comes from the
+          grid row (= the activity feed), so the two boxes always match. */}
+      <div className="relative w-full h-full min-h-56 bg-black">
         {s.release_image_url &&
           (s.release_is_video ? (
             <video
@@ -168,12 +169,12 @@ function NewsScroller() {
   );
 
   return (
-    <Card className="h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm">News</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div ref={containerRef} className="relative h-56 overflow-hidden news-scroller">
+      <CardContent className="flex-1 min-h-0">
+        <div ref={containerRef} className="relative h-full min-h-40 overflow-hidden news-scroller">
           <div
             ref={contentRef}
             className={overflowing ? 'animate-news-scroll' : ''}
@@ -212,8 +213,8 @@ function Banner({ s }: { s: HomeSettings }) {
   // Fixed 16:9 frame (recommend 1920×1080). Images fill it (cover); videos
   // are never cut — a non-16:9 video letterboxes on black instead.
   return (
-    <Card className="overflow-hidden">
-      <div className="aspect-video w-full bg-black">
+    <Card className="overflow-hidden h-full">
+      <div className="w-full h-full min-h-56 bg-black">
         {s.banner_is_video ? (
           <video
             src={s.banner_url}
