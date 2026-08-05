@@ -212,6 +212,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [mobileOpen, setMobileOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const feedbackButtonRef = useRef<HTMLButtonElement>(null);
+  const sessionUserIdRef = useRef<string | null>(null);
+
+  // ONE Supabase session per browser (localStorage, shared across tabs).
+  // If another tab signs into a DIFFERENT account, this tab's UI keeps the
+  // old role while its API calls use the new token — everything fails with
+  // confusing 401/403s (owner hit this granting permissions from a stale
+  // admin tab after logging in as the test client elsewhere). Reload so
+  // the layout re-runs its role guards against the real session.
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      const currentId = sessionUserIdRef.current;
+      const newId = session?.user?.id ?? null;
+      if (currentId && newId !== currentId) {
+        window.location.reload();
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
   // MFA gate: enrolled admins must have a verified, non-stale session.
   // null = no gate; otherwise the factor to challenge + why.
   const [mfaGate, setMfaGate] = useState<{ factorId: string; stale: boolean } | null>(null);
@@ -255,6 +274,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           router.push('/');
           return;
         }
+        sessionUserIdRef.current = user.id;
         setUserEmail(user.email || '');
         // Load admin's permission list so the sidebar can filter nav items.
         // Defaults to all-on if the column is missing/null (pre-migration).

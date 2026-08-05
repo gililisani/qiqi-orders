@@ -151,6 +151,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   // Feedback popup
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const feedbackButtonRef = useRef<HTMLButtonElement>(null);
+  const sessionUserIdRef = useRef<string | null>(null);
+
+  // ONE Supabase session per browser (localStorage, shared across tabs).
+  // If another tab signs into a DIFFERENT account, this tab's UI keeps the
+  // old role while its API calls use the new token — everything fails with
+  // confusing 401/403s (owner hit this granting permissions from a stale
+  // admin tab after logging in as the test client elsewhere). Reload so
+  // the layout re-runs its role guards against the real session.
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      const currentId = sessionUserIdRef.current;
+      const newId = session?.user?.id ?? null;
+      if (currentId && newId !== currentId) {
+        window.location.reload();
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
 
   useEffect(() => {
     (async () => {
@@ -167,6 +186,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           router.push('/');
           return;
         }
+        sessionUserIdRef.current = user.id;
         setUserEmail(user.email || '');
         setUserId(user.id);
         // Load client's permission list so the sidebar can filter nav items
