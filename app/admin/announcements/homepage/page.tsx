@@ -146,7 +146,7 @@ export default function HomeNewsBoxSettingsPage() {
               <Input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
             </FormField>
           </div>
-          <FormField label="Image" required helper="Uploaded to public storage — also accepts a pasted URL below.">
+          <FormField label="Image" required helper="Recommended 16:9 — 1920×1080 (or 1280×720). Uploaded to public storage; a pasted URL below also works.">
             <ImageUpload onImageUploaded={setReleaseImageUrl} currentImageUrl={releaseImageUrl || undefined} />
           </FormField>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -171,7 +171,7 @@ export default function HomeNewsBoxSettingsPage() {
 
       {mode === 'banner' && (
         <>
-          <FormField label="Banner image" helper="For an image banner — or paste any image/video URL below.">
+          <FormField label="Banner image" helper="Recommended 16:9 — 1920×1080 (or 1280×720). For video, paste the URL below; same 16:9 sizing, MP4 works best.">
             <ImageUpload onImageUploaded={setBannerUrl} currentImageUrl={!bannerIsVideo ? bannerUrl || undefined : undefined} />
           </FormField>
           <FormField label="Image or video URL" required>

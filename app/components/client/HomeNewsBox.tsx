@@ -49,12 +49,16 @@ function NewRelease({ s }: { s: HomeSettings }) {
   const upcoming = s.release_date && s.release_date > today;
   return (
     <Card className="overflow-hidden">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm">New Product Release</CardTitle>
+      </CardHeader>
       {s.release_image_url && (
+        // 16:9 media area — matches the banner box; recommend 1920×1080.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={s.release_image_url}
           alt={s.release_title || 'New release'}
-          className="w-full h-44 object-cover"
+          className="w-full aspect-video object-cover"
         />
       )}
       <CardContent className="p-4">
@@ -163,21 +167,25 @@ function NewsScroller() {
 // --- Mode 3: banner --------------------------------------------------------
 function Banner({ s }: { s: HomeSettings }) {
   if (!s.banner_url) return null;
+  // Fixed 16:9 frame (recommend 1920×1080). Images fill it (cover); videos
+  // are never cut — a non-16:9 video letterboxes on black instead.
   return (
     <Card className="overflow-hidden">
-      {s.banner_is_video ? (
-        <video
-          src={s.banner_url}
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="w-full h-full max-h-80 object-cover"
-        />
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={s.banner_url} alt="" className="w-full h-full max-h-80 object-cover" />
-      )}
+      <div className="aspect-video w-full bg-black">
+        {s.banner_is_video ? (
+          <video
+            src={s.banner_url}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={s.banner_url} alt="" className="w-full h-full object-cover" />
+        )}
+      </div>
     </Card>
   );
 }
