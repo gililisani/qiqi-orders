@@ -7,7 +7,9 @@ import { Badge } from '../../components/qq/badge';
 import { DropdownMenuItem } from '../../components/qq/dropdown-menu';
 import { useToast } from '../../components/ui/ToastProvider';
 import { useConfirm } from '../../components/ui/ConfirmProvider';
-import { Trash2 } from 'lucide-react';
+import { Settings, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '../../components/qq/button';
 import { ANNOUNCEMENT_TYPES } from '../../components/admin/AnnouncementForm';
 
 interface AnnouncementRow {
@@ -56,6 +58,13 @@ export default function AnnouncementsPage() {
       description="What partners see on their homepage — teasers, launches, restocks, offers. Everything expires on schedule."
       newUrl="/admin/announcements/new"
       newLabel="New announcement"
+      extraHeaderActions={
+        <Link href="/admin/announcements/homepage">
+          <Button variant="outline" size="sm">
+            <Settings className="h-4 w-4" /> Homepage box
+          </Button>
+        </Link>
+      }
       editUrl={(id) => `/admin/announcements/${id}/edit`}
       fetch={async () =>
         supabase
