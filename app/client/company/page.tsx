@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import { formatCurrency } from '../../../lib/formatters';
 import TerritoryList from '../../components/shared/TerritoryList';
+import { AnnualTargetsCard } from '../../components/client/AnnualTargetsCard';
 
 import { PageHeader } from '../../components/qq/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/qq/card';
@@ -305,6 +306,9 @@ export default function YourCompanyPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Annual targets & progress — same card admins see on the company page */}
+      <AnnualTargetsCard />
 
       {/* Territories */}
       <Card>

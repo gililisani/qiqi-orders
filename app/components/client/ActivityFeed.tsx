@@ -68,7 +68,7 @@ export function ActivityFeed() {
           });
         }
         feed.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-        if (!cancelled) setItems(feed.slice(0, 8));
+        if (!cancelled) setItems(feed.slice(0, 6));
       } catch {
         /* leave empty */
       } finally {
@@ -81,7 +81,7 @@ export function ActivityFeed() {
   }, []);
 
   return (
-    <Card className="h-full">
+    <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm">Recent activity</CardTitle>
       </CardHeader>
@@ -93,7 +93,7 @@ export function ActivityFeed() {
             Updates about your orders and notes from Qiqi will appear here.
           </p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-3 max-h-60 overflow-y-auto pr-1">
             {items.map((item) => (
               <li key={item.key}>
                 <button
