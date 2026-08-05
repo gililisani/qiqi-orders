@@ -11,7 +11,6 @@ import {
   Building2,
   MessageSquare,
   ReceiptText,
-  FileText,
   ShieldCheck,
 } from 'lucide-react';
 
@@ -64,19 +63,27 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
   {
     items: [
-      { label: 'Dashboard',   href: '/client',             icon: <LayoutDashboard />, permission: 'orders' },
-      { label: 'Orders',      href: '/client/orders',      icon: <ShoppingCart />,    permission: 'orders' },
-      { label: 'Performance', href: '/client/performance', icon: <TrendingUp />,      permission: 'reports' },
-      { label: 'Billing',     href: '/client/billing',     icon: <ReceiptText />,     permission: 'orders' },
-      { label: 'Price list',  href: '/client/price-list',  icon: <FileText />,        permission: 'orders' },
-      { label: 'Compliance',  href: '/client/compliance',  icon: <ShieldCheck />,     permission: null },
-      { label: 'Assets',      href: '/client/assets',      icon: <ImageIcon />,       permission: 'dam' },
-      { label: 'Notes',       href: '/client/notes',       icon: <StickyNote />, key: 'notes', permission: 'orders' },
+      { label: 'Dashboard',       href: '/client',            icon: <LayoutDashboard />, permission: 'orders' },
+      { label: 'Orders',          href: '/client/orders',     icon: <ShoppingCart />,    permission: 'orders' },
+      { label: 'Regulatory Docs', href: '/client/compliance', icon: <ShieldCheck />,     permission: null },
+      { label: 'Notes',           href: '/client/notes',      icon: <StickyNote />, key: 'notes', permission: 'orders' },
+      // Price list exists at /client/price-list but is hidden from the nav
+      // until the per-region redesign (owner 2026-08-04): show ONLY the
+      // caller's region price, add Salon/MSRP columns, design the PDF.
+    ],
+  },
+  {
+    label: 'Media',
+    items: [
+      // Campaigns joins this group when that feature lands.
+      { label: 'Assets', href: '/client/assets', icon: <ImageIcon />, permission: 'dam' },
     ],
   },
   {
     label: 'Account',
     items: [
+      { label: 'Performance',  href: '/client/performance', icon: <TrendingUp />,  permission: 'reports' },
+      { label: 'Billing',      href: '/client/billing',     icon: <ReceiptText />, permission: 'orders' },
       // "Your company" shows company-level info that overlaps with reports
       // (targets, support funds, etc.), so it's gated on the same
       // permission. DAM-only users don't see it.

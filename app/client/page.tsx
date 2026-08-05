@@ -10,7 +10,6 @@ import { formatCurrency } from '../../lib/formatters';
 
 import HighlightedProductsCarousel from '../components/shared/HighlightedProductsCarousel';
 import { SupportFundGoalStrip } from '../components/client/SupportFundGoalStrip';
-import { AnnouncementsRail } from '../components/client/AnnouncementsRail';
 import { invoiceInfo } from '../../lib/clientInvoices';
 
 import { PageHeader } from '../components/qq/page-header';
@@ -125,8 +124,6 @@ export default function ClientDashboard() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
-      <AnnouncementsRail />
 
       <OutstandingBalanceBadge orders={orders} />
 
