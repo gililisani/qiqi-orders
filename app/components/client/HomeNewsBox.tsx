@@ -53,29 +53,34 @@ function NewRelease({ s }: { s: HomeSettings }) {
         <CardTitle className="text-sm">New Product Release</CardTitle>
       </CardHeader>
       {s.release_image_url && (
-        // 16:9 media area — matches the banner box; recommend 1920×1080.
+        // Fixed-height strip so the card matches the activity feed's
+        // footprint; wide images center-crop into it.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={s.release_image_url}
           alt={s.release_title || 'New release'}
-          className="w-full aspect-video object-cover"
+          className="w-full h-40 object-cover"
         />
       )}
       <CardContent className="p-4">
-        <Badge variant="accent">{upcoming ? 'Coming soon' : 'New release'}</Badge>
-        <p className="mt-2 text-base font-semibold leading-snug">{s.release_title}</p>
-        {s.release_date && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            {upcoming ? 'Releasing' : 'Released'} {formatDate(s.release_date)}
-          </p>
-        )}
-        {s.release_link_url && (
-          <a href={s.release_link_url} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm" className="mt-3">
-              <ExternalLink className="h-4 w-4" /> Learn more
-            </Button>
-          </a>
-        )}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <Badge variant="accent">{upcoming ? 'Coming soon' : 'New release'}</Badge>
+            <p className="mt-1.5 text-base font-semibold leading-snug">{s.release_title}</p>
+            {s.release_date && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {upcoming ? 'Releasing' : 'Released'} {formatDate(s.release_date)}
+              </p>
+            )}
+          </div>
+          {s.release_link_url && (
+            <a href={s.release_link_url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+              <Button variant="outline" size="sm">
+                <ExternalLink className="h-4 w-4" /> Learn more
+              </Button>
+            </a>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

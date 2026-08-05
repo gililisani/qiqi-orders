@@ -146,7 +146,7 @@ export default function HomeNewsBoxSettingsPage() {
               <Input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
             </FormField>
           </div>
-          <FormField label="Image" required helper="Recommended 16:9 — 1920×1080 (or 1280×720). Uploaded to public storage; a pasted URL below also works.">
+          <FormField label="Image" required helper="Wide banner-style image recommended, e.g. 1600×500. Any wide image works — it center-crops into the strip. A pasted URL below also works.">
             <ImageUpload onImageUploaded={setReleaseImageUrl} currentImageUrl={releaseImageUrl || undefined} />
           </FormField>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
