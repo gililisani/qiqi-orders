@@ -17,6 +17,11 @@ create table public.client_home_settings (
     check (news_mode in ('new_release', 'news_scroller', 'banner', 'nothing', 'latest_dam')),
   release_title text,
   release_image_url text,
+  release_is_video boolean not null default false,
+  -- Overlay text color, admin-toggled for readability: white on dark
+  -- media, black on bright media.
+  release_text_color text not null default 'white'
+    check (release_text_color in ('white', 'black')),
   release_date date,
   release_link_url text,
   banner_url text,

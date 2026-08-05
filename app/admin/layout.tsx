@@ -10,7 +10,6 @@ import {
   Users,
   Shield,
   Box,
-  Star,
   FolderOpen,
   Image as ImageIcon,
   Megaphone,
@@ -99,7 +98,6 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Catalog',
     items: [
       { label: 'Products',             href: '/admin/products',             icon: <Box />,        permission: 'settings' },
-      { label: 'Highlighted Products', href: '/admin/highlighted-products', icon: <Star />,       permission: 'settings' },
       { label: 'Product Categories',   href: '/admin/categories',           icon: <FolderOpen />, permission: 'settings' },
       { label: 'Compliance Docs',      href: '/admin/compliance',           icon: <ShieldCheck />, permission: 'settings' },
     ],
@@ -154,7 +152,6 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: string }> = [
   { prefix: '/admin/users', permission: 'users:manage' },
   { prefix: '/admin/admins', permission: 'admins:manage' },
   { prefix: '/admin/products', permission: 'settings' },
-  { prefix: '/admin/highlighted-products', permission: 'settings' },
   { prefix: '/admin/categories', permission: 'settings' },
   { prefix: '/admin/compliance', permission: 'settings' },
   { prefix: '/admin/announcements', permission: 'dam' },

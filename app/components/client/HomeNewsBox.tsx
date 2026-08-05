@@ -22,6 +22,8 @@ export interface HomeSettings {
   news_mode: string;
   release_title: string | null;
   release_image_url: string | null;
+  release_is_video: boolean;
+  release_text_color: 'white' | 'black' | null;
   release_date: string | null;
   release_link_url: string | null;
   banner_url: string | null;
@@ -47,41 +49,76 @@ export function HomeNewsBox({ settings }: { settings: HomeSettings }) {
 function NewRelease({ s }: { s: HomeSettings }) {
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = s.release_date && s.release_date > today;
+  const dark = s.release_text_color === 'black';
+  const text = dark ? 'text-black' : 'text-white';
+  // Readability scrims matched to the text color choice.
+  const scrim = dark
+    ? 'bg-gradient-to-t from-white/70 via-white/20 to-white/40'
+    : 'bg-gradient-to-t from-black/70 via-black/15 to-black/35';
+
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm">New Product Release</CardTitle>
-      </CardHeader>
-      {s.release_image_url && (
-        // Fixed-height strip so the card matches the activity feed's
-        // footprint; wide images center-crop into it.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={s.release_image_url}
-          alt={s.release_title || 'New release'}
-          className="w-full h-40 object-cover"
-        />
-      )}
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <Badge variant="accent">{upcoming ? 'Coming soon' : 'New release'}</Badge>
-            <p className="mt-1.5 text-base font-semibold leading-snug">{s.release_title}</p>
-            {s.release_date && (
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {upcoming ? 'Releasing' : 'Released'} {formatDate(s.release_date)}
+      {/* Full-bleed media with everything overlaid (owner spec). */}
+      <div className="relative aspect-video w-full bg-black">
+        {s.release_image_url &&
+          (s.release_is_video ? (
+            <video
+              src={s.release_image_url}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={s.release_image_url}
+              alt={s.release_title || 'New release'}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ))}
+        <div className={`absolute inset-0 pointer-events-none ${scrim}`} />
+
+        <div className={`absolute inset-0 p-4 flex flex-col justify-between ${text}`}>
+          <p className="text-sm font-semibold tracking-tight drop-shadow-sm">
+            New Product Release
+          </p>
+          <div className="flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <span
+                className={`inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                  dark ? 'bg-black/10 border border-black/30' : 'bg-white/15 border border-white/40'
+                }`}
+              >
+                {upcoming ? 'Coming soon' : 'New release'}
+              </span>
+              <p className="mt-1.5 text-xl font-bold leading-tight drop-shadow-sm">
+                {s.release_title}
               </p>
+              {s.release_date && (
+                <p className="mt-0.5 text-xs opacity-90">
+                  {upcoming ? 'Releasing' : 'Released'} {formatDate(s.release_date)}
+                </p>
+              )}
+            </div>
+            {s.release_link_url && (
+              <a
+                href={s.release_link_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`shrink-0 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium border transition-colors ${
+                  dark
+                    ? 'border-black/40 hover:bg-black/10'
+                    : 'border-white/60 hover:bg-white/15'
+                }`}
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> Learn more
+              </a>
             )}
           </div>
-          {s.release_link_url && (
-            <a href={s.release_link_url} target="_blank" rel="noopener noreferrer" className="shrink-0">
-              <Button variant="outline" size="sm">
-                <ExternalLink className="h-4 w-4" /> Learn more
-              </Button>
-            </a>
-          )}
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

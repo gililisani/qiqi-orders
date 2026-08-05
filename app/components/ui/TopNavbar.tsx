@@ -128,7 +128,6 @@ export default function TopNavbar() {
                 >
                   <div className="border border-[#e5e5e5] rounded-xl bg-white p-2">
                     <Link href="/admin/products" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">All Products</Link>
-                    <Link href="/admin/highlighted-products" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Highlighted Products</Link>
                     <Link href="/admin/categories" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Categories</Link>
                   </div>
                 </div>

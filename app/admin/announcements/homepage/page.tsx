@@ -38,6 +38,8 @@ export default function HomeNewsBoxSettingsPage() {
   const [mode, setMode] = useState('nothing');
   const [releaseTitle, setReleaseTitle] = useState('');
   const [releaseImageUrl, setReleaseImageUrl] = useState('');
+  const [releaseIsVideo, setReleaseIsVideo] = useState(false);
+  const [releaseTextColor, setReleaseTextColor] = useState('white');
   const [releaseDate, setReleaseDate] = useState('');
   const [releaseLinkUrl, setReleaseLinkUrl] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
@@ -58,6 +60,8 @@ export default function HomeNewsBoxSettingsPage() {
         setMode(data.news_mode ?? 'nothing');
         setReleaseTitle(data.release_title ?? '');
         setReleaseImageUrl(data.release_image_url ?? '');
+        setReleaseIsVideo(!!data.release_is_video);
+        setReleaseTextColor(data.release_text_color ?? 'white');
         setReleaseDate(data.release_date ?? '');
         setReleaseLinkUrl(data.release_link_url ?? '');
         setBannerUrl(data.banner_url ?? '');
@@ -87,6 +91,8 @@ export default function HomeNewsBoxSettingsPage() {
           news_mode: mode,
           release_title: releaseTitle.trim() || null,
           release_image_url: releaseImageUrl.trim() || null,
+          release_is_video: releaseIsVideo,
+          release_text_color: releaseTextColor,
           release_date: releaseDate || null,
           release_link_url: releaseLinkUrl.trim() || null,
           banner_url: bannerUrl.trim() || null,
@@ -146,16 +152,41 @@ export default function HomeNewsBoxSettingsPage() {
               <Input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
             </FormField>
           </div>
-          <FormField label="Image" required helper="Wide banner-style image recommended, e.g. 1600×500. Any wide image works — it center-crops into the strip. A pasted URL below also works.">
-            <ImageUpload onImageUploaded={setReleaseImageUrl} currentImageUrl={releaseImageUrl || undefined} />
+          <FormField label="Media" required helper="Fills the whole box, 16:9 — 1920×1080 image or MP4 video. The text overlays it.">
+            <ImageUpload onImageUploaded={setReleaseImageUrl} currentImageUrl={!releaseIsVideo ? releaseImageUrl || undefined : undefined} />
           </FormField>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Image URL">
+            <FormField label="Image or video URL">
               <Input value={releaseImageUrl} onChange={(e) => setReleaseImageUrl(e.target.value)} placeholder="https://…" />
             </FormField>
             <FormField label="Link" helper="Optional — a product page or PDF partners can open.">
               <Input value={releaseLinkUrl} onChange={(e) => setReleaseLinkUrl(e.target.value)} placeholder="https://…" />
             </FormField>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+            <FormField
+              label="Overlay text color"
+              helper="White for dark media, black for bright media — whichever reads best."
+            >
+              <Select value={releaseTextColor} onValueChange={setReleaseTextColor}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="white">White text (dark media)</SelectItem>
+                  <SelectItem value="black">Black text (bright media)</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormField>
+            <label className="flex items-center gap-2 cursor-pointer select-none pb-2">
+              <input
+                type="checkbox"
+                checked={releaseIsVideo}
+                onChange={(e) => setReleaseIsVideo(e.target.checked)}
+                className="h-4 w-4 accent-foreground"
+              />
+              <span className="text-sm">The media URL is a video (plays muted, on loop)</span>
+            </label>
           </div>
         </>
       )}
