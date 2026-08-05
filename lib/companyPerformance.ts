@@ -62,6 +62,9 @@ export interface CompanyPerformance {
     netsuiteNumber: string | null;
     subsidiaryName: string | null;
     isEnrolled: boolean;
+    /** Support-fund tier percent (null when not enrolled) — drives the
+     *  client dashboard's "reaching your goal earns ≈$X" projection. */
+    sfPercent: number | null;
     agreementStart: string | null; // first period start
     agreementEnd: string | null; // last period end
   };
@@ -81,6 +84,8 @@ export interface CompanyPerformance {
     units: number;
     topProducts: TopProductRow[]; // top 10 by revenue
     productCount: number; // distinct products bought in window
+    sfEarned: number;
+    sfUsed: number;
   };
 }
 
@@ -362,11 +367,15 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
   // ---- Windowed metrics + product mix -------------------------------------
   const windowOrderIds = new Set<string>();
   let windowSales = 0;
+  let windowSfEarned = 0;
+  let windowSfUsed = 0;
   for (const order of doneOrders) {
     const doneAt = firstDone.get(order.id);
     if (!doneAt || doneAt < windowFrom || doneAt > windowTo) continue;
     windowOrderIds.add(order.id);
     windowSales += Number(order.total_value) || 0;
+    windowSfEarned += Number(order.credit_earned) || 0;
+    windowSfUsed += sfUsedByOrder.get(order.id) ?? 0;
   }
   const windowFromDay = windowFrom.toISOString().slice(0, 10);
   const windowToDay = windowTo.toISOString().slice(0, 10);
@@ -411,6 +420,9 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
       netsuiteNumber: company.netsuite_number ?? null,
       subsidiaryName: company.subsidiary?.name ?? null,
       isEnrolled: company.support_fund_id != null,
+      sfPercent:
+        (Array.isArray(company.support_fund) ? company.support_fund[0] : company.support_fund)
+          ?.percent ?? null,
       agreementStart: firstPeriod,
       agreementEnd: lastPeriod,
     },
@@ -431,6 +443,8 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
       units: windowUnits,
       topProducts: allProducts.slice(0, 10),
       productCount: allProducts.length,
+      sfEarned: windowSfEarned,
+      sfUsed: windowSfUsed,
     },
   };
 }
@@ -515,7 +529,7 @@ export async function buildCompanyPerformance(
   const [companyRes, periodsRes, inputs] = await Promise.all([
     supabase
       .from('companies')
-      .select('id, company_name, netsuite_number, support_fund_id, subsidiary:subsidiaries(name)')
+      .select('id, company_name, netsuite_number, support_fund_id, support_fund:support_fund_levels(percent), subsidiary:subsidiaries(name)')
       .eq('id', companyId)
       .single(),
     supabase

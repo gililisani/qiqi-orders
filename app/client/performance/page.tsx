@@ -84,6 +84,19 @@ export default function ClientPerformancePage() {
   const isEnrolled = company?.isEnrolled ?? false;
   const todayISO = new Date().toISOString().slice(0, 10);
 
+  // Active goal spotlight — the period running today, and what reaching its
+  // target is worth in support funds (owner: goals need a visible payoff).
+  const activePeriod = (data?.periods ?? []).find(
+    (p) => p.startDate <= todayISO && todayISO <= p.endDate,
+  );
+  const remainingToGoal = activePeriod ? Math.max(0, activePeriod.target - activePeriod.actual) : 0;
+  const daysLeft = activePeriod
+    ? Math.max(0, Math.ceil((new Date(`${activePeriod.endDate}T23:59:59Z`).getTime() - Date.now()) / 86400000))
+    : 0;
+  const sfPercent = company?.sfPercent ?? 0;
+  const goalSfProjection =
+    isEnrolled && sfPercent > 0 ? (remainingToGoal * sfPercent) / 100 : 0;
+
   return (
     <div className="px-6 py-8 space-y-6">
       {error && (
@@ -125,6 +138,56 @@ export default function ClientPerformancePage() {
           </>
         )}
       </div>
+
+      {/* Active goal spotlight */}
+      {activePeriod && (
+        <Card className="border-emerald-200 bg-emerald-50/40">
+          <CardContent className="pt-5 pb-4">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                  Your {activePeriod.periodName || 'current'} goal
+                </p>
+                <div className="mt-2 flex items-baseline gap-3 flex-wrap">
+                  <span className="text-2xl font-semibold tabular-nums">
+                    {money(activePeriod.actual)}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    of {money(activePeriod.target)} · {daysLeft} day{daysLeft === 1 ? '' : 's'} left
+                  </span>
+                </div>
+                <div className="mt-2 max-w-md">
+                  <ProgressBar pct={activePeriod.progressPct} expectedPct={activePeriod.expectedPct} />
+                </div>
+              </div>
+              <div className="lg:text-right shrink-0">
+                {remainingToGoal > 0 ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      {money(remainingToGoal)} to go
+                    </p>
+                    {goalSfProjection > 0 && (
+                      <p className="mt-1 text-sm font-medium text-emerald-800">
+                        Reaching your goal earns you ≈ {money(goalSfProjection)} in
+                        additional support funds
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm font-medium text-emerald-800">
+                    Goal reached — congratulations!
+                    {isEnrolled && sfPercent > 0 && (
+                      <span className="block mt-0.5 font-normal text-muted-foreground">
+                        Every further order keeps earning {sfPercent}% support funds.
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Periods (Years) */}
       <Card>
@@ -221,11 +284,17 @@ export default function ClientPerformancePage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className={`grid grid-cols-2 ${isEnrolled ? 'lg:grid-cols-6' : 'lg:grid-cols-4'} gap-3 sm:gap-4`}>
             <Tile label="Sales" value={loading ? '—' : money(data?.window.sales ?? 0)} />
             <Tile label="Orders" value={loading ? '—' : String(data?.window.orders ?? 0)} />
             <Tile label="Units" value={loading ? '—' : String(data?.window.units ?? 0)} />
             <Tile label="Distinct products" value={loading ? '—' : String(data?.window.productCount ?? 0)} />
+            {isEnrolled && (
+              <>
+                <Tile label="SF earned" value={loading ? '—' : money(data?.window.sfEarned ?? 0)} />
+                <Tile label="SF redeemed" value={loading ? '—' : money(data?.window.sfUsed ?? 0)} />
+              </>
+            )}
           </div>
 
           <div>

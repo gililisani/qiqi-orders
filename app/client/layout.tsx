@@ -10,6 +10,9 @@ import {
   StickyNote,
   Building2,
   MessageSquare,
+  ReceiptText,
+  FileText,
+  ShieldCheck,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabaseClient';
@@ -64,6 +67,9 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Dashboard',   href: '/client',             icon: <LayoutDashboard />, permission: 'orders' },
       { label: 'Orders',      href: '/client/orders',      icon: <ShoppingCart />,    permission: 'orders' },
       { label: 'Performance', href: '/client/performance', icon: <TrendingUp />,      permission: 'reports' },
+      { label: 'Billing',     href: '/client/billing',     icon: <ReceiptText />,     permission: 'orders' },
+      { label: 'Price list',  href: '/client/price-list',  icon: <FileText />,        permission: 'orders' },
+      { label: 'Compliance',  href: '/client/compliance',  icon: <ShieldCheck />,     permission: null },
       { label: 'Assets',      href: '/client/assets',      icon: <ImageIcon />,       permission: 'dam' },
       { label: 'Notes',       href: '/client/notes',       icon: <StickyNote />, key: 'notes', permission: 'orders' },
     ],

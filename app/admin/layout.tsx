@@ -26,6 +26,8 @@ import {
   MessageSquare,
   ShoppingBag,
   Store,
+  Newspaper,
+  ShieldCheck,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabaseClient';
@@ -99,6 +101,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Products',             href: '/admin/products',             icon: <Box />,        permission: 'settings' },
       { label: 'Highlighted Products', href: '/admin/highlighted-products', icon: <Star />,       permission: 'settings' },
       { label: 'Product Categories',   href: '/admin/categories',           icon: <FolderOpen />, permission: 'settings' },
+      { label: 'Compliance Docs',      href: '/admin/compliance',           icon: <ShieldCheck />, permission: 'settings' },
     ],
   },
   {
@@ -107,6 +110,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Media Assets',    href: '/admin/dam',           icon: <ImageIcon />, permission: 'dam' },
       { label: 'Asset Campaigns', href: '/admin/dam/campaigns', icon: <Megaphone />, permission: 'dam' },
       { label: 'Asset Settings',  href: '/admin/dam/settings',  icon: <Settings />,  permission: 'dam' },
+      { label: 'Announcements',   href: '/admin/announcements', icon: <Newspaper />, permission: 'dam' },
     ],
   },
   {
@@ -152,6 +156,8 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: string }> = [
   { prefix: '/admin/products', permission: 'settings' },
   { prefix: '/admin/highlighted-products', permission: 'settings' },
   { prefix: '/admin/categories', permission: 'settings' },
+  { prefix: '/admin/compliance', permission: 'settings' },
+  { prefix: '/admin/announcements', permission: 'dam' },
   { prefix: '/admin/classes', permission: 'settings' },
   { prefix: '/admin/locations', permission: 'settings' },
   { prefix: '/admin/subsidiaries', permission: 'settings' },

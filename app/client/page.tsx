@@ -9,6 +9,9 @@ import { supabase } from '../../lib/supabaseClient';
 import { formatCurrency } from '../../lib/formatters';
 
 import HighlightedProductsCarousel from '../components/shared/HighlightedProductsCarousel';
+import { SupportFundGoalStrip } from '../components/client/SupportFundGoalStrip';
+import { AnnouncementsRail } from '../components/client/AnnouncementsRail';
+import { invoiceInfo } from '../../lib/clientInvoices';
 
 import { PageHeader } from '../components/qq/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/qq/card';
@@ -123,7 +126,11 @@ export default function ClientDashboard() {
         </Alert>
       )}
 
+      <AnnouncementsRail />
+
       <OutstandingBalanceBadge orders={orders} />
+
+      <SupportFundGoalStrip />
 
       {/* Quick actions + Highlighted products */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -261,28 +268,15 @@ function OutstandingBalanceBadge({ orders }: { orders: Order[] }) {
 
   for (const o of orders) {
     if (!o.invoice_number) continue;
+    // Shared best-known-balance logic — same math as the Billing page.
+    const info = invoiceInfo(o, now);
+    if (info.remaining == null || info.remaining <= 0.005) continue;
 
-    // Best-known balance: cached amount_remaining if present, else 0 when
-    // status says "Paid In Full" (so unsynced paid invoices count as $0
-    // not unknown). Anything we genuinely don't know is skipped — better
-    // to under-report than to inflate the outstanding total.
-    let remaining: number | null = null;
-    const cached = Number(o.invoice_amount_remaining);
-    if (Number.isFinite(cached)) {
-      remaining = cached;
-    } else if ((o.netsuite_invoice_status || '').toLowerCase().includes('paid in full')) {
-      remaining = 0;
-    }
-    if (remaining == null || remaining <= 0.005) continue;
-
-    totalOutstanding += remaining;
+    totalOutstanding += info.remaining;
     outstandingCount += 1;
-    if (o.invoice_due_date) {
-      const dueMs = new Date(`${o.invoice_due_date}T23:59:59Z`).getTime();
-      if (!Number.isNaN(dueMs) && dueMs < now) {
-        overdueOutstanding += remaining;
-        overdueCount += 1;
-      }
+    if (info.overdue) {
+      overdueOutstanding += info.remaining;
+      overdueCount += 1;
     }
   }
 
@@ -321,9 +315,9 @@ function OutstandingBalanceBadge({ orders }: { orders: Order[] }) {
             )}
           </p>
         </div>
-        <Link href="/client/orders">
+        <Link href="/client/billing">
           <Button variant="outline" size="sm">
-            View orders
+            View billing
           </Button>
         </Link>
       </CardContent>
