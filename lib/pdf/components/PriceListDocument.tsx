@@ -42,7 +42,13 @@ const styles = StyleSheet.create({
     fontFamily: 'ABC P3rman3nt',
     color: '#000',
   },
-  logoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 34 },
+  logoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 26 },
+  title: {
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: 700,
+    marginBottom: 14,
+  },
   logo: { height: 32 },
   taglineLogo: { height: 20, marginLeft: 16 },
   // Single-line grid: the table draws top+left once; every cell draws only
@@ -54,7 +60,7 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row' },
   cell: {
-    paddingVertical: 5,
+    paddingVertical: 3.5,
     paddingHorizontal: 6,
     borderRightWidth: B,
     borderBottomWidth: B,
@@ -121,6 +127,8 @@ export function PriceListDocument({
             <Image src={taglineUrl} style={styles.taglineLogo} />
           )}
         </View>
+
+        <Text style={styles.title}>Qiqi Price List</Text>
 
         <View style={styles.table}>
           <View style={styles.row} fixed>
