@@ -27,6 +27,7 @@ import {
   Store,
   Newspaper,
   ShieldCheck,
+  ListOrdered,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabaseClient';
@@ -99,6 +100,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Products',             href: '/admin/products',             icon: <Box />,        permission: 'settings' },
       { label: 'Product Categories',   href: '/admin/categories',           icon: <FolderOpen />, permission: 'settings' },
+      { label: 'Price List',           href: '/admin/price-list',           icon: <ListOrdered />, permission: 'settings' },
       { label: 'Compliance Docs',      href: '/admin/compliance',           icon: <ShieldCheck />, permission: 'settings' },
     ],
   },
@@ -153,6 +155,7 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: string }> = [
   { prefix: '/admin/admins', permission: 'admins:manage' },
   { prefix: '/admin/products', permission: 'settings' },
   { prefix: '/admin/categories', permission: 'settings' },
+  { prefix: '/admin/price-list', permission: 'settings' },
   { prefix: '/admin/compliance', permission: 'settings' },
   { prefix: '/admin/announcements', permission: 'dam' },
   { prefix: '/admin/classes', permission: 'settings' },
