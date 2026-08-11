@@ -31,7 +31,7 @@ export function registerPriceListFonts(base: string): void {
   });
 }
 
-const B = 0.75; // single thin black border
+const B = 0.5; // hairline black border, matching the owner's template
 
 const styles = StyleSheet.create({
   page: {
@@ -61,10 +61,12 @@ const styles = StyleSheet.create({
     borderColor: '#000',
     justifyContent: 'center',
   },
+  // Product gets the room — the other columns are as tight as their
+  // headers allow, so product names never wrap.
   colProduct: { flex: 1 },
-  colCase: { width: 58 },
-  colPrice: { width: 88 },
-  colMsrp: { width: 76 },
+  colCase: { width: 44 },
+  colPrice: { width: 74 },
+  colMsrp: { width: 62 },
   headText: { fontWeight: 700, fontSize: 9 },
   footer: {
     position: 'absolute',
