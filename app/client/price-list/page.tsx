@@ -96,8 +96,9 @@ export default function ClientPriceListPage() {
         import('../../../lib/pdf/components/PriceListDocument'),
       ]);
       const generatedAt = new Date().toISOString();
+      const logoUrl = `${window.location.origin}/logo.png`;
       const blob = await pdf(
-        React.createElement(PriceListDocument, { rows, generatedAt }) as any
+        React.createElement(PriceListDocument, { rows, generatedAt, logoUrl }) as any
       ).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
