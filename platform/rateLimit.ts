@@ -55,6 +55,12 @@ export const SET_PASSWORD_PER_TOKEN_RATE = {
   windowSeconds: 600,
 } as const;
 
+/** Invoice PDF download: global per actor (each call renders a PDF inside NetSuite). */
+export const INVOICE_PDF_ACTOR_RATE = {
+  limit: 30,
+  windowSeconds: 600,
+} as const;
+
 /** Request login code: per target email (anti-spam, prevents email bombing). */
 export const REQUEST_LOGIN_CODE_PER_EMAIL_RATE = {
   limit: 3,

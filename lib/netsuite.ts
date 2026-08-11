@@ -262,6 +262,48 @@ export class NetSuiteAPI {
     return !!process.env.NETSUITE_ASOF_SCRIPT_ID && !!process.env.NETSUITE_ASOF_DEPLOY_ID;
   }
 
+  // ---------------------------------------------------------------------------
+  // RESTlet: invoice PDF (deployed in NetSuite, see netsuite/). Renders the
+  // invoice with the account's own Advanced PDF/HTML template via N/render —
+  // byte-identical to the UI's Print button. RESTlets can't return binary, so
+  // the script sends base64 and we decode here.
+  // ---------------------------------------------------------------------------
+  async getInvoicePdf(nsInvoiceId: string): Promise<{ fileName: string; pdf: Buffer }> {
+    const scriptId = process.env.NETSUITE_INVPDF_SCRIPT_ID;
+    const deployId = process.env.NETSUITE_INVPDF_DEPLOY_ID;
+    if (!scriptId || !deployId) {
+      throw new Error('RESTlet not configured: set NETSUITE_INVPDF_SCRIPT_ID and NETSUITE_INVPDF_DEPLOY_ID');
+    }
+    const urlAccountId = this.config.accountId.toLowerCase().replace(/_/g, '-');
+    const base = `https://${urlAccountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl`;
+    const params = new URLSearchParams({ script: scriptId, deploy: deployId, invoiceId: nsInvoiceId });
+    const url = `${base}?${params.toString()}`;
+
+    const authHeader = this.getAuthHeader(url, 'GET');
+    const response = await axios({
+      method: 'GET',
+      url,
+      headers: { Authorization: authHeader, Accept: 'application/json', 'Content-Type': 'application/json' },
+      validateStatus: () => true,
+    });
+    if (response.status >= 400) {
+      const msg = response.data?.['o:message'] || response.data?.message || JSON.stringify(response.data) || `HTTP ${response.status}`;
+      throw new Error(`RESTlet ${response.status}: ${msg}`);
+    }
+    const data = response.data as { fileName?: string; base64?: string };
+    if (!data?.base64) {
+      throw new Error('Invoice PDF RESTlet returned no file content');
+    }
+    return {
+      fileName: data.fileName || `Invoice-${nsInvoiceId}.pdf`,
+      pdf: Buffer.from(data.base64, 'base64'),
+    };
+  }
+
+  isInvoicePdfConfigured(): boolean {
+    return !!process.env.NETSUITE_INVPDF_SCRIPT_ID && !!process.env.NETSUITE_INVPDF_DEPLOY_ID;
+  }
+
   // Diagnostic: hit the RESTlet's self-probe (?debug=1) to learn which search
   // step NetSuite rejects. Temporary aid while validating the RESTlet.
   async getInventoryAsOfDebug(dateIso: string, itemCode?: string): Promise<unknown> {

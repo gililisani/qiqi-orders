@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { escapeHtml } from '@/lib/htmlEscape';
+import { escapeHtml, sanitizeContentDispositionFilename } from '@/lib/htmlEscape';
 
 describe('escapeHtml', () => {
   it('escapes all five HTML metacharacters', () => {
@@ -38,5 +38,31 @@ describe('escapeHtml', () => {
     expect(escaped).not.toMatch(/<\//);
     expect(escaped).toContain('&lt;img');
     expect(escaped).toContain('&quot;');
+  });
+});
+
+describe('sanitizeContentDispositionFilename', () => {
+  it('passes a normal invoice filename through', () => {
+    expect(sanitizeContentDispositionFilename('Invoice-INV12345.pdf')).toBe('Invoice-INV12345.pdf');
+  });
+
+  it('strips CR/LF header-injection attempts', () => {
+    expect(sanitizeContentDispositionFilename('a.pdf\r\nSet-Cookie: x=1')).toBe(
+      'a.pdfSet-Cookie x1'
+    );
+  });
+
+  it('strips quotes and backslashes that would escape the quoted-string', () => {
+    expect(sanitizeContentDispositionFilename('inv"; rm -rf \\".pdf')).toBe('inv rm -rf .pdf');
+  });
+
+  it('falls back when nothing survives', () => {
+    expect(sanitizeContentDispositionFilename('"""')).toBe('file.pdf');
+    expect(sanitizeContentDispositionFilename(null)).toBe('file.pdf');
+    expect(sanitizeContentDispositionFilename('   ')).toBe('file.pdf');
+  });
+
+  it('honors a custom fallback', () => {
+    expect(sanitizeContentDispositionFilename(null, 'invoice.pdf')).toBe('invoice.pdf');
   });
 });

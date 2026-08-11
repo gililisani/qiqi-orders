@@ -98,6 +98,7 @@ import {
   NON_DRAFT_ORDER_STATUSES,
 } from '../shared/orderDetails/orderDetailsUtils';
 import { useOrderDetailsController } from '../shared/orderDetails/useOrderDetailsController';
+import { InvoiceDownloadButton } from '../shared/InvoiceDownloadButton';
 
 // ----------------------------------------------------------------------------
 // Types
@@ -1845,7 +1846,12 @@ function AdminInvoiceCard({ order }: { order: Order }) {
     <Card>
       <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
         <CardTitle className="text-sm">Invoice</CardTitle>
-        <AdminInvoiceStatusBadge status={order.netsuite_invoice_status} />
+        <div className="flex items-center gap-2">
+          {order.netsuite_invoice_id && (
+            <InvoiceDownloadButton orderId={order.id} invoiceNumber={order.invoice_number} />
+          )}
+          <AdminInvoiceStatusBadge status={order.netsuite_invoice_status} />
+        </div>
       </CardHeader>
       <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
         <Field label="Invoice #">

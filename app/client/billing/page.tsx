@@ -14,6 +14,7 @@ import { CreditCard, Receipt } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { formatCurrency, formatDate } from '../../../lib/formatters';
 import { invoiceInfo, type InvoiceState } from '../../../lib/clientInvoices';
+import { InvoiceDownloadButton } from '../../components/shared/InvoiceDownloadButton';
 
 import { PageHeader } from '../../components/qq/page-header';
 import { Card, CardContent } from '../../components/qq/card';
@@ -35,6 +36,7 @@ interface InvoiceOrder {
   po_number: string | null;
   total_value: number;
   invoice_number: string | null;
+  netsuite_invoice_id: string | null;
   netsuite_invoice_date: string | null;
   invoice_due_date: string | null;
   invoice_amount_remaining: number | null;
@@ -64,7 +66,7 @@ export default function ClientBillingPage() {
         const { data, error: err } = await supabase
           .from('orders')
           .select(
-            'id, po_number, total_value, invoice_number, netsuite_invoice_date, invoice_due_date, invoice_amount_remaining, netsuite_invoice_status, payment_status, paid_at, stripe_hosted_url'
+            'id, po_number, total_value, invoice_number, netsuite_invoice_id, netsuite_invoice_date, invoice_due_date, invoice_amount_remaining, netsuite_invoice_status, payment_status, paid_at, stripe_hosted_url'
           )
           .not('invoice_number', 'is', null)
           .order('netsuite_invoice_date', { ascending: false, nullsFirst: false });
@@ -156,7 +158,7 @@ export default function ClientBillingPage() {
                   <TableHead>Due date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Balance due</TableHead>
-                  <TableHead className="w-28" />
+                  <TableHead className="w-48" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -187,20 +189,29 @@ export default function ClientBillingPage() {
                       {info.remaining != null ? formatCurrency(info.remaining) : '—'}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      {order.stripe_hosted_url &&
-                        (info.state === 'open' || info.state === 'overdue' ? (
-                          <a href={order.stripe_hosted_url} target="_blank" rel="noopener noreferrer">
-                            <Button size="sm">
-                              <CreditCard className="h-4 w-4" /> Pay now
-                            </Button>
-                          </a>
-                        ) : info.state === 'paid' && order.payment_status === 'paid' ? (
-                          <a href={order.stripe_hosted_url} target="_blank" rel="noopener noreferrer">
-                            <Button variant="outline" size="sm">
-                              <Receipt className="h-4 w-4" /> Receipt
-                            </Button>
-                          </a>
-                        ) : null)}
+                      <div className="flex items-center justify-end gap-2">
+                        {order.netsuite_invoice_id && (
+                          <InvoiceDownloadButton
+                            orderId={order.id}
+                            invoiceNumber={order.invoice_number}
+                            label="PDF"
+                          />
+                        )}
+                        {order.stripe_hosted_url &&
+                          (info.state === 'open' || info.state === 'overdue' ? (
+                            <a href={order.stripe_hosted_url} target="_blank" rel="noopener noreferrer">
+                              <Button size="sm">
+                                <CreditCard className="h-4 w-4" /> Pay now
+                              </Button>
+                            </a>
+                          ) : info.state === 'paid' && order.payment_status === 'paid' ? (
+                            <a href={order.stripe_hosted_url} target="_blank" rel="noopener noreferrer">
+                              <Button variant="outline" size="sm">
+                                <Receipt className="h-4 w-4" /> Receipt
+                              </Button>
+                            </a>
+                          ) : null)}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

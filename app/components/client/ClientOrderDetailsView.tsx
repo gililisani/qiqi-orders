@@ -43,6 +43,7 @@ import {
 
 import ClientOrderDocumentsView from './ClientOrderDocumentsView';
 import ClientOrderHistoryView from './ClientOrderHistoryView';
+import { InvoiceDownloadButton } from '../shared/InvoiceDownloadButton';
 
 import { useToast } from '../ui/ToastProvider';
 import { useConfirm } from '../ui/ConfirmProvider';
@@ -585,6 +586,7 @@ function InvoiceCard({
   order,
 }: {
   order: {
+    id: string;
     invoice_number?: string | null;
     netsuite_invoice_id?: string | null;
     netsuite_invoice_status?: string | null;
@@ -597,12 +599,15 @@ function InvoiceCard({
     <Card>
       <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
         <CardTitle className="text-sm">Invoice</CardTitle>
-        <InvoiceStatusBadge status={order.netsuite_invoice_status} />
+        <div className="flex items-center gap-2">
+          {order.netsuite_invoice_id && (
+            <InvoiceDownloadButton orderId={order.id} invoiceNumber={order.invoice_number} />
+          )}
+          <InvoiceStatusBadge status={order.netsuite_invoice_status} />
+        </div>
       </CardHeader>
       <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
         <Field label="Invoice #">
-          {/* Plain text — clients don't have NetSuite access. Becomes a
-              "Download PDF" link in Phase 3 (RESTlet). */}
           <span className="font-mono">{order.invoice_number}</span>
         </Field>
         <Field label="Issue date">
