@@ -31,10 +31,13 @@ import {
 interface ProductRow {
   item_name: string | null;
   sku: string | null;
+  case_pack: number | null;
   price_international: number | null;
   price_americas: number | null;
   salon_price: number | null;
   msrp: number | null;
+  visible_to_americas: boolean | null;
+  visible_to_international: boolean | null;
 }
 
 export default function ClientPriceListPage() {
@@ -65,19 +68,30 @@ export default function ClientPriceListPage() {
 
         const { data: products, error: err } = await supabase
           .from('Products')
-          .select('item_name, sku, price_international, price_americas, salon_price, msrp, sort_order')
+          .select(
+            'item_name, sku, case_pack, price_international, price_americas, salon_price, msrp, sort_order, visible_to_americas, visible_to_international'
+          )
           .eq('enable', true)
           .order('sort_order', { ascending: true, nullsFirst: false });
         if (err) throw err;
 
+        // Same tolerant region match as order pricing (never strict-equal).
+        const isAmericas = (className || '').toLowerCase().includes('america');
+
         setRows(
-          ((products as unknown as ProductRow[]) || []).map((p) => ({
-            name: p.item_name || p.sku || '—',
-            // Same tolerant region match as order pricing (never strict-equal).
-            distributor: resolveCatalogPrice(className, p) || null,
-            salon: p.salon_price,
-            msrp: p.msrp,
-          })),
+          ((products as unknown as ProductRow[]) || [])
+            // Only the products visible to the caller's region — the list
+            // must match what they can actually order.
+            .filter((p) =>
+              isAmericas ? p.visible_to_americas !== false : p.visible_to_international !== false,
+            )
+            .map((p) => ({
+              name: p.item_name || p.sku || '—',
+              casePack: p.case_pack,
+              distributor: resolveCatalogPrice(className, p) || null,
+              salon: p.salon_price,
+              msrp: p.msrp,
+            })),
         );
       } catch (err: any) {
         setError(err.message || 'Failed to load the price list.');
@@ -90,15 +104,21 @@ export default function ClientPriceListPage() {
   const handleDownload = async () => {
     try {
       setDownloading(true);
-      const [{ pdf }, React, { PriceListDocument }] = await Promise.all([
+      const [{ pdf }, React, { PriceListDocument, registerPriceListFonts }] = await Promise.all([
         import('@react-pdf/renderer'),
         import('react'),
         import('../../../lib/pdf/components/PriceListDocument'),
       ]);
+      const origin = window.location.origin;
+      registerPriceListFonts(origin);
       const generatedAt = new Date().toISOString();
-      const logoUrl = `${window.location.origin}/logo.png`;
       const blob = await pdf(
-        React.createElement(PriceListDocument, { rows, generatedAt, logoUrl }) as any
+        React.createElement(PriceListDocument, {
+          rows,
+          generatedAt,
+          logoUrl: `${origin}/logo.png`,
+          taglineUrl: `${origin}/Qiqi_Tagline_Black.png`,
+        }) as any
       ).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -146,6 +166,7 @@ export default function ClientPriceListPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Product</TableHead>
+                  <TableHead className="text-right">Case Pack</TableHead>
                   <TableHead className="text-right">Distributor (USD)</TableHead>
                   <TableHead className="text-right">Salon (USD)</TableHead>
                   <TableHead className="text-right">MSRP (USD)</TableHead>
@@ -155,6 +176,9 @@ export default function ClientPriceListPage() {
                 {rows.map((r, i) => (
                   <TableRow key={i}>
                     <TableCell className="text-sm font-medium">{r.name}</TableCell>
+                    <TableCell className="text-right font-mono text-sm">
+                      {r.casePack ?? '—'}
+                    </TableCell>
                     <TableCell className="text-right font-mono text-sm font-semibold">
                       {r.distributor ? formatCurrency(r.distributor) : '—'}
                     </TableCell>

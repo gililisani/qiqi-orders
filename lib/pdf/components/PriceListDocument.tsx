@@ -1,56 +1,71 @@
 /**
- * Partner price list PDF — a faithful replica of the owner's hand-made
- * template ("2026 updated price list.pdf"): Qiqi wordmark + tagline top
- * left, plain fully-bordered black-on-white table (Product | Distributor
- * Price | Salon Price | MSRP, values left-aligned, $9.5-style formatting,
- * "Pro use" where there is no MSRP), centered contact line at the bottom.
- * Region-specific: the caller's distributor price only.
+ * Partner price list PDF — faithful replica of the owner's hand-made
+ * template, iterated with them: wordmark + tagline logos top left (both
+ * real brand assets from /public), ABC P3rman3nt (the Hub's brand font),
+ * single thin black grid (no doubled borders), left-aligned $9.5-style
+ * prices, "Pro use" where there is no MSRP, contact-only footer.
+ * Region-specific: the caller's distributor price and ONLY the products
+ * visible to their region.
  */
 
 import React from 'react';
-import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
+import { Document, Font, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 
 export interface PriceListRow {
   name: string;
+  casePack: number | null;
   distributor: number | null;
   salon: number | null;
   msrp: number | null;
 }
 
-const BORDER = 0.75;
+/** Register the Hub's brand font for the PDF. `base` is the app origin in
+ *  the browser, or a filesystem path in node (tests/verification). */
+export function registerPriceListFonts(base: string): void {
+  Font.register({
+    family: 'ABC P3rman3nt',
+    fonts: [
+      { src: `${base}/fonts/abc-p3rman3nt/ABCP3rman3nt-Book.otf`, fontWeight: 400 },
+      { src: `${base}/fonts/abc-p3rman3nt/ABCP3rman3nt-Bold.otf`, fontWeight: 700 },
+    ],
+  });
+}
+
+const B = 0.75; // single thin black border
 
 const styles = StyleSheet.create({
   page: {
     paddingTop: 40,
-    paddingBottom: 60,
+    paddingBottom: 56,
     paddingHorizontal: 62,
     fontSize: 9,
-    fontFamily: 'Helvetica',
+    fontFamily: 'ABC P3rman3nt',
     color: '#000',
   },
-  logoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 36 },
-  logo: { height: 34, marginRight: 14 },
-  tagline: { fontSize: 10.5, lineHeight: 1.25 },
-  taglineLight: { fontFamily: 'Helvetica-Oblique' },
-  taglineBold: { fontFamily: 'Helvetica-Bold' },
+  logoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 34 },
+  logo: { height: 32 },
+  taglineLogo: { height: 20, marginLeft: 16 },
+  // Single-line grid: the table draws top+left once; every cell draws only
+  // its right+bottom edge. No edge is ever drawn twice.
   table: {
-    borderWidth: BORDER,
+    borderTopWidth: B,
+    borderLeftWidth: B,
     borderColor: '#000',
   },
   row: { flexDirection: 'row' },
-  rowBorder: { borderBottomWidth: BORDER, borderBottomColor: '#000' },
   cell: {
     paddingVertical: 5,
     paddingHorizontal: 6,
-    borderRightWidth: BORDER,
-    borderRightColor: '#000',
+    borderRightWidth: B,
+    borderBottomWidth: B,
+    borderColor: '#000',
     justifyContent: 'center',
   },
-  cellLast: { borderRightWidth: 0 },
   colProduct: { flex: 1 },
-  colPrice: { width: 92 },
-  colMsrp: { width: 80 },
-  headText: { fontFamily: 'Helvetica-Bold', fontSize: 9 },
+  colCase: { width: 58 },
+  colPrice: { width: 88 },
+  colMsrp: { width: 76 },
+  headText: { fontWeight: 700, fontSize: 9 },
   footer: {
     position: 'absolute',
     bottom: 30,
@@ -83,10 +98,12 @@ export function PriceListDocument({
   rows,
   generatedAt,
   logoUrl,
+  taglineUrl,
 }: {
   rows: PriceListRow[];
   generatedAt: string;
   logoUrl?: string;
+  taglineUrl?: string;
 }) {
   const year = new Date(generatedAt).getFullYear();
   return (
@@ -97,22 +114,19 @@ export function PriceListDocument({
             // eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image, not a DOM img
             <Image src={logoUrl} style={styles.logo} />
           )}
-          <View>
-            <Text style={styles.tagline}>
-              <Text style={styles.taglineLight}>The </Text>
-              <Text style={styles.taglineBold}>Art and Science</Text>
-            </Text>
-            <Text style={styles.tagline}>
-              <Text style={styles.taglineLight}>of </Text>
-              <Text style={styles.taglineBold}>Hair Control</Text>
-            </Text>
-          </View>
+          {taglineUrl && (
+            // eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image, not a DOM img
+            <Image src={taglineUrl} style={styles.taglineLogo} />
+          )}
         </View>
 
         <View style={styles.table}>
-          <View style={[styles.row, styles.rowBorder]} fixed>
+          <View style={styles.row} fixed>
             <View style={[styles.cell, styles.colProduct]}>
               <Text style={styles.headText}>Product</Text>
+            </View>
+            <View style={[styles.cell, styles.colCase]}>
+              <Text style={styles.headText}>Case Pack</Text>
             </View>
             <View style={[styles.cell, styles.colPrice]}>
               <Text style={styles.headText}>Distributor Price (USD)</Text>
@@ -120,19 +134,18 @@ export function PriceListDocument({
             <View style={[styles.cell, styles.colPrice]}>
               <Text style={styles.headText}>Salon Price (USD)</Text>
             </View>
-            <View style={[styles.cell, styles.colMsrp, styles.cellLast]}>
+            <View style={[styles.cell, styles.colMsrp]}>
               <Text style={styles.headText}>MSRP (USD)</Text>
             </View>
           </View>
 
           {rows.map((r, i) => (
-            <View
-              style={[styles.row, ...(i < rows.length - 1 ? [styles.rowBorder] : [])]}
-              key={i}
-              wrap={false}
-            >
+            <View style={styles.row} key={i} wrap={false}>
               <View style={[styles.cell, styles.colProduct]}>
                 <Text>{r.name}</Text>
+              </View>
+              <View style={[styles.cell, styles.colCase]}>
+                <Text>{r.casePack ?? ''}</Text>
               </View>
               <View style={[styles.cell, styles.colPrice]}>
                 <Text>{money(r.distributor)}</Text>
@@ -140,7 +153,7 @@ export function PriceListDocument({
               <View style={[styles.cell, styles.colPrice]}>
                 <Text>{money(r.salon)}</Text>
               </View>
-              <View style={[styles.cell, styles.colMsrp, styles.cellLast]}>
+              <View style={[styles.cell, styles.colMsrp]}>
                 <Text>{r.msrp == null ? 'Pro use' : money(r.msrp)}</Text>
               </View>
             </View>
@@ -148,7 +161,7 @@ export function PriceListDocument({
         </View>
 
         <Text style={styles.footer} fixed>
-          Qiqi Global Ltd. | www.qiqiglobal.com | @Qiqiglobal | info@qiqiglobal.com
+          www.qiqiglobal.com | @Qiqiglobal | info@qiqiglobal.com
         </Text>
         <Text style={styles.generated} fixed>
           Generated{' '}
