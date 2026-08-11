@@ -119,12 +119,30 @@ define(['N/render', 'N/record', 'N/search', 'N/error'], function (render, record
     }
 
     var paymentId = payments[0].id;
-    var tranId = payments[0].tranid;
+    // getText gives display text like "Payment #PUS16830" — keep the number.
+    var tranId = payments[0].tranid.replace(/^[^#]*#\s*/, '');
 
-    var pdfFile = render.transaction({
-      entityId: Number(paymentId),
-      printMode: render.PrintMode.PDF,
-    });
+    var pdfFile;
+    try {
+      pdfFile = render.transaction({
+        entityId: Number(paymentId),
+        printMode: render.PrintMode.PDF,
+      });
+    } catch (e) {
+      // RETURNED, not thrown (same reason as NO_PAYMENT): some payment
+      // records fail NetSuite's renderer (seen on an IL-subsidiary payment,
+      // presumably a localization template). The Hub turns this into a
+      // friendly "not available" message instead of a 500 + owner email.
+      return {
+        error: 'RENDER_FAILED',
+        invoiceId: String(invoiceId),
+        paymentId: String(paymentId),
+        tranId: tranId,
+        message:
+          'NetSuite could not render payment ' + tranId + ' (id ' + paymentId + '): ' +
+          ((e && e.message) || String(e)),
+      };
+    }
 
     return {
       paymentId: String(paymentId),

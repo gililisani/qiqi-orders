@@ -81,9 +81,17 @@ export async function GET(
     try {
       ({ fileName, pdf } = await ns.getPaymentConfirmationPdf(order.netsuite_invoice_id));
     } catch (e: any) {
-      if (String(e?.message || '').includes('NO_PAYMENT')) {
+      const msg = String(e?.message || '');
+      if (msg.includes('NO_PAYMENT')) {
         return NextResponse.json(
           { error: 'No payment is recorded for this invoice yet.' },
+          { status: 404 }
+        );
+      }
+      if (msg.includes('RENDER_FAILED')) {
+        console.error('Payment render failed:', msg);
+        return NextResponse.json(
+          { error: 'A payment exists but its confirmation document is not available. Contact billing@qiqiglobal.com if you need it.' },
           { status: 404 }
         );
       }

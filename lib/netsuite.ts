@@ -332,10 +332,10 @@ export class NetSuiteAPI {
       throw new Error(`RESTlet ${response.status}: ${msg}`);
     }
     const data = response.data as { fileName?: string; base64?: string; error?: string; message?: string };
-    if (data?.error === 'NO_PAYMENT') {
+    if (data?.error === 'NO_PAYMENT' || data?.error === 'RENDER_FAILED') {
       // Returned (not thrown) by the RESTlet so NetSuite doesn't email the
       // script owner about an expected business case.
-      throw new Error(`NO_PAYMENT: ${data.message || `no payment applied to invoice ${nsInvoiceId}`}`);
+      throw new Error(`${data.error}: ${data.message || `for invoice ${nsInvoiceId}`}`);
     }
     if (!data?.base64) {
       throw new Error('Payment PDF RESTlet returned no file content');
