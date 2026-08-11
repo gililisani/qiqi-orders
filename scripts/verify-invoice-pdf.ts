@@ -7,6 +7,8 @@
  *
  * Usage:
  *   npx tsx scripts/verify-invoice-pdf.ts <netsuite invoice internal id>
+ *   npx tsx scripts/verify-invoice-pdf.ts <netsuite invoice internal id> --payment
+ *     (--payment fetches the payment-confirmation PDF for that invoice instead)
  *
  * Needs in .env.local: the NETSUITE_* TBA creds plus
  * NETSUITE_INVPDF_SCRIPT_ID / NETSUITE_INVPDF_DEPLOY_ID (see
@@ -28,8 +30,15 @@ async function main() {
   }
 
   const ns = createNetSuiteAPI();
-  console.log(`Fetching invoice ${invoiceId} via the RESTlet…`);
-  const { fileName, pdf } = await ns.getInvoicePdf(invoiceId);
+  const paymentMode = process.argv.includes('--payment');
+  console.log(
+    paymentMode
+      ? `Fetching the payment confirmation for invoice ${invoiceId} via the RESTlet…`
+      : `Fetching invoice ${invoiceId} via the RESTlet…`
+  );
+  const { fileName, pdf } = paymentMode
+    ? await ns.getPaymentConfirmationPdf(invoiceId)
+    : await ns.getInvoicePdf(invoiceId);
 
   const out = path.join(process.cwd(), fileName);
   fs.writeFileSync(out, pdf);

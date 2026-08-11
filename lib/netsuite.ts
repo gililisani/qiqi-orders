@@ -304,6 +304,43 @@ export class NetSuiteAPI {
     return !!process.env.NETSUITE_INVPDF_SCRIPT_ID && !!process.env.NETSUITE_INVPDF_DEPLOY_ID;
   }
 
+  // Payment-confirmation PDF for the most recent Customer Payment applied to
+  // an invoice. Same RESTlet, different mode: the payment→invoice traversal
+  // happens INSIDE NetSuite via N/search because this account's link tables
+  // are not readable through external SuiteQL (known quirk). Throws with
+  // NO_PAYMENT in the message when the invoice has no applied payment.
+  async getPaymentConfirmationPdf(nsInvoiceId: string): Promise<{ fileName: string; pdf: Buffer }> {
+    const scriptId = process.env.NETSUITE_INVPDF_SCRIPT_ID;
+    const deployId = process.env.NETSUITE_INVPDF_DEPLOY_ID;
+    if (!scriptId || !deployId) {
+      throw new Error('RESTlet not configured: set NETSUITE_INVPDF_SCRIPT_ID and NETSUITE_INVPDF_DEPLOY_ID');
+    }
+    const urlAccountId = this.config.accountId.toLowerCase().replace(/_/g, '-');
+    const base = `https://${urlAccountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl`;
+    const params = new URLSearchParams({ script: scriptId, deploy: deployId, paymentForInvoice: nsInvoiceId });
+    const url = `${base}?${params.toString()}`;
+
+    const authHeader = this.getAuthHeader(url, 'GET');
+    const response = await axios({
+      method: 'GET',
+      url,
+      headers: { Authorization: authHeader, Accept: 'application/json', 'Content-Type': 'application/json' },
+      validateStatus: () => true,
+    });
+    if (response.status >= 400) {
+      const msg = response.data?.['o:message'] || response.data?.message || JSON.stringify(response.data) || `HTTP ${response.status}`;
+      throw new Error(`RESTlet ${response.status}: ${msg}`);
+    }
+    const data = response.data as { fileName?: string; base64?: string };
+    if (!data?.base64) {
+      throw new Error('Payment PDF RESTlet returned no file content');
+    }
+    return {
+      fileName: data.fileName || `Payment-for-invoice-${nsInvoiceId}.pdf`,
+      pdf: Buffer.from(data.base64, 'base64'),
+    };
+  }
+
   // Diagnostic: hit the RESTlet's self-probe (?debug=1) to learn which search
   // step NetSuite rejects. Temporary aid while validating the RESTlet.
   async getInventoryAsOfDebug(dateIso: string, itemCode?: string): Promise<unknown> {

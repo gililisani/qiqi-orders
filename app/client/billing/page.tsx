@@ -197,6 +197,14 @@ export default function ClientBillingPage() {
                             label="PDF"
                           />
                         )}
+                        {order.netsuite_invoice_id && info.state === 'paid' && (
+                          <InvoiceDownloadButton
+                            orderId={order.id}
+                            invoiceNumber={order.invoice_number}
+                            kind="payment"
+                            label="Payment"
+                          />
+                        )}
                         {order.stripe_hosted_url &&
                           (info.state === 'open' || info.state === 'overdue' ? (
                             <a href={order.stripe_hosted_url} target="_blank" rel="noopener noreferrer">
@@ -222,8 +230,8 @@ export default function ClientBillingPage() {
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Balances sync from our accounting system and may lag a recent payment by a
-        day. Questions about an invoice? Reach us at accounting@qiqiglobal.com.
+        Balances sync from our accounting system and may lag a recent payment by up
+        to 7 days. Questions about an invoice? Reach us at billing@qiqiglobal.com.
       </p>
     </div>
   );

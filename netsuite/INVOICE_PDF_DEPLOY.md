@@ -47,6 +47,15 @@ returns a permission error, check the role has:
 - **Permissions → Transactions → Print Checks and Forms** — if NetSuite
   complains specifically about printing
 
+## Updating the script (new version of the .js file)
+
+No new script record, no new IDs. In NetSuite:
+1. **Customization → Scripting → Scripts** → open the script (e.g. "Partners
+   Hub Invoice pull").
+2. Click the **Script File** link → **Edit** → replace the content with the
+   new file (or upload the new file over it) → **Save**.
+The existing deployment serves the new code immediately.
+
 ## 5. Verify
 Ask the agent to run the local verification script against a known invoice
 (it fetches one PDF, read-only, and saves it for you to open):

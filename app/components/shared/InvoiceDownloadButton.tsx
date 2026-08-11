@@ -18,25 +18,32 @@ import { useToast } from '../ui/ToastProvider';
 export function InvoiceDownloadButton({
   orderId,
   invoiceNumber,
+  kind = 'invoice',
   variant = 'outline',
   size = 'sm',
-  label = 'Invoice PDF',
+  label,
 }: {
   orderId: string;
   invoiceNumber?: string | null;
+  /** 'invoice' = the invoice PDF; 'payment' = the payment-confirmation PDF. */
+  kind?: 'invoice' | 'payment';
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm';
   label?: string;
 }) {
   const toast = useToast();
   const [downloading, setDownloading] = useState(false);
+  const noun = kind === 'payment' ? 'payment confirmation' : 'invoice';
+  const buttonLabel = label ?? (kind === 'payment' ? 'Payment PDF' : 'Invoice PDF');
 
   const handleDownload = async () => {
     try {
       setDownloading(true);
-      const res = await fetchWithAuth(`/api/orders/${orderId}/invoice-pdf`);
+      const res = await fetchWithAuth(
+        `/api/orders/${orderId}/${kind === 'payment' ? 'payment-pdf' : 'invoice-pdf'}`
+      );
       if (!res.ok) {
-        let message = 'Failed to download the invoice.';
+        let message = `Failed to download the ${noun}.`;
         try {
           const body = await res.json();
           if (body?.error) message = body.error;
@@ -49,11 +56,12 @@ export function InvoiceDownloadButton({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = invoiceNumber ? `Invoice-${invoiceNumber}.pdf` : 'Invoice.pdf';
+      const prefix = kind === 'payment' ? 'Payment' : 'Invoice';
+      a.download = invoiceNumber ? `${prefix}-${invoiceNumber}.pdf` : `${prefix}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to download the invoice.');
+      toast.error(err.message || `Failed to download the ${noun}.`);
     } finally {
       setDownloading(false);
     }
@@ -62,7 +70,7 @@ export function InvoiceDownloadButton({
   return (
     <Button variant={variant} size={size} onClick={handleDownload} loading={downloading}>
       <FileDown className="h-4 w-4" />
-      {downloading ? 'Fetching…' : label}
+      {downloading ? 'Fetching…' : buttonLabel}
     </Button>
   );
 }
