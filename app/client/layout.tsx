@@ -12,6 +12,7 @@ import {
   MessageSquare,
   ReceiptText,
   ShieldCheck,
+  FileText,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabaseClient';
@@ -65,11 +66,9 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Dashboard',       href: '/client',            icon: <LayoutDashboard />, permission: 'orders' },
       { label: 'Orders',          href: '/client/orders',     icon: <ShoppingCart />,    permission: 'orders' },
+      { label: 'Price List',      href: '/client/price-list', icon: <FileText />,        permission: 'orders' },
       { label: 'Regulatory Docs', href: '/client/compliance', icon: <ShieldCheck />,     permission: null },
       { label: 'Notes',           href: '/client/notes',      icon: <StickyNote />, key: 'notes', permission: 'orders' },
-      // Price list exists at /client/price-list but is hidden from the nav
-      // until the per-region redesign (owner 2026-08-04): show ONLY the
-      // caller's region price, add Salon/MSRP columns, design the PDF.
     ],
   },
   {

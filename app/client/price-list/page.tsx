@@ -1,9 +1,10 @@
 'use client';
 
 /**
- * Price list — on-screen table + on-the-fly PDF download. One module for
- * every partner: both regions' distributor prices, straight from the
- * catalog, so it can never be out of date.
+ * Price list — region-specific: the caller sees THEIR distributor price
+ * (Americas vs International resolved from their company's class, same
+ * tolerant match the order pricing uses), plus Salon Price and MSRP.
+ * On-screen table + a designed on-the-fly PDF that can never go stale.
  */
 
 import { useEffect, useState } from 'react';
@@ -11,7 +12,8 @@ import { Download } from 'lucide-react';
 
 import { supabase } from '../../../lib/supabaseClient';
 import { formatCurrency } from '../../../lib/formatters';
-import type { PriceListProduct } from '../../../lib/pdf/components/PriceListDocument';
+import { resolveCatalogPrice } from '../../../lib/orderPricing';
+import type { PriceListRow } from '../../../lib/pdf/components/PriceListDocument';
 
 import { PageHeader } from '../../components/qq/page-header';
 import { Card, CardContent } from '../../components/qq/card';
@@ -26,8 +28,17 @@ import {
   TableCell,
 } from '../../components/qq/table';
 
+interface ProductRow {
+  item_name: string | null;
+  sku: string | null;
+  price_international: number | null;
+  price_americas: number | null;
+  salon_price: number | null;
+  msrp: number | null;
+}
+
 export default function ClientPriceListPage() {
-  const [products, setProducts] = useState<PriceListProduct[]>([]);
+  const [rows, setRows] = useState<PriceListRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,13 +46,39 @@ export default function ClientPriceListPage() {
   useEffect(() => {
     (async () => {
       try {
-        const { data, error: err } = await supabase
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated.');
+
+        // Region = the company's class (RLS: own company + its linked class).
+        const { data: client } = await supabase
+          .from('clients')
+          .select('company:companies(class:classes(name))')
+          .eq('id', user.id)
+          .single();
+        const companyRaw: any = Array.isArray(client?.company)
+          ? client?.company?.[0]
+          : client?.company;
+        const classRaw = Array.isArray(companyRaw?.class)
+          ? companyRaw?.class?.[0]
+          : companyRaw?.class;
+        const className: string | null = classRaw?.name ?? null;
+
+        const { data: products, error: err } = await supabase
           .from('Products')
-          .select('item_name, sku, price_international, price_americas, sort_order')
+          .select('item_name, sku, price_international, price_americas, salon_price, msrp, sort_order')
           .eq('enable', true)
           .order('sort_order', { ascending: true, nullsFirst: false });
         if (err) throw err;
-        setProducts((data as PriceListProduct[]) || []);
+
+        setRows(
+          ((products as unknown as ProductRow[]) || []).map((p) => ({
+            name: p.item_name || p.sku || '—',
+            // Same tolerant region match as order pricing (never strict-equal).
+            distributor: resolveCatalogPrice(className, p) || null,
+            salon: p.salon_price,
+            msrp: p.msrp,
+          })),
+        );
       } catch (err: any) {
         setError(err.message || 'Failed to load the price list.');
       } finally {
@@ -60,7 +97,7 @@ export default function ClientPriceListPage() {
       ]);
       const generatedAt = new Date().toISOString();
       const blob = await pdf(
-        React.createElement(PriceListDocument, { products, generatedAt }) as any
+        React.createElement(PriceListDocument, { rows, generatedAt }) as any
       ).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -79,13 +116,13 @@ export default function ClientPriceListPage() {
     <div className="px-6 py-8 space-y-6">
       <PageHeader
         title="Price list"
-        description="Current distributor prices, always up to date."
+        description="Your distributor prices with suggested salon and retail pricing — always current."
         actions={
           <Button
             size="sm"
             onClick={handleDownload}
             loading={downloading}
-            disabled={loading || products.length === 0}
+            disabled={loading || rows.length === 0}
           >
             <Download className="h-4 w-4" />
             {downloading ? 'Generating…' : 'Download PDF'}
@@ -108,27 +145,27 @@ export default function ClientPriceListPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Product</TableHead>
-                  <TableHead className="hidden sm:table-cell">SKU</TableHead>
-                  <TableHead className="text-right">International (USD)</TableHead>
-                  <TableHead className="text-right">Americas (USD)</TableHead>
+                  <TableHead className="text-right">Distributor (USD)</TableHead>
+                  <TableHead className="text-right">Salon (USD)</TableHead>
+                  <TableHead className="text-right">MSRP (USD)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((p, i) => (
+                {rows.map((r, i) => (
                   <TableRow key={i}>
-                    <TableCell className="text-sm font-medium">{p.item_name || '—'}</TableCell>
-                    <TableCell className="hidden sm:table-cell font-mono text-xs">
-                      {p.sku || '—'}
+                    <TableCell className="text-sm font-medium">{r.name}</TableCell>
+                    <TableCell className="text-right font-mono text-sm font-semibold">
+                      {r.distributor ? formatCurrency(r.distributor) : '—'}
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm">
-                      {Number(p.price_international) > 0
-                        ? formatCurrency(Number(p.price_international))
-                        : '—'}
+                      {r.salon ? formatCurrency(r.salon) : '—'}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {Number(p.price_americas) > 0
-                        ? formatCurrency(Number(p.price_americas))
-                        : '—'}
+                    <TableCell className="text-right text-sm">
+                      {r.msrp ? (
+                        <span className="font-mono">{formatCurrency(r.msrp)}</span>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">Pro use</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

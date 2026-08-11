@@ -36,6 +36,8 @@ interface ProductData {
   visible_to_americas: boolean;
   visible_to_international: boolean;
   qualifies_for_credit_earning: boolean;
+  salon_price?: number | null;
+  msrp?: number | null;
   case_weight?: number | null;
   hs_code?: string | null;
   made_in?: string | null;
@@ -162,6 +164,23 @@ export default function BulkUploadProducts() {
           qualifiesForCredit = lower === 'true';
         }
 
+        const optionalPrice = (name: string): number | null | 'error' => {
+          const raw = opt(name);
+          if (!raw) return null;
+          const v = parseFloat(raw);
+          if (!Number.isFinite(v) || v < 0) return 'error';
+          return v;
+        };
+        const salonPrice = optionalPrice('salon_price');
+        const msrpVal = optionalPrice('msrp');
+        if (salonPrice === 'error' || msrpVal === 'error') {
+          setError(
+            `Row ${i + 1} (${values[headers.indexOf('sku')] || 'no SKU'}): ` +
+              `salon_price / msrp must be non-negative numbers when provided.`
+          );
+          return;
+        }
+
         const caseWeightRaw = opt('case_weight');
         let caseWeight: number | null = null;
         if (caseWeightRaw) {
@@ -193,6 +212,8 @@ export default function BulkUploadProducts() {
           visible_to_international:
             values[headers.indexOf('visible_to_international')].toLowerCase() === 'true',
           qualifies_for_credit_earning: qualifiesForCredit,
+          salon_price: salonPrice,
+          msrp: msrpVal,
           case_weight: caseWeight,
           hs_code: opt('hs_code') || null,
           made_in: opt('made_in') || null,
@@ -233,6 +254,8 @@ export default function BulkUploadProducts() {
     const headers = [
       ...REQUIRED_HEADERS,
       'qualifies_for_credit_earning',
+      'salon_price',
+      'msrp',
       'case_weight',
       'hs_code',
       'made_in',
@@ -252,6 +275,8 @@ export default function BulkUploadProducts() {
       'true',
       'true',
       'true',
+      '20.00',
+      '42.00',
       '4.20',
       '3305.10.00',
       'Israel',
@@ -419,6 +444,8 @@ export default function BulkUploadProducts() {
             <li><span className="font-mono text-foreground">visible_to_americas</span> — true/false (required)</li>
             <li><span className="font-mono text-foreground">visible_to_international</span> — true/false (required)</li>
             <li><span className="font-mono text-foreground">qualifies_for_credit_earning</span> — true/false (optional; default true — set false for testers/POS items that must not earn support-fund credit)</li>
+            <li><span className="font-mono text-foreground">salon_price</span> — suggested salon price, number (optional; shown on the partner price list)</li>
+            <li><span className="font-mono text-foreground">msrp</span> — retail price, number (optional; empty = &quot;Pro use&quot; on the price list)</li>
             <li><span className="font-mono text-foreground">case_weight</span> — case weight in kg, number (optional; used by packing lists and SLIs)</li>
             <li><span className="font-mono text-foreground">hs_code</span> — customs HS code (optional; used by SLIs)</li>
             <li><span className="font-mono text-foreground">made_in</span> — country of origin (optional; used by SLIs)</li>

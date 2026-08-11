@@ -29,6 +29,8 @@ export interface ProductFormData {
   case_pack: string;
   price_international: string;
   price_americas: string;
+  salon_price: string;
+  msrp: string;
   enable: boolean;
   list_in_support_funds: boolean;
   visible_to_americas: boolean;
@@ -133,6 +135,22 @@ export function ProductFormFields({ formData, onChange, categories }: ProductFor
                     value={formData.price_international}
                     onChange={setStr('price_international')}
                     required
+                  />
+                </FormField>
+                <FormField label="Salon price (USD)" helper="Shown on the partner price list.">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.salon_price}
+                    onChange={setStr('salon_price')}
+                  />
+                </FormField>
+                <FormField label="MSRP (USD)" helper="Leave empty for professional-use products — the price list shows 'Pro use'.">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.msrp}
+                    onChange={setStr('msrp')}
                   />
                 </FormField>
               </div>
