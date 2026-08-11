@@ -57,37 +57,65 @@ define(['N/render', 'N/record', 'N/search', 'N/error'], function (render, record
     };
   }
 
-  function renderPaymentForInvoice(invoiceId) {
-    // Most recent Customer Payment applied to the invoice. mainline=T keeps
-    // one row per payment; trandate DESC puts the latest first.
-    var results = search
+  // Everything applied against the invoice (payments, credit memos, deposit
+  // applications), read from the INVOICE side via the applyingtransaction
+  // join — the reliable direction on this account.
+  function findApplyingTransactions(invoiceId) {
+    var rows = search
       .create({
-        type: search.Type.CUSTOMER_PAYMENT,
+        type: search.Type.TRANSACTION,
         filters: [
-          search.createFilter({
-            name: 'appliedtotransaction',
-            operator: search.Operator.ANYOF,
-            values: [invoiceId],
-          }),
+          search.createFilter({ name: 'internalid', operator: search.Operator.ANYOF, values: [invoiceId] }),
           search.createFilter({ name: 'mainline', operator: search.Operator.IS, values: ['T'] }),
         ],
         columns: [
-          search.createColumn({ name: 'trandate', sort: search.Sort.DESC }),
-          search.createColumn({ name: 'tranid' }),
+          search.createColumn({ name: 'applyingtransaction' }),
+          search.createColumn({ name: 'applyinglinktype' }),
         ],
       })
       .run()
-      .getRange({ start: 0, end: 1 });
+      .getRange({ start: 0, end: 50 });
 
-    if (!results || results.length === 0) {
+    var applying = [];
+    for (var i = 0; i < (rows || []).length; i++) {
+      var id = rows[i].getValue('applyingtransaction');
+      if (!id) continue;
+      applying.push({
+        id: String(id),
+        tranid: String(rows[i].getText('applyingtransaction') || id),
+        linkType: String(rows[i].getValue('applyinglinktype') || ''),
+      });
+    }
+    return applying;
+  }
+
+  function renderPaymentForInvoice(invoiceId, debug) {
+    var applying = findApplyingTransactions(invoiceId);
+
+    if (debug) {
+      return { invoiceId: String(invoiceId), applying: applying };
+    }
+
+    // Prefer actual Customer Payments; latest (highest internal id) first.
+    var payments = applying.filter(function (a) {
+      return /pymt|payment/i.test(a.linkType);
+    });
+    payments.sort(function (a, b) { return Number(b.id) - Number(a.id); });
+
+    if (payments.length === 0) {
+      var seen = applying
+        .map(function (a) { return a.linkType + ' ' + a.tranid; })
+        .join(', ');
       throw error.create({
         name: 'NO_PAYMENT',
-        message: 'No customer payment is applied to invoice ' + invoiceId,
+        message:
+          'No customer payment is applied to invoice ' + invoiceId +
+          (seen ? ' (applying transactions: ' + seen + ')' : ' (nothing applied)'),
       });
     }
 
-    var paymentId = results[0].id;
-    var tranId = String(results[0].getValue('tranid') || paymentId);
+    var paymentId = payments[0].id;
+    var tranId = payments[0].tranid;
 
     var pdfFile = render.transaction({
       entityId: Number(paymentId),
@@ -109,7 +137,7 @@ define(['N/render', 'N/record', 'N/search', 'N/error'], function (render, record
       if (!/^\d+$/.test(String(paymentFor))) {
         throw error.create({ name: 'BAD_ID', message: 'paymentForInvoice=<internal id> required' });
       }
-      return renderPaymentForInvoice(String(paymentFor));
+      return renderPaymentForInvoice(String(paymentFor), context.debug === '1');
     }
 
     var id = context.invoiceId;
