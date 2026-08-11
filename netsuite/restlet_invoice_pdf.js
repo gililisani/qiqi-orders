@@ -106,12 +106,16 @@ define(['N/render', 'N/record', 'N/search', 'N/error'], function (render, record
       var seen = applying
         .map(function (a) { return a.linkType + ' ' + a.tranid; })
         .join(', ');
-      throw error.create({
-        name: 'NO_PAYMENT',
+      // RETURNED, not thrown: a thrown RESTlet error makes NetSuite email the
+      // script owner, and "no payment yet" is an expected business answer,
+      // not a malfunction. The Hub treats this payload as its 404.
+      return {
+        error: 'NO_PAYMENT',
+        invoiceId: String(invoiceId),
         message:
           'No customer payment is applied to invoice ' + invoiceId +
           (seen ? ' (applying transactions: ' + seen + ')' : ' (nothing applied)'),
-      });
+      };
     }
 
     var paymentId = payments[0].id;
