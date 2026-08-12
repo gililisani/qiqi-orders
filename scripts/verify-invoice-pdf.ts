@@ -9,6 +9,8 @@
  *   npx tsx scripts/verify-invoice-pdf.ts <netsuite invoice internal id>
  *   npx tsx scripts/verify-invoice-pdf.ts <netsuite invoice internal id> --payment
  *     (--payment fetches the payment-confirmation PDF for that invoice instead)
+ *   npx tsx scripts/verify-invoice-pdf.ts <netsuite sales order internal id> --so
+ *     (--so treats the id as a Sales Order and fetches its PDF)
  *
  * Needs in .env.local: the NETSUITE_* TBA creds plus
  * NETSUITE_INVPDF_SCRIPT_ID / NETSUITE_INVPDF_DEPLOY_ID (see
@@ -31,14 +33,14 @@ async function main() {
 
   const ns = createNetSuiteAPI();
   const paymentMode = process.argv.includes('--payment');
-  console.log(
-    paymentMode
-      ? `Fetching the payment confirmation for invoice ${invoiceId} via the RESTlet…`
-      : `Fetching invoice ${invoiceId} via the RESTlet…`
-  );
+  const soMode = process.argv.includes('--so');
+  const what = paymentMode ? 'payment confirmation for invoice' : soMode ? 'sales order' : 'invoice';
+  console.log(`Fetching ${what} ${invoiceId} via the RESTlet…`);
   const { fileName, pdf } = paymentMode
     ? await ns.getPaymentConfirmationPdf(invoiceId)
-    : await ns.getInvoicePdf(invoiceId);
+    : soMode
+      ? await ns.getSalesOrderPdf(invoiceId)
+      : await ns.getInvoicePdf(invoiceId);
 
   const out = path.join(process.cwd(), fileName);
   fs.writeFileSync(out, pdf);
