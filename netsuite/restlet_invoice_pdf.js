@@ -23,19 +23,23 @@
  * open the script → click the Script File link → Edit → paste the new
  * content (or upload the file over it). Same script/deploy IDs keep working.
  *
- * CALL (both GET)
+ * CALL (all GET)
  *   ?script=NNN&deploy=MM&invoiceId=12345
  *     → the invoice PDF. invoiceId = internal id (orders.netsuite_invoice_id).
  *     Returns: { invoiceId, tranId, fileName, base64 }
  *   ?script=NNN&deploy=MM&paymentForInvoice=12345
  *     → the payment-confirmation PDF for the MOST RECENT Customer Payment
- *       applied to that invoice. Throws NO_PAYMENT if none is applied.
+ *       applied to that invoice. Returns {error:'NO_PAYMENT'} if none.
  *     Returns: { paymentId, invoiceId, tranId, fileName, base64 }
+ *   ?script=NNN&deploy=MM&salesOrderId=12345
+ *     → the Sales Order PDF. salesOrderId = internal id (orders.netsuite_so_id).
+ *     Returns: { salesOrderId, tranId, fileName, base64 }
  *
  * SECURITY
- * Renders only INVOICE records and CUSTOMER PAYMENTS applied to them —
- * record.load is pinned to INVOICE, and the payment search is filtered by
- * appliedToTransaction, so arbitrary record ids can't be rendered. Read-only.
+ * Renders only INVOICES, SALES ORDERS, and CUSTOMER PAYMENTS applied to
+ * invoices — record.load is pinned per type, and the payment lookup goes
+ * through the invoice's applying transactions, so arbitrary record ids
+ * can't be rendered. Read-only.
  */
 define(['N/render', 'N/record', 'N/search', 'N/error'], function (render, record, search, error) {
   function renderInvoice(id) {
@@ -157,6 +161,36 @@ define(['N/render', 'N/record', 'N/search', 'N/error'], function (render, record
     };
   }
 
+  function renderSalesOrder(id) {
+    // Pinned to SALES_ORDER — any other record id throws instead of rendering.
+    var so = record.load({ type: record.Type.SALES_ORDER, id: id });
+    var tranId = String(so.getValue('tranid') || id);
+
+    var pdfFile;
+    try {
+      pdfFile = render.transaction({
+        entityId: Number(id),
+        printMode: render.PrintMode.PDF,
+      });
+    } catch (e) {
+      return {
+        error: 'RENDER_FAILED',
+        salesOrderId: String(id),
+        tranId: tranId,
+        message:
+          'NetSuite could not render sales order ' + tranId + ' (id ' + id + '): ' +
+          ((e && e.message) || String(e)),
+      };
+    }
+
+    return {
+      salesOrderId: String(id),
+      tranId: tranId,
+      fileName: 'SalesOrder-' + tranId + '.pdf',
+      base64: pdfFile.getContents(),
+    };
+  }
+
   function get(context) {
     var paymentFor = context.paymentForInvoice;
     if (paymentFor) {
@@ -164,6 +198,14 @@ define(['N/render', 'N/record', 'N/search', 'N/error'], function (render, record
         throw error.create({ name: 'BAD_ID', message: 'paymentForInvoice=<internal id> required' });
       }
       return renderPaymentForInvoice(String(paymentFor), context.debug === '1');
+    }
+
+    var soId = context.salesOrderId;
+    if (soId) {
+      if (!/^\d+$/.test(String(soId))) {
+        throw error.create({ name: 'BAD_ID', message: 'salesOrderId=<internal id> required' });
+      }
+      return renderSalesOrder(String(soId));
     }
 
     var id = context.invoiceId;

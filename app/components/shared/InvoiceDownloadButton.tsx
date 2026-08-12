@@ -15,6 +15,12 @@ import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 import { Button } from '../qq/button';
 import { useToast } from '../ui/ToastProvider';
 
+const KIND_CONFIG = {
+  invoice: { endpoint: 'invoice-pdf', prefix: 'Invoice', noun: 'invoice', label: 'Invoice PDF' },
+  payment: { endpoint: 'payment-pdf', prefix: 'Payment', noun: 'payment confirmation', label: 'Payment PDF' },
+  so: { endpoint: 'so-pdf', prefix: 'SalesOrder', noun: 'sales order', label: 'SO PDF' },
+} as const;
+
 export function InvoiceDownloadButton({
   orderId,
   invoiceNumber,
@@ -24,24 +30,23 @@ export function InvoiceDownloadButton({
   label,
 }: {
   orderId: string;
+  /** Document number used for the local filename (invoice # or SO #). */
   invoiceNumber?: string | null;
-  /** 'invoice' = the invoice PDF; 'payment' = the payment-confirmation PDF. */
-  kind?: 'invoice' | 'payment';
+  kind?: 'invoice' | 'payment' | 'so';
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm';
   label?: string;
 }) {
   const toast = useToast();
   const [downloading, setDownloading] = useState(false);
-  const noun = kind === 'payment' ? 'payment confirmation' : 'invoice';
-  const buttonLabel = label ?? (kind === 'payment' ? 'Payment PDF' : 'Invoice PDF');
+  const cfg = KIND_CONFIG[kind];
+  const noun = cfg.noun;
+  const buttonLabel = label ?? cfg.label;
 
   const handleDownload = async () => {
     try {
       setDownloading(true);
-      const res = await fetchWithAuth(
-        `/api/orders/${orderId}/${kind === 'payment' ? 'payment-pdf' : 'invoice-pdf'}`
-      );
+      const res = await fetchWithAuth(`/api/orders/${orderId}/${cfg.endpoint}`);
       if (!res.ok) {
         let message = `Failed to download the ${noun}.`;
         try {
@@ -56,8 +61,7 @@ export function InvoiceDownloadButton({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const prefix = kind === 'payment' ? 'Payment' : 'Invoice';
-      a.download = invoiceNumber ? `${prefix}-${invoiceNumber}.pdf` : `${prefix}.pdf`;
+      a.download = invoiceNumber ? `${cfg.prefix}-${invoiceNumber}.pdf` : `${cfg.prefix}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err: any) {

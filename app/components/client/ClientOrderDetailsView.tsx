@@ -292,11 +292,18 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
             )}
             {order.so_number && (
               <Field label="Sales order #">
-                {/* Plain text on the client side — clients have no NetSuite
-                    access, so deep-linking them in would breach the
-                    integration boundary. Will become a "Download SO PDF"
-                    link in Phase 3 (RESTlet-based document download). */}
-                <span className="font-mono">{order.so_number}</span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="font-mono">{order.so_number}</span>
+                  {order.netsuite_so_id && (
+                    <InvoiceDownloadButton
+                      orderId={order.id}
+                      invoiceNumber={order.so_number}
+                      kind="so"
+                      label="Download"
+                      variant="ghost"
+                    />
+                  )}
+                </span>
               </Field>
             )}
             <Field label="Created">

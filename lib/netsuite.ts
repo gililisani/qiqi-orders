@@ -268,7 +268,15 @@ export class NetSuiteAPI {
   // byte-identical to the UI's Print button. RESTlets can't return binary, so
   // the script sends base64 and we decode here.
   // ---------------------------------------------------------------------------
-  async getInvoicePdf(nsInvoiceId: string): Promise<{ fileName: string; pdf: Buffer }> {
+  // Shared RESTlet call for all document-PDF modes (invoice / payment / SO).
+  // Expected business outcomes (NO_PAYMENT, RENDER_FAILED) come back as
+  // returned payloads — the RESTlet never throws for them because thrown
+  // RESTlet errors email the script owner — and are rethrown here with the
+  // code prefixed so routes can map them to friendly responses.
+  private async restletPdf(
+    mode: Record<string, string>,
+    fallbackName: string,
+  ): Promise<{ fileName: string; pdf: Buffer }> {
     const scriptId = process.env.NETSUITE_INVPDF_SCRIPT_ID;
     const deployId = process.env.NETSUITE_INVPDF_DEPLOY_ID;
     if (!scriptId || !deployId) {
@@ -276,48 +284,7 @@ export class NetSuiteAPI {
     }
     const urlAccountId = this.config.accountId.toLowerCase().replace(/_/g, '-');
     const base = `https://${urlAccountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl`;
-    const params = new URLSearchParams({ script: scriptId, deploy: deployId, invoiceId: nsInvoiceId });
-    const url = `${base}?${params.toString()}`;
-
-    const authHeader = this.getAuthHeader(url, 'GET');
-    const response = await axios({
-      method: 'GET',
-      url,
-      headers: { Authorization: authHeader, Accept: 'application/json', 'Content-Type': 'application/json' },
-      validateStatus: () => true,
-    });
-    if (response.status >= 400) {
-      const msg = response.data?.['o:message'] || response.data?.message || JSON.stringify(response.data) || `HTTP ${response.status}`;
-      throw new Error(`RESTlet ${response.status}: ${msg}`);
-    }
-    const data = response.data as { fileName?: string; base64?: string };
-    if (!data?.base64) {
-      throw new Error('Invoice PDF RESTlet returned no file content');
-    }
-    return {
-      fileName: data.fileName || `Invoice-${nsInvoiceId}.pdf`,
-      pdf: Buffer.from(data.base64, 'base64'),
-    };
-  }
-
-  isInvoicePdfConfigured(): boolean {
-    return !!process.env.NETSUITE_INVPDF_SCRIPT_ID && !!process.env.NETSUITE_INVPDF_DEPLOY_ID;
-  }
-
-  // Payment-confirmation PDF for the most recent Customer Payment applied to
-  // an invoice. Same RESTlet, different mode: the payment→invoice traversal
-  // happens INSIDE NetSuite via N/search because this account's link tables
-  // are not readable through external SuiteQL (known quirk). Throws with
-  // NO_PAYMENT in the message when the invoice has no applied payment.
-  async getPaymentConfirmationPdf(nsInvoiceId: string): Promise<{ fileName: string; pdf: Buffer }> {
-    const scriptId = process.env.NETSUITE_INVPDF_SCRIPT_ID;
-    const deployId = process.env.NETSUITE_INVPDF_DEPLOY_ID;
-    if (!scriptId || !deployId) {
-      throw new Error('RESTlet not configured: set NETSUITE_INVPDF_SCRIPT_ID and NETSUITE_INVPDF_DEPLOY_ID');
-    }
-    const urlAccountId = this.config.accountId.toLowerCase().replace(/_/g, '-');
-    const base = `https://${urlAccountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl`;
-    const params = new URLSearchParams({ script: scriptId, deploy: deployId, paymentForInvoice: nsInvoiceId });
+    const params = new URLSearchParams({ script: scriptId, deploy: deployId, ...mode });
     const url = `${base}?${params.toString()}`;
 
     const authHeader = this.getAuthHeader(url, 'GET');
@@ -333,17 +300,35 @@ export class NetSuiteAPI {
     }
     const data = response.data as { fileName?: string; base64?: string; error?: string; message?: string };
     if (data?.error === 'NO_PAYMENT' || data?.error === 'RENDER_FAILED') {
-      // Returned (not thrown) by the RESTlet so NetSuite doesn't email the
-      // script owner about an expected business case.
-      throw new Error(`${data.error}: ${data.message || `for invoice ${nsInvoiceId}`}`);
+      throw new Error(`${data.error}: ${data.message || 'no detail'}`);
     }
     if (!data?.base64) {
-      throw new Error('Payment PDF RESTlet returned no file content');
+      throw new Error('PDF RESTlet returned no file content');
     }
     return {
-      fileName: data.fileName || `Payment-for-invoice-${nsInvoiceId}.pdf`,
+      fileName: data.fileName || fallbackName,
       pdf: Buffer.from(data.base64, 'base64'),
     };
+  }
+
+  async getInvoicePdf(nsInvoiceId: string): Promise<{ fileName: string; pdf: Buffer }> {
+    return this.restletPdf({ invoiceId: nsInvoiceId }, `Invoice-${nsInvoiceId}.pdf`);
+  }
+
+  // Payment confirmation for the most recent Customer Payment applied to an
+  // invoice. The payment→invoice traversal happens INSIDE NetSuite via
+  // N/search because this account's link tables are not readable through
+  // external SuiteQL (known quirk).
+  async getPaymentConfirmationPdf(nsInvoiceId: string): Promise<{ fileName: string; pdf: Buffer }> {
+    return this.restletPdf({ paymentForInvoice: nsInvoiceId }, `Payment-for-invoice-${nsInvoiceId}.pdf`);
+  }
+
+  async getSalesOrderPdf(nsSOId: string): Promise<{ fileName: string; pdf: Buffer }> {
+    return this.restletPdf({ salesOrderId: nsSOId }, `SalesOrder-${nsSOId}.pdf`);
+  }
+
+  isInvoicePdfConfigured(): boolean {
+    return !!process.env.NETSUITE_INVPDF_SCRIPT_ID && !!process.env.NETSUITE_INVPDF_DEPLOY_ID;
   }
 
   // Diagnostic: hit the RESTlet's self-probe (?debug=1) to learn which search
