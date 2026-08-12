@@ -96,9 +96,13 @@ define(['N/render', 'N/record', 'N/search', 'N/error'], function (render, record
       return { invoiceId: String(invoiceId), applying: applying };
     }
 
-    // Prefer actual Customer Payments; latest (highest internal id) first.
+    // Real Customer Payments only, by DISPLAY NAME ("Payment #PIL10678").
+    // linkType is useless here: on IL invoices the Currency Revaluation row
+    // (CRIL…, unprintable) ALSO reports linkType "Payment", and it always has
+    // a newer internal id than the true payment — so filtering by linkType
+    // and taking the newest rendered the revaluation and failed.
     var payments = applying.filter(function (a) {
-      return /pymt|payment/i.test(a.linkType);
+      return /^payment\b/i.test(a.tranid);
     });
     payments.sort(function (a, b) { return Number(b.id) - Number(a.id); });
 
