@@ -1,0 +1,433 @@
+{
+  "id": "gid://shopify/Order/7516567535671",
+  "name": "#7201",
+  "createdAt": "2026-08-12T00:33:16Z",
+  "processedAt": "2026-08-12T00:33:12Z",
+  "closedAt": "2026-08-12T15:39:33Z",
+  "cancelledAt": null,
+  "cancelReason": null,
+  "sourceName": "3890849",
+  "test": false,
+  "confirmed": true,
+  "currencyCode": "USD",
+  "presentmentCurrencyCode": "USD",
+  "displayFinancialStatus": "PAID",
+  "displayFulfillmentStatus": "FULFILLED",
+  "tags": [],
+  "note": null,
+  "poNumber": null,
+  "customer": {
+    "id": "gid://shopify/Customer/9121099415607",
+    "email": "user-d9f164@example.com",
+    "firstName": "Redacted",
+    "lastName": "bdabc2",
+    "numberOfOrders": "1",
+    "tags": []
+  },
+  "purchasingEntity": {
+    "__typename": "Customer",
+    "id": "gid://shopify/Customer/9121099415607",
+    "email": "user-d9f164@example.com"
+  },
+  "billingAddress": {
+    "name": "Name-1aaf73",
+    "company": null,
+    "address1": "1 Redacted St",
+    "city": "Baldwinsville",
+    "provinceCode": "NY",
+    "zip": "00000",
+    "countryCodeV2": "US"
+  },
+  "shippingAddress": {
+    "name": "Name-9cb7ba",
+    "company": null,
+    "address1": "1 Redacted St",
+    "city": "Baldwinsville",
+    "provinceCode": "NY",
+    "zip": "00000",
+    "countryCodeV2": "US"
+  },
+  "currentSubtotalPriceSet": {
+    "shopMoney": {
+      "amount": "37.8",
+      "currencyCode": "USD"
+    }
+  },
+  "currentTotalDiscountsSet": {
+    "shopMoney": {
+      "amount": "4.2"
+    }
+  },
+  "currentTotalTaxSet": {
+    "shopMoney": {
+      "amount": "3.5"
+    }
+  },
+  "currentShippingPriceSet": {
+    "shopMoney": {
+      "amount": "5.9"
+    }
+  },
+  "currentTotalPriceSet": {
+    "shopMoney": {
+      "amount": "47.2",
+      "currencyCode": "USD"
+    }
+  },
+  "originalTotalPriceSet": {
+    "shopMoney": {
+      "amount": "47.2"
+    }
+  },
+  "netPaymentSet": {
+    "shopMoney": {
+      "amount": "47.2"
+    }
+  },
+  "totalRefundedSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "taxesIncluded": false,
+  "taxExempt": false,
+  "taxLines": [
+    {
+      "title": "New York State Tax",
+      "rate": 0.04,
+      "ratePercentage": 4,
+      "priceSet": {
+        "shopMoney": {
+          "amount": "1.75"
+        }
+      }
+    },
+    {
+      "title": "Onondaga County Tax",
+      "rate": 0.04,
+      "ratePercentage": 4,
+      "priceSet": {
+        "shopMoney": {
+          "amount": "1.75"
+        }
+      }
+    }
+  ],
+  "discountApplications": {
+    "nodes": [
+      {
+        "__typename": "DiscountCodeApplication",
+        "allocationMethod": "ACROSS",
+        "targetSelection": "ALL",
+        "targetType": "LINE_ITEM",
+        "code": "Welcome10",
+        "value": {
+          "__typename": "PricingPercentageValue",
+          "percentage": 10
+        }
+      }
+    ]
+  },
+  "shippingLines": {
+    "nodes": [
+      {
+        "title": "USPS 2 to 3 Business Days",
+        "code": "USPS 2 to 3 Business Days",
+        "source": "shopify",
+        "originalPriceSet": {
+          "shopMoney": {
+            "amount": "5.9"
+          }
+        },
+        "discountedPriceSet": {
+          "shopMoney": {
+            "amount": "5.9"
+          }
+        },
+        "taxLines": [
+          {
+            "title": "New York State Tax",
+            "ratePercentage": 4,
+            "priceSet": {
+              "shopMoney": {
+                "amount": "0.24"
+              }
+            }
+          },
+          {
+            "title": "Onondaga County Tax",
+            "ratePercentage": 4,
+            "priceSet": {
+              "shopMoney": {
+                "amount": "0.24"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "lineItems": {
+    "nodes": [
+      {
+        "id": "gid://shopify/LineItem/17123053633591",
+        "name": "Hydration Fixation Conditioner - S",
+        "sku": "FPS0028",
+        "quantity": 1,
+        "currentQuantity": 1,
+        "refundableQuantity": 1,
+        "vendor": "Qiqi",
+        "requiresShipping": true,
+        "isGiftCard": false,
+        "variant": {
+          "id": "gid://shopify/ProductVariant/41933741916215",
+          "sku": "FPS0028",
+          "barcode": "7290019116677",
+          "product": {
+            "id": "gid://shopify/Product/7355027980343",
+            "productType": ""
+          }
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "22.0"
+          }
+        },
+        "discountedUnitPriceAfterAllDiscountsSet": {
+          "shopMoney": {
+            "amount": "19.8"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "22.0"
+          }
+        },
+        "discountedTotalSet": {
+          "shopMoney": {
+            "amount": "22.0"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountAllocations": [
+          {
+            "allocatedAmountSet": {
+              "shopMoney": {
+                "amount": "2.2"
+              }
+            },
+            "discountApplication": {
+              "__typename": "DiscountCodeApplication"
+            }
+          }
+        ],
+        "taxLines": [
+          {
+            "title": "New York State Tax",
+            "rate": 0.04,
+            "ratePercentage": 4,
+            "priceSet": {
+              "shopMoney": {
+                "amount": "0.79"
+              }
+            }
+          },
+          {
+            "title": "Onondaga County Tax",
+            "rate": 0.04,
+            "ratePercentage": 4,
+            "priceSet": {
+              "shopMoney": {
+                "amount": "0.79"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "gid://shopify/LineItem/17123053666359",
+        "name": "Smooth Service Shampoo - S",
+        "sku": "FPS0027",
+        "quantity": 1,
+        "currentQuantity": 1,
+        "refundableQuantity": 1,
+        "vendor": "Qiqi",
+        "requiresShipping": true,
+        "isGiftCard": false,
+        "variant": {
+          "id": "gid://shopify/ProductVariant/41928319172663",
+          "sku": "FPS0027",
+          "barcode": "7290019116875",
+          "product": {
+            "id": "gid://shopify/Product/7352559468599",
+            "productType": ""
+          }
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "20.0"
+          }
+        },
+        "discountedUnitPriceAfterAllDiscountsSet": {
+          "shopMoney": {
+            "amount": "18.0"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "20.0"
+          }
+        },
+        "discountedTotalSet": {
+          "shopMoney": {
+            "amount": "20.0"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountAllocations": [
+          {
+            "allocatedAmountSet": {
+              "shopMoney": {
+                "amount": "2.0"
+              }
+            },
+            "discountApplication": {
+              "__typename": "DiscountCodeApplication"
+            }
+          }
+        ],
+        "taxLines": [
+          {
+            "title": "New York State Tax",
+            "rate": 0.04,
+            "ratePercentage": 4,
+            "priceSet": {
+              "shopMoney": {
+                "amount": "0.72"
+              }
+            }
+          },
+          {
+            "title": "Onondaga County Tax",
+            "rate": 0.04,
+            "ratePercentage": 4,
+            "priceSet": {
+              "shopMoney": {
+                "amount": "0.72"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "transactions": [
+    {
+      "id": "gid://shopify/OrderTransaction/9720510644279",
+      "kind": "AUTHORIZATION",
+      "status": "SUCCESS",
+      "gateway": "shop_cash",
+      "processedAt": "2026-08-12T00:33:13Z",
+      "test": false,
+      "amountSet": {
+        "shopMoney": {
+          "amount": "1.41",
+          "currencyCode": "USD"
+        }
+      },
+      "parentTransaction": null,
+      "paymentId": "rEN5iWRI7UCSK7pC8z2Zc2811",
+      "formattedGateway": "Shop Cash",
+      "fees": []
+    },
+    {
+      "id": "gid://shopify/OrderTransaction/9720510677047",
+      "kind": "SALE",
+      "status": "SUCCESS",
+      "gateway": "shopify_payments",
+      "processedAt": "2026-08-12T00:33:13Z",
+      "test": false,
+      "amountSet": {
+        "shopMoney": {
+          "amount": "45.79",
+          "currencyCode": "USD"
+        }
+      },
+      "parentTransaction": null,
+      "paymentId": "rSvCd5YnS0s6P8aoz15tasjus",
+      "formattedGateway": "Shopify Payments",
+      "fees": [
+        {
+          "amount": {
+            "amount": "1.33",
+            "currencyCode": "USD"
+          },
+          "rate": "0.0225",
+          "rateName": "domestic_card_not_present",
+          "type": "processing_fee"
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/OrderTransaction/9720511037495",
+      "kind": "CAPTURE",
+      "status": "SUCCESS",
+      "gateway": "shop_cash",
+      "processedAt": "2026-08-12T00:33:25Z",
+      "test": false,
+      "amountSet": {
+        "shopMoney": {
+          "amount": "1.41",
+          "currencyCode": "USD"
+        }
+      },
+      "parentTransaction": {
+        "id": "gid://shopify/OrderTransaction/9720510644279"
+      },
+      "paymentId": "#7201.1",
+      "formattedGateway": "Shop Cash",
+      "fees": []
+    }
+  ],
+  "refunds": [],
+  "fulfillments": [
+    {
+      "id": "gid://shopify/Fulfillment/7082032791607",
+      "status": "SUCCESS",
+      "createdAt": "2026-08-12T15:39:33Z",
+      "trackingInfo": [
+        {
+          "company": "Other",
+          "number": "TRACK-97d5e0",
+          "url": null
+        }
+      ],
+      "fulfillmentLineItems": {
+        "nodes": [
+          {
+            "quantity": 1,
+            "lineItem": {
+              "id": "gid://shopify/LineItem/17123053633591",
+              "sku": "FPS0028"
+            }
+          },
+          {
+            "quantity": 1,
+            "lineItem": {
+              "id": "gid://shopify/LineItem/17123053666359",
+              "sku": "FPS0027"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

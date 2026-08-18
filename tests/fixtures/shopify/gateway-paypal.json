@@ -1,0 +1,345 @@
+{
+  "id": "gid://shopify/Order/7513930268727",
+  "name": "#7189",
+  "createdAt": "2026-08-10T17:28:26Z",
+  "processedAt": "2026-08-10T17:28:25Z",
+  "closedAt": "2026-08-11T19:33:58Z",
+  "cancelledAt": null,
+  "cancelReason": null,
+  "sourceName": "14660960257",
+  "test": false,
+  "confirmed": true,
+  "currencyCode": "USD",
+  "presentmentCurrencyCode": "USD",
+  "displayFinancialStatus": "PAID",
+  "displayFulfillmentStatus": "FULFILLED",
+  "tags": [
+    "B2B",
+    "ispro"
+  ],
+  "note": null,
+  "poNumber": null,
+  "customer": {
+    "id": "gid://shopify/Customer/6167472308279",
+    "email": "user-b71f09@example.com",
+    "firstName": "Redacted",
+    "lastName": "ab512b",
+    "numberOfOrders": "7",
+    "tags": [
+      "isPro",
+      "Login with Shop",
+      "Shop"
+    ]
+  },
+  "purchasingEntity": {
+    "__typename": "PurchasingCompany",
+    "company": {
+      "id": "gid://shopify/Company/9109559",
+      "name": "Company-2f81ac",
+      "externalId": null
+    },
+    "location": {
+      "id": "gid://shopify/CompanyLocation/9601079",
+      "name": "Name-2f81ac",
+      "externalId": null
+    },
+    "contact": {
+      "id": "gid://shopify/CompanyContact/9175095",
+      "customer": {
+        "id": "gid://shopify/Customer/6167472308279",
+        "email": "user-b71f09@example.com"
+      }
+    }
+  },
+  "billingAddress": {
+    "name": "",
+    "company": "Company-2f81ac",
+    "address1": "1 Redacted St",
+    "city": "wilmington",
+    "provinceCode": "NC",
+    "zip": "00000",
+    "countryCodeV2": "US"
+  },
+  "shippingAddress": {
+    "name": "",
+    "company": "Company-2f81ac",
+    "address1": "1 Redacted St",
+    "city": "wilmington",
+    "provinceCode": "NC",
+    "zip": "00000",
+    "countryCodeV2": "US"
+  },
+  "currentSubtotalPriceSet": {
+    "shopMoney": {
+      "amount": "260.0",
+      "currencyCode": "USD"
+    }
+  },
+  "currentTotalDiscountsSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentTotalTaxSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentShippingPriceSet": {
+    "shopMoney": {
+      "amount": "8.9"
+    }
+  },
+  "currentTotalPriceSet": {
+    "shopMoney": {
+      "amount": "268.9",
+      "currencyCode": "USD"
+    }
+  },
+  "originalTotalPriceSet": {
+    "shopMoney": {
+      "amount": "268.9"
+    }
+  },
+  "netPaymentSet": {
+    "shopMoney": {
+      "amount": "268.9"
+    }
+  },
+  "totalRefundedSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "taxesIncluded": false,
+  "taxExempt": false,
+  "taxLines": [],
+  "discountApplications": {
+    "nodes": []
+  },
+  "shippingLines": {
+    "nodes": [
+      {
+        "title": "Shipping",
+        "code": "Shipping",
+        "source": "shopify",
+        "originalPriceSet": {
+          "shopMoney": {
+            "amount": "8.9"
+          }
+        },
+        "discountedPriceSet": {
+          "shopMoney": {
+            "amount": "8.9"
+          }
+        },
+        "taxLines": []
+      }
+    ]
+  },
+  "lineItems": {
+    "nodes": [
+      {
+        "id": "gid://shopify/LineItem/17118146297911",
+        "name": "SelfCtrl Exploration Set - One Size",
+        "sku": "KIT0034",
+        "quantity": 4,
+        "currentQuantity": 4,
+        "refundableQuantity": 4,
+        "vendor": "Qiqi",
+        "requiresShipping": true,
+        "isGiftCard": false,
+        "variant": {
+          "id": "gid://shopify/ProductVariant/42340375920695",
+          "sku": "KIT0034",
+          "barcode": "7290019116073",
+          "product": {
+            "id": "gid://shopify/Product/7090148802615",
+            "productType": ""
+          }
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "32.5"
+          }
+        },
+        "discountedUnitPriceAfterAllDiscountsSet": {
+          "shopMoney": {
+            "amount": "32.5"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "130.0"
+          }
+        },
+        "discountedTotalSet": {
+          "shopMoney": {
+            "amount": "130.0"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountAllocations": [],
+        "taxLines": []
+      },
+      {
+        "id": "gid://shopify/LineItem/17118146330679",
+        "name": "Qiqi Hair Controller - Thick and Coarse",
+        "sku": "FPS0025",
+        "quantity": 1,
+        "currentQuantity": 1,
+        "refundableQuantity": 1,
+        "vendor": "Qiqi",
+        "requiresShipping": true,
+        "isGiftCard": false,
+        "variant": {
+          "id": "gid://shopify/ProductVariant/42027560075319",
+          "sku": "FPS0025",
+          "barcode": "7290019116646",
+          "product": {
+            "id": "gid://shopify/Product/7388836266039",
+            "productType": "Hair Controller"
+          }
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "50.0"
+          }
+        },
+        "discountedUnitPriceAfterAllDiscountsSet": {
+          "shopMoney": {
+            "amount": "50.0"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "50.0"
+          }
+        },
+        "discountedTotalSet": {
+          "shopMoney": {
+            "amount": "50.0"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountAllocations": [],
+        "taxLines": []
+      },
+      {
+        "id": "gid://shopify/LineItem/17118146363447",
+        "name": "Qiqi Black Heat Cap - US Plug",
+        "sku": "TOL0005",
+        "quantity": 1,
+        "currentQuantity": 1,
+        "refundableQuantity": 1,
+        "vendor": "Qiqi",
+        "requiresShipping": true,
+        "isGiftCard": false,
+        "variant": {
+          "id": "gid://shopify/ProductVariant/42027565973559",
+          "sku": "TOL0005",
+          "barcode": "7290019116868",
+          "product": {
+            "id": "gid://shopify/Product/7388837118007",
+            "productType": "Tools & Accessories"
+          }
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "80.0"
+          }
+        },
+        "discountedUnitPriceAfterAllDiscountsSet": {
+          "shopMoney": {
+            "amount": "80.0"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "80.0"
+          }
+        },
+        "discountedTotalSet": {
+          "shopMoney": {
+            "amount": "80.0"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountAllocations": [],
+        "taxLines": []
+      }
+    ]
+  },
+  "transactions": [
+    {
+      "id": "gid://shopify/OrderTransaction/9716295106615",
+      "kind": "SALE",
+      "status": "SUCCESS",
+      "gateway": "paypal",
+      "processedAt": "2026-08-10T17:28:22Z",
+      "test": false,
+      "amountSet": {
+        "shopMoney": {
+          "amount": "268.9",
+          "currencyCode": "USD"
+        }
+      },
+      "parentTransaction": null,
+      "paymentId": "rokxDtAHqGMoYHdXYwjAIBX0F",
+      "formattedGateway": "Paypal",
+      "fees": []
+    }
+  ],
+  "refunds": [],
+  "fulfillments": [
+    {
+      "id": "gid://shopify/Fulfillment/7080426668087",
+      "status": "SUCCESS",
+      "createdAt": "2026-08-11T19:33:58Z",
+      "trackingInfo": [
+        {
+          "company": "DHL eCommerce",
+          "number": "TRACK-39faea",
+          "url": null
+        }
+      ],
+      "fulfillmentLineItems": {
+        "nodes": [
+          {
+            "quantity": 4,
+            "lineItem": {
+              "id": "gid://shopify/LineItem/17118146297911",
+              "sku": "KIT0034"
+            }
+          },
+          {
+            "quantity": 1,
+            "lineItem": {
+              "id": "gid://shopify/LineItem/17118146363447",
+              "sku": "TOL0005"
+            }
+          },
+          {
+            "quantity": 1,
+            "lineItem": {
+              "id": "gid://shopify/LineItem/17118146330679",
+              "sku": "FPS0025"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

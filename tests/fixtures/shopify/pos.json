@@ -1,0 +1,169 @@
+{
+  "id": "gid://shopify/Order/5164891766839",
+  "name": "#1012",
+  "createdAt": "2023-06-25T12:52:35Z",
+  "processedAt": "2023-06-25T12:52:35Z",
+  "closedAt": "2023-06-25T12:52:36Z",
+  "cancelledAt": null,
+  "cancelReason": null,
+  "sourceName": "pos",
+  "test": false,
+  "confirmed": true,
+  "currencyCode": "USD",
+  "presentmentCurrencyCode": "USD",
+  "displayFinancialStatus": "PAID",
+  "displayFulfillmentStatus": "FULFILLED",
+  "tags": [],
+  "note": null,
+  "poNumber": null,
+  "customer": null,
+  "purchasingEntity": null,
+  "billingAddress": null,
+  "shippingAddress": null,
+  "currentSubtotalPriceSet": {
+    "shopMoney": {
+      "amount": "0.0",
+      "currencyCode": "USD"
+    }
+  },
+  "currentTotalDiscountsSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentTotalTaxSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentShippingPriceSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentTotalPriceSet": {
+    "shopMoney": {
+      "amount": "0.0",
+      "currencyCode": "USD"
+    }
+  },
+  "originalTotalPriceSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "netPaymentSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "totalRefundedSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "taxesIncluded": false,
+  "taxExempt": false,
+  "taxLines": [],
+  "discountApplications": {
+    "nodes": []
+  },
+  "shippingLines": {
+    "nodes": []
+  },
+  "lineItems": {
+    "nodes": [
+      {
+        "id": "gid://shopify/LineItem/12570201882679",
+        "name": "Test",
+        "sku": null,
+        "quantity": 1,
+        "currentQuantity": 1,
+        "refundableQuantity": 1,
+        "vendor": null,
+        "requiresShipping": true,
+        "isGiftCard": false,
+        "variant": null,
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountedUnitPriceAfterAllDiscountsSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountedTotalSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountAllocations": [],
+        "taxLines": [
+          {
+            "title": "Missouri State Tax",
+            "rate": 0.04225,
+            "ratePercentage": 4.225,
+            "priceSet": {
+              "shopMoney": {
+                "amount": "0.0"
+              }
+            }
+          },
+          {
+            "title": "Greene County Tax",
+            "rate": 0.0175,
+            "ratePercentage": 1.75,
+            "priceSet": {
+              "shopMoney": {
+                "amount": "0.0"
+              }
+            }
+          },
+          {
+            "title": "Springfield City Tax",
+            "rate": 0.02125,
+            "ratePercentage": 2.125,
+            "priceSet": {
+              "shopMoney": {
+                "amount": "0.0"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "transactions": [],
+  "refunds": [],
+  "fulfillments": [
+    {
+      "id": "gid://shopify/Fulfillment/4824674041911",
+      "status": "SUCCESS",
+      "createdAt": "2023-06-25T12:52:36Z",
+      "trackingInfo": [],
+      "fulfillmentLineItems": {
+        "nodes": [
+          {
+            "quantity": 1,
+            "lineItem": {
+              "id": "gid://shopify/LineItem/12570201882679",
+              "sku": null
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

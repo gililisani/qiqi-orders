@@ -1,0 +1,271 @@
+{
+  "id": "gid://shopify/Order/7530826367031",
+  "name": "#7246",
+  "createdAt": "2026-08-18T01:50:43Z",
+  "processedAt": "2026-08-18T01:50:40Z",
+  "closedAt": null,
+  "cancelledAt": null,
+  "cancelReason": null,
+  "sourceName": "14660960257",
+  "test": false,
+  "confirmed": true,
+  "currencyCode": "USD",
+  "presentmentCurrencyCode": "USD",
+  "displayFinancialStatus": "PAID",
+  "displayFulfillmentStatus": "UNFULFILLED",
+  "tags": [
+    "B2B",
+    "ispro"
+  ],
+  "note": null,
+  "poNumber": null,
+  "customer": {
+    "id": "gid://shopify/Customer/6164280475703",
+    "email": "user-ae27db@example.com",
+    "firstName": "Redacted",
+    "lastName": "314bcf",
+    "numberOfOrders": "13",
+    "tags": [
+      "isPro",
+      "Login with Shop",
+      "migrated_matrixify",
+      "Shop"
+    ]
+  },
+  "purchasingEntity": {
+    "__typename": "PurchasingCompany",
+    "company": {
+      "id": "gid://shopify/Company/37879863",
+      "name": "Company-7ffd63",
+      "externalId": null
+    },
+    "location": {
+      "id": "gid://shopify/CompanyLocation/38699063",
+      "name": "Name-7ffd63",
+      "externalId": null
+    },
+    "contact": {
+      "id": "gid://shopify/CompanyContact/39813175",
+      "customer": {
+        "id": "gid://shopify/Customer/6164280475703",
+        "email": "user-ae27db@example.com"
+      }
+    }
+  },
+  "billingAddress": {
+    "name": "",
+    "company": "Company-7ffd63",
+    "address1": "1 Redacted St",
+    "city": "Plainfield",
+    "provinceCode": "IL",
+    "zip": "00000",
+    "countryCodeV2": "US"
+  },
+  "shippingAddress": {
+    "name": "",
+    "company": "Company-7ffd63",
+    "address1": "1 Redacted St",
+    "city": "Plainfield",
+    "provinceCode": "IL",
+    "zip": "00000",
+    "countryCodeV2": "US"
+  },
+  "currentSubtotalPriceSet": {
+    "shopMoney": {
+      "amount": "100.0",
+      "currencyCode": "USD"
+    }
+  },
+  "currentTotalDiscountsSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentTotalTaxSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentShippingPriceSet": {
+    "shopMoney": {
+      "amount": "8.9"
+    }
+  },
+  "currentTotalPriceSet": {
+    "shopMoney": {
+      "amount": "108.9",
+      "currencyCode": "USD"
+    }
+  },
+  "originalTotalPriceSet": {
+    "shopMoney": {
+      "amount": "108.9"
+    }
+  },
+  "netPaymentSet": {
+    "shopMoney": {
+      "amount": "108.9"
+    }
+  },
+  "totalRefundedSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "taxesIncluded": false,
+  "taxExempt": false,
+  "taxLines": [],
+  "discountApplications": {
+    "nodes": []
+  },
+  "shippingLines": {
+    "nodes": [
+      {
+        "title": "USPS 3 to 5 Business Days",
+        "code": "USPS 3 to 5 Business Days",
+        "source": "shopify",
+        "originalPriceSet": {
+          "shopMoney": {
+            "amount": "8.9"
+          }
+        },
+        "discountedPriceSet": {
+          "shopMoney": {
+            "amount": "8.9"
+          }
+        },
+        "taxLines": []
+      }
+    ]
+  },
+  "lineItems": {
+    "nodes": [
+      {
+        "id": "gid://shopify/LineItem/17150293770295",
+        "name": "Qiqi Hair Controller - Thick and Coarse",
+        "sku": "FPS0025",
+        "quantity": 1,
+        "currentQuantity": 1,
+        "refundableQuantity": 1,
+        "vendor": "Qiqi",
+        "requiresShipping": true,
+        "isGiftCard": false,
+        "variant": {
+          "id": "gid://shopify/ProductVariant/42027560075319",
+          "sku": "FPS0025",
+          "barcode": "7290019116646",
+          "product": {
+            "id": "gid://shopify/Product/7388836266039",
+            "productType": "Hair Controller"
+          }
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "50.0"
+          }
+        },
+        "discountedUnitPriceAfterAllDiscountsSet": {
+          "shopMoney": {
+            "amount": "50.0"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "50.0"
+          }
+        },
+        "discountedTotalSet": {
+          "shopMoney": {
+            "amount": "50.0"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountAllocations": [],
+        "taxLines": []
+      },
+      {
+        "id": "gid://shopify/LineItem/17150293803063",
+        "name": "Qiqi Hair Controller - Thin and Delicate",
+        "sku": "FPS0023",
+        "quantity": 1,
+        "currentQuantity": 1,
+        "refundableQuantity": 1,
+        "vendor": "Qiqi",
+        "requiresShipping": true,
+        "isGiftCard": false,
+        "variant": {
+          "id": "gid://shopify/ProductVariant/42027560009783",
+          "sku": "FPS0023",
+          "barcode": "7290019116059",
+          "product": {
+            "id": "gid://shopify/Product/7388836266039",
+            "productType": "Hair Controller"
+          }
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "50.0"
+          }
+        },
+        "discountedUnitPriceAfterAllDiscountsSet": {
+          "shopMoney": {
+            "amount": "50.0"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "50.0"
+          }
+        },
+        "discountedTotalSet": {
+          "shopMoney": {
+            "amount": "50.0"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountAllocations": [],
+        "taxLines": []
+      }
+    ]
+  },
+  "transactions": [
+    {
+      "id": "gid://shopify/OrderTransaction/9741053493303",
+      "kind": "SALE",
+      "status": "SUCCESS",
+      "gateway": "shopify_payments",
+      "processedAt": "2026-08-18T01:50:40Z",
+      "test": false,
+      "amountSet": {
+        "shopMoney": {
+          "amount": "108.9",
+          "currencyCode": "USD"
+        }
+      },
+      "parentTransaction": null,
+      "paymentId": "rx0ODiX2hkMY11T45dDlwYnIP",
+      "formattedGateway": "Shopify Payments",
+      "fees": [
+        {
+          "amount": {
+            "amount": "3.51",
+            "currencyCode": "USD"
+          },
+          "rate": "0.0295",
+          "rateName": "premium_domestic_card_not_present",
+          "type": "processing_fee"
+        }
+      ]
+    }
+  ],
+  "refunds": [],
+  "fulfillments": []
+}

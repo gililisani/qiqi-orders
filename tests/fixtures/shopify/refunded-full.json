@@ -1,0 +1,297 @@
+{
+  "id": "gid://shopify/Order/7485642080311",
+  "name": "#7083",
+  "createdAt": "2026-07-28T16:08:56Z",
+  "processedAt": "2026-07-28T16:08:53Z",
+  "closedAt": "2026-08-11T12:38:35Z",
+  "cancelledAt": null,
+  "cancelReason": null,
+  "sourceName": "14660960257",
+  "test": false,
+  "confirmed": true,
+  "currencyCode": "USD",
+  "presentmentCurrencyCode": "USD",
+  "displayFinancialStatus": "REFUNDED",
+  "displayFulfillmentStatus": "UNFULFILLED",
+  "tags": [
+    "B2B",
+    "ispro"
+  ],
+  "note": null,
+  "poNumber": null,
+  "customer": {
+    "id": "gid://shopify/Customer/9096940486711",
+    "email": "user-c129e2@example.com",
+    "firstName": "Redacted",
+    "lastName": "ea3b47",
+    "numberOfOrders": "1",
+    "tags": [
+      "isPro",
+      "Login with Shop",
+      "Shop"
+    ]
+  },
+  "purchasingEntity": {
+    "__typename": "PurchasingCompany",
+    "company": {
+      "id": "gid://shopify/Company/891453495",
+      "name": "Company-f290db",
+      "externalId": null
+    },
+    "location": {
+      "id": "gid://shopify/CompanyLocation/1332052023",
+      "name": "Name-f290db",
+      "externalId": null
+    },
+    "contact": {
+      "id": "gid://shopify/CompanyContact/1112866871",
+      "customer": {
+        "id": "gid://shopify/Customer/9096940486711",
+        "email": "user-c129e2@example.com"
+      }
+    }
+  },
+  "billingAddress": {
+    "name": "",
+    "company": "Company-c4fb6b",
+    "address1": "1 Redacted St",
+    "city": "Delmar",
+    "provinceCode": "DE",
+    "zip": "00000",
+    "countryCodeV2": "US"
+  },
+  "shippingAddress": {
+    "name": "",
+    "company": "Company-c4fb6b",
+    "address1": "1 Redacted St",
+    "city": "Delmar",
+    "provinceCode": "DE",
+    "zip": "00000",
+    "countryCodeV2": "US"
+  },
+  "currentSubtotalPriceSet": {
+    "shopMoney": {
+      "amount": "0.0",
+      "currencyCode": "USD"
+    }
+  },
+  "currentTotalDiscountsSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentTotalTaxSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentShippingPriceSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentTotalPriceSet": {
+    "shopMoney": {
+      "amount": "0.0",
+      "currencyCode": "USD"
+    }
+  },
+  "originalTotalPriceSet": {
+    "shopMoney": {
+      "amount": "38.9"
+    }
+  },
+  "netPaymentSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "totalRefundedSet": {
+    "shopMoney": {
+      "amount": "38.9"
+    }
+  },
+  "taxesIncluded": false,
+  "taxExempt": false,
+  "taxLines": [],
+  "discountApplications": {
+    "nodes": []
+  },
+  "shippingLines": {
+    "nodes": [
+      {
+        "title": "USPS 3 to 5 Business Days",
+        "code": "USPS 3 to 5 Business Days",
+        "source": "shopify",
+        "originalPriceSet": {
+          "shopMoney": {
+            "amount": "8.9"
+          }
+        },
+        "discountedPriceSet": {
+          "shopMoney": {
+            "amount": "8.9"
+          }
+        },
+        "taxLines": []
+      }
+    ]
+  },
+  "lineItems": {
+    "nodes": [
+      {
+        "id": "gid://shopify/LineItem/17068256854071",
+        "name": "Go Deeper Cleansing Shampoo - XXX-L",
+        "sku": "FPS0020",
+        "quantity": 1,
+        "currentQuantity": 0,
+        "refundableQuantity": 0,
+        "vendor": "Qiqi",
+        "requiresShipping": true,
+        "isGiftCard": false,
+        "variant": {
+          "id": "gid://shopify/ProductVariant/42052554489911",
+          "sku": "FPS0020",
+          "barcode": "7290019116257",
+          "product": {
+            "id": "gid://shopify/Product/6776003002423",
+            "productType": "Shampoo"
+          }
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "30.0"
+          }
+        },
+        "discountedUnitPriceAfterAllDiscountsSet": {
+          "shopMoney": {
+            "amount": "30.0"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "30.0"
+          }
+        },
+        "discountedTotalSet": {
+          "shopMoney": {
+            "amount": "30.0"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountAllocations": [],
+        "taxLines": []
+      }
+    ]
+  },
+  "transactions": [
+    {
+      "id": "gid://shopify/OrderTransaction/9673991979063",
+      "kind": "SALE",
+      "status": "SUCCESS",
+      "gateway": "shopify_payments",
+      "processedAt": "2026-07-28T16:08:53Z",
+      "test": false,
+      "amountSet": {
+        "shopMoney": {
+          "amount": "38.9",
+          "currencyCode": "USD"
+        }
+      },
+      "parentTransaction": null,
+      "paymentId": "r9iak2G3DCKaRJEy9gJgkhCn6",
+      "formattedGateway": "Shopify Payments",
+      "fees": [
+        {
+          "amount": {
+            "amount": "1.45",
+            "currencyCode": "USD"
+          },
+          "rate": "0.0295",
+          "rateName": "amex_card_not_present",
+          "type": "processing_fee"
+        }
+      ]
+    },
+    {
+      "id": "gid://shopify/OrderTransaction/9718830891063",
+      "kind": "REFUND",
+      "status": "SUCCESS",
+      "gateway": "shopify_payments",
+      "processedAt": "2026-08-11T12:38:33Z",
+      "test": false,
+      "amountSet": {
+        "shopMoney": {
+          "amount": "38.9",
+          "currencyCode": "USD"
+        }
+      },
+      "parentTransaction": {
+        "id": "gid://shopify/OrderTransaction/9673991979063"
+      },
+      "paymentId": "zkle5fjjXd2oAWPeDBgXx0JKU",
+      "formattedGateway": "Shopify Payments",
+      "fees": []
+    }
+  ],
+  "refunds": [
+    {
+      "id": "gid://shopify/Refund/1078093283383",
+      "createdAt": "2026-08-11T12:38:33Z",
+      "note": "[redacted note]",
+      "totalRefundedSet": {
+        "shopMoney": {
+          "amount": "38.9"
+        }
+      },
+      "refundLineItems": {
+        "nodes": [
+          {
+            "quantity": 1,
+            "restockType": "CANCEL",
+            "restocked": true,
+            "lineItem": {
+              "id": "gid://shopify/LineItem/17068256854071",
+              "sku": "FPS0020"
+            },
+            "priceSet": {
+              "shopMoney": {
+                "amount": "30.0"
+              }
+            },
+            "subtotalSet": {
+              "shopMoney": {
+                "amount": "30.0"
+              }
+            },
+            "totalTaxSet": {
+              "shopMoney": {
+                "amount": "0.0"
+              }
+            }
+          }
+        ]
+      },
+      "transactions": {
+        "nodes": [
+          {
+            "id": "gid://shopify/OrderTransaction/9718830891063",
+            "kind": "REFUND",
+            "status": "SUCCESS",
+            "gateway": "shopify_payments",
+            "amountSet": {
+              "shopMoney": {
+                "amount": "38.9"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "fulfillments": []
+}

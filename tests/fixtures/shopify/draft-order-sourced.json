@@ -1,0 +1,320 @@
+{
+  "id": "gid://shopify/Order/7521056063543",
+  "name": "#7222",
+  "createdAt": "2026-08-14T04:31:44Z",
+  "processedAt": "2026-08-14T04:31:41Z",
+  "closedAt": "2026-08-14T17:42:52Z",
+  "cancelledAt": null,
+  "cancelReason": null,
+  "sourceName": "shopify_draft_order",
+  "test": false,
+  "confirmed": true,
+  "currencyCode": "USD",
+  "presentmentCurrencyCode": "USD",
+  "displayFinancialStatus": "PAID",
+  "displayFulfillmentStatus": "FULFILLED",
+  "tags": [
+    "B2B",
+    "ispro"
+  ],
+  "note": null,
+  "poNumber": null,
+  "customer": {
+    "id": "gid://shopify/Customer/6164270972983",
+    "email": "user-febd2c@example.com",
+    "firstName": "Redacted",
+    "lastName": "14334b",
+    "numberOfOrders": "15",
+    "tags": [
+      "isPro",
+      "migrated_matrixify"
+    ]
+  },
+  "purchasingEntity": {
+    "__typename": "PurchasingCompany",
+    "company": {
+      "id": "gid://shopify/Company/17367095",
+      "name": "Company-7292de",
+      "externalId": null
+    },
+    "location": {
+      "id": "gid://shopify/CompanyLocation/17858615",
+      "name": "Name-7292de",
+      "externalId": null
+    },
+    "contact": {
+      "id": "gid://shopify/CompanyContact/17301559",
+      "customer": {
+        "id": "gid://shopify/Customer/6164270972983",
+        "email": "user-febd2c@example.com"
+      }
+    }
+  },
+  "billingAddress": {
+    "name": "",
+    "company": "Company-7292de",
+    "address1": "1 Redacted St",
+    "city": "Schaumburg",
+    "provinceCode": "IL",
+    "zip": "00000",
+    "countryCodeV2": "US"
+  },
+  "shippingAddress": {
+    "name": "",
+    "company": "Company-7292de",
+    "address1": "1 Redacted St",
+    "city": "Schaumburg",
+    "provinceCode": "IL",
+    "zip": "00000",
+    "countryCodeV2": "US"
+  },
+  "currentSubtotalPriceSet": {
+    "shopMoney": {
+      "amount": "180.0",
+      "currencyCode": "USD"
+    }
+  },
+  "currentTotalDiscountsSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentTotalTaxSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentShippingPriceSet": {
+    "shopMoney": {
+      "amount": "8.9"
+    }
+  },
+  "currentTotalPriceSet": {
+    "shopMoney": {
+      "amount": "188.9",
+      "currencyCode": "USD"
+    }
+  },
+  "originalTotalPriceSet": {
+    "shopMoney": {
+      "amount": "188.9"
+    }
+  },
+  "netPaymentSet": {
+    "shopMoney": {
+      "amount": "188.9"
+    }
+  },
+  "totalRefundedSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "taxesIncluded": false,
+  "taxExempt": false,
+  "taxLines": [],
+  "discountApplications": {
+    "nodes": []
+  },
+  "shippingLines": {
+    "nodes": [
+      {
+        "title": "Standard Shipping",
+        "code": "custom",
+        "source": "shopify",
+        "originalPriceSet": {
+          "shopMoney": {
+            "amount": "8.9"
+          }
+        },
+        "discountedPriceSet": {
+          "shopMoney": {
+            "amount": "8.9"
+          }
+        },
+        "taxLines": []
+      }
+    ]
+  },
+  "lineItems": {
+    "nodes": [
+      {
+        "id": "gid://shopify/LineItem/17131147690039",
+        "name": "Smooth Service Shampoo - M",
+        "sku": "FPS0018",
+        "quantity": 2,
+        "currentQuantity": 2,
+        "refundableQuantity": 2,
+        "vendor": "Qiqi",
+        "requiresShipping": true,
+        "isGiftCard": false,
+        "variant": {
+          "id": "gid://shopify/ProductVariant/41928319205431",
+          "sku": "FPS0018",
+          "barcode": "7290019116042",
+          "product": {
+            "id": "gid://shopify/Product/7352559468599",
+            "productType": ""
+          }
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "20.0"
+          }
+        },
+        "discountedUnitPriceAfterAllDiscountsSet": {
+          "shopMoney": {
+            "amount": "20.0"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "40.0"
+          }
+        },
+        "discountedTotalSet": {
+          "shopMoney": {
+            "amount": "40.0"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountAllocations": [],
+        "taxLines": []
+      },
+      {
+        "id": "gid://shopify/LineItem/17131147722807",
+        "name": "Super Soaker Smoothing Masque - M",
+        "sku": "FPS0017",
+        "quantity": 5,
+        "currentQuantity": 5,
+        "refundableQuantity": 5,
+        "vendor": "Qiqi",
+        "requiresShipping": true,
+        "isGiftCard": false,
+        "variant": {
+          "id": "gid://shopify/ProductVariant/41892954570807",
+          "sku": "FPS0017",
+          "barcode": "7290019116448",
+          "product": {
+            "id": "gid://shopify/Product/7346009014327",
+            "productType": ""
+          }
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "28.0"
+          }
+        },
+        "discountedUnitPriceAfterAllDiscountsSet": {
+          "shopMoney": {
+            "amount": "28.0"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "140.0"
+          }
+        },
+        "discountedTotalSet": {
+          "shopMoney": {
+            "amount": "140.0"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountAllocations": [],
+        "taxLines": []
+      }
+    ]
+  },
+  "transactions": [
+    {
+      "id": "gid://shopify/OrderTransaction/9727306170423",
+      "kind": "AUTHORIZATION",
+      "status": "SUCCESS",
+      "gateway": "shopify_payments",
+      "processedAt": "2026-08-14T04:31:41Z",
+      "test": false,
+      "amountSet": {
+        "shopMoney": {
+          "amount": "188.9",
+          "currencyCode": "USD"
+        }
+      },
+      "parentTransaction": null,
+      "paymentId": "rJgpXKPdTSez8VCf4Sa1UfnRh",
+      "formattedGateway": "Shopify Payments",
+      "fees": []
+    },
+    {
+      "id": "gid://shopify/OrderTransaction/9727306465335",
+      "kind": "CAPTURE",
+      "status": "SUCCESS",
+      "gateway": "shopify_payments",
+      "processedAt": "2026-08-14T04:31:45Z",
+      "test": false,
+      "amountSet": {
+        "shopMoney": {
+          "amount": "188.9",
+          "currencyCode": "USD"
+        }
+      },
+      "parentTransaction": {
+        "id": "gid://shopify/OrderTransaction/9727306170423"
+      },
+      "paymentId": "aPuBScIDzGruyPoQZexuaNhiq",
+      "formattedGateway": "Shopify Payments",
+      "fees": [
+        {
+          "amount": {
+            "amount": "5.87",
+            "currencyCode": "USD"
+          },
+          "rate": "0.0295",
+          "rateName": "premium_domestic_card_not_present",
+          "type": "processing_fee"
+        }
+      ]
+    }
+  ],
+  "refunds": [],
+  "fulfillments": [
+    {
+      "id": "gid://shopify/Fulfillment/7086085799991",
+      "status": "SUCCESS",
+      "createdAt": "2026-08-14T17:42:51Z",
+      "trackingInfo": [
+        {
+          "company": "UPS",
+          "number": "TRACK-25fd84",
+          "url": null
+        }
+      ],
+      "fulfillmentLineItems": {
+        "nodes": [
+          {
+            "quantity": 2,
+            "lineItem": {
+              "id": "gid://shopify/LineItem/17131147690039",
+              "sku": "FPS0018"
+            }
+          },
+          {
+            "quantity": 5,
+            "lineItem": {
+              "id": "gid://shopify/LineItem/17131147722807",
+              "sku": "FPS0017"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

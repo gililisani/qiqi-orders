@@ -1,0 +1,336 @@
+{
+  "id": "gid://shopify/Order/7528796913719",
+  "name": "#7243",
+  "createdAt": "2026-08-17T12:05:18Z",
+  "processedAt": "2026-08-17T12:05:12Z",
+  "closedAt": "2026-08-17T18:27:26Z",
+  "cancelledAt": null,
+  "cancelReason": null,
+  "sourceName": "14660960257",
+  "test": false,
+  "confirmed": true,
+  "currencyCode": "USD",
+  "presentmentCurrencyCode": "USD",
+  "displayFinancialStatus": "PAID",
+  "displayFulfillmentStatus": "FULFILLED",
+  "tags": [],
+  "note": null,
+  "poNumber": null,
+  "customer": {
+    "id": "gid://shopify/Customer/8411544551479",
+    "email": "user-028442@example.com",
+    "firstName": "Redacted",
+    "lastName": "503046",
+    "numberOfOrders": "2",
+    "tags": [
+      "Login with Shop",
+      "Shop"
+    ]
+  },
+  "purchasingEntity": {
+    "__typename": "Customer",
+    "id": "gid://shopify/Customer/8411544551479",
+    "email": "user-028442@example.com"
+  },
+  "billingAddress": {
+    "name": "Name-db2608",
+    "company": null,
+    "address1": "1 Redacted St",
+    "city": "Dorado",
+    "provinceCode": "PR",
+    "zip": "00000",
+    "countryCodeV2": "US"
+  },
+  "shippingAddress": {
+    "name": "Name-db2608",
+    "company": null,
+    "address1": "1 Redacted St",
+    "city": "Dorado",
+    "provinceCode": "PR",
+    "zip": "00000",
+    "countryCodeV2": "US"
+  },
+  "currentSubtotalPriceSet": {
+    "shopMoney": {
+      "amount": "386.0",
+      "currencyCode": "USD"
+    }
+  },
+  "currentTotalDiscountsSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentTotalTaxSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentShippingPriceSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "currentTotalPriceSet": {
+    "shopMoney": {
+      "amount": "386.0",
+      "currencyCode": "USD"
+    }
+  },
+  "originalTotalPriceSet": {
+    "shopMoney": {
+      "amount": "386.0"
+    }
+  },
+  "netPaymentSet": {
+    "shopMoney": {
+      "amount": "386.0"
+    }
+  },
+  "totalRefundedSet": {
+    "shopMoney": {
+      "amount": "0.0"
+    }
+  },
+  "taxesIncluded": false,
+  "taxExempt": false,
+  "taxLines": [],
+  "discountApplications": {
+    "nodes": []
+  },
+  "shippingLines": {
+    "nodes": [
+      {
+        "title": "USPS 8 to 10 Business Days",
+        "code": "USPS 8 to 10 Business Days",
+        "source": "shopify",
+        "originalPriceSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountedPriceSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "taxLines": []
+      }
+    ]
+  },
+  "lineItems": {
+    "nodes": [
+      {
+        "id": "gid://shopify/LineItem/17145220268087",
+        "name": "Smooth Service Shampoo - M",
+        "sku": "FPS0018",
+        "quantity": 2,
+        "currentQuantity": 2,
+        "refundableQuantity": 2,
+        "vendor": "Qiqi",
+        "requiresShipping": true,
+        "isGiftCard": false,
+        "variant": {
+          "id": "gid://shopify/ProductVariant/41928319205431",
+          "sku": "FPS0018",
+          "barcode": "7290019116042",
+          "product": {
+            "id": "gid://shopify/Product/7352559468599",
+            "productType": ""
+          }
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "40.0"
+          }
+        },
+        "discountedUnitPriceAfterAllDiscountsSet": {
+          "shopMoney": {
+            "amount": "40.0"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "80.0"
+          }
+        },
+        "discountedTotalSet": {
+          "shopMoney": {
+            "amount": "80.0"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountAllocations": [],
+        "taxLines": []
+      },
+      {
+        "id": "gid://shopify/LineItem/17145220300855",
+        "name": "Hydration Fixation Conditioner - M",
+        "sku": "FPS0019",
+        "quantity": 3,
+        "currentQuantity": 3,
+        "refundableQuantity": 3,
+        "vendor": "Qiqi",
+        "requiresShipping": true,
+        "isGiftCard": false,
+        "variant": {
+          "id": "gid://shopify/ProductVariant/41933741948983",
+          "sku": "FPS0019",
+          "barcode": "7290019116240",
+          "product": {
+            "id": "gid://shopify/Product/7355027980343",
+            "productType": ""
+          }
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "42.0"
+          }
+        },
+        "discountedUnitPriceAfterAllDiscountsSet": {
+          "shopMoney": {
+            "amount": "42.0"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "126.0"
+          }
+        },
+        "discountedTotalSet": {
+          "shopMoney": {
+            "amount": "126.0"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountAllocations": [],
+        "taxLines": []
+      },
+      {
+        "id": "gid://shopify/LineItem/17145220333623",
+        "name": "Smooth Service Shampoo - XXX-L",
+        "sku": "FPS0022",
+        "quantity": 2,
+        "currentQuantity": 2,
+        "refundableQuantity": 2,
+        "vendor": "Qiqi",
+        "requiresShipping": true,
+        "isGiftCard": false,
+        "variant": {
+          "id": "gid://shopify/ProductVariant/41928319238199",
+          "sku": "FPS0022",
+          "barcode": "7290019116653",
+          "product": {
+            "id": "gid://shopify/Product/7352559468599",
+            "productType": ""
+          }
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "90.0"
+          }
+        },
+        "discountedUnitPriceAfterAllDiscountsSet": {
+          "shopMoney": {
+            "amount": "90.0"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "180.0"
+          }
+        },
+        "discountedTotalSet": {
+          "shopMoney": {
+            "amount": "180.0"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.0"
+          }
+        },
+        "discountAllocations": [],
+        "taxLines": []
+      }
+    ]
+  },
+  "transactions": [
+    {
+      "id": "gid://shopify/OrderTransaction/9738371760183",
+      "kind": "SALE",
+      "status": "SUCCESS",
+      "gateway": "shopify_payments",
+      "processedAt": "2026-08-17T12:05:12Z",
+      "test": false,
+      "amountSet": {
+        "shopMoney": {
+          "amount": "386.0",
+          "currencyCode": "USD"
+        }
+      },
+      "parentTransaction": null,
+      "paymentId": "rTDWNZvMn9mic098Ys4sldRxl",
+      "formattedGateway": "Shopify Payments",
+      "fees": [
+        {
+          "amount": {
+            "amount": "8.99",
+            "currencyCode": "USD"
+          },
+          "rate": "0.0225",
+          "rateName": "domestic_card_not_present",
+          "type": "processing_fee"
+        }
+      ]
+    }
+  ],
+  "refunds": [],
+  "fulfillments": [
+    {
+      "id": "gid://shopify/Fulfillment/7091518111799",
+      "status": "SUCCESS",
+      "createdAt": "2026-08-17T18:27:26Z",
+      "trackingInfo": [
+        {
+          "company": "DHL eCommerce",
+          "number": "TRACK-02a5f7",
+          "url": null
+        }
+      ],
+      "fulfillmentLineItems": {
+        "nodes": [
+          {
+            "quantity": 2,
+            "lineItem": {
+              "id": "gid://shopify/LineItem/17145220268087",
+              "sku": "FPS0018"
+            }
+          },
+          {
+            "quantity": 3,
+            "lineItem": {
+              "id": "gid://shopify/LineItem/17145220300855",
+              "sku": "FPS0019"
+            }
+          },
+          {
+            "quantity": 2,
+            "lineItem": {
+              "id": "gid://shopify/LineItem/17145220333623",
+              "sku": "FPS0022"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
