@@ -42,3 +42,4 @@ Tailwind Template/
 # Claude Code local state
 .claude/
 backups/
+backfill-report-*.json

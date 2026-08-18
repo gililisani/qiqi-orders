@@ -57,12 +57,15 @@ describe('runOrderPipeline', () => {
     expect(r.customerVia).toBe('created');
     const cust = creates.find((c) => c.type === 'customer')!;
     expect(cust.payload.isPerson).toBe(true);
-    expect(cust.payload.custentity_shop_cust_id).toBe(plan.buyer.shopifyCustomerId);
+    // NetScore's field is Integer-typed in NS — must go over as a number.
+    expect(cust.payload.custentity_shop_cust_id).toBe(Number(plan.buyer.shopifyCustomerId));
+    expect(cust.payload.category).toEqual({ id: '10' });
+    expect(cust.payload.custentity3).toEqual({ id: '4' });
     expect(cust.payload.externalId).toContain('CUST-');
 
     const so = creates.find((c) => c.type === 'salesOrder')!;
     expect(so.payload.externalId).toBe(`SHOPORD-${plan.shopifyOrderId}`);
-    expect(so.payload.custbody_shopify_order_id).toBe(plan.shopifyOrderId);
+    expect(so.payload.custbody_shopify_order_id).toBe(Number(plan.shopifyOrderId)); // Integer field in NS
     const lineSum = so.payload.item.items.reduce((s: number, l: any) => s + l.amount, 0);
     expect(Math.round(lineSum * 100)).toBe(plan.lines.reduce((s, l) => s + l.netAmountCents, 0));
 

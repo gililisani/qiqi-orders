@@ -120,8 +120,9 @@ export async function runOrderPipeline(
       tranDate: plan.processedAt.slice(0, 10),
       otherRefNum: plan.poNumber ?? plan.orderName,
       memo: `Shopify ${plan.orderName}`,
-      custbody_shopify_order_id: plan.shopifyOrderId,
+      custbody_shopify_order_id: Number(plan.shopifyOrderId),
       shippingCost: plan.shipping ? Number(centsToDecimal(plan.shipping.amountCents)) : 0,
+      ...(plan.shipping ? { shipMethod: { id: config.shipMethodId } } : {}),
       item: { items: itemLines },
     });
     created.so = true;
@@ -134,7 +135,7 @@ export async function runOrderPipeline(
     nsInvoiceId = await ns.transformRecord('salesOrder', nsSoId, 'invoice', {
       externalId: invExtId,
       tranDate: plan.processedAt.slice(0, 10),
-      custbody_shopify_order_id: plan.shopifyOrderId,
+      custbody_shopify_order_id: Number(plan.shopifyOrderId),
     });
     created.invoice = true;
   }
@@ -178,10 +179,13 @@ async function ensureCustomer(
 
   // Gather candidates for the pure decision ladder.
   const candidates: NsCustomerCandidate[] = [];
+  const classification = new Map<string, { category: string | null; class: string | null }>();
+  const note = (r: any) => classification.set(String(r.id), { category: r.category ?? null, class: r.custentity3 ?? null });
   if (buyer.shopifyCustomerId) {
-    const rows = await ns.suiteQL<{ id: string; entityid: string; companyname: string | null; email: string | null; isinactive: string }>(
-      `SELECT id, entityid, companyname, email, isinactive FROM customer WHERE custentity_shop_cust_id = '${esc(buyer.shopifyCustomerId)}'`,
+    const rows = await ns.suiteQL<any>(
+      `SELECT id, entityid, companyname, email, isinactive, category, custentity3 FROM customer WHERE custentity_shop_cust_id = ${Number(buyer.shopifyCustomerId)}`,
     );
+    rows.forEach(note);
     candidates.push(
       ...rows.map((r) => ({
         nsCustomerId: String(r.id),
@@ -194,9 +198,10 @@ async function ensureCustomer(
     );
   }
   if (buyer.email) {
-    const rows = await ns.suiteQL<{ id: string; entityid: string; companyname: string | null; email: string | null; isinactive: string }>(
-      `SELECT id, entityid, companyname, email, isinactive FROM customer WHERE LOWER(email) = '${esc(buyer.email)}'`,
+    const rows = await ns.suiteQL<any>(
+      `SELECT id, entityid, companyname, email, isinactive, category, custentity3 FROM customer WHERE LOWER(email) = '${esc(buyer.email)}'`,
     );
+    rows.forEach(note);
     const seen = new Set(candidates.map((c) => c.nsCustomerId));
     candidates.push(
       ...rows
@@ -219,18 +224,30 @@ async function ensureCustomer(
     // Adopt: stamp our externalid (+ their field if absent) so rung 0 hits next time.
     const stamp: Record<string, unknown> = { externalId: extId };
     if (decision.stampNeeded && buyer.shopifyCustomerId) {
-      stamp.custentity_shop_cust_id = buyer.shopifyCustomerId;
+      // NetScore built the field as Integer — 13-digit Shopify ids are
+      // still far below 2^53, so Number is exact.
+      stamp.custentity_shop_cust_id = Number(buyer.shopifyCustomerId);
     }
+    // This account makes Category/Class mandatory — PATCH re-validates the
+    // whole record, so records missing them must be filled with the
+    // account's own per-kind convention or the stamp write bounces.
+    const defaults = config.customerDefaults[buyer.kind];
+    const known = classification.get(decision.nsCustomerId);
+    if (!known?.category) stamp.category = { id: defaults.category };
+    if (!known?.class) stamp.custentity3 = { id: defaults.class };
     await ns.updateRecord('customer', decision.nsCustomerId, stamp);
     return { nsCustomerId: decision.nsCustomerId, via: decision.via, wasCreated: false };
   }
 
   // Create — always with stamps, per principle 5.
+  const defaults = config.customerDefaults[buyer.kind];
   const payload: Record<string, unknown> = {
     externalId: extId,
     subsidiary: { id: config.subsidiaryId },
     email: buyer.email,
-    custentity_shop_cust_id: buyer.shopifyCustomerId,
+    custentity_shop_cust_id: buyer.shopifyCustomerId ? Number(buyer.shopifyCustomerId) : null,
+    category: { id: defaults.category },
+    custentity3: { id: defaults.class },
   };
   if (buyer.kind === 'b2b') {
     payload.isPerson = false;
