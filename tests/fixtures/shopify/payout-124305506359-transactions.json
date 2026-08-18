@@ -1,0 +1,49 @@
+[
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3595148492855",
+    "transactionDate": "2026-08-06T07:33:21Z",
+    "type": "TRANSFER",
+    "test": false,
+    "amount": {
+      "amount": "125.0"
+    },
+    "fee": {
+      "amount": "0.0"
+    },
+    "net": {
+      "amount": "125.0"
+    },
+    "sourceId": "124305506359",
+    "sourceType": "TRANSFER",
+    "adjustmentReason": null,
+    "associatedOrder": null,
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124305506359"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3594510762039",
+    "transactionDate": "2026-08-05T18:00:28Z",
+    "type": "REFUND",
+    "test": false,
+    "amount": {
+      "amount": "-125.0"
+    },
+    "fee": {
+      "amount": "0.0"
+    },
+    "net": {
+      "amount": "-125.0"
+    },
+    "sourceId": "188174565431",
+    "sourceType": "REFUND",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7472597303351",
+      "name": "#7035"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124305506359"
+    }
+  }
+]

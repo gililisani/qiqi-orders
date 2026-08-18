@@ -1,0 +1,1374 @@
+[
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3598426243127",
+    "transactionDate": "2026-08-09T01:02:07Z",
+    "type": "TRANSFER",
+    "test": false,
+    "amount": {
+      "amount": "-10657.54"
+    },
+    "fee": {
+      "amount": "0.0"
+    },
+    "net": {
+      "amount": "-10657.54"
+    },
+    "sourceId": "124344991799",
+    "sourceType": "TRANSFER",
+    "adjustmentReason": null,
+    "associatedOrder": null,
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3595826593847",
+    "transactionDate": "2026-08-06T21:26:22Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "58.9"
+    },
+    "fee": {
+      "amount": "1.63"
+    },
+    "net": {
+      "amount": "57.27"
+    },
+    "sourceId": "4261809651767",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7505826775095",
+      "name": "#7168"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3595732353079",
+    "transactionDate": "2026-08-06T19:45:15Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "336.4"
+    },
+    "fee": {
+      "amount": "7.87"
+    },
+    "net": {
+      "amount": "328.53"
+    },
+    "sourceId": "4261644501047",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7505671979063",
+      "name": "#7167"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3595503894583",
+    "transactionDate": "2026-08-06T15:56:24Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "110.0"
+    },
+    "fee": {
+      "amount": "3.55"
+    },
+    "net": {
+      "amount": "106.45"
+    },
+    "sourceId": "4261274320951",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7505262739511",
+      "name": "#7166"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3595501142071",
+    "transactionDate": "2026-08-06T15:53:18Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "158.9"
+    },
+    "fee": {
+      "amount": "3.88"
+    },
+    "net": {
+      "amount": "155.02"
+    },
+    "sourceId": "4261269405751",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7505257824311",
+      "name": "#7165"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3595435180087",
+    "transactionDate": "2026-08-06T14:54:41Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "255.8"
+    },
+    "fee": {
+      "amount": "6.06"
+    },
+    "net": {
+      "amount": "249.74"
+    },
+    "sourceId": "4261168283703",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7505154015287",
+      "name": "#7163"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3595402969143",
+    "transactionDate": "2026-08-06T14:29:15Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "651.9"
+    },
+    "fee": {
+      "amount": "19.53"
+    },
+    "net": {
+      "amount": "632.37"
+    },
+    "sourceId": "4261122932791",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7505106599991",
+      "name": "#7162"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3595320852535",
+    "transactionDate": "2026-08-06T13:01:00Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "168.9"
+    },
+    "fee": {
+      "amount": "5.28"
+    },
+    "net": {
+      "amount": "163.62"
+    },
+    "sourceId": "4261008506935",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7504974708791",
+      "name": "#7161"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3594991763511",
+    "transactionDate": "2026-08-06T03:50:21Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "58.9"
+    },
+    "fee": {
+      "amount": "2.04"
+    },
+    "net": {
+      "amount": "56.86"
+    },
+    "sourceId": "4260490051639",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7504236544055",
+      "name": "#7160"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3594896441399",
+    "transactionDate": "2026-08-06T01:17:20Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "261.9"
+    },
+    "fee": {
+      "amount": "8.03"
+    },
+    "net": {
+      "amount": "253.87"
+    },
+    "sourceId": "4260337877047",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7504078798903",
+      "name": "#7159"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3594810818615",
+    "transactionDate": "2026-08-06T00:03:43Z",
+    "type": "DISPUTE_REVERSAL",
+    "test": false,
+    "amount": {
+      "amount": "545.8"
+    },
+    "fee": {
+      "amount": "-15.0"
+    },
+    "net": {
+      "amount": "560.8"
+    },
+    "sourceId": "10353049655",
+    "sourceType": "DISPUTE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7344860561463",
+      "name": "#6579"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3594673389623",
+    "transactionDate": "2026-08-05T21:04:01Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "58.9"
+    },
+    "fee": {
+      "amount": "2.04"
+    },
+    "net": {
+      "amount": "56.86"
+    },
+    "sourceId": "4260033560631",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7503777169463",
+      "name": "#7158"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3594629972023",
+    "transactionDate": "2026-08-05T20:13:54Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "102.9"
+    },
+    "fee": {
+      "amount": "3.34"
+    },
+    "net": {
+      "amount": "99.56"
+    },
+    "sourceId": "4259951706167",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7503710486583",
+      "name": "#7157"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3594563813431",
+    "transactionDate": "2026-08-05T18:58:55Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "667.9"
+    },
+    "fee": {
+      "amount": "20.0"
+    },
+    "net": {
+      "amount": "647.9"
+    },
+    "sourceId": "4259850682423",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7503609004087",
+      "name": "#7156"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3594505814071",
+    "transactionDate": "2026-08-05T17:55:53Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "240.9"
+    },
+    "fee": {
+      "amount": "7.41"
+    },
+    "net": {
+      "amount": "233.49"
+    },
+    "sourceId": "4259761127479",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7503508799543",
+      "name": "#7155"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3594441097271",
+    "transactionDate": "2026-08-05T16:39:22Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "306.0"
+    },
+    "fee": {
+      "amount": "9.33"
+    },
+    "net": {
+      "amount": "296.67"
+    },
+    "sourceId": "4259660726327",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7503395815479",
+      "name": "#7154"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3594369368119",
+    "transactionDate": "2026-08-05T15:23:30Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "58.9"
+    },
+    "fee": {
+      "amount": "1.63"
+    },
+    "net": {
+      "amount": "57.27"
+    },
+    "sourceId": "4259560783927",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7503080423479",
+      "name": "#7153"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3594361077815",
+    "transactionDate": "2026-08-05T15:13:14Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "45.9"
+    },
+    "fee": {
+      "amount": "1.33"
+    },
+    "net": {
+      "amount": "44.57"
+    },
+    "sourceId": "4259546497079",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7503065251895",
+      "name": "#7152"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3594359701559",
+    "transactionDate": "2026-08-05T15:11:11Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "170.9"
+    },
+    "fee": {
+      "amount": "4.15"
+    },
+    "net": {
+      "amount": "166.75"
+    },
+    "sourceId": "4259543842871",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7503062237239",
+      "name": "#7151"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3594149330999",
+    "transactionDate": "2026-08-05T10:19:45Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "238.9"
+    },
+    "fee": {
+      "amount": "7.35"
+    },
+    "net": {
+      "amount": "231.55"
+    },
+    "sourceId": "4259214196791",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7502661484599",
+      "name": "#7150"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3594025402423",
+    "transactionDate": "2026-08-05T04:46:28Z",
+    "type": "DISPUTE_WITHDRAWAL",
+    "test": false,
+    "amount": {
+      "amount": "-186.0"
+    },
+    "fee": {
+      "amount": "15.0"
+    },
+    "net": {
+      "amount": "-201.0"
+    },
+    "sourceId": "10445914167",
+    "sourceType": "DISPUTE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7469188808759",
+      "name": "#7022"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3593896132663",
+    "transactionDate": "2026-08-05T03:12:52Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "108.9"
+    },
+    "fee": {
+      "amount": "3.51"
+    },
+    "net": {
+      "amount": "105.39"
+    },
+    "sourceId": "4258845294647",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7502095319095",
+      "name": "#7149"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3593602433079",
+    "transactionDate": "2026-08-04T21:32:41Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "58.9"
+    },
+    "fee": {
+      "amount": "1.63"
+    },
+    "net": {
+      "amount": "57.27"
+    },
+    "sourceId": "4258443919415",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7501699481655",
+      "name": "#7148"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3593193226295",
+    "transactionDate": "2026-08-04T13:58:04Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "252.0"
+    },
+    "fee": {
+      "amount": "5.97"
+    },
+    "net": {
+      "amount": "246.03"
+    },
+    "sourceId": "4257819820087",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7500092571703",
+      "name": "#7147"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3592574238775",
+    "transactionDate": "2026-08-03T23:07:35Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "34.9"
+    },
+    "fee": {
+      "amount": "1.33"
+    },
+    "net": {
+      "amount": "33.57"
+    },
+    "sourceId": "4256863486007",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7498932027447",
+      "name": "#7146"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3592515125303",
+    "transactionDate": "2026-08-03T21:54:14Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "565.9"
+    },
+    "fee": {
+      "amount": "13.03"
+    },
+    "net": {
+      "amount": "552.87"
+    },
+    "sourceId": "4256768458807",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7498838671415",
+      "name": "#7145"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3592395128887",
+    "transactionDate": "2026-08-03T19:32:18Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "215.9"
+    },
+    "fee": {
+      "amount": "5.16"
+    },
+    "net": {
+      "amount": "210.74"
+    },
+    "sourceId": "4256555008055",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7498648223799",
+      "name": "#7143"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3592354857015",
+    "transactionDate": "2026-08-03T18:49:00Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "108.9"
+    },
+    "fee": {
+      "amount": "2.75"
+    },
+    "net": {
+      "amount": "106.15"
+    },
+    "sourceId": "4256494911543",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7498589831223",
+      "name": "#7142"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3592348926007",
+    "transactionDate": "2026-08-03T18:44:11Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "108.9"
+    },
+    "fee": {
+      "amount": "3.51"
+    },
+    "net": {
+      "amount": "105.39"
+    },
+    "sourceId": "4256487669815",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7498582753335",
+      "name": "#7141"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3592346828855",
+    "transactionDate": "2026-08-03T18:42:37Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "517.8"
+    },
+    "fee": {
+      "amount": "15.58"
+    },
+    "net": {
+      "amount": "502.22"
+    },
+    "sourceId": "4256485113911",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7498580787255",
+      "name": "#7140"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3592289943607",
+    "transactionDate": "2026-08-03T17:50:05Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "463.5"
+    },
+    "fee": {
+      "amount": "13.97"
+    },
+    "net": {
+      "amount": "449.53"
+    },
+    "sourceId": "4256396116023",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7498497130551",
+      "name": "#7139"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3592153202743",
+    "transactionDate": "2026-08-03T15:13:00Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "58.9"
+    },
+    "fee": {
+      "amount": "2.04"
+    },
+    "net": {
+      "amount": "56.86"
+    },
+    "sourceId": "4256169328695",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7497837477943",
+      "name": "#7138"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3591829356599",
+    "transactionDate": "2026-08-03T05:54:47Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "90.0"
+    },
+    "fee": {
+      "amount": "2.96"
+    },
+    "net": {
+      "amount": "87.04"
+    },
+    "sourceId": "4255661490231",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7497133850679",
+      "name": "#7137"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3591569113143",
+    "transactionDate": "2026-08-03T01:02:53Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "308.9"
+    },
+    "fee": {
+      "amount": "7.25"
+    },
+    "net": {
+      "amount": "301.65"
+    },
+    "sourceId": "4255285346359",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7496728510519",
+      "name": "#7136"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3591519567927",
+    "transactionDate": "2026-08-03T00:13:25Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "82.0"
+    },
+    "fee": {
+      "amount": "2.15"
+    },
+    "net": {
+      "amount": "79.85"
+    },
+    "sourceId": "4255218991159",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7496669036599",
+      "name": "#7135"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3591486373943",
+    "transactionDate": "2026-08-02T23:34:39Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "220.9"
+    },
+    "fee": {
+      "amount": "6.82"
+    },
+    "net": {
+      "amount": "214.08"
+    },
+    "sourceId": "4255167807543",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7496620015671",
+      "name": "#7134"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3591078871095",
+    "transactionDate": "2026-08-02T15:55:37Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "75.9"
+    },
+    "fee": {
+      "amount": "2.01"
+    },
+    "net": {
+      "amount": "73.89"
+    },
+    "sourceId": "4254475223095",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7495943815223",
+      "name": "#7131"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3590945308727",
+    "transactionDate": "2026-08-02T13:01:12Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "110.0"
+    },
+    "fee": {
+      "amount": "3.55"
+    },
+    "net": {
+      "amount": "106.45"
+    },
+    "sourceId": "4254247911479",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7495717978167",
+      "name": "#7130"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3590852182071",
+    "transactionDate": "2026-08-02T10:43:58Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "219.9"
+    },
+    "fee": {
+      "amount": "5.25"
+    },
+    "net": {
+      "amount": "214.65"
+    },
+    "sourceId": "4254073651255",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7495525662775",
+      "name": "#7129"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3590457163831",
+    "transactionDate": "2026-08-02T00:48:28Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "58.9"
+    },
+    "fee": {
+      "amount": "1.63"
+    },
+    "net": {
+      "amount": "57.27"
+    },
+    "sourceId": "4253477863479",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7494786023479",
+      "name": "#7128"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3590412697655",
+    "transactionDate": "2026-08-01T23:58:03Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "308.9"
+    },
+    "fee": {
+      "amount": "9.41"
+    },
+    "net": {
+      "amount": "299.49"
+    },
+    "sourceId": "4253408264247",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7494726811703",
+      "name": "#7127"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3590026166327",
+    "transactionDate": "2026-08-01T17:16:31Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "108.9"
+    },
+    "fee": {
+      "amount": "2.75"
+    },
+    "net": {
+      "amount": "106.15"
+    },
+    "sourceId": "4252705751095",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7494125813815",
+      "name": "#7126"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3589986779191",
+    "transactionDate": "2026-08-01T16:39:12Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "82.0"
+    },
+    "fee": {
+      "amount": "2.15"
+    },
+    "net": {
+      "amount": "79.85"
+    },
+    "sourceId": "4252635463735",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7494061555767",
+      "name": "#7125"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3589823922231",
+    "transactionDate": "2026-08-01T13:48:41Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "46.9"
+    },
+    "fee": {
+      "amount": "1.68"
+    },
+    "net": {
+      "amount": "45.22"
+    },
+    "sourceId": "4252353822775",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7493739675703",
+      "name": "#7124"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3589819826231",
+    "transactionDate": "2026-08-01T13:43:33Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "398.9"
+    },
+    "fee": {
+      "amount": "12.07"
+    },
+    "net": {
+      "amount": "386.83"
+    },
+    "sourceId": "4252347465783",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7493732696119",
+      "name": "#7123"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3589794168887",
+    "transactionDate": "2026-08-01T13:06:22Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "58.9"
+    },
+    "fee": {
+      "amount": "1.63"
+    },
+    "net": {
+      "amount": "57.27"
+    },
+    "sourceId": "4252306669623",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7493685936183",
+      "name": "#7122"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3589304221751",
+    "transactionDate": "2026-08-01T00:52:23Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "470.9"
+    },
+    "fee": {
+      "amount": "10.9"
+    },
+    "net": {
+      "amount": "460.0"
+    },
+    "sourceId": "4251485667383",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7492642537527",
+      "name": "#7121"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3589144477751",
+    "transactionDate": "2026-07-31T21:40:16Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "215.9"
+    },
+    "fee": {
+      "amount": "6.67"
+    },
+    "net": {
+      "amount": "209.23"
+    },
+    "sourceId": "4251213135927",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7492401266743",
+      "name": "#7120"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3588842684471",
+    "transactionDate": "2026-07-31T17:43:47Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "208.9"
+    },
+    "fee": {
+      "amount": "5.0"
+    },
+    "net": {
+      "amount": "203.9"
+    },
+    "sourceId": "4250751991863",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7491990126647",
+      "name": "#7119"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3588567826487",
+    "transactionDate": "2026-07-31T16:29:37Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "519.8"
+    },
+    "fee": {
+      "amount": "12.0"
+    },
+    "net": {
+      "amount": "507.8"
+    },
+    "sourceId": "4250391216183",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7491636494391",
+      "name": "#7118"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3588549181495",
+    "transactionDate": "2026-07-31T16:07:47Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "58.9"
+    },
+    "fee": {
+      "amount": "1.63"
+    },
+    "net": {
+      "amount": "57.27"
+    },
+    "sourceId": "4250360545335",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7491597860919",
+      "name": "#7117"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3588505468983",
+    "transactionDate": "2026-07-31T15:20:39Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "138.0"
+    },
+    "fee": {
+      "amount": "3.41"
+    },
+    "net": {
+      "amount": "134.59"
+    },
+    "sourceId": "4250287931447",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7491522461751",
+      "name": "#7116"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3588322033719",
+    "transactionDate": "2026-07-31T11:13:17Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "216.0"
+    },
+    "fee": {
+      "amount": "6.67"
+    },
+    "net": {
+      "amount": "209.33"
+    },
+    "sourceId": "4249979224119",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7491160178743",
+      "name": "#7114"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3588205314103",
+    "transactionDate": "2026-07-31T05:52:54Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "63.9"
+    },
+    "fee": {
+      "amount": "2.19"
+    },
+    "net": {
+      "amount": "61.71"
+    },
+    "sourceId": "4249764069431",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7490821226551",
+      "name": "#7113"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  },
+  {
+    "id": "gid://shopify/ShopifyPaymentsBalanceTransaction/3588046618679",
+    "transactionDate": "2026-07-31T02:36:56Z",
+    "type": "CHARGE",
+    "test": false,
+    "amount": {
+      "amount": "82.0"
+    },
+    "fee": {
+      "amount": "2.15"
+    },
+    "net": {
+      "amount": "79.85"
+    },
+    "sourceId": "4249514475575",
+    "sourceType": "CHARGE",
+    "adjustmentReason": null,
+    "associatedOrder": {
+      "id": "gid://shopify/Order/7490521137207",
+      "name": "#7111"
+    },
+    "associatedPayout": {
+      "id": "gid://shopify/ShopifyPaymentsPayout/124344991799"
+    }
+  }
+]

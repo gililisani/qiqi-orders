@@ -22,8 +22,8 @@ async function main() {
     shopifyPaymentsAccount {
       activated
       balance { amount currencyCode }
-      payoutSchedule { interval weeklyAnchor }
-      payouts(first: 20) {
+
+      payouts(first: 20, reverse: true) {
         nodes {
           id legacyResourceId issuedAt status transactionType
           net { amount currencyCode }
@@ -44,7 +44,7 @@ async function main() {
     }
   }`);
   const acct = payouts.shopifyPaymentsAccount;
-  console.log('schedule:', JSON.stringify(acct.payoutSchedule), 'balance:', JSON.stringify(acct.balance));
+  console.log('balance:', JSON.stringify(acct.balance));
   for (const p of acct.payouts.nodes) {
     console.log(
       `PAYOUT ${p.legacyResourceId} ${p.issuedAt} ${p.status} net=$${p.net.amount} ` +
@@ -53,13 +53,18 @@ async function main() {
   }
   fs.writeFileSync(path.join(OUT, 'payouts-list.json'), JSON.stringify(acct, null, 2));
 
-  // Balance transactions for the two most recent paid payouts.
-  const recent = acct.payouts.nodes.filter((p: any) => p.status === 'PAID').slice(0, 2);
-  for (const p of recent) {
-    const txns = await shopifyPaginate(
-      `query BT($q: String!, $cursor: String) {
+  // Balance transactions: the payout_id query filter is silently invalid
+  // (returns everything), so page newest-first and group locally.
+  const recent = acct.payouts.nodes.filter((p: any) => p.status === 'PAID').slice(0, 6);
+  const wanted = new Set(recent.map((p: any) => `gid://shopify/ShopifyPaymentsPayout/${p.legacyResourceId}`));
+  const grouped = new Map<string, any[]>();
+  let cursor: string | null = null;
+  let fetched = 0;
+  while (fetched < 3000) {
+    const page: any = await shopifyGraphQL(
+      `query BT($cursor: String) {
         shopifyPaymentsAccount {
-          balanceTransactions(first: 100, after: $cursor, query: $q) {
+          balanceTransactions(first: 100, after: $cursor, reverse: true) {
             nodes {
               id transactionDate type test
               amount { amount }
@@ -74,13 +79,33 @@ async function main() {
           }
         }
       }`,
-      { q: `payout_id:${p.legacyResourceId}` },
-      'shopifyPaymentsAccount.balanceTransactions',
+      { cursor },
     );
-    console.log(`payout ${p.legacyResourceId}: ${txns.length} balance transactions`);
+    const conn = page.shopifyPaymentsAccount.balanceTransactions;
+    fetched += conn.nodes.length;
+    for (const t of conn.nodes) {
+      const pid = t.associatedPayout?.id;
+      if (pid && wanted.has(pid)) {
+        if (!grouped.has(pid)) grouped.set(pid, []);
+        grouped.get(pid)!.push(t);
+      }
+    }
+    if (!conn.pageInfo.hasNextPage) break;
+    cursor = conn.pageInfo.endCursor;
+  }
+  for (const p of recent) {
+    const gid = `gid://shopify/ShopifyPaymentsPayout/${p.legacyResourceId}`;
+    const txns = grouped.get(gid) ?? [];
     const byType = new Map<string, number>();
-    for (const t of txns as any[]) byType.set(t.type, (byType.get(t.type) ?? 0) + 1);
-    console.log('  types:', JSON.stringify([...byType.entries()]));
+    let net = 0;
+    for (const t of txns) {
+      byType.set(t.type, (byType.get(t.type) ?? 0) + 1);
+      net += Math.round(Number(t.net.amount) * 100);
+    }
+    console.log(
+      `payout ${p.legacyResourceId} (${p.issuedAt.slice(0, 10)}): ${txns.length} txns, ` +
+        `types=${JSON.stringify([...byType.entries()])}, txn-net=$${(net / 100).toFixed(2)} vs payout net=$${p.net.amount}`,
+    );
     fs.writeFileSync(path.join(OUT, `payout-${p.legacyResourceId}-transactions.json`), JSON.stringify(txns, null, 2));
   }
 }

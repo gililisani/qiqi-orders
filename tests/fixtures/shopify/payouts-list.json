@@ -1,0 +1,873 @@
+{
+  "activated": true,
+  "balance": [
+    {
+      "amount": "5359.33",
+      "currencyCode": "USD"
+    }
+  ],
+  "payouts": {
+    "nodes": [
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/124572958775",
+        "legacyResourceId": "124572958775",
+        "issuedAt": "2026-08-17T00:00:00Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "8582.05",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.03"
+          },
+          "adjustmentsGross": {
+            "amount": "-2.09"
+          },
+          "chargesFee": {
+            "amount": "249.02"
+          },
+          "chargesGross": {
+            "amount": "8872.09"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "-38.9"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/124483305527",
+        "legacyResourceId": "124483305527",
+        "issuedAt": "2026-08-12T07:26:44Z",
+        "status": "PAID",
+        "transactionType": "WITHDRAWAL",
+        "net": {
+          "amount": "-29.9",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "0.0"
+          },
+          "chargesGross": {
+            "amount": "0.0"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "-29.9"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/124344991799",
+        "legacyResourceId": "124344991799",
+        "issuedAt": "2026-08-10T00:00:00Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "10657.54",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "359.8"
+          },
+          "chargesFee": {
+            "amount": "294.86"
+          },
+          "chargesGross": {
+            "amount": "10592.6"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "0.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/124305506359",
+        "legacyResourceId": "124305506359",
+        "issuedAt": "2026-08-06T07:33:21Z",
+        "status": "PAID",
+        "transactionType": "WITHDRAWAL",
+        "net": {
+          "amount": "-125.0",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "0.0"
+          },
+          "chargesGross": {
+            "amount": "0.0"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "-125.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/124145598519",
+        "legacyResourceId": "124145598519",
+        "issuedAt": "2026-08-03T03:59:59Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "576.3",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "16.3"
+          },
+          "chargesGross": {
+            "amount": "592.6"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "0.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/124137078839",
+        "legacyResourceId": "124137078839",
+        "issuedAt": "2026-08-03T00:00:00Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "12001.87",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "355.53"
+          },
+          "chargesGross": {
+            "amount": "12357.4"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "0.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/123930443831",
+        "legacyResourceId": "123930443831",
+        "issuedAt": "2026-07-27T03:59:59Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "722.89",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "19.71"
+          },
+          "chargesGross": {
+            "amount": "742.6"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "0.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/123921301559",
+        "legacyResourceId": "123921301559",
+        "issuedAt": "2026-07-27T00:00:00Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "6712.17",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "199.63"
+          },
+          "chargesGross": {
+            "amount": "6911.8"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "0.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/123714240567",
+        "legacyResourceId": "123714240567",
+        "issuedAt": "2026-07-20T03:59:59Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "57.27",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "1.63"
+          },
+          "chargesGross": {
+            "amount": "58.9"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "0.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/123708014647",
+        "legacyResourceId": "123708014647",
+        "issuedAt": "2026-07-20T00:00:00Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "9144.07",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.02"
+          },
+          "adjustmentsGross": {
+            "amount": "1.15"
+          },
+          "chargesFee": {
+            "amount": "278.89"
+          },
+          "chargesGross": {
+            "amount": "9421.83"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "0.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/123496300599",
+        "legacyResourceId": "123496300599",
+        "issuedAt": "2026-07-13T03:59:59Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "135.47",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "3.43"
+          },
+          "chargesGross": {
+            "amount": "138.9"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "0.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/123493417015",
+        "legacyResourceId": "123493417015",
+        "issuedAt": "2026-07-13T00:00:00Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "5188.91",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "170.44"
+          },
+          "chargesGross": {
+            "amount": "5739.35"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "-380.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/123271086135",
+        "legacyResourceId": "123271086135",
+        "issuedAt": "2026-07-06T00:00:00Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "9159.41",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "301.52"
+          },
+          "chargesGross": {
+            "amount": "9460.93"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "0.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/123075002423",
+        "legacyResourceId": "123075002423",
+        "issuedAt": "2026-06-29T03:59:59Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "1215.63",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "35.07"
+          },
+          "chargesGross": {
+            "amount": "1276.62"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "-25.92"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/123068186679",
+        "legacyResourceId": "123068186679",
+        "issuedAt": "2026-06-29T00:00:00Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "10682.43",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "320.99"
+          },
+          "chargesGross": {
+            "amount": "11053.82"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "-50.4"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/122862239799",
+        "legacyResourceId": "122862239799",
+        "issuedAt": "2026-06-22T03:59:59Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "151.11",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "3.79"
+          },
+          "chargesGross": {
+            "amount": "154.9"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "0.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/122859454519",
+        "legacyResourceId": "122859454519",
+        "issuedAt": "2026-06-22T00:00:00Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "8604.15",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "-4.92"
+          },
+          "chargesFee": {
+            "amount": "286.06"
+          },
+          "chargesGross": {
+            "amount": "9683.97"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "-788.84"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/122670841911",
+        "legacyResourceId": "122670841911",
+        "issuedAt": "2026-06-15T03:59:59Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "619.41",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "15.19"
+          },
+          "chargesGross": {
+            "amount": "634.6"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "0.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/122656096311",
+        "legacyResourceId": "122656096311",
+        "issuedAt": "2026-06-15T00:00:00Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "8227.3",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "15.0"
+          },
+          "adjustmentsGross": {
+            "amount": "-545.8"
+          },
+          "chargesFee": {
+            "amount": "270.26"
+          },
+          "chargesGross": {
+            "amount": "9058.36"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "0.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      },
+      {
+        "id": "gid://shopify/ShopifyPaymentsPayout/122457620535",
+        "legacyResourceId": "122457620535",
+        "issuedAt": "2026-06-08T03:59:59Z",
+        "status": "PAID",
+        "transactionType": "DEPOSIT",
+        "net": {
+          "amount": "80.97",
+          "currencyCode": "USD"
+        },
+        "summary": {
+          "adjustmentsFee": {
+            "amount": "0.0"
+          },
+          "adjustmentsGross": {
+            "amount": "0.0"
+          },
+          "chargesFee": {
+            "amount": "3.03"
+          },
+          "chargesGross": {
+            "amount": "84.0"
+          },
+          "refundsFee": {
+            "amount": "0.0"
+          },
+          "refundsFeeGross": {
+            "amount": "0.0"
+          },
+          "reservedFundsFee": {
+            "amount": "0.0"
+          },
+          "reservedFundsGross": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsFee": {
+            "amount": "0.0"
+          },
+          "retriedPayoutsGross": {
+            "amount": "0.0"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -79,8 +79,25 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
 - **Amount-only refunds are real**: #7084 refund has zero refundLineItems.
 - **Per-transaction processing fees are exposed** (amount, rate, rateName)
   on shopify_payments transactions — feeds Loop E precisely.
-- Fixtures: `tests/fixtures/shopify/raw/` (gitignored, real PII; 13
-  archetypes incl. split-tender, both refund kinds, draft, POS #1012).
+- Fixtures: `tests/fixtures/shopify/raw/` (gitignored, real PII; 14 order
+  archetypes incl. split-tender, both refund kinds, draft, POS #1012,
+  NL VAT) + redacted committed copies in `tests/fixtures/shopify/`.
+- **Payout facts (captured 2026-08-18)**: weekly Monday payouts arrive as
+  TWO deposits — main week batch (00:00:00Z) + a small late-settling
+  charges batch (03:59:59Z; plain charges from older orders, NOT
+  Shop-related). **Negative payouts are real** (−$29.90 on 2026-08-12,
+  −$125.00 on 2026-08-06: refund-only days → Shopify withdraws from the
+  bank). Balance-transaction types seen: CHARGE, REFUND, TRANSFER,
+  DISPUTE_WITHDRAWAL, DISPUTE_REVERSAL, SHOP_CASH_CREDIT,
+  TAX_ADJUSTMENT_DEBIT (= Shop-remitted marketplace tax deduction,
+  confirming the channelLiable design). Invariant: a payout's balance
+  txns include its TRANSFER (= −net), so composition sums exactly to net
+  — used as a validation gate. API traps: payouts list is oldest-first
+  (need reverse:true) and the `payout_id:` query filter is silently
+  ignored → group balance txns locally by associatedPayout.
+- Scopes added 2026-08-18 (app version 3): read_shopify_payments_accounts,
+  read_shopify_payments_disputes. Scope additions require accepting the
+  update in the store admin, then a token re-exchange.
 
 ## NetSuite facts (surveyed 2026-08-17, read-only SuiteQL)
 
