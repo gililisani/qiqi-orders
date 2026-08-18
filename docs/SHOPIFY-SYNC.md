@@ -149,16 +149,28 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
   original transaction dates; no special period logic needed.
 - **EUR-period correction**: owner has no preference → we'll correct in
   the current open period (simplest, auditable).
-- Payout reconciliation today is manual one-by-one bank rec (owner
-  confirming details with bookkeeper).
+- **Payout booking (CFO, 2026-08-18)** — current manual flow: bookkeeper
+  downloads Shopify transactions monthly → NS Banking Import into 100501
+  (same per PayPal/Affirm) → manual Match Bank Data against payments →
+  bank deposits matched against 100501, difference = fees → fees journal.
+  CFO's ideal (= HUB's Amazon FBA pattern): **Vendor Bill to vendor
+  "Shopify" for fees (622070) + payment journal against 100501.**
+  Loop E implements exactly that, PER PAYOUT (not monthly — each bank
+  deposit reconciles against a self-contained record set; monthly
+  consolidation stays available as a config flag). Loop A's per-order
+  payments + refunds make the ledger mirror Shopify, obsoleting the
+  transaction-upload-and-match steps; Loop D is the automated check.
+  OPEN with CFO: optional per-payout net journal 100501 → "payouts in
+  transit" for 1:1 bank matching. PayPal/Affirm keep the manual flow in
+  v1 (~7% of volume), automated later.
 
 ## Open questions
 
 **Accounting (small, non-blocking for build):**
 1. NS account for the international VAT/duty pass-through (courier
    payable). Also: which NS item/line type carries it on the invoice.
-2. Payout booking: Deposit vs Journal Entry (bookkeeper preference), and
-   fees per payout (recommended — matches bank statement) vs per order.
+2. CFO option: per-payout net journal to a "payouts in transit" account
+   for 1:1 bank matching (see payout booking decision above).
 3. Amount-only refunds (no line items): which item/account takes the
    credit.
 4. Chargeback flow specifics once Loop E surfaces disputes.
