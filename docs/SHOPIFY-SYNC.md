@@ -101,7 +101,7 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
 - No B2B company-id stamp field observed yet — B2B matching may rely on
   their customer-id stamp on the contact; confirm against a B2B chain.
 
-## Data model (Supabase, staging first) — ☐
+## Data model (Supabase, staging first) — ☑ 2026-08-17
 
 - `shopify_sync_config` — mode, cursor timestamps per loop, feature gates.
 - `shopify_order_sync` — one row per Shopify order: shopify ids (order,
@@ -154,8 +154,11 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
   order-level code discounts (net = originalTotal − allocations); refunds
   never mutate as-sold line data (plan lines AS-SOLD, totals CURRENT);
   POS #1012 is a SKU-less custom item (gate errors it, correctly).
-- ☐ **Phase 2 — engine + state** (sandbox mode): migrations, ensure-steps,
-  poll cursor, Loop A end-to-end against NS sandbox with real orders.
+- ◐ **Phase 2 — engine + state**: 2a DONE 2026-08-17 (migration applied to
+  staging; L1 client w/ 24h token auto-refresh; cursor poller with 10-min
+  overlap, mode-aware; cron */15; live shadow run: 42/42 real orders clean).
+  2b remaining: ensure-pipeline NS writes — blocked on sandbox license
+  renewal (expired 7/28/2026, account manager engaged 2026-08-17).
 - ☐ **Phase 3 — Loops B & C** (sandbox): IFs (lot rule), credit memos
   (line-level, tax-reversing, amount-only, restock flag).
 - ☐ **Phase 4 — Loops D & E**: nightly recon, price variance, payout
