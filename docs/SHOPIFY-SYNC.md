@@ -148,8 +148,12 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
 - ☑ **Phase 0 — access + discovery** (2026-08-17): custom app (read-only
   scopes), token exchange script, smoke test, store measurement, 13
   fixtures, NS survey. Scripts in `scripts/shopify/`.
-- ☐ **Phase 1 — core transforms** (pure, fixture-tested): validate,
-  customerMatch, orderTransform incl. split tender + multi-tax; Vitest.
+- ☑ **Phase 1 — core transforms** (2026-08-17): `lib/shopify/core/`
+  (money/validate/customerMatch/orderTransform), 23 Vitest tests over 13
+  redacted fixtures. Facts encoded: `discountedTotalSet` excludes
+  order-level code discounts (net = originalTotal − allocations); refunds
+  never mutate as-sold line data (plan lines AS-SOLD, totals CURRENT);
+  POS #1012 is a SKU-less custom item (gate errors it, correctly).
 - ☐ **Phase 2 — engine + state** (sandbox mode): migrations, ensure-steps,
   poll cursor, Loop A end-to-end against NS sandbox with real orders.
 - ☐ **Phase 3 — Loops B & C** (sandbox): IFs (lot rule), credit memos
