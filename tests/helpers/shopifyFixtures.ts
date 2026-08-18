@@ -11,7 +11,7 @@ export function loadOrder(name: string): ShopifyOrder {
 export function allFixtureNames(): string[] {
   return fs
     .readdirSync(DIR)
-    .filter((f) => f.endsWith('.json'))
+    .filter((f) => f.endsWith('.json') && !f.startsWith('payout'))
     .map((f) => f.replace(/\.json$/, ''));
 }
 
