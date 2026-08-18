@@ -262,6 +262,8 @@ export interface BuyerInfo {
   displayName: string;
   firstName: string | null;
   lastName: string | null;
+  billingAddress: ShopifyAddress | null;
+  shippingAddress: ShopifyAddress | null;
 }
 
 /** One NS customer candidate, as found by the engine's lookups. */

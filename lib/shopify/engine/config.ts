@@ -34,6 +34,10 @@ export interface EngineConfig {
   };
   /** Ship method for SOs carrying a shipping cost (NetScore SOs use 1171 = "FedEx/USPS/More"). */
   shipMethodId: string;
+  /** Payment terms for Shopify customers: "Upfront on Sales order" (owner 2026-08-18). */
+  termsId: string;
+  /** "Shopify" sales-rep employee — Shopify orders have no human rep (owner 2026-08-18). */
+  salesRepId: string;
   /** Our externalid namespaces (NetScore never used externalid — the field is ours). */
   externalIds: {
     customer: (buyerKey: string) => string;
@@ -57,15 +61,21 @@ export const ENGINE_CONFIG: EngineConfig = {
     // 100503 Affirm — QIQI INC (USD)
     affirm: '1026',
   },
+  // Sandbox item ids (owner-created 2026-08-18): 1432 → acct 240504
+  // "Duties & Taxes (DDP)", 1433 → acct 240502 "Marketplace Tax - Shop
+  // Remitted". Re-verify ids in production before cutover.
   taxItems: {
-    merchantLiable: null, // pending: pass-through items to be created in NS
-    channelLiable: null,
+    merchantLiable: '1432',
+    channelLiable: '1433',
   },
   customerDefaults: {
     b2b: { category: '4', class: '3' },
     b2c: { category: '10', class: '4' },
   },
   shipMethodId: '1171',
+  termsId: '8',
+  salesRepId: '126620', // sandbox id; create the "Shopify" employee in prod at cutover
+
   externalIds: {
     customer: (buyerKey) => `SHOP-${buyerKey}`, // SHOP-CO-<companyId> / SHOP-CUST-<customerId>
     salesOrder: (id) => `SHOPORD-${id}`,

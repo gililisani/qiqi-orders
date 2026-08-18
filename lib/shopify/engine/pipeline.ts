@@ -179,11 +179,12 @@ async function ensureCustomer(
 
   // Gather candidates for the pure decision ladder.
   const candidates: NsCustomerCandidate[] = [];
-  const classification = new Map<string, { category: string | null; class: string | null }>();
-  const note = (r: any) => classification.set(String(r.id), { category: r.category ?? null, class: r.custentity3 ?? null });
+  const classification = new Map<string, { category: string | null; class: string | null; terms: string | null }>();
+  const note = (r: any) =>
+    classification.set(String(r.id), { category: r.category ?? null, class: r.custentity3 ?? null, terms: r.terms ?? null });
   if (buyer.shopifyCustomerId) {
     const rows = await ns.suiteQL<any>(
-      `SELECT id, entityid, companyname, email, isinactive, category, custentity3 FROM customer WHERE custentity_shop_cust_id = ${Number(buyer.shopifyCustomerId)}`,
+      `SELECT id, entityid, companyname, email, isinactive, category, custentity3, terms FROM customer WHERE custentity_shop_cust_id = ${Number(buyer.shopifyCustomerId)}`,
     );
     rows.forEach(note);
     candidates.push(
@@ -199,7 +200,7 @@ async function ensureCustomer(
   }
   if (buyer.email) {
     const rows = await ns.suiteQL<any>(
-      `SELECT id, entityid, companyname, email, isinactive, category, custentity3 FROM customer WHERE LOWER(email) = '${esc(buyer.email)}'`,
+      `SELECT id, entityid, companyname, email, isinactive, category, custentity3, terms FROM customer WHERE LOWER(email) = '${esc(buyer.email)}'`,
     );
     rows.forEach(note);
     const seen = new Set(candidates.map((c) => c.nsCustomerId));
@@ -235,12 +236,38 @@ async function ensureCustomer(
     const known = classification.get(decision.nsCustomerId);
     if (!known?.category) stamp.category = { id: defaults.category };
     if (!known?.class) stamp.custentity3 = { id: defaults.class };
+    // Terms: fill only when missing — never fight an existing arrangement.
+    if (!known?.terms) stamp.terms = { id: config.termsId };
     await ns.updateRecord('customer', decision.nsCustomerId, stamp);
     return { nsCustomerId: decision.nsCustomerId, via: decision.via, wasCreated: false };
   }
 
   // Create — always with stamps, per principle 5.
   const defaults = config.customerDefaults[buyer.kind];
+  // Address book: CPA wants sales-by-state visible on the customer record.
+  const addressItems: Array<Record<string, unknown>> = [];
+  const toNsAddress = (a: NonNullable<typeof buyer.billingAddress>) => ({
+    addressee: a.name ?? buyer.displayName,
+    addr1: a.address1,
+    city: a.city,
+    state: a.provinceCode,
+    zip: a.zip,
+    country: { id: a.countryCodeV2 ?? 'US' },
+  });
+  const billing = buyer.billingAddress;
+  const shipping = buyer.shippingAddress;
+  const sameAddress =
+    billing && shipping && billing.address1 === shipping.address1 && billing.zip === shipping.zip;
+  if (billing) {
+    addressItems.push({
+      defaultBilling: true,
+      defaultShipping: Boolean(sameAddress || !shipping),
+      addressBookAddress: toNsAddress(billing),
+    });
+  }
+  if (shipping && !sameAddress) {
+    addressItems.push({ defaultShipping: true, addressBookAddress: toNsAddress(shipping) });
+  }
   const payload: Record<string, unknown> = {
     externalId: extId,
     subsidiary: { id: config.subsidiaryId },
@@ -248,6 +275,9 @@ async function ensureCustomer(
     custentity_shop_cust_id: buyer.shopifyCustomerId ? Number(buyer.shopifyCustomerId) : null,
     category: { id: defaults.category },
     custentity3: { id: defaults.class },
+    terms: { id: config.termsId },
+    salesRep: { id: config.salesRepId },
+    ...(addressItems.length ? { addressBook: { items: addressItems } } : {}),
   };
   if (buyer.kind === 'b2b') {
     payload.isPerson = false;

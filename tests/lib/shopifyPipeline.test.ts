@@ -61,6 +61,10 @@ describe('runOrderPipeline', () => {
     expect(cust.payload.custentity_shop_cust_id).toBe(Number(plan.buyer.shopifyCustomerId));
     expect(cust.payload.category).toEqual({ id: '10' });
     expect(cust.payload.custentity3).toEqual({ id: '4' });
+    expect(cust.payload.terms).toEqual({ id: '8' }); // Upfront on Sales order
+    expect(cust.payload.salesRep).toEqual({ id: CONFIG.salesRepId }); // "Shopify"
+    expect(cust.payload.addressBook.items.length).toBeGreaterThan(0);
+    expect(cust.payload.addressBook.items[0].defaultBilling).toBe(true);
     expect(cust.payload.externalId).toContain('CUST-');
 
     const so = creates.find((c) => c.type === 'salesOrder')!;
@@ -133,8 +137,9 @@ describe('runOrderPipeline', () => {
 
   it('tax lines without a configured tax item stop the order loudly', async () => {
     const plan = buildOrderPlan(loadOrder('intl-vat-nl'));
+    const unconfigured: EngineConfig = { ...CONFIG, taxItems: { merchantLiable: null, channelLiable: null } };
     const { ns, creates } = fakeNs();
-    await expect(runOrderPipeline(plan, ns, CONFIG)).rejects.toThrow(/merchant-liable tax/);
+    await expect(runOrderPipeline(plan, ns, unconfigured)).rejects.toThrow(/merchant-liable tax/);
     expect(creates).toEqual([]);
   });
 
