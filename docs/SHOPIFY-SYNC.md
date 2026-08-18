@@ -115,14 +115,23 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
 
 ## Accounting decisions (owner, 2026-08-17)
 
-- **US sales tax: not collected** (below nexus threshold; Avalara+NS nexus
-  later, triggered in Shopify when the time comes). Anomaly found: 2 US
-  orders charged tax in 90d (US-VA $4.92, US-NY $3.50 = #7201) — VA/NY
-  likely enabled by mistake in Shopify tax settings; owner to check.
-- **International tax (EU VAT / CA / CH etc.)**: Shopify computes; we
-  collect and pass through to the courier (DDP-like). ~$1,650/90d. Books
-  as a pass-through liability, NOT revenue/tax-payable-to-gov. NS account
-  for this pass-through: **TBD** (remaining question below).
+- **US sales tax: not collected by us** (below nexus; Avalara+NS nexus
+  later). The 2 US-taxed orders in 90d are **Shop-app marketplace orders**
+  (`channelLiable: true` on every tax line): Shopify collects AND remits;
+  the money passes through and is deducted from the payout. Not our
+  liability to a government — but it must be booked to a "marketplace tax
+  (Shop-remitted)" pass-through cleared by the payout, never revenue.
+- **International tax (EU VAT / CA / CH etc.)**: `channelLiable: null` →
+  merchant-liable. We collect and pass to the courier (DDP). ~$1,650/90d.
+  Books to a "duties & taxes pass-through (courier)" liability, cleared by
+  courier vendor bills. Never revenue. (NetScore books this to **410000
+  Sales revenue** via a "Shopify Tax Item" Service-for-Sale item —
+  overstating revenue by all VAT ever collected; reclass JE is a
+  post-cutover CPA item.) NS account numbers: **TBD**.
+- **Tax line rule (implemented in core)**: every PlanTaxLine carries
+  `channelLiable`; the engine maps true → marketplace pass-through,
+  false → courier pass-through. Fixture proof: #7201 (Shop, true) vs
+  #6582 (NL VAT, false), test-asserted.
 - **Clearing accounts** (existing): `100501` Shopify — QIQI INC (USD)
   [Shopify Payments + Shop Pay + Shop Cash all land here], `100503`
   Affirm, `100504` PayPal.

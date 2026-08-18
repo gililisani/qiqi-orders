@@ -18,6 +18,13 @@ export interface ShopifyTaxLine {
   title: string;
   rate?: number | null;
   ratePercentage?: number | null;
+  /**
+   * true = the sales channel (e.g. the Shop app as marketplace facilitator)
+   * collects AND remits this tax — it passes through us momentarily and is
+   * deducted from the payout. null/false = merchant-liable (our intl
+   * VAT/duties, passed to the courier under DDP).
+   */
+  channelLiable?: boolean | null;
   priceSet: MoneyBag;
 }
 
@@ -184,6 +191,12 @@ export interface PlanTaxLine {
   title: string;
   ratePercentage: number | null;
   amountCents: number;
+  /**
+   * Drives the NS account: channel-liable tax → "marketplace tax (Shop
+   * remitted)" liability, cleared by the payout deduction; merchant-liable
+   * → "duties & taxes pass-through (courier/DDP)" liability. Never revenue.
+   */
+  channelLiable: boolean;
 }
 
 export interface PlanLine {

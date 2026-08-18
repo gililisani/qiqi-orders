@@ -16,6 +16,7 @@
   "tags": [],
   "note": null,
   "poNumber": null,
+  "updatedAt": "2023-06-25T12:53:36Z",
   "customer": null,
   "purchasingEntity": null,
   "billingAddress": null,
@@ -115,6 +116,7 @@
             "title": "Missouri State Tax",
             "rate": 0.04225,
             "ratePercentage": 4.225,
+            "channelLiable": false,
             "priceSet": {
               "shopMoney": {
                 "amount": "0.0"
@@ -125,6 +127,7 @@
             "title": "Greene County Tax",
             "rate": 0.0175,
             "ratePercentage": 1.75,
+            "channelLiable": false,
             "priceSet": {
               "shopMoney": {
                 "amount": "0.0"
@@ -135,6 +138,7 @@
             "title": "Springfield City Tax",
             "rate": 0.02125,
             "ratePercentage": 2.125,
+            "channelLiable": false,
             "priceSet": {
               "shopMoney": {
                 "amount": "0.0"

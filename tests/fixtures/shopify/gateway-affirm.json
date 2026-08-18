@@ -19,6 +19,7 @@
   ],
   "note": null,
   "poNumber": null,
+  "updatedAt": "2026-08-11T13:55:01Z",
   "customer": {
     "id": "gid://shopify/Customer/8830248419383",
     "email": "user-ffb546@example.com",

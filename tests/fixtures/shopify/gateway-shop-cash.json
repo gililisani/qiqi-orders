@@ -16,6 +16,7 @@
   "tags": [],
   "note": null,
   "poNumber": null,
+  "updatedAt": "2026-08-12T15:39:33Z",
   "customer": {
     "id": "gid://shopify/Customer/9121099415607",
     "email": "user-d9f164@example.com",
@@ -96,6 +97,7 @@
       "title": "New York State Tax",
       "rate": 0.04,
       "ratePercentage": 4,
+      "channelLiable": true,
       "priceSet": {
         "shopMoney": {
           "amount": "1.75"
@@ -106,6 +108,7 @@
       "title": "Onondaga County Tax",
       "rate": 0.04,
       "ratePercentage": 4,
+      "channelLiable": true,
       "priceSet": {
         "shopMoney": {
           "amount": "1.75"
@@ -148,6 +151,7 @@
           {
             "title": "New York State Tax",
             "ratePercentage": 4,
+            "channelLiable": true,
             "priceSet": {
               "shopMoney": {
                 "amount": "0.24"
@@ -157,6 +161,7 @@
           {
             "title": "Onondaga County Tax",
             "ratePercentage": 4,
+            "channelLiable": true,
             "priceSet": {
               "shopMoney": {
                 "amount": "0.24"
@@ -230,6 +235,7 @@
             "title": "New York State Tax",
             "rate": 0.04,
             "ratePercentage": 4,
+            "channelLiable": true,
             "priceSet": {
               "shopMoney": {
                 "amount": "0.79"
@@ -240,6 +246,7 @@
             "title": "Onondaga County Tax",
             "rate": 0.04,
             "ratePercentage": 4,
+            "channelLiable": true,
             "priceSet": {
               "shopMoney": {
                 "amount": "0.79"
@@ -309,6 +316,7 @@
             "title": "New York State Tax",
             "rate": 0.04,
             "ratePercentage": 4,
+            "channelLiable": true,
             "priceSet": {
               "shopMoney": {
                 "amount": "0.72"
@@ -319,6 +327,7 @@
             "title": "Onondaga County Tax",
             "rate": 0.04,
             "ratePercentage": 4,
+            "channelLiable": true,
             "priceSet": {
               "shopMoney": {
                 "amount": "0.72"

@@ -32,7 +32,7 @@ export const ORDER_SELECTION = `
   netPaymentSet { shopMoney { amount } }
   totalRefundedSet { shopMoney { amount } }
   taxesIncluded taxExempt
-  taxLines { title rate ratePercentage priceSet { shopMoney { amount } } }
+  taxLines { title rate ratePercentage channelLiable priceSet { shopMoney { amount } } }
   discountApplications(first: 10) {
     nodes {
       __typename allocationMethod targetSelection targetType
@@ -47,7 +47,7 @@ export const ORDER_SELECTION = `
       title code source
       originalPriceSet { shopMoney { amount } }
       discountedPriceSet { shopMoney { amount } }
-      taxLines { title ratePercentage priceSet { shopMoney { amount } } }
+      taxLines { title ratePercentage channelLiable priceSet { shopMoney { amount } } }
     }
   }
   lineItems(first: 50) {
@@ -61,7 +61,7 @@ export const ORDER_SELECTION = `
       discountedTotalSet { shopMoney { amount } }
       totalDiscountSet { shopMoney { amount } }
       discountAllocations { allocatedAmountSet { shopMoney { amount } } discountApplication { __typename } }
-      taxLines { title rate ratePercentage priceSet { shopMoney { amount } } }
+      taxLines { title rate ratePercentage channelLiable priceSet { shopMoney { amount } } }
     }
   }
   transactions(first: 20) {

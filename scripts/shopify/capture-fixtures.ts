@@ -9,6 +9,7 @@
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import { ORDER_SELECTION } from '../../lib/shopify/orderQuery';
 
 dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 
@@ -30,98 +31,14 @@ async function gql(query: string, variables?: Record<string, unknown>): Promise<
   return data.data;
 }
 
-const ORDER_DETAIL = `
-  id name createdAt processedAt closedAt cancelledAt cancelReason
-  sourceName test confirmed
-  currencyCode presentmentCurrencyCode
-  displayFinancialStatus displayFulfillmentStatus
-  tags note poNumber
-  customer { id email firstName lastName numberOfOrders tags }
-  purchasingEntity {
-    __typename
-    ... on PurchasingCompany {
-      company { id name externalId }
-      location { id name externalId }
-      contact { id customer { id email } }
-    }
-    ... on Customer { id email }
-  }
-  billingAddress { name company address1 city provinceCode zip countryCodeV2 }
-  shippingAddress { name company address1 city provinceCode zip countryCodeV2 }
-  currentSubtotalPriceSet { shopMoney { amount currencyCode } }
-  currentTotalDiscountsSet { shopMoney { amount } }
-  currentTotalTaxSet { shopMoney { amount } }
-  currentShippingPriceSet { shopMoney { amount } }
-  currentTotalPriceSet { shopMoney { amount currencyCode } }
-  originalTotalPriceSet { shopMoney { amount } }
-  netPaymentSet { shopMoney { amount } }
-  totalRefundedSet { shopMoney { amount } }
-  taxesIncluded taxExempt
-  taxLines { title rate ratePercentage priceSet { shopMoney { amount } } }
-  discountApplications(first: 10) {
-    nodes {
-      __typename allocationMethod targetSelection targetType
-      ... on DiscountCodeApplication { code }
-      ... on AutomaticDiscountApplication { title }
-      ... on ManualDiscountApplication { title description }
-      value { __typename ... on MoneyV2 { amount } ... on PricingPercentageValue { percentage } }
-    }
-  }
-  shippingLines(first: 5) {
-    nodes {
-      title code source
-      originalPriceSet { shopMoney { amount } }
-      discountedPriceSet { shopMoney { amount } }
-      taxLines { title ratePercentage priceSet { shopMoney { amount } } }
-    }
-  }
-  lineItems(first: 50) {
-    nodes {
-      id name sku quantity currentQuantity refundableQuantity
-      vendor requiresShipping isGiftCard
-      variant { id sku barcode product { id productType } }
-      originalUnitPriceSet { shopMoney { amount } }
-      discountedUnitPriceAfterAllDiscountsSet { shopMoney { amount } }
-      originalTotalSet { shopMoney { amount } }
-      discountedTotalSet { shopMoney { amount } }
-      totalDiscountSet { shopMoney { amount } }
-      discountAllocations { allocatedAmountSet { shopMoney { amount } } discountApplication { __typename } }
-      taxLines { title rate ratePercentage priceSet { shopMoney { amount } } }
-    }
-  }
-  transactions(first: 20) {
-    id kind status gateway processedAt test
-    amountSet { shopMoney { amount currencyCode } }
-    parentTransaction { id }
-    paymentId formattedGateway
-    fees { amount { amount currencyCode } rate rateName type }
-  }
-  refunds(first: 10) {
-    id createdAt note
-    totalRefundedSet { shopMoney { amount } }
-    refundLineItems(first: 50) {
-      nodes {
-        quantity restockType restocked
-        lineItem { id sku }
-        priceSet { shopMoney { amount } }
-        subtotalSet { shopMoney { amount } }
-        totalTaxSet { shopMoney { amount } }
-      }
-    }
-    transactions(first: 10) { nodes { id kind status gateway amountSet { shopMoney { amount } } } }
-  }
-  fulfillments(first: 10) {
-    id status createdAt
-
-    trackingInfo { company number url }
-    fulfillmentLineItems(first: 50) { nodes { quantity lineItem { id sku } } }
-  }
-`;
+// Canonical selection lives in lib/shopify/orderQuery.ts — one source of truth.
+const ORDER_DETAIL = ORDER_SELECTION;
 
 const ARCHETYPES: Array<{ file: string; query: string }> = [
   { file: 'b2b-latest', query: "" }, // filled below from purchasingEntity filtering
   { file: 'b2c-latest', query: "" },
   { file: 'multi-tax-domestic', query: "name:#7201" },
+  { file: 'intl-vat-nl', query: "name:#6582" },
   { file: 'intl-de', query: "shipping_address_country_code:DE" },
   { file: 'intl-ca', query: "shipping_address_country_code:CA" },
   { file: 'refunded-full', query: "financial_status:refunded" },

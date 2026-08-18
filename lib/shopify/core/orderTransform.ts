@@ -16,6 +16,7 @@ function planTaxLines(lines: ShopifyTaxLine[]): PlanTaxLine[] {
       title: t.title,
       ratePercentage: t.ratePercentage ?? (typeof t.rate === 'number' ? t.rate * 100 : null),
       amountCents: toCents(t.priceSet.shopMoney.amount),
+      channelLiable: t.channelLiable === true,
     }))
     .filter((t) => t.amountCents !== 0);
 }

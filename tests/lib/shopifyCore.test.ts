@@ -119,6 +119,17 @@ describe('buildOrderPlan', () => {
     expect(taxSum).toBe(plan.totals.taxCents);
   });
 
+  it('separates channel-liable (Shop-remitted) from merchant-liable tax', () => {
+    // #7201 came through the Shop app: Shopify remits — channelLiable true.
+    const shop = buildOrderPlan(loadOrder('multi-tax-domestic'));
+    expect(shop.taxLines.length).toBeGreaterThan(0);
+    expect(shop.taxLines.every((t) => t.channelLiable)).toBe(true);
+    // #6582 is EU VAT we collect and pass to the courier — merchant-liable.
+    const vat = buildOrderPlan(loadOrder('intl-vat-nl'));
+    expect(vat.taxLines.length).toBeGreaterThan(0);
+    expect(vat.taxLines.every((t) => !t.channelLiable)).toBe(true);
+  });
+
   it('records charged prices, not catalog prices, on discounted orders', () => {
     const plan = buildOrderPlan(loadOrder('discounted'));
     expect(plan.discountCodes).toContain('Pack10');
