@@ -143,15 +143,21 @@ describe('runOrderPipeline', () => {
     expect(creates).toEqual([]);
   });
 
-  it('channel-liable tax books to the marketplace item, not the courier item', async () => {
+  it('tax lines land on the INVOICE (not the SO), on the right item', async () => {
     const plan = buildOrderPlan(loadOrder('multi-tax-domestic'));
     const config: EngineConfig = { ...CONFIG, taxItems: { merchantLiable: 'tax-m', channelLiable: 'tax-c' } };
-    const { ns, creates } = fakeNs();
+    const { ns, creates, transforms } = fakeNs();
     await runOrderPipeline(plan, ns, config);
+    // SO: products only — NS forbids charge items on Sales Orders.
     const so = creates.find((c) => c.type === 'salesOrder')!;
-    const taxLines = so.payload.item.items.filter((l: any) => String(l.item.id).startsWith('tax-'));
+    expect(so.payload.item.items.some((l: any) => String(l.item.id).startsWith('tax-'))).toBe(false);
+    // Invoice transform body appends the exact tax lines, channel-liable → marketplace item.
+    const inv = transforms.find((t) => t.to === 'invoice')!;
+    const taxLines = inv.body.item.items;
     expect(taxLines).toHaveLength(2);
     expect(taxLines.every((l: any) => l.item.id === 'tax-c')).toBe(true);
+    const taxSum = taxLines.reduce((s: number, l: any) => s + Math.round(l.amount * 100), 0);
+    expect(taxSum).toBe(plan.totals.taxCents);
   });
 
   it('unknown gateway stops before any write', async () => {

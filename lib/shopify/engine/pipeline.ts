@@ -90,7 +90,27 @@ export async function runOrderPipeline(
   const { nsCustomerId, via, wasCreated } = await ensureCustomer(plan, ns, config);
   created.customer = wasCreated;
 
-  // ---- step 2: ensure sales order ----
+  // Tax lines (exact Shopify amounts, per jurisdiction) go on the INVOICE,
+  // not the SO: NS forbids charge items on Sales Orders (owner-confirmed;
+  // REST additionally accepts only inventory items on SO lines here), and
+  // the invoice is the legal money document anyway. The SO stays a clean
+  // warehouse doc: products + shipping.
+  const taxLines: Array<Record<string, unknown>> = [];
+  for (const [lines, itemId] of [
+    [merchantTax, config.taxItems.merchantLiable],
+    [channelTax, config.taxItems.channelLiable],
+  ] as const) {
+    for (const t of lines) {
+      taxLines.push({
+        item: { id: itemId! },
+        quantity: 1,
+        amount: Number(centsToDecimal(t.amountCents)),
+        description: t.title,
+      });
+    }
+  }
+
+  // ---- step 2: ensure sales order (products + shipping only) ----
   const soExtId = config.externalIds.salesOrder(plan.shopifyOrderId);
   let nsSoId = await ns.findRecordIdByExternalId('salesOrder', soExtId);
   if (!nsSoId) {
@@ -100,19 +120,6 @@ export async function runOrderPipeline(
       amount: Number(centsToDecimal(l.netAmountCents)),
       description: l.description,
     }));
-    for (const [taxLines, itemId] of [
-      [merchantTax, config.taxItems.merchantLiable],
-      [channelTax, config.taxItems.channelLiable],
-    ] as const) {
-      for (const t of taxLines) {
-        itemLines.push({
-          item: { id: itemId! },
-          quantity: 1,
-          amount: Number(centsToDecimal(t.amountCents)),
-          description: t.title,
-        });
-      }
-    }
     nsSoId = await ns.createRecord('salesOrder', {
       externalId: soExtId,
       entity: { id: nsCustomerId },
@@ -136,6 +143,10 @@ export async function runOrderPipeline(
       externalId: invExtId,
       tranDate: plan.processedAt.slice(0, 10),
       custbody_shopify_order_id: Number(plan.shopifyOrderId),
+      // Extra item lines in the transform body APPEND to the SO's lines
+      // (verified empirically 2026-08-18) — the invoice carries the exact
+      // per-jurisdiction tax amounts on the pass-through items.
+      ...(taxLines.length ? { item: { items: taxLines } } : {}),
     });
     created.invoice = true;
   }

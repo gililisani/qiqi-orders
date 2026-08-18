@@ -246,9 +246,21 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
   customers need Category+Class (B2B 4/3, B2C 10/4); shipped SOs need
   shipMethod 1171. Parked by design: #7201 until marketplace tax item
   exists. Sandbox creds live in .env.local (NETSUITE_SB_*, disposable).
-  NEXT: create the two pass-through tax items (sandbox first) → set
-  ENGINE_CONFIG.taxItems → owner-guided date-range tests → Loops B/C/E
-  engine runs in sandbox.
+  TAX REPRESENTATION SETTLED 2026-08-18: NS forbids charge items on
+  Sales Orders (owner-confirmed; REST additionally accepts ONLY inventory
+  items on SO lines in this account — Service items included, unlike
+  UI/SuiteScript). Solution: SO = products + shipping; the INVOICE (legal
+  doc) carries the exact per-jurisdiction tax lines — extra item lines in
+  the SO→invoice transform body APPEND to the SO's lines (verified). Items
+  1432 (DDP → 240504) / 1433 (marketplace → 240502), OthCharge-for-Sale,
+  invoice-only, with a 0 base price (items without price rows are
+  REST-unorderable). 23/24 synced incl. #7201 (split tender + 2 NY tax
+  lines, 2 payments). Customer creates: terms 8 Upfront, sales rep
+  "Shopify" (sandbox 126620), address book from order. Native NS
+  Sales Tax Items / Nexus setup deferred until US nexus registration
+  (Avalara path).
+  NEXT: owner-guided date-range tests → wire poller→pipeline → Loops
+  B/C/E engine runs in sandbox.
 - ☐ **Phase 3 — Loops B & C** (sandbox): IFs (lot rule), credit memos
   (line-level, tax-reversing, amount-only, restock flag).
 - ☐ **Phase 4 — Loops D & E**: nightly recon, price variance, payout
