@@ -32,6 +32,10 @@
     {
       "path": "/api/cron/refresh-invoices",
       "schedule": "30 2 * * *"
+    },
+    {
+      "path": "/api/cron/shopify-poll",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

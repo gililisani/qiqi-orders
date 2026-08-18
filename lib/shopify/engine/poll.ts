@@ -1,0 +1,119 @@
+/**
+ * L3 ENGINE — Loop A poller. Cursor-driven, idempotent, mode-aware.
+ *
+ * Every run: fetch orders updated since (cursor − overlap), gate each,
+ * build its plan, persist state + events. NS writes only happen in
+ * 'sandbox'/'live' modes via the pipeline (not yet wired — Phase 2b);
+ * 'shadow' computes and records everything but writes nothing to NS.
+ *
+ * Idempotency: re-seeing an order is normal (updated_at moves on any
+ * change, and we deliberately re-poll an overlap window). State rows are
+ * upserts; the pipeline's ensure-steps make NS writes re-runnable.
+ */
+import { gateOrder } from '../core/validate';
+import { buildOrderPlan } from '../core/orderTransform';
+import type { ShopifyOrder } from '../core/types';
+import type { ShopifySyncStore } from '../store';
+
+/** Re-poll window: absorbs clock skew + updates landing mid-poll. */
+const OVERLAP_MS = 10 * 60_000;
+
+export interface PollDeps {
+  store: ShopifySyncStore;
+  fetchOrdersUpdatedSince: (isoTimestamp: string) => Promise<ShopifyOrder[]>;
+  loadKnownSkus: () => Promise<Set<string>>;
+  now?: () => Date;
+}
+
+export interface PollResult {
+  mode: string;
+  fetched: number;
+  proceeded: number;
+  skipped: number;
+  errored: number;
+  cursor: string | null;
+}
+
+export async function pollOrders(deps: PollDeps): Promise<PollResult> {
+  const { store } = deps;
+  const now = deps.now ?? (() => new Date());
+  const config = await store.getConfig();
+
+  if (config.mode === 'off') {
+    return { mode: 'off', fetched: 0, proceeded: 0, skipped: 0, errored: 0, cursor: config.orders_cursor };
+  }
+
+  // First run: start from now minus one day so we don't inhale all history
+  // by accident. Backfills are explicit (scripts), never implicit.
+  const cursorMs = config.orders_cursor
+    ? new Date(config.orders_cursor).getTime() - OVERLAP_MS
+    : now().getTime() - 24 * 3600_000;
+  const since = new Date(cursorMs).toISOString();
+
+  const orders = await deps.fetchOrdersUpdatedSince(since);
+  const knownSkus = orders.length > 0 ? await deps.loadKnownSkus() : new Set<string>();
+
+  let proceeded = 0;
+  let skipped = 0;
+  let errored = 0;
+  let maxUpdatedAt = config.orders_cursor;
+
+  for (const order of orders) {
+    const orderId = order.id.replace(/^.*\//, '');
+    const updatedAt = (order as any).updatedAt as string | undefined;
+    if (updatedAt && (!maxUpdatedAt || updatedAt > maxUpdatedAt)) maxUpdatedAt = updatedAt;
+
+    try {
+      const gate = gateOrder(order, knownSkus);
+
+      if (gate.outcome === 'skip') {
+        await store.seenOrder(order, null);
+        await store.markSkipped(orderId, gate.reason, gate.message);
+        await store.event('orders', 'gate_skip', orderId, { reason: gate.reason });
+        skipped += 1;
+        continue;
+      }
+
+      if (gate.outcome === 'error') {
+        await store.seenOrder(order, null);
+        await store.markError(orderId, gate.issues);
+        await store.event('orders', 'gate_error', orderId, { issues: gate.issues });
+        errored += 1;
+        continue;
+      }
+
+      const plan = buildOrderPlan(order);
+      await store.seenOrder(order, plan);
+      const existing = await store.getOrderState(orderId);
+      // Shadow mode stops here — plan persisted, nothing written to NS.
+      // sandbox/live will hand the plan to the ensure-pipeline (Phase 2b).
+      if (existing?.state === 'pending' || existing?.state === 'error' || existing?.state === 'skipped') {
+        await store.setState(orderId, 'pending', { error_code: null, error_message: null, skip_reason: null });
+      }
+      await store.event('orders', 'planned', orderId, {
+        totalCents: plan.totals.totalCents,
+        payments: plan.payments.length,
+        buyer: plan.buyer.kind,
+      });
+      proceeded += 1;
+    } catch (err: any) {
+      errored += 1;
+      await store.event('orders', 'poll_exception', orderId, { error: String(err?.message ?? err).slice(0, 500) });
+    }
+  }
+
+  await store.updateConfig({
+    orders_cursor: maxUpdatedAt,
+    last_poll_at: now().toISOString(),
+    last_poll_error: null,
+  });
+  await store.event('system', 'poll_complete', null, {
+    fetched: orders.length,
+    proceeded,
+    skipped,
+    errored,
+    since,
+  });
+
+  return { mode: config.mode, fetched: orders.length, proceeded, skipped, errored, cursor: maxUpdatedAt };
+}
