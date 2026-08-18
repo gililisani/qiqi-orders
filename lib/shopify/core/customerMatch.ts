@@ -29,6 +29,8 @@ export function extractBuyer(order: ShopifyOrder): BuyerInfo {
       companyName: pe.company.name,
       email: contactEmail ?? email,
       displayName: pe.company.name,
+      firstName: order.customer?.firstName ?? null,
+      lastName: order.customer?.lastName ?? null,
     };
   }
 
@@ -43,6 +45,8 @@ export function extractBuyer(order: ShopifyOrder): BuyerInfo {
     companyName: null,
     email,
     displayName: name || order.customer?.email || 'Unknown customer',
+    firstName: order.customer?.firstName ?? null,
+    lastName: order.customer?.lastName ?? null,
   };
 }
 

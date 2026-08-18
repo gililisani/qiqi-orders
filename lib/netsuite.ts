@@ -1049,6 +1049,31 @@ export class NetSuiteAPI {
     return id;
   }
 
+  /** Partially update any record via REST PATCH (e.g. stamping ids on a matched customer). */
+  async updateRecord(recordType: string, id: string, payload: Record<string, unknown>): Promise<void> {
+    const url = `${this.baseUrl}/record/v1/${recordType}/${id}`;
+    const authHeader = this.getAuthHeader(url, 'PATCH');
+    const res = await axios({
+      method: 'PATCH',
+      url,
+      headers: {
+        Authorization: authHeader,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      data: JSON.stringify(payload),
+      validateStatus: () => true,
+    });
+    if (res.status >= 400) {
+      const msg =
+        res.data?.['o:errorDetails']?.map((d: any) => d.detail).join(' | ') ||
+        res.data?.['o:message'] ||
+        JSON.stringify(res.data) ||
+        `HTTP ${res.status}`;
+      throw new Error(`NetSuite update ${recordType} ${id} failed: ${msg}`);
+    }
+  }
+
   /** Transform one record into another (e.g. vendorBill → vendorPayment). */
   async transformRecord(
     fromType: string,

@@ -260,6 +260,8 @@ export interface BuyerInfo {
   companyName: string | null;
   email: string | null; // normalized (lowercase, trimmed)
   displayName: string;
+  firstName: string | null;
+  lastName: string | null;
 }
 
 /** One NS customer candidate, as found by the engine's lookups. */

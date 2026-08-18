@@ -226,8 +226,20 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
 - ◐ **Phase 2 — engine + state**: 2a DONE 2026-08-17 (migration applied to
   staging; L1 client w/ 24h token auto-refresh; cursor poller with 10-min
   overlap, mode-aware; cron */15; live shadow run: 42/42 real orders clean).
-  2b remaining: ensure-pipeline NS writes — blocked on sandbox license
-  renewal (expired 7/28/2026, account manager engaged 2026-08-17).
+  2b BUILT 2026-08-18 (pipeline + backfill runner, 10 tests): ensure-steps
+  Customer→SO→Invoice→Payment(s), externalid namespaces SHOP-*/SHOPORD-/
+  SHOPINV-/SHOPPAY- (ours; NetScore never used externalid), NetScore-stamp
+  adoption with our-stamp write-back, preflight gates (gateway account,
+  tax items, SKUs) so no partial chains, split-tender payments, tax lines
+  as items per channelLiable. Backfill: `scripts/shopify/backfill.ts
+  --from --to [--dry-run]` — SANDBOX-ONLY by construction, idempotent.
+  DECISION (CFO delegated 2026-08-18): Loop E net journal posts DIRECT TO
+  BANK GL (no transit account) — register entry pre-exists the bank feed
+  and auto-matches; bank account internal id needed from bookkeeper.
+  TESTING (owner 2026-08-18): use the CURRENT stale sandbox (Apr-2025
+  refresh, license renewal in progress) — new orders exercise the create
+  path; owner will drive date-range tests, native-B2B era = June 2026+.
+  AWAITING: sandbox integration tokens (NETSUITE_SB_*) from owner.
 - ☐ **Phase 3 — Loops B & C** (sandbox): IFs (lot rule), credit memos
   (line-level, tax-reversing, amount-only, restock flag).
 - ☐ **Phase 4 — Loops D & E**: nightly recon, price variance, payout
