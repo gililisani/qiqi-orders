@@ -113,15 +113,46 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
 - `shopify_error_queue` — view over error-state rows feeding admin UI +
   daily digest email.
 
+## Accounting decisions (owner, 2026-08-17)
+
+- **US sales tax: not collected** (below nexus threshold; Avalara+NS nexus
+  later, triggered in Shopify when the time comes). Anomaly found: 2 US
+  orders charged tax in 90d (US-VA $4.92, US-NY $3.50 = #7201) — VA/NY
+  likely enabled by mistake in Shopify tax settings; owner to check.
+- **International tax (EU VAT / CA / CH etc.)**: Shopify computes; we
+  collect and pass through to the courier (DDP-like). ~$1,650/90d. Books
+  as a pass-through liability, NOT revenue/tax-payable-to-gov. NS account
+  for this pass-through: **TBD** (remaining question below).
+- **Clearing accounts** (existing): `100501` Shopify — QIQI INC (USD)
+  [Shopify Payments + Shop Pay + Shop Cash all land here], `100503`
+  Affirm, `100504` PayPal.
+- **Split tender**: recorded per transaction, but both legs of a
+  shop_cash+shopify_payments split post to 100501 — matches payout math.
+- **Processing fee expense accounts**: `622070` Shopify, `622060` PayPal,
+  `710130` Affirm. (`622030` is the Shopify platform license — monthly
+  invoice, NOT processing fees; the sync never touches it.)
+- **Refunds credit the same clearing account as the original payment.**
+- **Restock only when Shopify's refund says restock** (restockType);
+  refunds without restock create no NS inventory movement.
+- **Chargebacks**: currently unhandled anywhere — we SHOULD handle them;
+  post through 100501. Design into Loop E (payouts report disputes).
+- **Posting periods: relaxed.** Months close 45–60+ days later. Post with
+  original transaction dates; no special period logic needed.
+- **EUR-period correction**: owner has no preference → we'll correct in
+  the current open period (simplest, auditable).
+- Payout reconciliation today is manual one-by-one bank rec (owner
+  confirming details with bookkeeper).
+
 ## Open questions
 
-**CPA (blocking Loop A tax + Loop E booking):**
-1. NS-side mapping for multi-line taxes/duties (per-jurisdiction items vs
-   tax groups; intl VAT/duty lines).
-2. Clearing account structure: Shopify Payments / PayPal / Affirm /
-   Shop Cash (+ cash for future POS).
-3. Payout booking record: Deposit vs Journal; fee expense account.
-4. Posting-period rule for late-synced orders crossing month boundaries.
+**Accounting (small, non-blocking for build):**
+1. NS account for the international VAT/duty pass-through (courier
+   payable). Also: which NS item/line type carries it on the invoice.
+2. Payout booking: Deposit vs Journal Entry (bookkeeper preference), and
+   fees per payout (recommended — matches bank statement) vs per order.
+3. Amount-only refunds (no line items): which item/account takes the
+   credit.
+4. Chargeback flow specifics once Loop E surfaces disputes.
 
 **Ops:**
 5. Lot assignment for IFs: FEFO auto-assign pending confirmation ShipHero
