@@ -239,7 +239,16 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
   TESTING (owner 2026-08-18): use the CURRENT stale sandbox (Apr-2025
   refresh, license renewal in progress) — new orders exercise the create
   path; owner will drive date-range tests, native-B2B era = June 2026+.
-  AWAITING: sandbox integration tokens (NETSUITE_SB_*) from owner.
+  FIRST LIVE SANDBOX RUN 2026-08-18: 22/24 orders (Aug 10–12) synced
+  end-to-end (Customer→SO→Invoice→Payment); re-run adopted all with zero
+  creates; NetScore-era customers matched + reused. Account rules
+  encoded: shop_cust_id + shopify_order_id custbodies are Integer;
+  customers need Category+Class (B2B 4/3, B2C 10/4); shipped SOs need
+  shipMethod 1171. Parked by design: #7201 until marketplace tax item
+  exists. Sandbox creds live in .env.local (NETSUITE_SB_*, disposable).
+  NEXT: create the two pass-through tax items (sandbox first) → set
+  ENGINE_CONFIG.taxItems → owner-guided date-range tests → Loops B/C/E
+  engine runs in sandbox.
 - ☐ **Phase 3 — Loops B & C** (sandbox): IFs (lot rule), credit memos
   (line-level, tax-reversing, amount-only, restock flag).
 - ☐ **Phase 4 — Loops D & E**: nightly recon, price variance, payout
