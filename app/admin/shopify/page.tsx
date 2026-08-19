@@ -28,6 +28,7 @@ interface OrderRow {
   ns_target: string | null;
   error_code: string | null;
   error_message: string | null;
+  error_detail: { issues?: Array<{ code: string; detail?: { candidates?: Array<{ id: string; entityId: string; via: string }>; skus?: string[]; sku?: string } }> } | null;
   links: {
     customer: string | null;
     so: string | null;
@@ -115,6 +116,9 @@ export default function ShopifySyncDashboard() {
   const [data, setData] = useState<Overview | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState<string | null>(null);
+  const [actionMsg, setActionMsg] = useState<string | null>(null);
+  const [importName, setImportName] = useState('');
+  const [skuMapInput, setSkuMapInput] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     try {
@@ -134,18 +138,41 @@ export default function ShopifySyncDashboard() {
     return () => clearInterval(t);
   }, [load]);
 
-  const retry = async (shopifyOrderId: string) => {
-    setRetrying(shopifyOrderId);
+  const act = async (path: string, body: Record<string, unknown>, busyKey: string) => {
+    setRetrying(busyKey);
+    setActionMsg(null);
     try {
-      await fetchWithAuth('/api/shopify/sync/retry', {
+      const res = await fetchWithAuth(path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shopifyOrderId }),
+        body: JSON.stringify(body),
       });
+      const json = await res.json();
+      if (!res.ok) setActionMsg(json.error || `HTTP ${res.status}`);
+      else if (json.result === 'ok') setActionMsg(`${json.orderName ?? ''} synced (${json.state})`.trim());
+      else if (json.result === 'still_error') setActionMsg(`${json.orderName ?? 'Order'} still parked: ${json.issues?.[0]?.message ?? ''}`.slice(0, 200));
+      else if (json.result === 'ignored') setActionMsg('Order marked as ignored');
+      else if (json.result === 'skipped') setActionMsg(`Skipped: ${json.message}`);
+      else if (json.mapped) setActionMsg(`SKU mapped to ${json.mapped}`);
       await load();
     } finally {
       setRetrying(null);
     }
+  };
+
+  const retry = (shopifyOrderId: string) => act('/api/shopify/sync/retry', { shopifyOrderId }, shopifyOrderId);
+  const ignore = (shopifyOrderId: string) => {
+    const note = window.prompt('Why is this order being ignored? (required, audited)');
+    if (note?.trim()) act('/api/shopify/sync/ignore', { shopifyOrderId, note }, shopifyOrderId);
+  };
+  const resolveCustomer = (shopifyOrderId: string, nsCustomerId: string) =>
+    act('/api/shopify/sync/resolve-customer', { shopifyOrderId, nsCustomerId }, shopifyOrderId);
+  const mapSku = (shopifyOrderId: string, shopifySku: string) => {
+    const nsItem = skuMapInput[`${shopifyOrderId}:${shopifySku}`]?.trim();
+    if (nsItem) act('/api/shopify/sync/map-sku', { shopifySku, nsItem, retryShopifyOrderId: shopifyOrderId }, shopifyOrderId);
+  };
+  const importOrder = () => {
+    if (importName.trim()) act('/api/shopify/sync/import-order', { orderName: importName.trim() }, 'import');
   };
 
   const errors = data?.orders.filter((o) => o.state === 'error') ?? [];
@@ -156,7 +183,24 @@ export default function ShopifySyncDashboard() {
       <PageHeader
         title="Shopify Sync"
         description="Shopify → NetSuite: orders, fulfillments, refunds, payouts"
+        actions={
+          <div className="flex items-center gap-2">
+            <input
+              value={importName}
+              onChange={(e) => setImportName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && importOrder()}
+              placeholder="Import order # (e.g. 7268)"
+              className="h-9 w-52 rounded-md border border-border bg-background px-3 text-sm"
+            />
+            <Button size="sm" variant="outline" disabled={retrying === 'import'} onClick={importOrder}>
+              Import
+            </Button>
+          </div>
+        }
       />
+      {actionMsg && (
+        <div className="mb-4 rounded-md border border-border bg-secondary px-3 py-2 text-sm">{actionMsg}</div>
+      )}
 
       {loadError && (
         <Card className="mb-6 border-brand-magenta/40">
@@ -243,20 +287,72 @@ export default function ShopifySyncDashboard() {
                           {o.error_code}
                         </span>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={retrying === o.shopify_order_id}
-                        onClick={() => retry(o.shopify_order_id)}
-                      >
-                        <RefreshCw className={cn('mr-1 h-3.5 w-3.5', retrying === o.shopify_order_id && 'animate-spin')} />
-                        Retry
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={retrying === o.shopify_order_id}
+                          onClick={() => retry(o.shopify_order_id)}
+                        >
+                          <RefreshCw className={cn('mr-1 h-3.5 w-3.5', retrying === o.shopify_order_id && 'animate-spin')} />
+                          Retry
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={retrying === o.shopify_order_id}
+                          onClick={() => ignore(o.shopify_order_id)}
+                        >
+                          Ignore…
+                        </Button>
+                      </div>
                     </div>
                     <p className="mt-2 text-sm text-foreground">{o.error_message}</p>
                     {o.error_code && ERROR_GUIDANCE[o.error_code] && (
                       <p className="mt-1 text-sm text-muted-foreground">{ERROR_GUIDANCE[o.error_code]}</p>
                     )}
+                    {/* Ambiguous customer: pick the right NS record. */}
+                    {o.error_code === 'AMBIGUOUS_CUSTOMER' &&
+                      (o.error_detail?.issues?.[0]?.detail?.candidates ?? []).length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {o.error_detail!.issues![0].detail!.candidates!.map((c) => (
+                            <Button
+                              key={c.id}
+                              size="sm"
+                              variant="outline"
+                              disabled={retrying === o.shopify_order_id}
+                              onClick={() => resolveCustomer(o.shopify_order_id, c.id)}
+                            >
+                              Use {c.entityId} (#{c.id}, via {c.via})
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    {/* Unknown SKU: map it once, forever. */}
+                    {o.error_code === 'UNKNOWN_SKU' &&
+                      (o.error_detail?.issues?.[0]?.detail?.skus ??
+                        (o.error_detail?.issues?.[0]?.detail?.sku ? [o.error_detail.issues[0].detail.sku] : [])
+                      ).map((sku) => (
+                        <div key={sku} className="mt-2 flex items-center gap-2">
+                          <span className="text-sm font-mono">{sku}</span>
+                          <span className="text-sm text-muted-foreground">→ NS item code or id:</span>
+                          <input
+                            value={skuMapInput[`${o.shopify_order_id}:${sku}`] ?? ''}
+                            onChange={(e) =>
+                              setSkuMapInput((m) => ({ ...m, [`${o.shopify_order_id}:${sku}`]: e.target.value }))
+                            }
+                            className="h-8 w-40 rounded-md border border-border bg-background px-2 text-sm"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={retrying === o.shopify_order_id}
+                            onClick={() => mapSku(o.shopify_order_id, sku)}
+                          >
+                            Map &amp; retry
+                          </Button>
+                        </div>
+                      ))}
                   </div>
                 ))}
               </CardContent>

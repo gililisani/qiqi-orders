@@ -30,9 +30,10 @@ export async function executeOrder(
   plan: OrderPlan,
   ns: NsApi,
   config: EngineConfig,
+  opts: { skuOverrides?: Map<string, string> } = {},
 ): Promise<ExecutionOutcome> {
   // Loop A — the money chain.
-  const a = await runOrderPipeline(plan, ns, config);
+  const a = await runOrderPipeline(plan, ns, config, opts);
 
   // Loop B — one IF per Shopify fulfillment.
   const fulfillmentPlans = buildFulfillmentPlans(order);

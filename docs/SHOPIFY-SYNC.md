@@ -339,11 +339,20 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
 2. **Admin dashboard** at /admin/shopify (qq components): status strip
    (mode, last poll, synced today/week, error count), recent-orders table
    with per-order chain state + NS record links, payouts view (Loop E).
-3. **Self-service error queue**: every parked order shows plain-language
-   error + guided action + a Retry button (idempotency makes retry always
-   safe). AMBIGUOUS_CUSTOMER gets a "pick the right customer" resolver
-   (stamps + retries). UNKNOWN_SKU / lot-stock → fix in NS, retry.
-   NOT_USD / TOTALS_MISMATCH → deliberately not self-fixable.
+3. **Self-service error queue — BUILT 2026-08-20**: per-error guided
+   actions on the dashboard, all no-code, all idempotent-safe:
+   Retry (re-fetches fresh from Shopify — doubles as "recheck");
+   AMBIGUOUS_CUSTOMER → candidate buttons ("Use C1921 (#7179)") that
+   stamp the chosen NS customer + retry (permanent match);
+   UNKNOWN_SKU → inline "map to NS item code/id" → permanent alias in
+   shopify_sku_aliases + retry (each SKU fixed exactly once, poller
+   honors aliases too); Ignore-with-note → auditable terminal 'ignored'
+   state (excluded from error counter, never deleted, Retry un-ignores);
+   "Import order #" box (the NetScore lost-order cure). Shared engine:
+   lib/shopify/engine/retryOrder.ts. Alerts (lib/shopify/alerts.ts):
+   ~daily digest email when errors exist + throttled immediate mail on
+   poll failure — env SHOPIFY_SYNC_ALERT_EMAIL (add to prod env list).
+   Migration 20260820100000 (applied to staging).
 4. **Settings page (post-production, LAST task)**: lift ENGINE_CONFIG
    into a config table + admin UI (locations, tax items, terms, rep,
    gateway map). Aligns with the productization directive; ENGINE_CONFIG

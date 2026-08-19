@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       db
         .from('shopify_order_sync')
         .select(
-          'shopify_order_id, order_name, order_created_at, buyer_kind, state, skip_reason, total_cents, refunded_cents, ns_target, ns_customer_id, ns_so_id, ns_invoice_id, ns_payment_ids, ns_fulfillment_ids, ns_credit_memo_ids, error_code, error_message, updated_at',
+          'shopify_order_id, order_name, order_created_at, buyer_kind, state, skip_reason, total_cents, refunded_cents, ns_target, ns_customer_id, ns_so_id, ns_invoice_id, ns_payment_ids, ns_fulfillment_ids, ns_credit_memo_ids, error_code, error_message, error_detail, ignore_note, updated_at',
         )
         .order('order_created_at', { ascending: false })
         .limit(100),

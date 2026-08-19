@@ -90,6 +90,24 @@ export class ShopifySyncStore {
     return data as any;
   }
 
+  async markIgnored(shopifyOrderId: string, note: string): Promise<void> {
+    await this.setState(shopifyOrderId, 'ignored', { ignore_note: note.slice(0, 500) });
+  }
+
+  /** Shopify SKU → NS item id aliases (permanent, admin-created). */
+  async getSkuAliases(): Promise<Map<string, string>> {
+    const { data, error } = await this.db.from('shopify_sku_aliases').select('shopify_sku, ns_item_id');
+    if (error) throw new Error(`shopify_sku_aliases read failed: ${error.message}`);
+    return new Map((data ?? []).map((r) => [r.shopify_sku, r.ns_item_id]));
+  }
+
+  async addSkuAlias(shopifySku: string, nsItemId: string, note?: string): Promise<void> {
+    const { error } = await this.db
+      .from('shopify_sku_aliases')
+      .upsert({ shopify_sku: shopifySku, ns_item_id: nsItemId, note: note ?? null });
+    if (error) throw new Error(`shopify_sku_aliases upsert failed: ${error.message}`);
+  }
+
   async upsertPayout(row: {
     shopify_payout_id: string;
     issued_at: string;

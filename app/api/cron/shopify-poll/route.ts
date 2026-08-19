@@ -6,6 +6,7 @@ import { fetchOrdersUpdatedSince, loadKnownSkus } from '../../../../lib/shopify/
 import { executeOrder } from '../../../../lib/shopify/engine/execute';
 import { ENGINE_CONFIG } from '../../../../lib/shopify/engine/config';
 import { createNetSuiteForTarget, type NsTarget } from '../../../../lib/shopify/engine/nsTarget';
+import { maybeSendErrorDigest, maybeSendPollFailure } from '../../../../lib/shopify/alerts';
 
 /**
  * Loop A poller (every 15 min, vercel.json). Mode lives in
@@ -28,14 +29,31 @@ export async function GET(request: NextRequest) {
     const nsTarget: NsTarget | undefined =
       mode === 'sandbox' ? 'sandbox' : mode === 'live' ? 'production' : undefined;
     const ns = nsTarget ? createNetSuiteForTarget(nsTarget) : null;
+    const aliases = await store.getSkuAliases();
     const result = await pollOrders({
       store,
       fetchOrdersUpdatedSince,
-      loadKnownSkus,
+      loadKnownSkus: async () => {
+        const skus = await loadKnownSkus();
+        for (const sku of aliases.keys()) skus.add(sku);
+        return skus;
+      },
       nsTarget,
-      execute: ns ? (order, plan) => executeOrder(order, plan, ns, ENGINE_CONFIG) : undefined,
+      execute: ns
+        ? (order, plan) => executeOrder(order, plan, ns, ENGINE_CONFIG, { skuOverrides: aliases })
+        : undefined,
     });
     console.log(`[cron/shopify-poll] ${JSON.stringify(result)}`);
+
+    // Daily digest when errors exist (throttled inside).
+    const db = createServiceRoleClient();
+    const { data: parked } = await db
+      .from('shopify_order_sync')
+      .select('order_name, error_code, error_message')
+      .eq('state', 'error')
+      .limit(50);
+    if (parked?.length) await maybeSendErrorDigest(store, parked);
+
     return NextResponse.json({ success: true, ...result });
   } catch (err: any) {
     const message = String(err?.message ?? err).slice(0, 1000);
@@ -43,6 +61,7 @@ export async function GET(request: NextRequest) {
     try {
       await store.updateConfig({ last_poll_error: message });
       await store.event('system', 'poll_failed', null, { error: message });
+      await maybeSendPollFailure(store, message);
     } catch {
       // reporting must not mask the original failure
     }

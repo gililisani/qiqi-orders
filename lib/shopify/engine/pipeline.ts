@@ -50,6 +50,7 @@ export async function runOrderPipeline(
   plan: OrderPlan,
   ns: NsApi,
   config: EngineConfig,
+  opts: { skuOverrides?: Map<string, string> } = {},
 ): Promise<PipelineResult> {
   const created = { customer: false, so: false, invoice: false, payments: 0 };
 
@@ -78,11 +79,14 @@ export async function runOrderPipeline(
   }
 
   const itemIds = await ns.resolveItemIdsBySku(plan.lines.map((l) => l.sku));
+  // Admin-created aliases (dashboard "Map SKU") take precedence.
+  for (const [sku, nsItemId] of opts.skuOverrides ?? []) itemIds.set(sku, nsItemId);
   const missing = plan.lines.filter((l) => !itemIds.get(l.sku));
   if (missing.length > 0) {
     throw new PipelineError({
       code: 'UNKNOWN_SKU',
       message: `${plan.orderName}: SKUs not found in NS: ${missing.map((l) => l.sku).join(', ')}`,
+      detail: { skus: missing.map((l) => l.sku) },
     });
   }
 
