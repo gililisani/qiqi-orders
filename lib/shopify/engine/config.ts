@@ -47,6 +47,14 @@ export interface EngineConfig {
    * amount-only residuals. (= CPA question #3, resolved 2026-08-18.)
    */
   refundAdjustmentItemId: string;
+  /**
+   * "Shopify Discount" Discount item → 420000 Sales Discounts. Product
+   * lines book at CATALOG price; the order's total discount goes on the
+   * SO/invoice header via this item — totals still match Shopify to the
+   * cent, and given discounts become visible in annual reports (owner
+   * 2026-08-19, QA finding on #7220).
+   */
+  discountItemId: string;
   /** Loop E — payout booking (CFO pattern: fee bill + journal, per payout). */
   payouts: {
     /** Vendor "Shopify Inc." for fee bills. */
@@ -102,6 +110,7 @@ export const ENGINE_CONFIG: EngineConfig = {
   salesRepId: '126620', // sandbox id; create the "Shopify" employee in prod at cutover
   fulfillmentLocationId: '31',
   refundAdjustmentItemId: '1534', // sandbox id; recreate in prod at cutover
+  discountItemId: '1056', // pre-existing "Shopify Discount" item, re-pointed to 420000 (was non-posting)
   payouts: {
     shopifyVendorId: '69810', // "Shopify Inc." (active; 1992 is the inactive one)
     feeExpenseAccountId: '1859', // 622070

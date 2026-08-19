@@ -70,8 +70,9 @@ describe('runOrderPipeline', () => {
     const so = creates.find((c) => c.type === 'salesOrder')!;
     expect(so.payload.externalId).toBe(`SHOPORD-${plan.shopifyOrderId}`);
     expect(so.payload.custbody_shopify_order_id).toBe(Number(plan.shopifyOrderId)); // Integer field in NS
+    // Lines at CATALOG price; discount (if any) rides the header.
     const lineSum = so.payload.item.items.reduce((s: number, l: any) => s + l.amount, 0);
-    expect(Math.round(lineSum * 100)).toBe(plan.lines.reduce((s, l) => s + l.netAmountCents, 0));
+    expect(Math.round(lineSum * 100)).toBe(plan.lines.reduce((s, l) => s + l.netAmountCents + l.discountCents, 0));
 
     const inv = transforms.find((t) => t.to === 'invoice')!;
     expect(inv.body.externalId).toBe(`SHOPINV-${plan.shopifyOrderId}`);
@@ -166,6 +167,31 @@ describe('runOrderPipeline', () => {
     const { ns, creates } = fakeNs();
     await expect(runOrderPipeline(plan, ns, CONFIG)).rejects.toThrow(/no clearing account/);
     expect(creates).toEqual([]);
+  });
+});
+
+describe('discount representation', () => {
+  it('discounted order (#7220): gross lines + header discount to 420000, net still exact', async () => {
+    const plan = buildOrderPlan(loadOrder('discounted'));
+    const { ns, creates } = fakeNs();
+    await runOrderPipeline(plan, ns, CONFIG);
+    const so = creates.find((c) => c.type === 'salesOrder')!;
+    const lineSum = so.payload.item.items.reduce((s: number, l: any) => s + Math.round(l.amount * 100), 0);
+    expect(lineSum).toBe(15000); // catalog: 1×$50 + 2×$50
+    expect(so.payload.discountItem).toEqual({ id: CONFIG.discountItemId });
+    expect(Math.round(so.payload.discountRate * 100)).toBe(-1500); // Pack10 = -$15
+    expect(so.payload.memo).toContain('Pack10');
+    // Net effect: 150 - 15 + 8.90 shipping = 143.90 = Shopify total.
+    const ship = Math.round(so.payload.shippingCost * 100);
+    expect(lineSum - 1500 + ship).toBe(plan.totals.totalCents);
+  });
+
+  it('undiscounted orders get no discount header', async () => {
+    const plan = buildOrderPlan(loadOrder('b2b-latest'));
+    const { ns, creates } = fakeNs();
+    await runOrderPipeline(plan, ns, CONFIG);
+    const so = creates.find((c) => c.type === 'salesOrder')!;
+    expect(so.payload.discountItem).toBeUndefined();
   });
 });
 

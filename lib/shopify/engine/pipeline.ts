@@ -111,13 +111,17 @@ export async function runOrderPipeline(
   }
 
   // ---- step 2: ensure sales order (products + shipping only) ----
+  // Lines book at CATALOG price; the order's discounts go on the header
+  // via the "Shopify Discount" item (→ 420000 Sales Discounts) so given
+  // discounts are visible and reportable. Totals still equal Shopify's.
+  const discountCents = plan.lines.reduce((s, l) => s + l.discountCents, 0);
   const soExtId = config.externalIds.salesOrder(plan.shopifyOrderId);
   let nsSoId = await ns.findRecordIdByExternalId('salesOrder', soExtId);
   if (!nsSoId) {
     const itemLines: Array<Record<string, unknown>> = plan.lines.map((l) => ({
       item: { id: itemIds.get(l.sku)! },
       quantity: l.quantity,
-      amount: Number(centsToDecimal(l.netAmountCents)),
+      amount: Number(centsToDecimal(l.netAmountCents + l.discountCents)),
       description: l.description,
     }));
     nsSoId = await ns.createRecord('salesOrder', {
@@ -126,10 +130,13 @@ export async function runOrderPipeline(
       subsidiary: { id: config.subsidiaryId },
       tranDate: plan.processedAt.slice(0, 10),
       otherRefNum: plan.poNumber ?? plan.orderName,
-      memo: `Shopify ${plan.orderName}`,
+      memo: `Shopify ${plan.orderName}${plan.discountCodes.length ? ` · discount: ${plan.discountCodes.join(', ')}` : ''}`,
       custbody_shopify_order_id: Number(plan.shopifyOrderId),
       shippingCost: plan.shipping ? Number(centsToDecimal(plan.shipping.amountCents)) : 0,
       ...(plan.shipping ? { shipMethod: { id: config.shipMethodId } } : {}),
+      ...(discountCents > 0
+        ? { discountItem: { id: config.discountItemId }, discountRate: Number(centsToDecimal(-discountCents)) }
+        : {}),
       item: { items: itemLines },
     });
     created.so = true;

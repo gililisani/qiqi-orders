@@ -1049,6 +1049,25 @@ export class NetSuiteAPI {
     return id;
   }
 
+  /** Delete any record via REST (sandbox rebuild tooling; NS enforces dependency order). */
+  async deleteRecord(recordType: string, id: string): Promise<void> {
+    const url = `${this.baseUrl}/record/v1/${recordType}/${id}`;
+    const authHeader = this.getAuthHeader(url, 'DELETE');
+    const res = await axios({
+      method: 'DELETE',
+      url,
+      headers: { Authorization: authHeader, Accept: 'application/json' },
+      validateStatus: () => true,
+    });
+    if (res.status >= 400 && res.status !== 404) {
+      const msg =
+        res.data?.['o:errorDetails']?.map((d: any) => d.detail).join(' | ') ||
+        res.data?.['o:message'] ||
+        `HTTP ${res.status}`;
+      throw new Error(`NetSuite delete ${recordType} ${id} failed: ${msg}`);
+    }
+  }
+
   /** Partially update any record via REST PATCH (e.g. stamping ids on a matched customer). */
   async updateRecord(recordType: string, id: string, payload: Record<string, unknown>): Promise<void> {
     const url = `${this.baseUrl}/record/v1/${recordType}/${id}`;
