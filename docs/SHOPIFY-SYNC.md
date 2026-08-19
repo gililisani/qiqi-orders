@@ -278,13 +278,40 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
   prod expectations, diff vs NetScore's live output daily.
 - ☐ **Phase 6 — cutover**: runbook below.
 
+## Owner requirements (2026-08-18)
+
+1. **Cross-Subsidiary Fulfillment is MANDATORY in production.** Qiqi INC
+   has no physical warehouse (Amazon only); all Shopify fulfillment ships
+   from Qiqi Global's 3PL (BrandFox). Prod SOs need the Allow
+   Cross-Subsidiary Fulfillment checkbox + line-level Inventory Location =
+   BrandFox (auto-sets Inventory Subsidiary = Qiqi Global). Mirror the
+   HUB's proven cross-sub SO push (line `inventorylocation`). Sandbox
+   (Apr-2025 copy) predates this: Packable sat under Qiqi INC, so
+   same-sub works there. Plan: `crossSubsidiaryFulfillment` config flag —
+   false in sandbox, TRUE in prod with BrandFox ids; copy exact prod
+   location ids from NetScore's live SOs during shadow mode. HARD GATE on
+   the cutover checklist.
+2. **Admin dashboard** at /admin/shopify (qq components): status strip
+   (mode, last poll, synced today/week, error count), recent-orders table
+   with per-order chain state + NS record links, payouts view (Loop E).
+3. **Self-service error queue**: every parked order shows plain-language
+   error + guided action + a Retry button (idempotency makes retry always
+   safe). AMBIGUOUS_CUSTOMER gets a "pick the right customer" resolver
+   (stamps + retries). UNKNOWN_SKU / lot-stock → fix in NS, retry.
+   NOT_USD / TOTALS_MISMATCH → deliberately not self-fixable.
+4. **Settings page (post-production, LAST task)**: lift ENGINE_CONFIG
+   into a config table + admin UI (locations, tax items, terms, rep,
+   gateway map). Aligns with the productization directive; ENGINE_CONFIG
+   is already the single isolated home of every such value.
+
 ## Cutover / decommission runbook
 
 1. Pre: stamp-migration job run + verified (Q11). Shadow diffs clean
    2 weeks. CPA sign-off on tax + payout mapping.
 2. Freeze: note cursor timestamp T.
 3. NetSuite: set every NetScore script deployment **inactive** (do NOT
-   uninstall the bundle).
+   uninstall the bundle). VERIFY cross-subsidiary fulfillment config
+   (BrandFox location ids, CSF flag) against NetScore's last live SOs.
 4. Shopify: delete NetScore's legacy custom app (Develop apps) — kills
    their token. (Their 0-install dev-dashboard app "NetScore TEchnologies
    2025-10" is inert; delete anytime.)
