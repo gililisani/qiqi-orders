@@ -1,0 +1,370 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { ExternalLink, RefreshCw } from 'lucide-react';
+import { fetchWithAuth } from '../../../lib/fetchWithAuth';
+import { PageHeader } from '../../components/qq/page-header';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/qq/card';
+import { Skeleton } from '../../components/qq/skeleton';
+import { Button } from '../../components/qq/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../components/qq/table';
+import { cn } from '../../../lib/utils';
+
+interface OrderRow {
+  shopify_order_id: string;
+  order_name: string;
+  order_created_at: string;
+  buyer_kind: 'b2b' | 'b2c' | null;
+  state: string;
+  skip_reason: string | null;
+  total_cents: number | null;
+  ns_target: string | null;
+  error_code: string | null;
+  error_message: string | null;
+  links: {
+    customer: string | null;
+    so: string | null;
+    invoice: string | null;
+    fulfillments: (string | null)[];
+    creditMemos: (string | null)[];
+  };
+}
+
+interface PayoutRow {
+  shopify_payout_id: string;
+  issued_at: string;
+  net_cents: number;
+  fee_cents: number;
+  state: string;
+  error_message: string | null;
+  links: { bill: string | null; journal: string | null };
+}
+
+interface Overview {
+  config: { mode: string; last_poll_at: string | null; last_poll_error: string | null };
+  counts: Record<string, number>;
+  errorCount: number;
+  orders: OrderRow[];
+  payouts: PayoutRow[];
+}
+
+const STATE_STYLES: Record<string, string> = {
+  paid: 'bg-[#DBEAFE] text-[#1D4ED8] border-[#BFDBFE]',
+  fulfilled: 'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]',
+  refunded: 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]',
+  closed: 'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]',
+  skipped: 'bg-secondary text-muted-foreground border-border',
+  pending: 'bg-secondary text-muted-foreground border-border',
+  error: 'bg-brand-magenta/15 text-brand-magenta border-brand-magenta/40',
+};
+
+/** Plain-language guidance per error code (owner requirement #3). */
+const ERROR_GUIDANCE: Record<string, string> = {
+  UNKNOWN_SKU:
+    'This SKU does not exist in NetSuite. Create the item in NS (or fix the SKU on the Shopify product), then Retry.',
+  MISSING_SKU: 'A line on this order has no SKU (custom item). Fix the product in Shopify, then Retry.',
+  AMBIGUOUS_CUSTOMER:
+    'Several NS customers match this buyer. Merge/inactivate the duplicates in NS (or stamp the right one), then Retry.',
+  NOT_USD: 'Non-USD money detected — this should never happen. Do not retry; investigate the order in Shopify.',
+  TOTALS_MISMATCH: 'The order math does not reconcile to the cent. Do not retry; investigate.',
+  PAYMENT_MISMATCH: 'Payments do not cover the charged total. Often resolves after Shopify settles — Retry later.',
+  UNSUPPORTED_SOURCE: 'See the message — usually missing NS configuration (item, account, stock). Fix, then Retry.',
+  GIFT_CARD_LINE: 'Order contains a gift card — not supported.',
+  TAXES_INCLUDED: 'Tax-inclusive pricing detected — the store should be tax-exclusive. Investigate.',
+};
+
+function StateBadge({ state }: { state: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium',
+        STATE_STYLES[state] ?? STATE_STYLES.pending,
+      )}
+    >
+      {state}
+    </span>
+  );
+}
+
+function NsLink({ href, label }: { href: string | null; label: string }) {
+  if (!href) return null;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-0.5 text-brand-periwinkle hover:underline"
+    >
+      {label}
+      <ExternalLink className="h-3 w-3" />
+    </a>
+  );
+}
+
+const money = (cents: number | null | undefined) =>
+  cents == null ? '—' : `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+export default function ShopifySyncDashboard() {
+  const [data, setData] = useState<Overview | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth('/api/shopify/sync/overview');
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setData(json);
+      setLoadError(null);
+    } catch (err: any) {
+      setLoadError(String(err?.message ?? err));
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 60_000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  const retry = async (shopifyOrderId: string) => {
+    setRetrying(shopifyOrderId);
+    try {
+      await fetchWithAuth('/api/shopify/sync/retry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shopifyOrderId }),
+      });
+      await load();
+    } finally {
+      setRetrying(null);
+    }
+  };
+
+  const errors = data?.orders.filter((o) => o.state === 'error') ?? [];
+  const nonErrors = data?.orders.filter((o) => o.state !== 'error') ?? [];
+
+  return (
+    <div className="px-6 py-8">
+      <PageHeader
+        title="Shopify Sync"
+        description="Shopify → NetSuite: orders, fulfillments, refunds, payouts"
+      />
+
+      {loadError && (
+        <Card className="mb-6 border-brand-magenta/40">
+          <CardContent className="p-4 text-sm text-brand-magenta">
+            Couldn&apos;t load sync state: {loadError}
+          </CardContent>
+        </Card>
+      )}
+
+      {!data && !loadError && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+      )}
+
+      {data && (
+        <>
+          {/* Status strip */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Mode</p>
+                <p className="mt-1 text-2xl font-semibold capitalize">{data.config.mode}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {data.config.mode === 'sandbox' ? 'writing to NS Sandbox' : data.config.mode === 'live' ? 'writing to NS Production' : 'no NS writes'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Last poll</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {data.config.last_poll_at
+                    ? new Date(data.config.last_poll_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                    : '—'}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {data.config.last_poll_error ? `error: ${data.config.last_poll_error.slice(0, 60)}` : data.config.last_poll_at ? new Date(data.config.last_poll_at).toLocaleDateString() : 'never'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Synced (visible)</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {(data.counts['paid'] ?? 0) + (data.counts['fulfilled'] ?? 0) + (data.counts['refunded'] ?? 0)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {data.counts['fulfilled'] ?? 0} fulfilled · {data.counts['refunded'] ?? 0} refunded
+                </p>
+              </CardContent>
+            </Card>
+            <Card className={cn(data.errorCount > 0 && 'border-brand-magenta/40')}>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Errors</p>
+                <p className={cn('mt-1 text-2xl font-semibold tabular-nums', data.errorCount > 0 && 'text-brand-magenta')}>
+                  {data.errorCount}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {data.errorCount > 0 ? 'needs attention below' : 'all clear'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Error queue */}
+          {errors.length > 0 && (
+            <Card className="mt-6 border-brand-magenta/40">
+              <CardHeader>
+                <CardTitle>Needs attention</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {errors.map((o) => (
+                  <div key={o.shopify_order_id} className="rounded-md border border-border p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <span className="font-medium">{o.order_name}</span>
+                        <span className="ml-2 text-sm text-muted-foreground">
+                          {new Date(o.order_created_at).toLocaleDateString()} · {money(o.total_cents)}
+                        </span>
+                        <span className="ml-2 inline-flex items-center rounded-sm border border-brand-magenta/40 bg-brand-magenta/10 px-1.5 py-0.5 text-xs text-brand-magenta">
+                          {o.error_code}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={retrying === o.shopify_order_id}
+                        onClick={() => retry(o.shopify_order_id)}
+                      >
+                        <RefreshCw className={cn('mr-1 h-3.5 w-3.5', retrying === o.shopify_order_id && 'animate-spin')} />
+                        Retry
+                      </Button>
+                    </div>
+                    <p className="mt-2 text-sm text-foreground">{o.error_message}</p>
+                    {o.error_code && ERROR_GUIDANCE[o.error_code] && (
+                      <p className="mt-1 text-sm text-muted-foreground">{ERROR_GUIDANCE[o.error_code]}</p>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Orders table */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Recent orders</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Buyer</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead>State</TableHead>
+                    <TableHead>NetSuite chain</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {nonErrors.map((o) => (
+                    <TableRow key={o.shopify_order_id}>
+                      <TableCell className="font-medium">{o.order_name}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(o.order_created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="uppercase text-xs text-muted-foreground">{o.buyer_kind ?? '—'}</TableCell>
+                      <TableCell className="text-right tabular-nums">{money(o.total_cents)}</TableCell>
+                      <TableCell>
+                        <StateBadge state={o.state} />
+                        {o.skip_reason && (
+                          <span className="ml-1 text-xs text-muted-foreground">{o.skip_reason}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          <NsLink href={o.links.customer} label="Customer" />
+                          <NsLink href={o.links.so} label="SO" />
+                          <NsLink href={o.links.invoice} label="Invoice" />
+                          {o.links.fulfillments.map((href, i) => (
+                            <NsLink key={`f${i}`} href={href} label={`IF${o.links.fulfillments.length > 1 ? ` ${i + 1}` : ''}`} />
+                          ))}
+                          {o.links.creditMemos.map((href, i) => (
+                            <NsLink key={`c${i}`} href={href} label={`CM${o.links.creditMemos.length > 1 ? ` ${i + 1}` : ''}`} />
+                          ))}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Payouts */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Payouts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.payouts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No payouts booked yet.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Payout</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="text-right">Net to bank</TableHead>
+                      <TableHead className="text-right">Fees</TableHead>
+                      <TableHead>State</TableHead>
+                      <TableHead>NetSuite</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.payouts.map((p) => (
+                      <TableRow key={p.shopify_payout_id}>
+                        <TableCell className="font-mono text-xs">{p.shopify_payout_id}</TableCell>
+                        <TableCell>{new Date(p.issued_at).toLocaleDateString()}</TableCell>
+                        <TableCell className={cn('text-right tabular-nums', p.net_cents < 0 && 'text-brand-magenta')}>
+                          {money(p.net_cents)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">{money(p.fee_cents)}</TableCell>
+                        <TableCell>
+                          <StateBadge state={p.state === 'booked' ? 'fulfilled' : p.state} />
+                          {p.error_message && (
+                            <span className="ml-1 text-xs text-muted-foreground">{p.error_message.slice(0, 60)}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2 text-xs">
+                            <NsLink href={p.links.bill} label="Fee bill" />
+                            <NsLink href={p.links.journal} label="Journal" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}

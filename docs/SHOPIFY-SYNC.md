@@ -299,8 +299,22 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
   1 parked (disputes, by design); idempotent. Charge-window paging needs
   14d slack before oldest payout (weekly charges predate issue date).
   Payout state table: migration 20260819100000 (applied to staging).
-  NEXT: admin dashboard + self-service error queue → Loop D nightly
-  recon → shadow mode. Loops A/B/C/E all live in sandbox.
+  DASHBOARD LIVE 2026-08-19: /admin/shopify (nav: Shopify → Shopify
+  Sync, permission 'netsuite') — status strip (mode/last poll/synced/
+  errors), self-service error queue (plain-language guidance per error
+  code + always-safe Retry via POST /api/shopify/sync/retry), recent
+  orders with per-target NS deep links (SO/Invoice/IF/CM/Customer),
+  payouts table (fee bill + journal links; negative nets highlighted).
+  Overview API: /api/shopify/sync/overview. Payout backfill persists to
+  shopify_payout_sync. Staging Supabase API keys in .env.local
+  (STAGING_SUPABASE_*); `run-poll-staging.ts` = persistent poll (real
+  Shopify → NS sandbox → staging DB). VERCEL PREVIEW ENV still needed
+  for on-deploy polling/retry: SHOPIFY_STORE_DOMAIN, SHOPIFY_CLIENT_ID,
+  SHOPIFY_CLIENT_SECRET, NETSUITE_SB_ACCOUNT_ID/_CONSUMER_KEY/
+  _CONSUMER_SECRET/_TOKEN_ID/_TOKEN_SECRET (+ NEXT_PUBLIC_NETSUITE_
+  ACCOUNT_ID for NS links).
+  NEXT: Loop D nightly recon → shadow mode. Loops A/B/C/E + dashboard
+  all live in sandbox.
 - ☐ **Phase 3 — Loops B & C** (sandbox): IFs (lot rule), credit memos
   (line-level, tax-reversing, amount-only, restock flag).
 - ☐ **Phase 4 — Loops D & E**: nightly recon, price variance, payout

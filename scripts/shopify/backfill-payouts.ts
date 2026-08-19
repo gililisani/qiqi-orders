@@ -8,6 +8,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 
+import { createClient } from '@supabase/supabase-js';
+import { ShopifySyncStore } from '../../lib/shopify/store';
 import { fetchRecentPayouts } from '../../lib/shopify/payoutFetch';
 import { ensurePayoutBooking } from '../../lib/shopify/engine/payouts';
 import { PipelineError } from '../../lib/shopify/engine/pipeline';
@@ -24,6 +26,14 @@ async function main() {
   const payouts = await fetchRecentPayouts({ count });
   console.log(`fetched ${payouts.length} paid payouts`);
   const ns = createNetSuiteForTarget('sandbox');
+  const store =
+    process.env.STAGING_SUPABASE_URL && process.env.STAGING_SUPABASE_SERVICE_ROLE_KEY
+      ? new ShopifySyncStore(
+          createClient(process.env.STAGING_SUPABASE_URL, process.env.STAGING_SUPABASE_SERVICE_ROLE_KEY, {
+            auth: { persistSession: false },
+          }),
+        )
+      : null;
   let ok = 0, errored = 0;
 
   for (const { payout, txns } of payouts) {
@@ -36,10 +46,34 @@ async function main() {
           `fees=$${(r.plan.totalFeeCents / 100).toFixed(2)} → bill=${r.nsFeeBillId ?? '-'}${c.bill ? '(new)' : ''} ` +
           `pay=${r.nsFeePaymentId ?? '-'}${c.payment ? '(new)' : ''} journal=${r.nsJournalId}${c.journal ? '(new)' : ''}`,
       );
+      await store?.upsertPayout({
+        shopify_payout_id: r.plan.shopifyPayoutId,
+        issued_at: r.plan.issuedAt.slice(0, 10),
+        status: r.plan.status,
+        net_cents: r.plan.netCents,
+        fee_cents: r.plan.totalFeeCents,
+        state: 'booked',
+        ns_target: 'sandbox',
+        ns_fee_bill_id: r.nsFeeBillId,
+        ns_fee_payment_id: r.nsFeePaymentId,
+        ns_journal_id: r.nsJournalId,
+        composition: { breakdown: r.plan.breakdown, disputes: r.plan.disputes } as any,
+        error_message: null,
+      });
     } catch (err: any) {
       errored += 1;
       const msg = err instanceof PipelineError ? `${err.issue.code}: ${err.issue.message}` : String(err?.message ?? err);
       console.log(`  ✗ payout ${payout.legacyResourceId}: ${msg.slice(0, 220)}`);
+      await store?.upsertPayout({
+        shopify_payout_id: payout.legacyResourceId,
+        issued_at: payout.issuedAt.slice(0, 10),
+        status: payout.status,
+        net_cents: Math.round(Number(payout.net.amount) * 100),
+        fee_cents: 0,
+        state: 'error',
+        ns_target: 'sandbox',
+        error_message: msg.slice(0, 500),
+      });
     }
   }
   console.log(`\nDONE: ${ok} booked, ${errored} errored of ${payouts.length}`);

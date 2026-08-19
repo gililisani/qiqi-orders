@@ -131,6 +131,12 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: 'Shopify',
+    items: [
+      { label: 'Shopify Sync', href: '/admin/shopify', icon: <ShoppingBag />, permission: 'netsuite' },
+    ],
+  },
+  {
     label: 'Configuration',
     items: [
       { label: 'NetSuite Data',        href: '/admin/netsuite-data', icon: <Building />, permission: 'settings' },
@@ -171,6 +177,7 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: string }> = [
   { prefix: '/admin/netsuite', permission: 'netsuite' },
   { prefix: '/admin/inventory', permission: 'netsuite' },
   { prefix: '/admin/amazon', permission: 'netsuite' },
+  { prefix: '/admin/shopify', permission: 'netsuite' },
 ];
 
 function isAdminPathAllowed(pathname: string, permissions: string[]): boolean {

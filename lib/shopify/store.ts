@@ -90,6 +90,26 @@ export class ShopifySyncStore {
     return data as any;
   }
 
+  async upsertPayout(row: {
+    shopify_payout_id: string;
+    issued_at: string;
+    status: string;
+    net_cents: number;
+    fee_cents: number;
+    state: 'pending' | 'booked' | 'error';
+    ns_target?: string | null;
+    ns_fee_bill_id?: string | null;
+    ns_fee_payment_id?: string | null;
+    ns_journal_id?: string | null;
+    composition?: Record<string, unknown> | null;
+    error_message?: string | null;
+  }): Promise<void> {
+    const { error } = await this.db
+      .from('shopify_payout_sync')
+      .upsert({ ...row, updated_at: new Date().toISOString() }, { onConflict: 'shopify_payout_id' });
+    if (error) throw new Error(`shopify_payout_sync upsert failed: ${error.message}`);
+  }
+
   async event(
     loop: 'orders' | 'fulfillments' | 'refunds' | 'reconcile' | 'payouts' | 'system',
     event: string,
