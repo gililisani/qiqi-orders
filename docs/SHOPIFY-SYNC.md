@@ -268,8 +268,20 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
   stock. First run: 20/20 IFs where stock existed; 2 stale-sandbox
   stock-outs errored correctly; re-run = 0 new (idempotent).
   `scripts/shopify/backfill-fulfillments.ts --from --to`.
-  NEXT: owner-guided date-range tests → wire poller→pipeline → Loops
-  C/E engine in sandbox → admin dashboard + alerts.
+  LOOP C LIVE IN SANDBOX 2026-08-18: `engine/refund.ts` — per refund:
+  Credit Memo SHOPCM-<refundId> (standalone, location required) →
+  Customer Refund SHOPRFD-<txnId> transformed from the CM, account =
+  same gateway clearing as the payment (owner rule). "Shopify Refund
+  Adjustment" item (sandbox 1534, OthCharge → 410000; CPA may re-point;
+  resolves CPA question #3): carries refunded product amounts (SKU in
+  description) when inventory must NOT move (unfulfilled cancels,
+  no-restock refunds), refunded shipping, and amount-only residuals.
+  Tax reversal on the order's pass-through item. NS rule learned: an
+  inventory item on a CM FORCES lot-level restock — so physical returns
+  (restock=true on a fulfilled order) PARK until v2's lot-receipt
+  design. #7083 (cancel) + #7084 (amount-only) both booked + idempotent.
+  NEXT: poller wiring → Loop E engine (needs bank account id) → admin
+  dashboard + self-service error queue → shadow mode.
 - ☐ **Phase 3 — Loops B & C** (sandbox): IFs (lot rule), credit memos
   (line-level, tax-reversing, amount-only, restock flag).
 - ☐ **Phase 4 — Loops D & E**: nightly recon, price variance, payout

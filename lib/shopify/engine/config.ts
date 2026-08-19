@@ -40,6 +40,13 @@ export interface EngineConfig {
   salesRepId: string;
   /** 3PL ship-from location (sandbox 31 "Packable - Qiqi INC"; re-verify in prod = ShipHero's location). */
   fulfillmentLocationId: string;
+  /**
+   * "Shopify Refund Adjustment" (OthCharge for Sale → 410000 Sales; CPA
+   * may re-point). Carries refund amounts with NO inventory movement:
+   * cancelled-before-fulfillment lines, kept-goods refunds, shipping and
+   * amount-only residuals. (= CPA question #3, resolved 2026-08-18.)
+   */
+  refundAdjustmentItemId: string;
   /** Our externalid namespaces (NetScore never used externalid — the field is ours). */
   externalIds: {
     customer: (buyerKey: string) => string;
@@ -78,6 +85,7 @@ export const ENGINE_CONFIG: EngineConfig = {
   termsId: '8',
   salesRepId: '126620', // sandbox id; create the "Shopify" employee in prod at cutover
   fulfillmentLocationId: '31',
+  refundAdjustmentItemId: '1534', // sandbox id; recreate in prod at cutover
 
   externalIds: {
     customer: (buyerKey) => `SHOP-${buyerKey}`, // SHOP-CO-<companyId> / SHOP-CUST-<customerId>
