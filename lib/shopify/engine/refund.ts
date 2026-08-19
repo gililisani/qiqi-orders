@@ -110,6 +110,12 @@ export async function ensureRefunds(
         entity: { id: nsCustomerId },
         subsidiary: { id: config.subsidiaryId },
         location: { id: config.fulfillmentLocationId },
+        // Same searchable reference as the SO carries — global search on
+        // the Shopify order number surfaces SO, invoice and CM together.
+        // (True Related-Records linkage would require transforming the
+        // invoice, which drags its inventory lines in and forces restock —
+        // tested 2026-08-18, not viable for money-only CMs.)
+        otherRefNum: refund.orderName,
         tranDate: refund.createdAt.slice(0, 10),
         custbody_shopify_order_id: Number(refund.shopifyOrderId),
         memo: `Shopify refund ${refund.orderName}${refund.note ? ` · ${refund.note}` : ''}`,
