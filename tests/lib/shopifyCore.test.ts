@@ -130,6 +130,22 @@ describe('buildOrderPlan', () => {
     expect(vat.taxLines.every((t) => !t.channelLiable)).toBe(true);
   });
 
+  it('DDP import duties (#7268): separate field, merchant-liable, totals reconcile', () => {
+    const order = loadOrder('intl-duties-ca');
+    expect(gateOrder(order, SKUS)).toMatchObject({ outcome: 'proceed' });
+    const plan = buildOrderPlan(order);
+    expect(plan.totals.dutiesCents).toBe(1300);
+    const duties = plan.taxLines.find((t) => t.title === 'Import Duties')!;
+    expect(duties.amountCents).toBe(1300);
+    expect(duties.channelLiable).toBe(false);
+    // The full equation, incl. a 100%-off free-items promo on the same order:
+    const gross = plan.lines.reduce((s, l) => s + l.netAmountCents + l.discountCents, 0);
+    const discount = plan.lines.reduce((s, l) => s + l.discountCents, 0);
+    expect(gross - discount + plan.totals.shippingCents + plan.totals.taxCents + plan.totals.dutiesCents).toBe(
+      plan.totals.totalCents,
+    );
+  });
+
   it('records charged prices, not catalog prices, on discounted orders', () => {
     const plan = buildOrderPlan(loadOrder('discounted'));
     expect(plan.discountCodes).toContain('Pack10');

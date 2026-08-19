@@ -26,6 +26,7 @@ export const ORDER_SELECTION = `
   currentSubtotalPriceSet { shopMoney { amount currencyCode } }
   currentTotalDiscountsSet { shopMoney { amount } }
   currentTotalTaxSet { shopMoney { amount } }
+  currentTotalDutiesSet { shopMoney { amount } }
   currentShippingPriceSet { shopMoney { amount } }
   currentTotalPriceSet { shopMoney { amount currencyCode } }
   originalTotalPriceSet { shopMoney { amount } }

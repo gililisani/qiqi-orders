@@ -165,6 +165,14 @@ export async function runOrderPipeline(
       // (verified empirically 2026-08-18) — the invoice carries the exact
       // per-jurisdiction tax amounts on the pass-through items.
       ...(taxLines.length ? { item: { items: taxLines } } : {}),
+      // NS converts the SO's flat header discount to a PERCENTAGE during
+      // the transform and would re-apply it across the appended tax/duty
+      // lines (found on #7268: tax got discounted, total dropped $17.98).
+      // Re-asserting the flat amount here keeps the discount exact and
+      // the appended lines undiscounted.
+      ...(discountCents > 0
+        ? { discountItem: { id: config.discountItemId }, discountRate: Number(centsToDecimal(-discountCents)) }
+        : {}),
     });
     created.invoice = true;
   }

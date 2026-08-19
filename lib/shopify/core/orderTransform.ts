@@ -85,6 +85,14 @@ export function buildOrderPlan(order: ShopifyOrder): OrderPlan {
     .map((d) => (typeof d.code === 'string' ? d.code : typeof d.title === 'string' ? (d.title as string) : null))
     .filter((c): c is string => !!c);
 
+  const dutiesCents = order.currentTotalDutiesSet ? toCents(order.currentTotalDutiesSet.shopMoney.amount) : 0;
+  const taxLines = planTaxLines(order.taxLines);
+  if (dutiesCents > 0) {
+    // Import duties: merchant-liable pass-through (same DDP liability as
+    // intl VAT — collected from the buyer, forwarded to the courier).
+    taxLines.push({ title: 'Import Duties', ratePercentage: null, amountCents: dutiesCents, channelLiable: false });
+  }
+
   return {
     shopifyOrderId: gidNum(order.id),
     orderName: order.name,
@@ -93,7 +101,7 @@ export function buildOrderPlan(order: ShopifyOrder): OrderPlan {
     note: order.note,
     buyer,
     lines,
-    taxLines: planTaxLines(order.taxLines),
+    taxLines,
     shipping,
     payments,
     totals: {
@@ -101,6 +109,7 @@ export function buildOrderPlan(order: ShopifyOrder): OrderPlan {
       discountCents: toCents(order.currentTotalDiscountsSet.shopMoney.amount),
       shippingCents: toCents(order.currentShippingPriceSet.shopMoney.amount),
       taxCents: toCents(order.currentTotalTaxSet.shopMoney.amount),
+      dutiesCents,
       totalCents: toCents(order.currentTotalPriceSet.shopMoney.amount),
     },
     discountCodes,

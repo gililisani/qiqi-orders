@@ -39,6 +39,7 @@ const ARCHETYPES: Array<{ file: string; query: string }> = [
   { file: 'b2c-latest', query: "" },
   { file: 'multi-tax-domestic', query: "name:#7201" },
   { file: 'intl-vat-nl', query: "name:#6582" },
+  { file: 'intl-duties-ca', query: "name:#7268" },
   { file: 'intl-de', query: "shipping_address_country_code:DE" },
   { file: 'intl-ca', query: "shipping_address_country_code:CA" },
   { file: 'refunded-full', query: "financial_status:refunded" },

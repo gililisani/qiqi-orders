@@ -128,6 +128,8 @@ export interface ShopifyOrder {
   currentSubtotalPriceSet: MoneyBag;
   currentTotalDiscountsSet: MoneyBag;
   currentTotalTaxSet: MoneyBag;
+  /** Import duties on DDP international orders — separate from tax. */
+  currentTotalDutiesSet?: MoneyBag | null;
   currentShippingPriceSet: MoneyBag;
   currentTotalPriceSet: MoneyBag;
   netPaymentSet: MoneyBag;
@@ -243,6 +245,8 @@ export interface OrderPlan {
     discountCents: number;
     shippingCents: number;
     taxCents: number;
+    /** Import duties (DDP) — booked like merchant-liable tax. */
+    dutiesCents: number;
     totalCents: number; // what the customer was charged
   };
   discountCodes: string[];

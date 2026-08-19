@@ -90,13 +90,16 @@ export function gateOrder(order: ShopifyOrder, knownSkus: ReadonlySet<string>): 
   const subtotal = money(order.currentSubtotalPriceSet, 'subtotal');
   const tax = money(order.currentTotalTaxSet, 'tax');
   const shipping = money(order.currentShippingPriceSet, 'shipping');
+  // DDP international orders carry import duties in their own field,
+  // separate from tax — the NetScore bug was dropping this (#7268: $13).
+  const duties = order.currentTotalDutiesSet ? money(order.currentTotalDutiesSet, 'duties') : 0;
   const total = money(order.currentTotalPriceSet, 'total');
-  const computed = subtotal + tax + shipping;
+  const computed = subtotal + tax + shipping + duties;
   if (computed !== total) {
     issues.push({
       code: 'TOTALS_MISMATCH',
-      message: `${order.name} subtotal+tax+shipping=${computed} but total=${total} (cents)`,
-      detail: { subtotal, tax, shipping, total },
+      message: `${order.name} subtotal+tax+shipping+duties=${computed} but total=${total} (cents)`,
+      detail: { subtotal, tax, shipping, duties, total },
     });
   }
 

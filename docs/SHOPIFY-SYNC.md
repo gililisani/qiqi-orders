@@ -349,6 +349,19 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
    gateway map). Aligns with the productization directive; ENGINE_CONFIG
    is already the single isolated home of every such value.
 
+## Import duties (QA find 2026-08-19, order #7268)
+
+DDP orders carry import duties in `currentTotalDutiesSet` — SEPARATE
+from tax (the exact NetScore drop-a-duty bug from the brief; the gate
+refused to book #7268 rather than mis-book it, then support was added).
+Duties become an "Import Duties" merchant-liable line → DDP pass-through
+item → 240504, and join the totals equation (subtotal+tax+shipping+
+duties=total). Second find on the same order: NS converts a flat SO
+header discount to a PERCENTAGE on invoice transform and re-applies it
+to appended tax/duty lines — fixed by re-asserting the flat discount in
+the transform body. Fixture: intl-duties-ca (100%-off promo + $138
+discount + CA 13% tax + $13 duties books exactly).
+
 ## Backfill boundary (discovered 2026-08-19)
 
 The legacy "Pro Discount" workaround (retail price − 50% simulating
