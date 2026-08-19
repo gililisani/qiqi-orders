@@ -259,8 +259,17 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
   "Shopify" (sandbox 126620), address book from order. Native NS
   Sales Tax Items / Nexus setup deferred until US nexus registration
   (Avalara path).
+  LOOP B LIVE IN SANDBOX 2026-08-18: `engine/fulfill.ts` — one IF per
+  Shopify fulfillment (SHOPFUL-<id>), transform from SO with orderLine
+  mapping, location 31 (sandbox 3PL "Packable"; re-verify prod at
+  cutover), FEFO lot assignment (expiration NULLS LAST, then lowest lot
+  number — this account leaves expirationdate empty; lot numbers encode
+  production order), multi-lot spanning, loud error on insufficient
+  stock. First run: 20/20 IFs where stock existed; 2 stale-sandbox
+  stock-outs errored correctly; re-run = 0 new (idempotent).
+  `scripts/shopify/backfill-fulfillments.ts --from --to`.
   NEXT: owner-guided date-range tests → wire poller→pipeline → Loops
-  B/C/E engine runs in sandbox.
+  C/E engine in sandbox → admin dashboard + alerts.
 - ☐ **Phase 3 — Loops B & C** (sandbox): IFs (lot rule), credit memos
   (line-level, tax-reversing, amount-only, restock flag).
 - ☐ **Phase 4 — Loops D & E**: nightly recon, price variance, payout

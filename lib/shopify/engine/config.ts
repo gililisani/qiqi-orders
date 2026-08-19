@@ -38,6 +38,8 @@ export interface EngineConfig {
   termsId: string;
   /** "Shopify" sales-rep employee — Shopify orders have no human rep (owner 2026-08-18). */
   salesRepId: string;
+  /** 3PL ship-from location (sandbox 31 "Packable - Qiqi INC"; re-verify in prod = ShipHero's location). */
+  fulfillmentLocationId: string;
   /** Our externalid namespaces (NetScore never used externalid — the field is ours). */
   externalIds: {
     customer: (buyerKey: string) => string;
@@ -75,6 +77,7 @@ export const ENGINE_CONFIG: EngineConfig = {
   shipMethodId: '1171',
   termsId: '8',
   salesRepId: '126620', // sandbox id; create the "Shopify" employee in prod at cutover
+  fulfillmentLocationId: '31',
 
   externalIds: {
     customer: (buyerKey) => `SHOP-${buyerKey}`, // SHOP-CO-<companyId> / SHOP-CUST-<customerId>
