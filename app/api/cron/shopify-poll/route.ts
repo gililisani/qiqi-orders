@@ -3,6 +3,9 @@ import { createServiceRoleClient } from '../../../../platform/auth/guards';
 import { ShopifySyncStore } from '../../../../lib/shopify/store';
 import { pollOrders } from '../../../../lib/shopify/engine/poll';
 import { fetchOrdersUpdatedSince, loadKnownSkus } from '../../../../lib/shopify/engine/deps';
+import { executeOrder } from '../../../../lib/shopify/engine/execute';
+import { ENGINE_CONFIG } from '../../../../lib/shopify/engine/config';
+import { createNetSuiteForTarget, type NsTarget } from '../../../../lib/shopify/engine/nsTarget';
 
 /**
  * Loop A poller (every 15 min, vercel.json). Mode lives in
@@ -21,7 +24,17 @@ export async function GET(request: NextRequest) {
 
   const store = new ShopifySyncStore(createServiceRoleClient());
   try {
-    const result = await pollOrders({ store, fetchOrdersUpdatedSince, loadKnownSkus });
+    const mode = (await store.getConfig()).mode;
+    const nsTarget: NsTarget | undefined =
+      mode === 'sandbox' ? 'sandbox' : mode === 'live' ? 'production' : undefined;
+    const ns = nsTarget ? createNetSuiteForTarget(nsTarget) : null;
+    const result = await pollOrders({
+      store,
+      fetchOrdersUpdatedSince,
+      loadKnownSkus,
+      nsTarget,
+      execute: ns ? (order, plan) => executeOrder(order, plan, ns, ENGINE_CONFIG) : undefined,
+    });
     console.log(`[cron/shopify-poll] ${JSON.stringify(result)}`);
     return NextResponse.json({ success: true, ...result });
   } catch (err: any) {

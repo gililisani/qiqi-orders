@@ -12,8 +12,10 @@
  */
 import { gateOrder } from '../core/validate';
 import { buildOrderPlan } from '../core/orderTransform';
-import type { ShopifyOrder } from '../core/types';
+import type { OrderPlan, ShopifyOrder } from '../core/types';
 import type { ShopifySyncStore } from '../store';
+import { PipelineError } from './pipeline';
+import type { ExecutionOutcome } from './execute';
 
 /** Re-poll window: absorbs clock skew + updates landing mid-poll. */
 const OVERLAP_MS = 10 * 60_000;
@@ -22,6 +24,13 @@ export interface PollDeps {
   store: ShopifySyncStore;
   fetchOrdersUpdatedSince: (isoTimestamp: string) => Promise<ShopifyOrder[]>;
   loadKnownSkus: () => Promise<Set<string>>;
+  /**
+   * NS writer for sandbox/live modes (wired to executeOrder + the mode's
+   * NetSuite target). Absent in shadow mode — the poller then only plans.
+   */
+  execute?: (order: ShopifyOrder, plan: OrderPlan) => Promise<ExecutionOutcome>;
+  /** Which NS the executor writes to; recorded on each order row. */
+  nsTarget?: 'sandbox' | 'production';
   now?: () => Date;
 }
 
@@ -29,6 +38,7 @@ export interface PollResult {
   mode: string;
   fetched: number;
   proceeded: number;
+  executed: number;
   skipped: number;
   errored: number;
   cursor: string | null;
@@ -40,7 +50,11 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
   const config = await store.getConfig();
 
   if (config.mode === 'off') {
-    return { mode: 'off', fetched: 0, proceeded: 0, skipped: 0, errored: 0, cursor: config.orders_cursor };
+    return { mode: 'off', fetched: 0, proceeded: 0, executed: 0, skipped: 0, errored: 0, cursor: config.orders_cursor };
+  }
+  const writeMode = config.mode === 'sandbox' || config.mode === 'live';
+  if (writeMode && !deps.execute) {
+    throw new Error(`mode is '${config.mode}' but the poller has no executor wired`);
   }
 
   // First run: start from now minus one day so we don't inhale all history
@@ -54,6 +68,7 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
   const knownSkus = orders.length > 0 ? await deps.loadKnownSkus() : new Set<string>();
 
   let proceeded = 0;
+  let executed = 0;
   let skipped = 0;
   let errored = 0;
   let maxUpdatedAt = config.orders_cursor;
@@ -84,18 +99,50 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
 
       const plan = buildOrderPlan(order);
       await store.seenOrder(order, plan);
-      const existing = await store.getOrderState(orderId);
-      // Shadow mode stops here — plan persisted, nothing written to NS.
-      // sandbox/live will hand the plan to the ensure-pipeline (Phase 2b).
-      if (existing?.state === 'pending' || existing?.state === 'error' || existing?.state === 'skipped') {
-        await store.setState(orderId, 'pending', { error_code: null, error_message: null, skip_reason: null });
-      }
       await store.event('orders', 'planned', orderId, {
         totalCents: plan.totals.totalCents,
         payments: plan.payments.length,
         buyer: plan.buyer.kind,
       });
       proceeded += 1;
+
+      if (writeMode && deps.execute) {
+        try {
+          const outcome = await deps.execute(order, plan);
+          await store.setState(orderId, outcome.state, {
+            ...outcome.nsIds,
+            ns_target: deps.nsTarget ?? null,
+            error_code: null,
+            error_message: null,
+            skip_reason: null,
+          });
+          await store.event('orders', 'executed', orderId, {
+            state: outcome.state,
+            so: outcome.nsIds.ns_so_id,
+            invoice: outcome.nsIds.ns_invoice_id,
+          });
+          executed += 1;
+        } catch (err: any) {
+          errored += 1;
+          if (err instanceof PipelineError) {
+            await store.markError(orderId, [err.issue]);
+            await store.event('orders', 'pipeline_error', orderId, { issue: err.issue });
+          } else {
+            await store.markError(orderId, [
+              { code: 'UNSUPPORTED_SOURCE', message: String(err?.message ?? err).slice(0, 500) },
+            ]);
+            await store.event('orders', 'pipeline_exception', orderId, {
+              error: String(err?.message ?? err).slice(0, 500),
+            });
+          }
+        }
+      } else {
+        // Shadow mode: plan persisted, nothing written to NS.
+        const existing = await store.getOrderState(orderId);
+        if (existing?.state === 'error' || existing?.state === 'skipped') {
+          await store.setState(orderId, 'pending', { error_code: null, error_message: null, skip_reason: null });
+        }
+      }
     } catch (err: any) {
       errored += 1;
       await store.event('orders', 'poll_exception', orderId, { error: String(err?.message ?? err).slice(0, 500) });
@@ -115,5 +162,5 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
     since,
   });
 
-  return { mode: config.mode, fetched: orders.length, proceeded, skipped, errored, cursor: maxUpdatedAt };
+  return { mode: config.mode, fetched: orders.length, proceeded, executed, skipped, errored, cursor: maxUpdatedAt };
 }

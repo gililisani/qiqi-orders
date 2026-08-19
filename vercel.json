@@ -6,6 +6,9 @@
     "app/api/cron/amazon-fba-monthly/route.ts": {
       "maxDuration": 300
     },
+    "app/api/cron/shopify-poll/route.ts": {
+      "maxDuration": 300
+    },
     "app/api/netsuite/amazon-fba/push/route.ts": {
       "maxDuration": 300
     },

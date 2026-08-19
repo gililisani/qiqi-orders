@@ -280,8 +280,16 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
   inventory item on a CM FORCES lot-level restock — so physical returns
   (restock=true on a fulfilled order) PARK until v2's lot-receipt
   design. #7083 (cancel) + #7084 (amount-only) both booked + idempotent.
-  NEXT: poller wiring → Loop E engine (needs bank account id) → admin
-  dashboard + self-service error queue → shadow mode.
+  POLLER WIRED 2026-08-18: `engine/execute.ts` chains A→B→C per order;
+  poll modes: shadow = plan only, sandbox/live = execute (hard error if
+  no executor — no silent no-write). Live local run (3h window): 6/6 —
+  2 new orders booked to payment, 4 ShipHero-shipped orders got full
+  chain + IF in one pass. Steady-state 15-min cron handles 2–5 orders
+  (~30s/order NS REST); shopify-poll maxDuration 300. Initial-cursor
+  backfills stay script-driven (the 24h default window with ~40 updated
+  orders exceeds one cron slot — fine, cursor advances incrementally).
+  NEXT: Loop E engine (needs bank account id) → admin dashboard +
+  self-service error queue → shadow mode.
 - ☐ **Phase 3 — Loops B & C** (sandbox): IFs (lot rule), credit memos
   (line-level, tax-reversing, amount-only, restock flag).
 - ☐ **Phase 4 — Loops D & E**: nightly recon, price variance, payout

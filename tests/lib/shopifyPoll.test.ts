@@ -100,6 +100,48 @@ describe('pollOrders', () => {
     expect(calls.state[0]).toMatchObject({ state: 'skipped', reason: 'UNPAID_YET' });
   });
 
+  it('sandbox mode executes orders and records outcomes; pipeline errors park the order', async () => {
+    const { store, calls, states } = fakeStore('sandbox');
+    const good = withUpdatedAt('b2c-latest', '2026-08-17T10:00:00Z');
+    const bad = withUpdatedAt('b2b-latest', '2026-08-17T11:00:00Z');
+    const r = await pollOrders({
+      store,
+      fetchOrdersUpdatedSince: async () => [good, bad],
+      loadKnownSkus: async () => SKUS,
+      nsTarget: 'sandbox',
+      execute: async (order) => {
+        if (order.name === bad.name) {
+          const { PipelineError } = await import('@/lib/shopify/engine/pipeline');
+          throw new PipelineError({ code: 'UNKNOWN_SKU', message: 'test park' });
+        }
+        return {
+          state: 'paid' as const,
+          nsIds: {
+            ns_customer_id: '1', ns_so_id: '2', ns_invoice_id: '3',
+            ns_payment_ids: ['4'], ns_fulfillment_ids: [], ns_credit_memo_ids: [],
+          },
+        };
+      },
+    });
+    expect(r).toMatchObject({ executed: 1, errored: 1, proceeded: 2 });
+    const goodId = good.id.replace(/^.*\//, '');
+    expect(states.get(goodId)).toBe('paid');
+    const set = calls.state.find((c: any) => c.id === goodId && c.state === 'paid');
+    expect(set.ns_so_id).toBe('2');
+    expect(set.ns_target).toBe('sandbox');
+  });
+
+  it('sandbox mode without an executor is a hard error (no silent no-write)', async () => {
+    const { store } = fakeStore('sandbox');
+    await expect(
+      pollOrders({
+        store,
+        fetchOrdersUpdatedSince: async () => [],
+        loadKnownSkus: async () => SKUS,
+      }),
+    ).rejects.toThrow(/no executor/);
+  });
+
   it('one order throwing does not stop the others', async () => {
     const { store } = fakeStore('shadow');
     const bad = withUpdatedAt('b2b-latest', '2026-08-17T10:00:00Z');
