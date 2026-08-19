@@ -37,6 +37,12 @@ async function main() {
   const order = data.order as ShopifyOrder;
   if (!order?.id) throw new Error('order not found in Shopify');
 
+  if (order.refunds.length > 0 && !process.argv.includes('--force')) {
+    throw new Error(
+      `${order.name} has refunds — NS blocks deleting applied customer refunds, so a full rebuild is not possible. ` +
+      `The old chain stays; new representation applies to newly-created records.`,
+    );
+  }
   const del = async (type: string, extId: string) => {
     const id = await ns.findRecordIdByExternalId(type, extId);
     if (id) {

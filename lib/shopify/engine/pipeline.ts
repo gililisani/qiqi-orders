@@ -104,6 +104,7 @@ export async function runOrderPipeline(
       taxLines.push({
         item: { id: itemId! },
         quantity: 1,
+        price: { id: '-1' },
         amount: Number(centsToDecimal(t.amountCents)),
         description: t.title,
       });
@@ -121,6 +122,9 @@ export async function runOrderPipeline(
     const itemLines: Array<Record<string, unknown>> = plan.lines.map((l) => ({
       item: { id: itemIds.get(l.sku)! },
       quantity: l.quantity,
+      // Price level "Custom" (-1): the amount is injected from Shopify,
+      // exactly as a human would have to select to type a price.
+      price: { id: '-1' },
       amount: Number(centsToDecimal(l.netAmountCents + l.discountCents)),
       description: l.description,
     }));

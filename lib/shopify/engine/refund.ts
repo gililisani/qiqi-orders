@@ -71,6 +71,7 @@ export async function ensureRefunds(
         lines.push({
           item: { id: config.refundAdjustmentItemId },
           quantity: l.quantity,
+          price: { id: '-1' },
           amount: Number(centsToDecimal(l.subtotalCents)),
           description: `Refund · ${l.sku ?? 'item'} ×${l.quantity}`,
         });
@@ -86,6 +87,7 @@ export async function ensureRefunds(
         lines.push({
           item: { id: taxItemId },
           quantity: 1,
+          price: { id: '-1' },
           amount: Number(centsToDecimal(taxCents)),
           description: 'Tax reversal',
         });
@@ -100,6 +102,7 @@ export async function ensureRefunds(
         lines.push({
           item: { id: config.refundAdjustmentItemId },
           quantity: 1,
+          price: { id: '-1' },
           amount: Number(centsToDecimal(refund.residualCents)),
           description: label,
         });

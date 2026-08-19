@@ -71,6 +71,8 @@ describe('runOrderPipeline', () => {
     expect(so.payload.externalId).toBe(`SHOPORD-${plan.shopifyOrderId}`);
     expect(so.payload.custbody_shopify_order_id).toBe(Number(plan.shopifyOrderId)); // Integer field in NS
     // Lines at CATALOG price; discount (if any) rides the header.
+    // Every injected amount declares price level Custom (-1).
+    expect(so.payload.item.items.every((l: any) => l.price?.id === '-1')).toBe(true);
     const lineSum = so.payload.item.items.reduce((s: number, l: any) => s + l.amount, 0);
     expect(Math.round(lineSum * 100)).toBe(plan.lines.reduce((s, l) => s + l.netAmountCents + l.discountCents, 0));
 
