@@ -105,6 +105,7 @@ export async function runOrderPipeline(
         item: { id: itemId! },
         quantity: 1,
         price: { id: '-1' },
+        rate: Number(centsToDecimal(t.amountCents)),
         amount: Number(centsToDecimal(t.amountCents)),
         description: t.title,
       });
@@ -119,15 +120,21 @@ export async function runOrderPipeline(
   const soExtId = config.externalIds.salesOrder(plan.shopifyOrderId);
   let nsSoId = await ns.findRecordIdByExternalId('salesOrder', soExtId);
   if (!nsSoId) {
-    const itemLines: Array<Record<string, unknown>> = plan.lines.map((l) => ({
-      item: { id: itemIds.get(l.sku)! },
-      quantity: l.quantity,
-      // Price level "Custom" (-1): the amount is injected from Shopify,
-      // exactly as a human would have to select to type a price.
-      price: { id: '-1' },
-      amount: Number(centsToDecimal(l.netAmountCents + l.discountCents)),
-      description: l.description,
-    }));
+    const itemLines: Array<Record<string, unknown>> = plan.lines.map((l) => {
+      const amountCents = l.netAmountCents + l.discountCents;
+      return {
+        item: { id: itemIds.get(l.sku)! },
+        quantity: l.quantity,
+        // Price level "Custom" (-1): the amount is injected from Shopify,
+        // exactly as a human would have to select to type a price.
+        price: { id: '-1' },
+        // Rate is display-only for NS (amount stays authoritative even on
+        // uneven divisions — verified empirically); rounded unit price.
+        rate: Math.round(amountCents / l.quantity) / 100,
+        amount: Number(centsToDecimal(amountCents)),
+        description: l.description,
+      };
+    });
     nsSoId = await ns.createRecord('salesOrder', {
       externalId: soExtId,
       entity: { id: nsCustomerId },
