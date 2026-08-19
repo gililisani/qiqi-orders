@@ -47,6 +47,22 @@ export interface EngineConfig {
    * amount-only residuals. (= CPA question #3, resolved 2026-08-18.)
    */
   refundAdjustmentItemId: string;
+  /** Loop E — payout booking (CFO pattern: fee bill + journal, per payout). */
+  payouts: {
+    /** Vendor "Shopify Inc." for fee bills. */
+    shopifyVendorId: string;
+    /** 622070 Shopify Processing Fee. */
+    feeExpenseAccountId: string;
+    /** 100101 IDB QIQINC (USD) — where Monday deposits land. */
+    bankAccountId: string;
+    /** 240502 Marketplace Tax — Shop Remitted (cleared by payout tax deductions). */
+    marketplaceTaxAccountId: string;
+    /**
+     * Chargeback/dispute account — null parks payouts containing disputes
+     * (loud) until the CPA names the account.
+     */
+    chargebackAccountId: string | null;
+  };
   /** Our externalid namespaces (NetScore never used externalid — the field is ours). */
   externalIds: {
     customer: (buyerKey: string) => string;
@@ -86,6 +102,13 @@ export const ENGINE_CONFIG: EngineConfig = {
   salesRepId: '126620', // sandbox id; create the "Shopify" employee in prod at cutover
   fulfillmentLocationId: '31',
   refundAdjustmentItemId: '1534', // sandbox id; recreate in prod at cutover
+  payouts: {
+    shopifyVendorId: '69810', // "Shopify Inc." (active; 1992 is the inactive one)
+    feeExpenseAccountId: '1859', // 622070
+    bankAccountId: '938', // 100101 IDB QIQINC (USD) — owner 2026-08-19
+    marketplaceTaxAccountId: '1573', // 240502
+    chargebackAccountId: null, // CPA decision pending — dispute payouts park
+  },
 
   externalIds: {
     customer: (buyerKey) => `SHOP-${buyerKey}`, // SHOP-CO-<companyId> / SHOP-CUST-<customerId>

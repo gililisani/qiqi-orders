@@ -288,8 +288,19 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
   (~30s/order NS REST); shopify-poll maxDuration 300. Initial-cursor
   backfills stay script-driven (the 24h default window with ~40 updated
   orders exceeds one cron slot — fine, cursor advances incrementally).
-  NEXT: Loop E engine (needs bank account id) → admin dashboard +
-  self-service error queue → shadow mode.
+  LOOP E LIVE IN SANDBOX 2026-08-19: `engine/payouts.ts` + `payoutFetch.ts`
+  — per PAID payout: fee Vendor Bill SHOPPO-FEE-<id> (vendor Shopify Inc.
+  69810, expense 622070/1859, tranId mandatory) + vendorPayment from
+  100501 + net journal SHOPPO-NET-<id> (debit bank 100101/938 — owner
+  2026-08-19 — credit 100501, plus marketplace-tax leg 240502 clearing
+  Shop-remitted deductions; negative payouts reverse the bank leg).
+  Dispute payouts PARK until chargebackAccountId is configured (CPA).
+  Live run: 5/6 booked incl. both negative payouts + the Monday pair;
+  1 parked (disputes, by design); idempotent. Charge-window paging needs
+  14d slack before oldest payout (weekly charges predate issue date).
+  Payout state table: migration 20260819100000 (applied to staging).
+  NEXT: admin dashboard + self-service error queue → Loop D nightly
+  recon → shadow mode. Loops A/B/C/E all live in sandbox.
 - ☐ **Phase 3 — Loops B & C** (sandbox): IFs (lot rule), credit memos
   (line-level, tax-reversing, amount-only, restock flag).
 - ☐ **Phase 4 — Loops D & E**: nightly recon, price variance, payout
