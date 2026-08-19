@@ -349,6 +349,16 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
    gateway map). Aligns with the productization directive; ENGINE_CONFIG
    is already the single isolated home of every such value.
 
+## Backfill boundary (discovered 2026-08-19)
+
+The legacy "Pro Discount" workaround (retail price − 50% simulating
+wholesale) last appears on **2026-07-15** (#6999); zero occurrences in
+271 orders since. Under the current representation (gross lines + header
+discount → 420000) those legacy orders would inflate both Sales and
+Sales Discounts with what was economically wholesale pricing.
+**Earliest safe backfill date: 2026-07-16.** History before that stays
+NetScore's records (as the cutover design always intended).
+
 ## Cutover / decommission runbook
 
 1. Pre: stamp-migration job run + verified (Q11). Shadow diffs clean
