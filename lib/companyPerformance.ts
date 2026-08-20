@@ -137,7 +137,7 @@ export function computePeriodMetrics(
   doneOrders: Array<{ id: string; total_value?: number | null; credit_earned?: number | null }>,
   firstDone: Map<string, Date>,
   sfUsedByOrder: Map<string, number>,
-  historical: Array<{ amount: number | string | null; sale_date: string }>
+  historical: Array<{ amount: number | string | null; sale_date: string; support_fund?: number | string | null }>
 ): PeriodMetrics {
   const startDate = new Date(`${period.start_date}T00:00:00.000Z`);
   const endDate = new Date(`${period.end_date}T23:59:59.999Z`);
@@ -156,6 +156,9 @@ export function computePeriodMetrics(
   for (const sale of historical) {
     if (sale.sale_date >= period.start_date && sale.sale_date <= period.end_date) {
       actual += Number(sale.amount) || 0;
+      // Historical SF = the NS discount captured on import (or typed in) —
+      // counts toward "earned" so pre-Hub eras show their real SF benefit.
+      sfEarned += Number(sale.support_fund) || 0;
     }
   }
 
@@ -343,7 +346,10 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
     toDateSfEarned += Number(order.credit_earned) || 0;
     toDateSfUsed += sfUsedByOrder.get(order.id) ?? 0;
   }
-  for (const sale of historical) toDateSales += Number(sale.amount) || 0;
+  for (const sale of historical) {
+    toDateSales += Number(sale.amount) || 0;
+    toDateSfEarned += Number(sale.support_fund) || 0;
+  }
 
   // ---- Per-period rows ----------------------------------------------------
   const periodRows: CompanyPeriodRow[] = periods.map((p) => {
@@ -382,6 +388,7 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
   for (const sale of historical) {
     if (sale.sale_date >= windowFromDay && sale.sale_date <= windowToDay) {
       windowSales += Number(sale.amount) || 0;
+      windowSfEarned += Number(sale.support_fund) || 0;
     }
   }
 
@@ -483,7 +490,7 @@ export async function fetchRevenueInputs(
       .in('company_id', companyIds),
     supabase
       .from('historical_sales')
-      .select('company_id, amount, sale_date')
+      .select('company_id, amount, sale_date, support_fund')
       .in('company_id', companyIds),
   ]);
   if (ordersRes.error) throw new Error(`orders: ${ordersRes.error.message}`);
