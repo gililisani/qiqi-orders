@@ -18,9 +18,10 @@ Steps marked (agent) are run by the agent; the rest are owner actions.
     DDP 1464, Marketplace 1564, Refund Adjustment 1565)
  2. ☑ Create "Shopify" sales rep in prod NS UI (2026-08-20: id 190493,
     in config — production config COMPLETE, live mode code-unblocked)
- 3. ☐ Prod Supabase SQL: paste docs/sql/2026-08-20-shopify-prod-apply.sql
-    (all 5 migrations combined) into the PROD Supabase SQL editor, Run
-    ONCE. Creates tables only; mode='off'.
+ 3. ☑ Prod Supabase SQL (2026-08-20): all 7 tables verified present,
+    mode='off', all empty. netscore_* stamps stay empty until the
+    snapshot pre-load / cutover step 13 (agent's run blocked by the
+    permission gate — owner-approved run or cutover step 13 fills them).
  4. ☐ Rotate the Shopify app client secret (Shopify admin → Settings →
     Apps and sales channels → Develop apps → Qiqi Hub Sync → API
     credentials). Keep the new secret for step 5. Then tell the agent —
