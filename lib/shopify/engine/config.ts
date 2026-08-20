@@ -199,10 +199,10 @@ export const PRODUCTION_ENGINE_CONFIG: EngineConfig = {
   // 2026-08-20) — mirror them. Fallback if REST insists: '31'.
   creditMemoLocationId: null,
   termsId: '8',
-  // "Shopify" employee: the integration role lacks Lists→Employee Record
-  // permission (create bounced 2026-08-20) — owner creates it in the prod
-  // NS UI and supplies the internal id.
-  salesRepId: PROD_PENDING,
+  // "Shopify" employee — owner-created in the prod NS UI 2026-08-20 (the
+  // integration role lacks Lists→Employee Record, so unverifiable via
+  // API; a wrong id would bounce the first customer create loudly).
+  salesRepId: '190493',
   fulfillmentLocationId: '46', // Brandfox Qiqi Global
   refundAdjustmentItemId: '1565', // "Shopify Refund Adjustment" → 410000 (setup-production.ts 2026-08-20)
   discountItemId: '1056', // pre-existing; setup-production.ts re-points it to 466/420000

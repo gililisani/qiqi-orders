@@ -8,6 +8,53 @@ until cutover; we build against NS **sandbox** while reading the
 
 Status legend: ☐ planned ◐ in progress ☑ done
 
+## MIGRATION CHECKLIST (maintained — the single source for "what's next")
+
+The agent maintains this list and hands the owner ONE step at a time.
+Steps marked (agent) are run by the agent; the rest are owner actions.
+
+**Pre-cutover (safe any day — nothing goes live):**
+ 1. ☑ Create the 3 NS items — setup-production.ts --apply (2026-08-20:
+    DDP 1464, Marketplace 1564, Refund Adjustment 1565)
+ 2. ☑ Create "Shopify" sales rep in prod NS UI (2026-08-20: id 190493,
+    in config — production config COMPLETE, live mode code-unblocked)
+ 3. ☐ Prod Supabase SQL: paste docs/sql/2026-08-20-shopify-prod-apply.sql
+    (all 5 migrations combined) into the PROD Supabase SQL editor, Run
+    ONCE. Creates tables only; mode='off'.
+ 4. ☐ Rotate the Shopify app client secret (Shopify admin → Settings →
+    Apps and sales channels → Develop apps → Qiqi Hub Sync → API
+    credentials). Keep the new secret for step 5. Then tell the agent —
+    local .env.local needs the new value too.
+ 5. ☐ Vercel env vars, Production scope: SHOPIFY_STORE_DOMAIN
+    (qiqi-pro.myshopify.com), SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET
+    (the NEW one), SHOPIFY_SYNC_ALERT_EMAIL.
+ 6. ☐ (agent) Promote staging → main (with the promote check). Prod then
+    runs the cron pollers as no-ops (mode='off').
+ 7. ☐ Smoke-check prod /admin/shopify loads (status strip shows mode off).
+ 8. ☐ CPA: bless renaming 240502/240504 (note: 240502 holds one CLOSED
+    net-zero franchise-tax accrual) + name a chargeback account
+    (non-blocking — dispute payouts park until then).
+ 9. ☐ Rename accounts in prod NS UI: 240502 → "Marketplace Tax - Shop
+    Remitted", 240504 → "Duties & Taxes Collected - Pass-through (DDP)".
+10. ☐ Get NetScore contract renewal/notice dates (cancellation timing).
+
+**Cutover day (owner + agent together, in this exact order):**
+11. ☐ Deactivate ALL 27 NetScore script deployments in prod NS; note the
+    exact time T.
+12. ☐ Shopify admin: delete NetScore's legacy custom app (kills their
+    token). NS: revoke their integration tokens. Delete their 0-install
+    dev-dashboard app.
+13. ☐ (agent) Re-snapshot NetScore stamps into PROD Supabase
+    (snapshot-netscore-data.ts --target production --db prod).
+14. ☐ (agent) setup-production.ts --repoint-discount (item 1056 → 420000).
+15. ☐ (agent) Set mode='live', cursor=T.
+16. ☐ (agent) Gap backfill [T..now] + boundary recon; review results
+    together on the dashboard.
+17. ☐ Watch the dashboard for the first days; verify the first Monday
+    payout (fee bill + net journal vs the bank line).
+18. ☐ After ~1 clean week (Loop D green): delete the 6 standalone
+    NetScore scripts, uninstall bundle 322635, cancel the contract.
+
 ## Principles (agreed 2026-08-17)
 
 1. **Shopify is the source of truth for money.** Record actual line prices,
