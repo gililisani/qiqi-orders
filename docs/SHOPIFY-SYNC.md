@@ -66,9 +66,21 @@ Steps marked (agent) are run by the agent; the rest are owner actions.
     (Script's "sales rep missing" ✗ is a false negative: it looks for
     externalid SHOP-SALESREP; owner created 190493 manually in the UI.)
 15. ☑ mode='live', orders_cursor=2026-08-20T22:10:00Z.
-16. ◐ (agent) First live poll + boundary recon; review on the dashboard.
-17. ☐ Watch the dashboard for the first days; verify the first Monday
-    payout (fee bill + net journal vs the bank line).
+16. ☑ First live poll 23:01 UTC: 6 fetched / 0 errors — all 6 were
+    NetScore-era fulfillment updates, correctly SKIPPED by the guard
+    (would have been 6 duplicate SOs without it). Boundary recon
+    2026-08-18→20: 29 orders, all 29 netscore-era, 0 missing,
+    0 mismatched — ALL CLEAN. Cursor advancing. Local-script note:
+    stale 24h SHOPIFY_ADMIN_TOKEN in .env.local expired and overrode
+    client-credentials → commented out; local scripts now use the
+    client-credentials flow like prod. backfill-payouts.ts gained
+    --target production --i-am-sure (prod NS + prod dashboard persistence)
+    ready for the first Monday payout.
+17. ◐ IN PROGRESS: watch the dashboard daily; first NEW order validates
+    CSF (BrandFox line inventorylocation) + sales rep 190493 — check its
+    SO in NS when it lands. Monday 2026-08-24: agent runs
+    `backfill-payouts.ts --count 2 --target production --i-am-sure`,
+    then owner matches journal + fee bill against the bank line.
 18. ☐ After ~1 clean week (Loop D green): delete the 6 standalone
     NetScore scripts, uninstall bundle 322635, cancel the contract.
 
