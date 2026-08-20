@@ -25,11 +25,12 @@ Steps marked (agent) are run by the agent; the rest are owner actions.
  4. ☑ Shopify client secret rotated (2026-08-20); owner updated
     .env.local directly (secret never re-entered chat). Verified: token
     exchange OK with the new secret, latest order visible.
- 5. ☐ Vercel env vars, Production scope: SHOPIFY_STORE_DOMAIN
-    (qiqi-pro.myshopify.com), SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET
-    (the NEW one), SHOPIFY_SYNC_ALERT_EMAIL.
- 6. ☐ (agent) Promote staging → main (with the promote check). Prod then
-    runs the cron pollers as no-ops (mode='off').
+ 5. ☑ Vercel Production env vars set (2026-08-20): SHOPIFY_STORE_DOMAIN,
+    SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET (new), SHOPIFY_SYNC_ALERT_
+    EMAIL; NEXT_PUBLIC_NETSUITE_ACCOUNT_ID confirmed present.
+ 6. ☑ Promoted staging → main (2026-08-20, dd21a23, clean fast-forward,
+    45 commits all Shopify, promote check clean, 249 tests green). Prod
+    crons live but mode='off' = no-op.
  7. ☐ Smoke-check prod /admin/shopify loads (status strip shows mode off).
  8. ☐ CPA: bless renaming 240502/240504 (note: 240502 holds one CLOSED
     net-zero franchise-tax accrual) + name a chargeback account
