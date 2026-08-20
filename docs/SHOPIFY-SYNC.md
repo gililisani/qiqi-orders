@@ -48,18 +48,25 @@ Steps marked (agent) are run by the agent; the rest are owner actions.
     ~2027-04 to send the non-renewal notice. "Cancel contract" in step 18
     becomes "confirm non-renewal notice is scheduled".
 
-**Cutover day (owner + agent together, in this exact order):**
-11. ☐ Deactivate ALL 27 NetScore script deployments in prod NS; note the
-    exact time T.
-12. ☐ Shopify admin: delete NetScore's legacy custom app (kills their
-    token). NS: revoke their integration tokens. Delete their 0-install
-    dev-dashboard app.
-13. ☐ (agent) Re-snapshot NetScore stamps into PROD Supabase
-    (snapshot-netscore-data.ts --target production --db prod).
-14. ☐ (agent) setup-production.ts --repoint-discount (item 1056 → 420000).
-15. ☐ (agent) Set mode='live', cursor=T.
-16. ☐ (agent) Gap backfill [T..now] + boundary recon; review results
-    together on the dashboard.
+**Cutover day — EXECUTED 2026-08-20, T = 22:10 UTC:**
+11. ☑ Deployments deactivated (owner, via edit pages — inline editing
+    silently fails on Deployed): 44 of 47 off incl. ALL importers.
+    3 accepted leftovers, all harmless: NetScore Item Export NS→Shopify
+    (dormant + corrupt schedule blocks any save — NS recurrence bug),
+    Shopify Item Ids Update (dormant), NetScore License Records Update
+    (scheduled, license telemetry only). Bundle uninstall (step 18)
+    removes them.
+12. ☑ NetScore's Shopify app DELETED (their outbound token dead). NS-side
+    finding: NO inbound integration/tokens exist — their connector was
+    pure in-account SuiteScript; nothing to revoke (expected).
+13. ☑ Stamps re-snapshot → PROD Supabase: 2,211 customers / 18,573
+    transactions (+18 vs morning = today's last NetScore orders) / 31
+    items.
+14. ☑ Discount item 1056 re-pointed to 420000 (was non-posting).
+    (Script's "sales rep missing" ✗ is a false negative: it looks for
+    externalid SHOP-SALESREP; owner created 190493 manually in the UI.)
+15. ☑ mode='live', orders_cursor=2026-08-20T22:10:00Z.
+16. ◐ (agent) First live poll + boundary recon; review on the dashboard.
 17. ☐ Watch the dashboard for the first days; verify the first Monday
     payout (fee bill + net journal vs the bank line).
 18. ☐ After ~1 clean week (Loop D green): delete the 6 standalone
