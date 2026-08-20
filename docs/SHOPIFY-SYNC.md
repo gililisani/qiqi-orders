@@ -31,7 +31,8 @@ Steps marked (agent) are run by the agent; the rest are owner actions.
  6. ☑ Promoted staging → main (2026-08-20, dd21a23, clean fast-forward,
     45 commits all Shopify, promote check clean, 249 tests green). Prod
     crons live but mode='off' = no-op.
- 7. ☐ Smoke-check prod /admin/shopify loads (status strip shows mode off).
+ 7. ☑ Prod /admin/shopify smoke-checked by owner (2026-08-20): loads,
+    mode off, tables empty.
  8. ☐ CPA: bless renaming 240502/240504 (note: 240502 holds one CLOSED
     net-zero franchise-tax accrual) + name a chargeback account
     (non-blocking — dispute payouts park until then).
