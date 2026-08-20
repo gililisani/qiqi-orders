@@ -473,10 +473,16 @@ terms fix (#7240), error tools. 230 tests green.
    20260820130000 (netscore snapshot tables — the cutover guard, customer
    ladder and recon adoption all read them)**. Mode defaults 'off' —
    inert until cutover.
-1b. Run `npx tsx scripts/shopify/setup-production.ts --apply` (agent's
-   permission gate blocks prod-NS writes; one command, creates the 4
-   inert records) → paste the printed ids into PRODUCTION_ENGINE_CONFIG
-   in lib/shopify/engine/config.ts (agent does the paste + test + commit).
+1b. ☑ setup-production --apply RUN 2026-08-20: the 3 items live in prod
+   (DDP 1464 → 1571, Marketplace 1564 → 1573, Refund Adjustment 1565 →
+   833; externalids + sub 11 + 0-price rows verified) and their ids are
+   in PRODUCTION_ENGINE_CONFIG. ◐ REMAINING: the "Shopify" sales-rep
+   employee — the integration role lacks Lists→Employee Record permission
+   (create bounced). Owner creates it in prod NS UI (Lists → Employees →
+   New: name "Shopify Channel", ENTITY ID "Shopify", check Sales Rep,
+   subsidiary Qiqi INC) and reads the internal id from the record URL
+   (…id=NNNN) → agent pastes it as salesRepId (the last PROD-PENDING;
+   live mode stays code-blocked until then).
 2. Vercel PRODUCTION env: SHOPIFY_STORE_DOMAIN, SHOPIFY_CLIENT_ID,
    SHOPIFY_CLIENT_SECRET, SHOPIFY_SYNC_ALERT_EMAIL (NETSUITE_* prod vars
    already exist). ROTATE the Shopify client secret first (it passed

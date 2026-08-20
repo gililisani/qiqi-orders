@@ -179,13 +179,12 @@ export const PRODUCTION_ENGINE_CONFIG: EngineConfig = {
     paypal: '1021',
     affirm: '1026',
   },
-  // Created in sandbox post-copy — setup-production.ts creates the prod
-  // items (1432/1433 equivalents → accounts 240504/240502) and these get
-  // the real ids. null would merely park taxed orders; PROD_PENDING blocks
-  // live mode entirely until setup ran, which is the intent.
+  // Created by setup-production.ts --apply (2026-08-20): "Intl Duties &
+  // Taxes (DDP)" → 240504, "Marketplace Tax (Shop)" → 240502. Verified:
+  // externalids SHOP-TAX-DDP/SHOP-TAX-MKT, sub 11, 0-price rows.
   taxItems: {
-    merchantLiable: PROD_PENDING,
-    channelLiable: PROD_PENDING,
+    merchantLiable: '1464',
+    channelLiable: '1564',
   },
   customerDefaults: {
     b2b: { category: '4', class: '3' },
@@ -200,9 +199,12 @@ export const PRODUCTION_ENGINE_CONFIG: EngineConfig = {
   // 2026-08-20) — mirror them. Fallback if REST insists: '31'.
   creditMemoLocationId: null,
   termsId: '8',
-  salesRepId: PROD_PENDING, // "Shopify" employee — created by setup-production.ts
+  // "Shopify" employee: the integration role lacks Lists→Employee Record
+  // permission (create bounced 2026-08-20) — owner creates it in the prod
+  // NS UI and supplies the internal id.
+  salesRepId: PROD_PENDING,
   fulfillmentLocationId: '46', // Brandfox Qiqi Global
-  refundAdjustmentItemId: PROD_PENDING, // "Shopify Refund Adjustment" — created by setup-production.ts
+  refundAdjustmentItemId: '1565', // "Shopify Refund Adjustment" → 410000 (setup-production.ts 2026-08-20)
   discountItemId: '1056', // pre-existing; setup-production.ts re-points it to 466/420000
   payouts: {
     shopifyVendorId: '69810',
