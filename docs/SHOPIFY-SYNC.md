@@ -438,20 +438,45 @@ terms fix (#7240), error tools. 230 tests green.
    REQUIRES: fresh snapshot into PROD Supabase at cutover
    (snapshot-netscore-data.ts --target production --db prod, new flag)
    run AFTER NetScore's scripts die, so last-minute orders carry stamps.
-3. **Prod setup script** (scripts/shopify/setup-production.ts, mirrors
-   sandbox scripts): verify/re-point items + create where missing:
-   tax items (DDP + marketplace, base price 0, sub 11 + includeChildren),
-   "Shopify Refund Adjustment" (→410000), "Shopify Discount" re-point to
-   466/420000 (prod item may also be non-posting!), "Shopify" sales rep,
-   verify ids: terms 8, shipMethod 1171, vendor "Shopify Inc.", accounts
-   1019/1021/1026/938/1859/466/240502/240504, customer category/class,
-   BrandFox location. Output = the prod ENGINE_CONFIG values (they may
-   differ from sandbox ids for records created post-Apr-2025!).
+3. ☑ **Prod setup script** — BUILT + VERIFY-RUN CLEAN 2026-08-20
+   (scripts/shopify/setup-production.ts). Verify-only by default;
+   `--apply` creates the 4 inert records; `--repoint-discount` is a
+   SEPARATE cutover-only flag. Facts from the verify run (read-only):
+   - Account ids IDENTICAL prod=sandbox, all 9 verified ✓ (100501=1019,
+     100503=1026, 100504=1021, 100101=938, 622070=1859, 240502=1573,
+     240504=1571, 410000=833, 420000=466).
+   - 240502/240504 still carry OLD prod names → owner renames (CPA nod).
+     240502 is NOT zero-history: a CLOSED net-zero franchise-tax accrual
+     trio (VendBill 38777369 + JEUS12838/9/40, $556=$556). Safe to
+     repurpose; CPA should know.
+   - Location 46 BrandFox ✓ active sub 1; vendor 69810 ✓ active (prod
+     1992 also active, unused by us); terms 8 ✓ (1,674 customers);
+     ship item 1171 ✓ (10.7k lines).
+   - Prod "Shopify Discount" 1056 confirmed NON-POSTING. **NetScore
+     ACTIVELY books through it (527 lines, latest 2026-08-19)** — the
+     re-point to 466/420000 CANNOT happen while NetScore runs (it would
+     change their live discount posting). Moved to the cutover sequence
+     (`--repoint-discount`).
+   - Missing (inert, created by `--apply` — blocked by agent permission
+     classifier, owner runs it): "Intl Duties & Taxes (DDP)" → 1571,
+     "Marketplace Tax (Shop)" → 1573, "Shopify Refund Adjustment" → 833
+     (all OthCharge-for-Sale, sub 11 + includeChildren, taxSchedule 1,
+     0-price row, externalids SHOP-TAX-DDP/SHOP-TAX-MKT/SHOP-REFUND-ADJ),
+     "Shopify" sales-rep employee (SHOP-SALESREP, sub 3).
+     The script prints the exact PRODUCTION_ENGINE_CONFIG values to
+     paste into lib/shopify/engine/config.ts (replacing PROD-PENDING);
+     live mode is code-blocked until that paste lands.
 
 ### Owner actions for migration
 1. Prod Supabase SQL (owner-run, per convention): migrations
-   20260817220000, 20260819100000, 20260820100000. Mode defaults 'off' —
+   20260817220000, 20260819100000, 20260820100000, **20260820120000 +
+   20260820130000 (netscore snapshot tables — the cutover guard, customer
+   ladder and recon adoption all read them)**. Mode defaults 'off' —
    inert until cutover.
+1b. Run `npx tsx scripts/shopify/setup-production.ts --apply` (agent's
+   permission gate blocks prod-NS writes; one command, creates the 4
+   inert records) → paste the printed ids into PRODUCTION_ENGINE_CONFIG
+   in lib/shopify/engine/config.ts (agent does the paste + test + commit).
 2. Vercel PRODUCTION env: SHOPIFY_STORE_DOMAIN, SHOPIFY_CLIENT_ID,
    SHOPIFY_CLIENT_SECRET, SHOPIFY_SYNC_ALERT_EMAIL (NETSUITE_* prod vars
    already exist). ROTATE the Shopify client secret first (it passed
@@ -524,11 +549,24 @@ NOT proceed until this is answered.
 2. **Clean up now-safe leftovers**: delete the 6 standalone scripts.
    The BUNDLE stays installed-but-inert for now (uninstall is pure
    cosmetics once scripts are dead; keeping it preserves quick rollback).
+2b. **Re-snapshot stamps into PROD Supabase** (after T so last-minute
+   orders are covered): `npx tsx scripts/shopify/snapshot-netscore-data.ts
+   --target production --db prod`. The NETSCORE_ERA guard on every prod
+   execute path reads this — a stale snapshot = duplicate-chain risk for
+   boundary orders.
+2c. **Re-point the discount item** (safe now — NetScore is dead):
+   `npx tsx scripts/shopify/setup-production.ts --repoint-discount`.
 3. **Turn on ours** (prereqs from "Build remaining" + owner env/SQL
-   steps must be done): mode='live', cursor=T.
-4. **Import the gap**: backfill.ts (prod target) for [T .. now] —
-   idempotent, books every missed order exactly once. Gap length is
-   irrelevant (hours or days).
+   steps must be done; live mode throws until PRODUCTION_ENGINE_CONFIG
+   has no PROD-PENDING left): mode='live', cursor=T.
+4. **Import the gap**: `backfill.ts --from .. --to .. --target production
+   --i-am-sure` for [T .. now] — full A+B+C chain per order, persists to
+   the prod dashboard, idempotent, NETSCORE_ERA-guarded. Gap length is
+   irrelevant (hours or days). (The 15-min poller alone would also chew
+   through a short gap from cursor=T; the script is faster + reportable.)
+4b. **Recon the boundary**: `reconcile.ts --from <T-2 days> --to <today>
+   --target production` — proves no order fell in the crack; NetScore-era
+   orders count as netscore-era, ours verify to the cent.
 5. Payout loop: verify after first Monday payout (journal + fee bill vs
    bank line).
 6. After ~1 clean week on the dashboard + Loop D: **uninstall bundle
