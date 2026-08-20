@@ -381,6 +381,77 @@ Sales Discounts with what was economically wholesale pricing.
 **Earliest safe backfill date: 2026-07-16.** History before that stays
 NetScore's records (as the cutover design always intended).
 
+## PRODUCTION MIGRATION PLAN (agreed 2026-08-20 — next session executes)
+
+Sandbox QA COMPLETE. Owner-verified: orders (simple/B2B/B2C), discounts
+(single/stacked/automatic/100%-off → 420000), Custom price level + rates,
+intl VAT (DE), intl duties (CA #7268), Shop marketplace tax + split
+tender (#7201), refunds (#7083/#7084), fulfillments w/ FEFO lots,
+payouts (journal JEUS12053 walked through by owner incl. 240502 leg),
+terms fix (#7240), error tools. 230 tests green.
+
+### Build remaining (in order, BEFORE any prod write)
+1. **CSF support** — hard gate. `crossSubsidiaryFulfillment` config flag:
+   SO header checkbox + line-level `inventorylocation` (BrandFox, under
+   Qiqi Global) mirroring lib/netsuite.ts pushOrderToNetSuite's cross-sub
+   mode (lines ~470-520). Copy exact prod location ids from NetScore's
+   live SOs (SELECT location off recent SalesOrd w/ custbody_shopify_order_id).
+   Sandbox cannot test CSF-era data (Packable was same-sub) — verify via
+   prod probes + first live orders.
+2. **Loop D reconciliation** — nightly cron: every Shopify order of the
+   day vs shopify_order_sync + NS (by externalid), invoice total ==
+   Shopify total to the cent, missing orders → error queue cards.
+   Also the completeness check vs NetScore-era (post-cutover only).
+3. **Prod setup script** (scripts/shopify/setup-production.ts, mirrors
+   sandbox scripts): verify/re-point items + create where missing:
+   tax items (DDP + marketplace, base price 0, sub 11 + includeChildren),
+   "Shopify Refund Adjustment" (→410000), "Shopify Discount" re-point to
+   466/420000 (prod item may also be non-posting!), "Shopify" sales rep,
+   verify ids: terms 8, shipMethod 1171, vendor "Shopify Inc.", accounts
+   1019/1021/1026/938/1859/466/240502/240504, customer category/class,
+   BrandFox location. Output = the prod ENGINE_CONFIG values (they may
+   differ from sandbox ids for records created post-Apr-2025!).
+
+### Owner actions for migration
+1. Prod Supabase SQL (owner-run, per convention): migrations
+   20260817220000, 20260819100000, 20260820100000. Mode defaults 'off' —
+   inert until cutover.
+2. Vercel PRODUCTION env: SHOPIFY_STORE_DOMAIN, SHOPIFY_CLIENT_ID,
+   SHOPIFY_CLIENT_SECRET, SHOPIFY_SYNC_ALERT_EMAIL (NETSUITE_* prod vars
+   already exist). ROTATE the Shopify client secret first (it passed
+   through chat 2026-08-17) and use the new value.
+3. Promote staging → main (all sync code ships to prod HUB; cron starts
+   polling but mode='off' = no-op).
+4. Confirm prod accounts 240502/240504 zero-history → rename like
+   sandbox (CPA nod on names).
+5. CPA: chargeback account (dispute payouts park until then — acceptable).
+6. NetScore inventory (STILL PENDING): screenshots of Installed Bundles,
+   their Scripts+deployments, Manage Integrations record; contract
+   renewal/notice dates.
+
+### Cutover sequence (after builds + shadow window)
+1. Shadow: mode='shadow' in PROD (computes+persists, zero NS writes) —
+   compressed ~5 clean days; compare our plans vs NetScore's records
+   daily (Loop D in read-only compare mode).
+2. Cutover day: note cursor T → deactivate ALL NetScore script
+   deployments (NOT uninstall) → delete their legacy Shopify custom app
+   (kills token) → set mode='live' (cursor=T) → watch dashboard.
+3. Payout loop: enable after first Monday payout; verify JEUS journal +
+   fee bill against bank line.
+4. 30 clean days of Loop D → stamp-migration job (copy
+   custentity_shop_cust_id + custbody_shopify_order_id data to OUR
+   fields — BEFORE bundle uninstall, uninstall can delete field data) →
+   uninstall NetScore bundle → revoke their NS tokens + delete their
+   0-install dev-dashboard app → cancel contract.
+5. Rollback during window: reactivate their deployments + recreate their
+   Shopify app token; set mode='shadow'.
+
+### Post-production queue (unchanged)
+Restock v2 (lot-level returns), settings page (lift ENGINE_CONFIG to
+table + admin UI — LAST task), PayPal/Affirm payout automation,
+historical cleanup (56 dup email groups, EUR-period orders, NetScore's
+410000 VAT reclass — CPA), backfill boundary 2026-07-16.
+
 ## Cutover / decommission runbook
 
 1. Pre: stamp-migration job run + verified (Q11). Shadow diffs clean
