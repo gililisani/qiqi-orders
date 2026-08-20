@@ -425,9 +425,53 @@ terms fix (#7240), error tools. 230 tests green.
 4. Confirm prod accounts 240502/240504 zero-history → rename like
    sandbox (CPA nod on names).
 5. CPA: chargeback account (dispute payouts park until then — acceptable).
-6. NetScore inventory (STILL PENDING): screenshots of Installed Bundles,
-   their Scripts+deployments, Manage Integrations record; contract
-   renewal/notice dates.
+6. NetScore inventory — SURVEYED 2026-08-20 (BundleContents886.xlsx +
+   live SuiteQL probe; see "NetScore footprint" section below).
+   Still pending from owner: Manage Integrations record + contract
+   renewal/notice dates + the EXPORT-DIRECTION question below.
+
+### NetScore footprint (full survey 2026-08-20)
+
+Bundle 322635 components (from owner's BundleContents886.xlsx export):
+- Fields WE care about: custentity_shop_cust_id (customer stamps),
+  custbody_shopify_order_id (all their historical transactions),
+  custbody_shopify_refund_id / _order_cancelled / _export_to_shopify /
+  _refund_to_shopify, custcol_shopify_order_line_item; item-side:
+  custitem_shopify_product_id / _variant_id / _item_export_to_shopify etc.
+- Custom records: connector setup, payment/location/shipping/items
+  mappings, "Shopify Error Record" (their bloody error page — dies
+  unmourned), product details. Saved searches ×20, subtabs, center tab.
+- 21 bundle scripts + 6 MORE OUTSIDE the bundle (kit-item exports ×2,
+  Shopify Item Ids Update, Shopify_allocate_items, NetScore license
+  telemetry ×2) → 27 scripts, 47 deployments, 42 isdeployed=T.
+  Deactivation checklist = ALL 27 scripts' deployments, not just the
+  bundle's 21.
+
+**DECOMMISSION DECISION (2026-08-20): DEACTIVATE, DO NOT UNINSTALL.**
+Bundle uninstall deletes its fields AND their data (2+ years of
+custbody_shopify_order_id on transactions, 6.7k customer stamps, item
+mappings). Keeping the bundle installed with every deployment inactive
+costs nothing, keeps all historical data + searchability, and removes
+the entire wipe risk. The \$2k/yr is the license contract — cancel it
+regardless; dead scripts don't phone home (their license-expiration
+script gets deactivated with the rest). Belt-and-braces: snapshot ALL
+stamps (customer id ↔ shop_cust_id; transaction id ↔ shopify_order_id)
+into Supabase tables before cutover anyway, and add a snapshot-table
+rung to the customer ladder so even a future uninstall can't hurt us.
+
+**OPEN QUESTION FOR OWNER (blocks cutover scope): the EXPORT direction.**
+NetScore is BIDIRECTIONAL: NS→Shopify exports for items, prices, images,
+inventory, kit/matrix items, product availability, shipment updates —
+and the data says they're configured: 31 items carry Shopify product-id
+mappings, 23 flagged export-to-shopify (≈ the whole catalog). Our
+replacement deliberately covers Shopify→NS only. Owner must answer:
+when you change a price/product in NS today, does it flow to Shopify?
+Who maintains Shopify product data — NS (via NetScore) or Shopify admin
+directly? (Inventory is presumably ShipHero's job.) Outcomes:
+(a) exports unused/redundant → nothing to do; (b) used → either manage
+the ~31-item catalog manually in Shopify (small, low-churn) or add a
+HUB price/item export loop to the post-production queue. Cutover does
+NOT proceed until this is answered.
 
 ### Cutover sequence (after builds + shadow window)
 1. Shadow: mode='shadow' in PROD (computes+persists, zero NS writes) —
