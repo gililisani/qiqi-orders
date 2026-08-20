@@ -478,22 +478,31 @@ the ~31-item catalog manually in Shopify (small, low-churn) or add a
 HUB price/item export loop to the post-production queue. Cutover does
 NOT proceed until this is answered.
 
-### Cutover sequence (after builds + shadow window)
-1. Shadow: mode='shadow' in PROD (computes+persists, zero NS writes) —
-   compressed ~5 clean days; compare our plans vs NetScore's records
-   daily (Loop D in read-only compare mode).
-2. Cutover day: note cursor T → deactivate ALL NetScore script
-   deployments (NOT uninstall) → delete their legacy Shopify custom app
-   (kills token) → set mode='live' (cursor=T) → watch dashboard.
-3. Payout loop: enable after first Monday payout; verify JEUS journal +
-   fee bill against bank line.
-4. 30 clean days of Loop D → stamp-migration job (copy
-   custentity_shop_cust_id + custbody_shopify_order_id data to OUR
-   fields — BEFORE bundle uninstall, uninstall can delete field data) →
-   uninstall NetScore bundle → revoke their NS tokens + delete their
-   0-install dev-dashboard app → cancel contract.
-5. Rollback during window: reactivate their deployments + recreate their
-   Shopify app token; set mode='shadow'.
+### Cutover sequence — HARD CUTOVER (owner's order, agreed 2026-08-20;
+### supersedes the shadow-mode plan — sandbox QA + snapshot + bundle
+### independence made shadow redundant)
+1. **Stop NetScore**: deactivate ALL 27 scripts' deployments → delete
+   their legacy Shopify custom app (kills token at the source) → revoke
+   their NS integration tokens → delete their 0-install dev-dashboard
+   app. Note timestamp T. NetScore is operationally dead.
+2. **Clean up now-safe leftovers**: delete the 6 standalone scripts.
+   The BUNDLE stays installed-but-inert for now (uninstall is pure
+   cosmetics once scripts are dead; keeping it preserves quick rollback).
+3. **Turn on ours** (prereqs from "Build remaining" + owner env/SQL
+   steps must be done): mode='live', cursor=T.
+4. **Import the gap**: backfill.ts (prod target) for [T .. now] —
+   idempotent, books every missed order exactly once. Gap length is
+   irrelevant (hours or days).
+5. Payout loop: verify after first Monday payout (journal + fee bill vs
+   bank line).
+6. After ~1 clean week on the dashboard + Loop D: **uninstall bundle
+   322635 in prod** (rehearsed in sandbox 2026-08-20: deletes fields +
+   data; we no longer care — snapshot in Supabase, code independent) →
+   cancel contract.
+NOTE: stamp-migration-to-our-fields is OBSOLETE — replaced by the
+Supabase snapshot (netscore_*_stamps) + snapshot ladder rung, shipped
+2026-08-20. NetScore also deleted their own prod duplicates
+(7,324→2,818 customers) — dup-merge job off the queue.
 
 ### Post-production queue (unchanged)
 Restock v2 (lot-level returns), settings page (lift ENGINE_CONFIG to
