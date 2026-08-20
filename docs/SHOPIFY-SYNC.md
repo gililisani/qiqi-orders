@@ -459,7 +459,12 @@ stamps (customer id ↔ shop_cust_id; transaction id ↔ shopify_order_id)
 into Supabase tables before cutover anyway, and add a snapshot-table
 rung to the customer ladder so even a future uninstall can't hurt us.
 
-**OPEN QUESTION FOR OWNER (blocks cutover scope): the EXPORT direction.**
+**RESOLVED (owner 2026-08-20): NS→Shopify exports never worked and are
+NOT wanted.** Inventory flows ShipHero→Shopify (more accurate than NS);
+all products are "continue selling when out of stock"; catalog is
+managed in Shopify directly. The export scripts are dead weight —
+deactivate with everything else, replace with nothing. Cutover unblocked.
+(Original finding, for the record:)
 NetScore is BIDIRECTIONAL: NS→Shopify exports for items, prices, images,
 inventory, kit/matrix items, product availability, shipment updates —
 and the data says they're configured: 31 items carry Shopify product-id
