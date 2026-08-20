@@ -134,7 +134,10 @@ type SortKey =
 export default function CompanyPerformancePage() {
   const router = useRouter();
   const sp = useSearchParams();
-  const scope: Scope = 'active'; // report is active-periods-only; history is per-company
+  // 'active' = the current target per partner; 'all' = every period incl.
+  // completed and future ones (owner request 2026-08-20 — the report should
+  // tell the whole performance story, historical eras included).
+  const scope: Scope = sp.get('scope') === 'all' ? 'all' : 'active';
   const companyId = sp.get('companyId') ?? '';
   const subsidiaryId = sp.get('subsidiaryId') ?? '';
 
@@ -318,8 +321,15 @@ export default function CompanyPerformancePage() {
                 </option>
               ))}
             </select>
-            {/* Scope toggle removed — this report shows ACTIVE periods only.
-                Full period history lives on each company's drill-down page. */}
+            <select
+              value={scope}
+              onChange={(e) => updateParam('scope', e.target.value === 'all' ? 'all' : null)}
+              className="h-9 rounded-md border border-border bg-card px-3 text-sm text-foreground"
+              aria-label="Period scope"
+            >
+              <option value="active">Active targets</option>
+              <option value="all">All periods</option>
+            </select>
           </div>
         }
       />

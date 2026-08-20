@@ -137,7 +137,9 @@ export function computePeriodMetrics(
   doneOrders: Array<{ id: string; total_value?: number | null; credit_earned?: number | null }>,
   firstDone: Map<string, Date>,
   sfUsedByOrder: Map<string, number>,
-  historical: Array<{ amount: number | string | null; sale_date: string; support_fund?: number | string | null }>
+  historical: Array<{ amount: number | string | null; sale_date: string; support_fund?: number | string | null }>,
+  // Company SF % — used to ESTIMATE the accrual side of historical sales.
+  historicalSfPercent?: number | null
 ): PeriodMetrics {
   const startDate = new Date(`${period.start_date}T00:00:00.000Z`);
   const endDate = new Date(`${period.end_date}T23:59:59.999Z`);
@@ -153,12 +155,17 @@ export function computePeriodMetrics(
     sfEarned += Number(order.credit_earned) || 0;
     sfUsed += sfUsedByOrder.get(order.id) ?? 0;
   }
+  // Historical SF semantics (owner-corrected 2026-08-20): the imported
+  // support_fund is the DISCOUNT on the invoice = SF REDEEMED → sfUsed.
+  // The accrual side is estimated as SF% × sale amount, mirroring how Hub
+  // orders earn credit.
+  const histPct = Number(historicalSfPercent) || 0;
   for (const sale of historical) {
     if (sale.sale_date >= period.start_date && sale.sale_date <= period.end_date) {
-      actual += Number(sale.amount) || 0;
-      // Historical SF = the NS discount captured on import (or typed in) —
-      // counts toward "earned" so pre-Hub eras show their real SF benefit.
-      sfEarned += Number(sale.support_fund) || 0;
+      const amt = Number(sale.amount) || 0;
+      actual += amt;
+      sfUsed += Number(sale.support_fund) || 0;
+      sfEarned += (histPct / 100) * amt;
     }
   }
 
@@ -261,7 +268,17 @@ export function computeSfBehaviorDistribution(
   enrolledPeriods: Array<{ company_id: string; start_date: string; end_date: string }>,
   doneOrders: Array<{ id: string; company_id: string; credit_earned?: number | null }>,
   firstDone: Map<string, Date>,
-  sfUsedByOrder: Map<string, number>
+  sfUsedByOrder: Map<string, number>,
+  // Historical sales participate too — pre-Hub companies otherwise show an
+  // empty behavior box. earned = SF% × amount (estimate), claimed = the
+  // imported invoice discount.
+  historical?: Array<{
+    company_id: string;
+    sale_date: string;
+    amount: number | string | null;
+    support_fund?: number | string | null;
+  }>,
+  sfPercentByCompany?: Map<string, number>
 ): SfBehaviorDistribution {
   const periodsByCompany = new Map<string, Array<{ s: Date; e: Date }>>();
   for (const p of enrolledPeriods) {
@@ -280,16 +297,8 @@ export function computeSfBehaviorDistribution(
     leftoverSum = 0;
   let total = 0;
 
-  for (const o of doneOrders) {
-    const doneAt = firstDone.get(o.id);
-    if (!doneAt) continue;
-    const ranges = periodsByCompany.get(o.company_id) ?? [];
-    if (!ranges.some((r) => doneAt >= r.s && doneAt <= r.e)) continue;
-
-    const earned = Number(o.credit_earned) || 0;
-    const claimed = sfUsedByOrder.get(o.id) ?? 0;
-    if (earned === 0 && claimed === 0) continue;
-
+  const classify = (earned: number, claimed: number) => {
+    if (earned === 0 && claimed === 0) return;
     total += 1;
     const delta = earned - claimed;
     if (Math.abs(delta) < 0.01) {
@@ -301,6 +310,23 @@ export function computeSfBehaviorDistribution(
       over += 1;
       topUpSum += -delta;
     }
+  };
+
+  for (const o of doneOrders) {
+    const doneAt = firstDone.get(o.id);
+    if (!doneAt) continue;
+    const ranges = periodsByCompany.get(o.company_id) ?? [];
+    if (!ranges.some((r) => doneAt >= r.s && doneAt <= r.e)) continue;
+    classify(Number(o.credit_earned) || 0, sfUsedByOrder.get(o.id) ?? 0);
+  }
+
+  for (const h of historical ?? []) {
+    const ranges = periodsByCompany.get(h.company_id) ?? [];
+    const at = new Date(`${h.sale_date}T12:00:00.000Z`);
+    if (Number.isNaN(at.getTime())) continue;
+    if (!ranges.some((r) => at >= r.s && at <= r.e)) continue;
+    const pct = sfPercentByCompany?.get(h.company_id) ?? 0;
+    classify((pct / 100) * (Number(h.amount) || 0), Number(h.support_fund) || 0);
   }
 
   return {
@@ -337,6 +363,10 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
   } = inputs;
 
   const sfUsedByOrder = buildSfUsedByOrder(sfItems);
+  const sfPercent =
+    (Array.isArray(company.support_fund) ? company.support_fund[0] : company.support_fund)
+      ?.percent ?? null;
+  const histPct = Number(sfPercent) || 0;
 
   // ---- To-date totals -----------------------------------------------------
   let toDateSales = 0;
@@ -350,14 +380,18 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
     toDateSfEarned += Number(order.credit_earned) || 0;
     toDateSfUsed += sfUsedByOrder.get(order.id) ?? 0;
   }
+  // Historical: the imported support_fund is the invoice DISCOUNT = SF
+  // redeemed; the accrual side is estimated at the company's SF %.
   for (const sale of historical) {
-    toDateSales += Number(sale.amount) || 0;
-    toDateSfEarned += Number(sale.support_fund) || 0;
+    const amt = Number(sale.amount) || 0;
+    toDateSales += amt;
+    toDateSfUsed += Number(sale.support_fund) || 0;
+    toDateSfEarned += (histPct / 100) * amt;
   }
 
   // ---- Per-period rows ----------------------------------------------------
   const periodRows: CompanyPeriodRow[] = periods.map((p) => {
-    const m = computePeriodMetrics(now, p, doneOrders, firstDone, sfUsedByOrder, historical);
+    const m = computePeriodMetrics(now, p, doneOrders, firstDone, sfUsedByOrder, historical, sfPercent);
     return {
       periodId: p.id,
       periodName: p.period_name ?? '',
@@ -391,8 +425,10 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
   const windowToDay = windowTo.toISOString().slice(0, 10);
   for (const sale of historical) {
     if (sale.sale_date >= windowFromDay && sale.sale_date <= windowToDay) {
-      windowSales += Number(sale.amount) || 0;
-      windowSfEarned += Number(sale.support_fund) || 0;
+      const amt = Number(sale.amount) || 0;
+      windowSales += amt;
+      windowSfUsed += Number(sale.support_fund) || 0;
+      windowSfEarned += (histPct / 100) * amt;
     }
   }
 
@@ -451,9 +487,7 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
       netsuiteNumber: company.netsuite_number ?? null,
       subsidiaryName: company.subsidiary?.name ?? null,
       isEnrolled: company.support_fund_id != null,
-      sfPercent:
-        (Array.isArray(company.support_fund) ? company.support_fund[0] : company.support_fund)
-          ?.percent ?? null,
+      sfPercent,
       agreementStart: firstPeriod,
       agreementEnd: lastPeriod,
     },

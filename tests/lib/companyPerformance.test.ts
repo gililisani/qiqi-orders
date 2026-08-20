@@ -297,7 +297,8 @@ describe('historical support funds + imported line items', () => {
 
   const result = computeCompanyMetrics({
     now: NOW,
-    company: COMPANY,
+    // 10% SF level: historical accrual is ESTIMATED at SF% × amount.
+    company: { ...COMPANY, support_fund: { percent: 10 } },
     periods: PERIODS,
     doneOrders: DONE_ORDERS,
     firstDone: FIRST_DONE,
@@ -309,11 +310,37 @@ describe('historical support funds + imported line items', () => {
     windowTo: new Date('2026-07-31T23:59:59Z'),
   });
 
-  it('adds historical support_fund to SF earned to-date and per period', () => {
-    // Orders: 800 + 1400 + 400; historical: 250 + 60.
-    expect(result.toDate.sfEarned).toBe(800 + 1400 + 400 + 250 + 60);
+  it('historical support_fund counts as SF USED; earned is SF% × amount', () => {
+    // Earned: orders 800+1400+400, historical 10% × (5000 + 1234).
+    expect(result.toDate.sfEarned).toBeCloseTo(2600 + 623.4, 5);
+    // Used: orders 1200+500, historical discounts 250 + 60.
+    expect(result.toDate.sfUsed).toBeCloseTo(1700 + 310, 5);
     const year1 = result.periods.find((p) => p.periodName === 'Year 1')!;
-    expect(year1.sfEarned).toBe(800 + 1400 + 250);
+    expect(year1.sfEarned).toBeCloseTo(800 + 1400 + 500, 5); // + 10% × 5000
+    expect(year1.sfUsed).toBeCloseTo(1200 + 250, 5);
+  });
+
+  it('historical sales populate the SF behavior distribution', () => {
+    const dist = computeSfBehaviorDistribution(
+      [{ company_id: 'c1', start_date: '2025-07-01', end_date: '2026-06-30' }],
+      [],
+      new Map(),
+      new Map(),
+      [
+        // earned 10% × 5000 = 500, claimed 250 → under-redeemed
+        { company_id: 'c1', sale_date: '2025-08-15', amount: 5000, support_fund: 250 },
+        // earned 100, claimed 400 → topped up
+        { company_id: 'c1', sale_date: '2025-09-01', amount: 1000, support_fund: 400 },
+        // outside enrolled periods → ignored
+        { company_id: 'c1', sale_date: '2024-01-01', amount: 9999, support_fund: 10 },
+      ],
+      new Map([['c1', 10]])
+    );
+    expect(dist.sampleSize).toBe(2);
+    expect(dist.underRedeemedPct).toBe(50);
+    expect(dist.toppedUpPct).toBe(50);
+    expect(dist.avgLeftover).toBeCloseTo(250, 5);
+    expect(dist.avgTopUp).toBeCloseTo(300, 5);
   });
 
   it('merges matched historical items into the same product row and keeps unmatched separate', () => {

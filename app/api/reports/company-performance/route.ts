@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
     let periodsQuery = supabase
       .from('target_periods')
       .select(
-        'id, company_id, period_name, start_date, end_date, target_amount, company:companies(id, company_name, netsuite_number, subsidiary_id, support_fund_id)',
+        'id, company_id, period_name, start_date, end_date, target_amount, company:companies(id, company_name, netsuite_number, subsidiary_id, support_fund_id, support_fund:support_fund_levels(percent))',
       )
       .order('end_date', { ascending: true });
 
@@ -184,9 +184,15 @@ export async function GET(request: NextRequest) {
     }
 
     // ---- Per-period rows (pure — no queries) ----
+    const sfPercentByCompany = new Map<string, number>();
     const rows: PeriodRow[] = periods.map((p: any) => {
       const company = Array.isArray(p.company) ? p.company[0] : p.company;
       const isEnrolled = company?.support_fund_id != null;
+      const sfl = Array.isArray(company?.support_fund)
+        ? company?.support_fund[0]
+        : company?.support_fund;
+      const sfPercent = Number(sfl?.percent) || 0;
+      if (isEnrolled) sfPercentByCompany.set(p.company_id, sfPercent);
 
       const m = computePeriodMetrics(
         now,
@@ -195,6 +201,7 @@ export async function GET(request: NextRequest) {
         inputs.firstDone,
         sfUsedByOrder,
         historicalByCompany.get(p.company_id) ?? [],
+        sfPercent,
       );
 
       return {
@@ -232,6 +239,8 @@ export async function GET(request: NextRequest) {
       inputs.doneOrders,
       inputs.firstDone,
       sfUsedByOrder,
+      inputs.historical,
+      sfPercentByCompany,
     );
 
     return NextResponse.json({ rows, kpis, sfBehavior, filterOptions });
