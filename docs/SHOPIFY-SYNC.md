@@ -660,6 +660,14 @@ Supabase snapshot (netscore_*_stamps) + snapshot ladder rung, shipped
 2026-08-20. NetScore also deleted their own prod duplicates
 (7,324→2,818 customers) — dup-merge job off the queue.
 
+### Dashboard v2 — FINANCIAL view (owner directive 2026-08-20, build next)
+
+The dashboard is the ACCOUNTING department's window, not a sales report.
+Headline cards: Total orders · Orders value · Fees paid to Shopify
+Processing · Error orders (expand once an error exists) · Next payout
+(date + amount from the Shopify Payments API). Keep the sync plumbing
+(mode/cursor/links) secondary. qq/* components per the design system.
+
 ### Post-production queue (unchanged)
 Restock v2 (lot-level returns), settings page (lift ENGINE_CONFIG to
 table + admin UI — LAST task), PayPal/Affirm payout automation,
