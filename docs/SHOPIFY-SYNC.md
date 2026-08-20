@@ -42,7 +42,11 @@ Steps marked (agent) are run by the agent; the rest are owner actions.
  9. ☑ Accounts renamed in prod NS UI by owner (2026-08-20), verified via
     SuiteQL: 240502 "Marketplace Tax - Shop Remitted", 240504 "Duties &
     Taxes Collected - Pass-through (DDP)".
-10. ☐ Get NetScore contract renewal/notice dates (cancellation timing).
+10. ☑ NetScore contract: owner renewed ~2026-06 for a year; refund not
+    expected, owner writes it off. No cancellation urgency — license is
+    paid through ~2027-06. ACTION PARKED: owner sets a calendar reminder
+    ~2027-04 to send the non-renewal notice. "Cancel contract" in step 18
+    becomes "confirm non-renewal notice is scheduled".
 
 **Cutover day (owner + agent together, in this exact order):**
 11. ☐ Deactivate ALL 27 NetScore script deployments in prod NS; note the
