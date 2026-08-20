@@ -4,14 +4,13 @@ import { ShopifySyncStore } from '../../../../../lib/shopify/store';
 import { fetchOrderById, retryOrder } from '../../../../../lib/shopify/engine/retryOrder';
 import { extractBuyer } from '../../../../../lib/shopify/core/customerMatch';
 import { buildOrderPlan } from '../../../../../lib/shopify/core/orderTransform';
-import { ENGINE_CONFIG } from '../../../../../lib/shopify/engine/config';
+import { engineConfigForTarget } from '../../../../../lib/shopify/engine/config';
 import { createNetSuiteForTarget } from '../../../../../lib/shopify/engine/nsTarget';
 
 /**
  * Ambiguous-customer resolver: the admin picks which NS customer this
- * buyer is; we stamp our externalid (+ NetScore's field when missing) on
- * that record, then retry — the ladder's rung 0 matches instantly and
- * forever after.
+ * buyer is; we stamp our externalid on that record, then retry — the
+ * ladder's rung 0 matches instantly and forever after.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -25,14 +24,17 @@ export async function POST(request: NextRequest) {
     if (config.mode !== 'sandbox' && config.mode !== 'live') {
       return NextResponse.json({ error: `Sync mode is '${config.mode}'` }, { status: 409 });
     }
-    const ns = createNetSuiteForTarget(config.mode === 'live' ? 'production' : 'sandbox');
+    const nsTarget = config.mode === 'live' ? ('production' as const) : ('sandbox' as const);
+    const ns = createNetSuiteForTarget(nsTarget);
+    const engineConfig = engineConfigForTarget(nsTarget);
 
     const order = await fetchOrderById(String(shopifyOrderId));
     if (!order) return NextResponse.json({ error: 'Order not found in Shopify' }, { status: 404 });
 
     // Verify the chosen customer exists and is active before stamping.
-    const rows = await ns.suiteQL<{ id: string; isinactive: string; custentity_shop_cust_id?: string }>(
-      `SELECT id, isinactive, custentity_shop_cust_id FROM customer WHERE id = ${Number(nsCustomerId)}`,
+    // (No NetScore custentity reference — the field dies with their bundle.)
+    const rows = await ns.suiteQL<{ id: string; isinactive: string }>(
+      `SELECT id, isinactive FROM customer WHERE id = ${Number(nsCustomerId)}`,
     );
     if (!rows.length) return NextResponse.json({ error: 'NS customer not found' }, { status: 404 });
     if (rows[0].isinactive === 'T') return NextResponse.json({ error: 'NS customer is inactive' }, { status: 409 });
@@ -40,10 +42,7 @@ export async function POST(request: NextRequest) {
     const buyer = extractBuyer(order);
     const buyerKey =
       buyer.kind === 'b2b' && buyer.shopifyCompanyId ? `CO-${buyer.shopifyCompanyId}` : `CUST-${buyer.shopifyCustomerId}`;
-    const stamp: Record<string, unknown> = { externalId: ENGINE_CONFIG.externalIds.customer(buyerKey) };
-    if (!rows[0].custentity_shop_cust_id && buyer.shopifyCustomerId) {
-      stamp.custentity_shop_cust_id = Number(buyer.shopifyCustomerId);
-    }
+    const stamp: Record<string, unknown> = { externalId: engineConfig.externalIds.customer(buyerKey) };
     await ns.updateRecord('customer', String(nsCustomerId), stamp);
     await store.event('orders', 'customer_resolved', String(shopifyOrderId), {
       nsCustomerId: String(nsCustomerId),

@@ -115,7 +115,9 @@ export async function ensureRefunds(
         externalId: cmExtId,
         entity: { id: nsCustomerId },
         subsidiary: { id: config.subsidiaryId },
-        location: { id: config.fulfillmentLocationId },
+        // Sandbox demands a header location; prod NetScore money-only CMs
+        // carry none (probed 2026-08-20) — configurable per target.
+        ...(config.creditMemoLocationId ? { location: { id: config.creditMemoLocationId } } : {}),
         // Same searchable reference as the SO carries — global search on
         // the Shopify order number surfaces SO, invoice and CM together.
         // (True Related-Records linkage would require transforming the

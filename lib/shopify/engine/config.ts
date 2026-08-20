@@ -34,6 +34,24 @@ export interface EngineConfig {
   };
   /** Ship method for SOs carrying a shipping cost (NetScore SOs use 1171 = "FedEx/USPS/More"). */
   shipMethodId: string;
+  /**
+   * Cross-Subsidiary Fulfillment (owner requirement #1, hard gate): Qiqi
+   * INC has no warehouse — prod orders ship from BrandFox under Qiqi
+   * Global. When true, every SO product line carries `inventorylocation`
+   * = fulfillmentLocationId (NS then auto-sets inventorysubsidiary and
+   * runs intercompany accounting), mirroring both the HUB's proven
+   * cross-sub push (lib/netsuite.ts) and NetScore's own live prod SOs
+   * (probed 2026-08-20: line inventorylocation=46, no header location).
+   * False in sandbox: its Apr-2025 copy has Packable under Qiqi INC.
+   */
+  crossSubsidiaryFulfillment: boolean;
+  /**
+   * Credit memo header location. Sandbox requires one (31 Packable);
+   * prod NetScore money-only CustCreds carry NONE (probed 2026-08-20) —
+   * null omits the field. Fallback if prod REST insists: 31
+   * "Packable - Qiqi INC" (active, subsidiary 3).
+   */
+  creditMemoLocationId: string | null;
   /** Payment terms for Shopify customers: "Upfront on Sales order" (owner 2026-08-18). */
   termsId: string;
   /** "Shopify" sales-rep employee — Shopify orders have no human rep (owner 2026-08-18). */
@@ -80,6 +98,11 @@ export interface EngineConfig {
   };
 }
 
+/**
+ * SANDBOX config — the build/QA target (Apr-2025 prod copy). Exported as
+ * ENGINE_CONFIG for the sandbox-only scripts; target-aware entry points
+ * must use engineConfigForTarget() instead.
+ */
 export const ENGINE_CONFIG: EngineConfig = {
   // Verified from prod data: Pure Art Salon (Shopify-era customer) carries
   // subsidiary 3 = Qiqi INC.
@@ -106,6 +129,8 @@ export const ENGINE_CONFIG: EngineConfig = {
     b2c: { category: '10', class: '4' },
   },
   shipMethodId: '1171',
+  crossSubsidiaryFulfillment: false, // sandbox: Packable sits under Qiqi INC (same-sub)
+  creditMemoLocationId: '31', // sandbox CMs bounce without a location
   termsId: '8',
   salesRepId: '126620', // sandbox id; create the "Shopify" employee in prod at cutover
   fulfillmentLocationId: '31',
@@ -129,4 +154,91 @@ export const ENGINE_CONFIG: EngineConfig = {
 
 export function gatewayAccountId(config: EngineConfig, gateway: string): string | null {
   return config.gatewayAccounts[gateway.trim().toLowerCase()] ?? null;
+}
+
+/**
+ * Sentinel for prod record ids that do not exist yet — the records are
+ * created/verified by scripts/shopify/setup-production.ts, whose output
+ * gets hardcoded here. engineConfigForTarget('production') throws while
+ * any sentinel remains, so live mode cannot start on placeholder ids.
+ */
+const PROD_PENDING = 'PROD-PENDING';
+
+/**
+ * PRODUCTION config. Records that pre-date the Apr-2025 sandbox copy keep
+ * identical internal ids in both systems (verified by setup-production.ts
+ * before cutover); records created in sandbox during the build carry
+ * PROD_PENDING until their prod counterparts exist.
+ */
+export const PRODUCTION_ENGINE_CONFIG: EngineConfig = {
+  subsidiaryId: '3',
+  gatewayAccounts: {
+    shopify_payments: '1019',
+    shop_cash: '1019',
+    shop_pay: '1019',
+    paypal: '1021',
+    affirm: '1026',
+  },
+  // Created in sandbox post-copy — setup-production.ts creates the prod
+  // items (1432/1433 equivalents → accounts 240504/240502) and these get
+  // the real ids. null would merely park taxed orders; PROD_PENDING blocks
+  // live mode entirely until setup ran, which is the intent.
+  taxItems: {
+    merchantLiable: PROD_PENDING,
+    channelLiable: PROD_PENDING,
+  },
+  customerDefaults: {
+    b2b: { category: '4', class: '3' },
+    b2c: { category: '10', class: '4' },
+  },
+  shipMethodId: '1171',
+  // Hard gate (owner requirement #1): prod fulfills from BrandFox
+  // (location 46, subsidiary 1 Qiqi Global) via CSF — probed off
+  // NetScore's live SOs + IFs 2026-08-20.
+  crossSubsidiaryFulfillment: true,
+  // NetScore's prod money-only CustCreds carry no location (probed
+  // 2026-08-20) — mirror them. Fallback if REST insists: '31'.
+  creditMemoLocationId: null,
+  termsId: '8',
+  salesRepId: PROD_PENDING, // "Shopify" employee — created by setup-production.ts
+  fulfillmentLocationId: '46', // Brandfox Qiqi Global
+  refundAdjustmentItemId: PROD_PENDING, // "Shopify Refund Adjustment" — created by setup-production.ts
+  discountItemId: '1056', // pre-existing; setup-production.ts re-points it to 466/420000
+  payouts: {
+    shopifyVendorId: '69810',
+    feeExpenseAccountId: '1859', // 622070
+    bankAccountId: '938', // 100101 IDB QIQINC (USD)
+    marketplaceTaxAccountId: '1573', // 240502
+    chargebackAccountId: null, // CPA decision pending — dispute payouts park
+  },
+  externalIds: {
+    customer: (buyerKey) => `SHOP-${buyerKey}`,
+    salesOrder: (id) => `SHOPORD-${id}`,
+    invoice: (id) => `SHOPINV-${id}`,
+    payment: (txnId) => `SHOPPAY-${txnId}`,
+  },
+};
+
+/**
+ * Resolve the engine config per NS target. Production is validated: any
+ * PROD_PENDING id throws loudly (the poller marks the poll failed and
+ * alerts) instead of sending placeholder refs to the prod ledger.
+ */
+export function engineConfigForTarget(target: 'sandbox' | 'production'): EngineConfig {
+  if (target === 'sandbox') return ENGINE_CONFIG;
+  const c = PRODUCTION_ENGINE_CONFIG;
+  const pending: string[] = [];
+  const scan = (obj: Record<string, unknown>, prefix: string) => {
+    for (const [k, v] of Object.entries(obj)) {
+      if (v === PROD_PENDING) pending.push(`${prefix}${k}`);
+      else if (v && typeof v === 'object' && !Array.isArray(v)) scan(v as Record<string, unknown>, `${prefix}${k}.`);
+    }
+  };
+  scan(c as unknown as Record<string, unknown>, '');
+  if (pending.length > 0) {
+    throw new Error(
+      `Production engine config incomplete — run scripts/shopify/setup-production.ts and fill in: ${pending.join(', ')}`,
+    );
+  }
+  return c;
 }

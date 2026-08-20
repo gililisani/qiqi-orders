@@ -14,7 +14,7 @@ import { ShopifySyncStore } from '../../lib/shopify/store';
 import { pollOrders } from '../../lib/shopify/engine/poll';
 import { fetchOrdersUpdatedSince, loadKnownSkus } from '../../lib/shopify/engine/deps';
 import { executeOrder } from '../../lib/shopify/engine/execute';
-import { ENGINE_CONFIG } from '../../lib/shopify/engine/config';
+import { engineConfigForTarget } from '../../lib/shopify/engine/config';
 import { createNetSuiteForTarget } from '../../lib/shopify/engine/nsTarget';
 
 function arg(name: string): string | null {
@@ -40,13 +40,14 @@ async function main() {
     return;
   }
 
-  const ns = config.mode === 'sandbox' || config.mode === 'live' ? createNetSuiteForTarget(config.mode === 'live' ? 'production' : 'sandbox') : null;
+  const nsTarget = config.mode === 'live' ? ('production' as const) : ('sandbox' as const);
+  const ns = config.mode === 'sandbox' || config.mode === 'live' ? createNetSuiteForTarget(nsTarget) : null;
   const result = await pollOrders({
     store,
     fetchOrdersUpdatedSince,
     loadKnownSkus,
-    nsTarget: config.mode === 'live' ? 'production' : 'sandbox',
-    execute: ns ? (order, plan) => executeOrder(order, plan, ns, ENGINE_CONFIG) : undefined,
+    nsTarget,
+    execute: ns ? (order, plan) => executeOrder(order, plan, ns, engineConfigForTarget(nsTarget)) : undefined,
   });
   console.log('RESULT:', JSON.stringify(result));
 }

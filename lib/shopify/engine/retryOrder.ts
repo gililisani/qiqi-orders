@@ -11,7 +11,7 @@ import { buildOrderPlan } from '../core/orderTransform';
 import type { ShopifyOrder } from '../core/types';
 import { executeOrder } from './execute';
 import { PipelineError } from './pipeline';
-import { ENGINE_CONFIG } from './config';
+import { engineConfigForTarget } from './config';
 import { loadKnownSkus } from './deps';
 import { createNetSuiteForTarget, type NsTarget } from './nsTarget';
 import type { ShopifySyncStore } from '../store';
@@ -67,7 +67,7 @@ export async function retryOrder(order: ShopifyOrder, store: ShopifySyncStore): 
   const plan = buildOrderPlan(order);
   await store.seenOrder(order, plan);
   try {
-    const outcome = await executeOrder(order, plan, ns, ENGINE_CONFIG, {
+    const outcome = await executeOrder(order, plan, ns, engineConfigForTarget(nsTarget), {
       skuOverrides: aliases,
       stampCandidates: (sid) => store.stampCandidates(sid, nsTarget),
     });

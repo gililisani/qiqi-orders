@@ -101,4 +101,25 @@ describe('ensureRefunds', () => {
     const r = await ensureRefunds(refunds, orderPlan, '999', ns, ENGINE_CONFIG);
     expect(r.created).toEqual({ creditMemos: 0, refunds: 0 });
   });
+
+  it('CM location: sandbox config sets it, prod (null) omits it — NetScore prod CMs carry none', async () => {
+    const { orderPlan, refunds } = load('refunded-full');
+
+    const sandbox = fakeNs();
+    await ensureRefunds(refunds, orderPlan, '999', sandbox.ns, ENGINE_CONFIG, { orderHasNsFulfillment: false });
+    const sandboxCm = sandbox.creates.find((c) => c.type === 'creditMemo')!;
+    expect(sandboxCm.payload.location).toEqual({ id: ENGINE_CONFIG.creditMemoLocationId });
+
+    const prodlike = fakeNs();
+    await ensureRefunds(
+      refunds,
+      orderPlan,
+      '999',
+      prodlike.ns,
+      { ...ENGINE_CONFIG, creditMemoLocationId: null },
+      { orderHasNsFulfillment: false },
+    );
+    const prodCm = prodlike.creates.find((c) => c.type === 'creditMemo')!;
+    expect(prodCm.payload).not.toHaveProperty('location');
+  });
 });

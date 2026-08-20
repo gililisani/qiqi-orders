@@ -141,6 +141,12 @@ export async function runOrderPipeline(
         rate: Math.round(amountCents / l.quantity) / 100,
         amount: Number(centsToDecimal(amountCents)),
         description: l.description,
+        // Cross-Subsidiary Fulfillment: the line's INVENTORY location is
+        // the other-subsidiary 3PL (NS auto-sets inventorysubsidiary and
+        // runs intercompany accounting); the header location stays blank.
+        ...(config.crossSubsidiaryFulfillment
+          ? { inventorylocation: { id: config.fulfillmentLocationId } }
+          : {}),
       };
     });
     nsSoId = await ns.createRecord('salesOrder', {

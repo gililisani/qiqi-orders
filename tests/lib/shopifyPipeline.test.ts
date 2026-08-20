@@ -198,6 +198,22 @@ describe('discount representation', () => {
     const so = creates.find((c) => c.type === 'salesOrder')!;
     expect(so.payload.discountItem).toBeUndefined();
   });
+
+  it('CSF: product lines carry inventorylocation, header stays location-free (prod BrandFox pattern)', async () => {
+    const plan = buildOrderPlan(loadOrder('b2c-latest'));
+    const csf: EngineConfig = { ...CONFIG, crossSubsidiaryFulfillment: true, fulfillmentLocationId: '46' };
+    const { ns, creates } = fakeNs();
+    await runOrderPipeline(plan, ns, csf);
+    const so = creates.find((c) => c.type === 'salesOrder')!;
+    expect(so.payload.location).toBeUndefined();
+    expect(so.payload.item.items.every((l: any) => l.inventorylocation?.id === '46')).toBe(true);
+
+    // Sandbox (same-sub) lines stay clean.
+    const plain = fakeNs();
+    await runOrderPipeline(plan, plain.ns, CONFIG);
+    const plainSo = plain.creates.find((c) => c.type === 'salesOrder')!;
+    expect(plainSo.payload.item.items.every((l: any) => l.inventorylocation === undefined)).toBe(true);
+  });
 });
 
 describe('engine config sanity', () => {
@@ -209,5 +225,21 @@ describe('engine config sanity', () => {
   });
   it('fixture SKU set is non-trivial (fixtures loaded correctly)', () => {
     expect(fixtureSkus().size).toBeGreaterThan(5);
+  });
+  it('production target throws while PROD-PENDING ids remain (live mode cannot start on placeholders)', async () => {
+    const { engineConfigForTarget, PRODUCTION_ENGINE_CONFIG } = await import('@/lib/shopify/engine/config');
+    expect(engineConfigForTarget('sandbox')).toBe(ENGINE_CONFIG);
+    if (JSON.stringify(PRODUCTION_ENGINE_CONFIG).includes('PROD-PENDING')) {
+      expect(() => engineConfigForTarget('production')).toThrow(/setup-production/);
+    } else {
+      // Once setup-production.ts output is encoded, prod config must resolve.
+      expect(engineConfigForTarget('production').crossSubsidiaryFulfillment).toBe(true);
+    }
+  });
+  it('production config hard facts: CSF on, BrandFox 46, no CM location (probed 2026-08-20)', async () => {
+    const { PRODUCTION_ENGINE_CONFIG } = await import('@/lib/shopify/engine/config');
+    expect(PRODUCTION_ENGINE_CONFIG.crossSubsidiaryFulfillment).toBe(true);
+    expect(PRODUCTION_ENGINE_CONFIG.fulfillmentLocationId).toBe('46');
+    expect(PRODUCTION_ENGINE_CONFIG.creditMemoLocationId).toBeNull();
   });
 });

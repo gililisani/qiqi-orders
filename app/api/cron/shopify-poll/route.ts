@@ -4,7 +4,7 @@ import { ShopifySyncStore } from '../../../../lib/shopify/store';
 import { pollOrders } from '../../../../lib/shopify/engine/poll';
 import { fetchOrdersUpdatedSince, loadKnownSkus } from '../../../../lib/shopify/engine/deps';
 import { executeOrder } from '../../../../lib/shopify/engine/execute';
-import { ENGINE_CONFIG } from '../../../../lib/shopify/engine/config';
+import { engineConfigForTarget } from '../../../../lib/shopify/engine/config';
 import { createNetSuiteForTarget, type NsTarget } from '../../../../lib/shopify/engine/nsTarget';
 import { maybeSendErrorDigest, maybeSendPollFailure } from '../../../../lib/shopify/alerts';
 
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       nsTarget,
       execute: ns
         ? (order, plan) =>
-            executeOrder(order, plan, ns, ENGINE_CONFIG, {
+            executeOrder(order, plan, ns, engineConfigForTarget(nsTarget!), {
               skuOverrides: aliases,
               stampCandidates: (sid) => store.stampCandidates(sid, nsTarget!),
             })

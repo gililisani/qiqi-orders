@@ -391,13 +391,27 @@ payouts (journal JEUS12053 walked through by owner incl. 240502 leg),
 terms fix (#7240), error tools. 230 tests green.
 
 ### Build remaining (in order, BEFORE any prod write)
-1. **CSF support** — hard gate. `crossSubsidiaryFulfillment` config flag:
-   SO header checkbox + line-level `inventorylocation` (BrandFox, under
-   Qiqi Global) mirroring lib/netsuite.ts pushOrderToNetSuite's cross-sub
-   mode (lines ~470-520). Copy exact prod location ids from NetScore's
-   live SOs (SELECT location off recent SalesOrd w/ custbody_shopify_order_id).
-   Sandbox cannot test CSF-era data (Packable was same-sub) — verify via
-   prod probes + first live orders.
+1. ☑ **CSF support** — DONE 2026-08-20. Prod probes (read-only, scripts/
+   shopify/probe-csf-prod{,2}.ts) settled the facts: BrandFox = location
+   **46** ("Brandfox Qiqi Global", subsidiary 1); NetScore's live SOs are
+   subsidiary 3 with NO header location and line-level
+   `inventorylocation: 46` (inventorysubsidiary auto-set) — identical to
+   the HUB's proven cross-sub push, no explicit header checkbox via REST;
+   their IFs ship with line location 46 (= our fulfill.ts shape already);
+   their money-only CustCreds carry NO location; invoices carry none.
+   Implementation: `crossSubsidiaryFulfillment` + nullable
+   `creditMemoLocationId` config fields; SO product lines get
+   `inventorylocation` when on. Config split: ENGINE_CONFIG (sandbox) +
+   PRODUCTION_ENGINE_CONFIG (CSF on, fulfillment loc 46, CM loc null,
+   PROD-PENDING sentinels for the 4 sandbox-created ids —
+   engineConfigForTarget('production') THROWS until setup-production.ts
+   output is encoded, so live mode can't start on placeholders). All
+   target-aware entry points use engineConfigForTarget; backfill.ts
+   gained `--target production --i-am-sure` (full A+B+C chain + prod
+   Supabase persistence — the cutover gap-import tool). Bonus fix:
+   resolve-customer route no longer touches custentity_shop_cust_id
+   (bundle-independence gap). Sandbox can't exercise CSF (same-sub) —
+   verify on first live orders.
 2. **Loop D reconciliation** — nightly cron: every Shopify order of the
    day vs shopify_order_sync + NS (by externalid), invoice total ==
    Shopify total to the cent, missing orders → error queue cards.
