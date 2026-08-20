@@ -22,10 +22,9 @@ Steps marked (agent) are run by the agent; the rest are owner actions.
     mode='off', all empty. netscore_* stamps stay empty until the
     snapshot pre-load / cutover step 13 (agent's run blocked by the
     permission gate — owner-approved run or cutover step 13 fills them).
- 4. ☐ Rotate the Shopify app client secret (Shopify admin → Settings →
-    Apps and sales channels → Develop apps → Qiqi Hub Sync → API
-    credentials). Keep the new secret for step 5. Then tell the agent —
-    local .env.local needs the new value too.
+ 4. ☑ Shopify client secret rotated (2026-08-20); owner updated
+    .env.local directly (secret never re-entered chat). Verified: token
+    exchange OK with the new secret, latest order visible.
  5. ☐ Vercel env vars, Production scope: SHOPIFY_STORE_DOMAIN
     (qiqi-pro.myshopify.com), SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET
     (the NEW one), SHOPIFY_SYNC_ALERT_EMAIL.
