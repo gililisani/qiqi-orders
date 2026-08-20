@@ -31,6 +31,46 @@ import { createNetSuiteAPI, normalizeNsDate } from '../../../../../lib/netsuite'
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * Double-count guard: everything the company's Hub orders know about their
+ * invoices. Two match paths — the NS internal id, and the order's
+ * invoice_number TEXT containing the invoice tranid. The text path exists
+ * for split-invoice orders (invoice_number like "INVIL10899+INVIL10901",
+ * netsuite_invoice_id NULL), whose invoices would otherwise slip through
+ * and double-count.
+ */
+async function fetchOrderGuard(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  companyId: string
+): Promise<{ nsIds: Set<string>; invoiceTexts: string[] }> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('netsuite_invoice_id, invoice_number')
+    .eq('company_id', companyId)
+    .or('netsuite_invoice_id.not.is.null,invoice_number.not.is.null');
+  if (error) throw error;
+  return {
+    nsIds: new Set(
+      (data || []).map((o) => o.netsuite_invoice_id).filter(Boolean) as string[]
+    ),
+    invoiceTexts: (data || [])
+      .map((o) => String(o.invoice_number || '').trim().toUpperCase())
+      .filter(Boolean),
+  };
+}
+
+function isHubOrderInvoice(
+  guard: { nsIds: Set<string>; invoiceTexts: string[] },
+  nsInvoiceId: string,
+  tranid: string
+): boolean {
+  if (guard.nsIds.has(nsInvoiceId)) return true;
+  const ref = tranid.trim().toUpperCase();
+  if (!ref) return false;
+  // Tolerant containment, never strict-equal — catches "A+B" combined refs.
+  return guard.invoiceTexts.some((t) => t.includes(ref));
+}
+
 interface PreviewRow {
   netsuite_invoice_id: string;
   reference: string;
@@ -191,19 +231,14 @@ export async function POST(request: NextRequest) {
 
       // 4. Flag invoices the Hub already knows about.
       const nsIds = invoices.map((i) => String(i.id));
-      const [{ data: hubOrders }, { data: imported }] = await Promise.all([
-        supabase
-          .from('orders')
-          .select('netsuite_invoice_id')
-          .eq('company_id', companyId)
-          .in('netsuite_invoice_id', nsIds),
+      const [orderGuard, { data: imported }] = await Promise.all([
+        fetchOrderGuard(supabase, companyId),
         supabase
           .from('historical_sales')
           .select('netsuite_invoice_id')
           .eq('company_id', companyId)
           .in('netsuite_invoice_id', nsIds),
       ]);
-      const orderSet = new Set((hubOrders || []).map((o) => o.netsuite_invoice_id));
       const importedSet = new Set((imported || []).map((h) => h.netsuite_invoice_id));
 
       const rows: PreviewRow[] = invoices.map((inv) => ({
@@ -213,7 +248,7 @@ export async function POST(request: NextRequest) {
         amount: Number(inv.foreigntotal) || 0,
         support_fund: sfByInvoice.get(String(inv.id)) ?? 0,
         itemCount: countByInvoice.get(String(inv.id)) ?? 0,
-        alreadyOrder: orderSet.has(String(inv.id)),
+        alreadyOrder: isHubOrderInvoice(orderGuard, String(inv.id), String(inv.tranid || '')),
         alreadyImported: importedSet.has(String(inv.id)),
       }));
 
@@ -253,9 +288,24 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Server-side double-count guard — never trust the client's
+      // filtering: any invoice a Hub order already tracks (by NS id OR by
+      // invoice-number text, incl. split-invoice "A+B" refs) is dropped.
+      const guard = await fetchOrderGuard(supabase, companyId);
+      const importable = clean.filter(
+        (r) => !isHubOrderInvoice(guard, r.netsuite_invoice_id, r.reference)
+      );
+      const blocked = clean.length - importable.length;
+      if (importable.length === 0) {
+        return NextResponse.json(
+          { error: 'All selected invoices are already tracked as Hub orders — nothing imported.' },
+          { status: 400 }
+        );
+      }
+
       const { data: saved, error: upsertErr } = await supabase
         .from('historical_sales')
-        .upsert(clean, { onConflict: 'company_id,netsuite_invoice_id' })
+        .upsert(importable, { onConflict: 'company_id,netsuite_invoice_id' })
         .select('id, netsuite_invoice_id');
       if (upsertErr) throw upsertErr;
 
@@ -270,7 +320,7 @@ export async function POST(request: NextRequest) {
         );
         const linesByInvoice = await fetchInvoiceLines(
           ns,
-          clean.map((r) => Number(r.netsuite_invoice_id))
+          importable.map((r) => Number(r.netsuite_invoice_id))
         );
 
         const { data: products } = await supabase.from('Products').select('id, sku');
@@ -312,7 +362,7 @@ export async function POST(request: NextRequest) {
         itemCount = itemRows.length;
       }
 
-      return NextResponse.json({ success: true, imported: clean.length, items: itemCount });
+      return NextResponse.json({ success: true, imported: importable.length, items: itemCount, blocked });
     }
 
     return NextResponse.json({ error: 'Unknown mode.' }, { status: 400 });
