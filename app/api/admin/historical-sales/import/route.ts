@@ -12,7 +12,10 @@
  *       flagged so the UI can exclude them.
  *   { companyId, mode: 'import', rows: [...] }
  *     → upserts the (admin-reviewed) rows keyed on (company_id,
- *       netsuite_invoice_id) — re-importing repairs rather than duplicates.
+ *       netsuite_invoice_id) — re-importing repairs rather than duplicates —
+ *       then re-fetches each invoice's product lines from NetSuite
+ *       (server-authoritative, the client can't tamper with them), matches
+ *       them to the Hub catalog by SKU, and replaces the sale's items.
  *
  * Some old invoices carry SF as negative-priced product lines instead of a
  * discount item; those preview with support_fund 0 and the admin fills the
@@ -34,8 +37,53 @@ interface PreviewRow {
   sale_date: string | null;
   amount: number;
   support_fund: number;
+  itemCount: number;
   alreadyOrder: boolean;
   alreadyImported: boolean;
+}
+
+/**
+ * Product lines for a set of NS invoices, catalog-ready. mainline/taxline
+ * filtered out; component sub-lines of assemblies carry NULL netamount and
+ * are excluded; Discount-type lines are excluded (the SF ones are captured
+ * as support_fund, the value sits in foreignamount not netamount anyway).
+ * NS sign convention on invoices is negative-for-revenue — flipped here, so
+ * a positive-amount NS line (free goods / product-level discount) becomes a
+ * negative item amount and per-invoice sums reconcile with the total.
+ */
+async function fetchInvoiceLines(
+  ns: ReturnType<typeof createNetSuiteAPI>,
+  invoiceIds: number[]
+): Promise<Map<string, Array<{ sku: string; item_name: string; quantity: number; amount: number }>>> {
+  const byInvoice = new Map<string, Array<{ sku: string; item_name: string; quantity: number; amount: number }>>();
+  for (let i = 0; i < invoiceIds.length; i += 200) {
+    const chunk = invoiceIds.slice(i, i + 200);
+    const lines = await ns.suiteQLPaged<{
+      transaction: string;
+      itemid: string | null;
+      displayname: string | null;
+      itemtype: string | null;
+      quantity: string | null;
+      netamount: string | null;
+    }>(
+      `SELECT tl.transaction, i.itemid, i.displayname, i.itemtype, tl.quantity, tl.netamount ` +
+        `FROM transactionline tl LEFT JOIN item i ON i.id = tl.item ` +
+        `WHERE tl.transaction IN (${chunk.join(', ')}) ` +
+        `AND tl.mainline = 'F' AND tl.taxline = 'F' AND tl.netamount IS NOT NULL`
+    );
+    for (const l of lines) {
+      if ((l.itemtype || '') === 'Discount') continue;
+      const key = String(l.transaction);
+      if (!byInvoice.has(key)) byInvoice.set(key, []);
+      byInvoice.get(key)!.push({
+        sku: String(l.itemid || '').trim(),
+        item_name: String(l.displayname || l.itemid || '').trim(),
+        quantity: -(Number(l.quantity) || 0),
+        amount: -(Number(l.netamount) || 0),
+      });
+    }
+  }
+  return byInvoice;
 }
 
 export async function POST(request: NextRequest) {
@@ -125,6 +173,23 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // 3b. Line counts per invoice, for the preview table.
+      const countByInvoice = new Map<string, number>();
+      {
+        const invoiceIds = invoices.map((i) => Number(i.id)).filter(Number.isFinite);
+        for (let i = 0; i < invoiceIds.length; i += 200) {
+          const chunk = invoiceIds.slice(i, i + 200);
+          const counts = await ns.suiteQL<{ transaction: string; n: string }>(
+            `SELECT tl.transaction, COUNT(*) AS n FROM transactionline tl ` +
+              `LEFT JOIN item i ON i.id = tl.item ` +
+              `WHERE tl.transaction IN (${chunk.join(', ')}) ` +
+              `AND tl.mainline = 'F' AND tl.taxline = 'F' AND tl.netamount IS NOT NULL ` +
+              `AND (i.itemtype IS NULL OR i.itemtype <> 'Discount') GROUP BY tl.transaction`
+          );
+          for (const c of counts) countByInvoice.set(String(c.transaction), Number(c.n) || 0);
+        }
+      }
+
       // 4. Flag invoices the Hub already knows about.
       const nsIds = invoices.map((i) => String(i.id));
       const [{ data: hubOrders }, { data: imported }] = await Promise.all([
@@ -148,6 +213,7 @@ export async function POST(request: NextRequest) {
         sale_date: normalizeNsDate(inv.trandate),
         amount: Number(inv.foreigntotal) || 0,
         support_fund: sfByInvoice.get(String(inv.id)) ?? 0,
+        itemCount: countByInvoice.get(String(inv.id)) ?? 0,
         alreadyOrder: orderSet.has(String(inv.id)),
         alreadyImported: importedSet.has(String(inv.id)),
       }));
@@ -188,12 +254,65 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const { error: upsertErr } = await supabase
+      const { data: saved, error: upsertErr } = await supabase
         .from('historical_sales')
-        .upsert(clean, { onConflict: 'company_id,netsuite_invoice_id' });
+        .upsert(clean, { onConflict: 'company_id,netsuite_invoice_id' })
+        .select('id, netsuite_invoice_id');
       if (upsertErr) throw upsertErr;
 
-      return NextResponse.json({ success: true, imported: clean.length });
+      // Product lines: re-fetched from NetSuite (not trusted from the
+      // client), matched to the Hub catalog by SKU, replacing any existing
+      // items so re-imports repair.
+      let itemCount = 0;
+      if (process.env.NETSUITE_ACCOUNT_ID) {
+        const ns = createNetSuiteAPI();
+        const saleIdByNsId = new Map(
+          (saved || []).map((s) => [String(s.netsuite_invoice_id), s.id as string])
+        );
+        const linesByInvoice = await fetchInvoiceLines(
+          ns,
+          clean.map((r) => Number(r.netsuite_invoice_id))
+        );
+
+        const { data: products } = await supabase.from('Products').select('id, sku');
+        const productBySku = new Map(
+          (products || [])
+            .filter((p) => p.sku)
+            .map((p) => [String(p.sku).trim().toUpperCase(), p.id as number])
+        );
+
+        const saleIds = Array.from(saleIdByNsId.values());
+        const { error: delErr } = await supabase
+          .from('historical_sale_items')
+          .delete()
+          .in('historical_sale_id', saleIds);
+        if (delErr) throw delErr;
+
+        const itemRows = [];
+        for (const [nsId, lines] of linesByInvoice) {
+          const saleId = saleIdByNsId.get(nsId);
+          if (!saleId) continue;
+          for (const line of lines) {
+            itemRows.push({
+              historical_sale_id: saleId,
+              product_id: productBySku.get(line.sku.toUpperCase()) ?? null,
+              sku: line.sku || null,
+              item_name: line.item_name || null,
+              quantity: line.quantity,
+              amount: line.amount,
+            });
+          }
+        }
+        if (itemRows.length > 0) {
+          const { error: itemsErr } = await supabase
+            .from('historical_sale_items')
+            .insert(itemRows);
+          if (itemsErr) throw itemsErr;
+        }
+        itemCount = itemRows.length;
+      }
+
+      return NextResponse.json({ success: true, imported: clean.length, items: itemCount });
     }
 
     return NextResponse.json({ error: 'Unknown mode.' }, { status: 400 });

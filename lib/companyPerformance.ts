@@ -319,9 +319,13 @@ interface RawInputs {
   periods: any[];
   doneOrders: any[]; // id, total_value, credit_earned
   firstDone: Map<string, Date>; // order_id → first Done timestamp
-  historical: any[]; // amount, sale_date
+  historical: any[]; // amount, sale_date, support_fund
   sfItems: any[]; // order_id, total_price (support-fund lines)
   productItems: any[]; // order_id, product_id, quantity, total_price, product meta
+  // NS-imported lines of historical sales: sale_date, product_id, sku,
+  // item_name, quantity, amount, product meta. Optional — older callers
+  // (and companies with totals-only rows) simply have none.
+  historicalItems?: any[];
   windowFrom: Date;
   windowTo: Date;
 }
@@ -329,7 +333,7 @@ interface RawInputs {
 export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
   const {
     now, company, periods, doneOrders, firstDone, historical,
-    sfItems, productItems, windowFrom, windowTo,
+    sfItems, productItems, historicalItems = [], windowFrom, windowTo,
   } = inputs;
 
   const sfUsedByOrder = buildSfUsedByOrder(sfItems);
@@ -404,6 +408,26 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
       productId: item.product_id ?? null,
       sku: item.product?.sku ?? null,
       name: item.product?.item_name ?? null,
+      units: 0,
+      revenue: 0,
+    };
+    entry.units += units;
+    entry.revenue += revenue;
+    productAgg.set(key, entry);
+  }
+  // Historical (NS-imported) lines join the same mix, keyed by product_id
+  // when the SKU matched the catalog — so pre-Hub and Hub volumes of the
+  // same product merge into one row.
+  for (const item of historicalItems) {
+    if (item.sale_date < windowFromDay || item.sale_date > windowToDay) continue;
+    const units = Number(item.quantity) || 0;
+    const revenue = Number(item.amount) || 0;
+    windowUnits += units;
+    const key = String(item.product_id ?? item.sku ?? item.item_name ?? 'unknown');
+    const entry = productAgg.get(key) ?? {
+      productId: item.product_id ?? null,
+      sku: item.product?.sku ?? item.sku ?? null,
+      name: item.product?.item_name ?? item.item_name ?? null,
       units: 0,
       revenue: 0,
     };
@@ -559,6 +583,18 @@ export async function buildCompanyPerformance(
     productItems = itemsRes.data ?? [];
   }
 
+  // NS-imported lines of this company's historical sales (inner join scopes
+  // by company; the parent's sale_date is flattened for window filtering).
+  const histItemsRes = await supabase
+    .from('historical_sale_items')
+    .select('product_id, sku, item_name, quantity, amount, product:Products(sku, item_name), sale:historical_sales!inner(company_id, sale_date)')
+    .eq('sale.company_id', companyId);
+  if (histItemsRes.error) throw new Error(`historical items: ${histItemsRes.error.message}`);
+  const historicalItems = (histItemsRes.data ?? []).map((row: any) => {
+    const sale = Array.isArray(row.sale) ? row.sale[0] : row.sale;
+    return { ...row, sale_date: sale?.sale_date ?? '' };
+  });
+
   return computeCompanyMetrics({
     now: new Date(),
     company: companyRes.data,
@@ -568,6 +604,7 @@ export async function buildCompanyPerformance(
     historical: inputs.historical,
     sfItems: inputs.sfItems,
     productItems,
+    historicalItems,
     windowFrom,
     windowTo,
   });

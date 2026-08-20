@@ -280,3 +280,49 @@ describe('computeSfBehaviorDistribution', () => {
     expect(d.avgTopUp).toBe(0);
   });
 });
+
+describe('historical support funds + imported line items', () => {
+  const HIST_WITH_SF = [
+    { amount: 5000, sale_date: '2025-08-15', support_fund: 250 }, // Year 1
+    { amount: 1234, sale_date: '2024-01-01', support_fund: 60 },  // pre-period
+  ];
+  const HIST_ITEMS = [
+    // Matched to catalog product 1 → merges with the order-derived row.
+    { sale_date: '2026-07-12', product_id: 1, sku: 'FPS0018', item_name: 'Shampoo', quantity: 7, amount: 3000, product: { sku: 'FPS0018', item_name: 'Shampoo' } },
+    // Unmatched legacy kit → its own row, keyed by SKU.
+    { sale_date: '2026-07-12', product_id: null, sku: 'KIT0034', item_name: 'Old Kit', quantity: 2, amount: 900, product: null },
+    // Outside the window → ignored.
+    { sale_date: '2025-08-15', product_id: 1, sku: 'FPS0018', item_name: 'Shampoo', quantity: 50, amount: 20000, product: { sku: 'FPS0018', item_name: 'Shampoo' } },
+  ];
+
+  const result = computeCompanyMetrics({
+    now: NOW,
+    company: COMPANY,
+    periods: PERIODS,
+    doneOrders: DONE_ORDERS,
+    firstDone: FIRST_DONE,
+    historical: HIST_WITH_SF,
+    sfItems: SF_ITEMS,
+    productItems: PRODUCT_ITEMS,
+    historicalItems: HIST_ITEMS,
+    windowFrom: new Date('2026-07-01T00:00:00Z'),
+    windowTo: new Date('2026-07-31T23:59:59Z'),
+  });
+
+  it('adds historical support_fund to SF earned to-date and per period', () => {
+    // Orders: 800 + 1400 + 400; historical: 250 + 60.
+    expect(result.toDate.sfEarned).toBe(800 + 1400 + 400 + 250 + 60);
+    const year1 = result.periods.find((p) => p.periodName === 'Year 1')!;
+    expect(year1.sfEarned).toBe(800 + 1400 + 250);
+  });
+
+  it('merges matched historical items into the same product row and keeps unmatched separate', () => {
+    const shampoo = result.window.topProducts.find((p) => p.sku === 'FPS0018')!;
+    expect(shampoo.units).toBe(10 + 7); // order units + in-window historical units
+    expect(shampoo.revenue).toBe(12000 + 3000);
+    const kit = result.window.topProducts.find((p) => p.sku === 'KIT0034')!;
+    expect(kit.units).toBe(2);
+    expect(kit.revenue).toBe(900);
+    expect(result.window.topProducts.find((p) => p.units === 50)).toBeUndefined();
+  });
+});

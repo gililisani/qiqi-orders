@@ -51,6 +51,7 @@ interface HistoricalSale {
   support_fund: number | null;
   reference: string | null;
   source: string | null;
+  items: Array<{ count: number }> | null;
 }
 
 interface Company {
@@ -65,12 +66,13 @@ interface PreviewRow {
   sale_date: string | null;
   amount: number;
   support_fund: number;
+  itemCount: number;
   alreadyOrder: boolean;
   alreadyImported: boolean;
   selected: boolean;
 }
 
-const SALE_COLUMNS = 'id, sale_date, amount, support_fund, reference, source';
+const SALE_COLUMNS = 'id, sale_date, amount, support_fund, reference, source, items:historical_sale_items(count)';
 
 export default function CompanyHistoricalSalesPage() {
   const params = useParams();
@@ -316,7 +318,9 @@ export default function CompanyHistoricalSalesPage() {
       if (!res.ok) throw new Error(data?.error || 'Import failed.');
       await recalcTargets();
       await refreshSales();
-      toast.success(`Imported ${data.imported} sale${data.imported === 1 ? '' : 's'} from NetSuite.`);
+      toast.success(
+        `Imported ${data.imported} sale${data.imported === 1 ? '' : 's'} with ${data.items ?? 0} product line${data.items === 1 ? '' : 's'} from NetSuite.`
+      );
       setImportOpen(false);
     } catch (err: any) {
       setImportError(err.message || 'Import failed.');
@@ -450,6 +454,7 @@ export default function CompanyHistoricalSalesPage() {
                 <TableHead>Reference</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="text-right">Support fund</TableHead>
+                <TableHead className="text-right">Items</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead className="w-24 text-right">Actions</TableHead>
               </TableRow>
@@ -464,6 +469,9 @@ export default function CompanyHistoricalSalesPage() {
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm">
                     {Number(sale.support_fund) ? formatCurrency(Number(sale.support_fund)) : '—'}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                    {sale.items?.[0]?.count || '—'}
                   </TableCell>
                   <TableCell>
                     <Badge variant={sale.source === 'netsuite' ? 'accent' : 'muted'}>
@@ -614,6 +622,7 @@ export default function CompanyHistoricalSalesPage() {
               <p className="text-xs text-muted-foreground">
                 Support fund is read from the invoice&apos;s SF discount lines. Old invoices that
                 gave support funds as free goods show 0 — type the value before importing.
+                Product lines are imported automatically with each invoice (the Items count).
                 Invoices already tracked as Hub orders can&apos;t be imported (they&apos;d double-count).
               </p>
               <div className="max-h-80 overflow-y-auto border rounded-md">
@@ -625,6 +634,7 @@ export default function CompanyHistoricalSalesPage() {
                       <TableHead>Invoice</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead className="text-right w-36">Support fund</TableHead>
+                      <TableHead className="text-right">Items</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -657,6 +667,9 @@ export default function CompanyHistoricalSalesPage() {
                               setPreviewRow(idx, { support_fund: parseFloat(e.target.value) || 0 })
                             }
                           />
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                          {row.itemCount || '—'}
                         </TableCell>
                         <TableCell>
                           {row.alreadyOrder ? (
