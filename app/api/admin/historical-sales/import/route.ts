@@ -173,20 +173,29 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // 3b. Line counts per invoice, for the preview table.
+      // 3b. Product lines per invoice — for the preview's item counts AND
+      // the rest of the SF. Owner rule: EVERY row that reduces the invoice
+      // is the SF (in positive). Historically that's usually a regular
+      // product line at a negative price (free goods) or a "Customer
+      // Discount" item — not a Discount-type item at all — so the
+      // discount-item sum above only covers the Hub era. Our line amounts
+      // are sign-flipped (revenue positive), so reduction lines are the
+      // negative-amount ones.
       const countByInvoice = new Map<string, number>();
       {
-        const invoiceIds = invoices.map((i) => Number(i.id)).filter(Number.isFinite);
-        for (let i = 0; i < invoiceIds.length; i += 200) {
-          const chunk = invoiceIds.slice(i, i + 200);
-          const counts = await ns.suiteQL<{ transaction: string; n: string }>(
-            `SELECT tl.transaction, COUNT(*) AS n FROM transactionline tl ` +
-              `LEFT JOIN item i ON i.id = tl.item ` +
-              `WHERE tl.transaction IN (${chunk.join(', ')}) ` +
-              `AND tl.mainline = 'F' AND tl.taxline = 'F' AND tl.netamount IS NOT NULL ` +
-              `AND (i.itemtype IS NULL OR i.itemtype <> 'Discount') GROUP BY tl.transaction`
+        const linesByInvoice = await fetchInvoiceLines(
+          ns,
+          invoices.map((i) => Number(i.id)).filter(Number.isFinite)
+        );
+        for (const [nsId, lines] of linesByInvoice) {
+          countByInvoice.set(nsId, lines.length);
+          const reductions = lines.reduce(
+            (s, l) => s + (l.amount < 0 ? -l.amount : 0),
+            0
           );
-          for (const c of counts) countByInvoice.set(String(c.transaction), Number(c.n) || 0);
+          if (reductions > 0) {
+            sfByInvoice.set(nsId, (sfByInvoice.get(nsId) ?? 0) + reductions);
+          }
         }
       }
 

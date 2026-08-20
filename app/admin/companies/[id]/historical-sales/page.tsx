@@ -620,10 +620,11 @@ export default function CompanyHistoricalSalesPage() {
           {preview && preview.length > 0 && (
             <>
               <p className="text-xs text-muted-foreground">
-                Support fund is read from the invoice&apos;s SF discount lines. Old invoices that
-                gave support funds as free goods show 0 — type the value before importing.
-                Product lines are imported automatically with each invoice (the Items count).
-                Invoices already tracked as Hub orders can&apos;t be imported (they&apos;d double-count).
+                Support fund is read from every row that reduces the invoice — discount lines
+                and negative-priced product lines alike — shown as a positive value, editable
+                for exceptions. Product lines are imported automatically with each invoice (the
+                Items count). Invoices already tracked as Hub orders can&apos;t be imported
+                (they&apos;d double-count).
               </p>
               <div className="max-h-80 overflow-y-auto border rounded-md">
                 <Table>
