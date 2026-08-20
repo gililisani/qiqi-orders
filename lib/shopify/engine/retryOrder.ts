@@ -48,6 +48,15 @@ export async function retryOrder(order: ShopifyOrder, store: ShopifySyncStore): 
   const ns = createNetSuiteForTarget(nsTarget);
   const shopifyOrderId = order.id.replace(/^.*\//, '');
 
+  // Cutover guard: NetScore-era orders never re-enter the pipeline in
+  // production — their chain already exists under NetScore's records.
+  if (nsTarget === 'production' && (await store.hasNetscoreSalesOrder(shopifyOrderId))) {
+    await store.seenOrder(order, null);
+    const message = `${order.name} was booked by NetScore — its NS chain already exists; handle any late fulfillment/refund manually in NS`;
+    await store.markSkipped(shopifyOrderId, 'NETSCORE_ERA', message);
+    return { result: 'skipped', reason: 'NETSCORE_ERA', message, orderName: order.name };
+  }
+
   const aliases = await store.getSkuAliases();
   const knownSkus = await loadKnownSkus();
   for (const sku of aliases.keys()) knownSkus.add(sku);

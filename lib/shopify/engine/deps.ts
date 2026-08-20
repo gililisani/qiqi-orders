@@ -12,6 +12,12 @@ export async function fetchOrdersUpdatedSince(isoTimestamp: string): Promise<Sho
   return shopifyPaginate<ShopifyOrder>(ORDERS_UPDATED_SINCE_QUERY, { q }, 'orders');
 }
 
+/** Loop D: full orders created inside a window (recon re-verifies each). */
+export async function fetchOrdersCreatedBetween(fromIso: string, toIso: string): Promise<ShopifyOrder[]> {
+  const q = `created_at:>='${fromIso}' created_at:<='${toIso}'`;
+  return shopifyPaginate<ShopifyOrder>(ORDERS_UPDATED_SINCE_QUERY, { q }, 'orders');
+}
+
 /**
  * The gate's SKU universe = every item code in NetSuite. One paged SuiteQL
  * read per poll (only when the poll actually fetched orders). Read-only —

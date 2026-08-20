@@ -131,6 +131,51 @@ describe('pollOrders', () => {
     expect(set.ns_target).toBe('sandbox');
   });
 
+  it('live mode skips NetScore-era orders instead of re-booking them (cutover guard)', async () => {
+    const { store, states } = fakeStore('live');
+    const order = withUpdatedAt('b2c-latest', '2026-08-25T10:00:00Z');
+    const orderId = order.id.replace(/^.*\//, '');
+    let executed = 0;
+    const r = await pollOrders({
+      store,
+      fetchOrdersUpdatedSince: async () => [order],
+      loadKnownSkus: async () => SKUS,
+      nsTarget: 'production',
+      isNetscoreEra: async (id) => id === orderId,
+      execute: async () => {
+        executed += 1;
+        throw new Error('must not execute a NetScore-era order');
+      },
+    });
+    expect(executed).toBe(0);
+    expect(r.skipped).toBe(1);
+    expect(states.get(orderId)).toBe('skipped');
+  });
+
+  it('sandbox target never consults the NetScore guard (QA re-books deliberately)', async () => {
+    const { store } = fakeStore('sandbox');
+    const order = withUpdatedAt('b2c-latest', '2026-08-17T10:00:00Z');
+    let executed = 0;
+    await pollOrders({
+      store,
+      fetchOrdersUpdatedSince: async () => [order],
+      loadKnownSkus: async () => SKUS,
+      nsTarget: 'sandbox',
+      isNetscoreEra: async () => true,
+      execute: async () => {
+        executed += 1;
+        return {
+          state: 'paid' as const,
+          nsIds: {
+            ns_customer_id: '1', ns_so_id: '2', ns_invoice_id: '3',
+            ns_payment_ids: ['4'], ns_fulfillment_ids: [], ns_credit_memo_ids: [],
+          },
+        };
+      },
+    });
+    expect(executed).toBe(1);
+  });
+
   it('sandbox mode without an executor is a hard error (no silent no-write)', async () => {
     const { store } = fakeStore('sandbox');
     await expect(

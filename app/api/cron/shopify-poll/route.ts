@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
         return skus;
       },
       nsTarget,
+      isNetscoreEra: (orderId) => store.hasNetscoreSalesOrder(orderId),
       execute: ns
         ? (order, plan) =>
             executeOrder(order, plan, ns, engineConfigForTarget(nsTarget!), {

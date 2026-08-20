@@ -412,10 +412,32 @@ terms fix (#7240), error tools. 230 tests green.
    resolve-customer route no longer touches custentity_shop_cust_id
    (bundle-independence gap). Sandbox can't exercise CSF (same-sub) —
    verify on first live orders.
-2. **Loop D reconciliation** — nightly cron: every Shopify order of the
-   day vs shopify_order_sync + NS (by externalid), invoice total ==
-   Shopify total to the cent, missing orders → error queue cards.
-   Also the completeness check vs NetScore-era (post-cutover only).
+2. ☑ **Loop D reconciliation** — DONE 2026-08-20. `engine/reconcile.ts` +
+   nightly cron /api/cron/shopify-reconcile (08:10 UTC, 48h window,
+   maxDuration 300) + `scripts/shopify/reconcile.ts --from --to
+   [--target production]` for manual sweeps. Per order: state row must
+   exist (else MISSING_ORDER card — the NetScore lost-order cure,
+   automated); synced orders verify against NS by externalid TO THE CENT
+   (SO+invoice exist, invoice foreigntotal == as-sold total = Σ line
+   nets + shipping + tax/duties; every payment/IF/CM exists; each CM
+   total == its refund) → RECON_MISMATCH card. Missing-row-but-NS-chain-
+   exists → ADOPTS (heals the row, then verifies) — no false alarms
+   after DB resets/pre-persistence backfills. Infra failures throw (a
+   failed recon never cards healthy orders). First live sandbox run
+   (Aug 10–12): 19 adopted clean; CAUGHT REAL DRIFT — #7201's invoice
+   carries the pre-fix percentage-discount bug (booked 08-18, fix found
+   on #7268 08-19): invoice 46.85 vs charged 47.20, discount 4.55 vs SO
+   4.20. Plus 3 stock-out IF gaps + 2 never-booked orders — all correct.
+   **CUTOVER-BOUNDARY GUARD (new, critical)**: an order created pre-T
+   (booked by NetScore) but updated post-T (fulfillment/refund) would
+   have flowed through our pipeline and DUPLICATED their SO — now every
+   production execute path (poller, retry, backfill, recon) checks
+   netscore_transaction_stamps first: SalesOrd stamp exists → skip as
+   NETSCORE_ERA (visible on dashboard; late IF/CM handled manually in
+   NS). Sandbox target ignores the guard (QA re-books deliberately).
+   REQUIRES: fresh snapshot into PROD Supabase at cutover
+   (snapshot-netscore-data.ts --target production --db prod, new flag)
+   run AFTER NetScore's scripts die, so last-minute orders carry stamps.
 3. **Prod setup script** (scripts/shopify/setup-production.ts, mirrors
    sandbox scripts): verify/re-point items + create where missing:
    tax items (DDP + marketplace, base price 0, sub 11 + includeChildren),

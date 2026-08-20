@@ -90,6 +90,34 @@ export class ShopifySyncStore {
     return data as any;
   }
 
+  /** Full state row for Loop D reconciliation. */
+  async getOrderRow(shopifyOrderId: string): Promise<Record<string, any> | null> {
+    const { data, error } = await this.db
+      .from('shopify_order_sync')
+      .select('state, skip_reason, error_code, ns_target, ns_so_id, ns_invoice_id, ns_payment_ids, ns_fulfillment_ids, ns_credit_memo_ids, updated_at')
+      .eq('shopify_order_id', shopifyOrderId)
+      .maybeSingle();
+    if (error) throw new Error(`shopify_order_sync read failed: ${error.message}`);
+    return data as any;
+  }
+
+  /**
+   * True when NetScore booked this order (a SalesOrd stamp exists in the
+   * snapshot). Cutover guard: such orders never re-enter our pipeline on
+   * the production target — their NS chain is NetScore's history.
+   */
+  async hasNetscoreSalesOrder(shopifyOrderId: string): Promise<boolean> {
+    const { data, error } = await this.db
+      .from('netscore_transaction_stamps')
+      .select('ns_transaction_id')
+      .eq('shopify_order_id', shopifyOrderId)
+      .eq('ns_target', 'production')
+      .eq('tran_type', 'SalesOrd')
+      .limit(1);
+    if (error) throw new Error(`netscore_transaction_stamps read failed: ${error.message}`);
+    return (data ?? []).length > 0;
+  }
+
   async markIgnored(shopifyOrderId: string, note: string): Promise<void> {
     await this.setState(shopifyOrderId, 'ignored', { ignore_note: note.slice(0, 500) });
   }

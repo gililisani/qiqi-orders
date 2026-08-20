@@ -168,7 +168,11 @@ export type SyncErrorCode =
   | 'UNPARSEABLE_MONEY'
   | 'TAXES_INCLUDED'
   | 'AMBIGUOUS_CUSTOMER'
-  | 'UNSUPPORTED_SOURCE';
+  | 'UNSUPPORTED_SOURCE'
+  /** Loop D: order exists in Shopify but was never synced (the NetScore lost-order bug, now detected). */
+  | 'MISSING_ORDER'
+  /** Loop D: NS records exist but disagree with Shopify (totals/chain) to the cent. */
+  | 'RECON_MISMATCH';
 
 export interface SyncIssue {
   code: SyncErrorCode;
@@ -177,7 +181,18 @@ export interface SyncIssue {
 }
 
 /** Order should not sync (yet / at all) but is NOT an error. */
-export type SkipReason = 'TEST_ORDER' | 'UNPAID_YET' | 'CANCELLED_UNPAID' | 'ZERO_TOTAL';
+export type SkipReason =
+  | 'TEST_ORDER'
+  | 'UNPAID_YET'
+  | 'CANCELLED_UNPAID'
+  | 'ZERO_TOTAL'
+  /**
+   * Order was booked by NetScore (a SalesOrd stamp exists in the
+   * snapshot) — post-cutover updates to it (fulfillment/refund) must NOT
+   * re-book it through our pipeline. Handle any late IF/CM manually in NS.
+   * Production target only; sandbox QA deliberately re-books these.
+   */
+  | 'NETSCORE_ERA';
 
 export type GateResult =
   | { outcome: 'proceed' }

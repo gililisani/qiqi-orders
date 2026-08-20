@@ -127,6 +127,16 @@ async function main() {
     }
     try {
       if (target === 'production') {
+        // Cutover guard: orders NetScore already booked stay theirs.
+        if (await store!.hasNetscoreSalesOrder(shopifyOrderId)) {
+          skipped += 1;
+          report.push({ order: order.name, result: 'skip', reason: 'NETSCORE_ERA' });
+          await store!.seenOrder(order, null);
+          await store!
+            .markSkipped(shopifyOrderId, 'NETSCORE_ERA', `${order.name} was booked by NetScore — chain exists`)
+            .catch(() => {});
+          continue;
+        }
         // Full chain (A+B+C) + prod dashboard persistence — same as the
         // live poller, so gap-imported orders look identical to polled ones.
         await store!.seenOrder(order, plan);

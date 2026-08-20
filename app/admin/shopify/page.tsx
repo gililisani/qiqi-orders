@@ -79,6 +79,9 @@ const ERROR_GUIDANCE: Record<string, string> = {
   UNSUPPORTED_SOURCE: 'See the message — usually missing NS configuration (item, account, stock). Fix, then Retry.',
   GIFT_CARD_LINE: 'Order contains a gift card — not supported.',
   TAXES_INCLUDED: 'Tax-inclusive pricing detected — the store should be tax-exclusive. Investigate.',
+  MISSING_ORDER: 'Nightly check found this order in Shopify but not in NetSuite. Retry books it (safe).',
+  RECON_MISMATCH:
+    'Nightly check found the NetSuite records disagree with Shopify (see message). Retry re-ensures the chain; if it persists, investigate the NS records.',
 };
 
 function StateBadge({ state }: { state: string }) {

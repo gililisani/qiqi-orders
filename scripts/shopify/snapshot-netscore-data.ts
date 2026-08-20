@@ -1,8 +1,13 @@
 /**
  * Snapshot ALL NetScore field data into Supabase before their bundle is
- * uninstalled. Read-only against NS; idempotent upserts into staging DB.
+ * uninstalled. Read-only against NS; idempotent upserts.
  *
- *   npx tsx scripts/shopify/snapshot-netscore-data.ts --target sandbox|production
+ *   npx tsx scripts/shopify/snapshot-netscore-data.ts --target sandbox|production [--db prod]
+ *
+ * DB defaults to the STAGING Supabase; pass --db prod to write the prod
+ * HUB Supabase (the store the live poller reads). CUTOVER: re-run with
+ * `--target production --db prod` immediately after NetScore's scripts
+ * are deactivated, so last-minute orders carry stamps too.
  */
 import dotenv from 'dotenv';
 import path from 'path';
@@ -18,9 +23,15 @@ function arg(name: string): string | null {
 async function main() {
   const target = (arg('target') ?? 'sandbox') as NsTarget;
   const ns = createNetSuiteForTarget(target);
-  const db = createClient(process.env.STAGING_SUPABASE_URL!, process.env.STAGING_SUPABASE_SERVICE_ROLE_KEY!, {
-    auth: { persistSession: false },
-  });
+  const db =
+    arg('db') === 'prod'
+      ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+          auth: { persistSession: false },
+        })
+      : createClient(process.env.STAGING_SUPABASE_URL!, process.env.STAGING_SUPABASE_SERVICE_ROLE_KEY!, {
+          auth: { persistSession: false },
+        });
+  console.log(`snapshot: NS ${target} → ${arg('db') === 'prod' ? 'PROD' : 'staging'} Supabase`);
   const chunkUpsert = async (table: string, rows: any[]) => {
     for (let i = 0; i < rows.length; i += 500) {
       const { error } = await db.from(table).upsert(rows.slice(i, i + 500), { onConflict: table === 'netscore_customer_stamps' ? 'ns_target,ns_customer_id' : table === 'netscore_transaction_stamps' ? 'ns_target,ns_transaction_id' : 'ns_target,ns_item_id' });

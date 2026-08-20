@@ -31,6 +31,12 @@ export interface PollDeps {
   execute?: (order: ShopifyOrder, plan: OrderPlan) => Promise<ExecutionOutcome>;
   /** Which NS the executor writes to; recorded on each order row. */
   nsTarget?: 'sandbox' | 'production';
+  /**
+   * Cutover guard (production target only): true = NetScore booked this
+   * order — skip it instead of re-booking its chain. Wired to the
+   * netscore_transaction_stamps snapshot.
+   */
+  isNetscoreEra?: (shopifyOrderId: string) => Promise<boolean>;
   now?: () => Date;
 }
 
@@ -107,6 +113,16 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
       proceeded += 1;
 
       if (writeMode && deps.execute) {
+        if (deps.nsTarget === 'production' && deps.isNetscoreEra && (await deps.isNetscoreEra(orderId))) {
+          await store.markSkipped(
+            orderId,
+            'NETSCORE_ERA',
+            `${order.name} was booked by NetScore — updates to it are not auto-booked; handle any late fulfillment/refund manually in NS`,
+          );
+          await store.event('orders', 'netscore_era_skip', orderId, {});
+          skipped += 1;
+          continue;
+        }
         try {
           const outcome = await deps.execute(order, plan);
           await store.setState(orderId, outcome.state, {
