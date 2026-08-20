@@ -40,7 +40,11 @@ export async function GET(request: NextRequest) {
       },
       nsTarget,
       execute: ns
-        ? (order, plan) => executeOrder(order, plan, ns, ENGINE_CONFIG, { skuOverrides: aliases })
+        ? (order, plan) =>
+            executeOrder(order, plan, ns, ENGINE_CONFIG, {
+              skuOverrides: aliases,
+              stampCandidates: (sid) => store.stampCandidates(sid, nsTarget!),
+            })
         : undefined,
     });
     console.log(`[cron/shopify-poll] ${JSON.stringify(result)}`);

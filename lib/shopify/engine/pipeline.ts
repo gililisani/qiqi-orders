@@ -50,7 +50,11 @@ export async function runOrderPipeline(
   plan: OrderPlan,
   ns: NsApi,
   config: EngineConfig,
-  opts: { skuOverrides?: Map<string, string> } = {},
+  opts: {
+    skuOverrides?: Map<string, string>;
+    /** Snapshot-table lookup (NetScore-era stamps live in Supabase now). */
+    stampCandidates?: (shopifyCustomerId: string) => Promise<NsCustomerCandidate[]>;
+  } = {},
 ): Promise<PipelineResult> {
   const created = { customer: false, so: false, invoice: false, payments: 0 };
 
@@ -91,7 +95,7 @@ export async function runOrderPipeline(
   }
 
   // ---- step 1: ensure customer ----
-  const { nsCustomerId, via, wasCreated } = await ensureCustomer(plan, ns, config);
+  const { nsCustomerId, via, wasCreated } = await ensureCustomer(plan, ns, config, opts.stampCandidates);
   created.customer = wasCreated;
 
   // Tax lines (exact Shopify amounts, per jurisdiction) go on the INVOICE,
@@ -152,7 +156,6 @@ export async function runOrderPipeline(
       terms: { id: config.termsId },
       otherRefNum: plan.poNumber ?? plan.orderName,
       memo: `Shopify ${plan.orderName}${plan.discountCodes.length ? ` · discount: ${plan.discountCodes.join(', ')}` : ''}`,
-      custbody_shopify_order_id: Number(plan.shopifyOrderId),
       shippingCost: plan.shipping ? Number(centsToDecimal(plan.shipping.amountCents)) : 0,
       ...(plan.shipping ? { shipMethod: { id: config.shipMethodId } } : {}),
       ...(discountCents > 0
@@ -171,7 +174,6 @@ export async function runOrderPipeline(
       externalId: invExtId,
       tranDate: plan.processedAt.slice(0, 10),
       terms: { id: config.termsId },
-      custbody_shopify_order_id: Number(plan.shopifyOrderId),
       // Extra item lines in the transform body APPEND to the SO's lines
       // (verified empirically 2026-08-18) — the invoice carries the exact
       // per-jurisdiction tax amounts on the pass-through items.
@@ -213,6 +215,7 @@ async function ensureCustomer(
   plan: OrderPlan,
   ns: NsApi,
   config: EngineConfig,
+  stampCandidates?: (shopifyCustomerId: string) => Promise<NsCustomerCandidate[]>,
 ): Promise<{ nsCustomerId: string; via: PipelineResult['customerVia']; wasCreated: boolean }> {
   const buyer = plan.buyer;
   const buyerKey =
@@ -225,26 +228,33 @@ async function ensureCustomer(
   const byExt = await ns.findRecordIdByExternalId('customer', extId);
   if (byExt) return { nsCustomerId: byExt, via: 'external_id', wasCreated: false };
 
-  // Gather candidates for the pure decision ladder.
+  // Gather candidates for the pure decision ladder. NetScore-era stamps
+  // live in OUR snapshot table (their bundle fields are gone) — the
+  // engine injects that lookup; verify each hit still exists + read its
+  // live classification from NS.
   const candidates: NsCustomerCandidate[] = [];
   const classification = new Map<string, { category: string | null; class: string | null; terms: string | null }>();
   const note = (r: any) =>
     classification.set(String(r.id), { category: r.category ?? null, class: r.custentity3 ?? null, terms: r.terms ?? null });
-  if (buyer.shopifyCustomerId) {
-    const rows = await ns.suiteQL<any>(
-      `SELECT id, entityid, companyname, email, isinactive, category, custentity3, terms FROM customer WHERE custentity_shop_cust_id = ${Number(buyer.shopifyCustomerId)}`,
-    );
-    rows.forEach(note);
-    candidates.push(
-      ...rows.map((r) => ({
-        nsCustomerId: String(r.id),
-        entityId: r.entityid,
-        companyName: r.companyname,
-        email: r.email,
-        isInactive: r.isinactive === 'T',
-        via: 'customer_stamp' as const,
-      })),
-    );
+  if (buyer.shopifyCustomerId && stampCandidates) {
+    const snapshot = await stampCandidates(buyer.shopifyCustomerId);
+    if (snapshot.length) {
+      const ids = snapshot.map((c) => Number(c.nsCustomerId)).join(',');
+      const rows = await ns.suiteQL<any>(
+        `SELECT id, entityid, companyname, email, isinactive, category, custentity3, terms FROM customer WHERE id IN (${ids})`,
+      );
+      rows.forEach(note);
+      candidates.push(
+        ...rows.map((r) => ({
+          nsCustomerId: String(r.id),
+          entityId: r.entityid,
+          companyName: r.companyname,
+          email: r.email,
+          isInactive: r.isinactive === 'T',
+          via: 'customer_stamp' as const,
+        })),
+      );
+    }
   }
   if (buyer.email) {
     const rows = await ns.suiteQL<any>(
@@ -270,13 +280,8 @@ async function ensureCustomer(
   if (decision.action === 'error') throw new PipelineError(decision.issue);
 
   if (decision.action === 'use') {
-    // Adopt: stamp our externalid (+ their field if absent) so rung 0 hits next time.
+    // Adopt: stamp our externalid so rung 0 hits next time.
     const stamp: Record<string, unknown> = { externalId: extId };
-    if (decision.stampNeeded && buyer.shopifyCustomerId) {
-      // NetScore built the field as Integer — 13-digit Shopify ids are
-      // still far below 2^53, so Number is exact.
-      stamp.custentity_shop_cust_id = Number(buyer.shopifyCustomerId);
-    }
     // This account makes Category/Class mandatory — PATCH re-validates the
     // whole record, so records missing them must be filled with the
     // account's own per-kind convention or the stamp write bounces.
@@ -291,6 +296,7 @@ async function ensureCustomer(
   }
 
   // Create — always with stamps, per principle 5.
+  void 0; // (their custentity stamp is no longer written — our externalid is the key)
   const defaults = config.customerDefaults[buyer.kind];
   // Address book: CPA wants sales-by-state visible on the customer record.
   const addressItems: Array<Record<string, unknown>> = [];
@@ -320,7 +326,6 @@ async function ensureCustomer(
     externalId: extId,
     subsidiary: { id: config.subsidiaryId },
     email: buyer.email,
-    custentity_shop_cust_id: buyer.shopifyCustomerId ? Number(buyer.shopifyCustomerId) : null,
     category: { id: defaults.category },
     custentity3: { id: defaults.class },
     terms: { id: config.termsId },

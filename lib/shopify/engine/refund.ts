@@ -123,7 +123,6 @@ export async function ensureRefunds(
         // tested 2026-08-18, not viable for money-only CMs.)
         otherRefNum: refund.orderName,
         tranDate: refund.createdAt.slice(0, 10),
-        custbody_shopify_order_id: Number(refund.shopifyOrderId),
         memo: `Shopify refund ${refund.orderName}${refund.note ? ` · ${refund.note}` : ''}`,
         item: { items: lines },
       });

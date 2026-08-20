@@ -3,7 +3,7 @@
  * (called from the engine / cron routes; never from the browser).
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { OrderPlan, ShopifyOrder, SkipReason, SyncIssue } from './core/types';
+import type { NsCustomerCandidate, OrderPlan, ShopifyOrder, SkipReason, SyncIssue } from './core/types';
 
 export type SyncMode = 'off' | 'shadow' | 'sandbox' | 'live';
 
@@ -92,6 +92,24 @@ export class ShopifySyncStore {
 
   async markIgnored(shopifyOrderId: string, note: string): Promise<void> {
     await this.setState(shopifyOrderId, 'ignored', { ignore_note: note.slice(0, 500) });
+  }
+
+  /** NetScore-era customer stamps (snapshotted before their bundle died). */
+  async stampCandidates(shopifyCustomerId: string, nsTarget: 'sandbox' | 'production'): Promise<NsCustomerCandidate[]> {
+    const { data, error } = await this.db
+      .from('netscore_customer_stamps')
+      .select('ns_customer_id, entity_id, company_name, email, is_inactive')
+      .eq('shopify_customer_id', shopifyCustomerId)
+      .eq('ns_target', nsTarget);
+    if (error) throw new Error(`netscore_customer_stamps read failed: ${error.message}`);
+    return (data ?? []).map((r) => ({
+      nsCustomerId: String(r.ns_customer_id),
+      entityId: r.entity_id ?? '',
+      companyName: r.company_name,
+      email: r.email,
+      isInactive: !!r.is_inactive,
+      via: 'customer_stamp' as const,
+    }));
   }
 
   /** Shopify SKU → NS item id aliases (permanent, admin-created). */

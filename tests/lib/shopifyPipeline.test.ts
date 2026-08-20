@@ -57,8 +57,7 @@ describe('runOrderPipeline', () => {
     expect(r.customerVia).toBe('created');
     const cust = creates.find((c) => c.type === 'customer')!;
     expect(cust.payload.isPerson).toBe(true);
-    // NetScore's field is Integer-typed in NS — must go over as a number.
-    expect(cust.payload.custentity_shop_cust_id).toBe(Number(plan.buyer.shopifyCustomerId));
+    expect(cust.payload.custentity_shop_cust_id).toBeUndefined(); // NetScore fields are dead
     expect(cust.payload.category).toEqual({ id: '10' });
     expect(cust.payload.custentity3).toEqual({ id: '4' });
     expect(cust.payload.terms).toEqual({ id: '8' }); // Upfront on Sales order
@@ -69,7 +68,7 @@ describe('runOrderPipeline', () => {
 
     const so = creates.find((c) => c.type === 'salesOrder')!;
     expect(so.payload.externalId).toBe(`SHOPORD-${plan.shopifyOrderId}`);
-    expect(so.payload.custbody_shopify_order_id).toBe(Number(plan.shopifyOrderId)); // Integer field in NS
+    expect(so.payload.custbody_shopify_order_id).toBeUndefined(); // NetScore fields are dead
     // Lines at CATALOG price; discount (if any) rides the header.
     // Every injected amount declares price level Custom (-1).
     expect(so.payload.item.items.every((l: any) => l.price?.id === '-1')).toBe(true);
@@ -94,16 +93,20 @@ describe('runOrderPipeline', () => {
     expect(r2.customerVia).toBe('external_id');
   });
 
-  it('adopts a NetScore-stamped customer and stamps our externalid on it', async () => {
+  it('adopts a NetScore-stamped customer (via snapshot table) and stamps our externalid', async () => {
     const plan = buildOrderPlan(loadOrder('b2b-latest'));
     const { ns, creates, updates } = fakeNs({
       customersByQuery: {
-        custentity_shop_cust_id: [
+        'WHERE id IN (7179)': [
           { id: '7179', entityid: 'C1921', companyname: 'Pure Art Salon', email: 'x@y.com', isinactive: 'F' },
         ],
       },
     });
-    const r = await runOrderPipeline(plan, ns, CONFIG);
+    const r = await runOrderPipeline(plan, ns, CONFIG, {
+      stampCandidates: async () => [
+        { nsCustomerId: '7179', entityId: 'C1921', companyName: 'Pure Art Salon', email: 'x@y.com', isInactive: false, via: 'customer_stamp' },
+      ],
+    });
     expect(r.nsCustomerId).toBe('7179');
     expect(r.customerVia).toBe('customer_stamp');
     expect(creates.find((c) => c.type === 'customer')).toBeUndefined();

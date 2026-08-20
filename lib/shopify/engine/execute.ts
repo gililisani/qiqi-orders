@@ -30,7 +30,10 @@ export async function executeOrder(
   plan: OrderPlan,
   ns: NsApi,
   config: EngineConfig,
-  opts: { skuOverrides?: Map<string, string> } = {},
+  opts: {
+    skuOverrides?: Map<string, string>;
+    stampCandidates?: (shopifyCustomerId: string) => Promise<import('../core/types').NsCustomerCandidate[]>;
+  } = {},
 ): Promise<ExecutionOutcome> {
   // Loop A — the money chain.
   const a = await runOrderPipeline(plan, ns, config, opts);

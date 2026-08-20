@@ -91,7 +91,6 @@ export async function ensureItemFulfillments(
       externalId: extId,
       tranDate: plan.createdAt.slice(0, 10),
       shipStatus: { id: 'C' }, // Shipped
-      custbody_shopify_order_id: Number(plan.shopifyOrderId),
       memo: `Shopify ${plan.orderName}${tracking ? ` · ${tracking}` : ''}`,
       item: { items: ifLines },
     });

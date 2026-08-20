@@ -67,7 +67,10 @@ export async function retryOrder(order: ShopifyOrder, store: ShopifySyncStore): 
   const plan = buildOrderPlan(order);
   await store.seenOrder(order, plan);
   try {
-    const outcome = await executeOrder(order, plan, ns, ENGINE_CONFIG, { skuOverrides: aliases });
+    const outcome = await executeOrder(order, plan, ns, ENGINE_CONFIG, {
+      skuOverrides: aliases,
+      stampCandidates: (sid) => store.stampCandidates(sid, nsTarget),
+    });
     await store.setState(shopifyOrderId, outcome.state, {
       ...outcome.nsIds,
       ns_target: nsTarget,
