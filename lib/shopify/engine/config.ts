@@ -211,7 +211,9 @@ export const PRODUCTION_ENGINE_CONFIG: EngineConfig = {
     feeExpenseAccountId: '1859', // 622070
     bankAccountId: '938', // 100101 IDB QIQINC (USD)
     marketplaceTaxAccountId: '1573', // 240502
-    chargebackAccountId: null, // CPA decision pending — dispute payouts park
+    // 622071 "Shopify Chargebacks" (Expense) — owner-created 2026-08-20.
+    // Dispute withdrawals debit it; won-dispute reversals credit it back.
+    chargebackAccountId: '2445',
   },
   externalIds: {
     customer: (buyerKey) => `SHOP-${buyerKey}`,

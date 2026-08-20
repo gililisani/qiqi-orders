@@ -33,11 +33,15 @@ Steps marked (agent) are run by the agent; the rest are owner actions.
     crons live but mode='off' = no-op.
  7. ☑ Prod /admin/shopify smoke-checked by owner (2026-08-20): loads,
     mode off, tables empty.
- 8. ☐ CPA: bless renaming 240502/240504 (note: 240502 holds one CLOSED
-    net-zero franchise-tax accrual) + name a chargeback account
-    (non-blocking — dispute payouts park until then).
- 9. ☐ Rename accounts in prod NS UI: 240502 → "Marketplace Tax - Shop
-    Remitted", 240504 → "Duties & Taxes Collected - Pass-through (DDP)".
+ 8. ☑ Chargeback account CREATED (owner's call, 2026-08-20, skipping the
+    CPA pre-nod): 622071 "Shopify Chargebacks", Expense, id 2445 — in
+    PRODUCTION_ENGINE_CONFIG; dispute payouts now book automatically
+    (engine logic pre-existed; parking was the fallback). CPA can still
+    review post-hoc; the NetScore 410000-VAT reclass JE stays a
+    post-cutover CPA item.
+ 9. ☑ Accounts renamed in prod NS UI by owner (2026-08-20), verified via
+    SuiteQL: 240502 "Marketplace Tax - Shop Remitted", 240504 "Duties &
+    Taxes Collected - Pass-through (DDP)".
 10. ☐ Get NetScore contract renewal/notice dates (cancellation timing).
 
 **Cutover day (owner + agent together, in this exact order):**
