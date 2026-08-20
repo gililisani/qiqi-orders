@@ -160,8 +160,16 @@ async function main() {
 
   // ---- D. sales rep ----
   console.log('sales rep:');
-  let repId = await ns.findRecordIdByExternalId('employee', 'SHOP-SALESREP');
-  if (repId) ok(`"Shopify" sales rep exists (id ${repId})`);
+  // Owner created 190493 manually in the UI (no externalid; the
+  // integration role cannot create or even read employees). A configured
+  // non-sentinel id counts as verified — it self-validates on the first
+  // customer create.
+  const { PRODUCTION_ENGINE_CONFIG } = await import('../../lib/shopify/engine/config');
+  let repId: string | null =
+    PRODUCTION_ENGINE_CONFIG.salesRepId && PRODUCTION_ENGINE_CONFIG.salesRepId !== 'PROD-PENDING'
+      ? PRODUCTION_ENGINE_CONFIG.salesRepId
+      : await ns.findRecordIdByExternalId('employee', 'SHOP-SALESREP');
+  if (repId) ok(`"Shopify" sales rep configured (id ${repId})`);
   else if (APPLY) {
     repId = await ns.createRecord('employee', {
       externalId: 'SHOP-SALESREP',
