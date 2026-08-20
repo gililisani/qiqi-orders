@@ -43,19 +43,35 @@ interface PreviewRow {
 }
 
 /**
- * Product lines for a set of NS invoices, catalog-ready. mainline/taxline
- * filtered out; component sub-lines of assemblies carry NULL netamount and
- * are excluded; Discount-type lines are excluded (the SF ones are captured
- * as support_fund, the value sits in foreignamount not netamount anyway).
- * NS sign convention on invoices is negative-for-revenue — flipped here, so
- * a positive-amount NS line (free goods / product-level discount) becomes a
- * negative item amount and per-invoice sums reconcile with the total.
+ * Lines for a set of NS invoices. mainline/taxline filtered out; assembly
+ * component sub-lines (NULL netamount AND NULL foreignamount) excluded.
+ *
+ * Two derived facts per line, matching how this account stored things
+ * across the years:
+ *  - `reduction`: the SF signal. The ONLY universal marker of a line that
+ *    reduces the invoice is `foreignamount > 0` (NS invoice sign
+ *    convention: revenue negative). Covers all three observed patterns:
+ *    Discount-type SF items (netamount 0), item-less HEADER discounts
+ *    (netamount 0, memo e.g. "Distributor Support Fund" — INVIL10722),
+ *    and negative-priced product lines (free goods).
+ *  - `isItem`: whether the line is a real product line for
+ *    historical_sale_items (has an item, not Discount-type). Amounts are
+ *    sign-flipped so revenue is positive; negative-priced product lines
+ *    stay negative and per-invoice item sums reconcile with the total.
  */
 async function fetchInvoiceLines(
   ns: ReturnType<typeof createNetSuiteAPI>,
   invoiceIds: number[]
-): Promise<Map<string, Array<{ sku: string; item_name: string; quantity: number; amount: number }>>> {
-  const byInvoice = new Map<string, Array<{ sku: string; item_name: string; quantity: number; amount: number }>>();
+): Promise<
+  Map<
+    string,
+    Array<{ sku: string; item_name: string; quantity: number; amount: number; reduction: number; isItem: boolean }>
+  >
+> {
+  const byInvoice = new Map<
+    string,
+    Array<{ sku: string; item_name: string; quantity: number; amount: number; reduction: number; isItem: boolean }>
+  >();
   for (let i = 0; i < invoiceIds.length; i += 200) {
     const chunk = invoiceIds.slice(i, i + 200);
     const lines = await ns.suiteQLPaged<{
@@ -65,14 +81,18 @@ async function fetchInvoiceLines(
       itemtype: string | null;
       quantity: string | null;
       netamount: string | null;
+      foreignamount: string | null;
     }>(
-      `SELECT tl.transaction, i.itemid, i.displayname, i.itemtype, tl.quantity, tl.netamount ` +
+      `SELECT tl.transaction, i.itemid, i.displayname, i.itemtype, tl.quantity, tl.netamount, tl.foreignamount ` +
         `FROM transactionline tl LEFT JOIN item i ON i.id = tl.item ` +
         `WHERE tl.transaction IN (${chunk.join(', ')}) ` +
-        `AND tl.mainline = 'F' AND tl.taxline = 'F' AND tl.netamount IS NOT NULL`
+        `AND tl.mainline = 'F' AND tl.taxline = 'F' ` +
+        `AND (tl.netamount IS NOT NULL OR tl.foreignamount IS NOT NULL)`
     );
     for (const l of lines) {
-      if ((l.itemtype || '') === 'Discount') continue;
+      const foreign = Number(l.foreignamount) || 0;
+      const hasItem = !!l.itemid;
+      const isDiscountType = (l.itemtype || '') === 'Discount';
       const key = String(l.transaction);
       if (!byInvoice.has(key)) byInvoice.set(key, []);
       byInvoice.get(key)!.push({
@@ -80,6 +100,8 @@ async function fetchInvoiceLines(
         item_name: String(l.displayname || l.itemid || '').trim(),
         quantity: -(Number(l.quantity) || 0),
         amount: -(Number(l.netamount) || 0),
+        reduction: foreign > 0 ? foreign : 0,
+        isItem: hasItem && !isDiscountType && l.netamount !== null,
       });
     }
   }
@@ -147,40 +169,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ company: company.company_name, rows: [] });
       }
 
-      // 2. SF discount items, discovered by name (tolerant match — item set
-      //    has changed over the years: "Marketing Support Funds 5%/10%",
-      //    "Partners Support Funds").
-      const sfItems = await ns.suiteQL<{ id: string }>(
-        `SELECT id FROM item WHERE itemtype = 'Discount' AND LOWER(itemid) LIKE '%support fund%'`
-      );
-      const sfItemIds = sfItems.map((i) => Number(i.id)).filter(Number.isFinite);
-
-      // 3. SF per invoice: discount lines keep their value in foreignamount
-      //    (netamount is 0 on discount lines — account quirk, validated).
+      // 2. Lines per invoice — item counts + the SF. Owner rule: EVERY row
+      // that reduces the invoice is the SF (in positive). One universal
+      // signal covers all three storage patterns this account used over
+      // the years (Discount-type SF items, item-less header discounts,
+      // negative-priced product lines): foreignamount > 0. Computed per
+      // line inside fetchInvoiceLines as `reduction`.
       const sfByInvoice = new Map<string, number>();
-      if (sfItemIds.length > 0) {
-        const invoiceIds = invoices.map((i) => Number(i.id)).filter(Number.isFinite);
-        for (let i = 0; i < invoiceIds.length; i += 200) {
-          const chunk = invoiceIds.slice(i, i + 200);
-          const lines = await ns.suiteQL<{ transaction: string; sf: string | null }>(
-            `SELECT tl.transaction, SUM(tl.foreignamount) AS sf FROM transactionline tl ` +
-              `WHERE tl.transaction IN (${chunk.join(', ')}) ` +
-              `AND tl.item IN (${sfItemIds.join(', ')}) GROUP BY tl.transaction`
-          );
-          for (const l of lines) {
-            sfByInvoice.set(String(l.transaction), Number(l.sf) || 0);
-          }
-        }
-      }
-
-      // 3b. Product lines per invoice — for the preview's item counts AND
-      // the rest of the SF. Owner rule: EVERY row that reduces the invoice
-      // is the SF (in positive). Historically that's usually a regular
-      // product line at a negative price (free goods) or a "Customer
-      // Discount" item — not a Discount-type item at all — so the
-      // discount-item sum above only covers the Hub era. Our line amounts
-      // are sign-flipped (revenue positive), so reduction lines are the
-      // negative-amount ones.
       const countByInvoice = new Map<string, number>();
       {
         const linesByInvoice = await fetchInvoiceLines(
@@ -188,14 +183,9 @@ export async function POST(request: NextRequest) {
           invoices.map((i) => Number(i.id)).filter(Number.isFinite)
         );
         for (const [nsId, lines] of linesByInvoice) {
-          countByInvoice.set(nsId, lines.length);
-          const reductions = lines.reduce(
-            (s, l) => s + (l.amount < 0 ? -l.amount : 0),
-            0
-          );
-          if (reductions > 0) {
-            sfByInvoice.set(nsId, (sfByInvoice.get(nsId) ?? 0) + reductions);
-          }
+          countByInvoice.set(nsId, lines.filter((l) => l.isItem).length);
+          const sf = lines.reduce((s, l) => s + l.reduction, 0);
+          if (sf > 0) sfByInvoice.set(nsId, sf);
         }
       }
 
@@ -302,6 +292,7 @@ export async function POST(request: NextRequest) {
           const saleId = saleIdByNsId.get(nsId);
           if (!saleId) continue;
           for (const line of lines) {
+            if (!line.isItem) continue; // header discounts etc. live in support_fund
             itemRows.push({
               historical_sale_id: saleId,
               product_id: productBySku.get(line.sku.toUpperCase()) ?? null,
