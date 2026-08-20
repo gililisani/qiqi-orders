@@ -144,6 +144,12 @@ export async function runOrderPipeline(
       entity: { id: nsCustomerId },
       subsidiary: { id: config.subsidiaryId },
       tranDate: plan.processedAt.slice(0, 10),
+      // Explicit per-transaction terms: adopted customers may carry
+      // early-payment-discount terms (2/10 N-45 etc.) which NetSuite
+      // would auto-apply, leaving part of the payment unapplied
+      // (QA #7240: 2% = \$4.56 dangling). Shopify orders are paid upfront
+      // in full — always.
+      terms: { id: config.termsId },
       otherRefNum: plan.poNumber ?? plan.orderName,
       memo: `Shopify ${plan.orderName}${plan.discountCodes.length ? ` · discount: ${plan.discountCodes.join(', ')}` : ''}`,
       custbody_shopify_order_id: Number(plan.shopifyOrderId),
@@ -164,6 +170,7 @@ export async function runOrderPipeline(
     nsInvoiceId = await ns.transformRecord('salesOrder', nsSoId, 'invoice', {
       externalId: invExtId,
       tranDate: plan.processedAt.slice(0, 10),
+      terms: { id: config.termsId },
       custbody_shopify_order_id: Number(plan.shopifyOrderId),
       // Extra item lines in the transform body APPEND to the SO's lines
       // (verified empirically 2026-08-18) — the invoice carries the exact
