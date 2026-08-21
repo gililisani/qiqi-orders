@@ -74,6 +74,14 @@ define(['N/record', 'N/search', 'N/error', 'N/format'], function (record, search
       wanted[String(body.lines[i].orderLine)] = body.lines[i];
     }
 
+    // With Intercompany Cross-Subsidiary Fulfillment enabled, the transform
+    // REQUIRES the inventory location as a defaultValue — without it NetSuite
+    // throws VALID_LINE_ITEM_REQD ("at least one valid line item"). The UI
+    // passes it implicitly when you click Fulfill; scripts must be explicit.
+    var inventoryLocationId = body.lines[0] && body.lines[0].locationId;
+    if (!inventoryLocationId) {
+      throw error.create({ name: 'BAD_INPUT', message: 'lines[0].locationId (inventory location) required' });
+    }
     var rec;
     try {
       rec = record.transform({
@@ -81,6 +89,7 @@ define(['N/record', 'N/search', 'N/error', 'N/format'], function (record, search
         fromId: Number(body.salesOrderId),
         toType: record.Type.ITEM_FULFILLMENT,
         isDynamic: true,
+        defaultValues: { inventorylocation: Number(inventoryLocationId) },
       });
     } catch (e) {
       return {
