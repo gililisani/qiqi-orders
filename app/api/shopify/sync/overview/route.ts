@@ -110,7 +110,10 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // "#7277" → https://admin.shopify.com/store/qiqi-pro/orders/<id>
+    const storeHandle = (process.env.SHOPIFY_STORE_DOMAIN ?? '').replace('.myshopify.com', '');
     return NextResponse.json({
+      shopifyAdminBase: storeHandle ? `https://admin.shopify.com/store/${storeHandle}` : null,
       config,
       counts,
       errorCount: counts['error'] ?? 0,

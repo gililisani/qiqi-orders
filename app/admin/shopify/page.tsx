@@ -57,6 +57,7 @@ interface PeriodSums {
 }
 
 interface Overview {
+  shopifyAdminBase: string | null;
   config: { mode: string; last_poll_at: string | null; last_poll_error: string | null };
   counts: Record<string, number>;
   errorCount: number;
@@ -141,6 +142,21 @@ function NsLink({ href, label }: { href: string | null; label: string }) {
 
 const money = (cents: number | null | undefined) =>
   cents == null ? '—' : `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+/** Order number as a link into the Shopify admin (new tab). */
+function OrderLink({ base, id, name, className }: { base: string | null; id: string; name: string; className?: string }) {
+  if (!base) return <span className={className}>{name}</span>;
+  return (
+    <a
+      href={`${base}/orders/${id}`}
+      target="_blank"
+      rel="noreferrer"
+      className={cn('text-brand-periwinkle hover:underline', className)}
+    >
+      {name}
+    </a>
+  );
+}
 
 export default function ShopifySyncDashboard() {
   const [data, setData] = useState<Overview | null>(null);
@@ -409,7 +425,7 @@ export default function ShopifySyncDashboard() {
                   <div key={o.shopify_order_id} className="rounded-md border border-border p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
-                        <span className="font-medium">{o.order_name}</span>
+                        <OrderLink base={data.shopifyAdminBase} id={o.shopify_order_id} name={o.order_name} className="font-medium" />
                         <span className="ml-2 text-sm text-muted-foreground">
                           {new Date(o.order_created_at).toLocaleDateString()} · {money(o.total_cents)}
                         </span>
@@ -514,7 +530,9 @@ export default function ShopifySyncDashboard() {
                 <TableBody>
                   {nonErrors.map((o) => (
                     <TableRow key={o.shopify_order_id}>
-                      <TableCell className="font-medium">{o.order_name}</TableCell>
+                      <TableCell className="font-medium">
+                        <OrderLink base={data.shopifyAdminBase} id={o.shopify_order_id} name={o.order_name} />
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(o.order_created_at).toLocaleDateString()}
                       </TableCell>
