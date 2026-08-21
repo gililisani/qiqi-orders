@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 import { PageHeader } from '../../components/qq/page-header';
@@ -67,6 +67,9 @@ interface Overview {
     nextPayout: { issuedAt: string | null; netAmount: number; status: string } | null;
   } | null;
   orders: OrderRow[];
+  ordersTotal: number;
+  /** All error-state orders, regardless of age — never window-dependent. */
+  errors: OrderRow[];
   payouts: PayoutRow[];
 }
 
@@ -147,18 +150,42 @@ export default function ShopifySyncDashboard() {
   const [importName, setImportName] = useState('');
   const [skuMapInput, setSkuMapInput] = useState<Record<string, string>>({});
   const [period, setPeriod] = useState<PeriodKey>('mtd');
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadedRef = useRef<number>(20);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (limit?: number) => {
     try {
-      const res = await fetchWithAuth('/api/shopify/sync/overview');
+      // Refreshes keep however many rows the user has expanded to.
+      const keep = limit ?? loadedRef.current ?? 20;
+      const res = await fetchWithAuth(`/api/shopify/sync/overview?ordersLimit=${keep}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      loadedRef.current = json.orders?.length ?? 20;
       setData(json);
       setLoadError(null);
     } catch (err: any) {
       setLoadError(String(err?.message ?? err));
     }
   }, []);
+
+  const loadMore = async () => {
+    if (!data) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetchWithAuth(
+        `/api/shopify/sync/overview?ordersOffset=${data.orders.length}&ordersLimit=50`,
+      );
+      const json = await res.json();
+      if (res.ok && json.orders) {
+        const seen = new Set(data.orders.map((o) => o.shopify_order_id));
+        const merged = [...data.orders, ...json.orders.filter((o: OrderRow) => !seen.has(o.shopify_order_id))];
+        loadedRef.current = merged.length;
+        setData({ ...data, orders: merged, ordersTotal: json.ordersTotal ?? data.ordersTotal });
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     load();
@@ -203,7 +230,7 @@ export default function ShopifySyncDashboard() {
     if (importName.trim()) act('/api/shopify/sync/import-order', { orderName: importName.trim() }, 'import');
   };
 
-  const errors = data?.orders.filter((o) => o.state === 'error') ?? [];
+  const errors = data?.errors ?? [];
   const nonErrors = data?.orders.filter((o) => o.state !== 'error') ?? [];
   const sums = data?.financials?.periods?.[period] ?? null;
 
@@ -463,7 +490,12 @@ export default function ShopifySyncDashboard() {
           {/* Orders table */}
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Recent orders</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Recent orders</CardTitle>
+                <span className="text-xs text-muted-foreground">
+                  showing {data.orders.length} of {data.ordersTotal}
+                </span>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -509,6 +541,13 @@ export default function ShopifySyncDashboard() {
                   ))}
                 </TableBody>
               </Table>
+              {data.orders.length < data.ordersTotal && (
+                <div className="mt-4 flex justify-center">
+                  <Button size="sm" variant="outline" disabled={loadingMore} onClick={loadMore}>
+                    {loadingMore ? 'Loading…' : `Load ${Math.min(50, data.ordersTotal - data.orders.length)} more`}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 

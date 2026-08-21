@@ -34,31 +34,54 @@ export async function GET(request: NextRequest) {
     await requireAdminWithPermission(request, 'netsuite');
     const db = createServiceRoleClient();
 
-    const [{ data: config }, { data: orders }, { data: payouts }, { data: events }] = await Promise.all([
-      db.from('shopify_sync_config').select('*').eq('id', 1).single(),
-      db
-        .from('shopify_order_sync')
-        .select(
-          'shopify_order_id, order_name, order_created_at, buyer_kind, state, skip_reason, total_cents, refunded_cents, ns_target, ns_customer_id, ns_so_id, ns_invoice_id, ns_payment_ids, ns_fulfillment_ids, ns_credit_memo_ids, error_code, error_message, error_detail, ignore_note, updated_at',
-        )
-        .order('order_created_at', { ascending: false })
-        .limit(100),
-      db
-        .from('shopify_payout_sync')
-        .select('*')
-        .order('issued_at', { ascending: false })
-        .limit(20),
-      db
-        .from('shopify_sync_events')
-        .select('loop, event, shopify_order_id, detail, created_at')
-        .order('created_at', { ascending: false })
-        .limit(30),
-    ]);
+    // Windowed list: the DB keeps every order forever; the page renders a
+    // slice (default 20) and "Load more" appends via ordersOffset/-Limit.
+    const url = new URL(request.url);
+    const ordersLimit = Math.min(Math.max(Number(url.searchParams.get('ordersLimit')) || 20, 1), 200);
+    const ordersOffset = Math.max(Number(url.searchParams.get('ordersOffset')) || 0, 0);
 
-    const counts: Record<string, number> = {};
-    for (const o of orders ?? []) counts[o.state] = (counts[o.state] ?? 0) + 1;
+    const ORDER_FIELDS =
+      'shopify_order_id, order_name, order_created_at, buyer_kind, state, skip_reason, total_cents, refunded_cents, ns_target, ns_customer_id, ns_so_id, ns_invoice_id, ns_payment_ids, ns_fulfillment_ids, ns_credit_memo_ids, error_code, error_message, error_detail, ignore_note, updated_at';
 
-    const rows = (orders ?? []).map((o) => {
+    const [{ data: config }, { data: orders, count: ordersTotal }, { data: errorRows }, { data: payouts }, { data: events }, paidC, fulfilledC, refundedC] =
+      await Promise.all([
+        db.from('shopify_sync_config').select('*').eq('id', 1).single(),
+        db
+          .from('shopify_order_sync')
+          .select(ORDER_FIELDS, { count: 'exact' })
+          .order('order_created_at', { ascending: false })
+          .range(ordersOffset, ordersOffset + ordersLimit - 1),
+        // Errors ALWAYS load in full — visibility must never depend on how
+        // deep the recent-orders window happens to be.
+        db
+          .from('shopify_order_sync')
+          .select(ORDER_FIELDS)
+          .eq('state', 'error')
+          .order('order_created_at', { ascending: false })
+          .limit(100),
+        db
+          .from('shopify_payout_sync')
+          .select('*')
+          .order('issued_at', { ascending: false })
+          .limit(20),
+        db
+          .from('shopify_sync_events')
+          .select('loop, event, shopify_order_id, detail, created_at')
+          .order('created_at', { ascending: false })
+          .limit(30),
+        db.from('shopify_order_sync').select('*', { count: 'exact', head: true }).eq('state', 'paid'),
+        db.from('shopify_order_sync').select('*', { count: 'exact', head: true }).eq('state', 'fulfilled'),
+        db.from('shopify_order_sync').select('*', { count: 'exact', head: true }).eq('state', 'refunded'),
+      ]);
+
+    const counts: Record<string, number> = {
+      paid: paidC.count ?? 0,
+      fulfilled: fulfilledC.count ?? 0,
+      refunded: refundedC.count ?? 0,
+      error: (errorRows ?? []).length,
+    };
+
+    const withLinks = (o: any) => {
       const base = nsBase(o.ns_target);
       const link = (path: string | null) => (base && path ? `${base}${path}` : null);
       return {
@@ -71,7 +94,9 @@ export async function GET(request: NextRequest) {
           creditMemos: (o.ns_credit_memo_ids ?? []).map((id: string) => link(NS_PATHS.creditMemo(id))),
         },
       };
-    });
+    };
+    const rows = (orders ?? []).map(withLinks);
+    const errors = (errorRows ?? []).map(withLinks);
 
     const payoutRows = (payouts ?? []).map((p) => {
       const base = nsBase(p.ns_target);
@@ -91,6 +116,8 @@ export async function GET(request: NextRequest) {
       errorCount: counts['error'] ?? 0,
       financials: (config as any)?.financial_snapshot ?? null,
       orders: rows,
+      ordersTotal: ordersTotal ?? rows.length,
+      errors,
       payouts: payoutRows,
       events,
     });
