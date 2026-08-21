@@ -315,7 +315,9 @@ export default function ShopifySyncDashboard() {
                   {sums ? `${sums.orders} · ${money(sums.valueCents)}` : '—'}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {sums && sums.refundedCents > 0 ? `${money(sums.refundedCents)} refunded` : PERIOD_LABELS[period]}
+                  {sums && sums.refundedCents > 0
+                    ? `net ${money(sums.valueCents - sums.refundedCents)} after ${money(sums.refundedCents)} refunds`
+                    : PERIOD_LABELS[period]}
                 </p>
               </CardContent>
             </Card>

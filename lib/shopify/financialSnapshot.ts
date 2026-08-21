@@ -10,13 +10,18 @@
  *
  * Periods run on the store's calendar (America/New_York).
  */
-import { shopifyPaginate } from './client';
+import { shopifyGraphQL, shopifyPaginate } from './client';
 import { storeDate } from './core/dates';
 import { fetchPendingBalance, fetchUpcomingPayout, type UpcomingPayout } from './payoutFetch';
 
 export interface StorePeriodSums {
   orders: number;
   valueCents: number;
+  /**
+   * Refunds PROCESSED in the period — for any order, however old (that's
+   * how Shopify's own "Total sales" counts returns; verified 2026-08-21:
+   * value − refunded == Shopify's MTD Total sales to the cent).
+   */
   refundedCents: number;
   /** Shopify Payments processing fees on successful charges. */
   feesCents: number;
@@ -84,12 +89,35 @@ export async function computeFinancialSnapshot(now = new Date()): Promise<Financ
     'orders',
   );
 
+  // Refund activity is fetched SEPARATELY: a refund processed today can
+  // belong to an order months old, which the created_at window misses.
+  const refundData = await shopifyGraphQL(`{
+    orders(first: 100, query: "updated_at:>='${sinceUtc}' financial_status:partially_refunded,refunded") {
+      nodes {
+        test
+        refunds { createdAt totalRefundedSet { shopMoney { amount } } }
+      }
+    }
+  }`);
+
   const periods = { today: emptySums(), last7: emptySums(), mtd: emptySums() };
+
+  for (const o of (refundData.orders?.nodes ?? []) as Array<{ test: boolean; refunds: Array<{ createdAt: string; totalRefundedSet: { shopMoney: { amount: string } } }> }>) {
+    if (o.test) continue;
+    for (const r of o.refunds ?? []) {
+      const cents = toCents(r.totalRefundedSet?.shopMoney?.amount);
+      if (cents <= 0) continue;
+      const etDate = storeDate(r.createdAt);
+      if (etDate === todayEt) periods.today.refundedCents += cents;
+      if (etDate >= weekStartEt) periods.last7.refundedCents += cents;
+      if (etDate >= monthStartEt && etDate.slice(0, 7) === todayEt.slice(0, 7)) periods.mtd.refundedCents += cents;
+    }
+  }
+
   for (const o of orders) {
     if (o.test) continue;
     const etDate = storeDate(o.createdAt);
     const valueCents = toCents(o.currentTotalPriceSet?.shopMoney?.amount);
-    const refundedCents = toCents(o.totalRefundedSet?.shopMoney?.amount);
     let feesCents = 0;
     const gateways: Array<[string, number]> = [];
     for (const t of o.transactions ?? []) {
@@ -106,7 +134,6 @@ export async function computeFinancialSnapshot(now = new Date()): Promise<Financ
       const sums = periods[key];
       sums.orders += 1;
       sums.valueCents += valueCents;
-      sums.refundedCents += refundedCents;
       sums.feesCents += feesCents;
       for (const [gw, cents] of gateways) {
         sums.gatewaysCents[gw] = (sums.gatewaysCents[gw] ?? 0) + cents;
