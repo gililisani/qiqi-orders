@@ -42,7 +42,10 @@ define(['N/record', 'N/search', 'N/error'], function (record, search, error) {
       .create({
         type: search.Type.ITEM_FULFILLMENT,
         filters: [
-          search.createFilter({ name: 'externalid', operator: search.Operator.ANYOF, values: [externalId] }),
+          // 'externalidstring' is the text-match idiom — a plain 'externalid'
+          // filter with ANYOF expects internal ids and silently matches
+          // nothing (caused the #7279 duplicate race, 2026-08-21).
+          search.createFilter({ name: 'externalidstring', operator: search.Operator.IS, values: externalId }),
           search.createFilter({ name: 'mainline', operator: search.Operator.IS, values: ['T'] }),
         ],
         columns: [search.createColumn({ name: 'tranid' })],

@@ -91,19 +91,34 @@ export async function ensureItemFulfillments(
     // (sandbox) keeps the plain transform.
     let ifId: string;
     if (ns.restletFulfillOrder && ns.restletFulfillConfigured?.()) {
-      ifId = await ns.restletFulfillOrder({
-        salesOrderId: nsSoId,
-        externalId: extId,
-        tranDate,
-        memo,
-        shipStatus: 'C',
-        lines: picked.map((p) => ({
-          orderLine: p.orderLine,
-          quantity: p.quantity,
-          locationId: config.fulfillmentLocationId,
-          lots: p.assignments.map((a: any) => ({ id: String(a.issueInventoryNumber.id), quantity: Number(a.quantity) })),
-        })),
-      });
+      try {
+        ifId = await ns.restletFulfillOrder({
+          salesOrderId: nsSoId,
+          externalId: extId,
+          tranDate,
+          memo,
+          shipStatus: 'C',
+          lines: picked.map((p) => ({
+            orderLine: p.orderLine,
+            quantity: p.quantity,
+            locationId: config.fulfillmentLocationId,
+            lots: p.assignments.map((a: any) => ({ id: String(a.issueInventoryNumber.id), quantity: Number(a.quantity) })),
+          })),
+        });
+      } catch (err: any) {
+        // Race guard: a concurrent poll/retry may have created this IF
+        // between our ensure-lookup and the RESTlet save (seen live on
+        // #7279, cron vs manual retry). The duplicate rejection means the
+        // record EXISTS — adopt it instead of erroring.
+        if (String(err?.message ?? '').includes('already exists')) {
+          const raced = await ns.findRecordIdByExternalId('itemFulfillment', extId);
+          if (raced) {
+            nsFulfillmentIds.push(raced);
+            continue;
+          }
+        }
+        throw err;
+      }
     } else {
       if (config.crossSubsidiaryFulfillment) {
         throw new PipelineError({
