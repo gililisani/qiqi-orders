@@ -214,6 +214,9 @@ export async function runOrderPipeline(
   // ---- step 4: ensure one payment per successful gateway transaction ----
   const nsPaymentIds: string[] = [];
   for (const payment of plan.payments) {
+    // Zero-value orders (replacements/compensations) have nothing to pay —
+    // NS rejects $0 customer payments, and there is no money to record.
+    if (payment.amountCents === 0) continue;
     const payExtId = config.externalIds.payment(payment.shopifyTransactionId);
     let payId = await ns.findRecordIdByExternalId('customerpayment', payExtId);
     if (!payId) {

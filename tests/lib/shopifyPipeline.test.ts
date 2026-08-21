@@ -199,6 +199,38 @@ describe('discount representation', () => {
     expect(so.payload.discountItem).toBeUndefined();
   });
 
+  it('zero-value order (replacement/compensation): proceeds, books SO+invoice at $0, NO payment', async () => {
+    const order = loadOrder('b2c-latest') as any;
+    // Shape a $0 replacement: every money bag zeroed, no transactions.
+    const zero = (bag: any) => bag && (bag.shopMoney = { amount: '0.00', currencyCode: 'USD' });
+    for (const k of [
+      'currentSubtotalPriceSet', 'currentTotalDiscountsSet', 'currentTotalTaxSet',
+      'currentShippingPriceSet', 'currentTotalPriceSet', 'netPaymentSet', 'totalRefundedSet',
+    ]) zero(order[k]);
+    order.taxLines = [];
+    order.shippingLines = { nodes: [] };
+    order.transactions = [];
+    order.refunds = [];
+    for (const li of order.lineItems.nodes) {
+      zero(li.originalTotalSet);
+      zero(li.discountedTotalSet);
+      li.discountAllocations = [];
+    }
+    const { gateOrder } = await import('@/lib/shopify/core/validate');
+    const gate = gateOrder(order, new Set(order.lineItems.nodes.map((l: any) => l.sku ?? l.variant?.sku)));
+    expect(gate.outcome).toBe('proceed'); // NOT skipped — inventory must move
+
+    const plan = buildOrderPlan(order);
+    expect(plan.totals.totalCents).toBe(0);
+    const { ns, creates, transforms } = fakeNs();
+    const r = await runOrderPipeline(plan, ns, CONFIG);
+    expect(r.created).toMatchObject({ so: true, invoice: true, payments: 0 });
+    const so = creates.find((c) => c.type === 'salesOrder')!;
+    const soSum = so.payload.item.items.reduce((s: number, l: any) => s + l.amount, 0);
+    expect(soSum).toBe(0);
+    expect(transforms.find((t) => t.to === 'customerpayment')).toBeUndefined();
+  });
+
   it('CSF: product lines carry inventorylocation, header stays location-free (prod BrandFox pattern)', async () => {
     const plan = buildOrderPlan(loadOrder('b2c-latest'));
     const csf: EngineConfig = { ...CONFIG, crossSubsidiaryFulfillment: true, fulfillmentLocationId: '46' };

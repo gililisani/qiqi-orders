@@ -146,8 +146,9 @@ export function gateOrder(order: ShopifyOrder, knownSkus: ReadonlySet<string>): 
   }
 
   if (issues.length > 0) return { outcome: 'error', issues };
-  if (total === 0 && paidCents === 0) {
-    return { outcome: 'skip', reason: 'ZERO_TOTAL', message: `${order.name} is a zero-value order` };
-  }
+  // Zero-value orders PROCEED (owner ruling 2026-08-21, #7280): they are
+  // replacements/compensations that ship REAL goods — skipping them makes
+  // NS inventory drift. They book the full chain at $0 with no payment;
+  // the IF is the point. (Shopify TEST orders are still skipped above.)
   return { outcome: 'proceed' };
 }

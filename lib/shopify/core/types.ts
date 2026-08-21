@@ -185,7 +185,7 @@ export type SkipReason =
   | 'TEST_ORDER'
   | 'UNPAID_YET'
   | 'CANCELLED_UNPAID'
-  | 'ZERO_TOTAL'
+  | 'ZERO_TOTAL' // retired 2026-08-21 (zero orders now proceed); kept for old dashboard rows
   /**
    * Order was booked by NetScore (a SalesOrd stamp exists in the
    * snapshot) — post-cutover updates to it (fulfillment/refund) must NOT
