@@ -12,6 +12,28 @@ export interface FetchedPayout {
   txns: ShopifyBalanceTxn[];
 }
 
+export interface UpcomingPayout {
+  issuedAt: string;
+  netAmount: number;
+  status: string;
+}
+
+/** The next not-yet-paid payout (SCHEDULED/IN_TRANSIT), for the dashboard. */
+export async function fetchUpcomingPayout(): Promise<UpcomingPayout | null> {
+  const data = await shopifyGraphQL(`{
+    shopifyPaymentsAccount {
+      payouts(first: 5, reverse: true) {
+        nodes { legacyResourceId issuedAt status net { amount } }
+      }
+    }
+  }`);
+  const nodes: any[] = data.shopifyPaymentsAccount?.payouts?.nodes ?? [];
+  const upcoming = nodes.find((p) => p.status === 'SCHEDULED' || p.status === 'IN_TRANSIT');
+  return upcoming
+    ? { issuedAt: upcoming.issuedAt, netAmount: Number(upcoming.net.amount), status: upcoming.status }
+    : null;
+}
+
 export async function fetchRecentPayouts(opts: { count: number }): Promise<FetchedPayout[]> {
   const data = await shopifyGraphQL(`{
     shopifyPaymentsAccount {

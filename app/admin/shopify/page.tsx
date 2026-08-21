@@ -48,13 +48,27 @@ interface PayoutRow {
   links: { bill: string | null; journal: string | null };
 }
 
+interface PeriodSums {
+  orders: number;
+  valueCents: number;
+  refundedCents: number;
+  feesCents: number;
+}
+
 interface Overview {
   config: { mode: string; last_poll_at: string | null; last_poll_error: string | null };
   counts: Record<string, number>;
   errorCount: number;
+  financials: {
+    periods: { today: PeriodSums; last7: PeriodSums; mtd: PeriodSums };
+    nextPayout: { issuedAt: string; netAmount: number; status: string } | null;
+  };
   orders: OrderRow[];
   payouts: PayoutRow[];
 }
+
+type PeriodKey = 'today' | 'last7' | 'mtd';
+const PERIOD_LABELS: Record<PeriodKey, string> = { today: 'Today', last7: '7 days', mtd: 'This month' };
 
 const STATE_STYLES: Record<string, string> = {
   paid: 'bg-[#DBEAFE] text-[#1D4ED8] border-[#BFDBFE]',
@@ -122,6 +136,7 @@ export default function ShopifySyncDashboard() {
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [importName, setImportName] = useState('');
   const [skuMapInput, setSkuMapInput] = useState<Record<string, string>>({});
+  const [period, setPeriod] = useState<PeriodKey>('mtd');
 
   const load = useCallback(async () => {
     try {
@@ -180,6 +195,7 @@ export default function ShopifySyncDashboard() {
 
   const errors = data?.orders.filter((o) => o.state === 'error') ?? [];
   const nonErrors = data?.orders.filter((o) => o.state !== 'error') ?? [];
+  const sums = data?.financials?.periods?.[period] ?? { orders: 0, valueCents: 0, refundedCents: 0, feesCents: 0 };
 
   return (
     <div className="px-6 py-8">
@@ -223,44 +239,51 @@ export default function ShopifySyncDashboard() {
 
       {data && (
         <>
-          {/* Status strip */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Financial strip — what accounting looks at */}
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-medium text-muted-foreground">Financials (store time, ET)</p>
+            <div className="inline-flex rounded-md border border-border p-0.5">
+              {(Object.keys(PERIOD_LABELS) as PeriodKey[]).map((k) => (
+                <button
+                  key={k}
+                  onClick={() => setPeriod(k)}
+                  className={cn(
+                    'rounded px-2.5 py-1 text-xs font-medium transition-colors',
+                    period === k ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {PERIOD_LABELS[k]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <Card>
               <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Mode</p>
-                <p className="mt-1 text-2xl font-semibold capitalize">{data.config.mode}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Total orders</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">{sums.orders}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{PERIOD_LABELS[period]} · booked to NetSuite</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Orders value</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">{money(sums.valueCents)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {data.config.mode === 'sandbox' ? 'writing to NS Sandbox' : data.config.mode === 'live' ? 'writing to NS Production' : 'no NS writes'}
+                  {sums.refundedCents > 0 ? `${money(sums.refundedCents)} refunded` : 'no refunds'}
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Last poll</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">
-                  {data.config.last_poll_at
-                    ? new Date(data.config.last_poll_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                    : '—'}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {data.config.last_poll_error ? `error: ${data.config.last_poll_error.slice(0, 60)}` : data.config.last_poll_at ? new Date(data.config.last_poll_at).toLocaleDateString() : 'never'}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Synced (visible)</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">
-                  {(data.counts['paid'] ?? 0) + (data.counts['fulfilled'] ?? 0) + (data.counts['refunded'] ?? 0)}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {data.counts['fulfilled'] ?? 0} fulfilled · {data.counts['refunded'] ?? 0} refunded
-                </p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Shopify fees</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">{money(sums.feesCents)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">processing fees on card charges</p>
               </CardContent>
             </Card>
             <Card className={cn(data.errorCount > 0 && 'border-brand-magenta/40')}>
               <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Errors</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Error orders</p>
                 <p className={cn('mt-1 text-2xl font-semibold tabular-nums', data.errorCount > 0 && 'text-brand-magenta')}>
                   {data.errorCount}
                 </p>
@@ -269,6 +292,42 @@ export default function ShopifySyncDashboard() {
                 </p>
               </CardContent>
             </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Next payout</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {data.financials?.nextPayout ? `$${data.financials.nextPayout.netAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—'}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {data.financials?.nextPayout
+                    ? `${new Date(data.financials.nextPayout.issuedAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${data.financials.nextPayout.status.toLowerCase().replace('_', ' ')}`
+                    : 'none scheduled'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sync plumbing — secondary */}
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-border bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
+            <span>
+              Mode: <span className="font-medium capitalize text-foreground">{data.config.mode}</span>
+              {data.config.mode === 'live' && ' (NS Production)'}
+            </span>
+            <span>
+              Last poll:{' '}
+              <span className="font-medium text-foreground">
+                {data.config.last_poll_at
+                  ? new Date(data.config.last_poll_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/New_York' }) + ' ET'
+                  : 'never'}
+              </span>
+            </span>
+            <span>
+              Synced: <span className="font-medium text-foreground">{(data.counts['paid'] ?? 0) + (data.counts['fulfilled'] ?? 0) + (data.counts['refunded'] ?? 0)}</span>{' '}
+              ({data.counts['fulfilled'] ?? 0} fulfilled · {data.counts['refunded'] ?? 0} refunded)
+            </span>
+            {data.config.last_poll_error && (
+              <span className="text-brand-magenta">poll error: {data.config.last_poll_error.slice(0, 60)}</span>
+            )}
           </div>
 
           {/* Error queue */}
