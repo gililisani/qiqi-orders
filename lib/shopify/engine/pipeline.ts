@@ -27,6 +27,20 @@ export interface NsApi {
   transformRecord(fromType: string, fromId: string, toType: string, body: Record<string, unknown>): Promise<string>;
   suiteQL<T = Record<string, unknown>>(query: string): Promise<T[]>;
   resolveItemIdsBySku(skus: string[]): Promise<Map<string, string>>;
+  /**
+   * SuiteScript-path IF creation (netsuite/restlet_fulfill_order.js) —
+   * the only way to fulfill cross-subsidiary orders programmatically.
+   * Optional: absent in sandbox/tests, where plain transform works.
+   */
+  restletFulfillConfigured?(): boolean;
+  restletFulfillOrder?(payload: {
+    salesOrderId: string;
+    externalId: string;
+    tranDate: string;
+    memo: string;
+    shipStatus: string;
+    lines: Array<{ orderLine: number; quantity: number; locationId: string; lots: Array<{ id: string; quantity: number }> }>;
+  }): Promise<string>;
 }
 
 export class PipelineError extends Error {

@@ -96,4 +96,38 @@ describe('ensureItemFulfillments', () => {
     const r = await ensureItemFulfillments([], '423000', ns, ENGINE_CONFIG);
     expect(r).toEqual({ nsFulfillmentIds: [], created: 0 });
   });
+
+  it('CSF + RESTlet configured: fulfills via the RESTlet with FEFO lots (no REST transform)', async () => {
+    const { ns, transforms } = fakeNs({
+      soLines: SO_LINES,
+      lots: [{ id: '471', inventorynumber: '560345', quantityavailable: '247', expirationdate: null }],
+    });
+    const calls: any[] = [];
+    ns.restletFulfillConfigured = () => true;
+    ns.restletFulfillOrder = async (payload) => {
+      calls.push(payload);
+      return '598652';
+    };
+    const csf = { ...ENGINE_CONFIG, crossSubsidiaryFulfillment: true, fulfillmentLocationId: '46' };
+    const r = await ensureItemFulfillments([PLAN], '598252', ns, csf);
+    expect(r).toMatchObject({ created: 1, nsFulfillmentIds: ['598652'] });
+    expect(transforms).toHaveLength(0); // REST transform never touched
+    expect(calls[0]).toMatchObject({
+      salesOrderId: '598252',
+      externalId: 'SHOPFUL-900',
+      shipStatus: 'C',
+      lines: [{ orderLine: 1, quantity: 5, locationId: '46', lots: [{ id: '471', quantity: 5 }] }],
+    });
+    expect(calls[0].memo).toContain('TRK1');
+  });
+
+  it('CSF without the RESTlet parks loudly instead of hitting the broken REST transform', async () => {
+    const { ns, transforms } = fakeNs({
+      soLines: SO_LINES,
+      lots: [{ id: '471', inventorynumber: '560345', quantityavailable: '247', expirationdate: null }],
+    });
+    const csf = { ...ENGINE_CONFIG, crossSubsidiaryFulfillment: true, fulfillmentLocationId: '46' };
+    await expect(ensureItemFulfillments([PLAN], '598252', ns, csf)).rejects.toThrow(/fulfill RESTlet/);
+    expect(transforms).toHaveLength(0);
+  });
 });

@@ -344,6 +344,63 @@ export class NetSuiteAPI {
     };
   }
 
+  /**
+   * Create an Item Fulfillment via the fulfill-order RESTlet (SuiteScript
+   * path — required for cross-subsidiary fulfillment, which plain REST
+   * transform cannot initialize; see netsuite/restlet_fulfill_order.js).
+   * Returns the IF internal id. Available only when the RESTlet env ids
+   * are configured (production); callers fall back to transformRecord.
+   */
+  restletFulfillConfigured(): boolean {
+    return !!process.env.NETSUITE_FULFILL_SCRIPT_ID && !!process.env.NETSUITE_FULFILL_DEPLOY_ID;
+  }
+
+  async restletFulfillOrder(payload: {
+    salesOrderId: string;
+    externalId: string;
+    tranDate: string;
+    memo: string;
+    shipStatus: string;
+    lines: Array<{
+      orderLine: number;
+      quantity: number;
+      locationId: string;
+      lots: Array<{ id: string; quantity: number }>;
+    }>;
+  }): Promise<string> {
+    const scriptId = process.env.NETSUITE_FULFILL_SCRIPT_ID;
+    const deployId = process.env.NETSUITE_FULFILL_DEPLOY_ID;
+    if (!scriptId || !deployId) {
+      throw new Error('RESTlet not configured: set NETSUITE_FULFILL_SCRIPT_ID and NETSUITE_FULFILL_DEPLOY_ID');
+    }
+    return this.with429Retry(async () => {
+      const urlAccountId = this.config.accountId.toLowerCase().replace(/_/g, '-');
+      const base = `https://${urlAccountId}.restlets.api.netsuite.com/app/site/hosting/restlet.nl`;
+      const url = `${base}?${new URLSearchParams({ script: scriptId, deploy: deployId }).toString()}`;
+      const authHeader = this.getAuthHeader(url, 'POST');
+      const response = await axios({
+        method: 'POST',
+        url,
+        headers: { Authorization: authHeader, Accept: 'application/json', 'Content-Type': 'application/json' },
+        data: JSON.stringify(payload),
+        validateStatus: () => true,
+      });
+      if (response.status >= 400) {
+        const msg =
+          response.data?.['o:message'] || response.data?.message || JSON.stringify(response.data) || `HTTP ${response.status}`;
+        throw new Error(`Fulfill RESTlet HTTP ${response.status}: ${msg}`);
+      }
+      const data = response.data as { fulfillmentId?: string; error?: string; message?: string };
+      if (data?.error) {
+        throw new Error(`Fulfill RESTlet ${data.error}: ${data.message || 'no detail'}`);
+      }
+      if (!data?.fulfillmentId) {
+        throw new Error('Fulfill RESTlet returned no fulfillment id');
+      }
+      return String(data.fulfillmentId);
+    });
+  }
+
   async getInvoicePdf(nsInvoiceId: string): Promise<{ fileName: string; pdf: Buffer }> {
     return this.restletPdf({ invoiceId: nsInvoiceId }, `Invoice-${nsInvoiceId}.pdf`);
   }

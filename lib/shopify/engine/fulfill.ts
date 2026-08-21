@@ -62,9 +62,9 @@ export async function ensureItemFulfillments(
       continue;
     }
 
-    // Map each fulfilled SKU to its SO line.
+    // Map each fulfilled SKU to its SO line + FEFO-pick the lots.
     const skuIds = await ns.resolveItemIdsBySku(plan.lines.map((l) => l.sku!).filter(Boolean));
-    const ifLines: Array<Record<string, unknown>> = [];
+    const picked: Array<{ orderLine: number; quantity: number; assignments: Array<Record<string, unknown>> }> = [];
     for (const line of plan.lines) {
       const itemId = line.sku ? skuIds.get(line.sku) : undefined;
       const soLine = soLines.find((s) => s.itemId === itemId);
@@ -75,26 +75,57 @@ export async function ensureItemFulfillments(
         });
       }
       const assignments = await fefoAssign(ns, itemId, line.quantity, config.fulfillmentLocationId, plan.orderName);
-      ifLines.push({
-        orderLine: soLine.lineId,
-        quantity: line.quantity,
-        location: { id: config.fulfillmentLocationId },
-        inventoryDetail: { inventoryAssignment: { items: assignments } },
-      });
+      picked.push({ orderLine: soLine.lineId, quantity: line.quantity, assignments });
     }
 
     const tracking = plan.tracking
       .map((t) => [t.carrier, t.number].filter(Boolean).join(' '))
       .filter(Boolean)
       .join(', ');
+    const tranDate = storeDate(plan.createdAt);
+    const memo = `Shopify ${plan.orderName}${tracking ? ` · ${tracking}` : ''}`;
 
-    const ifId = await ns.transformRecord('salesOrder', nsSoId, 'itemFulfillment', {
-      externalId: extId,
-      tranDate: storeDate(plan.createdAt),
-      shipStatus: { id: 'C' }, // Shipped
-      memo: `Shopify ${plan.orderName}${tracking ? ` · ${tracking}` : ''}`,
-      item: { items: ifLines },
-    });
+    // Cross-subsidiary IFs can only be created via the SuiteScript RESTlet
+    // (plain REST transform reports "no valid line item" across the
+    // subsidiary boundary — proven live 2026-08-21). Same-subsidiary
+    // (sandbox) keeps the plain transform.
+    let ifId: string;
+    if (ns.restletFulfillOrder && ns.restletFulfillConfigured?.()) {
+      ifId = await ns.restletFulfillOrder({
+        salesOrderId: nsSoId,
+        externalId: extId,
+        tranDate,
+        memo,
+        shipStatus: 'C',
+        lines: picked.map((p) => ({
+          orderLine: p.orderLine,
+          quantity: p.quantity,
+          locationId: config.fulfillmentLocationId,
+          lots: p.assignments.map((a: any) => ({ id: String(a.issueInventoryNumber.id), quantity: Number(a.quantity) })),
+        })),
+      });
+    } else {
+      if (config.crossSubsidiaryFulfillment) {
+        throw new PipelineError({
+          code: 'UNSUPPORTED_SOURCE',
+          message: `${plan.orderName}: cross-subsidiary fulfillment needs the fulfill RESTlet — deploy netsuite/restlet_fulfill_order.js and set NETSUITE_FULFILL_SCRIPT_ID/_DEPLOY_ID`,
+        });
+      }
+      ifId = await ns.transformRecord('salesOrder', nsSoId, 'itemFulfillment', {
+        externalId: extId,
+        tranDate,
+        shipStatus: { id: 'C' }, // Shipped
+        memo,
+        item: {
+          items: picked.map((p) => ({
+            orderLine: p.orderLine,
+            quantity: p.quantity,
+            location: { id: config.fulfillmentLocationId },
+            inventoryDetail: { inventoryAssignment: { items: p.assignments } },
+          })),
+        },
+      });
+    }
     nsFulfillmentIds.push(ifId);
     created += 1;
   }
