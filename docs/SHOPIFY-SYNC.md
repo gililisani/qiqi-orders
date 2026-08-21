@@ -682,6 +682,33 @@ Supabase snapshot (netscore_*_stamps) + snapshot ladder rung, shipped
 - #7277's own SO/INV/payment still carry tranDate 2026-08-21 — owner may
   want a one-off PATCH to 2026-08-20.
 
+### Loop B in production — the CSF fulfillment saga (2026-08-21, SOLVED)
+
+First live fulfillments (#7275–#7278) exposed a three-layer onion; all
+peeled, all fixed, error queue back to ZERO:
+1. Integration role lacked **Transactions → Fulfill Sales Orders** (owner
+   added; also Employee Record View + Allow Cross-Subsidiary Record
+   Viewing while in there).
+2. **Plain REST transform cannot create cross-subsidiary IFs** (every
+   variant → "no valid line item"; UI + SuiteScript can — manual IF18232
+   proved it: sub-1 lines from a sub-3 order). Built
+   netsuite/restlet_fulfill_order.js ("QQ Shopify Fulfill", script 2032
+   deploy 1, env NETSUITE_FULFILL_SCRIPT_ID/_DEPLOY_ID in prod Vercel +
+   .env.local): SuiteScript record.transform + lines/lots/tracking,
+   idempotent by externalid. fulfill.ts routes via RESTlet when
+   configured; CSF without it parks loudly; sandbox keeps plain REST.
+3. Two SuiteScript quirks: CSF transform REQUIRES
+   `defaultValues: { inventorylocation }` (documented VALID_LINE_ITEM_REQD
+   cure), and N/format.parse rejects ISO dates on this DD/MM account —
+   build the Date object directly.
+Result: IF18233/34/35 booked by the RESTlet — BrandFox lines (loc 46,
+sub 1), FEFO lots (multi-item orders incl.), store-timezone dates.
+#7277 = owner's manual IF18232, stamped + adopted. NOTE: commitment/
+allocation was a RED HERRING — the account fulfills uncommitted lines
+daily; no allocation needed. Also parked observations: account FEFO
+framework broken (owner wants help fixing it someday); Hub B2B IFs still
+manual (future: ShipHero push + auto-IF for Hub orders too).
+
 ### Dashboard v2 — FINANCIAL view (owner directive 2026-08-20, build next)
 
 The dashboard is the ACCOUNTING department's window, not a sales report.
