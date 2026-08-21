@@ -36,7 +36,7 @@
  * Expected business failures come back as { error, message } payloads, not
  * thrown errors (thrown RESTlet errors email the script owner).
  */
-define(['N/record', 'N/search', 'N/error', 'N/format'], function (record, search, error, format) {
+define(['N/record', 'N/search', 'N/error'], function (record, search, error) {
   function findByExternalId(externalId) {
     var rows = search
       .create({
@@ -102,10 +102,11 @@ define(['N/record', 'N/search', 'N/error', 'N/format'], function (record, search
     if (body.shipStatus) rec.setValue({ fieldId: 'shipstatus', value: String(body.shipStatus) });
     if (body.memo) rec.setValue({ fieldId: 'memo', value: String(body.memo).slice(0, 999) });
     if (body.tranDate) {
-      rec.setValue({
-        fieldId: 'trandate',
-        value: format.parse({ value: String(body.tranDate), type: format.Type.DATE, timezone: format.Timezone.AMERICA_NEW_YORK }),
-      });
+      // tranDate arrives as YYYY-MM-DD (already the store-timezone date).
+      // Build the Date object directly — N/format.parse wants the account's
+      // display format (DD/MM/YYYY here) and rejects ISO.
+      var dp = String(body.tranDate).split('-');
+      rec.setValue({ fieldId: 'trandate', value: new Date(Number(dp[0]), Number(dp[1]) - 1, Number(dp[2])) });
     }
 
     var fulfilled = 0;
