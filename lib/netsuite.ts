@@ -161,7 +161,40 @@ export class NetSuiteAPI {
     );
   }
 
+  /**
+   * NetSuite rejects requests over the account's CONCURRENT request limit
+   * with HTTP 429 (CONCURRENCY_LIMIT_EXCEEDED) — e.g. when a nightly cron
+   * collides with the Shopify poller (#7277, 2026-08-21). A 429 means the
+   * request was BLOCKED before executing, so retrying after a pause is
+   * always safe. Each attempt re-signs OAuth (fresh nonce/timestamp).
+   */
+  retry429DelaysMs: number[] = [10_000, 20_000];
+
+  private async with429Retry<T>(fn: () => Promise<T>): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await fn();
+      } catch (err: any) {
+        const msg = String(err?.message ?? '');
+        const is429 =
+          msg.includes('CONCURRENCY_LIMIT_EXCEEDED') ||
+          msg.includes('Concurrent request limit exceeded') ||
+          /NetSuite 429|HTTP 429/.test(msg);
+        if (!is429 || attempt >= this.retry429DelaysMs.length) throw err;
+        await new Promise((r) => setTimeout(r, this.retry429DelaysMs[attempt]));
+      }
+    }
+  }
+
   private async request<T>(
+    path: string,
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
+    body?: unknown
+  ): Promise<T> {
+    return this.with429Retry(() => this.requestOnce<T>(path, method, body));
+  }
+
+  private async requestOnce<T>(
     path: string,
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
     body?: unknown
@@ -993,6 +1026,7 @@ export class NetSuiteAPI {
 
   /** Look up any record's internal id by external id. 404 → null. */
   async findRecordIdByExternalId(recordType: string, externalId: string): Promise<string | null> {
+    return this.with429Retry(async () => {
     const url = `${this.baseUrl}/record/v1/${recordType}/eid:${encodeURIComponent(externalId)}?fields=id,tranId`;
     const authHeader = this.getAuthHeader(url, 'GET');
     const res = await axios({
@@ -1006,6 +1040,7 @@ export class NetSuiteAPI {
       throw new Error(`NetSuite ${recordType} lookup by external id failed: HTTP ${res.status}`);
     }
     return res.data?.id ? String(res.data.id) : null;
+    });
   }
 
   /**
@@ -1015,6 +1050,7 @@ export class NetSuiteAPI {
    * instead of surfacing a duplicate error.
    */
   async createRecord(recordType: string, payload: Record<string, unknown>): Promise<string> {
+    return this.with429Retry(async () => {
     const url = `${this.baseUrl}/record/v1/${recordType}`;
     const authHeader = this.getAuthHeader(url, 'POST');
     const res = await axios({
@@ -1047,6 +1083,7 @@ export class NetSuiteAPI {
     const id = location ? location.split('/').pop() ?? '' : '';
     if (!id) throw new Error(`NetSuite created the ${recordType} but returned no ID.`);
     return id;
+    });
   }
 
   /** Delete any record via REST (sandbox rebuild tooling; NS enforces dependency order). */
@@ -1070,6 +1107,7 @@ export class NetSuiteAPI {
 
   /** Partially update any record via REST PATCH (e.g. stamping ids on a matched customer). */
   async updateRecord(recordType: string, id: string, payload: Record<string, unknown>): Promise<void> {
+    return this.with429Retry(async () => {
     const url = `${this.baseUrl}/record/v1/${recordType}/${id}`;
     const authHeader = this.getAuthHeader(url, 'PATCH');
     const res = await axios({
@@ -1091,6 +1129,7 @@ export class NetSuiteAPI {
         `HTTP ${res.status}`;
       throw new Error(`NetSuite update ${recordType} ${id} failed: ${msg}`);
     }
+    });
   }
 
   /** Transform one record into another (e.g. vendorBill → vendorPayment). */
@@ -1100,6 +1139,7 @@ export class NetSuiteAPI {
     toType: string,
     body: Record<string, unknown>
   ): Promise<string> {
+    return this.with429Retry(async () => {
     const url = `${this.baseUrl}/record/v1/${fromType}/${fromId}/!transform/${toType}`;
     const authHeader = this.getAuthHeader(url, 'POST');
     const res = await axios({
@@ -1129,6 +1169,7 @@ export class NetSuiteAPI {
     const id = location ? location.split('/').pop() ?? '' : '';
     if (!id) throw new Error(`NetSuite transform ${fromType} → ${toType} returned no ID.`);
     return id;
+    });
   }
 
   /** Read one record's tranId (cosmetic; failures return the id unchanged). */

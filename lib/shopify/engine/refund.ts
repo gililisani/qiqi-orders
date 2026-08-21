@@ -19,6 +19,7 @@
  * item — one mechanism, CPA re-points the account at will.
  */
 import { centsToDecimal } from '../core/money';
+import { storeDate } from '../core/dates';
 import type { OrderPlan } from '../core/types';
 import type { RefundPlan } from '../core/refundTransform';
 import { PipelineError, type NsApi } from './pipeline';
@@ -124,7 +125,7 @@ export async function ensureRefunds(
         // invoice, which drags its inventory lines in and forces restock —
         // tested 2026-08-18, not viable for money-only CMs.)
         otherRefNum: refund.orderName,
-        tranDate: refund.createdAt.slice(0, 10),
+        tranDate: storeDate(refund.createdAt),
         memo: `Shopify refund ${refund.orderName}${refund.note ? ` · ${refund.note}` : ''}`,
         item: { items: lines },
       });
@@ -146,7 +147,7 @@ export async function ensureRefunds(
       if (!rfdId) {
         rfdId = await ns.transformRecord('creditMemo', cmId, 'customerrefund', {
           externalId: rfdExtId,
-          tranDate: refund.createdAt.slice(0, 10),
+          tranDate: storeDate(refund.createdAt),
           account: { id: accountId },
           memo: `Shopify refund ${refund.orderName} · ${txn.gateway}`,
         });

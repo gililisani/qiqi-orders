@@ -8,6 +8,7 @@
  * the fulfillment location parks the order loudly — never a fake IF.
  */
 import { PipelineError, type NsApi } from './pipeline';
+import { storeDate } from '../core/dates';
 import type { EngineConfig } from './config';
 import type { FulfillmentPlan } from '../core/fulfillmentTransform';
 
@@ -89,7 +90,7 @@ export async function ensureItemFulfillments(
 
     const ifId = await ns.transformRecord('salesOrder', nsSoId, 'itemFulfillment', {
       externalId: extId,
-      tranDate: plan.createdAt.slice(0, 10),
+      tranDate: storeDate(plan.createdAt),
       shipStatus: { id: 'C' }, // Shipped
       memo: `Shopify ${plan.orderName}${tracking ? ` · ${tracking}` : ''}`,
       item: { items: ifLines },

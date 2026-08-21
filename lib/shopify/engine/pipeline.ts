@@ -14,6 +14,7 @@
  * BEFORE the SO is created.
  */
 import { centsToDecimal } from '../core/money';
+import { storeDate } from '../core/dates';
 import { decideCustomerMatch } from '../core/customerMatch';
 import type { NsCustomerCandidate, OrderPlan, SyncIssue } from '../core/types';
 import { gatewayAccountId, type EngineConfig } from './config';
@@ -153,7 +154,7 @@ export async function runOrderPipeline(
       externalId: soExtId,
       entity: { id: nsCustomerId },
       subsidiary: { id: config.subsidiaryId },
-      tranDate: plan.processedAt.slice(0, 10),
+      tranDate: storeDate(plan.processedAt),
       // Explicit per-transaction terms: adopted customers may carry
       // early-payment-discount terms (2/10 N-45 etc.) which NetSuite
       // would auto-apply, leaving part of the payment unapplied
@@ -178,7 +179,7 @@ export async function runOrderPipeline(
   if (!nsInvoiceId) {
     nsInvoiceId = await ns.transformRecord('salesOrder', nsSoId, 'invoice', {
       externalId: invExtId,
-      tranDate: plan.processedAt.slice(0, 10),
+      tranDate: storeDate(plan.processedAt),
       terms: { id: config.termsId },
       // Extra item lines in the transform body APPEND to the SO's lines
       // (verified empirically 2026-08-18) — the invoice carries the exact
@@ -204,7 +205,7 @@ export async function runOrderPipeline(
     if (!payId) {
       payId = await ns.transformRecord('invoice', nsInvoiceId, 'customerpayment', {
         externalId: payExtId,
-        tranDate: payment.processedAt.slice(0, 10),
+        tranDate: storeDate(payment.processedAt),
         account: { id: gatewayAccountId(config, payment.gateway)! },
         payment: Number(centsToDecimal(payment.amountCents)),
         memo: `Shopify ${plan.orderName} · ${payment.gateway}`,

@@ -660,6 +660,28 @@ Supabase snapshot (netscore_*_stamps) + snapshot ladder rung, shipped
 2026-08-20. NetScore also deleted their own prod duplicates
 (7,324→2,818 customers) — dup-merge job off the queue.
 
+### Watch-week findings (2026-08-21)
+
+- **First live order #7277 PERFECT**: SO SOUS17155 / INV INVUS17160 /
+  payment, $138 to the cent, CSF VALIDATED IN PROD (line
+  inventorylocation 46, inventorysubsidiary 1, no header location).
+- **NS 429 collision**: 02:30 UTC poll collided with the invoice-refresh
+  cron → CONCURRENCY_LIMIT_EXCEEDED → parked; the poller's 10-min
+  cursor-overlap re-ran it at 02:46 and self-healed (idempotency proven
+  live: 03:01/03:16 re-runs adopted, 0 duplicates). Rule of thumb:
+  transient infra errors self-heal; DATA errors (UNKNOWN_SKU etc.) wait
+  for the dashboard. FIXED PROPERLY: 429-aware retry (10s/20s, re-signed
+  OAuth) in lib/netsuite.ts request/find/create/update/transform.
+- **TIMEZONE (owner directive)**: NS transaction dates now use the STORE
+  timezone (America/New_York) via core/dates.ts storeDate() — SO/invoice/
+  payment/IF/CM. #7277 exposed it: 10:24pm ET Aug 20 order was dated Aug
+  21 (UTC), which would shift revenue across month boundaries vs Shopify
+  reports. Payout issue dates exempt (nominal Shopify dates). Cron moves:
+  refresh-invoices → 04:30 UTC (00:30 ET), refresh-reports → 05:00 UTC
+  (01:00 ET). NOTE: Vercel cron is UTC-fixed → times drift 1h in winter.
+- #7277's own SO/INV/payment still carry tranDate 2026-08-21 — owner may
+  want a one-off PATCH to 2026-08-20.
+
 ### Dashboard v2 — FINANCIAL view (owner directive 2026-08-20, build next)
 
 The dashboard is the ACCOUNTING department's window, not a sales report.
