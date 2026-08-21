@@ -14,6 +14,8 @@ export interface SyncConfig {
   payouts_cursor: string | null;
   last_poll_at: string | null;
   last_poll_error: string | null;
+  /** Cached store-wide financials (lib/shopify/financialSnapshot.ts), refreshed by the poll cron. */
+  financial_snapshot?: Record<string, unknown> | null;
 }
 
 export class ShopifySyncStore {

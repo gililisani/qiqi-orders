@@ -13,9 +13,20 @@ export interface FetchedPayout {
 }
 
 export interface UpcomingPayout {
-  issuedAt: string;
+  /** Absent when this is the accumulating pending balance (no payout record yet). */
+  issuedAt: string | null;
   netAmount: number;
   status: string;
+}
+
+/** Funds accumulated toward the next payout (Shopify Payments balance). */
+export async function fetchPendingBalance(): Promise<number | null> {
+  const data = await shopifyGraphQL(`{
+    shopifyPaymentsAccount { balance { amount currencyCode } }
+  }`);
+  const balances: any[] = data.shopifyPaymentsAccount?.balance ?? [];
+  const usd = balances.find((b) => b.currencyCode === 'USD') ?? balances[0];
+  return usd ? Number(usd.amount) : null;
 }
 
 /** The next not-yet-paid payout (SCHEDULED/IN_TRANSIT), for the dashboard. */

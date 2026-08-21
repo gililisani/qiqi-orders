@@ -7,6 +7,7 @@ import { executeOrder } from '../../../../lib/shopify/engine/execute';
 import { engineConfigForTarget } from '../../../../lib/shopify/engine/config';
 import { createNetSuiteForTarget, type NsTarget } from '../../../../lib/shopify/engine/nsTarget';
 import { maybeSendErrorDigest, maybeSendPollFailure } from '../../../../lib/shopify/alerts';
+import { computeFinancialSnapshot } from '../../../../lib/shopify/financialSnapshot';
 
 /**
  * Loop A poller (every 15 min, vercel.json). Mode lives in
@@ -49,6 +50,15 @@ export async function GET(request: NextRequest) {
         : undefined,
     });
     console.log(`[cron/shopify-poll] ${JSON.stringify(result)}`);
+
+    // Refresh the dashboard's store-wide financial snapshot (cached — the
+    // page never waits on Shopify). Failure must never mask a good poll.
+    try {
+      const snapshot = await computeFinancialSnapshot();
+      await store.updateConfig({ financial_snapshot: snapshot as unknown as Record<string, unknown> });
+    } catch (err: any) {
+      console.error('[cron/shopify-poll] financial snapshot failed:', String(err?.message ?? err).slice(0, 300));
+    }
 
     // Daily digest when errors exist (throttled inside).
     const db = createServiceRoleClient();

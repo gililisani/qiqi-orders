@@ -53,22 +53,32 @@ interface PeriodSums {
   valueCents: number;
   refundedCents: number;
   feesCents: number;
+  gatewaysCents: Record<string, number>;
 }
 
 interface Overview {
   config: { mode: string; last_poll_at: string | null; last_poll_error: string | null };
   counts: Record<string, number>;
   errorCount: number;
+  /** Store-wide snapshot from the poll cron (null until the first poll after deploy). */
   financials: {
+    computedAt: string;
     periods: { today: PeriodSums; last7: PeriodSums; mtd: PeriodSums };
-    nextPayout: { issuedAt: string; netAmount: number; status: string } | null;
-  };
+    nextPayout: { issuedAt: string | null; netAmount: number; status: string } | null;
+  } | null;
   orders: OrderRow[];
   payouts: PayoutRow[];
 }
 
 type PeriodKey = 'today' | 'last7' | 'mtd';
 const PERIOD_LABELS: Record<PeriodKey, string> = { today: 'Today', last7: '7 days', mtd: 'This month' };
+const GATEWAY_LABELS: Record<string, string> = {
+  shopify_payments: 'Shopify Payments',
+  shop_cash: 'Shop Cash',
+  shop_pay: 'Shop Pay',
+  paypal: 'PayPal',
+  affirm: 'Affirm',
+};
 
 const STATE_STYLES: Record<string, string> = {
   paid: 'bg-[#DBEAFE] text-[#1D4ED8] border-[#BFDBFE]',
@@ -195,7 +205,7 @@ export default function ShopifySyncDashboard() {
 
   const errors = data?.orders.filter((o) => o.state === 'error') ?? [];
   const nonErrors = data?.orders.filter((o) => o.state !== 'error') ?? [];
-  const sums = data?.financials?.periods?.[period] ?? { orders: 0, valueCents: 0, refundedCents: 0, feesCents: 0 };
+  const sums = data?.financials?.periods?.[period] ?? null;
 
   return (
     <div className="px-6 py-8">
@@ -239,9 +249,22 @@ export default function ShopifySyncDashboard() {
 
       {data && (
         <>
-          {/* Financial strip — what accounting looks at */}
+          {/* Financial strip — the store's numbers, straight from Shopify */}
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-medium text-muted-foreground">Financials (store time, ET)</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Store financials (ET)
+              {data.financials && (
+                <span className="ml-2 font-normal">
+                  · as of{' '}
+                  {new Date(data.financials.computedAt).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'America/New_York',
+                  })}{' '}
+                  ET
+                </span>
+              )}
+            </p>
             <div className="inline-flex rounded-md border border-border p-0.5">
               {(Object.keys(PERIOD_LABELS) as PeriodKey[]).map((k) => (
                 <button
@@ -261,24 +284,38 @@ export default function ShopifySyncDashboard() {
             <Card>
               <CardContent className="p-4">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Total orders</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">{sums.orders}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{PERIOD_LABELS[period]} · booked to NetSuite</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Orders value</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">{money(sums.valueCents)}</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {sums ? `${sums.orders} · ${money(sums.valueCents)}` : '—'}
+                </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {sums.refundedCents > 0 ? `${money(sums.refundedCents)} refunded` : 'no refunds'}
+                  {sums && sums.refundedCents > 0 ? `${money(sums.refundedCents)} refunded` : PERIOD_LABELS[period]}
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Shopify fees</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">{money(sums.feesCents)}</p>
-                <p className="mt-1 text-xs text-muted-foreground">processing fees on card charges</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Processing fees</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">{sums ? money(sums.feesCents) : '—'}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Shopify Payments charges → 622070</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Payments by method</p>
+                {sums && Object.keys(sums.gatewaysCents).length > 0 ? (
+                  <div className="mt-1 space-y-0.5">
+                    {Object.entries(sums.gatewaysCents)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([gw, cents]) => (
+                        <p key={gw} className="flex justify-between text-sm tabular-nums">
+                          <span className="text-muted-foreground">{GATEWAY_LABELS[gw] ?? gw}</span>
+                          <span className="font-medium">{money(cents)}</span>
+                        </p>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-2xl font-semibold">—</p>
+                )}
               </CardContent>
             </Card>
             <Card className={cn(data.errorCount > 0 && 'border-brand-magenta/40')}>
@@ -300,7 +337,9 @@ export default function ShopifySyncDashboard() {
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {data.financials?.nextPayout
-                    ? `${new Date(data.financials.nextPayout.issuedAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${data.financials.nextPayout.status.toLowerCase().replace('_', ' ')}`
+                    ? data.financials.nextPayout.issuedAt
+                      ? `${new Date(data.financials.nextPayout.issuedAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${data.financials.nextPayout.status.toLowerCase().replace('_', ' ')}`
+                      : 'balance accumulating · pays out Monday'
                     : 'none scheduled'}
                 </p>
               </CardContent>
