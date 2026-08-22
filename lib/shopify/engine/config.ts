@@ -195,9 +195,12 @@ export const PRODUCTION_ENGINE_CONFIG: EngineConfig = {
   // (location 46, subsidiary 1 Qiqi Global) via CSF — probed off
   // NetScore's live SOs + IFs 2026-08-20.
   crossSubsidiaryFulfillment: true,
-  // NetScore's prod money-only CustCreds carry no location (probed
-  // 2026-08-20) — mirror them. Fallback if REST insists: '31'.
-  creditMemoLocationId: null,
+  // Prod REST refuses a CM without a header location ("Please enter
+  // value(s) for: Location" — proven 2026-08-22 on the Group C clean-up:
+  // CMUS10121-10123 bounced with none, booked with 31). NetScore's own
+  // prod CMs carry location 31 on their lines. Location 31 is accessible
+  // to Qiqi INC (sub 3); 46/BrandFox belongs to Qiqi Global and is not.
+  creditMemoLocationId: '31',
   termsId: '8',
   // "Shopify" employee — owner-created in the prod NS UI 2026-08-20 (the
   // integration role lacks Lists→Employee Record, so unverifiable via

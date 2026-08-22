@@ -15,6 +15,13 @@ Definition — properly recorded = NS invoice/fulfillment/credit memo exist as S
 
 - **#6760 — DONE 2026-08-22. GROUP B COMPLETE (14/14).** Pro-Discount-era representation RULE (owner, option b): book product lines at the NET wholesale price (Shopify original − Pro Discount allocation), NO discount line — Sales reflects what the salon paid; never inflate 420000. VAT/duties always → 240504 pass-through. #6760: $805.25 → $457.25 on invoice, SO and PayPal payment ($348 phantom reversed; $79.35 BE VAT moved from revenue to 240504).
 
+- **Group C (4 netted refunds) — DONE 2026-08-22 (owner: "restructure all four").** Restructured IN PLACE to the live engine's representation: invoice + payment at what Shopify charged, Credit Memo on item 1565 (Refund Adjustment → 410000, no inventory) dated the Shopify refund date, Customer Refund from the gateway clearing account. Net revenue unchanged; gross + returns now match Shopify; 100501/100504 mirror Shopify's +charge/−refund lines. IFs untouched.
+  - #5789: lines back to $64/$28 → INVUS15604 $354.90, PUS15461 $354.90, **CMUS10121** $148 (2026-02-04) + refund from 100501. (Shopify "refund" was a Pro-Discount price correction; goods were kept.)
+  - #5804: FPS0017 $28→$56 → INVUS15620 $314.90, PUS15477 $314.90, **CMUS10122** $28 (2026-02-04, partial $28 of a $56 line → amount-only adjustment line) + refund from 100501.
+  - #5828: cancelled-before-shipping FPS0016 could NOT be re-added to INVUS15646 (REST treats an added inventory line as a standalone sale → "configure the inventory detail" = it would move stock). Billed instead on a **second invoice INVUS17174 $56 transformed from SOUS15638** (SO-linked, no inventory posting — verified), PUS15503 $42→$98 applied across both, **CMUS10123** $56 (2026-02-13) + refund from 100504 (PayPal), SO line closed → SOUS15638 now Closed (was Partially Fulfilled with the line open in the backlog).
+  - #6499: lines back to Shopify prices → INVUS16337/SOUS16317/PUS16200 $145.50→$291; existing CMUS10097 + refund kept. Net revenue now $145.50 (was $0).
+  - Found on the way: prod REST refuses a Credit Memo without a header location → engine config `creditMemoLocationId` set to 31 (the live engine had not created a prod CM yet; its first refund would have parked).
+
 ## THE LIST — 36 orders needing action
 
 - #5627 · 2026-01-04 · shopify_payments · Shopify $140.26

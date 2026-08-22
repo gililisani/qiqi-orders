@@ -739,6 +739,21 @@ duplicate-SKU Shopify lines map to distinct SO lines.
   wholesale (original − allocation), no discount line (owner rule b).
 - NetScore's "Shopify Tax Item" (1057 → 410000) on invoices must be
   re-pointed to item 1464 (→ 240504) when touched.
+- Netted refunds (NetScore shrank invoice + payment, no CM) → restructure
+  to the engine's chain: invoice/payment at charged, CM on 1565 dated the
+  Shopify refund date, Customer Refund from the gateway clearing account
+  (Group C, owner 2026-08-22). Never re-ADD an inventory line to an
+  existing invoice via REST — NS treats it as a standalone sale and
+  demands inventory detail (= stock movement). Bill an unbilled SO line
+  on a second invoice transformed from the SO instead (SO-linked, no
+  inventory posting), then close the SO line.
+- Shopify refund line items carry the FULL line value even when only
+  part was refunded (#5804: $28 of a $56 line) → when line subtotals
+  exceed the refund total, book one amount-only adjustment line.
+- Prod REST refuses a Credit Memo without a header location ("Please
+  enter value(s) for: Location") — engine config creditMemoLocationId =
+  31 (Packable; accessible to Qiqi INC — BrandFox 46 belongs to Qiqi
+  Global). Proven on CMUS10121-10123.
 
 ### Dashboard v2 — FINANCIAL view (owner directive 2026-08-20, build next)
 

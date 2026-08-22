@@ -268,10 +268,11 @@ describe('engine config sanity', () => {
       expect(engineConfigForTarget('production').crossSubsidiaryFulfillment).toBe(true);
     }
   });
-  it('production config hard facts: CSF on, BrandFox 46, no CM location (probed 2026-08-20)', async () => {
+  it('production config hard facts: CSF on, BrandFox 46, CM header location 31 (prod REST refuses CMs without one — proven 2026-08-22)', async () => {
     const { PRODUCTION_ENGINE_CONFIG } = await import('@/lib/shopify/engine/config');
     expect(PRODUCTION_ENGINE_CONFIG.crossSubsidiaryFulfillment).toBe(true);
     expect(PRODUCTION_ENGINE_CONFIG.fulfillmentLocationId).toBe('46');
-    expect(PRODUCTION_ENGINE_CONFIG.creditMemoLocationId).toBeNull();
+    // Not 46: BrandFox belongs to Qiqi Global, the CM posts on Qiqi INC.
+    expect(PRODUCTION_ENGINE_CONFIG.creditMemoLocationId).toBe('31');
   });
 });

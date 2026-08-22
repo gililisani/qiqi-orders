@@ -22,3 +22,12 @@ Every script writes to PRODUCTION NetSuite — owner approval per group.
 - `fix-wholesale-6760.ts` — Pro-Discount era rule (b): lines at net
   wholesale (original − allocation), no discount line, VAT line → 1464.
 - `payments-probe.ts` — payment/cleared/write-off facts per order.
+- `fix-refund-restructure.ts [--apply] <orders>` — Group C: netted refunds →
+  invoice/payment at charged, CM on 1565 dated the Shopify refund, Customer
+  Refund from the gateway clearing account; unbilled cancelled SO lines are
+  billed on a second invoice transformed from the SO (never added to the
+  existing invoice — that moves stock) and then closed. Dry-run by default;
+  GL read-back (410000 / clearing / AR) after each order.
+- `probe-refunds.ts <orders>` — read-only: Shopify refund facts (line items,
+  restock type, gateway txn ids) + the full NS chain (SO/invoice/payment/IF/
+  CM/refund with lines and GL) per order. Used to scope Groups C/D/E.
