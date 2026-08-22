@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
 
     // Verify the chosen customer exists and is active before stamping.
     // (No NetScore custentity reference — the field dies with their bundle.)
-    const rows = await ns.suiteQL<{ id: string; isinactive: string }>(
-      `SELECT id, isinactive FROM customer WHERE id = ${Number(nsCustomerId)}`,
+    const rows = await ns.suiteQL<{ id: string; isinactive: string; category: string | null; custentity3: string | null; terms: string | null }>(
+      `SELECT id, isinactive, category, custentity3, terms FROM customer WHERE id = ${Number(nsCustomerId)}`,
     );
     if (!rows.length) return NextResponse.json({ error: 'NS customer not found' }, { status: 404 });
     if (rows[0].isinactive === 'T') return NextResponse.json({ error: 'NS customer is inactive' }, { status: 409 });
@@ -43,6 +43,13 @@ export async function POST(request: NextRequest) {
     const buyerKey =
       buyer.kind === 'b2b' && buyer.shopifyCompanyId ? `CO-${buyer.shopifyCompanyId}` : `CUST-${buyer.shopifyCustomerId}`;
     const stamp: Record<string, unknown> = { externalId: engineConfig.externalIds.customer(buyerKey) };
+    // This account makes Category/Class mandatory and PATCH re-validates the
+    // whole record (#6599: "Please enter value(s) for: Class") — fill what's
+    // missing with the per-kind defaults, exactly like the pipeline's adopt.
+    const defaults = engineConfig.customerDefaults[buyer.kind];
+    if (!rows[0].category) stamp.category = { id: defaults.category };
+    if (!rows[0].custentity3) stamp.custentity3 = { id: defaults.class };
+    if (!rows[0].terms) stamp.terms = { id: engineConfig.termsId };
     await ns.updateRecord('customer', String(nsCustomerId), stamp);
     await store.event('orders', 'customer_resolved', String(shopifyOrderId), {
       nsCustomerId: String(nsCustomerId),
