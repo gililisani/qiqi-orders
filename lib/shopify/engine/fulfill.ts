@@ -64,17 +64,33 @@ export async function ensureItemFulfillments(
 
     // Map each fulfilled SKU to its SO line + FEFO-pick the lots.
     const skuIds = await ns.resolveItemIdsBySku(plan.lines.map((l) => l.sku!).filter(Boolean));
+    // Lot tracking is per item: assemblies here carry lots, accessories
+    // (e.g. TOL0006 Heat Cap, #6604/#6722) do not — a non-lot item gets a
+    // plain stock check and NO inventory detail.
+    const itemIdList = [...new Set(skuIds.values())];
+    const lotFlags = itemIdList.length
+      ? await ns.suiteQL<{ id: string; islotitem: string }>(`SELECT id, islotitem FROM item WHERE id IN (${itemIdList.join(',')})`)
+      : [];
+    const isLotItem = new Map(lotFlags.map((r) => [String(r.id), r.islotitem === 'T']));
     const picked: Array<{ orderLine: number; quantity: number; assignments: Array<Record<string, unknown>> }> = [];
+    // The same SKU can appear on several Shopify lines (#6604: FPS0024 ×2 →
+    // SO lines 5 and 6). Each SO line is consumed once; prefer the one with
+    // the matching quantity so 1+2 never lands as 2 on the 1-unit line.
+    const usedSoLines = new Set<number>();
     for (const line of plan.lines) {
       const itemId = line.sku ? skuIds.get(line.sku) : undefined;
-      const soLine = soLines.find((s) => s.itemId === itemId);
+      const free = soLines.filter((s) => s.itemId === itemId && !usedSoLines.has(s.lineId));
+      const soLine = free.find((s) => s.quantity === line.quantity) ?? free[0];
+      if (soLine) usedSoLines.add(soLine.lineId);
       if (!itemId || !soLine) {
         throw new PipelineError({
           code: 'UNKNOWN_SKU',
           message: `${plan.orderName} fulfillment ${plan.shopifyFulfillmentId}: SKU "${line.sku}" has no matching SO line`,
         });
       }
-      const assignments = await fefoAssign(ns, itemId, line.quantity, config.fulfillmentLocationId, plan.orderName);
+      const assignments = isLotItem.get(itemId)
+        ? await fefoAssign(ns, itemId, line.quantity, config.fulfillmentLocationId, plan.orderName)
+        : await assertPlainStock(ns, itemId, line.quantity, config.fulfillmentLocationId, plan.orderName);
       picked.push({ orderLine: soLine.lineId, quantity: line.quantity, assignments });
     }
 
@@ -136,7 +152,7 @@ export async function ensureItemFulfillments(
             orderLine: p.orderLine,
             quantity: p.quantity,
             location: { id: config.fulfillmentLocationId },
-            inventoryDetail: { inventoryAssignment: { items: p.assignments } },
+            ...(p.assignments.length ? { inventoryDetail: { inventoryAssignment: { items: p.assignments } } } : {}),
           })),
         },
       });
@@ -146,6 +162,27 @@ export async function ensureItemFulfillments(
   }
 
   return { nsFulfillmentIds, created };
+}
+
+/** Non-lot item: just prove the location has the stock; no inventory detail. */
+async function assertPlainStock(
+  ns: NsApi,
+  itemId: string,
+  needed: number,
+  locationId: string,
+  orderName: string,
+): Promise<Array<Record<string, unknown>>> {
+  const rows = await ns.suiteQL<{ quantityavailable: string }>(
+    `SELECT quantityavailable FROM aggregateitemlocation WHERE item = ${Number(itemId)} AND location = ${Number(locationId)}`,
+  );
+  const available = Number(rows[0]?.quantityavailable ?? 0);
+  if (available < needed) {
+    throw new PipelineError({
+      code: 'UNSUPPORTED_SOURCE',
+      message: `${orderName}: insufficient stock for item ${itemId} at location ${locationId} (need ${needed}, available ${available})`,
+    });
+  }
+  return [];
 }
 
 /** FEFO: expiration first when present, else lowest lot number. May span lots. */

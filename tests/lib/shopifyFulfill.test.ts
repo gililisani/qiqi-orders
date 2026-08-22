@@ -17,6 +17,8 @@ function fakeNs(opts: {
   soLines?: any[];
   lots?: any[];
   existingIf?: string | null;
+  lotItem?: boolean;
+  plainStock?: number;
 }) {
   const transforms: Array<{ to: string; body: any }> = [];
   const ns: NsApi = {
@@ -34,6 +36,8 @@ function fakeNs(opts: {
     async suiteQL(q: string) {
       if (q.includes('FROM transactionline')) return (opts.soLines ?? []) as any;
       if (q.includes('FROM inventorynumber inv')) return (opts.lots ?? []) as any;
+      if (q.includes('islotitem FROM item')) return [{ id: 'item-42', islotitem: opts.lotItem === false ? 'F' : 'T' }] as any;
+      if (q.includes('FROM aggregateitemlocation')) return [{ quantityavailable: String(opts.plainStock ?? 0) }] as any;
       return [];
     },
     async resolveItemIdsBySku(skus) {
@@ -129,5 +133,39 @@ describe('ensureItemFulfillments', () => {
     const csf = { ...ENGINE_CONFIG, crossSubsidiaryFulfillment: true, fulfillmentLocationId: '46' };
     await expect(ensureItemFulfillments([PLAN], '598252', ns, csf)).rejects.toThrow(/fulfill RESTlet/);
     expect(transforms).toHaveLength(0);
+  });
+
+  it('non-lot item (Heat Cap #6604): plain stock check, IF line carries NO inventory detail', async () => {
+    const { ns, transforms } = fakeNs({ soLines: SO_LINES, lots: [], lotItem: false, plainStock: 184 });
+    const r = await ensureItemFulfillments([PLAN], '423000', ns, ENGINE_CONFIG);
+    expect(r.created).toBe(1);
+    const line = transforms[0].body.item.items[0];
+    expect(line.inventoryDetail).toBeUndefined();
+    expect(line.quantity).toBe(5);
+  });
+
+  it('non-lot item with no stock at the location parks loudly', async () => {
+    const { ns } = fakeNs({ soLines: SO_LINES, lots: [], lotItem: false, plainStock: 0 });
+    await expect(ensureItemFulfillments([PLAN], '423000', ns, ENGINE_CONFIG)).rejects.toThrow(/insufficient stock/);
+  });
+
+  it('same SKU on two Shopify lines (#6604 FPS0024 ×1 and ×2) maps to two distinct SO lines', async () => {
+    const plan: FulfillmentPlan = {
+      ...PLAN,
+      lines: [
+        { sku: 'FPS0025', shopifyLineItemId: 'a', quantity: 2 },
+        { sku: 'FPS0025', shopifyLineItemId: 'b', quantity: 1 },
+      ],
+    };
+    const { ns, transforms } = fakeNs({
+      soLines: [
+        { id: '5', item: 'item-42', quantity: '-1', itemtype: 'Assembly' },
+        { id: '6', item: 'item-42', quantity: '-2', itemtype: 'Assembly' },
+      ],
+      lots: [{ id: '10', inventorynumber: '560100', quantityavailable: '99', expirationdate: null }],
+    });
+    await ensureItemFulfillments([plan], '423000', ns, ENGINE_CONFIG);
+    const lines = transforms[0].body.item.items;
+    expect(lines.map((l: any) => [l.orderLine, l.quantity])).toEqual([[6, 2], [5, 1]]);
   });
 });
