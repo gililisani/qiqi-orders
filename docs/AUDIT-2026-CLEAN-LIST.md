@@ -8,6 +8,9 @@ Definition — properly recorded = NS invoice/fulfillment/credit memo exist as S
 
 - **Group A (10 × shipped, no IF) — DONE 2026-08-22.** Root cause: NetScore created these SOs with inventory location Packable (31) right before the 3PL switch; BrandFox shipped them (owner-confirmed). Fix: relocated every line 31→46 (NetSuite flipped inventory subsidiary to Qiqi Global = CSF), then booked IF18246–IF18255 on the original ship dates with FEFO lots. #6519, #6571, #6578, #6579, #6580, #6581, #6583, #6584, #6587, #6590.
 
+- **Group B, portion 1 (Buy-X-get-Y / Salon re-pricing) — DONE 2026-08-22.** #6360, #6649, #6739, #6787, #6903, #7208: NetScore priced lines at the Salon price level (FPS0017 $28 vs Shopify $56 etc.) while keeping Shopify's discount → invoices and cash off by the difference. Fixed IN PLACE on original dates: product lines → Shopify unit prices (Custom price level), header discount → Shopify's total discount, payment → what Shopify charged (#6903 −$118.51 and #7208 −$28 phantom cash reversed). Cosmetic leftover: #6739 and #6903 carry a $0 "Shopify Discount" line (REST cannot delete sublist lines) — owner may delete in the UI.
+- **#5627 — removed from the list**: Shop-remitted marketplace tax ($8.26) correctly netted; only presentation differs.
+
 ## THE LIST — 36 orders needing action
 
 - #5627 · 2026-01-04 · shopify_payments · Shopify $140.26
