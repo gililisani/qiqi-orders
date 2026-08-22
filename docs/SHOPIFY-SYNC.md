@@ -709,6 +709,21 @@ daily; no allocation needed. Also parked observations: account FEFO
 framework broken (owner wants help fixing it someday); Hub B2B IFs still
 manual (future: ShipHero push + auto-IF for Hub orders too).
 
+### 2026 audit + EUR-window backfill (2026-08-21)
+
+docs/AUDIT-2026-SHOPIFY-NS.md: 1,670 orders, 1,623 clean. ALL 10 NetScore-
+lost orders were EUR-presentment orders → EUR accommodation built (store
+USD, presentment cosmetic; FX gap carried as an "FX rounding" invoice line
+on the refund-adjustment item; gate refuses only a non-USD STORE currency).
+9/10 imported: $5,083.73, original dates, IFs booked. #6545 open (refunded
++ RETURN restock — owner decides on inventory). Remaining audit items are
+CPA material: 34 NetScore-era amount mismatches (re-pricing, netted
+refunds, dropped duties) + 3 CM-less refunds.
+Rules learned: every Shopify order is Qiqi INC (other-subsidiary customer
+duplicates disqualified automatically; same-subsidiary duplicates park
+with facts for a human); non-lot items fulfill without inventory detail;
+duplicate-SKU Shopify lines map to distinct SO lines.
+
 ### Dashboard v2 — FINANCIAL view (owner directive 2026-08-20, build next)
 
 The dashboard is the ACCOUNTING department's window, not a sales report.

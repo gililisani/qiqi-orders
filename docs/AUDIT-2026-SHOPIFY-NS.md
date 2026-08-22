@@ -3,7 +3,16 @@
 Orders in 2026 (Shopify): 1670 (0 test orders excluded)
 Amount-verified clean: 1623
 
-## NOT SYNCED (needs attention) (10)
+## NOT SYNCED (needs attention) (10) — RESOLVED 2026-08-21
+
+ROOT CAUSE: all 10 were EUR-presentment orders (May 21 – Jul 10 EUR window);
+NetScore failed on every one of them. 9 imported through the live pipeline
+(EUR accommodation: USD amounts + FX rounding line): $5,083.73 invoiced,
+9 IFs, all on original dates. #6545 deliberately left open (fully refunded,
+items marked RETURN — owner to confirm whether goods came back to stock).
+Findings fixed along the way: non-lot items (TOL0006), duplicate-SKU lines
+(#6604), duplicate customer in the wrong subsidiary (#6599 → Qiqi INC rule).
+
 - #6545 (2026-05-21, $608.84, refunded $608.84) — NO NetSuite invoice found (era: no records at all)
 - #6599 (2026-05-28, $400.77) — NO NetSuite invoice found (era: no records at all)
 - #6604 (2026-05-29, $576.55) — NO NetSuite invoice found (era: no records at all)
