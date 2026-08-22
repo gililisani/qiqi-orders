@@ -4,6 +4,10 @@ Orders: 1671 · test excluded: 0 · unpaid/cancelled (nothing to record): 0 · *
 
 Definition — properly recorded = NS invoice/fulfillment/credit memo exist as Shopify says, cash recorded == cash Shopify moved, net revenue == Shopify net. All 2026 periods are open.
 
+## Progress
+
+- **Group A (10 × shipped, no IF) — DONE 2026-08-22.** Root cause: NetScore created these SOs with inventory location Packable (31) right before the 3PL switch; BrandFox shipped them (owner-confirmed). Fix: relocated every line 31→46 (NetSuite flipped inventory subsidiary to Qiqi Global = CSF), then booked IF18246–IF18255 on the original ship dates with FEFO lots. #6519, #6571, #6578, #6579, #6580, #6581, #6583, #6584, #6587, #6590.
+
 ## THE LIST — 36 orders needing action
 
 - #5627 · 2026-01-04 · shopify_payments · Shopify $140.26
