@@ -28,7 +28,25 @@ interface OrderRow {
   ns_target: string | null;
   error_code: string | null;
   error_message: string | null;
-  error_detail: { issues?: Array<{ code: string; detail?: { candidates?: Array<{ id: string; entityId: string; via: string }>; skus?: string[]; sku?: string } }> } | null;
+  error_detail: {
+    issues?: Array<{
+      code: string;
+      detail?: {
+        candidates?: Array<{
+          id: string;
+          entityId: string;
+          via: string;
+          subsidiary?: string | null;
+          createdAt?: string | null;
+          transactionCount?: number | null;
+          lastTransactionDate?: string | null;
+        }>;
+        disqualified?: Array<{ entityId: string; subsidiary?: string | null; reason: string }>;
+        skus?: string[];
+        sku?: string;
+      };
+    }>;
+  } | null;
   links: {
     customer: string | null;
     so: string | null;
@@ -100,7 +118,7 @@ const ERROR_GUIDANCE: Record<string, string> = {
     'This SKU does not exist in NetSuite. Create the item in NS (or fix the SKU on the Shopify product), then Retry.',
   MISSING_SKU: 'A line on this order has no SKU (custom item). Fix the product in Shopify, then Retry.',
   AMBIGUOUS_CUSTOMER:
-    'Several NS customers match this buyer. Merge/inactivate the duplicates in NS (or stamp the right one), then Retry.',
+    'Same buyer, several NetSuite records. Pick the right one below (usually the one with the history) — the choice is permanent. Inactivating the empty duplicate in NS afterwards is tidy but optional.',
   NOT_USD: 'Non-USD money detected — this should never happen. Do not retry; investigate the order in Shopify.',
   TOTALS_MISMATCH: 'The order math does not reconcile to the cent. Do not retry; investigate.',
   PAYMENT_MISMATCH: 'Payments do not cover the charged total. Often resolves after Shopify settles — Retry later.',
@@ -460,18 +478,36 @@ export default function ShopifySyncDashboard() {
                     {/* Ambiguous customer: pick the right NS record. */}
                     {o.error_code === 'AMBIGUOUS_CUSTOMER' &&
                       (o.error_detail?.issues?.[0]?.detail?.candidates ?? []).length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {o.error_detail!.issues![0].detail!.candidates!.map((c) => (
-                            <Button
-                              key={c.id}
-                              size="sm"
-                              variant="outline"
-                              disabled={retrying === o.shopify_order_id}
-                              onClick={() => resolveCustomer(o.shopify_order_id, c.id)}
-                            >
-                              Use {c.entityId} (#{c.id}, via {c.via})
-                            </Button>
-                          ))}
+                        <div className="mt-2 space-y-2">
+                          <p className="text-xs text-muted-foreground">
+                            Same person, two NetSuite records — pick the one with the history (the stamp is permanent):
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {o.error_detail!.issues![0].detail!.candidates!.map((c) => (
+                              <Button
+                                key={c.id}
+                                size="sm"
+                                variant="outline"
+                                disabled={retrying === o.shopify_order_id}
+                                onClick={() => resolveCustomer(o.shopify_order_id, c.id)}
+                                className="h-auto flex-col items-start py-1.5 text-left"
+                              >
+                                <span className="font-medium">Use {c.entityId}</span>
+                                <span className="text-xs font-normal text-muted-foreground">
+                                  {c.transactionCount ?? '?'} transactions
+                                  {c.lastTransactionDate ? ` · last ${c.lastTransactionDate}` : ''}
+                                  {c.createdAt ? ` · created ${c.createdAt}` : ''}
+                                  {c.subsidiary ? ` · ${c.subsidiary}` : ''}
+                                </span>
+                              </Button>
+                            ))}
+                          </div>
+                          {(o.error_detail!.issues![0].detail!.disqualified ?? []).length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              Not offered (wrong subsidiary):{' '}
+                              {o.error_detail!.issues![0].detail!.disqualified!.map((d) => `${d.entityId} (${d.subsidiary ?? '?'})`).join(', ')}
+                            </p>
+                          )}
                         </div>
                       )}
                     {/* Unknown SKU: map it once, forever. */}

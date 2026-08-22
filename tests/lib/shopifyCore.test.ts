@@ -236,3 +236,39 @@ describe('decideCustomerMatch', () => {
     });
   });
 });
+
+describe('decideCustomerMatch — subsidiary rule (owner 2026-08-21: all Shopify orders are Qiqi INC)', () => {
+  const buyer = {
+    kind: 'b2c', shopifyCustomerId: '555', shopifyCompanyId: null, shopifyCompanyLocationId: null,
+    companyName: null, email: 'x@y.z', displayName: 'X', firstName: 'X', lastName: null,
+    billingAddress: null, shippingAddress: null,
+  } as any;
+  const c = (id: string, sub: string, extra: any = {}) => ({
+    nsCustomerId: id, entityId: `C${id}`, companyName: null, email: 'x@y.z', isInactive: false,
+    via: 'customer_stamp' as const, subsidiaryId: sub, ...extra,
+  });
+
+  it('a duplicate in another subsidiary is disqualified → the Qiqi INC one is used, logged', () => {
+    const d = decideCustomerMatch(buyer, [c('1', '1'), c('2', '3')], { requiredSubsidiaryId: '3' });
+    expect(d.action).toBe('use');
+    expect((d as any).nsCustomerId).toBe('2');
+  });
+
+  it('two duplicates BOTH in Qiqi INC still park for a human, with the deciding facts attached', () => {
+    const d = decideCustomerMatch(
+      buyer,
+      [c('1', '3', { transactionCount: 14, lastTransactionDate: '2026-07-01' }), c('2', '3', { transactionCount: 0 }), c('9', '1')],
+      { requiredSubsidiaryId: '3' },
+    );
+    expect(d.action).toBe('error');
+    const detail = (d as any).issue.detail;
+    expect(detail.candidates.map((x: any) => x.id)).toEqual(['1', '2']);
+    expect(detail.candidates[0].transactionCount).toBe(14);
+    expect(detail.disqualified).toEqual([expect.objectContaining({ entityId: 'C9', reason: 'other subsidiary' })]);
+  });
+
+  it('without the subsidiary rule nothing changes (sandbox / unknown subsidiary)', () => {
+    const d = decideCustomerMatch(buyer, [c('1', '1'), c('2', '3')]);
+    expect(d.action).toBe('error');
+  });
+});

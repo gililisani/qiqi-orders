@@ -18,6 +18,7 @@ import { storeDate } from '../core/dates';
 import { decideCustomerMatch } from '../core/customerMatch';
 import type { NsCustomerCandidate, OrderPlan, SyncIssue } from '../core/types';
 import { gatewayAccountId, type EngineConfig } from './config';
+import { normalizeNsDate } from '../../netsuite';
 
 /** The NetSuiteAPI surface the pipeline needs (test seam). */
 export interface NsApi {
@@ -274,12 +275,16 @@ async function ensureCustomer(
   const classification = new Map<string, { category: string | null; class: string | null; terms: string | null }>();
   const note = (r: any) =>
     classification.set(String(r.id), { category: r.category ?? null, class: r.custentity3 ?? null, terms: r.terms ?? null });
+  const facts = (r: any) => ({
+    subsidiaryId: r.subsidiary ? String(r.subsidiary) : null,
+    createdAt: normalizeNsDate(r.datecreated) ?? null,
+  });
   if (buyer.shopifyCustomerId && stampCandidates) {
     const snapshot = await stampCandidates(buyer.shopifyCustomerId);
     if (snapshot.length) {
       const ids = snapshot.map((c) => Number(c.nsCustomerId)).join(',');
       const rows = await ns.suiteQL<any>(
-        `SELECT id, entityid, companyname, email, isinactive, category, custentity3, terms FROM customer WHERE id IN (${ids})`,
+        `SELECT id, entityid, companyname, email, isinactive, category, custentity3, terms, subsidiary, datecreated FROM customer WHERE id IN (${ids})`,
       );
       rows.forEach(note);
       candidates.push(
@@ -290,13 +295,14 @@ async function ensureCustomer(
           email: r.email,
           isInactive: r.isinactive === 'T',
           via: 'customer_stamp' as const,
+          ...facts(r),
         })),
       );
     }
   }
   if (buyer.email) {
     const rows = await ns.suiteQL<any>(
-      `SELECT id, entityid, companyname, email, isinactive, category, custentity3, terms FROM customer WHERE LOWER(email) = '${esc(buyer.email)}'`,
+      `SELECT id, entityid, companyname, email, isinactive, category, custentity3, terms, subsidiary, datecreated FROM customer WHERE LOWER(email) = '${esc(buyer.email)}'`,
     );
     rows.forEach(note);
     const seen = new Set(candidates.map((c) => c.nsCustomerId));
@@ -310,11 +316,31 @@ async function ensureCustomer(
           email: r.email,
           isInactive: r.isinactive === 'T',
           via: 'email' as const,
+          ...facts(r),
         })),
     );
   }
 
-  const decision = decideCustomerMatch(buyer, candidates);
+  // Duplicates ahead? Enrich with the facts a human needs to pick (history
+  // per record, subsidiary names) — one grouped query, only when it matters.
+  if (candidates.length > 1) {
+    const ids = candidates.map((c) => Number(c.nsCustomerId)).join(',');
+    const [history, subs] = await Promise.all([
+      ns.suiteQL<any>(
+        `SELECT entity, COUNT(*) AS n, MAX(trandate) AS last FROM transaction WHERE entity IN (${ids}) GROUP BY entity`,
+      ),
+      ns.suiteQL<any>(`SELECT id, name FROM subsidiary`),
+    ]);
+    const subName = new Map(subs.map((s) => [String(s.id), String(s.name)]));
+    for (const c of candidates) {
+      const h = history.find((r) => String(r.entity) === c.nsCustomerId);
+      c.transactionCount = h ? Number(h.n) : 0;
+      c.lastTransactionDate = h ? normalizeNsDate(h.last) : null;
+      c.subsidiaryName = c.subsidiaryId ? subName.get(c.subsidiaryId) ?? null : null;
+    }
+  }
+
+  const decision = decideCustomerMatch(buyer, candidates, { requiredSubsidiaryId: config.subsidiaryId });
   if (decision.action === 'error') throw new PipelineError(decision.issue);
 
   if (decision.action === 'use') {

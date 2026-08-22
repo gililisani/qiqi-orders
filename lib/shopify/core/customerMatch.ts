@@ -54,8 +54,20 @@ export function extractBuyer(order: ShopifyOrder): BuyerInfo {
   };
 }
 
-export function decideCustomerMatch(buyer: BuyerInfo, candidates: NsCustomerCandidate[]): MatchDecision {
-  const active = candidates.filter((c) => !c.isInactive);
+export function decideCustomerMatch(
+  buyer: BuyerInfo,
+  candidates: NsCustomerCandidate[],
+  opts: { requiredSubsidiaryId?: string } = {},
+): MatchDecision {
+  // Owner rule (2026-08-21): every Shopify order books under Qiqi INC —
+  // and NetSuite will not accept a customer that lives only in another
+  // subsidiary as the order's entity. Such candidates are DISQUALIFIED
+  // (logged in the issue detail), never chosen and never offered. #6599:
+  // NetScore had created the same buyer in Qiqi Global AND Qiqi INC.
+  const disqualified = opts.requiredSubsidiaryId
+    ? candidates.filter((c) => c.subsidiaryId && c.subsidiaryId !== opts.requiredSubsidiaryId)
+    : [];
+  const active = candidates.filter((c) => !c.isInactive && !disqualified.includes(c));
 
   // Rung 1 (B2B): the company stamp IS the business identity.
   const byCompany = active.filter((c) => c.via === 'company_stamp');
@@ -63,7 +75,7 @@ export function decideCustomerMatch(buyer: BuyerInfo, candidates: NsCustomerCand
     return { action: 'use', nsCustomerId: byCompany[0].nsCustomerId, via: 'company_stamp', stampNeeded: false };
   }
   if (byCompany.length > 1) {
-    return ambiguous(buyer, byCompany, 'multiple NS customers share this Shopify company id');
+    return ambiguous(buyer, byCompany, 'multiple NS customers share this Shopify company id', disqualified);
   }
 
   // Rung 2: the customer stamp (NetScore's custentity_shop_cust_id — 91.7%
@@ -73,7 +85,7 @@ export function decideCustomerMatch(buyer: BuyerInfo, candidates: NsCustomerCand
     return { action: 'use', nsCustomerId: byCustomer[0].nsCustomerId, via: 'customer_stamp', stampNeeded: buyer.kind === 'b2b' };
   }
   if (byCustomer.length > 1) {
-    return ambiguous(buyer, byCustomer, 'multiple NS customers share this Shopify customer id');
+    return ambiguous(buyer, byCustomer, 'multiple NS customers share this Shopify customer id', disqualified);
   }
 
   // Rung 3: normalized email — adoption path for pre-Shopify-era records.
@@ -84,7 +96,7 @@ export function decideCustomerMatch(buyer: BuyerInfo, candidates: NsCustomerCand
   if (byEmail.length > 1) {
     // The dup landscape means shared emails are real (one salon: 455
     // records). Guessing here is how NetScore corrupted the customer base.
-    return ambiguous(buyer, byEmail, 'email matches multiple NS customers');
+    return ambiguous(buyer, byEmail, 'email matches multiple NS customers', disqualified);
   }
 
   // Rung 4: genuinely new — create WITH stamps so the next order matches on rung 1/2.
@@ -94,13 +106,30 @@ export function decideCustomerMatch(buyer: BuyerInfo, candidates: NsCustomerCand
   };
 }
 
-function ambiguous(buyer: BuyerInfo, cands: NsCustomerCandidate[], why: string): MatchDecision {
+function ambiguous(
+  buyer: BuyerInfo,
+  cands: NsCustomerCandidate[],
+  why: string,
+  disqualified: NsCustomerCandidate[] = [],
+): MatchDecision {
+  const facts = (c: NsCustomerCandidate) => ({
+    id: c.nsCustomerId,
+    entityId: c.entityId,
+    via: c.via,
+    subsidiary: c.subsidiaryName ?? c.subsidiaryId ?? null,
+    createdAt: c.createdAt ?? null,
+    transactionCount: c.transactionCount ?? null,
+    lastTransactionDate: c.lastTransactionDate ?? null,
+  });
   return {
     action: 'error',
     issue: {
       code: 'AMBIGUOUS_CUSTOMER',
-      message: `${buyer.displayName}: ${why} (${cands.length} candidates)`,
-      detail: { candidates: cands.map((c) => ({ id: c.nsCustomerId, entityId: c.entityId, via: c.via })) },
+      message: `${buyer.displayName}: ${why} (${cands.length} candidates) — pick one on the dashboard`,
+      detail: {
+        candidates: cands.map(facts),
+        disqualified: disqualified.map((c) => ({ ...facts(c), reason: 'other subsidiary' })),
+      },
     },
   };
 }

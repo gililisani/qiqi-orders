@@ -309,6 +309,12 @@ export interface NsCustomerCandidate {
   isInactive: boolean;
   /** Which lookup produced it. */
   via: 'company_stamp' | 'customer_stamp' | 'email';
+  /** Facts that let a human (or the subsidiary rule) decide between duplicates. */
+  subsidiaryId?: string | null;
+  subsidiaryName?: string | null;
+  createdAt?: string | null;
+  transactionCount?: number;
+  lastTransactionDate?: string | null;
 }
 
 export type MatchDecision =
