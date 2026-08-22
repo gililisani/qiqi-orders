@@ -28,6 +28,7 @@ async function main() {
   const orders = await shopifyPaginate<any>(`query A($q: String!, $cursor: String) {
     orders(first: 100, after: $cursor, sortKey: CREATED_AT, query: $q) {
       nodes { id name test createdAt cancelledAt displayFinancialStatus displayFulfillmentStatus
+        taxLines { channelLiable priceSet { shopMoney { amount } } }
         transactions(first: 20) { kind status gateway amountSet { shopMoney { amount } } } }
       pageInfo { hasNextPage endCursor } } }`, { q: "created_at:>='2026-01-01T00:00:00-05:00'" }, 'orders');
   console.log(`Shopify 2026: ${orders.length} orders`);
@@ -50,6 +51,18 @@ async function main() {
     (e.CustPymt ??= []).push(...(r.ns_payment_ids ?? [])); (e.ItemShip ??= []).push(...(r.ns_fulfillment_ids ?? [])); (e.CustCred ??= []).push(...(r.ns_credit_memo_ids ?? []));
     recs.set(r.shopify_order_id, e);
   }
+
+  // 2b. Clean-up-era records (2026-08-22 groups A/C): IFs and second invoices
+  // transformed from NetScore SOs, CMs keyed by otherrefnum '#name' or SHOPCM-.
+  const soOwner = new Map<string, string>();
+  for (const [oid, e] of recs) for (const so of e.SalesOrd ?? []) soOwner.set(String(so), oid);
+  for (const ch of chunks([...soOwner.keys()].map(Number).filter(Boolean), 200)) {
+    const rows = await ns.suiteQL(`SELECT DISTINCT tl.transaction AS id, tl.createdfrom AS so, t.type FROM transactionline tl JOIN transaction t ON t.id = tl.transaction WHERE t.type IN ('ItemShip','CustInvc') AND tl.createdfrom IN (${ch.join(',')})`);
+    for (const r of rows) { const oid = soOwner.get(String(r.so)); if (!oid) continue; const e = recs.get(oid)!; const arr = (e[r.type] ??= []); if (!arr.includes(String(r.id))) arr.push(String(r.id)); }
+  }
+  const nameToId = new Map(orders.map((o) => [o.name.replace('#', ''), o.id.replace(/^.*\//, '')]));
+  const cmRows = await ns.suiteQL(`SELECT id, otherrefnum, externalid FROM transaction WHERE type = 'CustCred' AND trandate >= TO_DATE('2026-01-01','YYYY-MM-DD') AND (otherrefnum LIKE '#%' OR externalid LIKE 'SHOPCM-%')`);
+  for (const r of cmRows) { const oid = nameToId.get(String(r.otherrefnum ?? '').replace('#', '')); if (!oid) continue; const e = recs.get(oid) ?? {}; const arr = (e.CustCred ??= []); if (!arr.includes(String(r.id))) arr.push(String(r.id)); recs.set(oid, e); }
 
   // 3. Payments by memo (NetScore convention), bulk
   const names = orders.map((o) => o.name.replace('#', ''));
@@ -102,6 +115,8 @@ async function main() {
     const charged = o.transactions.filter((t: any) => ok_(t) && (t.kind === 'SALE' || t.kind === 'CAPTURE')).reduce((s: number, t: any) => s + c(t.amountSet.shopMoney.amount), 0);
     const refunded = o.transactions.filter((t: any) => ok_(t) && t.kind === 'REFUND').reduce((s: number, t: any) => s + c(t.amountSet.shopMoney.amount), 0);
     const gateway = o.transactions.find((t: any) => ok_(t) && (t.kind === 'SALE' || t.kind === 'CAPTURE'))?.gateway ?? '?';
+    // Shop-remitted (channel-liable) tax never reaches the payout → expected cash = charged − that tax (#5627 rule).
+    const channelTax = (o.taxLines ?? []).filter((t: any) => t.channelLiable).reduce((s: number, t: any) => s + c(t.priceSet.shopMoney.amount), 0);
     const e = recs.get(id) ?? {};
     const invs = (e.CustInvc ?? []).map((i) => total.get(i)).filter(Boolean) as any[];
     const label = `#${o.name.replace('#','')} · ${d} · ${gateway} · Shopify ${$(charged)}${refunded ? ` −${$(refunded)} refunded` : ''}`;
@@ -119,19 +134,23 @@ async function main() {
       for (const l of lines) if (l.mainline === 'F' && l.acctnumber && l.acctnumber !== '101101') writeoff += c(l.debit) - c(l.credit);
       if (cleared && Math.abs(amt - charged) > 0) reconciledWrong = true;
     }
-    const netTruth = charged - refunded, netBooked = invTotal - writeoff - cmTotal;
+    // Engine representation: payment = full charge, Shop-remitted tax moves to 240502 at payout.
+    // NetScore/bookkeeper alternative (#5627): payment short by the tax, written off at payment — net-correct, accept it.
+    const taxWriteoff = channelTax > 0 && Math.abs(writeoff - channelTax) < 0.005 ? writeoff : 0;
+    const expectedCash = charged - taxWriteoff;
+    const netTruth = charged - refunded, netBooked = invTotal - (writeoff - taxWriteoff) - cmTotal;
     const nettedByNetScore = refunded > 0 && cmTotal === 0 && invTotal === netTruth && cash === netTruth;
     if (nettedByNetScore) problems.push(`booked NET of the ${$(refunded)} refund (invoice and payment reduced; no credit memo, no customer refund) — net cash/revenue right, gross wrong`);
     else {
-      if (cash !== charged) problems.push(`cash recorded ${$(cash)} vs Shopify charged ${$(charged)} (Δ ${$(cash - charged)})`);
+      if (Math.abs(cash - expectedCash) > 0.005) problems.push(`cash recorded ${$(cash)} vs Shopify charged ${$(charged)}${taxWriteoff ? ` less Shop-remitted tax ${$(taxWriteoff)} written off` : ''} (Δ ${$(cash - expectedCash)})`);
       if (refunded > 0 && cmTotal === 0) problems.push(`Shopify refund ${$(refunded)} has no credit memo`);
     }
-    if (!nettedByNetScore && netBooked !== netTruth) problems.push(`net revenue booked ${$(netBooked)} vs Shopify net ${$(netTruth)} (Δ ${$(netBooked - netTruth)})`);
+    if (!nettedByNetScore && Math.abs(netBooked - netTruth) > 0.005) problems.push(`net revenue booked ${$(netBooked)} vs Shopify net ${$(netTruth)} (Δ ${$(netBooked - netTruth)})`);
     if (o.displayFulfillmentStatus === 'FULFILLED' && !(e.ItemShip ?? []).length) problems.push('shipped in Shopify, no item fulfillment in NS');
     if (problems.length) {
       counts['issues'] = (counts['issues'] ?? 0) + 1;
       issues.push(`${label}\n  NS: invoice ${invs.map((i) => `${i.tranid} ${$(i.total)}`).join(' + ')}${cmTotal ? `, CM ${$(cmTotal)}` : ''}; payments: ${cashCells.join('; ') || 'none found'}${writeoff ? `; write-offs ${$(writeoff)}` : ''}\n  WRONG: ${problems.join('; ')}\n  Bookkeeper: ${reconciledWrong ? '**bank-matched a wrong amount**' : cashCells.some((x) => x.includes('bank-matched')) ? 'bank-matched (amount correct)' : 'not bank-matched in NS'}`);
-    } else if (invTotal !== charged) {
+    } else if (invTotal !== charged && invTotal !== expectedCash) {
       presentation.push(`${label} — invoice ${$(invTotal)} with ${$(writeoff)} written off at payment (net correct)`);
       ok++;
     } else ok++;
@@ -142,6 +161,10 @@ async function main() {
     `## THE LIST — ${issues.length} orders needing action`, '', ...issues.map((s) => `- ${s}`), '',
     `## Presentation only — ${presentation.length} orders (net correct; NetScore overstated the invoice and the bookkeeper wrote the difference off at payment). No action unless the CPA wants gross sales to match Shopify.`, '', ...presentation.map((s) => `- ${s}`), ''];
   const p = '/Users/gililisani/Documents/GitHub/qiqi-orders/docs/AUDIT-2026-CLEAN-LIST.md';
+  // Keep the hand-written "## Progress" section (group outcomes) across regenerations.
+  const prev = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
+  const prog = prev.match(/## Progress[\s\S]*?(?=\n## THE LIST)/);
+  if (prog) out.splice(6, 0, prog[0].trimEnd(), '');
   fs.writeFileSync(p, out.join('\n'));
   console.log(out.slice(0, 4).join('\n')); console.log(`issues=${issues.length} presentation=${presentation.length} → ${p}`);
 }

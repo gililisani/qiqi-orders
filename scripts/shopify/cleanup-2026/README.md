@@ -31,3 +31,11 @@ Every script writes to PRODUCTION NetSuite — owner approval per group.
 - `probe-refunds.ts <orders>` — read-only: Shopify refund facts (line items,
   restock type, gateway txn ids) + the full NS chain (SO/invoice/payment/IF/
   CM/refund with lines and GL) per order. Used to scope Groups C/D/E.
+- `import-absent.ts [--apply] [--money-only-refund] <orders>` — Group D: orders
+  with NO NS chain → the live engine's own import (retryOrder: customer → SO →
+  invoice → payment → IF → CM/refund, original dates, idempotent), then closes
+  the SO lines of cancelled never-shipped orders; `--money-only-refund` books a
+  restock refund on 1565 (engine parks those) when the owner confirms the goods
+  did not come back. Dry-run by default.
+- `fix-wholesale.ts [--apply] <orders>` — rule (b) for ENGINE-created records:
+  lines → net wholesale (original − allocations), header discountRate → 0.
