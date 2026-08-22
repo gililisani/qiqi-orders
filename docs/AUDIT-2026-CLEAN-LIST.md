@@ -13,6 +13,8 @@ Definition — properly recorded = NS invoice/fulfillment/credit memo exist as S
 
 - **Group B, portions 2+3 — DONE 2026-08-22.** Re-pricing: #7026, #7029, #7215, #7232 (lines → Shopify prices, payment → charged). Dropped duties: #6991 (+$3.43), #7251 (+$14.95), #7268 (+$13.00) — "Import Duties" line added on item 1464 → 240504 pass-through, header discount re-asserted flat, payment → charged. Group B remaining: **#6760 only** (Pro Discount / B2B-workaround case — awaiting owner guidance on representation).
 
+- **#6760 — DONE 2026-08-22. GROUP B COMPLETE (14/14).** Pro-Discount-era representation RULE (owner, option b): book product lines at the NET wholesale price (Shopify original − Pro Discount allocation), NO discount line — Sales reflects what the salon paid; never inflate 420000. VAT/duties always → 240504 pass-through. #6760: $805.25 → $457.25 on invoice, SO and PayPal payment ($348 phantom reversed; $79.35 BE VAT moved from revenue to 240504).
+
 ## THE LIST — 36 orders needing action
 
 - #5627 · 2026-01-04 · shopify_payments · Shopify $140.26

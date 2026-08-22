@@ -724,6 +724,22 @@ duplicates disqualified automatically; same-subsidiary duplicates park
 with facts for a human); non-lot items fulfill without inventory detail;
 duplicate-SKU Shopify lines map to distinct SO lines.
 
+### Correction rules learned while cleaning 2026 (2026-08-22)
+
+- ALL 2026 periods are OPEN (owner: nothing closes until the books are
+  clean) → corrections go IN PLACE on original dates, never as dated
+  adjustments. Invoice lines, SO lines and the payment amount are all
+  REST-patchable (line-addressed item patches; payment via
+  `payment` + `apply`); REST cannot DELETE sublist lines (405) — zero
+  them instead. Header discounts must be changed via `discountRate`, not
+  by adding a discount item line (that doubles the discount).
+- Shop-remitted (channelLiable) tax never reaches the payout → expected
+  cash = charged − channel-liable tax (#5627 was correct all along).
+- Pro-Discount era (pre-2026-07-16 B2B workaround): book lines at NET
+  wholesale (original − allocation), no discount line (owner rule b).
+- NetScore's "Shopify Tax Item" (1057 → 410000) on invoices must be
+  re-pointed to item 1464 (→ 240504) when touched.
+
 ### Dashboard v2 — FINANCIAL view (owner directive 2026-08-20, build next)
 
 The dashboard is the ACCOUNTING department's window, not a sales report.
