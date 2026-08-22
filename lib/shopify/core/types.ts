@@ -12,6 +12,8 @@
 
 interface MoneyBag {
   shopMoney: { amount: string; currencyCode?: string };
+  /** Customer-facing currency when the store presents in another currency (EUR window, May–Jul 2026). */
+  presentmentMoney?: { amount: string; currencyCode?: string };
 }
 
 export interface ShopifyTaxLine {
@@ -255,6 +257,19 @@ export interface OrderPlan {
   taxLines: PlanTaxLine[];
   shipping: { title: string; amountCents: number; taxLines: PlanTaxLine[] } | null;
   payments: PlanPayment[];
+  /**
+   * Presentment currency when it differs from the store's (the EUR window):
+   * cosmetic for the customer — Shopify converts, the payout lands in USD.
+   * Books in USD; the memo keeps the customer-facing figure.
+   */
+  presentment: { currency: string; amount: string } | null;
+  /**
+   * Presentment orders only: what Shopify Payments actually received in USD
+   * minus the USD as-sold invoice math (line/transaction conversions round
+   * separately — #6599: $400.74 charged vs $400.77 lines). Booked as an
+   * "FX rounding" invoice line so invoice == payment == money received.
+   */
+  fxAdjustmentCents: number;
   totals: {
     subtotalCents: number; // post-discount, ex tax + shipping
     discountCents: number;

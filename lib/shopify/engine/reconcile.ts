@@ -50,7 +50,8 @@ export function expectedInvoiceCents(plan: OrderPlan): number {
   return (
     plan.lines.reduce((s, l) => s + l.netAmountCents, 0) +
     (plan.shipping?.amountCents ?? 0) +
-    plan.taxLines.reduce((s, t) => s + t.amountCents, 0)
+    plan.taxLines.reduce((s, t) => s + t.amountCents, 0) +
+    (plan.fxAdjustmentCents ?? 0)
   );
 }
 

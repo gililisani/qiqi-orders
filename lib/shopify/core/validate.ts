@@ -52,9 +52,11 @@ export function gateOrder(order: ShopifyOrder, knownSkus: ReadonlySet<string>): 
   if (order.currencyCode !== USD) {
     issues.push({ code: 'NOT_USD', message: `${order.name} order currency is ${order.currencyCode}` });
   }
-  if (order.presentmentCurrencyCode && order.presentmentCurrencyCode !== USD) {
-    issues.push({ code: 'NOT_USD', message: `${order.name} presentment currency is ${order.presentmentCurrencyCode}` });
-  }
+  // Presentment currency (what the customer saw/paid, e.g. EUR during the
+  // May–Jul 2026 window) is COSMETIC: the store currency is USD, Shopify
+  // converts, the payout lands in USD. Every amount we book is shopMoney
+  // (USD). Only a non-USD STORE currency is the incident we refuse.
+  const presentmentFx = !!order.presentmentCurrencyCode && order.presentmentCurrencyCode !== USD;
   for (const t of order.transactions) {
     const cc = t.amountSet?.shopMoney?.currencyCode;
     if (cc && cc !== USD) {
@@ -137,7 +139,12 @@ export function gateOrder(order: ShopifyOrder, knownSkus: ReadonlySet<string>): 
     .reduce((sum, t) => sum + money(t.amountSet, `txn ${t.id}`), 0);
   // A CAPTURE follows its AUTHORIZATION; both appear but only capture moves money.
   const originalTotal = money(order.currentTotalPriceSet, 'total') + money(order.totalRefundedSet, 'refunded');
-  if (paidCents !== originalTotal) {
+  // Presentment orders: Shopify converts lines and transactions separately,
+  // so the USD received differs from the USD order total by cents (or a few
+  // dollars when a refund happens weeks later at another rate). Tolerate
+  // up to 2% / $10 and let the plan carry the difference as FX rounding.
+  const fxTolerance = presentmentFx ? Math.max(1000, Math.round(originalTotal * 0.02)) : 0;
+  if (Math.abs(paidCents - originalTotal) > fxTolerance) {
     issues.push({
       code: 'PAYMENT_MISMATCH',
       message: `${order.name} successful payments ${paidCents} != charged total ${originalTotal} (cents)`,

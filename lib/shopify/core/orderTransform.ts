@@ -93,6 +93,18 @@ export function buildOrderPlan(order: ShopifyOrder): OrderPlan {
     taxLines.push({ title: 'Import Duties', ratePercentage: null, amountCents: dutiesCents, channelLiable: false });
   }
 
+  // Presentment (EUR-window) orders: book USD; reconcile the USD actually
+  // received against the USD as-sold math and carry the difference.
+  const presentmentFx = !!order.presentmentCurrencyCode && order.presentmentCurrencyCode !== order.currencyCode;
+  const saleTxn = order.transactions.find((t) => (t.kind === 'SALE' || t.kind === 'CAPTURE') && t.status === 'SUCCESS');
+  const presentment = presentmentFx
+    ? { currency: order.presentmentCurrencyCode!, amount: saleTxn?.amountSet?.presentmentMoney?.amount ?? '' }
+    : null;
+  const asSoldInvoiceCents =
+    lines.reduce((s, l) => s + l.netAmountCents, 0) + shippingCents + taxLines.reduce((s, t) => s + t.amountCents, 0);
+  const paidCents = payments.reduce((s, p) => s + p.amountCents, 0);
+  const fxAdjustmentCents = presentmentFx && payments.length > 0 ? paidCents - asSoldInvoiceCents : 0;
+
   return {
     shopifyOrderId: gidNum(order.id),
     orderName: order.name,
@@ -104,6 +116,8 @@ export function buildOrderPlan(order: ShopifyOrder): OrderPlan {
     taxLines,
     shipping,
     payments,
+    presentment,
+    fxAdjustmentCents,
     totals: {
       subtotalCents: toCents(order.currentSubtotalPriceSet.shopMoney.amount),
       discountCents: toCents(order.currentTotalDiscountsSet.shopMoney.amount),

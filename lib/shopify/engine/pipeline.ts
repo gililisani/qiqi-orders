@@ -176,7 +176,7 @@ export async function runOrderPipeline(
       // in full — always.
       terms: { id: config.termsId },
       otherRefNum: plan.poNumber ?? plan.orderName,
-      memo: `Shopify ${plan.orderName}${plan.discountCodes.length ? ` · discount: ${plan.discountCodes.join(', ')}` : ''}`,
+      memo: `Shopify ${plan.orderName}${plan.discountCodes.length ? ` · discount: ${plan.discountCodes.join(', ')}` : ''}${plan.presentment ? ` · presented in ${plan.presentment.currency} ${plan.presentment.amount}` : ''}`,
       shippingCost: plan.shipping ? Number(centsToDecimal(plan.shipping.amountCents)) : 0,
       ...(plan.shipping ? { shipMethod: { id: config.shipMethodId } } : {}),
       ...(discountCents > 0
@@ -185,6 +185,20 @@ export async function runOrderPipeline(
       item: { items: itemLines },
     });
     created.so = true;
+  }
+
+  // FX rounding (presentment orders): invoice must equal the USD actually
+  // received so invoice == payment == clearing-account money. Rides on the
+  // refund-adjustment item (→ 410000 Sales); sign follows the difference.
+  if (plan.fxAdjustmentCents !== 0) {
+    taxLines.push({
+      item: { id: config.refundAdjustmentItemId },
+      quantity: 1,
+      price: { id: '-1' },
+      rate: Number(centsToDecimal(plan.fxAdjustmentCents)),
+      amount: Number(centsToDecimal(plan.fxAdjustmentCents)),
+      description: `FX rounding (presented in ${plan.presentment?.currency ?? 'foreign currency'})`,
+    });
   }
 
   // ---- step 3: ensure invoice ----

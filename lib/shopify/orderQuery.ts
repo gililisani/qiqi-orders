@@ -67,7 +67,7 @@ export const ORDER_SELECTION = `
   }
   transactions(first: 20) {
     id kind status gateway processedAt test
-    amountSet { shopMoney { amount currencyCode } }
+    amountSet { shopMoney { amount currencyCode } presentmentMoney { amount currencyCode } }
     parentTransaction { id }
     paymentId formattedGateway
     fees { amount { amount currencyCode } rate rateName type }
