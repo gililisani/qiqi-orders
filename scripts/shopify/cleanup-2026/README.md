@@ -5,6 +5,9 @@ Context: docs/AUDIT-2026-CLEAN-LIST.md (the list) + docs/SHOPIFY-SYNC.md
 on original dates. Run from repo root with
 `NODE_PATH=$PWD/node_modules SHOPIFY_ADMIN_TOKEN= npx tsx scripts/shopify/cleanup-2026/<script> [order numbers]`.
 Every script writes to PRODUCTION NetSuite — owner approval per group.
+This folder is EXCLUDED from tsconfig (one-off ops tooling run via tsx, typed
+loosely on purpose) — `next build` type-checks every other **/*.ts and the
+2026-08-22 deploys of 2f9d996 failed on fix-reprice.ts:39 before the exclude.
 
 - `clean-list.ts` — regenerates docs/AUDIT-2026-CLEAN-LIST.md from scratch
   (Shopify truth vs NS via NetScore stamps + our rows + PDF-RESTlet link
@@ -39,3 +42,10 @@ Every script writes to PRODUCTION NetSuite — owner approval per group.
   did not come back. Dry-run by default.
 - `fix-wholesale.ts [--apply] <orders>` — rule (b) for ENGINE-created records:
   lines → net wholesale (original − allocations), header discountRate → 0.
+- `fix-presentation.ts [--apply] <orders>` — the 7 "presentation only" orders:
+  NetScore over-invoiced and the bookkeeper took the gap as "discount taken"
+  on the payment (Dr 420000). Moves it where the engine puts it: lines → net
+  of Pro Discount (rule b), genuine promos → header discountRate (420000),
+  "Shopify Tax Item" → 1464, payment disc → 0 with the full invoice applied.
+  Caveat learned on #6753: NetScore omitted 100%-discounted (free) lines
+  entirely → don't add a header discount for a line that isn't there.
