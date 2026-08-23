@@ -754,6 +754,13 @@ duplicate-SKU Shopify lines map to distinct SO lines.
   enter value(s) for: Location") — engine config creditMemoLocationId =
   31 (Packable; accessible to Qiqi INC — BrandFox 46 belongs to Qiqi
   Global). Proven on CMUS10121-10123.
+- Bookkeeper's NetScore-era technique: payment recorded at the Shopify
+  amount with the gap in the customer payment's "discount taken" field
+  (Dr 420000 / Cr AR) — net-correct, gross not. Cleaned 2026-08-22 by
+  re-pricing invoice + SO and setting `apply.disc = 0` on the payment.
+  NetScore dropped 100 %-discounted (free) lines from SO/invoice/IF
+  entirely (#6753 FPS0025, #5621 TOL0004 was kept at $0) — the free unit
+  shipped without an NS inventory record.
 
 ### Dashboard v2 — FINANCIAL view (owner directive 2026-08-20, build next)
 
