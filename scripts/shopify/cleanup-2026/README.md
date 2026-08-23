@@ -49,3 +49,8 @@ loosely on purpose) — `next build` type-checks every other **/*.ts and the
   "Shopify Tax Item" → 1464, payment disc → 0 with the full invoice applied.
   Caveat learned on #6753: NetScore omitted 100%-discounted (free) lines
   entirely → don't add a header discount for a line that isn't there.
+
+Part 1 reconciliation (2026-08-23): lib/shopify/core/statement.ts +
+/api/shopify/statement build the 100501 "bank statement" (OFX) from
+Shopify balance transactions; netsuite/fi_connectivity_shopify.js is the
+NetSuite feed plug-in (deploy: netsuite/FI_FEED_DEPLOY.md).
