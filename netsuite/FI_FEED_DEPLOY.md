@@ -25,14 +25,17 @@ Production-specific:
 1. **Token into Vercel** — copy `SHOPIFY_STATEMENT_TOKEN` from `.env.local`
    into Vercel → qiqi-orders → Settings → Environment Variables →
    Production scope → redeploy (or wait for the next deploy).
-2. **Token into NetSuite** — Setup > Company > API Secrets > New:
-   ID `custsecret_qq_stmt_token`, value = the same token,
-   restrict to the script from step 3.
-3. **Upload the plug-in** — Documents > Files > SuiteScripts: upload
-   `netsuite/fi_connectivity_shopify.js`. Then Customization > Plug-ins >
-   Plug-in Implementations > New → pick the file → type shows
-   "Financial Institution Connectivity" → name "QQ Shopify 100501 Feed"
-   → Save (Status: Released).
+2. **Plug-in script** — two parts:
+   a. Documents > Files > SuiteScripts: upload
+      `netsuite/fi_connectivity_shopify.js`.
+   b. Customization > Plug-ins > Plug-in Implementations > New → pick the
+      uploaded file → type shows "Financial Institution Connectivity" →
+      name "QQ Shopify 100501 Feed" → Save (Status: Released).
+   (b matters: uploading the file alone registers nothing.)
+3. **Token into NetSuite** — Setup > Company > API Secrets > New:
+   ID `custsecret_qq_stmt_token`, value = the same token as step 1,
+   "Restrict to Script" → pick the plug-in from step 2b. (This is why the
+   script must exist first.)
 4. **Financial Institution record** — Setup > Accounting > Financial
    Institutions > New: name "Shopify Payments (Hub)". Add a **Format
    Profile**: profile type Bank Reconciliation, connectivity plug-in =
