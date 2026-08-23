@@ -1,6 +1,6 @@
-# 2026 — Shopify vs NetSuite, the clean list (2026-08-23T02:40Z)
+# 2026 — Shopify vs NetSuite, the clean list (2026-08-23T13:42Z)
 
-Orders: 1672 · test excluded: 0 · unpaid/cancelled (nothing to record): 0 · **properly recorded: 1669** · on the list below: 3
+Orders: 1672 · test excluded: 1 · unpaid/cancelled (nothing to record): 1 · **properly recorded: 1670** · on the list below: 0
 
 Definition — properly recorded = NS invoice/fulfillment/credit memo exist as Shopify says, cash recorded == cash Shopify moved, net revenue == Shopify net. All 2026 periods are open.
 
@@ -32,20 +32,24 @@ Definition — properly recorded = NS invoice/fulfillment/credit memo exist as S
 - **Build fix (ff7f39a)**: both Vercel deploys of 2f9d996 failed — `next build` type-checks every *.ts and the cleanup scripts broke it; folder excluded from tsconfig, `npm run build` clean, staging preview Ready. `main` still carries the broken commit until promoted.
 - Regenerated 2026-08-22T21:05Z: **1,669 / 1,672 properly recorded · 3 left (Group E) · 0 presentation-only.**
 
-## THE LIST — 3 orders needing action
+- **Group E — DONE 2026-08-23 (owner facts).** #5734: genuine $0 order (100 % "replacement order — shipping issue"), shipped → phantom $150 payment into Undeposited Funds deleted, −$150 header discount on INVUS15486/SOUS15478 (420000), IF16505 kept. #6234: cancelled in Shopify 1 min after creation, manual gateway, no money, never shipped → PUS15932 / INVUS16073 / SOUS16054 deleted. #6773: test order (tag `test`) → PUS16488 / INVUS16631 / SOUS16629 deleted. clean-list rules added: Shopify tag `test` = test order; cancelled order whose only transactions are `manual` = nothing to record.
+- **Promoted staging → main 2026-08-23 (64037f4)**; Vercel production + preview deploys green again.
+- **FINAL 2026-08-23T13:42Z: 0 issues · 0 presentation-only · 1,670 / 1,672 properly recorded (1 test, 1 nothing-to-record).** Aggregate: invoiced == charged ($323,869.52) and credit memos == refunds ($3,622.73) to the cent; net Δ −$8.26 = #5627's Shop-remitted marketplace tax written off at payment (correct). IF count 1,658 vs 1,655 Shopify-fulfilled: #5703, #5706, #5779 are PARTIALLY_FULFILLED in Shopify with an NS IF for the shipped part — consistent, the remainder is still open on both sides.
 
-- #5734 · 2026-01-22 · ? · Shopify $0.00
-  NS: invoice INVUS15486 $150.00; payments: PUS15340 $150.00 → 101321
-  WRONG: cash recorded $150.00 vs Shopify charged $0.00 (Δ $150.00); net revenue booked $150.00 vs Shopify net $0.00 (Δ $150.00)
-  Bookkeeper: not bank-matched in NS
-- #6234 · 2026-04-13 · manual · Shopify $210.00
-  NS: invoice INVUS16073 $105.00; payments: PUS15932 $105.00 → 101321
-  WRONG: cash recorded $105.00 vs Shopify charged $210.00 (Δ $-105.00); net revenue booked $105.00 vs Shopify net $210.00 (Δ $-105.00)
-  Bookkeeper: not bank-matched in NS
-- #6773 · 2026-06-16 · manual · Shopify $150.00
-  NS: invoice INVUS16631 $200.00; payments: PUS16488 $200.00 → 101321
-  WRONG: cash recorded $200.00 vs Shopify charged $150.00 (Δ $50.00); net revenue booked $200.00 vs Shopify net $150.00 (Δ $50.00)
-  Bookkeeper: not bank-matched in NS
+## Aggregate — every 2026 order with money (1670 orders)
+
+| | Shopify | NetSuite | Δ |
+|---|---|---|---|
+| Charged / invoiced (gross, as-sold) | $323,869.52 | $323,869.52 invoiced | $0.00 |
+| Refunded / credit memos | $3,622.73 | $3,622.73 | $0.00 |
+| Net | $320,246.79 | $320,238.53 | $-8.26 |
+| Cash recorded on customer payments | $323,869.52 | $323,861.26 (+ $8.26 written off) | $0.00 |
+| Shipped orders / NS item fulfillments | 1655 | 1658 | 3 |
+
+By gateway (cash into the clearing accounts): shopify_payments 1522 orders $295,522.46 charged → $295,514.20 recorded · paypal 109 orders $21,718.46 charged → $21,718.46 recorded · Affirm 30 orders $6,628.60 charged → $6,628.60 recorded · ? 9 orders $0.00 charged → $0.00 recorded
+
+## THE LIST — 0 orders needing action
+
 
 ## Presentation only — 0 orders (net correct; NetScore overstated the invoice and the bookkeeper wrote the difference off at payment). No action unless the CPA wants gross sales to match Shopify.
 
