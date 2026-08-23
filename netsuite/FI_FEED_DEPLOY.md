@@ -10,8 +10,17 @@ Prereqs already true in the account: Bank Statement Parsers SuiteApp
 (FICONNECTIVITY script type present), Hub endpoint live at
 https://partners.qiqiglobal.com/api/shopify/statement (main 6ff5a88).
 
-Do SANDBOX first (Hub endpoint is read-only; imports land in sandbox
-100501), then repeat 3-7 in PRODUCTION.
+All steps run in PRODUCTION NetSuite (owner's call 2026-08-23: sandbox
+already proved import + rules; the real 1:1 match rate lives in prod).
+Safe because an import posts NOTHING to the GL — statement lines are
+reconciliation data; auto-matches wait in Review for confirmation, and
+imported lines can always be Excluded.
+
+Production-specific:
+- The bookkeeper's OLD imported lines still open on 100501's left side
+  may duplicate lines this feed brings for the same transactions →
+  Exclude her leftovers so nothing double-matches.
+- In Review, confirm page by page after a scan — never blanket-confirm.
 
 1. **Token into Vercel** — copy `SHOPIFY_STATEMENT_TOKEN` from `.env.local`
    into Vercel → qiqi-orders → Settings → Environment Variables →
