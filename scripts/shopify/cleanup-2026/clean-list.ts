@@ -27,7 +27,7 @@ async function main() {
   // 1. Shopify truth
   const orders = await shopifyPaginate<any>(`query A($q: String!, $cursor: String) {
     orders(first: 100, after: $cursor, sortKey: CREATED_AT, query: $q) {
-      nodes { id name test createdAt cancelledAt displayFinancialStatus displayFulfillmentStatus
+      nodes { id name test tags createdAt cancelledAt displayFinancialStatus displayFulfillmentStatus
         taxLines { channelLiable priceSet { shopMoney { amount } } }
         transactions(first: 20) { kind status gateway amountSet { shopMoney { amount } } } }
       pageInfo { hasNextPage endCursor } } }`, { q: "created_at:>='2026-01-01T00:00:00-05:00'" }, 'orders');
@@ -106,10 +106,14 @@ async function main() {
 
   // 6. Verdicts
   const issues: string[] = []; const presentation: string[] = []; let ok = 0, tests = 0, unpaid = 0;
+  const agg = { orders: 0, charged: 0, refunded: 0, invoiced: 0, cms: 0, cash: 0, writeoff: 0, shipped: 0, ifs: 0, byGateway: new Map<string, { n: number; charged: number; cash: number }>() };
   const counts: Record<string, number> = {};
   for (const o of orders) {
-    if (o.test) { tests++; continue; }
+    if (o.test || (o.tags ?? []).some((t: string) => t.trim().toLowerCase() === 'test')) { tests++; continue; } // Shopify test flag OR owner tag "test" (#6773)
     if (!['PAID', 'PARTIALLY_REFUNDED', 'REFUNDED'].includes(o.displayFinancialStatus)) { unpaid++; continue; }
+    // Cancelled order whose only "payments" were manual (no gateway money) → nothing happened (#6234 rule, owner 2026-08-23).
+    const moneyTxns = o.transactions.filter((t: any) => t.status === 'SUCCESS' && (t.kind === 'SALE' || t.kind === 'CAPTURE' || t.kind === 'REFUND'));
+    if (o.cancelledAt && moneyTxns.length > 0 && moneyTxns.every((t: any) => t.gateway === 'manual')) { unpaid++; continue; }
     const id = o.id.replace(/^.*\//, ''); const d = storeDate(o.createdAt);
     const ok_ = (t: any) => t.status === 'SUCCESS';
     const charged = o.transactions.filter((t: any) => ok_(t) && (t.kind === 'SALE' || t.kind === 'CAPTURE')).reduce((s: number, t: any) => s + c(t.amountSet.shopMoney.amount), 0);
@@ -147,6 +151,9 @@ async function main() {
     }
     if (!nettedByNetScore && Math.abs(netBooked - netTruth) > 0.005) problems.push(`net revenue booked ${$(netBooked)} vs Shopify net ${$(netTruth)} (Δ ${$(netBooked - netTruth)})`);
     if (o.displayFulfillmentStatus === 'FULFILLED' && !(e.ItemShip ?? []).length) problems.push('shipped in Shopify, no item fulfillment in NS');
+    agg.orders++; agg.charged += charged; agg.refunded += refunded; agg.invoiced += invTotal; agg.cms += cmTotal; agg.cash += cash; agg.writeoff += writeoff;
+    if (o.displayFulfillmentStatus === 'FULFILLED') agg.shipped++; if ((e.ItemShip ?? []).length) agg.ifs++;
+    { const g = agg.byGateway.get(gateway) ?? { n: 0, charged: 0, cash: 0 }; g.n++; g.charged += charged; g.cash += cash; agg.byGateway.set(gateway, g); }
     if (problems.length) {
       counts['issues'] = (counts['issues'] ?? 0) + 1;
       issues.push(`${label}\n  NS: invoice ${invs.map((i) => `${i.tranid} ${$(i.total)}`).join(' + ')}${cmTotal ? `, CM ${$(cmTotal)}` : ''}; payments: ${cashCells.join('; ') || 'none found'}${writeoff ? `; write-offs ${$(writeoff)}` : ''}\n  WRONG: ${problems.join('; ')}\n  Bookkeeper: ${reconciledWrong ? '**bank-matched a wrong amount**' : cashCells.some((x) => x.includes('bank-matched')) ? 'bank-matched (amount correct)' : 'not bank-matched in NS'}`);
@@ -158,6 +165,14 @@ async function main() {
   const out = [`# 2026 — Shopify vs NetSuite, the clean list (${new Date().toISOString().slice(0,16)}Z)`, '',
     `Orders: ${orders.length} · test excluded: ${tests} · unpaid/cancelled (nothing to record): ${unpaid} · **properly recorded: ${ok}** · on the list below: ${issues.length}`, '',
     'Definition — properly recorded = NS invoice/fulfillment/credit memo exist as Shopify says, cash recorded == cash Shopify moved, net revenue == Shopify net. All 2026 periods are open.', '',
+    `## Aggregate — every 2026 order with money (${agg.orders} orders)`, '',
+    `| | Shopify | NetSuite | Δ |`, `|---|---|---|---|`,
+    `| Charged / invoiced (gross, as-sold) | ${$(agg.charged)} | ${$(agg.invoiced)} invoiced | ${$(agg.invoiced - agg.charged)} |`,
+    `| Refunded / credit memos | ${$(agg.refunded)} | ${$(agg.cms)} | ${$(agg.cms - agg.refunded)} |`,
+    `| Net | ${$(agg.charged - agg.refunded)} | ${$(agg.invoiced - agg.writeoff - agg.cms)} | ${$((agg.invoiced - agg.writeoff - agg.cms) - (agg.charged - agg.refunded))} |`,
+    `| Cash recorded on customer payments | ${$(agg.charged)} | ${$(agg.cash)}${agg.writeoff ? ` (+ ${$(agg.writeoff)} written off)` : ''} | ${$(agg.cash + agg.writeoff - agg.charged)} |`,
+    `| Shipped orders / NS item fulfillments | ${agg.shipped} | ${agg.ifs} | ${agg.ifs - agg.shipped} |`, '',
+    `By gateway (cash into the clearing accounts): ${[...agg.byGateway.entries()].map(([g, v]) => `${g} ${v.n} orders ${$(v.charged)} charged → ${$(v.cash)} recorded`).join(' · ')}`, '',
     `## THE LIST — ${issues.length} orders needing action`, '', ...issues.map((s) => `- ${s}`), '',
     `## Presentation only — ${presentation.length} orders (net correct; NetScore overstated the invoice and the bookkeeper wrote the difference off at payment). No action unless the CPA wants gross sales to match Shopify.`, '', ...presentation.map((s) => `- ${s}`), ''];
   const p = '/Users/gililisani/Documents/GitHub/qiqi-orders/docs/AUDIT-2026-CLEAN-LIST.md';
