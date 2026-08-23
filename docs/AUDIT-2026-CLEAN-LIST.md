@@ -1,4 +1,4 @@
-# 2026 — Shopify vs NetSuite, the clean list (2026-08-22T19:49Z)
+# 2026 — Shopify vs NetSuite, the clean list (2026-08-23T02:40Z)
 
 Orders: 1672 · test excluded: 0 · unpaid/cancelled (nothing to record): 0 · **properly recorded: 1669** · on the list below: 3
 
@@ -28,6 +28,10 @@ Definition — properly recorded = NS invoice/fulfillment/credit memo exist as S
   - Engine gap noted: the live path does not close SO lines of cancelled never-shipped orders (a paid-then-cancelled order would sit in the fulfillment backlog) — candidate for the engine; cleanup closed them by hand.
 - **clean-list.ts upgraded** — sees cleanup-era IFs/second invoices (via `createdfrom`) and CMs (otherrefnum / SHOPCM-), accepts #5627's tax-write-off pattern, keeps this Progress section across regenerations. Regenerated 2026-08-22T19:40Z: **1,669 / 1,672 properly recorded; 3 left = Group E** (#5734, #6234, #6773 — manual-gateway/100%-discount orders paid into 101321 Undeposited Funds; bookkeeper facts pending).
 
+- **The 7 "presentation only" orders — DONE 2026-08-22 (owner: "not clean, go ahead").** Bookkeeper's technique was: payment at the Shopify amount, gap in the customer payment's "discount taken" field (Dr 420000) — net-correct, gross not. Moved the discount to where the engine puts it (`fix-presentation.ts`): lines net of Pro Discount (rule b), genuine promos → header discount (NYE25FI $220 on #5621, CHOOSECONTROL0526 $166 on #6402 → 420000), #6256's $93.44 "Shopify Tax Item" → 1464/240504, payment `disc` → 0 with the full invoice applied. #5621, #5851, #5995, #6256, #6402, #6585, #6753 now invoice == Shopify charge. Lesson (#6753): NetScore dropped 100 %-discounted free lines entirely — a free FPS0025 shipped with no NS SO/IF record; netted at $0, no header discount.
+- **Build fix (ff7f39a)**: both Vercel deploys of 2f9d996 failed — `next build` type-checks every *.ts and the cleanup scripts broke it; folder excluded from tsconfig, `npm run build` clean, staging preview Ready. `main` still carries the broken commit until promoted.
+- Regenerated 2026-08-22T21:05Z: **1,669 / 1,672 properly recorded · 3 left (Group E) · 0 presentation-only.**
+
 ## THE LIST — 3 orders needing action
 
 - #5734 · 2026-01-22 · ? · Shopify $0.00
@@ -43,12 +47,5 @@ Definition — properly recorded = NS invoice/fulfillment/credit memo exist as S
   WRONG: cash recorded $200.00 vs Shopify charged $150.00 (Δ $50.00); net revenue booked $200.00 vs Shopify net $150.00 (Δ $50.00)
   Bookkeeper: not bank-matched in NS
 
-## Presentation only — 7 orders (net correct; NetScore overstated the invoice and the bookkeeper wrote the difference off at payment). No action unless the CPA wants gross sales to match Shopify.
+## Presentation only — 0 orders (net correct; NetScore overstated the invoice and the bookkeeper wrote the difference off at payment). No action unless the CPA wants gross sales to match Shopify.
 
-- #5621 · 2026-01-03 · Affirm · Shopify $488.90 — invoice $533.90 with $45.00 written off at payment (net correct)
-- #5851 · 2026-02-12 · shopify_payments · Shopify $166.90 — invoice $194.90 with $28.00 written off at payment (net correct)
-- #5995 · 2026-03-08 · shopify_payments · Shopify $219.00 — invoice $274.00 with $55.00 written off at payment (net correct)
-- #6256 · 2026-04-17 · paypal · Shopify $585.24 — invoice $617.24 with $32.00 written off at payment (net correct)
-- #6402 · 2026-05-06 · shopify_payments · Shopify $406.90 — invoice $524.90 with $118.00 written off at payment (net correct)
-- #6585 · 2026-05-26 · shopify_payments · Shopify $391.90 — invoice $524.90 with $133.00 written off at payment (net correct)
-- #6753 · 2026-06-12 · shopify_payments · Shopify $151.00 — invoice $302.00 with $151.00 written off at payment (net correct)
