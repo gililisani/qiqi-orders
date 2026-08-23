@@ -1,6 +1,7 @@
 /**
  * @NApiVersion 2.x
- * @NScriptType plugintypeimpl
+ * @NScriptType fiConnectivityPlugin
+ * @NModuleScope SameAccount
  *
  * QQ Shopify 100501 Feed — Financial Institution Connectivity plug-in.
  *
