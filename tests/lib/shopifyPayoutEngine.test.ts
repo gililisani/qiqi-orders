@@ -94,6 +94,34 @@ describe('ensurePayoutBooking (real payout fixtures)', () => {
     expect(r.plan.disputes).toHaveLength(2);
   });
 
+  it('100501 nets to ZERO per payout even with a lone dispute fee (regression: dispute fee was counted in the fee bill AND the dispute leg)', async () => {
+    // Synthetic payout: one charge + one dispute withdrawal whose $15 fee does not cancel out.
+    const pid = 'gid://shopify/ShopifyPaymentsPayout/1';
+    const txns: ShopifyBalanceTxn[] = [
+      { id: 'gid://x/1', transactionDate: '2026-08-10T10:00:00Z', type: 'CHARGE', test: false, amount: { amount: '1000.00' }, fee: { amount: '30.00' }, net: { amount: '970.00' }, sourceId: null, sourceType: null, adjustmentReason: null, associatedOrder: { id: 'gid://shopify/Order/1', name: '#1' }, associatedPayout: { id: pid } },
+      { id: 'gid://x/2', transactionDate: '2026-08-10T11:00:00Z', type: 'DISPUTE_WITHDRAWAL', test: false, amount: { amount: '-186.00' }, fee: { amount: '15.00' }, net: { amount: '-201.00' }, sourceId: null, sourceType: null, adjustmentReason: null, associatedOrder: { id: 'gid://shopify/Order/2', name: '#2' }, associatedPayout: { id: pid } },
+      { id: 'gid://x/3', transactionDate: '2026-08-11T01:00:00Z', type: 'TRANSFER', test: false, amount: { amount: '-769.00' }, fee: { amount: '0.0' }, net: { amount: '-769.00' }, sourceId: '1', sourceType: 'TRANSFER', adjustmentReason: null, associatedOrder: null, associatedPayout: { id: pid } },
+    ];
+    const payout: ShopifyPayoutNode = { id: pid, legacyResourceId: '1', issuedAt: '2026-08-11T01:00:00Z', status: 'PAID', net: { amount: '769.00' }, summary: {} as any };
+    const configured: EngineConfig = { ...ENGINE_CONFIG, payouts: { ...ENGINE_CONFIG.payouts, chargebackAccountId: 'cb-acct' } };
+    const { ns, creates, transforms } = fakeNs();
+    await ensurePayoutBooking(payout, txns, ns, configured);
+    const clearing = ENGINE_CONFIG.gatewayAccounts.shopify_payments;
+    // What leaves 100501: fee bill payment (Σ fees) + the journal's clearing lines.
+    expect(transforms.some((t) => t.to === 'vendorPayment')).toBe(true); // fee bill paid from 100501 in full
+    const bill = creates.find((c) => c.type === 'vendorBill')!;
+    const feeCents = Math.round(bill.payload.expense.items.reduce((s: number, l: any) => s + Number(l.amount), 0) * 100);
+    const journal = creates.find((c) => c.type === 'journalEntry')!;
+    const clearingLines = journal.payload.line.items.filter((l: any) => l.account.id === clearing);
+    const clearingCredit = clearingLines.reduce((s: number, l: any) => s + Math.round((l.credit ?? 0) * 100) - Math.round((l.debit ?? 0) * 100), 0);
+    expect(feeCents).toBe(4500); // 30 + 15
+    expect(100000 - feeCents - clearingCredit).toBe(0); // gross charge in − fees − clearing = 0
+    // chargeback leg is GROSS (186), not net (201)
+    expect(journal.payload.line.items.find((l: any) => l.account.id === 'cb-acct').debit).toBe(186);
+    // the clearing side is split per statement piece: payout net + disputes
+    expect(clearingLines.map((l: any) => l.memo)).toEqual(['Clear Shopify balance · payout 1 net', 'Clear Shopify balance · payout 1 disputes']);
+  });
+
   it('re-run adopts all records, creates nothing', async () => {
     const { payout, txns } = loadPayout('124145598519');
     const id = payout.legacyResourceId;

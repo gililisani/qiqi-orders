@@ -92,25 +92,34 @@ export async function ensurePayoutBooking(
   }
 
   // ---- net journal: bank ← clearing (+ pass-through clearing legs) ----
+  // GROSS for the pass-through legs: their fees are already in the fee
+  // vendor bill (FEE_LABELS covers dispute fees), so using net here would
+  // count a dispute fee twice and leave 100501 off by it (found 2026-08-23
+  // while building the 100501 statement; hidden so far because the Aug 10
+  // payout's dispute fees cancelled out).
   const taxAdjCents = -plan.breakdown
     .filter((b) => b.type.startsWith('TAX_ADJUSTMENT'))
-    .reduce((s, b) => s + b.netCents, 0); // deductions are negative → positive debit
+    .reduce((s, b) => s + b.grossCents, 0); // deductions are negative → positive debit
   const disputeCents = -plan.breakdown
     .filter((b) => b.type.startsWith('DISPUTE'))
-    .reduce((s, b) => s + b.netCents, 0); // net withdrawal → positive debit (0 if none)
+    .reduce((s, b) => s + b.grossCents, 0); // withdrawal → positive debit (0 if none)
 
   // Signed legs; positive = debit, negative = credit. Must sum to zero.
+  // The 100501 side is split into the same pieces the Shopify statement
+  // shows (payout net / marketplace tax / disputes) so Match Bank Data
+  // pairs every statement line with exactly one journal line.
   const legs: Array<{ account: string; cents: number; memo: string }> = [
     { account: cfg.bankAccountId, cents: plan.netCents, memo: 'Payout net to bank' },
+    { account: config.gatewayAccounts.shopify_payments, cents: -plan.netCents, memo: `Clear Shopify balance · payout ${plan.shopifyPayoutId} net` },
   ];
   if (taxAdjCents !== 0) {
     legs.push({ account: cfg.marketplaceTaxAccountId, cents: taxAdjCents, memo: 'Shop-remitted marketplace tax' });
+    legs.push({ account: config.gatewayAccounts.shopify_payments, cents: -taxAdjCents, memo: `Clear Shopify balance · payout ${plan.shopifyPayoutId} marketplace tax` });
   }
   if (disputeCents !== 0 && cfg.chargebackAccountId) {
     legs.push({ account: cfg.chargebackAccountId, cents: disputeCents, memo: 'Chargebacks/disputes' });
+    legs.push({ account: config.gatewayAccounts.shopify_payments, cents: -disputeCents, memo: `Clear Shopify balance · payout ${plan.shopifyPayoutId} disputes` });
   }
-  const clearingCents = -(plan.netCents + taxAdjCents + disputeCents);
-  legs.push({ account: config.gatewayAccounts.shopify_payments, cents: clearingCents, memo: 'Clear Shopify balance' });
 
   const journalExtId = `SHOPPO-NET-${plan.shopifyPayoutId}`;
   let nsJournalId = await ns.findRecordIdByExternalId('journalEntry', journalExtId);

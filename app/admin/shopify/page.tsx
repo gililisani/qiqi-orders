@@ -184,6 +184,10 @@ export default function ShopifySyncDashboard() {
   const [importName, setImportName] = useState('');
   const [skuMapInput, setSkuMapInput] = useState<Record<string, string>>({});
   const [period, setPeriod] = useState<PeriodKey>('mtd');
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const [stmtFrom, setStmtFrom] = useState(todayIso.slice(0, 8) + '01');
+  const [stmtTo, setStmtTo] = useState(todayIso);
+  const [stmtBusy, setStmtBusy] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const loadedRef = useRef<number>(20);
 
@@ -263,6 +267,34 @@ export default function ShopifySyncDashboard() {
   const importOrder = () => {
     if (importName.trim()) act('/api/shopify/sync/import-order', { orderName: importName.trim() }, 'import');
   };
+  // Part 1 reconciliation: Shopify transactions as a 100501 "bank statement"
+  // (OFX) for NetSuite Banking Import → Match Bank Data pairs them with the
+  // engine's payments/refunds/payout journals.
+  const downloadStatement = async () => {
+    setStmtBusy(true);
+    setActionMsg(null);
+    try {
+      const res = await fetchWithAuth(`/api/shopify/statement?from=${stmtFrom}&to=${stmtTo}`);
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `shopify-100501-${stmtFrom}_${stmtTo}.ofx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setActionMsg(`100501 statement ${stmtFrom} → ${stmtTo}: ${res.headers.get('X-Statement-Lines') ?? '?'} lines — import it in NetSuite (Transactions → Bank → Banking Import), then Match Bank Data on 100501.`);
+    } catch (e: any) {
+      setActionMsg(`Statement failed: ${String(e?.message ?? e)}`);
+    } finally {
+      setStmtBusy(false);
+    }
+  };
 
   const errors = data?.errors ?? [];
   const nonErrors = data?.orders.filter((o) => o.state !== 'error') ?? [];
@@ -284,6 +316,26 @@ export default function ShopifySyncDashboard() {
             />
             <Button size="sm" variant="outline" disabled={retrying === 'import'} onClick={importOrder}>
               Import
+            </Button>
+            <span className="mx-1 h-6 w-px bg-border" aria-hidden />
+            <input
+              type="date"
+              value={stmtFrom}
+              max={stmtTo}
+              onChange={(e) => setStmtFrom(e.target.value)}
+              aria-label="Statement from"
+              className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+            />
+            <input
+              type="date"
+              value={stmtTo}
+              min={stmtFrom}
+              onChange={(e) => setStmtTo(e.target.value)}
+              aria-label="Statement to"
+              className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+            />
+            <Button size="sm" variant="outline" disabled={stmtBusy || !stmtFrom || !stmtTo} onClick={downloadStatement}>
+              {stmtBusy ? 'Building…' : '100501 statement (OFX)'}
             </Button>
           </div>
         }
