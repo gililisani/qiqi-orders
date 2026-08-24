@@ -80,9 +80,11 @@ define(['N/https', 'N/log'], function (https, log) {
   }
 
   function refreshData(context) {
-    // On-demand refresh (Update Imported Bank Data button) — same pull, no async job to track.
-    getTransactionData(context);
-    if (context.setRefreshRequestId) context.setRefreshRequestId({ refreshRequestId: 'qq-' + Date.now() });
+    // "Update Imported Bank Data" asks the institution to PREPARE fresh
+    // data; the pull happens in the getTransactionData call NetSuite makes
+    // next, with its own context. The Hub is always fresh → acknowledge.
+    // (This context has no addDataChunk — fetching here crashes.)
+    context.setRefreshRequestId({ refreshRequestId: 'qq-' + new Date().getTime() });
   }
 
   function getRefreshRequestStatus(context) {
