@@ -58,9 +58,12 @@ define(['N/https', 'N/log'], function (https, log) {
       var from = isoDay(req.dataStartTime, BACKLOG_START);
       var to = isoDay(req.dataEndTime, today());
       var url = HUB_URL + '/api/shopify/statement?from=' + from + '&to=' + to;
+      // Secret placeholders resolve ONLY through a SecureString (a plain
+      // string header is sent literally → the Hub sees garbage → 401).
+      var auth = https.createSecureString({ input: 'Bearer {custsecret_qq_stmt_token}' });
       var res = https.get({
         url: url,
-        headers: { Authorization: 'Bearer {custsecret_qq_stmt_token}', Accept: 'application/x-ofx' },
+        headers: { Authorization: auth, Accept: 'application/x-ofx' },
       });
       if (res.code !== 200) {
         log.error('qq-shopify-feed', 'HTTP ' + res.code + ' for ' + from + '..' + to + ': ' + (res.body || '').slice(0, 300));
