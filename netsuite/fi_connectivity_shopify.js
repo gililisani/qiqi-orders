@@ -24,7 +24,6 @@
  */
 define(['N/https', 'N/log'], function (https, log) {
   var HUB_URL = 'https://partners.qiqiglobal.com'; // Hub production origin
-  var ACCOUNT_KEY = 'shopify-payments'; // must equal the OFX ACCTID the Hub emits
   var BACKLOG_START = '2026-01-01'; // first-ever pull covers the cleaned year
 
   function isoDay(value, fallback) {
@@ -39,25 +38,35 @@ define(['N/https', 'N/log'], function (https, log) {
     context.configurationIFrameUrl = HUB_URL + '/admin/shopify';
   }
 
+  var ACCOUNTS = [
+    { accountMappingKey: 'shopify-payments', displayName: 'Shopify Payments (Qiqi Hub)' },
+    { accountMappingKey: 'paypal', displayName: 'PayPal via Shopify (Qiqi Hub)' },
+    { accountMappingKey: 'affirm', displayName: 'Affirm via Shopify (Qiqi Hub)' },
+  ];
+
   function getAccounts(context) {
-    context.addAccount({
-      accountMappingKey: ACCOUNT_KEY,
-      displayName: 'Shopify Payments (Qiqi Hub)',
-      accountType: 'BANK',
-      currency: 'USD',
-      groupName: 'Shopify',
-      lastUpdated: new Date().toISOString().slice(0, 19),
-    });
+    for (var i = 0; i < ACCOUNTS.length; i++) {
+      context.addAccount({
+        accountMappingKey: ACCOUNTS[i].accountMappingKey,
+        displayName: ACCOUNTS[i].displayName,
+        accountType: 'BANK',
+        currency: 'USD',
+        groupName: 'Shopify',
+        lastUpdated: new Date().toISOString().slice(0, 19),
+      });
+    }
   }
 
   function getTransactionData(context) {
     var requests = JSON.parse(context.accountRequestsJSON || '[]');
     for (var i = 0; i < requests.length; i++) {
       var req = requests[i];
-      if (req.accountMappingKey !== ACCOUNT_KEY) continue;
+      var known = false;
+      for (var k = 0; k < ACCOUNTS.length; k++) if (ACCOUNTS[k].accountMappingKey === req.accountMappingKey) known = true;
+      if (!known) continue;
       var from = isoDay(req.dataStartTime, BACKLOG_START);
       var to = isoDay(req.dataEndTime, today());
-      var url = HUB_URL + '/api/shopify/statement?from=' + from + '&to=' + to;
+      var url = HUB_URL + '/api/shopify/statement?from=' + from + '&to=' + to + '&account=' + req.accountMappingKey;
       // Secret placeholders resolve ONLY through a SecureString (a plain
       // string header is sent literally → the Hub sees garbage → 401).
       var auth = https.createSecureString({ input: 'Bearer {custsecret_qq_stmt_token}' });
@@ -73,7 +82,7 @@ define(['N/https', 'N/log'], function (https, log) {
         }
         throw new Error('Hub statement request failed: HTTP ' + res.code);
       }
-      log.audit('qq-shopify-feed', 'statement ' + from + '..' + to + ' → ' + res.body.length + ' chars');
+      log.audit('qq-shopify-feed', req.accountMappingKey + ' ' + from + '..' + to + ' → ' + res.body.length + ' chars');
       context.addDataChunk({ dataChunk: res.body });
     }
     context.returnAccountRequestsJSON({ accountsJson: context.accountRequestsJSON });

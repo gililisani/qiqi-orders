@@ -3,7 +3,7 @@
  * (newest-first paging until we are past `from`). Input for the 100501
  * statement (core/statement.ts). Read-only.
  */
-import { shopifyGraphQL } from './client';
+import { shopifyGraphQL, shopifyPaginate } from './client';
 import { storeDate } from './core/dates';
 import type { ShopifyBalanceTxn } from './core/payoutTransform';
 
@@ -65,6 +65,51 @@ export async function fetchPayoutIssueDates(opts: { from: string; to: string }):
     }
     if (past || !conn.pageInfo.hasNextPage) break;
     cursor = conn.pageInfo.endCursor;
+  }
+  return out;
+}
+
+export interface GatewayTxn {
+  id: string;
+  orderName: string;
+  kind: string;
+  status: string;
+  gateway: string;
+  processedAt: string;
+  amount: string;
+}
+
+/**
+ * PayPal/Affirm order transactions from Shopify (Phase A of the gateway
+ * feeds): charges + refunds per order — the exact mirror of the customer
+ * payments/refunds the engine posts to 100504/100503. Gateway fees and
+ * bank transfers are NOT in Shopify; they stay with the bookkeeper until
+ * Phase B (gateway APIs). Gateway names are matched case-insensitively
+ * (Shopify shows 'paypal' and 'Affirm').
+ */
+export async function fetchGatewayTransactions(gateway: 'paypal' | 'affirm', opts: { from: string; to: string }): Promise<GatewayTxn[]> {
+  // updated_at catches refunds on old orders as well as new orders; the
+  // 21-day slack covers late refund processing inside the window.
+  const lo = new Date(new Date(opts.from).getTime() - 21 * 864e5).toISOString().slice(0, 10);
+  const orders = await shopifyPaginate<any>(
+    `query GW($q: String!, $cursor: String) {
+      orders(first: 100, after: $cursor, query: $q) {
+        nodes { id name test transactions(first: 20) { id kind status gateway processedAt amountSet { shopMoney { amount } } } }
+        pageInfo { hasNextPage endCursor }
+      }
+    }`,
+    { q: `gateway:${gateway} updated_at:>='${lo}'` },
+    'orders',
+  );
+  const out: GatewayTxn[] = [];
+  for (const o of orders) {
+    if (o.test) continue;
+    for (const t of o.transactions ?? []) {
+      if (String(t.gateway ?? '').trim().toLowerCase() !== gateway) continue;
+      if (t.status !== 'SUCCESS') continue;
+      if (t.kind !== 'SALE' && t.kind !== 'CAPTURE' && t.kind !== 'REFUND') continue;
+      out.push({ id: t.id.replace(/^.*\//, ''), orderName: o.name, kind: t.kind, status: t.status, gateway, processedAt: t.processedAt, amount: t.amountSet.shopMoney.amount });
+    }
   }
   return out;
 }

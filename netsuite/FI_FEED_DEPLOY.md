@@ -63,3 +63,24 @@ and pairs 1:1.
 Rollback: deactivate the plug-in implementation (or the import schedule);
 imported-but-unmatched lines can be Excluded. Nothing posts to the GL
 from an import — matching only flags reconciliation state.
+
+## PayPal + Affirm accounts (Phase A, added 2026-08-24)
+
+The same plug-in now serves three accounts: `shopify-payments` (100501),
+`paypal` (100504), `affirm` (100503). PayPal/Affirm lines are the ORDER
+side only (charges + refunds from Shopify — 26/26 and 13/13 verified
+against NS postings). Gateway fees and bank transfers are not in Shopify;
+the bookkeeper keeps booking/matching those (Phase B = PayPal/Affirm APIs).
+
+To enable (after the Hub deploy carrying the `account` parameter):
+1. File Cabinet → replace `fi_connectivity_shopify.js` with the current
+   version (adds the two accounts).
+2. Setup > Accounting > Financial Institutions > "Shopify Payments (Hub)"
+   → the format profile → **Account Linking** → two new rows appear:
+   "PayPal via Shopify (Qiqi Hub)" → link GL **100504**,
+   "Affirm via Shopify (Qiqi Hub)" → link GL **100503**;
+   set each row's earliest-import date (60-day max applies) → Save.
+3. Next 00:01 import (or Update Imported Bank Data) pulls all three.
+   Affirm is the bookkeeper's best-kept account — expect some of its
+   older lines to find no free partner (already matched her way):
+   Exclude those.

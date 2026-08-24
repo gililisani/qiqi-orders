@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
-import { buildStatementLines, renderOfx } from '@/lib/shopify/core/statement';
+import { buildStatementLines, buildGatewayStatementLines, renderOfx } from '@/lib/shopify/core/statement';
 import { buildPayoutPlan } from '@/lib/shopify/core/payoutTransform';
 import type { ShopifyBalanceTxn, ShopifyPayoutNode } from '@/lib/shopify/core/payoutTransform';
 
@@ -55,6 +55,19 @@ describe('100501 statement (Part 1 reconciliation)', () => {
     expect(windowed.every((l) => l.date === '2026-08-13')).toBe(true);
     const withTest = buildStatementLines([{ ...txns[1], id: 'gid://x/1', test: true }]);
     expect(withTest).toEqual([]);
+  });
+
+  it('gateway lines (PayPal/Affirm Phase A): charge credit, refund debit, window filter, stable fitids', () => {
+    const txns = [
+      { id: '111', orderName: '#7300', kind: 'SALE', processedAt: '2026-08-20T14:00:00Z', amount: '208.90' },
+      { id: '112', orderName: '#7300', kind: 'REFUND', processedAt: '2026-08-22T14:00:00Z', amount: '208.90' },
+      { id: '113', orderName: '#7301', kind: 'CAPTURE', processedAt: '2026-08-25T14:00:00Z', amount: '50.00' },
+      { id: '114', orderName: '#7302', kind: 'SALE', processedAt: '2026-08-21T14:00:00Z', amount: '0.00' },
+    ];
+    const lines = buildGatewayStatementLines(txns, { from: '2026-08-19', to: '2026-08-23' });
+    expect(lines.map((l) => l.fitId)).toEqual(['gw-111', 'gw-112']); // #7301 outside window, zero-amount dropped
+    expect(lines[0]).toMatchObject({ cents: 20890, trnType: 'CREDIT', name: 'Shopify order #7300', date: '2026-08-20' });
+    expect(lines[1]).toMatchObject({ cents: -20890, trnType: 'DEBIT', name: 'Shopify refund #7300' });
   });
 
   it('renders OFX 2.x the NetSuite parser accepts: header, account, one STMTTRN per line, escaped text', () => {

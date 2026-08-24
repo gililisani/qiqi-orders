@@ -171,3 +171,33 @@ ${trn}
 </OFX>
 `;
 }
+
+import type { GatewayTxn } from '../statementFetch';
+
+/**
+ * PayPal/Affirm statement lines (Phase A): one line per successful order
+ * charge/refund, mirroring the engine's customer payments/refunds in
+ * 100504/100503. Naming matches the Shopify feed so the same
+ * reconciliation rules apply.
+ */
+export function buildGatewayStatementLines(txns: Pick<GatewayTxn, 'id' | 'orderName' | 'kind' | 'processedAt' | 'amount'>[], opts: { from?: string; to?: string } = {}): StatementLine[] {
+  const lines: StatementLine[] = [];
+  for (const t of txns) {
+    const date = storeDate(t.processedAt);
+    const cents = toCents(t.amount);
+    if (cents === 0) continue;
+    const refund = t.kind === 'REFUND';
+    lines.push({
+      fitId: `gw-${t.id}`,
+      date,
+      cents: refund ? -Math.abs(cents) : Math.abs(cents),
+      trnType: refund ? 'DEBIT' : 'CREDIT',
+      name: `${refund ? 'Shopify refund' : 'Shopify order'} ${t.orderName}`.slice(0, 32),
+      memo: `${refund ? 'Refund' : 'Charge'} ${t.orderName}`,
+      orderName: t.orderName,
+      payoutId: null,
+    });
+  }
+  const inWindow = (d: string) => (!opts.from || d >= opts.from) && (!opts.to || d <= opts.to);
+  return lines.filter((l) => inWindow(l.date)).sort((a, b) => a.date.localeCompare(b.date) || a.fitId.localeCompare(b.fitId));
+}

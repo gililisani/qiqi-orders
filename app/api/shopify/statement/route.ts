@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminWithPermission } from '../../../../platform/auth/guards';
-import { fetchBalanceTransactions, fetchPayoutIssueDates } from '../../../../lib/shopify/statementFetch';
+import { fetchBalanceTransactions, fetchPayoutIssueDates, fetchGatewayTransactions } from '../../../../lib/shopify/statementFetch';
 import { fetchPendingBalance } from '../../../../lib/shopify/payoutFetch';
-import { buildStatementLines, renderOfx } from '../../../../lib/shopify/core/statement';
+import { buildStatementLines, buildGatewayStatementLines, renderOfx } from '../../../../lib/shopify/core/statement';
 
 export const maxDuration = 120;
 
@@ -27,18 +27,27 @@ export async function GET(request: NextRequest) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
       return NextResponse.json({ error: 'from/to must be YYYY-MM-DD with from <= to' }, { status: 400 });
     }
-    const [txns, payoutDates] = await Promise.all([fetchBalanceTransactions({ from, to }), fetchPayoutIssueDates({ from, to })]);
-    const lines = buildStatementLines(txns, { from, to, payoutDates });
+    const account = sp.get('account') ?? 'shopify-payments';
+    if (!['shopify-payments', 'paypal', 'affirm'].includes(account)) {
+      return NextResponse.json({ error: `unknown account '${account}'` }, { status: 400 });
+    }
+    let lines;
+    if (account === 'shopify-payments') {
+      const [txns, payoutDates] = await Promise.all([fetchBalanceTransactions({ from, to }), fetchPayoutIssueDates({ from, to })]);
+      lines = buildStatementLines(txns, { from, to, payoutDates });
+    } else {
+      lines = buildGatewayStatementLines(await fetchGatewayTransactions(account as 'paypal' | 'affirm', { from, to }), { from, to });
+    }
     if (sp.get('format') === 'json') {
       return NextResponse.json({ from, to, count: lines.length, totalCents: lines.reduce((s, l) => s + l.cents, 0), lines });
     }
-    const pending = await fetchPendingBalance().catch(() => null);
-    const ofx = renderOfx(lines, { from, to, ledgerBalanceCents: pending != null ? Math.round(pending * 100) : 0 });
+    const pending = account === 'shopify-payments' ? await fetchPendingBalance().catch(() => null) : null;
+    const ofx = renderOfx(lines, { from, to, acctId: account, ledgerBalanceCents: pending != null ? Math.round(pending * 100) : 0 });
     return new NextResponse(ofx, {
       status: 200,
       headers: {
         'Content-Type': 'application/x-ofx; charset=utf-8',
-        'Content-Disposition': `attachment; filename="shopify-100501-${from}_${to}.ofx"`,
+        'Content-Disposition': `attachment; filename="shopify-${account}-${from}_${to}.ofx"`,
         'X-Statement-Lines': String(lines.length),
       },
     });
