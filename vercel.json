@@ -20,6 +20,9 @@
     },
     "app/api/amazon/dashboard/route.ts": {
       "maxDuration": 120
+    },
+    "app/api/cron/shopify-payouts/route.ts": {
+      "maxDuration": 300
     }
   },
   "crons": [
@@ -46,6 +49,10 @@
     {
       "path": "/api/cron/shopify-reconcile",
       "schedule": "10 8 * * *"
+    },
+    {
+      "path": "/api/cron/shopify-payouts",
+      "schedule": "0 14 * * *"
     }
   ]
 }
