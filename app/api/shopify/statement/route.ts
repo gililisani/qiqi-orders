@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { fetchBalanceTransactions, fetchPayoutIssueDates, fetchGatewayTransactions } from '../../../../lib/shopify/statementFetch';
 import { fetchPendingBalance } from '../../../../lib/shopify/payoutFetch';
-import { buildStatementLines, buildGatewayStatementLines, renderOfx } from '../../../../lib/shopify/core/statement';
+import { buildStatementLines, buildGatewayStatementLines, renderOfx, renderOfxDocument, type OfxStatement } from '../../../../lib/shopify/core/statement';
 
 export const maxDuration = 120;
 
@@ -22,33 +22,67 @@ export async function GET(request: NextRequest) {
     }
     const sp = request.nextUrl.searchParams;
     const today = new Date().toISOString().slice(0, 10);
-    const from = sp.get('from') ?? today.slice(0, 8) + '01';
-    const to = sp.get('to') ?? today;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
-      return NextResponse.json({ error: 'from/to must be YYYY-MM-DD with from <= to' }, { status: 400 });
+    const KNOWN = ['shopify-payments', 'paypal', 'affirm'];
+    const isDay = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d);
+
+    // Requests: either repeated req=account:from:to (multi-account — the
+    // plug-in path: ONE OFX document per pull, NetSuite concatenates
+    // chunks) or legacy account/from/to params (dashboard download).
+    const reqs: Array<{ account: string; from: string; to: string }> = [];
+    for (const r of sp.getAll('req')) {
+      const [account, from, to] = r.split(':');
+      reqs.push({ account, from: from || today.slice(0, 8) + '01', to: to || today });
     }
-    const account = sp.get('account') ?? 'shopify-payments';
-    if (!['shopify-payments', 'paypal', 'affirm'].includes(account)) {
-      return NextResponse.json({ error: `unknown account '${account}'` }, { status: 400 });
+    if (reqs.length === 0) {
+      reqs.push({
+        account: sp.get('account') ?? 'shopify-payments',
+        from: sp.get('from') ?? today.slice(0, 8) + '01',
+        to: sp.get('to') ?? today,
+      });
     }
-    let lines;
-    if (account === 'shopify-payments') {
-      const [txns, payoutDates] = await Promise.all([fetchBalanceTransactions({ from, to }), fetchPayoutIssueDates({ from, to })]);
-      lines = buildStatementLines(txns, { from, to, payoutDates });
-    } else {
-      lines = buildGatewayStatementLines(await fetchGatewayTransactions(account as 'paypal' | 'affirm', { from, to }), { from, to });
+    for (const r of reqs) {
+      if (!KNOWN.includes(r.account)) return NextResponse.json({ error: `unknown account '${r.account}'` }, { status: 400 });
+      if (!isDay(r.from) || !isDay(r.to) || r.from > r.to) {
+        return NextResponse.json({ error: `bad window for '${r.account}': from/to must be YYYY-MM-DD with from <= to` }, { status: 400 });
+      }
     }
+
+    const statements: OfxStatement[] = [];
+    for (const r of reqs) {
+      if (r.account === 'shopify-payments') {
+        const [txns, payoutDates] = await Promise.all([
+          fetchBalanceTransactions({ from: r.from, to: r.to }),
+          fetchPayoutIssueDates({ from: r.from, to: r.to }),
+        ]);
+        const pending = await fetchPendingBalance().catch(() => null);
+        statements.push({
+          acctId: r.account,
+          lines: buildStatementLines(txns, { from: r.from, to: r.to, payoutDates }),
+          from: r.from,
+          to: r.to,
+          ledgerBalanceCents: pending != null ? Math.round(pending * 100) : 0,
+        });
+      } else {
+        statements.push({
+          acctId: r.account,
+          lines: buildGatewayStatementLines(await fetchGatewayTransactions(r.account as 'paypal' | 'affirm', { from: r.from, to: r.to }), { from: r.from, to: r.to }),
+          from: r.from,
+          to: r.to,
+        });
+      }
+    }
+    const total = statements.reduce((n, st) => n + st.lines.length, 0);
     if (sp.get('format') === 'json') {
-      return NextResponse.json({ from, to, count: lines.length, totalCents: lines.reduce((s, l) => s + l.cents, 0), lines });
+      return NextResponse.json({ statements: statements.map((st) => ({ account: st.acctId, from: st.from, to: st.to, count: st.lines.length, lines: st.lines })) });
     }
-    const pending = account === 'shopify-payments' ? await fetchPendingBalance().catch(() => null) : null;
-    const ofx = renderOfx(lines, { from, to, acctId: account, ledgerBalanceCents: pending != null ? Math.round(pending * 100) : 0 });
+    const ofx = renderOfxDocument(statements);
+    const label = statements.length === 1 ? statements[0].acctId : 'multi';
     return new NextResponse(ofx, {
       status: 200,
       headers: {
         'Content-Type': 'application/x-ofx; charset=utf-8',
-        'Content-Disposition': `attachment; filename="shopify-${account}-${from}_${to}.ofx"`,
-        'X-Statement-Lines': String(lines.length),
+        'Content-Disposition': `attachment; filename="shopify-${label}-${statements[0].from}_${statements[0].to}.ofx"`,
+        'X-Statement-Lines': String(total),
       },
     });
   } catch (err: any) {

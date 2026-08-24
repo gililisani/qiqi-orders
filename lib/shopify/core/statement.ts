@@ -123,15 +123,31 @@ export interface OfxOptions {
 const xml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const ofxDate = (d: string) => `${d.replace(/-/g, '')}120000`;
 
-/** OFX 2.x (XML) bank statement — accepted by NetSuite's "OFX/QFX Plugin Implementation" parser. */
-export function renderOfx(lines: StatementLine[], opts: OfxOptions): string {
+export interface OfxStatement {
+  acctId: string;
+  lines: StatementLine[];
+  from: string;
+  to: string;
+  ledgerBalanceCents?: number;
+}
+
+/**
+ * OFX 2.x (XML) — accepted by NetSuite's "OFX/QFX Plugin Implementation"
+ * parser. ONE document may carry MULTIPLE statements (one STMTTRNRS per
+ * account): NetSuite concatenates all addDataChunk calls of a run into a
+ * single file, so a multi-account pull MUST be a single OFX envelope —
+ * a second <?xml?> header mid-file kills the parser (SSS_XML_DOM_EXCEPTION,
+ * hit live 2026-08-24).
+ */
+export function renderOfxDocument(statements: OfxStatement[], opts: { bankId?: string; now?: Date } = {}): string {
   const now = opts.now ?? new Date();
   const stamp = now.toISOString().replace(/[-:T]/g, '').slice(0, 14);
   const bankId = opts.bankId ?? 'SHOPIFY';
-  const acctId = opts.acctId ?? 'shopify-payments';
-  const trn = lines
-    .map(
-      (l) => `        <STMTTRN>
+  const blocks = statements
+    .map((st) => {
+      const trn = st.lines
+        .map(
+          (l) => `        <STMTTRN>
           <TRNTYPE>${l.trnType}</TRNTYPE>
           <DTPOSTED>${ofxDate(l.date)}</DTPOSTED>
           <TRNAMT>${centsToDecimal(l.cents)}</TRNAMT>
@@ -139,7 +155,23 @@ export function renderOfx(lines: StatementLine[], opts: OfxOptions): string {
           <NAME>${xml(l.name.slice(0, 32))}</NAME>
           <MEMO>${xml(l.memo.slice(0, 255))}</MEMO>
         </STMTTRN>`,
-    )
+        )
+        .join('\n');
+      return `    <STMTTRNRS>
+      <TRNUID>${stamp}-${xml(st.acctId)}</TRNUID>
+      <STATUS><CODE>0</CODE><SEVERITY>INFO</SEVERITY></STATUS>
+      <STMTRS>
+        <CURDEF>USD</CURDEF>
+        <BANKACCTFROM><BANKID>${bankId}</BANKID><ACCTID>${xml(st.acctId)}</ACCTID><ACCTTYPE>CHECKING</ACCTTYPE></BANKACCTFROM>
+        <BANKTRANLIST>
+        <DTSTART>${ofxDate(st.from)}</DTSTART>
+        <DTEND>${ofxDate(st.to)}</DTEND>
+${trn}
+        </BANKTRANLIST>
+        <LEDGERBAL><BALAMT>${centsToDecimal(st.ledgerBalanceCents ?? 0)}</BALAMT><DTASOF>${ofxDate(st.to)}</DTASOF></LEDGERBAL>
+      </STMTRS>
+    </STMTTRNRS>`;
+    })
     .join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>
 <?OFX OFXHEADER="200" VERSION="211" SECURITY="NONE" OLDFILEUID="NONE" NEWFILEUID="NONE"?>
@@ -153,26 +185,31 @@ export function renderOfx(lines: StatementLine[], opts: OfxOptions): string {
     </SONRS>
   </SIGNONMSGSRSV1>
   <BANKMSGSRSV1>
-    <STMTTRNRS>
-      <TRNUID>${stamp}</TRNUID>
-      <STATUS><CODE>0</CODE><SEVERITY>INFO</SEVERITY></STATUS>
-      <STMTRS>
-        <CURDEF>USD</CURDEF>
-        <BANKACCTFROM><BANKID>${bankId}</BANKID><ACCTID>${acctId}</ACCTID><ACCTTYPE>CHECKING</ACCTTYPE></BANKACCTFROM>
-        <BANKTRANLIST>
-        <DTSTART>${ofxDate(opts.from)}</DTSTART>
-        <DTEND>${ofxDate(opts.to)}</DTEND>
-${trn}
-        </BANKTRANLIST>
-        <LEDGERBAL><BALAMT>${centsToDecimal(opts.ledgerBalanceCents ?? 0)}</BALAMT><DTASOF>${ofxDate(opts.to)}</DTASOF></LEDGERBAL>
-      </STMTRS>
-    </STMTTRNRS>
+${blocks}
   </BANKMSGSRSV1>
 </OFX>
 `;
 }
 
+export interface OfxOptions {
+  bankId?: string;
+  acctId?: string;
+  from: string;
+  to: string;
+  ledgerBalanceCents?: number;
+  now?: Date;
+}
+
+/** Single-account convenience wrapper around renderOfxDocument. */
+export function renderOfx(lines: StatementLine[], opts: OfxOptions): string {
+  return renderOfxDocument(
+    [{ acctId: opts.acctId ?? 'shopify-payments', lines, from: opts.from, to: opts.to, ledgerBalanceCents: opts.ledgerBalanceCents }],
+    { bankId: opts.bankId, now: opts.now },
+  );
+}
+
 import type { GatewayTxn } from '../statementFetch';
+
 
 /**
  * PayPal/Affirm statement lines (Phase A): one line per successful order

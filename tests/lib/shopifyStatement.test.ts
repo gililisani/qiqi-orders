@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
-import { buildStatementLines, buildGatewayStatementLines, renderOfx } from '@/lib/shopify/core/statement';
+import { buildStatementLines, buildGatewayStatementLines, renderOfx, renderOfxDocument } from '@/lib/shopify/core/statement';
 import { buildPayoutPlan } from '@/lib/shopify/core/payoutTransform';
 import type { ShopifyBalanceTxn, ShopifyPayoutNode } from '@/lib/shopify/core/payoutTransform';
 
@@ -68,6 +68,23 @@ describe('100501 statement (Part 1 reconciliation)', () => {
     expect(lines.map((l) => l.fitId)).toEqual(['gw-111', 'gw-112']); // #7301 outside window, zero-amount dropped
     expect(lines[0]).toMatchObject({ cents: 20890, trnType: 'CREDIT', name: 'Shopify order #7300', date: '2026-08-20' });
     expect(lines[1]).toMatchObject({ cents: -20890, trnType: 'DEBIT', name: 'Shopify refund #7300' });
+  });
+
+  it('multi-account document: ONE xml header, one STMTTRNRS per account (NetSuite concatenates chunks — regression for SSS_XML_DOM_EXCEPTION)', () => {
+    const { txns } = load('124572958775');
+    const shop = buildStatementLines(txns);
+    const pp = buildGatewayStatementLines([{ id: '1', orderName: '#1', kind: 'SALE', processedAt: '2026-08-20T14:00:00Z', amount: '10.00' }]);
+    const doc = renderOfxDocument([
+      { acctId: 'shopify-payments', lines: shop, from: '2026-08-09', to: '2026-08-16' },
+      { acctId: 'paypal', lines: pp, from: '2026-08-09', to: '2026-08-16' },
+      { acctId: 'affirm', lines: [], from: '2026-08-09', to: '2026-08-16' },
+    ], { now: new Date('2026-08-24T12:00:00Z') });
+    expect((doc.match(/<\?xml/g) ?? []).length).toBe(1);
+    expect((doc.match(/<STMTTRNRS>/g) ?? []).length).toBe(3);
+    expect((doc.match(/<ACCTID>/g) ?? []).length).toBe(3);
+    expect(doc).toContain('<ACCTID>paypal</ACCTID>');
+    expect(doc.indexOf('<?xml')).toBe(0);
+    expect((doc.match(/<STMTTRN>/g) ?? []).length).toBe(shop.length + 1);
   });
 
   it('renders OFX 2.x the NetSuite parser accepts: header, account, one STMTTRN per line, escaped text', () => {

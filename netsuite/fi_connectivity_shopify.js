@@ -59,30 +59,34 @@ define(['N/https', 'N/log'], function (https, log) {
 
   function getTransactionData(context) {
     var requests = JSON.parse(context.accountRequestsJSON || '[]');
+    // ONE Hub call, ONE data chunk: NetSuite concatenates every chunk of a
+    // run into a single file, so per-account OFX documents would stack
+    // <?xml?> headers mid-file and kill the parser. The Hub returns one
+    // OFX with one STMTTRNRS per requested account.
+    var params = [];
     for (var i = 0; i < requests.length; i++) {
       var req = requests[i];
       var known = false;
       for (var k = 0; k < ACCOUNTS.length; k++) if (ACCOUNTS[k].accountMappingKey === req.accountMappingKey) known = true;
       if (!known) continue;
-      var from = isoDay(req.dataStartTime, BACKLOG_START);
-      var to = isoDay(req.dataEndTime, today());
-      var url = HUB_URL + '/api/shopify/statement?from=' + from + '&to=' + to + '&account=' + req.accountMappingKey;
-      // Secret placeholders resolve ONLY through a SecureString (a plain
-      // string header is sent literally → the Hub sees garbage → 401).
+      params.push('req=' + req.accountMappingKey + ':' + isoDay(req.dataStartTime, BACKLOG_START) + ':' + isoDay(req.dataEndTime, today()));
+    }
+    if (params.length > 0) {
+      var url = HUB_URL + '/api/shopify/statement?' + params.join('&');
       var auth = https.createSecureString({ input: 'Bearer {custsecret_qq_stmt_token}' });
       var res = https.get({
         url: url,
         headers: { Authorization: auth, Accept: 'application/x-ofx' },
       });
       if (res.code !== 200) {
-        log.error('qq-shopify-feed', 'HTTP ' + res.code + ' for ' + from + '..' + to + ': ' + (res.body || '').slice(0, 300));
+        log.error('qq-shopify-feed', 'HTTP ' + res.code + ' for ' + params.join(' ') + ': ' + (res.body || '').slice(0, 300));
         if (context.isRetryAllowed && context.isRetryAllowed()) {
           context.retry({ deltaMinutesLater: 30, currentFailureReason: 'Hub returned HTTP ' + res.code });
           return;
         }
         throw new Error('Hub statement request failed: HTTP ' + res.code);
       }
-      log.audit('qq-shopify-feed', req.accountMappingKey + ' ' + from + '..' + to + ' → ' + res.body.length + ' chars');
+      log.audit('qq-shopify-feed', params.join(' ') + ' → ' + res.body.length + ' chars');
       context.addDataChunk({ dataChunk: res.body });
     }
     context.returnAccountRequestsJSON({ accountsJson: context.accountRequestsJSON });
