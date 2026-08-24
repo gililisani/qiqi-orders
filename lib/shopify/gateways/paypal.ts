@@ -20,7 +20,13 @@ const BASE = 'https://api-m.paypal.com';
 export async function paypalToken(): Promise<string> {
   const id = process.env.PAYPAL_CLIENT_ID, sec = process.env.PAYPAL_CLIENT_SECRET;
   if (!id || !sec) throw new Error('PAYPAL_CLIENT_ID/SECRET not configured');
-  const r = await axios.post(`${BASE}/v1/oauth2/token`, 'grant_type=client_credentials', { auth: { username: id, password: sec } });
+  // Explicit form content type: PayPal's token endpoint rejects anything
+  // else, and axios's default for a string body varies by runtime
+  // ("Invalid Content-Type header" seen on Vercel, fine locally).
+  const r = await axios.post(`${BASE}/v1/oauth2/token`, 'grant_type=client_credentials', {
+    auth: { username: id.trim(), password: sec.trim() },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+  });
   return r.data.access_token;
 }
 

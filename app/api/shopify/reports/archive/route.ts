@@ -44,7 +44,12 @@ export async function POST(request: NextRequest) {
         results.push({ provider, path, bytes: 0, created: false });
         continue;
       }
-      const csv = await buildReportCsv(provider, from, to);
+      let csv: string;
+      try {
+        csv = await buildReportCsv(provider, from, to);
+      } catch (e: any) {
+        throw new Error(`${provider} ${month}: ${String(e?.message ?? e).slice(0, 200)}`);
+      }
       const bytes = new TextEncoder().encode(csv);
       await storage.putObject(path, bytes, {
         source: `${provider} official API`,
