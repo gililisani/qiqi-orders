@@ -81,8 +81,17 @@ Steps marked (agent) are run by the agent; the rest are owner actions.
     SO in NS when it lands. Monday 2026-08-24: agent runs
     `backfill-payouts.ts --count 2 --target production --i-am-sure`,
     then owner matches journal + fee bill against the bank line.
-18. ☐ After ~1 clean week (Loop D green): delete the 6 standalone
-    NetScore scripts, uninstall bundle 322635, cancel the contract.
+18. ☑ DONE 2026-08-24 (owner's call, 4 days after cutover, all clean):
+    4 standalone scripts deleted; bundle 322635 uninstalled (swept its 21
+    scripts + pages + custom records + fields); their separate LICENSE
+    bundle found and uninstalled too (held the last 2 "standalone"
+    scripts — the survey had mis-shelved them). Employee E1022 NetScore
+    inactivated. Verified (scripts/shopify/verify-decommission.ts):
+    0 NetScore scripts remain; Supabase snapshot intact (18,573 txn /
+    2,211 customer stamps); NetScore-era NS records untouched; engine
+    orders flowing; error queue 0. STILL OWED: contract non-renewal
+    reminder for 2027-04; mark vendor V5160 NETSCORE TECHNOLOGIES
+    inactive once the contract formally ends (never delete — history).
 
 ## Principles (agreed 2026-08-17)
 
