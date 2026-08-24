@@ -40,11 +40,21 @@ export async function GET(request: NextRequest) {
         to: sp.get('to') ?? today,
       });
     }
+    // Coverage floors: the bookkeeper's manual CSV imports already put
+    // statement lines into these accounts up to the dates below, and
+    // NetSuite's Account Linking window cannot be edited after linking
+    // (2026-08-24). Lines served before the floor would duplicate hers on
+    // the left side (FITID dedupe never applies across sources), so the
+    // Hub clamps instead. Irrelevant after each account's first pull —
+    // NetSuite then requests from its own last import forward.
+    const FLOOR: Record<string, string> = { paypal: '2026-05-29', affirm: '2026-08-01' };
     for (const r of reqs) {
       if (!KNOWN.includes(r.account)) return NextResponse.json({ error: `unknown account '${r.account}'` }, { status: 400 });
       if (!isDay(r.from) || !isDay(r.to) || r.from > r.to) {
         return NextResponse.json({ error: `bad window for '${r.account}': from/to must be YYYY-MM-DD with from <= to` }, { status: 400 });
       }
+      const floor = FLOOR[r.account];
+      if (floor && r.from < floor && !sp.get('ignoreFloor')) r.from = floor > r.to ? r.to : floor;
     }
 
     const statements: OfxStatement[] = [];
