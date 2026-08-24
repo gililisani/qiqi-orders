@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
       if (existing.has(path)) { results.push({ provider, created: false }); continue; }
       const csv = await buildReportCsv(provider, from, to);
       await storage.putObject(path, new TextEncoder().encode(csv), {
+        contentType: 'text/csv; charset=utf-8', // the supabase storage driver rejects uploads without one
         source: `${provider} official API`,
         window: `${from}..${to}`,
         generatedat: new Date().toISOString(),
