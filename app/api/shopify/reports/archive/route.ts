@@ -14,9 +14,10 @@ export async function GET(request: NextRequest) {
     const storage = createStorage();
     const objects = await storage.list(PREFIX);
     const files = objects.map((o) => {
-      const rel = o.path.startsWith(PREFIX) ? o.path.slice(PREFIX.length) : o.path;
+      const normalized = o.path.replace(/\/{2,}/g, '/'); // supabase driver list() double-slashes joined paths
+      const rel = normalized.startsWith(PREFIX) ? normalized.slice(PREFIX.length) : normalized;
       const [month, name] = [rel.slice(0, 7), rel.split('/').pop() ?? rel];
-      return { path: o.path, month, name, bytes: o.bytes, provider: name.split('-')[0] };
+      return { path: normalized, month, name, bytes: o.bytes, provider: name.split('-')[0] };
     });
     return NextResponse.json({ files });
   } catch (err: any) {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
     const { from, to } = monthWindow(month);
     const storage = createStorage();
-    const existing = new Set((await storage.list(`${PREFIX}${month}/`)).map((o) => o.path));
+    const existing = new Set((await storage.list(`${PREFIX}${month}/`)).map((o) => o.path.replace(/\/{2,}/g, '/')));
     const results: Array<{ provider: string; path: string; bytes: number; created: boolean }> = [];
     for (const provider of REPORT_PROVIDERS) {
       const path = `${PREFIX}${month}/${provider}-${month}.csv`;
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
       }
       const bytes = new TextEncoder().encode(csv);
       await storage.putObject(path, bytes, {
+        contentType: 'text/csv; charset=utf-8', // the supabase storage driver rejects uploads without one ("Invalid Content-Type header")
         source: `${provider} official API`,
         window: `${from}..${to}`,
         generatedat: new Date().toISOString(),
