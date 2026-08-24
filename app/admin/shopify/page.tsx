@@ -7,6 +7,7 @@ import { PageHeader } from '../../components/qq/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/qq/card';
 import { Skeleton } from '../../components/qq/skeleton';
 import { Button } from '../../components/qq/button';
+import { ReportsCard } from './reports-card';
 import {
   Table,
   TableBody,
@@ -709,6 +710,7 @@ export default function ShopifySyncDashboard() {
           </Card>
         </>
       )}
+      <ReportsCard />
     </div>
   );
 }

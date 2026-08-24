@@ -20,6 +20,15 @@ export interface AffirmEvent {
   depositId: string;
   transactionId: string | null;
   orderId: string | null;
+  // Portal-report fields (the bookkeeper's settlement CSV mirrors these):
+  purchaseId: string | null;
+  chargeCreatedDate: string | null;
+  transactionFeesCents: number;
+  originalLoanAmountCents: number | null;
+  mdr: number | null;
+  channel: string | null;
+  merchantAri: string | null;
+  currency: string | null;
 }
 
 export async function fetchAffirmEvents(opts: { after: string; before: string }): Promise<AffirmEvent[]> {
@@ -51,6 +60,14 @@ export async function fetchAffirmEvents(opts: { after: string; before: string })
         depositId: e.deposit_id,
         transactionId: e.transaction_id ?? null,
         orderId: e.order_id ?? null,
+        purchaseId: e.purchase_id ?? null,
+        chargeCreatedDate: e.charge_created_date ?? null,
+        transactionFeesCents: e.transaction_fees ?? 0,
+        originalLoanAmountCents: e.original_loan_amount ?? null,
+        mdr: e.mdr ?? null,
+        channel: e.channel ?? null,
+        merchantAri: e.initiating_merchant_id ?? e.merchant_id ?? null,
+        currency: e.currency ?? null,
       });
     }
     const next = r.data.next_page;

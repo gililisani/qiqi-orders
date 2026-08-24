@@ -4,7 +4,7 @@ import type { PaypalTxn } from '@/lib/shopify/gateways/paypal';
 import type { AffirmEvent } from '@/lib/shopify/gateways/affirm';
 
 const pp = (o: Partial<PaypalTxn>): PaypalTxn => ({ transactionId: 'X1', eventCode: 'T0006', date: '2026-08-05T10:00:00Z', status: 'S', amount: '100.00', fee: '-5.00', invoiceId: null, ...o });
-const af = (o: Partial<AffirmEvent>): AffirmEvent => ({ id: 'e1', date: '2026-08-10', eventType: 'loan_capture', salesCents: 5890, refundsCents: 0, feesCents: -383, totalSettledCents: 5507, depositId: 'D1', transactionId: 't1', orderId: null, ...o });
+const af = (o: Partial<AffirmEvent>): AffirmEvent => ({ id: 'e1', date: '2026-08-10', eventType: 'loan_capture', salesCents: 5890, refundsCents: 0, feesCents: -383, totalSettledCents: 5507, depositId: 'D1', transactionId: 't1', orderId: null, purchaseId: 'P1-AAAA', chargeCreatedDate: '2026-08-09', transactionFeesCents: -30, originalLoanAmountCents: 5890, mdr: 0.0599, channel: 'Affirm Direct', merchantAri: 'HV7933BTF9S8GEWN', currency: 'USD', ...o });
 
 describe('Phase B gateway booking transforms', () => {
   it('PayPal: monthly fee journal sums per-txn fees; withdrawals become transfers; hers are adopted; unknown codes surface', () => {

@@ -23,6 +23,15 @@
     },
     "app/api/cron/shopify-payouts/route.ts": {
       "maxDuration": 300
+    },
+    "app/api/cron/finance-reports/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/shopify/reports/archive/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/shopify/reports/route.ts": {
+      "maxDuration": 120
     }
   },
   "crons": [
@@ -53,6 +62,10 @@
     {
       "path": "/api/cron/shopify-payouts",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/finance-reports",
+      "schedule": "0 7 1 * *"
     }
   ]
 }
