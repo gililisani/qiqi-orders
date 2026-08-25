@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '../../../../platform/auth/guards';
 import { ShopifySyncStore } from '../../../../lib/shopify/store';
 import { bookRecentPayouts } from '../../../../lib/shopify/engine/payoutRun';
+import { bookGatewayEntries } from '../../../../lib/shopify/engine/gatewayRun';
 import { engineConfigForTarget } from '../../../../lib/shopify/engine/config';
 import { createNetSuiteForTarget, type NsTarget } from '../../../../lib/shopify/engine/nsTarget';
 import { maybeSendPollFailure } from '../../../../lib/shopify/alerts';
 
 /**
- * Loop E — daily payout booking (vercel.json, 14:00 UTC ≈ 10:00 ET, after
+ * Loop E + Phase B — daily payout & gateway booking (14:00 UTC ≈ 10:00 ET, after
  * Shopify flips the morning payouts to PAID). Idempotent: SHOPPO-*
  * externalids adopt, so the daily run books new payouts and re-adopts the
  * rest. count=6 covers several weeks of Mondays + odd mid-week payouts.
@@ -43,7 +44,19 @@ export async function GET(request: NextRequest) {
         `payout booking: ${result.errored.map((e) => `${e.payoutId}: ${e.error}`).join(' | ').slice(0, 900)}`,
       );
     }
-    return NextResponse.json({ success: true, booked: result.booked, errored: result.errored });
+
+    // Phase B — PayPal/Affirm fee+transfer booking, strictly AFTER the
+    // Shopify payout run (same function, sequential: cannot cross another
+    // NS job by construction; owner requirement 2026-08-24).
+    const gateways = await bookGatewayEntries({
+      ns: createNetSuiteForTarget(nsTarget),
+      apply: true,
+      log: (l) => console.log(`[cron/shopify-payouts] ${l}`),
+    });
+    if (gateways.errors.length > 0) {
+      await maybeSendPollFailure(store, `gateway booking: ${gateways.errors.join(' | ').slice(0, 900)}`);
+    }
+    return NextResponse.json({ success: true, booked: result.booked, errored: result.errored, gateways });
   } catch (err: any) {
     const message = String(err?.message ?? err).slice(0, 1000);
     console.error('[cron/shopify-payouts] error:', message);
