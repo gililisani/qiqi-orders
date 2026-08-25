@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/qq/ca
 import { Skeleton } from '../../components/qq/skeleton';
 import { Button } from '../../components/qq/button';
 import { ReportsCard } from './reports-card';
+import { StatementsTab } from './statements-tab';
+import { AffirmRemittances } from './affirm-remittances';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/qq/tabs';
 import {
   Table,
   TableBody,
@@ -131,7 +134,7 @@ const ERROR_GUIDANCE: Record<string, string> = {
     'Nightly check found the NetSuite records disagree with Shopify (see message). Retry re-ensures the chain; if it persists, investigate the NS records.',
 };
 
-function StateBadge({ state }: { state: string }) {
+function StateBadge({ state, label }: { state: string; label?: string }) {
   return (
     <span
       className={cn(
@@ -139,7 +142,7 @@ function StateBadge({ state }: { state: string }) {
         STATE_STYLES[state] ?? STATE_STYLES.pending,
       )}
     >
-      {state}
+      {label ?? state}
     </span>
   );
 }
@@ -185,21 +188,19 @@ export default function ShopifySyncDashboard() {
   const [importName, setImportName] = useState('');
   const [skuMapInput, setSkuMapInput] = useState<Record<string, string>>({});
   const [period, setPeriod] = useState<PeriodKey>('mtd');
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const [stmtFrom, setStmtFrom] = useState(todayIso.slice(0, 8) + '01');
-  const [stmtTo, setStmtTo] = useState(todayIso);
-  const [stmtBusy, setStmtBusy] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const loadedRef = useRef<number>(20);
+  const [page, setPage] = useState(0);
+  const [pageBusy, setPageBusy] = useState(false);
+  const pageRef = useRef<number>(0);
 
-  const load = useCallback(async (limit?: number) => {
+  const PAGE_SIZE = 20;
+  const load = useCallback(async (toPage?: number) => {
     try {
-      // Refreshes keep however many rows the user has expanded to.
-      const keep = limit ?? loadedRef.current ?? 20;
-      const res = await fetchWithAuth(`/api/shopify/sync/overview?ordersLimit=${keep}`);
+      const target = toPage ?? pageRef.current;
+      const res = await fetchWithAuth(`/api/shopify/sync/overview?ordersOffset=${target * PAGE_SIZE}&ordersLimit=${PAGE_SIZE}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      loadedRef.current = json.orders?.length ?? 20;
+      pageRef.current = target;
+      setPage(target);
       setData(json);
       setLoadError(null);
     } catch (err: any) {
@@ -207,22 +208,12 @@ export default function ShopifySyncDashboard() {
     }
   }, []);
 
-  const loadMore = async () => {
-    if (!data) return;
-    setLoadingMore(true);
+  const goToPage = async (target: number) => {
+    setPageBusy(true);
     try {
-      const res = await fetchWithAuth(
-        `/api/shopify/sync/overview?ordersOffset=${data.orders.length}&ordersLimit=50`,
-      );
-      const json = await res.json();
-      if (res.ok && json.orders) {
-        const seen = new Set(data.orders.map((o) => o.shopify_order_id));
-        const merged = [...data.orders, ...json.orders.filter((o: OrderRow) => !seen.has(o.shopify_order_id))];
-        loadedRef.current = merged.length;
-        setData({ ...data, orders: merged, ordersTotal: json.ordersTotal ?? data.ordersTotal });
-      }
+      await load(target);
     } finally {
-      setLoadingMore(false);
+      setPageBusy(false);
     }
   };
 
@@ -268,35 +259,6 @@ export default function ShopifySyncDashboard() {
   const importOrder = () => {
     if (importName.trim()) act('/api/shopify/sync/import-order', { orderName: importName.trim() }, 'import');
   };
-  // Part 1 reconciliation: Shopify transactions as a 100501 "bank statement"
-  // (OFX) for NetSuite Banking Import → Match Bank Data pairs them with the
-  // engine's payments/refunds/payout journals.
-  const downloadStatement = async () => {
-    setStmtBusy(true);
-    setActionMsg(null);
-    try {
-      const res = await fetchWithAuth(`/api/shopify/statement?from=${stmtFrom}&to=${stmtTo}`);
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error ?? `HTTP ${res.status}`);
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `shopify-100501-${stmtFrom}_${stmtTo}.ofx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      setActionMsg(`100501 statement ${stmtFrom} → ${stmtTo}: ${res.headers.get('X-Statement-Lines') ?? '?'} lines — import it in NetSuite (Transactions → Bank → Banking Import), then Match Bank Data on 100501.`);
-    } catch (e: any) {
-      setActionMsg(`Statement failed: ${String(e?.message ?? e)}`);
-    } finally {
-      setStmtBusy(false);
-    }
-  };
-
   const errors = data?.errors ?? [];
   const nonErrors = data?.orders.filter((o) => o.state !== 'error') ?? [];
   const sums = data?.financials?.periods?.[period] ?? null;
@@ -317,26 +279,6 @@ export default function ShopifySyncDashboard() {
             />
             <Button size="sm" variant="outline" disabled={retrying === 'import'} onClick={importOrder}>
               Import
-            </Button>
-            <span className="mx-1 h-6 w-px bg-border" aria-hidden />
-            <input
-              type="date"
-              value={stmtFrom}
-              max={stmtTo}
-              onChange={(e) => setStmtFrom(e.target.value)}
-              aria-label="Statement from"
-              className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-            />
-            <input
-              type="date"
-              value={stmtTo}
-              min={stmtFrom}
-              onChange={(e) => setStmtTo(e.target.value)}
-              aria-label="Statement to"
-              className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-            />
-            <Button size="sm" variant="outline" disabled={stmtBusy || !stmtFrom || !stmtTo} onClick={downloadStatement}>
-              {stmtBusy ? 'Building…' : '100501 statement (OFX)'}
             </Button>
           </div>
         }
@@ -594,13 +536,22 @@ export default function ShopifySyncDashboard() {
             </Card>
           )}
 
+          <Tabs defaultValue="orders" className="mt-6">
+            <TabsList>
+              <TabsTrigger value="orders">Orders</TabsTrigger>
+              <TabsTrigger value="payouts">Payouts</TabsTrigger>
+              <TabsTrigger value="reports">Finance reports</TabsTrigger>
+              <TabsTrigger value="statements">Statements (OFX)</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="orders">
           {/* Orders table */}
           <Card className="mt-6">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Recent orders</CardTitle>
+                <CardTitle>Orders</CardTitle>
                 <span className="text-xs text-muted-foreground">
-                  showing {data.orders.length} of {data.ordersTotal}
+                  {data.ordersTotal === 0 ? '0 orders' : `${page * 20 + 1}–${page * 20 + data.orders.length} of ${data.ordersTotal}`}
                 </span>
               </div>
             </CardHeader>
@@ -650,16 +601,21 @@ export default function ShopifySyncDashboard() {
                   ))}
                 </TableBody>
               </Table>
-              {data.orders.length < data.ordersTotal && (
-                <div className="mt-4 flex justify-center">
-                  <Button size="sm" variant="outline" disabled={loadingMore} onClick={loadMore}>
-                    {loadingMore ? 'Loading…' : `Load ${Math.min(50, data.ordersTotal - data.orders.length)} more`}
-                  </Button>
-                </div>
-              )}
+              <div className="mt-4 flex items-center justify-center gap-3">
+                <Button size="sm" variant="outline" disabled={pageBusy || page === 0} onClick={() => goToPage(page - 1)}>
+                  ← Newer
+                </Button>
+                <span className="text-xs text-muted-foreground">page {page + 1} of {Math.max(1, Math.ceil(data.ordersTotal / 20))}</span>
+                <Button size="sm" variant="outline" disabled={pageBusy || (page + 1) * 20 >= data.ordersTotal} onClick={() => goToPage(page + 1)}>
+                  Older →
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
+            </TabsContent>
+
+            <TabsContent value="payouts">
           {/* Payouts */}
           <Card className="mt-6">
             <CardHeader>
@@ -690,7 +646,7 @@ export default function ShopifySyncDashboard() {
                         </TableCell>
                         <TableCell className="text-right tabular-nums">{money(p.fee_cents)}</TableCell>
                         <TableCell>
-                          <StateBadge state={p.state === 'booked' ? 'fulfilled' : p.state} />
+                          <StateBadge state={p.state === 'booked' ? 'fulfilled' : p.state} label={p.state === 'booked' ? 'paid' : undefined} />
                           {p.error_message && (
                             <span className="ml-1 text-xs text-muted-foreground">{p.error_message.slice(0, 60)}</span>
                           )}
@@ -708,9 +664,21 @@ export default function ShopifySyncDashboard() {
               )}
             </CardContent>
           </Card>
+          <AffirmRemittances />
+            </TabsContent>
+
+            <TabsContent value="reports">
+              <ReportsCard />
+            </TabsContent>
+
+            <TabsContent value="statements">
+              <div className="mt-6">
+                <StatementsTab />
+              </div>
+            </TabsContent>
+          </Tabs>
         </>
       )}
-      <ReportsCard />
     </div>
   );
 }
