@@ -47,7 +47,11 @@ export function createSupabaseStorage(): ObjectStorage {
     }
 
     for (const item of data ?? []) {
-      const path = prefix ? `${prefix}/${item.name}` : item.name;
+      // Join without doubling slashes: a trailing-slash prefix produced
+      // "a//b", which Supabase lists as empty — recursive listings came
+      // back [] even though the objects exist (found 2026-08-24 via the
+      // finance-reports archive).
+      const path = prefix ? `${prefix.replace(/\/+$/, '')}/${item.name}` : item.name;
       const isDir = item.id?.endsWith('/') || item.name.endsWith('/');
       if (!isDir && item.metadata && typeof item.metadata.size === 'number') {
         acc.push({ path, bytes: item.metadata.size });
