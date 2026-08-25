@@ -112,9 +112,9 @@ export function ReportsCard() {
 
   return (
     <Card className="mt-6">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Finance reports — Shopify · PayPal · Affirm</CardTitle>
-        <div className="flex items-center gap-2">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle>Finance reports</CardTitle>
+        <div className="flex flex-wrap items-center gap-2">
           <select value={provider} onChange={(e) => setProvider(e.target.value)} aria-label="Provider" className="h-9 rounded-md border border-border bg-background px-2 text-sm">
             {PROVIDERS.map((p) => (
               <option key={p} value={p}>{LABEL[p]}</option>
