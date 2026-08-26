@@ -186,7 +186,12 @@ export class NetSuiteAPI {
           msg.includes('CONCURRENCY_LIMIT_EXCEEDED') ||
           msg.includes('Concurrent request limit exceeded') ||
           /NetSuite 429|HTTP 429/.test(msg);
-        if (!is429 || attempt >= this.retry429DelaysMs.length) throw err;
+        // Sporadic INVALID_LOGIN 401s happen on valid credentials (OAuth1
+        // nonce/timestamp collisions / NS auth flakes — two failed polls +
+        // alert emails on 2026-08-26); a retry clears them. Real auth
+        // breakage still fails after the ladder.
+        const isFlaky401 = msg.includes('INVALID_LOGIN');
+        if (!(is429 || isFlaky401) || attempt >= this.retry429DelaysMs.length) throw err;
         await new Promise((r) => setTimeout(r, this.retry429DelaysMs[attempt]));
       }
     }
