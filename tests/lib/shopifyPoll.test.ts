@@ -72,8 +72,8 @@ describe('pollOrders', () => {
     const r = await pollOrders({
       store,
       fetchOrdersUpdatedSince: async (since) => {
-        // Overlap window: cursor minus 10 min.
-        expect(since).toBe('2026-08-16T23:50:00.000Z');
+        // Overlap window: cursor minus 30 min (widened after the 2026-08-26 wedge).
+        expect(since).toBe('2026-08-16T23:30:00.000Z');
         return orders;
       },
       loadKnownSkus: async () => SKUS,

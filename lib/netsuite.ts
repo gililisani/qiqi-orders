@@ -2,6 +2,12 @@ import OAuth from 'oauth-1.0a';
 import crypto from 'crypto-js';
 import axios from 'axios';
 
+// No HTTP call may hang forever: a single stuck socket froze the order
+// poller for 10 hours on 2026-08-26 (no commit → same batch re-fetched →
+// wedged until every function hit Vercel's kill). Process-wide ceiling —
+// any slower call is already broken.
+axios.defaults.timeout = 120_000;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------

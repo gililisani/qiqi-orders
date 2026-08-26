@@ -28,6 +28,7 @@ function env(name: string): string {
 async function exchangeToken(): Promise<TokenCache> {
   const domain = env('SHOPIFY_STORE_DOMAIN');
   const res = await fetch(`https://${domain}/admin/oauth/access_token`, {
+    signal: AbortSignal.timeout(60_000),
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -77,7 +78,9 @@ export async function shopifyGraphQL<T = any>(
     let res: Response | null = null;
     let netErr: unknown = null;
     try {
+      // A hung socket must fail loudly, not freeze the poller (2026-08-26 wedge).
       res = await fetch(`https://${domain}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`, {
+        signal: AbortSignal.timeout(60_000),
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': await getToken() },
         body: JSON.stringify({ query, variables }),

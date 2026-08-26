@@ -18,7 +18,7 @@ import { PipelineError } from './pipeline';
 import type { ExecutionOutcome } from './execute';
 
 /** Re-poll window: absorbs clock skew + updates landing mid-poll. */
-const OVERLAP_MS = 10 * 60_000;
+const OVERLAP_MS = 30 * 60_000;
 
 export interface PollDeps {
   store: ShopifySyncStore;
@@ -78,11 +78,23 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
   let skipped = 0;
   let errored = 0;
   let maxUpdatedAt = config.orders_cursor;
+  let processedCount = 0;
+  let partial = false;
+  // Orders arrive sorted by UPDATED_AT ascending (query sortKey), so the
+  // cursor may only advance to orders that finished processing — and it
+  // is checkpointed incrementally so a killed run resumes instead of
+  // re-running the whole batch (the 2026-08-26 wedge: every poll died
+  // mid-batch, nothing ever committed, the batch only grew).
+  const startedMs = now().getTime();
+  const BUDGET_MS = 240_000; // leave headroom under the 300s function cap
 
   for (const order of orders) {
+    if (now().getTime() - startedMs > BUDGET_MS) {
+      partial = true;
+      break;
+    }
     const orderId = order.id.replace(/^.*\//, '');
     const updatedAt = (order as any).updatedAt as string | undefined;
-    if (updatedAt && (!maxUpdatedAt || updatedAt > maxUpdatedAt)) maxUpdatedAt = updatedAt;
 
     try {
       const gate = gateOrder(order, knownSkus);
@@ -162,6 +174,15 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
     } catch (err: any) {
       errored += 1;
       await store.event('orders', 'poll_exception', orderId, { error: String(err?.message ?? err).slice(0, 500) });
+    } finally {
+      // Runs on every outcome incl. the skip/error `continue` paths: the
+      // order is done, the cursor may pass it, and every few orders the
+      // progress is checkpointed so a killed run resumes mid-batch.
+      if (updatedAt && (!maxUpdatedAt || updatedAt > maxUpdatedAt)) maxUpdatedAt = updatedAt;
+      processedCount += 1;
+      if (processedCount % 5 === 0) {
+        await store.updateConfig({ orders_cursor: maxUpdatedAt, last_poll_at: now().toISOString(), last_poll_error: null });
+      }
     }
   }
 
@@ -172,9 +193,11 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
   });
   await store.event('system', 'poll_complete', null, {
     fetched: orders.length,
+    processed: processedCount,
     proceeded,
     skipped,
     errored,
+    partial,
     since,
   });
 
