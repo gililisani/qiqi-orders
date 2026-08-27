@@ -83,6 +83,8 @@ export async function retryOrder(order: ShopifyOrder, store: ShopifySyncStore): 
     await store.setState(shopifyOrderId, outcome.state, {
       ...outcome.nsIds,
       ns_target: nsTarget,
+      // Success watermark — lets the poller skip this exact order version.
+      executed_shopify_updated_at: (order as any).updatedAt ?? null,
       error_code: null,
       error_message: null,
       skip_reason: null,

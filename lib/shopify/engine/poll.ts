@@ -47,7 +47,31 @@ export interface PollResult {
   executed: number;
   skipped: number;
   errored: number;
+  /** Re-seen orders whose updated_at was already fully executed — no NS work. */
+  unchanged: number;
   cursor: string | null;
+}
+
+/** States whose NS chain is complete for the executed watermark. */
+const DONE_STATES = new Set(['paid', 'fulfilled', 'refunded']);
+
+/**
+ * True when this exact order version needs no work: already executed to NS
+ * (watermark covers updated_at), already gate-skipped for this version, or
+ * admin-ignored (the dashboard Retry button is the explicit resume path).
+ * Timestamps compare as epochs — Shopify sends 'Z', Postgres returns
+ * '+00:00', string equality would never match.
+ */
+function alreadyCurrent(
+  existing: { state: string; shopify_updated_at?: string | null; executed_shopify_updated_at?: string | null },
+  updatedAt: string,
+): boolean {
+  if (existing.state === 'ignored') return true;
+  const ms = new Date(updatedAt).getTime();
+  const covers = (ts: string | null | undefined) => !!ts && new Date(ts).getTime() >= ms;
+  if (DONE_STATES.has(existing.state) && covers(existing.executed_shopify_updated_at)) return true;
+  if (existing.state === 'skipped' && covers(existing.shopify_updated_at)) return true;
+  return false;
 }
 
 export async function pollOrders(deps: PollDeps): Promise<PollResult> {
@@ -56,7 +80,7 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
   const config = await store.getConfig();
 
   if (config.mode === 'off') {
-    return { mode: 'off', fetched: 0, proceeded: 0, executed: 0, skipped: 0, errored: 0, cursor: config.orders_cursor };
+    return { mode: 'off', fetched: 0, proceeded: 0, executed: 0, skipped: 0, errored: 0, unchanged: 0, cursor: config.orders_cursor };
   }
   const writeMode = config.mode === 'sandbox' || config.mode === 'live';
   if (writeMode && !deps.execute) {
@@ -77,6 +101,7 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
   let executed = 0;
   let skipped = 0;
   let errored = 0;
+  let unchanged = 0;
   let maxUpdatedAt = config.orders_cursor;
   let processedCount = 0;
   let partial = false;
@@ -97,6 +122,20 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
     const updatedAt = (order as any).updatedAt as string | undefined;
 
     try {
+      // Re-seen order, nothing new since the last completed run → no NS
+      // work, cursor still passes it. This is what keeps a fulfillment
+      // wave inside the time budget: without it every overlap re-poll
+      // re-ran the full ensure chain (~6-10s of NS calls) per order, and
+      // the 60s-killed runs of 2026-08-27 starved the tail (#7317/#7318).
+      // Write mode only — shadow deliberately recomputes everything.
+      if (writeMode && updatedAt) {
+        const existing = await store.getOrderState(orderId);
+        if (existing && alreadyCurrent(existing, updatedAt)) {
+          unchanged += 1;
+          continue;
+        }
+      }
+
       const gate = gateOrder(order, knownSkus);
 
       if (gate.outcome === 'skip') {
@@ -140,6 +179,9 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
           await store.setState(orderId, outcome.state, {
             ...outcome.nsIds,
             ns_target: deps.nsTarget ?? null,
+            // Watermark ONLY on success, in the same write as the state —
+            // a run killed mid-execute leaves it stale and the order re-runs.
+            executed_shopify_updated_at: updatedAt ?? null,
             error_code: null,
             error_message: null,
             skip_reason: null,
@@ -197,9 +239,10 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
     proceeded,
     skipped,
     errored,
+    unchanged,
     partial,
     since,
   });
 
-  return { mode: config.mode, fetched: orders.length, proceeded, executed, skipped, errored, cursor: maxUpdatedAt };
+  return { mode: config.mode, fetched: orders.length, proceeded, executed, skipped, errored, unchanged, cursor: maxUpdatedAt };
 }

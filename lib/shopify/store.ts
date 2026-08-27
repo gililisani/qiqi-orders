@@ -82,10 +82,15 @@ export class ShopifySyncStore {
     });
   }
 
-  async getOrderState(shopifyOrderId: string): Promise<{ state: string; retry_count: number } | null> {
+  async getOrderState(shopifyOrderId: string): Promise<{
+    state: string;
+    retry_count: number;
+    shopify_updated_at: string | null;
+    executed_shopify_updated_at: string | null;
+  } | null> {
     const { data, error } = await this.db
       .from('shopify_order_sync')
-      .select('state, retry_count')
+      .select('state, retry_count, shopify_updated_at, executed_shopify_updated_at')
       .eq('shopify_order_id', shopifyOrderId)
       .maybeSingle();
     if (error) throw new Error(`shopify_order_sync read failed: ${error.message}`);
