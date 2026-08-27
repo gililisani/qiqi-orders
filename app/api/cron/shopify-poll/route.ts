@@ -14,6 +14,12 @@ import { computeFinancialSnapshot } from '../../../../lib/shopify/financialSnaps
  * shopify_sync_config: 'off' = no-op, 'shadow' = compute + persist, no NS
  * writes, 'sandbox'/'live' = full pipeline (Phase 2b).
  */
+// Route segment config is the setting Vercel actually honors for Next.js
+// routes — the vercel.json functions block did NOT apply here, and the
+// runtime killed every poll at 60s during the 2026-08-27 fulfillment wave
+// (poll.ts BUDGET_MS assumes this 300).
+export const maxDuration = 300;
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {

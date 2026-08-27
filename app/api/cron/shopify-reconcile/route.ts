@@ -13,6 +13,10 @@ import { maybeSendErrorDigest } from '../../../../lib/shopify/alerts';
  * orders against NS to the cent; misses/mismatches become error-queue
  * cards. No-op unless mode is sandbox/live (recon needs an NS target).
  */
+// vercel.json's functions block is not honored for Next.js routes — this
+// cron was killed at 60s nightly (seen 2026-08-27) until this export.
+export const maxDuration = 300;
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {

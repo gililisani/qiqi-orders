@@ -15,6 +15,11 @@ import { maybeSendPollFailure } from '../../../../lib/shopify/alerts';
  * A payout that cannot book (e.g., dispute without a chargeback account)
  * lands as an error row on the dashboard + a throttled alert email.
  */
+// vercel.json's functions block is not honored for Next.js routes — without
+// this export the runtime caps the function at 60s (proven on the poll and
+// reconcile crons 2026-08-27); Phase A + Phase B need the full window.
+export const maxDuration = 300;
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
