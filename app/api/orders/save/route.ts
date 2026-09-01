@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireWithPermission } from '../../../../platform/auth/guards';
-import {
-  computeOrderMoney,
-  PACKING_FOR_OPTIONS,
-  type SaveItemInput,
-} from '../../../../lib/orderSave';
+import { computeOrderMoney, type SaveItemInput } from '../../../../lib/orderSave';
+import { SHIPMENT_TYPE_CODES } from '../../../../lib/shipmentTypes';
 
 /**
  * POST /api/orders/save — THE order write path (create + update).
@@ -60,11 +57,11 @@ export async function POST(request: NextRequest) {
     if (rawItems.length === 0) {
       return NextResponse.json({ error: 'The order needs at least one item.' }, { status: 400 });
     }
-    const packingFor =
-      typeof body.packingFor === 'string' ? body.packingFor : null;
-    if (!packingFor || !(PACKING_FOR_OPTIONS as readonly string[]).includes(packingFor)) {
+    const shipmentType =
+      typeof body.shipmentType === 'string' ? body.shipmentType : null;
+    if (!shipmentType || !SHIPMENT_TYPE_CODES.includes(shipmentType)) {
       return NextResponse.json(
-        { error: 'Please select what the order is packed for (Air or Ocean shipping).' },
+        { error: 'Please select a shipment type.' },
         { status: 400 },
       );
     }
@@ -146,7 +143,7 @@ export async function POST(request: NextRequest) {
           po_number: poNumber,
           status,
           location_id: company.location_id ?? null,
-          packing_for: packingFor,
+          shipment_type: shipmentType,
           total_value: money.total_value,
           support_fund_used: money.support_fund_used,
           credit_earned: money.credit_earned,
@@ -209,7 +206,7 @@ export async function POST(request: NextRequest) {
       p_order: {
         po_number: poNumber,
         status: newStatus,
-        packing_for: packingFor,
+        shipment_type: shipmentType,
         total_value: money.total_value,
         support_fund_used: money.support_fund_used,
         credit_earned: money.credit_earned,

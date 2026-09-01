@@ -1,4 +1,5 @@
 import type { NormalizedOrder, NormalizedLineItem } from './types';
+import { shipmentTypeByCode } from '../shipmentTypes';
 
 /**
  * Hub → provider-neutral order conversion. App-specific (knows the Hub's order /
@@ -16,6 +17,8 @@ export interface HubOrderForFulfillment {
   po_number?: string | null;
   created_at: string;
   currency?: string | null;
+  /** Shipment type code (SEA|AIR|LTL|STANDARD|DDP|LABELS) — see lib/shipmentTypes.ts. */
+  shipment_type?: string | null;
 }
 
 export interface HubCompanyForFulfillment {
@@ -44,6 +47,47 @@ function clean(v: string | null | undefined): string | null {
   return s === '' ? null : s;
 }
 
+// The warehouse order number embeds the ship-to country. The owner's examples
+// strip spaces ("PuertoRico", "HongKong") and abbreviate the two countries the
+// Hub commonly spells long-form. Matching is tolerant (case/punctuation).
+const COUNTRY_ABBREVIATIONS: Record<string, string> = {
+  us: 'USA',
+  usa: 'USA',
+  unitedstates: 'USA',
+  unitedstatesofamerica: 'USA',
+  gb: 'UK',
+  uk: 'UK',
+  unitedkingdom: 'UK',
+  greatbritain: 'UK',
+};
+
+/** "Puerto Rico" -> "PuertoRico", "United States" -> "USA". */
+export function countryToken(country?: string | null): string | null {
+  const s = clean(country);
+  if (!s) return null;
+  const key = s.toLowerCase().replace(/[^a-z]/g, '');
+  if (COUNTRY_ABBREVIATIONS[key]) return COUNTRY_ABBREVIATIONS[key];
+  const stripped = s.replace(/[^A-Za-z0-9]/g, '');
+  return stripped || null;
+}
+
+/**
+ * Warehouse order number per the owner's spec (doc 2026-09-01):
+ * `{NS SO}-{Country}-{shipment type code}` — e.g. SOIL10999-Greece-SEA.
+ * Returns null when any segment is missing (callers surface a clear error).
+ */
+export function buildWarehouseOrderNumber(params: {
+  soNumber?: string | null;
+  country?: string | null;
+  shipmentTypeCode?: string | null;
+}): string | null {
+  const so = clean(params.soNumber);
+  const country = countryToken(params.country);
+  const type = shipmentTypeByCode(params.shipmentTypeCode);
+  if (!so || !country || !type) return null;
+  return `${so}-${country}-${type.code}`;
+}
+
 /** Split a free-text contact name into first/last. */
 export function splitContactName(fullName?: string | null): { firstName: string; lastName: string } {
   const s = clean(fullName);
@@ -60,9 +104,20 @@ export function buildNormalizedOrder(params: {
 }): NormalizedOrder {
   const { order, company, items } = params;
 
-  // Prefer the SO number for the human order number, fall back to PO, then a
-  // short slice of the UUID so the field is never empty.
-  const orderNumber = clean(order.so_number) || clean(order.po_number) || order.id.substring(0, 8);
+  const shipmentType = shipmentTypeByCode(order.shipment_type);
+
+  // Warehouse order number: {SO}-{Country}-{type code}. Falls back to the old
+  // so/po/uuid chain only when a segment is missing (the push route validates
+  // the segments up front, so live pushes always get the full format).
+  const orderNumber =
+    buildWarehouseOrderNumber({
+      soNumber: order.so_number,
+      country: company.ship_to_country,
+      shipmentTypeCode: order.shipment_type,
+    }) ||
+    clean(order.so_number) ||
+    clean(order.po_number) ||
+    order.id.substring(0, 8);
 
   const lineItems: NormalizedLineItem[] = (items || [])
     .map((item, idx): NormalizedLineItem | null => {
@@ -84,6 +139,10 @@ export function buildNormalizedOrder(params: {
     orderNumber,
     orderDate: order.created_at,
     currency: clean(order.currency),
+    tags: shipmentType ? [...shipmentType.tags] : [],
+    shippingLine: shipmentType
+      ? { title: shipmentType.label, carrier: shipmentType.carrier, method: shipmentType.method }
+      : null,
     shipTo: {
       name: clean(company.ship_to_contact_name),
       company: clean(company.company_name),
@@ -93,7 +152,8 @@ export function buildNormalizedOrder(params: {
       state: clean(company.ship_to_state),
       zip: clean(company.ship_to_postal_code),
       country: clean(company.ship_to_country),
-      phone: clean(company.ship_to_contact_phone),
+      // The warehouse wants the phone without the "+" prefix (owner spec).
+      phone: clean(company.ship_to_contact_phone)?.replace(/\+/g, '').trim() || null,
       email: clean(company.ship_to_contact_email),
     },
     lineItems,

@@ -91,6 +91,7 @@ import CreateSLIModal from '../modals/CreateSLIModal';
 import { useToast } from '../ui/ToastProvider';
 import { useConfirm } from '../ui/ConfirmProvider';
 import { salesOrderUrl, invoiceUrl } from '../../../lib/netsuiteUrls';
+import { shipmentTypeLabel } from '../../../lib/shipmentTypes';
 import {
   canEditOrder,
   canShowPackingSlip,
@@ -113,7 +114,7 @@ interface Order {
   user_id: string;
   company_id: string;
   po_number: string;
-  packing_for?: string | null;
+  shipment_type?: string | null;
   invoice_number?: string | null;
   so_number?: string | null;
   number_of_pallets?: number | null;
@@ -1139,9 +1140,9 @@ export default function AdminOrderDetailsView({
             <div className="grid grid-cols-2 gap-4">
               <Field label="PO Number">
                 <span className="font-mono">{order.po_number || '—'}</span>
-                {order.packing_for && (
+                {order.shipment_type && (
                   <span className="ml-2 text-xs text-muted-foreground">
-                    · {order.packing_for}
+                    · {shipmentTypeLabel(order.shipment_type)}
                   </span>
                 )}
               </Field>

@@ -44,6 +44,7 @@ import {
 import ClientOrderDocumentsView from './ClientOrderDocumentsView';
 import ClientOrderHistoryView from './ClientOrderHistoryView';
 import { InvoiceDownloadButton } from '../shared/InvoiceDownloadButton';
+import { shipmentTypeLabel } from '../../../lib/shipmentTypes';
 
 import { useToast } from '../ui/ToastProvider';
 import { useConfirm } from '../ui/ConfirmProvider';
@@ -64,7 +65,7 @@ interface OrderCompany {
 interface Order {
   id: string;
   po_number?: string;
-  packing_for?: string;
+  shipment_type?: string;
   status: string;
   total_value: number;
   credit_earned: number;
@@ -287,8 +288,8 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
                 {order.po_number || order.id.substring(0, 8)}
               </span>
             </Field>
-            {order.packing_for && (
-              <Field label="Packing for">{order.packing_for}</Field>
+            {order.shipment_type && (
+              <Field label="Shipment type">{shipmentTypeLabel(order.shipment_type)}</Field>
             )}
             {order.so_number && (
               <Field label="Sales order #">

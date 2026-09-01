@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { buildNormalizedOrder, splitContactName } from '@/lib/fulfillment/normalize';
+import {
+  buildNormalizedOrder,
+  buildWarehouseOrderNumber,
+  countryToken,
+  splitContactName,
+} from '@/lib/fulfillment/normalize';
 import {
   isPickupShipment,
   buildShipHeroOrderInput,
@@ -77,6 +82,66 @@ describe('buildNormalizedOrder', () => {
     });
     expect(n.lineItems).toHaveLength(2);
   });
+
+  it('builds the warehouse order number, tags and shipping line from the shipment type', () => {
+    const n = buildNormalizedOrder({
+      ...hubOrder,
+      order: { ...hubOrder.order, so_number: 'SOIL10999', shipment_type: 'SEA' },
+      company: { ...hubOrder.company, ship_to_country: 'Greece' },
+    });
+    expect(n.orderNumber).toBe('SOIL10999-Greece-SEA'); // owner's doc example
+    expect(n.tags).toEqual(['WHOLESALE-SEAFREIGHT']);
+    expect(n.shippingLine).toMatchObject({ carrier: 'Generic', method: 'genericlabel' });
+  });
+
+  it('has no tags and the Cheapest line for Qiqi-Shipping types', () => {
+    const n = buildNormalizedOrder({
+      ...hubOrder,
+      order: { ...hubOrder.order, shipment_type: 'DDP' },
+      company: { ...hubOrder.company, ship_to_country: 'Hong Kong' },
+    });
+    expect(n.orderNumber).toBe('SO-555-HongKong-DDP');
+    expect(n.tags).toEqual([]);
+    expect(n.shippingLine).toMatchObject({ carrier: 'Cheapest', method: '4' });
+  });
+
+  it('strips + signs from the ship-to phone (warehouse spec)', () => {
+    const n = buildNormalizedOrder({
+      ...hubOrder,
+      company: { ...hubOrder.company, ship_to_contact_phone: '+370 685 11530' },
+    });
+    expect(n.shipTo.phone).toBe('370 685 11530');
+  });
+});
+
+describe('countryToken / buildWarehouseOrderNumber', () => {
+  it('strips spaces and punctuation from country names', () => {
+    expect(countryToken('Puerto Rico')).toBe('PuertoRico');
+    expect(countryToken('Hong Kong')).toBe('HongKong');
+    expect(countryToken('Lithuania')).toBe('Lithuania');
+  });
+
+  it('abbreviates US and UK long forms', () => {
+    expect(countryToken('United States')).toBe('USA');
+    expect(countryToken('US')).toBe('USA');
+    expect(countryToken('united states of america')).toBe('USA');
+    expect(countryToken('United Kingdom')).toBe('UK');
+  });
+
+  it('builds the full {SO}-{Country}-{code} number', () => {
+    expect(
+      buildWarehouseOrderNumber({ soNumber: 'SOUS10877', country: 'United States', shipmentTypeCode: 'LTL' }),
+    ).toBe('SOUS10877-USA-LTL');
+    expect(
+      buildWarehouseOrderNumber({ soNumber: 'SOUS10654', country: 'Puerto Rico', shipmentTypeCode: 'LABELS' }),
+    ).toBe('SOUS10654-PuertoRico-LABELS');
+  });
+
+  it('returns null when any segment is missing or the type is unknown', () => {
+    expect(buildWarehouseOrderNumber({ soNumber: null, country: 'Greece', shipmentTypeCode: 'SEA' })).toBeNull();
+    expect(buildWarehouseOrderNumber({ soNumber: 'SO-1', country: '', shipmentTypeCode: 'SEA' })).toBeNull();
+    expect(buildWarehouseOrderNumber({ soNumber: 'SO-1', country: 'Greece', shipmentTypeCode: 'Air Shipping' })).toBeNull();
+  });
 });
 
 describe('isPickupShipment (tolerant)', () => {
@@ -116,6 +181,24 @@ describe('buildShipHeroOrderInput', () => {
   it('omits customer_account_id when not configured', () => {
     const input = buildShipHeroOrderInput(buildNormalizedOrder(hubOrder), cfg({ customerAccountId: null }), PUSH_DATE);
     expect(input.customer_account_id).toBeUndefined();
+  });
+
+  it('carries the shipment-type tags and shipping line into the create input', () => {
+    const n = buildNormalizedOrder({
+      ...hubOrder,
+      order: { ...hubOrder.order, so_number: 'SOIL10776', shipment_type: 'AIR' },
+      company: { ...hubOrder.company, ship_to_country: 'Lithuania' },
+    });
+    const input = buildShipHeroOrderInput(n, cfg(), PUSH_DATE);
+    expect(input.order_number).toBe('SOIL10776-Lithuania-AIR');
+    expect(input.tags).toEqual(['WHOLESALE-AIRFREIGHT']);
+    expect(input.shipping_lines).toMatchObject({ carrier: 'Generic', method: 'genericlabel' });
+  });
+
+  it('omits tags and falls back to the generic line without a shipment type', () => {
+    const input = buildShipHeroOrderInput(buildNormalizedOrder(hubOrder), cfg(), PUSH_DATE);
+    expect(input.tags).toBeUndefined();
+    expect(input.shipping_lines).toMatchObject({ carrier: 'Generic', method: 'genericlabel' });
   });
 
   it('pins line-item warehouse_id only when configured', () => {

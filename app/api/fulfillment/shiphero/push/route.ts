@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
 import { getFulfillmentProvider } from '../../../../../lib/fulfillment';
-import { buildNormalizedOrder } from '../../../../../lib/fulfillment/normalize';
+import { buildNormalizedOrder, countryToken } from '../../../../../lib/fulfillment/normalize';
+import { shipmentTypeByCode } from '../../../../../lib/shipmentTypes';
 
 /**
  * POST /api/fulfillment/shiphero/push  { orderId }
@@ -30,6 +31,7 @@ export async function POST(request: NextRequest) {
         po_number,
         created_at,
         status,
+        shipment_type,
         netsuite_so_id,
         external_fulfillment_id,
         company:companies(
@@ -79,12 +81,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Order has no company' }, { status: 400 });
     }
 
+    // The warehouse order number is {SO}-{Country}-{type code} — every segment
+    // must exist before we push, so failures are clear instead of a malformed
+    // number landing at BrandFox.
+    if (!shipmentTypeByCode(order.shipment_type)) {
+      return NextResponse.json(
+        { error: 'Set the order\'s Shipment Type before sending it to the warehouse.' },
+        { status: 400 },
+      );
+    }
+    if (!order.so_number?.trim()) {
+      return NextResponse.json(
+        { error: 'The order has no NetSuite SO number yet — needed for the warehouse order number.' },
+        { status: 400 },
+      );
+    }
+    if (!countryToken(company.ship_to_country)) {
+      return NextResponse.json(
+        { error: 'The company has no Ship To country — needed for the warehouse order number.' },
+        { status: 400 },
+      );
+    }
+
     const normalized = buildNormalizedOrder({
       order: {
         id: order.id,
         so_number: order.so_number,
         po_number: order.po_number,
         created_at: order.created_at,
+        shipment_type: order.shipment_type,
       },
       company,
       items: (order.order_items ?? []).map((it: any) => ({

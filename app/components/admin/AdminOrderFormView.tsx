@@ -58,7 +58,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../qq/select';
-import { PACKING_FOR_OPTIONS } from '../../../lib/orderSave';
+import { SHIPMENT_TYPES } from '../../../lib/shipmentTypes';
 
 // ---------------- Types ----------------
 interface Category {
@@ -111,7 +111,7 @@ interface SupportFundItem extends OrderItem {}
 interface Order {
   id: string;
   po_number?: string;
-  packing_for?: string;
+  shipment_type?: string;
   status: string;
   company_id: string;
   company?: Company;
@@ -574,7 +574,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
               </CardContent>
             </Card>
 
-            {/* PO number (new mode) + mandatory Packing For (both modes) */}
+            {/* PO number (new mode) + mandatory Shipment Type (both modes) */}
             <div className="flex items-center gap-3">
               {isNewMode && (
               <div className="flex items-center gap-3">
@@ -602,35 +602,35 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
               </div>
               )}
 
-              {/* Packing differs between air and ocean freight — the
-                  warehouse needs this on every order (mandatory). */}
+              {/* Shipment type drives the warehouse order: tags, carrier and
+                  the order-number suffix (mandatory). */}
               <div className="flex items-center gap-3 ml-auto">
-                <Label htmlFor="packing-for" className="text-sm font-medium shrink-0">
-                  Packing for <span className="text-destructive">*</span>
+                <Label htmlFor="shipment-type" className="text-sm font-medium shrink-0">
+                  Shipment type <span className="text-destructive">*</span>
                 </Label>
                 <Select
-                  value={order?.packing_for || ''}
+                  value={order?.shipment_type || ''}
                   onValueChange={(v) =>
                     setOrder((prev) =>
                       prev
-                        ? { ...prev, packing_for: v }
+                        ? { ...prev, shipment_type: v }
                         : {
                             id: '',
                             po_number: '',
-                            packing_for: v,
+                            shipment_type: v,
                             status: 'Open',
                             company_id: selectedCompanyId,
                           }
                     )
                   }
                 >
-                  <SelectTrigger id="packing-for" className="w-44">
+                  <SelectTrigger id="shipment-type" className="w-64">
                     <SelectValue placeholder="Select…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {PACKING_FOR_OPTIONS.map((opt) => (
-                      <SelectItem key={opt} value={opt}>
-                        {opt}
+                    {SHIPMENT_TYPES.map((t) => (
+                      <SelectItem key={t.code} value={t.code}>
+                        {t.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

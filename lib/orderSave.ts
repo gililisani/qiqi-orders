@@ -12,12 +12,6 @@
 
 import { resolveCatalogPrice } from './orderPricing';
 
-/** How the warehouse packs the order — mandatory on every form save.
- *  Single source for the form dropdowns, client validation, the API check
- *  and the DB CHECK constraint (migration 20260803240000). */
-export const PACKING_FOR_OPTIONS = ['Air Shipping', 'Ocean Shipping'] as const;
-export type PackingFor = (typeof PACKING_FOR_OPTIONS)[number];
-
 export interface SaveItemInput {
   product_id: number;
   quantity: number;

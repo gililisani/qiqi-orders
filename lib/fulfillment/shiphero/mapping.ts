@@ -22,9 +22,9 @@ import { splitContactName } from '../normalize';
 // label wording is the kind of domain text that drifts.
 const GENERIC_PICKUP_TOKEN = 'generic';
 
-// What we put on the order's shipping line when creating it. These are the
-// wholesale/pickup defaults BrandFox named. PENDING confirmation whether we
-// should set this at create time or let BrandFox assign it at fulfillment.
+// Fallback shipping line when the order carries no shipment type (legacy
+// orders only — the shipment-type config in lib/shipmentTypes.ts is the
+// normal source since 2026-09).
 export const PICKUP_SHIPPING_LINE = {
   title: 'Wholesale Generic',
   carrier: 'Generic',
@@ -54,6 +54,8 @@ export interface ShipHeroOrderInput {
   total_tax: string;
   total_discounts: string;
   currency: string;
+  /** BrandFox automation rules key on these (e.g. WHOLESALE-AIRFREIGHT). */
+  tags?: string[];
   shipping_lines: { title: string; price: string; carrier?: string; method?: string };
   shipping_address: Record<string, string | null>;
   line_items: Array<{
@@ -81,6 +83,7 @@ export function buildShipHeroOrderInput(
   orderDate: string,
 ): ShipHeroOrderInput {
   const { firstName, lastName } = splitContactName(order.shipTo.name);
+  const shippingLine = order.shippingLine ?? PICKUP_SHIPPING_LINE;
 
   const input: ShipHeroOrderInput = {
     order_number: order.orderNumber,
@@ -92,10 +95,10 @@ export function buildShipHeroOrderInput(
     total_discounts: '0.00',
     currency: order.currency || 'USD',
     shipping_lines: {
-      title: PICKUP_SHIPPING_LINE.title,
+      title: shippingLine.title,
       price: '0.00',
-      carrier: PICKUP_SHIPPING_LINE.carrier,
-      method: PICKUP_SHIPPING_LINE.method,
+      carrier: shippingLine.carrier,
+      method: shippingLine.method,
     },
     shipping_address: {
       first_name: firstName || (order.shipTo.company ?? ''),
@@ -121,6 +124,10 @@ export function buildShipHeroOrderInput(
     })),
     email: order.shipTo.email,
   };
+
+  if (order.tags && order.tags.length > 0) {
+    input.tags = [...order.tags];
+  }
 
   // Scope the order to Qiqi's customer account on the master 3PL account.
   if (config.customerAccountId) {

@@ -1,10 +1,10 @@
-import { PACKING_FOR_OPTIONS } from '../../../../lib/orderSave';
+import { SHIPMENT_TYPE_CODES } from '../../../../lib/shipmentTypes';
 
 export function validatePerformSave(params: {
   company: unknown;
   orderItemsCount: number;
   supportFundItemsCount: number;
-  packingFor?: string | null;
+  shipmentType?: string | null;
 }): string | null {
   if (!params.company) {
     return 'No company selected';
@@ -14,13 +14,9 @@ export function validatePerformSave(params: {
     return 'Order must contain at least one product';
   }
 
-  if (
-    !params.packingFor ||
-    !(PACKING_FOR_OPTIONS as readonly string[]).includes(params.packingFor)
-  ) {
-    return 'Please select what the order is packed for (Air or Ocean shipping).';
+  if (!params.shipmentType || !SHIPMENT_TYPE_CODES.includes(params.shipmentType)) {
+    return 'Please select a shipment type.';
   }
 
   return null;
 }
-

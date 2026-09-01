@@ -48,11 +48,18 @@ export interface NormalizedLineItem {
 export interface NormalizedOrder {
   /** Hub order UUID — becomes the provider `partner_order_id` (dedup key). */
   orderId: string;
-  /** Human-facing number (so_number / po_number) — becomes `order_number`. */
+  /**
+   * Human-facing number — becomes `order_number`. For warehouse pushes this is
+   * `{NS SO}-{Country}-{shipment type code}` (built in normalize.ts).
+   */
   orderNumber: string;
   /** ISO date. */
   orderDate: string;
   currency?: string | null;
+  /** Warehouse routing tags (e.g. WHOLESALE-AIRFREIGHT); empty when none. */
+  tags: string[];
+  /** Shipping line to request at creation; null = provider default. */
+  shippingLine?: { title: string; carrier: string; method: string } | null;
   shipTo: NormalizedAddress;
   lineItems: NormalizedLineItem[];
 }
