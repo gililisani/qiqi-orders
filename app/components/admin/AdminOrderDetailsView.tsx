@@ -33,6 +33,8 @@ import {
   Loader2,
   RefreshCw,
   XCircle,
+  CheckCircle2,
+  MessageSquare,
 } from 'lucide-react';
 
 import { supabase } from '../../../lib/supabaseClient';
@@ -413,6 +415,11 @@ export default function AdminOrderDetailsView({
   // NetSuite actions (push / create invoice / sync invoice) — same as before
   // --------------------------------------------------------------------------
   const [nsLoading, setNsLoading] = useState<string | null>(null);
+  const [accepting, setAccepting] = useState(false);
+  const [cancellingOrder, setCancellingOrder] = useState(false);
+  const [showRequestChangesModal, setShowRequestChangesModal] = useState(false);
+  const [requestChangesMessage, setRequestChangesMessage] = useState('');
+  const [sendingRequestChanges, setSendingRequestChanges] = useState(false);
   const [shipHeroLoading, setShipHeroLoading] = useState(false);
 
   // Reconciliation runs once per (orderId) when an order has a so_number set
@@ -475,7 +482,7 @@ export default function AdminOrderDetailsView({
       const ok = await confirm({
         title: 'Push order to NetSuite?',
         description:
-          'This action will create a Purchase Order in NetSuite. Are you sure you want to continue?',
+          'This action will create a Sales Order in NetSuite. Are you sure you want to continue?',
         confirmLabel: 'Push to NetSuite',
       });
       if (!ok) return;
@@ -545,6 +552,131 @@ export default function AdminOrderDetailsView({
       toast.error(err.message || 'NetSuite request failed.');
     } finally {
       setNsLoading(null);
+    }
+  };
+
+  // Accept Order — one action: NetSuite SO + warehouse push (server-side
+  // orchestration in /api/orders/accept). Replaces the old two-step
+  // Push-to-NetSuite → "Send to warehouse?" flow for Open orders.
+  const handleAcceptOrder = async () => {
+    const ok = await confirm({
+      title: 'Accept this order?',
+      description:
+        'This creates the NetSuite Sales Order and sends the order to the warehouse (BrandFox) for fulfillment.',
+      confirmLabel: 'Accept Order',
+    });
+    if (!ok) return;
+    setAccepting(true);
+    try {
+      const res = await fetchWithAuth('/api/orders/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (data.step === 'warehouse') {
+          toast.error(
+            `Sales Order ${data.soNumber || ''} was created, but sending to the warehouse failed: ${data.error}. Retry via "Send to ShipHero" in the menu.`,
+          );
+          await fetchOrder();
+          await fetchOrderHistory();
+          return;
+        }
+        throw new Error(data.error || `Accept failed (${res.status})`);
+      }
+      toast.success(
+        `Order accepted — Sales Order ${data.soNumber} created` +
+          (data.warehouseDryRun
+            ? '. Warehouse push simulated (ShipHero dry-run).'
+            : ' and sent to the warehouse.'),
+      );
+      // Same customer notification the In Process status change sends.
+      try {
+        await fetchWithAuth('/api/orders/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, emailType: 'in_process' }),
+        });
+      } catch {
+        /* email failure shouldn't mask a successful accept */
+      }
+      await fetchOrder();
+      await fetchOrderHistory();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to accept order.');
+    } finally {
+      setAccepting(false);
+    }
+  };
+
+  // Cancel Order — only after acceptance (In Process + SO, pre-invoice).
+  // Unwinds ShipHero + deletes the NetSuite SO server-side.
+  const handleCancelOrder = async () => {
+    const ok = await confirm({
+      title: 'Cancel this order?',
+      description: `This cancels fulfillment at the warehouse and deletes Sales Order ${order?.so_number || ''} from NetSuite.`,
+      warning: 'This action cannot be undone.',
+      confirmLabel: 'Cancel Order',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    setCancellingOrder(true);
+    try {
+      const res = await fetchWithAuth('/api/orders/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Cancel failed (${res.status})`);
+      toast.success('Order cancelled — NetSuite SO deleted and warehouse notified.');
+      try {
+        await fetchWithAuth('/api/orders/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, emailType: 'cancelled' }),
+        });
+      } catch {
+        /* email failure shouldn't mask a successful cancel */
+      }
+      await fetchOrder();
+      await fetchOrderHistory();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to cancel order.');
+    } finally {
+      setCancellingOrder(false);
+    }
+  };
+
+  // Request changes — stock-shortage flow: ask the CLIENT to adjust the
+  // order (keeps their support-fund choices in their hands). Order stays Open.
+  const handleRequestChanges = async () => {
+    if (!requestChangesMessage.trim()) {
+      toast.error('Write the change request message first.');
+      return;
+    }
+    setSendingRequestChanges(true);
+    try {
+      const res = await fetchWithAuth('/api/orders/request-changes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, message: requestChangesMessage.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+      toast.success(
+        data.emailSkipped
+          ? 'Change request logged (no client email on file — nothing was sent).'
+          : 'Change request sent to the client.',
+      );
+      setShowRequestChangesModal(false);
+      setRequestChangesMessage('');
+      await fetchOrderHistory();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send the change request.');
+    } finally {
+      setSendingRequestChanges(false);
     }
   };
 
@@ -871,6 +1003,15 @@ export default function AdminOrderDetailsView({
       return null;
     }
     if (!order.netsuite_so_id) {
+      // Open orders get the one-click Accept (NS SO + warehouse push).
+      // The bare NetSuite push remains for edge cases: an order past Open
+      // whose SO link was removed (unlink / manual fixes).
+      if (order.status === 'Open') {
+        return {
+          action: 'accept' as const,
+          label: accepting ? 'Accepting…' : 'Accept Order',
+        };
+      }
       return {
         action: 'push-so' as const,
         label: nsLoading === 'push-so' ? 'Pushing…' : 'Push to NetSuite',
@@ -892,6 +1033,15 @@ export default function AdminOrderDetailsView({
     // (Refreshing invoice status moved out of the primary slot per spec.)
     return null;
   })();
+
+  // Request changes: Open only — the client can still edit, so the admin asks
+  // them to adjust (stock shortages etc.) instead of editing their order.
+  const canRequestChanges = originalStatus === 'Open';
+
+  // Cancel Order: only AFTER acceptance (SO exists, still In Process) and
+  // before invoicing — it deletes the NS SO and cancels the warehouse.
+  const canCancelOrder =
+    originalStatus === 'In Process' && !!order.netsuite_so_id && !order.netsuite_invoice_id;
 
   // Product rule: delete is allowed ONLY when the order is Cancelled.
   // Drafts must be cancelled first. NS-linked orders can still be deleted
@@ -946,9 +1096,14 @@ export default function AdminOrderDetailsView({
                 {nsPrimary && (
                   <Button
                     size="sm"
-                    onClick={() => handleNsAction(nsPrimary.action)}
-                    loading={nsLoading === nsPrimary.action}
+                    onClick={() =>
+                      nsPrimary.action === 'accept'
+                        ? handleAcceptOrder()
+                        : handleNsAction(nsPrimary.action)
+                    }
+                    loading={nsPrimary.action === 'accept' ? accepting : nsLoading === nsPrimary.action}
                   >
+                    {nsPrimary.action === 'accept' && <CheckCircle2 className="h-4 w-4" />}
                     {nsPrimary.label}
                   </Button>
                 )}
@@ -967,6 +1122,29 @@ export default function AdminOrderDetailsView({
                     </Button>
                   )}
               </>
+            )}
+
+            {/* Request changes — ask the client to adjust an Open order. */}
+            {canRequestChanges && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowRequestChangesModal(true)}
+              >
+                <MessageSquare className="h-4 w-4" /> Request changes
+              </Button>
+            )}
+
+            {/* Cancel Order — unwinds an accepted order (warehouse + NS SO). */}
+            {canCancelOrder && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={handleCancelOrder}
+                loading={cancellingOrder}
+              >
+                <XCircle className="h-4 w-4" /> Cancel Order
+              </Button>
             )}
 
             {/* Edit — only when status is Draft or Open. Frozen otherwise. */}
@@ -1747,6 +1925,41 @@ export default function AdminOrderDetailsView({
             </Button>
             <Button onClick={handleSendCustomEmail} loading={sendingNotification}>
               {sendingNotification ? 'Sending…' : 'Send email'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Request changes modal — stock-shortage flow: the client adjusts
+          their own order (keeps support-fund choices in their hands). */}
+      <Dialog open={showRequestChangesModal} onOpenChange={setShowRequestChangesModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request changes</DialogTitle>
+            <DialogDescription>
+              Ask the client to adjust this order. They get an email with your message, the request
+              shows on the order timeline, and the order stays Open so they can edit it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Label>Message to the client</Label>
+            <textarea
+              value={requestChangesMessage}
+              onChange={(e) => setRequestChangesMessage(e.target.value)}
+              className="mt-1.5 w-full px-3 py-2 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 min-h-[120px]"
+              placeholder="e.g. We can currently supply only 2,000 units of FPS0018 — please adjust the quantities and re-save the order."
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowRequestChangesModal(false)}
+              disabled={sendingRequestChanges}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleRequestChanges} loading={sendingRequestChanges}>
+              {sendingRequestChanges ? 'Sending…' : 'Send request'}
             </Button>
           </DialogFooter>
         </DialogContent>
