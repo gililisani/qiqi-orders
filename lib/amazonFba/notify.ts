@@ -21,6 +21,14 @@ function totalsTable(preview: MonthPreview): string {
     ['Net', money(preview.computedNet)],
     ['Orders', String(preview.orderCount)],
   ];
+  if (preview.returns) {
+    rows.push([
+      'Physical returns',
+      `${preview.returns.restockUnits} restock, ${preview.returns.nonRestockUnits} damaged`,
+    ]);
+  } else if (preview.returnsError) {
+    rows.push(['Physical returns', 'report unavailable — money-only push']);
+  }
   return `<table cellpadding="6" style="border-collapse:collapse">${rows
     .map(
       ([label, value]) =>

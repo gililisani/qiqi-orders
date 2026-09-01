@@ -15,6 +15,7 @@
 
 import { NetSuiteAPI } from '../netsuite';
 import type { FeeLine, SaleLine } from './parseReport';
+import type { MonthReturns } from './returnsRestock';
 
 export interface AmazonFbaConfig {
   customer_ns_id: string;
@@ -40,10 +41,12 @@ export interface MonthPushInput {
   refundTotal: number;
   feeLines: FeeLine[];
   reimbursementTotal: number;
+  /** Physical customer returns for the month (API-prepared batches only). */
+  returns?: MonthReturns;
 }
 
 export interface PushStepResult {
-  step: 'cashSale' | 'cashRefund' | 'vendorBill' | 'billPayment' | 'journal';
+  step: 'cashSale' | 'cashRefund' | 'vendorBill' | 'billPayment' | 'journal' | 'returnsRestock';
   status: 'created' | 'existed' | 'skipped';
   nsId?: string;
   tranId?: string;
@@ -71,7 +74,9 @@ export function missingConfigFields(config: AmazonFbaConfig, input: MonthPushInp
       need('advertising_account_ns_id', 'Advertising account (630040)');
     }
   }
-  if (input.reimbursementTotal !== 0) need('writeoff_account_ns_id', 'Write-off account (620070)');
+  if (input.reimbursementTotal !== 0 || (input.returns?.restockLines?.length || 0) > 0) {
+    need('writeoff_account_ns_id', 'Write-off account (620070)');
+  }
   return missing;
 }
 
@@ -150,8 +155,34 @@ export async function planLotAssignments(
     });
   }
 
-  const plan = new Map<number, LotAssignment[]>();
+  // Check month TOTALS per item first, so the error reports the real gap
+  // ("month needs 18, only 17 available — short 1") instead of the misleading
+  // per-line "need 1, only 0" that only shows once the pool is drained.
+  const needByItem = new Map<string, { name: string; need: number }>();
+  for (const line of saleLines) {
+    if (!lotTracked.has(String(line.nsItemId))) continue;
+    const entry = needByItem.get(line.nsItemId) || { name: line.nsItemName, need: 0 };
+    entry.need += line.quantity;
+    needByItem.set(line.nsItemId, entry);
+  }
   const shortages: string[] = [];
+  for (const [itemId, { name, need }] of needByItem) {
+    const available = (pools.get(itemId) || []).reduce((s, lot) => s + lot.available, 0);
+    if (available < need) {
+      shortages.push(
+        `${name}: this month sold ${need}, only ${available} available at the Amazon FBA location (short ${need - available})`
+      );
+    }
+  }
+  if (shortages.length > 0) {
+    throw new Error(
+      `Not enough lot-numbered inventory at the Amazon FBA location:\n${shortages.join('\n')}\n` +
+      'Record the missing inbound shipment / returns in NetSuite (or fix item mapping) and retry. ' +
+      'The drift panel on this page compares NetSuite against live Amazon stock.'
+    );
+  }
+
+  const plan = new Map<number, LotAssignment[]>();
   saleLines.forEach((line, index) => {
     if (!lotTracked.has(String(line.nsItemId))) {
       plan.set(index, []); // non-lot item: no inventory detail on the line
@@ -168,22 +199,63 @@ export async function planLotAssignments(
       lot.available -= take;
       remaining -= take;
     }
-    if (remaining > 0) {
-      shortages.push(
-        `${line.nsItemName}: need ${line.quantity}, only ${line.quantity - remaining} available across lots at Amazon FBA`
-      );
-    } else {
-      plan.set(index, assignments);
-    }
+    // Totals were verified above, so every line must be satisfiable.
+    plan.set(index, assignments);
   });
-
-  if (shortages.length > 0) {
-    throw new Error(
-      `Not enough lot-numbered inventory at the Amazon FBA location:\n${[...new Set(shortages)].join('\n')}\n` +
-      'Adjust inventory in NetSuite (or fix item mapping) and retry.'
-    );
-  }
   return plan;
+}
+
+// ---------------------------------------------------------------------------
+// Returns restock lot planning
+// ---------------------------------------------------------------------------
+/**
+ * Pick the lot NAME each restocked item goes back into: the lot with the most
+ * available stock at the FBA location, else the item's newest lot anywhere
+ * (the location may have just run dry — which is exactly when returns matter).
+ * Positive adjustments receive by lot NAME (receiptInventoryNumber).
+ */
+async function planRestockLots(
+  ns: NetSuiteAPI,
+  locationNsId: string,
+  itemIds: string[]
+): Promise<Map<string, string | null>> {
+  const lotByItem = new Map<string, string | null>();
+  if (itemIds.length === 0) return lotByItem;
+  const ids = itemIds.map((i) => Number(i)).join(', ');
+
+  const flagRows = await ns.suiteQL<{ id: string; islotitem: string }>(
+    `SELECT id, islotitem FROM item WHERE id IN (${ids})`
+  );
+  for (const r of flagRows) {
+    if (r.islotitem !== 'T') lotByItem.set(String(r.id), null); // non-lot: no detail needed
+  }
+
+  const atLocation = await ns.suiteQL<{ item: string; lotname: string; quantityavailable: string }>(
+    `SELECT ib.item, inv.inventorynumber AS lotname, ib.quantityavailable
+       FROM InventoryBalance ib
+       JOIN inventorynumber inv ON inv.id = ib.inventorynumber
+      WHERE ib.location = ${Number(locationNsId)} AND ib.item IN (${ids})
+      ORDER BY ib.quantityavailable DESC`
+  );
+  for (const r of atLocation) {
+    const key = String(r.item);
+    if (!lotByItem.has(key) && r.lotname) lotByItem.set(key, r.lotname);
+  }
+
+  const unresolved = itemIds.filter((id) => !lotByItem.has(String(id)));
+  if (unresolved.length > 0) {
+    const latest = await ns.suiteQL<{ item: string; lotname: string }>(
+      `SELECT inv.item, inv.inventorynumber AS lotname
+         FROM inventorynumber inv
+        WHERE inv.item IN (${unresolved.map((i) => Number(i)).join(', ')})
+        ORDER BY inv.id DESC`
+    );
+    for (const r of latest) {
+      const key = String(r.item);
+      if (!lotByItem.has(key) && r.lotname) lotByItem.set(key, r.lotname);
+    }
+  }
+  return lotByItem;
 }
 
 // ---------------------------------------------------------------------------
@@ -378,6 +450,64 @@ export async function pushMonthToNetSuite(
     );
   } else {
     results.push({ step: 'journal', status: 'skipped' });
+  }
+
+  // -- 6. Returns restock (sellable physical returns back into stock) --------
+  const restockLines = input.returns?.restockLines?.filter((l) => l.nsItemId && l.quantity > 0) || [];
+  if (restockLines.length > 0) {
+    const lotByItem = await planRestockLots(
+      ns,
+      config.location_ns_id,
+      restockLines.map((l) => l.nsItemId)
+    );
+    const missingLot = restockLines.filter(
+      (l) => lotByItem.get(String(l.nsItemId)) === undefined
+    );
+    if (missingLot.length > 0) {
+      throw new Error(
+        `Returns restock: no lot found for ${missingLot.map((l) => l.nsItemName).join(', ')} — ` +
+        'restock these manually in NetSuite, then push again (the adjustment is idempotent).'
+      );
+    }
+    await ensureRecord(
+      ns,
+      results,
+      'returnsRestock',
+      'inventoryAdjustment',
+      `AMAZON-FBA-RETSTK-${input.period}`,
+      () =>
+        ns.createRecord('inventoryAdjustment', {
+          externalId: `AMAZON-FBA-RETSTK-${input.period}`,
+          subsidiary: { id: config.subsidiary_ns_id },
+          account: { id: config.writeoff_account_ns_id },
+          adjLocation: { id: config.location_ns_id },
+          tranDate: input.tranDate,
+          memo: `Amazon FBA sellable customer returns ${input.periodLabel}`,
+          ...classRef,
+          inventory: {
+            items: restockLines.map((line) => {
+              const lotName = lotByItem.get(String(line.nsItemId));
+              return {
+                item: { id: line.nsItemId },
+                location: { id: config.location_ns_id },
+                adjustQtyBy: line.quantity,
+                memo: `Returned orders: ${line.orderIds.join(', ')}`.slice(0, 999),
+                ...(lotName
+                  ? {
+                      inventoryDetail: {
+                        inventoryAssignment: {
+                          items: [{ receiptInventoryNumber: lotName, quantity: line.quantity }],
+                        },
+                      },
+                    }
+                  : {}),
+              };
+            }),
+          },
+        })
+    );
+  } else {
+    results.push({ step: 'returnsRestock', status: 'skipped' });
   }
 
   return results;

@@ -83,6 +83,10 @@ export interface MonthPreview {
   /** gross + discounts + refunds − fees + reimbursements. */
   computedNet: number;
   reconciles: boolean;
+  /** Physical customer returns (API-prepared months from 2026-09 onward). */
+  returns?: import('./returnsRestock').MonthReturns;
+  /** Set when the returns report could not be fetched — push proceeds money-only. */
+  returnsError?: string;
 }
 
 const MONTH_NAMES = [

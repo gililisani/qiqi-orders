@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
       refundTotal: Number(body.refundTotal) || 0,
       feeLines: Array.isArray(body.feeLines) ? body.feeLines : [],
       reimbursementTotal: Number(body.reimbursementTotal) || 0,
+      returns:
+        body.returns && Array.isArray(body.returns.restockLines) ? body.returns : undefined,
     };
     period = input.period;
 

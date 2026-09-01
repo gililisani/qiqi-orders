@@ -14,6 +14,7 @@ import {
   Trash2,
   Upload,
   BadgeCheck,
+  XCircle,
 } from 'lucide-react';
 
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
@@ -150,6 +151,7 @@ export function AmazonFbaMonthCard({
           refundTotal: effective.refundTotal,
           feeLines: effective.feeLines,
           reimbursementTotal: effective.reimbursementTotal,
+          returns: effective.returns,
         }),
       });
       const data = await res.json();
@@ -292,6 +294,49 @@ export function AmazonFbaMonthCard({
         {missingConfig.length > 0 && !pushed && (
           <div className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
             Missing NetSuite IDs in Settings: {missingConfig.join(', ')}.
+          </div>
+        )}
+
+        {/* Physical customer returns → restock */}
+        {effective.returnsError && !pushed && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Returns report could not be fetched ({effective.returnsError}) — pushing books the money
+            only. Re-fetch the month to retry, or true up stock via the drift panel afterwards.
+          </div>
+        )}
+        {effective.returns && effective.returns.units.length > 0 && (
+          <div className="rounded-md border border-border overflow-hidden">
+            <div className="px-4 py-2 bg-muted/50 text-sm font-semibold">
+              Customer returns — {effective.returns.restockUnits} unit(s){' '}
+              {pushed ? 'restocked' : 'will restock'} (sellable)
+              {effective.returns.nonRestockUnits > 0 &&
+                `, ${effective.returns.nonRestockUnits} not restocked (damaged/defective)`}
+            </div>
+            <div className="px-4 py-2 space-y-0.5">
+              {effective.returns.units.map((u, i) => (
+                <div key={i} className="flex items-center justify-between text-sm py-0.5">
+                  <span className="flex items-center gap-2">
+                    {u.restock ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
+                    <span className="font-mono text-xs">{u.returnDate}</span>
+                    <span>{u.nsItemName || u.sellerSku}</span>
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {u.disposition}
+                    {u.quantity > 1 && ` × ${u.quantity}`}
+                  </span>
+                </div>
+              ))}
+              {effective.returns.unresolvedSkus.length > 0 && (
+                <p className="text-xs text-amber-700 pt-1">
+                  Unmapped returned SKU(s) — not restocked: {effective.returns.unresolvedSkus.join(', ')}.
+                  Map them in Settings and re-fetch the month.
+                </p>
+              )}
+            </div>
           </div>
         )}
 

@@ -134,14 +134,31 @@ describe('planLotAssignments', () => {
     ]);
   });
 
-  it('throws a clear shortage error naming the item', async () => {
+  it('throws a shortage error with MONTH totals, naming every short item', async () => {
     await expect(
       planLotAssignments(
         nsWithLots([{ item: '101', inventorynumber: '900', quantityavailable: '1' }]),
         '41',
         INPUT.saleLines
       )
-    ).rejects.toThrow(/Blowout: need 2.*\n.*Shampoo: need 1/s);
+    ).rejects.toThrow(
+      /Blowout: this month sold 2, only 1 available.*\(short 1\).*\n.*Shampoo: this month sold 1, only 0 available.*\(short 1\)/s
+    );
+  });
+
+  it('aggregates many qty-1 lines into one per-item total (the 2026-08 failure mode)', async () => {
+    // 18 lines of qty 1 vs 17 available — the old message said "need 1, only 0".
+    const lines = Array.from({ length: 18 }, (_, i) => ({
+      ...INPUT.saleLines[1],
+      orderId: `111-${i}`,
+    }));
+    await expect(
+      planLotAssignments(
+        nsWithLots([{ item: '102', inventorynumber: '901', quantityavailable: '17' }]),
+        '41',
+        lines
+      )
+    ).rejects.toThrow(/Shampoo: this month sold 18, only 17 available.*\(short 1\)/);
   });
 
   it('gives non-lot-tracked items an empty plan instead of lots or shortages', async () => {

@@ -43,5 +43,9 @@ export function normalizeStoredPreview(payload: any): MonthPreview | null {
     reportNet: payload.reportNet ?? net,
     computedNet: payload.computedNet ?? net,
     reconciles: payload.reconciles ?? needsAttention.length === 0,
+    ...(payload.returns && Array.isArray(payload.returns.restockLines)
+      ? { returns: payload.returns }
+      : {}),
+    ...(payload.returnsError ? { returnsError: String(payload.returnsError) } : {}),
   };
 }

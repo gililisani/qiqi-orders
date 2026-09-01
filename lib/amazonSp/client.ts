@@ -206,13 +206,15 @@ export const REPORT_TYPES = {
 export async function createReport(
   reportType: string,
   dataStartIso: string,
-  dataEndIso: string
+  dataEndIso: string,
+  reportOptions?: Record<string, string>
 ): Promise<string> {
   const data = await spPost<{ reportId: string }>('/reports/2021-06-30/reports', {
     reportType,
     marketplaceIds: [US_MARKETPLACE_ID],
     dataStartTime: dataStartIso,
     dataEndTime: dataEndIso,
+    ...(reportOptions ? { reportOptions } : {}),
   });
   return data.reportId;
 }

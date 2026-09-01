@@ -7,8 +7,12 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { createNetSuiteAPI } from '../netsuite';
 import { getFinancialEvents } from '../amazonSp/client';
-import { buildMonthPreviewFromEvents, resolveSellerSkus } from './buildFromAmazon';
+import { buildMonthPreviewFromEvents, resolveSellerSkus, resolveSkuList } from './buildFromAmazon';
+import { classifyMonthReturns, fetchMonthReturnRows, returnRowSkus } from './returnsRestock';
 import type { MonthPreview } from './parseReport';
+
+/** Physical-returns restock automation starts here; earlier months were trued up manually. */
+const RETURNS_AUTOMATION_FROM = '2026-09';
 
 export interface PrepareResult {
   status: 'prepared' | 'already-pushed';
@@ -41,6 +45,19 @@ export async function prepareMonthFromAmazon(
   const ns = createNetSuiteAPI();
   const skuMap = await resolveSellerSkus(events, supabaseAdmin, ns);
   const preview = buildMonthPreviewFromEvents(period, events, skuMap);
+
+  // Physical returns for the month (restock preview). A failure here must not
+  // sink the whole preparation — store the error and let the push proceed
+  // money-only; the drift panel catches any resulting stock gap.
+  if (period >= RETURNS_AUTOMATION_FROM) {
+    try {
+      const returnRows = await fetchMonthReturnRows(period);
+      const returnsSkuMap = await resolveSkuList(returnRowSkus(returnRows), supabaseAdmin, ns);
+      preview.returns = classifyMonthReturns(returnRows, returnsSkuMap);
+    } catch (err: any) {
+      preview.returnsError = String(err?.message || err).slice(0, 500);
+    }
+  }
 
   if (existing) {
     await supabaseAdmin

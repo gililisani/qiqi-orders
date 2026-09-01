@@ -168,7 +168,17 @@ export async function resolveSellerSkus(
       if (item.SellerSKU) sellerSkus.add(item.SellerSKU);
     }
   }
+  return resolveSkuList([...sellerSkus], supabaseAdmin, ns);
+}
+
+/** Same resolution order, for an arbitrary list of raw seller SKUs (returns report, drift view). */
+export async function resolveSkuList(
+  rawSkus: string[],
+  supabaseAdmin: SupabaseClient,
+  ns: NetSuiteAPI
+): Promise<Map<string, SkuResolution>> {
   const result = new Map<string, SkuResolution>();
+  const sellerSkus = new Set(rawSkus.filter(Boolean));
   if (sellerSkus.size === 0) return result;
 
   const normalized = [...sellerSkus].map((raw) => ({ raw, catalog: normalizeSellerSku(raw) }));

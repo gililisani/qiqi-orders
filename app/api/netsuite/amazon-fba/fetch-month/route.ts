@@ -3,7 +3,10 @@ import { createServiceRoleClient, requireAdminWithPermission } from '../../../..
 import { isAmazonSpConfigured } from '../../../../../lib/amazonSp/client';
 import { prepareMonthFromAmazon } from '../../../../../lib/amazonFba/prepareMonth';
 
-export const maxDuration = 120;
+// Finances-API paging plus the async returns report (generation can take a
+// few minutes on Amazon's side) — a returns timeout degrades gracefully to a
+// money-only preview, but give the report a real chance to finish.
+export const maxDuration = 300;
 
 /**
  * POST { period: 'YYYY-MM' } — fetch a month straight from the Amazon
