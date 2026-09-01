@@ -150,7 +150,7 @@ async function fetchInvoiceLines(
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAdminWithPermission(request, 'companies:manage');
+    const user = await requireAdminWithPermission(request, 'distributors:edit');
     const body = await request.json().catch(() => ({}));
     const companyId = String(body?.companyId || '');
     const mode = body?.mode;

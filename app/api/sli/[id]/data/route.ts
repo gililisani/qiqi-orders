@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchStandaloneSLIData } from '../../../../../lib/pdf/api/sliDataFetcher';
-import { requireAdmin } from '../../../../../platform/auth/guards';
+import { requireAdminWithPermission } from '../../../../../platform/auth/guards';
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'orders:view');
     const sliId = params.id;
     const data = await fetchStandaloneSLIData(sliId);
     

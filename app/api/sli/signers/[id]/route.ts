@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../platform/auth/guards';
 import { validateSignature } from '../../../../../lib/sli/signatureValidation';
 
 // PUT - update a signer (fields present in the body are updated)
 export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'config:edit');
     const body = await request.json();
     const { name, title, email, phone, signature_url, is_default } = body;
     const supabaseAdmin = createServiceRoleClient();
@@ -61,7 +61,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
 export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'config:edit');
     const supabaseAdmin = createServiceRoleClient();
 
     // Don't allow deleting the default signer — pick another default first.

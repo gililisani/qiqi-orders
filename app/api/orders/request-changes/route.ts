@@ -14,7 +14,7 @@ import { POST as sendEmailHandler } from '../send-email/route';
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAdminWithPermission(request, 'orders');
+    const user = await requireAdminWithPermission(request, 'orders:edit');
 
     const body = await request.json();
     const orderId = typeof body.orderId === 'string' ? body.orderId : null;

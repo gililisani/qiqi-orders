@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = createAuth();
-    await requireAdminWithPermission(request, 'dam');
+    await requireAdminWithPermission(request, 'assets:edit');
 
     const supabaseAdmin = createSupabaseAdminClient();
     const body = await request.json();

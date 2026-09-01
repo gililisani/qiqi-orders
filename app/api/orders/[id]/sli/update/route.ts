@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../../platform/auth/guards';
 
 export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -19,7 +19,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
 
     // Standard admin guard (was a hand-rolled token+admins lookup that
     // skipped the enabled check — audit 1.3 pattern).
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'orders:edit');
     const supabaseAdmin = createServiceRoleClient();
 
     // Check if SLI exists

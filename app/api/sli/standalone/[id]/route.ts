@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../platform/auth/guards';
 // Do not keep a module-level service-role client; create per-request
 
 // GET - Fetch standalone SLI
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'orders:view');
     const sliId = params.id;
     const supabaseAdmin = createServiceRoleClient();
 
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'orders:edit');
     const sliId = params.id;
     const body = await request.json();
     const supabaseAdmin = createServiceRoleClient();
@@ -120,7 +120,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
 export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'orders:edit');
     const sliId = params.id;
     const supabaseAdmin = createServiceRoleClient();
 

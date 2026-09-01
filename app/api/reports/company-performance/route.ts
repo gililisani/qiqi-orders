@@ -70,7 +70,7 @@ interface PeriodRow {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'reports');
+    await requireAdminWithPermission(request, 'insights');
     const { searchParams } = new URL(request.url);
     const scope = (searchParams.get('scope') ?? 'active') as Scope;
     const companyIdFilter = searchParams.get('companyId') || null;

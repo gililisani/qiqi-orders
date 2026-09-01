@@ -11,7 +11,7 @@ import { Input } from '../../../../components/qq/input';
 import { Button } from '../../../../components/qq/button';
 import { useToast } from '../../../../components/ui/ToastProvider';
 import { useConfirm } from '../../../../components/ui/ConfirmProvider';
-import { PermissionsField } from '../../../../components/admin/PermissionsField';
+import { AdminPermissionsField } from '../../../../components/admin/PermissionsField';
 import { DEFAULT_ADMIN_PERMISSIONS } from '../../../../../lib/permissions';
 
 export default function EditAdminPage() {
@@ -233,9 +233,9 @@ export default function EditAdminPage() {
 
       <FormField
         label="Access"
-        helper="Which areas of the Hub this admin can manage. Default is everything; untick to restrict."
+        helper="Per category: View opens the pages, Edit allows changes and actions. Default is everything; untick to restrict."
       >
-        <PermissionsField
+        <AdminPermissionsField
           value={formData.permissions}
           onChange={(next) => setFormData((p) => ({ ...p, permissions: next }))}
           disabled={loading}

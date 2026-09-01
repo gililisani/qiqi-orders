@@ -5,7 +5,7 @@ import { createNetSuiteAPI } from '../../../../../lib/netsuite';
 // GET - list all Amazon product → NS item mappings
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'amazon:view');
     const supabaseAdmin = createServiceRoleClient();
     const { data, error } = await supabaseAdmin
       .from('amazon_item_map')
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 //                                "search NetSuite" path in the modal).
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'amazon:edit');
     const body = await request.json();
     const { amazon_name, sku, unit_price } = body;
     let { ns_item_id, ns_item_name } = body;
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
 // DELETE ?id= - remove a mapping
 export async function DELETE(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'amazon:edit');
     const id = request.nextUrl.searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'Missing id.' }, { status: 400 });
     const supabaseAdmin = createServiceRoleClient();

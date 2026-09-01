@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   let setupToken: string | null = null;
 
   try {
-    const admin = await requireAdminWithPermission(request, 'users:manage');
+    const admin = await requireAdminWithPermission(request, 'users:edit');
 
     const { name, email, companyId, enabled, permissions: requestedPermissions } = await request.json();
 

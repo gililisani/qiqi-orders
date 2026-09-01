@@ -3,7 +3,7 @@ import { createServiceRoleClient, requireAdminWithPermission } from '../../../..
 
 export async function DELETE(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'users:manage');
+    await requireAdminWithPermission(request, 'users:edit');
 
     const { userId } = await request.json();
 

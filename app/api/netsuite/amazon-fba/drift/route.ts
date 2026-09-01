@@ -29,7 +29,7 @@ export interface DriftRow {
  */
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'amazon:view');
     if (!isAmazonSpConfigured()) {
       return NextResponse.json({ error: 'Amazon SP-API is not configured.' }, { status: 400 });
     }

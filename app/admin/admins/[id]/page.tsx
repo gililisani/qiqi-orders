@@ -22,7 +22,7 @@ import { Badge } from '../../../components/qq/badge';
 import { Alert, AlertDescription } from '../../../components/qq/alert';
 import { Label } from '../../../components/qq/label';
 import { useToast } from '../../../components/ui/ToastProvider';
-import { PERMISSIONS, type Permission } from '../../../../lib/permissions';
+import { ADMIN_PERMISSION_GROUPS } from '../../../../lib/permissions';
 
 interface Admin {
   id: string;
@@ -203,18 +203,30 @@ export default function AdminViewPage() {
             <CardTitle className="text-sm">Access</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            {(Object.keys(PERMISSIONS) as Permission[]).map((key) => {
-              const has = grants.includes(key);
+            {ADMIN_PERMISSION_GROUPS.map((g) => {
+              const label = g.single
+                ? grants.includes(g.single)
+                  ? 'Enabled'
+                  : 'Off'
+                : grants.includes(g.edit!)
+                  ? 'View + Edit'
+                  : grants.includes(g.view!)
+                    ? 'View only'
+                    : 'Off';
+              const any = label !== 'Off';
               return (
-                <div key={key} className="flex items-center justify-between gap-3">
-                  <span className={has ? '' : 'text-muted-foreground'}>
-                    {PERMISSIONS[key]}
+                <div key={g.category} className="flex items-center justify-between gap-3">
+                  <span className={any ? '' : 'text-muted-foreground'}>{g.category}</span>
+                  <span className="flex items-center gap-1.5 shrink-0">
+                    <span className={`text-xs ${any ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      {label}
+                    </span>
+                    {any ? (
+                      <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <X className="h-4 w-4 text-muted-foreground shrink-0" />
+                    )}
                   </span>
-                  {has ? (
-                    <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                  ) : (
-                    <X className="h-4 w-4 text-muted-foreground shrink-0" />
-                  )}
                 </div>
               );
             })}

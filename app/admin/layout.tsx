@@ -77,72 +77,72 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
   {
     items: [
-      { label: 'Dashboard',    href: '/admin',           icon: <LayoutDashboard />, permission: 'orders' },
-      { label: 'Distributors', href: '/admin/companies', icon: <Building2 />,       permission: 'companies:manage' },
+      { label: 'Dashboard',    href: '/admin',           icon: <LayoutDashboard />, permission: 'dashboard' },
+      { label: 'Distributors', href: '/admin/companies', icon: <Building2 />,       permission: 'distributors:view' },
     ],
   },
   {
     label: 'Orders',
     items: [
-      { label: 'Orders',        href: '/admin/orders',        icon: <ShoppingCart />, permission: 'orders' },
-      { label: 'SLI Documents', href: '/admin/sli/documents', icon: <FileText />,     permission: 'orders' },
+      { label: 'Orders',        href: '/admin/orders',        icon: <ShoppingCart />, permission: 'orders:view' },
+      { label: 'SLI Documents', href: '/admin/sli/documents', icon: <FileText />,     permission: 'orders:view' },
     ],
   },
   {
     label: 'Users',
     items: [
-      { label: 'Users',  href: '/admin/users',  icon: <Users />,  permission: 'users:manage' },
-      { label: 'Admins', href: '/admin/admins', icon: <Shield />, permission: 'admins:manage' },
+      { label: 'Users',  href: '/admin/users',  icon: <Users />,  permission: 'users:view' },
+      { label: 'Admins', href: '/admin/admins', icon: <Shield />, permission: 'users:view' },
     ],
   },
   {
     label: 'Catalog',
     items: [
-      { label: 'Products',             href: '/admin/products',             icon: <Box />,        permission: 'settings' },
-      { label: 'Product Categories',   href: '/admin/categories',           icon: <FolderOpen />, permission: 'settings' },
-      { label: 'Price List',           href: '/admin/price-list',           icon: <ListOrdered />, permission: 'settings' },
-      { label: 'Compliance Docs',      href: '/admin/compliance',           icon: <ShieldCheck />, permission: 'settings' },
+      { label: 'Products',             href: '/admin/products',             icon: <Box />,        permission: 'catalog:view' },
+      { label: 'Product Categories',   href: '/admin/categories',           icon: <FolderOpen />, permission: 'catalog:view' },
+      { label: 'Price List',           href: '/admin/price-list',           icon: <ListOrdered />, permission: 'catalog:view' },
+      { label: 'Compliance Docs',      href: '/admin/compliance',           icon: <ShieldCheck />, permission: 'catalog:view' },
     ],
   },
   {
     label: 'Assets',
     items: [
-      { label: 'Media Assets',    href: '/admin/dam',           icon: <ImageIcon />, permission: 'dam' },
-      { label: 'Asset Campaigns', href: '/admin/dam/campaigns', icon: <Megaphone />, permission: 'dam' },
-      { label: 'Asset Settings',  href: '/admin/dam/settings',  icon: <Settings />,  permission: 'dam' },
-      { label: 'Announcements',   href: '/admin/announcements', icon: <Newspaper />, permission: 'dam' },
+      { label: 'Media Assets',    href: '/admin/dam',           icon: <ImageIcon />, permission: 'assets:view' },
+      { label: 'Asset Campaigns', href: '/admin/dam/campaigns', icon: <Megaphone />, permission: 'assets:view' },
+      { label: 'Asset Settings',  href: '/admin/dam/settings',  icon: <Settings />,  permission: 'assets:view' },
+      { label: 'Announcements',   href: '/admin/announcements', icon: <Newspaper />, permission: 'assets:view' },
     ],
   },
   {
     label: 'Insights',
     items: [
-      { label: 'Executive Dashboard',  href: '/admin/reports',                     icon: <BarChart3 />,  permission: 'reports' },
-      { label: 'Company Performance',  href: '/admin/reports/company-performance', icon: <TrendingUp />, permission: 'reports' },
-      { label: 'Product Insights',     href: '/admin/reports/product-insights',    icon: <PieChart />,   permission: 'reports' },
-      { label: 'Support Funds',        href: '/admin/reports/support-funds',       icon: <DollarSign />, permission: 'reports' },
-      { label: 'Sales Explorer',       href: '/admin/reports/sales-explorer',      icon: <LineChart />,  permission: 'reports' },
+      { label: 'Executive Dashboard',  href: '/admin/reports',                     icon: <BarChart3 />,  permission: 'insights' },
+      { label: 'Company Performance',  href: '/admin/reports/company-performance', icon: <TrendingUp />, permission: 'insights' },
+      { label: 'Product Insights',     href: '/admin/reports/product-insights',    icon: <PieChart />,   permission: 'insights' },
+      { label: 'Support Funds',        href: '/admin/reports/support-funds',       icon: <DollarSign />, permission: 'insights' },
+      { label: 'Sales Explorer',       href: '/admin/reports/sales-explorer',      icon: <LineChart />,  permission: 'insights' },
     ],
   },
   {
     label: 'Amazon',
     items: [
-      { label: 'FBA Financials',  href: '/admin/netsuite/amazon-fba', icon: <ShoppingBag />, permission: 'netsuite' },
-      { label: 'Amazon Insights', href: '/admin/amazon',              icon: <Store />,       permission: 'netsuite' },
+      { label: 'FBA Financials',  href: '/admin/netsuite/amazon-fba', icon: <ShoppingBag />, permission: 'amazon:view' },
+      { label: 'Amazon Insights', href: '/admin/amazon',              icon: <Store />,       permission: 'amazon:view' },
     ],
   },
   {
     label: 'Shopify',
     items: [
-      { label: 'Shopify Sync', href: '/admin/shopify', icon: <ShoppingBag />, permission: 'netsuite' },
+      { label: 'Shopify Sync', href: '/admin/shopify', icon: <ShoppingBag />, permission: 'shopify:view' },
     ],
   },
   {
     label: 'Configuration',
     items: [
-      { label: 'NetSuite Data',        href: '/admin/netsuite-data', icon: <Building />, permission: 'settings' },
-      { label: 'NetSuite Integration', href: '/admin/netsuite',      icon: <Plug />,     permission: 'netsuite' },
-      { label: 'NS Inventory Sync',    href: '/admin/inventory',     icon: <Package />,  permission: 'netsuite' },
-      { label: 'SLI Settings',         href: '/admin/sli/settings',  icon: <Settings />, permission: 'settings' },
+      { label: 'NetSuite Data',        href: '/admin/netsuite-data', icon: <Building />, permission: 'config:view' },
+      { label: 'NetSuite Integration', href: '/admin/netsuite',      icon: <Plug />,     permission: 'config:view' },
+      { label: 'NS Inventory Sync',    href: '/admin/inventory',     icon: <Package />,  permission: 'config:view' },
+      { label: 'SLI Settings',         href: '/admin/sli/settings',  icon: <Settings />, permission: 'config:view' },
     ],
   },
 ];
@@ -153,31 +153,32 @@ const NAV_GROUPS: NavGroup[] = [
 // unmatched paths DENY by default — add new areas here when adding pages.
 // ----------------------------------------------------------------------------
 const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: string }> = [
-  { prefix: '/admin/orders', permission: 'orders' },
-  { prefix: '/admin/sli/settings', permission: 'settings' },
-  { prefix: '/admin/sli', permission: 'orders' },
-  { prefix: '/admin/companies', permission: 'companies:manage' },
-  { prefix: '/admin/users', permission: 'users:manage' },
-  { prefix: '/admin/admins', permission: 'admins:manage' },
-  { prefix: '/admin/products', permission: 'settings' },
-  { prefix: '/admin/categories', permission: 'settings' },
-  { prefix: '/admin/price-list', permission: 'settings' },
-  { prefix: '/admin/compliance', permission: 'settings' },
-  { prefix: '/admin/announcements', permission: 'dam' },
-  { prefix: '/admin/classes', permission: 'settings' },
-  { prefix: '/admin/locations', permission: 'settings' },
-  { prefix: '/admin/subsidiaries', permission: 'settings' },
-  { prefix: '/admin/incoterms', permission: 'settings' },
-  { prefix: '/admin/payment-terms', permission: 'settings' },
-  { prefix: '/admin/support-funds', permission: 'settings' },
-  { prefix: '/admin/netsuite-data', permission: 'settings' },
-  { prefix: '/admin/design', permission: 'settings' },
-  { prefix: '/admin/dam', permission: 'dam' },
-  { prefix: '/admin/reports', permission: 'reports' },
-  { prefix: '/admin/netsuite', permission: 'netsuite' },
-  { prefix: '/admin/inventory', permission: 'netsuite' },
-  { prefix: '/admin/amazon', permission: 'netsuite' },
-  { prefix: '/admin/shopify', permission: 'netsuite' },
+  { prefix: '/admin/orders', permission: 'orders:view' },
+  { prefix: '/admin/sli/settings', permission: 'config:view' },
+  { prefix: '/admin/sli', permission: 'orders:view' },
+  { prefix: '/admin/companies', permission: 'distributors:view' },
+  { prefix: '/admin/users', permission: 'users:view' },
+  { prefix: '/admin/admins', permission: 'users:view' },
+  { prefix: '/admin/products', permission: 'catalog:view' },
+  { prefix: '/admin/categories', permission: 'catalog:view' },
+  { prefix: '/admin/price-list', permission: 'catalog:view' },
+  { prefix: '/admin/compliance', permission: 'catalog:view' },
+  { prefix: '/admin/announcements', permission: 'assets:view' },
+  { prefix: '/admin/classes', permission: 'config:view' },
+  { prefix: '/admin/locations', permission: 'config:view' },
+  { prefix: '/admin/subsidiaries', permission: 'config:view' },
+  { prefix: '/admin/incoterms', permission: 'config:view' },
+  { prefix: '/admin/payment-terms', permission: 'config:view' },
+  { prefix: '/admin/support-funds', permission: 'config:view' },
+  { prefix: '/admin/netsuite-data', permission: 'config:view' },
+  { prefix: '/admin/design', permission: 'config:view' },
+  { prefix: '/admin/dam', permission: 'assets:view' },
+  { prefix: '/admin/reports', permission: 'insights' },
+  { prefix: '/admin/netsuite/amazon-fba', permission: 'amazon:view' },
+  { prefix: '/admin/netsuite', permission: 'config:view' },
+  { prefix: '/admin/inventory', permission: 'config:view' },
+  { prefix: '/admin/amazon', permission: 'amazon:view' },
+  { prefix: '/admin/shopify', permission: 'shopify:view' },
 ];
 
 function isAdminPathAllowed(pathname: string, permissions: string[]): boolean {
@@ -186,7 +187,7 @@ function isAdminPathAllowed(pathname: string, permissions: string[]): boolean {
   if (pathname === '/admin/security' || pathname.startsWith('/admin/security/')) {
     return true;
   }
-  if (pathname === '/admin') return permissions.includes('orders');
+  if (pathname === '/admin') return permissions.includes('dashboard');
   let best: { prefix: string; permission: string } | null = null;
   for (const entry of ROUTE_PERMISSIONS) {
     const matches = pathname === entry.prefix || pathname.startsWith(`${entry.prefix}/`);

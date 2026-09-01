@@ -11,7 +11,7 @@ import { createNetSuiteAPI } from '../../../../../../lib/netsuite';
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'amazon:edit');
     const ns = createNetSuiteAPI();
     const supabaseAdmin = createServiceRoleClient();
 

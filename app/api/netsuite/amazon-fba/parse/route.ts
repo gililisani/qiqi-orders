@@ -8,7 +8,7 @@ import { parseReportRows, buildMonthPreviews } from '../../../../../lib/amazonFb
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'amazon:edit');
     const { csvText } = await request.json();
     if (!csvText || typeof csvText !== 'string') {
       return NextResponse.json({ error: 'No CSV content provided.' }, { status: 400 });

@@ -7,7 +7,7 @@ export const maxDuration = 120;
 /** Live finance report for a date range: GET ?provider=shopify|paypal|affirm&from&to → CSV download. */
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'shopify:view');
     const sp = request.nextUrl.searchParams;
     const provider = sp.get('provider') as ReportProvider;
     const from = sp.get('from') ?? '';

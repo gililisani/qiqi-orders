@@ -32,15 +32,7 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    // Either user-management permission works to get in; which one is
-    // actually required depends on the TARGET (checked below): client
-    // targets need users:manage, admin targets need admins:manage.
-    let admin: Awaited<ReturnType<typeof requireAdminWithPermission>>;
-    try {
-      admin = await requireAdminWithPermission(request, 'users:manage');
-    } catch {
-      admin = await requireAdminWithPermission(request, 'admins:manage');
-    }
+    const admin = await requireAdminWithPermission(request, 'users:edit');
 
     const body = await request.json();
     const { userId, userName, companyId, companyName } = body;
@@ -73,28 +65,13 @@ export async function POST(request: NextRequest) {
     }
     const normalizedEmail = normalizeEmailForRateLimit(authUser.user.email);
 
-    // Admin targets get the admin welcome copy AND require admins:manage —
-    // users:manage alone must not operate on admin accounts.
+    // Admin targets get the admin welcome email copy.
     const { data: targetAdminRow } = await supabaseAdmin
       .from('admins')
       .select('id')
       .eq('id', userId)
       .maybeSingle();
     const targetIsAdmin = !!targetAdminRow;
-    const requiredPermission = targetIsAdmin ? 'admins:manage' : 'users:manage';
-    if (
-      !admin.permissions.includes(requiredPermission) &&
-      !admin.permissions.includes('*')
-    ) {
-      return NextResponse.json(
-        {
-          error: targetIsAdmin
-            ? 'Managing admin accounts requires the Admins permission.'
-            : 'Managing client users requires the Users permission.',
-        },
-        { status: 403 }
-      );
-    }
 
     const limited = await enforceRateLimit(supabaseAdmin, {
       key: `send-reset-link:actor:${admin.id}:email:${normalizedEmail}`,

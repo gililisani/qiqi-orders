@@ -5,7 +5,7 @@ import { ShopifySyncStore } from '../../../../../lib/shopify/store';
 /** Explicit human decision: this order will not sync. Audited, reversible (Retry un-ignores). */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'shopify:edit');
     const { shopifyOrderId, note } = await request.json();
     if (!/^\d+$/.test(String(shopifyOrderId ?? '')) || !note?.trim()) {
       return NextResponse.json({ error: 'shopifyOrderId and a note are required' }, { status: 400 });

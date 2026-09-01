@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createAuth } from '../../../platform/auth';
+import { requireAdminWithPermission } from '../../../platform/auth/guards';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
       hasAdmin: user?.roles?.includes('admin'),
     });
     
-    await auth.requireRole(request, 'admin');
+    await requireAdminWithPermission(request, 'assets:view');
 
     // Verify service role key is configured
     if (!SUPABASE_SERVICE_ROLE_KEY) {
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
       hasAdmin: user?.roles?.includes('admin'),
     });
     
-    const adminUser = await auth.requireRole(request, 'admin');
+    const adminUser = await requireAdminWithPermission(request, 'assets:edit');
 
     // Verify service role key is configured
     if (!SUPABASE_SERVICE_ROLE_KEY) {

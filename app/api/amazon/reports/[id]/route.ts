@@ -16,7 +16,7 @@ export const maxDuration = 60;
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'amazon:view');
     const type = request.nextUrl.searchParams.get('type');
     const status = await getReportStatus(params.id);
 

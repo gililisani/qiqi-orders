@@ -6,7 +6,7 @@ import { fetchOrderByName, retryOrder } from '../../../../../lib/shopify/engine/
 /** Manual import by order number — the cure for NetScore's "lost order" class. */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'shopify:edit');
     const { orderName } = await request.json();
     if (!orderName?.trim()) return NextResponse.json({ error: 'orderName is required' }, { status: 400 });
     if (!process.env.SHOPIFY_CLIENT_ID && !process.env.SHOPIFY_ADMIN_TOKEN) {

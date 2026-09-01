@@ -4,7 +4,7 @@ import { createNetSuiteAPI } from '../../../../lib/netsuite';
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'config:view');
 
     // Check env vars are set before trying to connect
     const missing: string[] = [];

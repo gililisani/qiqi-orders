@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '../../../../../platform/auth/guards';
+import { requireAdminWithPermission } from '../../../../../platform/auth/guards';
 import { getFulfillmentProvider } from '../../../../../lib/fulfillment';
 import { getShipHeroConfig } from '../../../../../lib/fulfillment/shiphero/config';
 
@@ -20,7 +20,7 @@ import { getShipHeroConfig } from '../../../../../lib/fulfillment/shiphero/confi
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'config:edit');
 
     const config = getShipHeroConfig();
     if (!config.webhookSecret) {

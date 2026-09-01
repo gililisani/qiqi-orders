@@ -20,7 +20,7 @@ function createSupabaseAdminClient() {
 
 async function getAdminUser(request: NextRequest): Promise<string> {
   const auth = createAuth();
-  const adminUser = await requireAdminWithPermission(request, 'dam');
+  const adminUser = await requireAdminWithPermission(request, 'assets:edit');
   return adminUser.id;
 }
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { createNetSuiteAPI } from '../../../../lib/netsuite';
 import { getNetSuiteItem } from '../../../../lib/netsuiteItemMap';
 import { createStripeClient, ensureCustomer, createOrderInvoice, sendInvoiceEmail, toCents } from '../../../../lib/stripe';
@@ -19,7 +19,7 @@ import { createStripeClient, ensureCustomer, createOrderInvoice, sendInvoiceEmai
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'orders:edit');
     const { orderId } = await request.json();
     if (!orderId) {
       return NextResponse.json({ error: 'orderId is required' }, { status: 400 });

@@ -170,6 +170,11 @@ export async function requireAdminWithPermission(
 export async function requireWithPermission(
   request: NextRequest,
   permission: string,
+  // Admins and clients use different permission vocabularies since the
+  // 2026-09 category restructure (admins: 'orders:edit', clients: 'orders').
+  // When adminPermission is given, admins are checked against it and clients
+  // against `permission`; when omitted, both check `permission`.
+  adminPermission?: string,
 ): Promise<AuthUser & { permissions: string[] }> {
   const user = await requireAnyRole(request, ['admin', 'client']);
 
@@ -185,11 +190,14 @@ export async function requireWithPermission(
   const supabase = createServiceRoleClient();
   const permissions = await fetchUserPermissions(supabase, user.id);
 
-  if (!permissions.includes(permission)) {
+  const required =
+    adminPermission && user.roles.includes('admin') ? adminPermission : permission;
+
+  if (!permissions.includes(required)) {
     throw NextResponse.json(
       {
         error: 'Not authorized for this area.',
-        missingPermission: permission,
+        missingPermission: required,
       },
       { status: 403 },
     );

@@ -15,7 +15,7 @@ import { ALL_PERMISSIONS } from '../../../../../lib/permissions';
  * PATCH /api/users/[id]/account
  *   Body: { kind: 'admin'|'client', name?, email?, enabled?, permissions?,
  *           password?, company_id? }
- *   Guard: admins:manage for admin targets, users:manage for client targets.
+ *   Guard: users:edit (the Users category covers client users AND admins).
  *
  * DELETE /api/users/[id]/account?kind=admin
  *   Admin targets only (client deletion already goes through /api/users/delete).
@@ -23,9 +23,7 @@ import { ALL_PERMISSIONS } from '../../../../../lib/permissions';
 
 const MIN_PASSWORD_LENGTH = 8;
 
-function permFor(kind: string): string {
-  return kind === 'admin' ? 'admins:manage' : 'users:manage';
-}
+
 
 export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -33,7 +31,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
     const targetId = params.id;
     const body = await request.json();
     const kind = body.kind === 'admin' ? 'admin' : 'client';
-    const actor = await requireAdminWithPermission(request, permFor(kind));
+    const actor = await requireAdminWithPermission(request, 'users:edit');
 
     const table = kind === 'admin' ? 'admins' : 'clients';
     const supabaseAdmin = createServiceRoleClient();
@@ -133,7 +131,7 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
         { status: 400 },
       );
     }
-    const actor = await requireAdminWithPermission(request, 'admins:manage');
+    const actor = await requireAdminWithPermission(request, 'users:edit');
     if (targetId === actor.id) {
       return NextResponse.json({ error: 'You cannot delete your own account.' }, { status: 400 });
     }

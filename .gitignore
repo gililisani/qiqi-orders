@@ -43,3 +43,4 @@ Tailwind Template/
 .claude/
 backups/
 backfill-report-*.json
+.env*

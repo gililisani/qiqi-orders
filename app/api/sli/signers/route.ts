@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { validateSignature } from '../../../../lib/sli/signatureValidation';
 
 // GET - list signers
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'config:view');
     const supabaseAdmin = createServiceRoleClient();
 
     const { data, error } = await supabaseAdmin
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 // POST - add a signer
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'config:edit');
     const body = await request.json();
     const { name, title, email, phone, signature_url, is_default } = body;
 

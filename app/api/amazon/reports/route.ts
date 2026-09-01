@@ -9,7 +9,7 @@ import { createReport, isAmazonSpConfigured, REPORT_TYPES } from '../../../../li
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'amazon:view');
     if (!isAmazonSpConfigured()) {
       return NextResponse.json({ error: 'Amazon SP-API is not configured.' }, { status: 400 });
     }

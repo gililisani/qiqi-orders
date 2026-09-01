@@ -19,7 +19,7 @@ const CONFIG_FIELDS = [
 // GET - current config
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'amazon:view');
     const supabaseAdmin = createServiceRoleClient();
     const { data, error } = await supabaseAdmin
       .from('amazon_fba_config')
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 // PUT - update config fields (only known fields, strings)
 export async function PUT(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'amazon:edit');
     const body = await request.json();
     const row: Record<string, string> = {};
     for (const key of CONFIG_FIELDS) {

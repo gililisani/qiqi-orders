@@ -24,7 +24,7 @@ function amazonToday(): string {
  */
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'amazon:view');
     if (!isAmazonSpConfigured()) {
       return NextResponse.json(
         { error: 'Amazon SP-API credentials are not configured (AMAZON_SP_* env vars).' },

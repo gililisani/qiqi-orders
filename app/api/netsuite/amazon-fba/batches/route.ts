@@ -8,7 +8,7 @@ import { createServiceRoleClient, requireAdminWithPermission } from '../../../..
  */
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'amazon:view');
     const supabaseAdmin = createServiceRoleClient();
 
     const { data: batches, error } = await supabaseAdmin

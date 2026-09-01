@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { recalculateCompanyTargetPeriods } from '../../../../lib/targetPeriods';
-import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../platform/auth/guards';
 
 /**
  * API endpoint to recalculate target periods for a company
@@ -9,7 +9,7 @@ import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'orders:edit');
     const { companyId } = await request.json();
 
     if (!companyId) {

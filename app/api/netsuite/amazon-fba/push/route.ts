@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   const supabaseAdmin = createServiceRoleClient();
   let period: string | undefined;
   try {
-    const admin = await requireAdminWithPermission(request, 'netsuite');
+    const admin = await requireAdminWithPermission(request, 'amazon:edit');
     const body = await request.json();
 
     const input: MonthPushInput = {

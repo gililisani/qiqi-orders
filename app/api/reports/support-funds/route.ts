@@ -74,7 +74,7 @@ function monthKey(d: Date): { key: string; label: string } {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'reports');
+    await requireAdminWithPermission(request, 'insights');
     const sp = new URL(request.url).searchParams;
     const window = (sp.get('window') ?? 'this-month') as WindowKey;
     const fromParam = sp.get('from');

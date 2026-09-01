@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createAuth } from '../../../../platform/auth';
+import { requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { createStorage } from '../../../../platform/storage';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
   const params = await props.params;
   try {
     const auth = createAuth();
-    await auth.requireRole(request, 'admin');
+    await requireAdminWithPermission(request, 'assets:view');
 
     if (!SUPABASE_SERVICE_ROLE_KEY) {
       console.error('SUPABASE_SERVICE_ROLE_KEY is not configured');
@@ -318,7 +319,7 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
   const params = await props.params;
   try {
     const auth = createAuth();
-    await auth.requireRole(request, 'admin');
+    await requireAdminWithPermission(request, 'assets:edit');
 
     const supabaseAdmin = createSupabaseAdminClient();
 
@@ -343,7 +344,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
   const params = await props.params;
   try {
     const auth = createAuth();
-    await auth.requireRole(request, 'admin');
+    await requireAdminWithPermission(request, 'assets:edit');
 
     const supabaseAdmin = createSupabaseAdminClient();
     const body = await request.json();

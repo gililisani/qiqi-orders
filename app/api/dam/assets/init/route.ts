@@ -53,7 +53,7 @@ function createSupabaseAdminClient() {
 export async function POST(request: NextRequest) {
   try {
     const auth = createAuth();
-    const adminUser = await requireAdminWithPermission(request, 'dam');
+    const adminUser = await requireAdminWithPermission(request, 'assets:edit');
 
     const supabaseAdmin = createSupabaseAdminClient();
     const body = await request.json();

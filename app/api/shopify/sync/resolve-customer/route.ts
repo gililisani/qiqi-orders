@@ -14,7 +14,7 @@ import { createNetSuiteForTarget } from '../../../../../lib/shopify/engine/nsTar
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'shopify:edit');
     const { shopifyOrderId, nsCustomerId } = await request.json();
     if (!/^\d+$/.test(String(shopifyOrderId ?? '')) || !/^\d+$/.test(String(nsCustomerId ?? ''))) {
       return NextResponse.json({ error: 'shopifyOrderId and nsCustomerId (numeric) are required' }, { status: 400 });

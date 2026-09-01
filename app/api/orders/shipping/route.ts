@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { createNetSuiteAPI } from '../../../../lib/netsuite';
 import { getNetSuiteItem } from '../../../../lib/netsuiteItemMap';
 
@@ -22,7 +22,7 @@ const EDITABLE_STATUSES = ['Draft', 'Open', 'In Process', 'Ready'];
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'orders:edit');
 
     const body = await request.json();
     const orderId: string | undefined = body?.orderId;

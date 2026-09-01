@@ -10,7 +10,7 @@ const PREFIX = 'finance-reports/';
 /** List the immutable monthly archive (grouped client-side). */
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'shopify:view');
     const storage = createStorage();
     const objects = await storage.list(PREFIX);
     const files = objects.map((o) => {
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 /** Archive one closed month for all three providers (idempotent — existing files are never overwritten). */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'shopify:edit');
     const { month } = await request.json();
     const currentMonth = new Date().toISOString().slice(0, 7);
     if (!/^\d{4}-\d{2}$/.test(month ?? '') || month < '2026-01' || month >= currentMonth) {

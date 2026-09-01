@@ -31,7 +31,7 @@ const NS_PATHS = {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'shopify:view');
     const db = createServiceRoleClient();
 
     // Windowed list: the DB keeps every order forever; the page renders a

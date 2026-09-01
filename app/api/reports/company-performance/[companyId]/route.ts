@@ -16,7 +16,7 @@ import { buildCompanyPerformance, resolveWindowRange } from '../../../../../lib/
 export async function GET(request: NextRequest, props: { params: Promise<{ companyId: string }> }) {
   const params = await props.params;
   try {
-    await requireAdminWithPermission(request, 'reports');
+    await requireAdminWithPermission(request, 'insights');
     const { searchParams } = new URL(request.url);
     const window = searchParams.get('window') ?? 'this-month';
     const { from, to } = resolveWindowRange(window, searchParams.get('from'), searchParams.get('to'));

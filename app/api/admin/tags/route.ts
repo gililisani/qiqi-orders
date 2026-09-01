@@ -19,7 +19,7 @@ function createSupabaseAdminClient() {
 export async function GET(request: NextRequest) {
   try {
     const auth = createAuth();
-    await requireAdminWithPermission(request, 'dam');
+    await requireAdminWithPermission(request, 'assets:view');
 
     const supabaseAdmin = createSupabaseAdminClient();
     const { searchParams } = new URL(request.url);
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const auth = createAuth();
-    await requireAdminWithPermission(request, 'dam');
+    await requireAdminWithPermission(request, 'assets:edit');
 
     const supabaseAdmin = createSupabaseAdminClient();
     const body = await request.json();
@@ -130,7 +130,7 @@ export async function PATCH(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = createAuth();
-    await requireAdminWithPermission(request, 'dam');
+    await requireAdminWithPermission(request, 'assets:edit');
 
     const supabaseAdmin = createSupabaseAdminClient();
     const body = await request.json();
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const auth = createAuth();
-    await requireAdminWithPermission(request, 'dam');
+    await requireAdminWithPermission(request, 'assets:edit');
 
     const supabaseAdmin = createSupabaseAdminClient();
     const { searchParams } = new URL(request.url);

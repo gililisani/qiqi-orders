@@ -8,7 +8,7 @@ import { createNetSuiteAPI } from '../../../../../lib/netsuite';
  */
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'amazon:view');
     const q = (request.nextUrl.searchParams.get('q') || '').trim();
     const type = request.nextUrl.searchParams.get('type');
     const ns = createNetSuiteAPI();

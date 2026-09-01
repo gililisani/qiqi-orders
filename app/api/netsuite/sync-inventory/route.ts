@@ -6,7 +6,7 @@ import { createNetSuiteAPI } from '../../../../lib/netsuite';
 // Fetches inventory from NS for that location and updates Products table
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'config:edit');
 
     const { locationId } = await request.json();
     if (!locationId) {
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
 // GET — return current inventory levels for a location
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'config:view');
 
     const { searchParams } = new URL(request.url);
     const locationId = searchParams.get('locationId');

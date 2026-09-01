@@ -6,7 +6,7 @@ import { fetchOrderById, retryOrder } from '../../../../../lib/shopify/engine/re
 /** Self-service retry — always safe (idempotent ensure-steps). */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'shopify:edit');
     const { shopifyOrderId } = await request.json();
     if (!shopifyOrderId || !/^\d+$/.test(String(shopifyOrderId))) {
       return NextResponse.json({ error: 'shopifyOrderId (numeric) is required' }, { status: 400 });

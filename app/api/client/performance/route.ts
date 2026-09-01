@@ -21,7 +21,7 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireWithPermission(request, 'reports');
+    const user = await requireWithPermission(request, 'reports', 'insights');
 
     const supabase = createServiceRoleClient();
     const { data: clientRow, error: clientErr } = await supabase

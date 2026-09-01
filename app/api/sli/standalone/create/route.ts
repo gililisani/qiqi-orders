@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../platform/auth/guards';
 
 export async function POST(request: NextRequest) {
   try {
-    const adminUser = await requireAdmin(request);
+    const adminUser = await requireAdminWithPermission(request, 'orders:edit');
     // Parse request body
     const body = await request.json();
     const {

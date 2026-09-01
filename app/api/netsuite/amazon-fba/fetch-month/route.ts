@@ -16,7 +16,7 @@ export const maxDuration = 300;
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'amazon:edit');
     if (!isAmazonSpConfigured()) {
       return NextResponse.json({ error: 'Amazon SP-API is not configured.' }, { status: 400 });
     }

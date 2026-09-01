@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../platform/auth/guards';
 import { getFulfillmentProvider } from '../../../../../lib/fulfillment';
 import { buildNormalizedOrder, countryToken } from '../../../../../lib/fulfillment/normalize';
 import { shipmentTypeByCode } from '../../../../../lib/shipmentTypes';
@@ -14,7 +14,7 @@ import { shipmentTypeByCode } from '../../../../../lib/shipmentTypes';
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'orders:edit');
 
     const { orderId } = await request.json();
     if (!orderId) {

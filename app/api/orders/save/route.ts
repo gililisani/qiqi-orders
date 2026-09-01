@@ -42,7 +42,7 @@ function generatePoNumber(): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireWithPermission(request, 'orders');
+    const user = await requireWithPermission(request, 'orders', 'orders:edit');
     const isAdmin = user.roles.includes('admin');
 
     const body = await request.json();

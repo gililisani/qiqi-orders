@@ -59,7 +59,7 @@ function periodRange(
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'reports');
+    await requireAdminWithPermission(request, 'insights');
     const { searchParams } = new URL(request.url);
     const window = (searchParams.get('window') ?? 'this-month') as WindowKey;
     const fromParam = searchParams.get('from');

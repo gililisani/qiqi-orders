@@ -17,7 +17,7 @@ import { refreshInvoices } from '../../../../lib/invoiceRefresh';
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'orders:edit');
 
     const body = await request.json().catch(() => ({}));
     const onlyMissing = body?.onlyMissing === true;

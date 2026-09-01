@@ -12,7 +12,7 @@ export const maxDuration = 60;
  */
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'shopify:view');
     const to = new Date().toISOString().slice(0, 10);
     const from = new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10);
     const events = await fetchAffirmEvents({ after: from, before: to });

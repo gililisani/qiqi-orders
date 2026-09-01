@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '../../../../platform/auth/guards';
+import { createServiceRoleClient, requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { SLI_CONFIG_DEFAULTS, mergeSLIConfig } from '../../../../lib/sli/sliConfig';
 
 const CONFIG_KEYS = Object.keys(SLI_CONFIG_DEFAULTS) as (keyof typeof SLI_CONFIG_DEFAULTS)[];
@@ -7,7 +7,7 @@ const CONFIG_KEYS = Object.keys(SLI_CONFIG_DEFAULTS) as (keyof typeof SLI_CONFIG
 // GET - current SLI config (merged over defaults)
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'config:view');
     const supabaseAdmin = createServiceRoleClient();
 
     const { data } = await supabaseAdmin.from('sli_config').select('*').eq('id', 1).maybeSingle();
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 // PUT - update SLI config (upsert the singleton row)
 export async function PUT(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    await requireAdminWithPermission(request, 'config:edit');
     const body = await request.json();
     const supabaseAdmin = createServiceRoleClient();
 

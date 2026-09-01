@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   try {
     const bearer = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
     const token = process.env.SHOPIFY_STATEMENT_TOKEN;
-    if (!(token && bearer && bearer === token)) await requireAdminWithPermission(request, 'netsuite');
+    if (!(token && bearer && bearer === token)) await requireAdminWithPermission(request, 'shopify:view');
     if (!process.env.SHOPIFY_CLIENT_ID && !process.env.SHOPIFY_ADMIN_TOKEN) {
       return NextResponse.json({ error: 'Shopify credentials are not configured in this environment' }, { status: 503 });
     }

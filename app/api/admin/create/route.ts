@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   };
 
   try {
-    const creator = await requireAdminWithPermission(request, 'admins:manage');
+    const creator = await requireAdminWithPermission(request, 'users:edit');
 
     const { name, email, enabled } = await request.json();
 

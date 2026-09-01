@@ -11,7 +11,7 @@ import { createNetSuiteForTarget } from '../../../../../lib/shopify/engine/nsTar
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'shopify:edit');
     const { shopifySku, nsItem, retryShopifyOrderId } = await request.json();
     if (!shopifySku || !nsItem) {
       return NextResponse.json({ error: 'shopifySku and nsItem are required' }, { status: 400 });

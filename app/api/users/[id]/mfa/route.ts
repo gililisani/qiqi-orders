@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
   const params = await props.params;
   try {
     const targetId = params.id;
-    await requireAdminWithPermission(request, 'admins:manage');
+    await requireAdminWithPermission(request, 'users:edit');
 
     const supabaseAdmin = createServiceRoleClient();
     const { data: factors, error: listErr } =
@@ -43,7 +43,7 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
   const params = await props.params;
   try {
     const targetId = params.id;
-    await requireAdminWithPermission(request, 'admins:manage');
+    await requireAdminWithPermission(request, 'users:edit');
 
     const supabaseAdmin = createServiceRoleClient();
 

@@ -26,7 +26,7 @@ import { POST as shipHeroPushHandler } from '../../fulfillment/shiphero/push/rou
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAdminWithPermission(request, 'netsuite');
+    const user = await requireAdminWithPermission(request, 'orders:edit');
 
     const { orderId } = await request.json();
     if (!orderId) {

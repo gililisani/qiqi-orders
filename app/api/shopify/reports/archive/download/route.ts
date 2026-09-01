@@ -5,7 +5,7 @@ import { createStorage } from '../../../../../../platform/storage';
 /** Download one archived report (path-checked to the finance-reports/ prefix). */
 export async function GET(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'shopify:view');
     const path = request.nextUrl.searchParams.get('path') ?? '';
     if (!path.startsWith('finance-reports/') || path.includes('..')) {
       return NextResponse.json({ error: 'bad path' }, { status: 400 });

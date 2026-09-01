@@ -5,7 +5,7 @@ import { validateOrderPricing } from '../../../../lib/orderPricing';
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdminWithPermission(request, 'netsuite');
+    await requireAdminWithPermission(request, 'orders:edit');
 
     const { orderId } = await request.json();
     if (!orderId) {
