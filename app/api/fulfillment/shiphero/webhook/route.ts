@@ -5,13 +5,16 @@ import { getFulfillmentProvider } from '../../../../../lib/fulfillment';
 /**
  * POST /api/fulfillment/shiphero/webhook?token=<SHIPHERO_WEBHOOK_SECRET>
  *
- * ShipHero calls this on a Shipment Update (our "ready for pickup" / shipped
- * signal) or Order Canceled. Authenticity comes from the secret token in the
- * URL (we register the webhook with this URL), not a session — so no auth guard.
+ * ShipHero calls this on Order Packed Out (our "ready" signal), Shipment
+ * Update (close-out — picked up / shipped) or Order Canceled. Authenticity
+ * comes from the secret token in the URL (we register the webhook with this
+ * URL), not a session — so no auth guard.
  *
  * ShipHero webhooks have a 10s timeout, 5 retries, and no SLA, so this handler
- * must be fast and idempotent: we only write when the normalized state actually
- * changes, and we return 200 for anything we've handled or chosen to ignore.
+ * stays FAST: it only records the normalized fulfillment_status. The heavy
+ * automation (invoice + ready email + Ready/Done status) runs in
+ * /api/cron/fulfillment-poll, which reads this recorded state within minutes —
+ * that also makes the webhook and the polling fallback one code path.
  */
 export const dynamic = 'force-dynamic';
 
@@ -113,9 +116,9 @@ export async function POST(request: NextRequest) {
 
     const note =
       event.status === 'ready_for_pickup'
-        ? 'Order is ready for pickup (ShipHero fulfillment, generic/wholesale carrier).'
+        ? 'Warehouse finished packing the order (ShipHero Packed Out).'
         : event.status === 'shipped'
-          ? `Order shipped (ShipHero)${event.trackingNumber ? `. Tracking ${event.trackingNumber}` : ''}.`
+          ? `Warehouse closed out the order (picked up / shipped)${event.trackingNumber ? `. Tracking ${event.trackingNumber}` : ''}.`
           : event.status === 'cancelled'
             ? 'Order cancelled in ShipHero.'
             : `Fulfillment update: ${event.status}.`;

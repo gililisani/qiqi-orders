@@ -6,8 +6,9 @@ import { getShipHeroConfig } from '../../../../../lib/fulfillment/shiphero/confi
 /**
  * POST /api/fulfillment/shiphero/register-webhook  { baseUrl? }
  *
- * Admin-only. Registers our Shipment Update webhook with ShipHero, scoped to
- * Qiqi's customer account. The callback URL is
+ * Admin-only. Registers our webhooks with ShipHero (Order Packed Out,
+ * Shipment Update, Order Canceled), scoped to Qiqi's customer account.
+ * The callback URL is
  *   <baseUrl>/api/fulfillment/shiphero/webhook?token=<SHIPHERO_WEBHOOK_SECRET>
  * — the secret token is how the webhook handler verifies authenticity.
  *
@@ -41,9 +42,11 @@ export async function POST(request: NextRequest) {
     const result = await provider.registerWebhook(callbackUrl);
 
     if (result.dryRun) {
-      return NextResponse.json({ success: true, dryRun: true, callbackUrl });
+      return NextResponse.json({ success: true, dryRun: true, callbackUrl, wouldRegister: result.raw });
     }
-    return NextResponse.json({ success: true, webhookId: result.id, callbackUrl });
+    // raw carries per-webhook-type results (Order Packed Out / Shipment
+    // Update / Order Canceled) — surface them so a partial failure is visible.
+    return NextResponse.json({ success: true, webhookId: result.id, callbackUrl, registrations: result.raw });
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('shiphero register-webhook error:', error);

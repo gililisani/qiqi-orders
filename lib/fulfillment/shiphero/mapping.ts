@@ -12,15 +12,23 @@ import { splitContactName } from '../normalize';
  */
 
 // ---------------------------------------------------------------------------
-// Ready-for-pickup detection (ExWorks)
+// Signal semantics (verified against BrandFox's live flow, 2026-09-01)
 // ---------------------------------------------------------------------------
 //
-// BrandFox marks a pickup order ready by fulfilling it with shipment carrier
-// "Generic" / "Wholesale Generic" and method "genericlabel" / "Wholesale Generic
-// Label". The common token across all four is "generic", so we match TOLERANTLY
-// (lowercase, whitespace-collapsed, substring) rather than strict-equals — the
-// label wording is the kind of domain text that drifts.
+// BrandFox's observed lifecycle for a distributor order:
+//   picking → packing → "packed" → "warehouse_completed"   (order_history)
+//   … then, AFTER the freight pickup, a close-out: a shipment is created with
+//   a generic label and the order flips to fulfillment_status "fulfilled".
+//
+// So: PACKED events (Order Packed Out webhook / packed history entries) are
+// the "ready for pickup" signal, and SHIPMENT CREATION is the close-out —
+// picked up / done. A generic-carrier label just means "no real tracking";
+// it does NOT mean "still awaiting pickup". Matching stays TOLERANT
+// (lowercase, whitespace-collapsed, substring) — this is domain text.
 const GENERIC_PICKUP_TOKEN = 'generic';
+
+// order_history phrases that mean the warehouse finished packing.
+const PACKED_HISTORY_TOKENS = ['packed', 'warehouse_completed'];
 
 // Fallback shipping line when the order carries no shipment type (legacy
 // orders only — the shipment-type config in lib/shipmentTypes.ts is the
@@ -35,9 +43,20 @@ function norm(v: string | null | undefined): string {
   return (v ?? '').toString().toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
-/** True when a shipment's carrier/method indicates a generic pickup (no real tracking). */
+/** True when a shipment's carrier/method is a generic label (no real tracking). */
 export function isPickupShipment(carrier?: string | null, method?: string | null): boolean {
   return norm(carrier).includes(GENERIC_PICKUP_TOKEN) || norm(method).includes(GENERIC_PICKUP_TOKEN);
+}
+
+/** True when a ShipHero order_history entry says the order finished packing. */
+export function isPackedHistoryEntry(information?: string | null): boolean {
+  const s = norm(information);
+  if (!s) return false;
+  // Only status-update lines count — packing NOTES ("…require unboxing
+  // repacks…", "Reference Air Freight Packing Guidelines…") also contain
+  // "pack" tokens but describe instructions, not progress.
+  if (!s.includes('order status updated')) return false;
+  return PACKED_HISTORY_TOKENS.some((t) => s.includes(t));
 }
 
 // ---------------------------------------------------------------------------
@@ -183,17 +202,32 @@ export function parseShipHeroWebhook(payload: any): NormalizedFulfillmentEvent |
     };
   }
 
-  // Shipment Update — our fulfillment/ready signal.
+  // Order Packed Out — the warehouse finished packing: our READY signal.
+  if (webhookType.includes('packed')) {
+    return {
+      type: 'packed_out',
+      externalOrderId,
+      partnerOrderId,
+      orderNumber,
+      status: 'ready_for_pickup',
+      trackingNumber: null,
+      carrier,
+      shippingMethod: method,
+      raw: payload,
+    };
+  }
+
+  // Shipment Update — the warehouse CLOSED OUT the order (their post-pickup
+  // action for ExWorks freight): our picked-up/done signal. Generic labels
+  // carry no meaningful tracking; real carriers do.
   if (webhookType.includes('shipment')) {
     const pickup = isPickupShipment(carrier, method);
-    const status: FulfillmentStatus = pickup ? 'ready_for_pickup' : 'shipped';
     return {
       type: 'shipment_update',
       externalOrderId,
       partnerOrderId,
       orderNumber,
-      status,
-      // Generic/pickup shipments carry no meaningful tracking.
+      status: 'shipped',
       trackingNumber: pickup ? null : trackingNumber,
       carrier,
       shippingMethod: method,
@@ -219,11 +253,14 @@ export function parseShipHeroWebhook(payload: any): NormalizedFulfillmentEvent |
 // ShipHero order (pulled) → normalized fulfillment snapshot
 // ---------------------------------------------------------------------------
 //
-// Used by the on-demand status sync. We deliberately do NOT trust ShipHero's
-// order-level `fulfillment_status` for ready/shipped — BrandFox puts custom
-// batch tags there ("Tomorrow", "QMS-Large"). We trust shipments (a real
-// shipment + its label carrier) and only read `fulfillment_status` to detect
-// cancellation.
+// Used by the on-demand status sync and the polling cron. We deliberately do
+// NOT trust ShipHero's order-level `fulfillment_status` for progress —
+// BrandFox puts custom batch tags there ("Tomorrow", "QMS-Large") — except to
+// detect cancellation. What we trust:
+//   - a shipment/label exists  → closed out ('shipped'; the post-pickup step)
+//   - order_history has a packed/warehouse_completed status update
+//                              → packed ('ready_for_pickup')
+//   - otherwise                → pending
 export function parseShipHeroOrderFulfillment(orderData: any): FulfillmentSnapshot {
   if (!orderData || typeof orderData !== 'object') return { status: 'unknown' };
 
@@ -244,7 +281,7 @@ export function parseShipHeroOrderFulfillment(orderData: any): FulfillmentSnapsh
     const method = pickString(label.shipping_method);
     const pickup = isPickupShipment(carrier, method);
     return {
-      status: pickup ? 'ready_for_pickup' : 'shipped',
+      status: 'shipped',
       trackingNumber: pickup ? null : pickString(label.tracking_number),
       carrier,
       shippingMethod: method,
@@ -256,5 +293,15 @@ export function parseShipHeroOrderFulfillment(orderData: any): FulfillmentSnapsh
   if (norm(orderData.fulfillment_status).includes('cancel')) {
     return { status: 'cancelled', raw: orderData };
   }
+
+  const history = Array.isArray(orderData.order_history)
+    ? orderData.order_history
+    : orderData.order_history
+      ? [orderData.order_history]
+      : [];
+  if (history.some((h: any) => isPackedHistoryEntry(h?.information))) {
+    return { status: 'ready_for_pickup', raw: orderData };
+  }
+
   return { status: 'pending', raw: orderData };
 }

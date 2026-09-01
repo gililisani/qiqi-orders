@@ -29,6 +29,7 @@ const ALLOWLIST: Record<string, string> = {
   'cron/shopify-payouts': 'cron secret auth',
   'cron/finance-reports': 'cron secret auth',
   'cron/shopify-watchdog': 'cron secret auth',
+  'cron/fulfillment-poll': 'cron secret auth',
   'stripe/webhook': 'Stripe signature verification',
   'fulfillment/shiphero/webhook': 'HMAC signature verification (fails closed)',
 };

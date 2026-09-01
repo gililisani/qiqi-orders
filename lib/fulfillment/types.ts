@@ -10,11 +10,18 @@
  */
 
 // Normalized fulfillment status the Hub stores on `orders.fulfillment_status`.
-// Every provider maps its own vocabulary onto these.
+// Every provider maps its own vocabulary onto these. Semantics (verified
+// against BrandFox's live flow, 2026-09-01):
+//   ready_for_pickup — the warehouse finished PACKING (ShipHero "packed" /
+//                      "warehouse_completed" / Order Packed Out webhook).
+//                      Triggers the invoice + "ready" notification.
+//   shipped          — the warehouse CLOSED OUT the order (shipment created).
+//                      For ExWorks pickups this is their post-pickup action —
+//                      the Hub treats it as picked up / complete.
 export type FulfillmentStatus =
-  | 'pending'           // accepted by the WMS, not yet fulfilled
-  | 'ready_for_pickup'  // ExWorks case: fulfilled with a "generic"/pickup carrier
-  | 'shipped'           // fulfilled with a real carrier (the rare CC-shipped case)
+  | 'pending'           // accepted by the WMS, not yet packed
+  | 'ready_for_pickup'  // packed — physically ready for the client/forwarder
+  | 'shipped'           // closed out (picked up / shipped)
   | 'cancelled'
   | 'unknown';
 
@@ -86,7 +93,7 @@ export interface FulfillmentSnapshot {
   raw?: unknown;
 }
 
-export type FulfillmentEventType = 'shipment_update' | 'order_cancelled' | 'other';
+export type FulfillmentEventType = 'packed_out' | 'shipment_update' | 'order_cancelled' | 'other';
 
 /**
  * A provider webhook normalized to what the Hub cares about. The provider's

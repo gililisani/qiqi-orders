@@ -64,13 +64,20 @@ const ORDER_FULFILLMENT = /* GraphQL */ `
             delivered
           }
         }
+        order_history {
+          created_at
+          information
+        }
       }
     }
   }
 `;
 
-// ShipHero's webhook type string for the fulfillment/ready signal.
-const SHIPMENT_UPDATE_WEBHOOK_NAME = 'Shipment Update';
+// The webhook types we subscribe to (exact ShipHero names):
+//   Order Packed Out — warehouse finished packing (our READY signal)
+//   Shipment Update  — close-out / shipped (our picked-up/DONE signal)
+//   Order Canceled   — cancellation
+const WEBHOOK_NAMES = ['Order Packed Out', 'Shipment Update', 'Order Canceled'] as const;
 
 export class ShipHeroProvider implements FulfillmentProvider {
   readonly name = 'shiphero';
@@ -155,23 +162,35 @@ export class ShipHeroProvider implements FulfillmentProvider {
   }
 
   async registerWebhook(url: string): Promise<{ id: string | null; dryRun: boolean; raw?: unknown }> {
-    const data: Record<string, unknown> = {
-      name: SHIPMENT_UPDATE_WEBHOOK_NAME,
-      url,
-      enabled: true,
-      shop_name: this.config.shopName,
-    };
-    if (this.config.customerAccountId) data.customer_account_id = this.config.customerAccountId;
+    const inputs = WEBHOOK_NAMES.map((name) => {
+      const data: Record<string, unknown> = {
+        name,
+        url,
+        enabled: true,
+        shop_name: this.config.shopName,
+      };
+      if (this.config.customerAccountId) data.customer_account_id = this.config.customerAccountId;
+      return data;
+    });
 
     if (this.dryRun) {
-      return { id: null, dryRun: true, raw: data };
+      return { id: null, dryRun: true, raw: inputs };
     }
 
-    const res = await this.client.graphql<{ webhook_create: { webhook: { id: string } } }>(
-      WEBHOOK_CREATE,
-      { data },
-    );
-    return { id: res.webhook_create?.webhook?.id ?? null, dryRun: false, raw: res };
+    const results: Array<{ name: string; id: string | null; error?: string }> = [];
+    for (const data of inputs) {
+      try {
+        const res = await this.client.graphql<{ webhook_create: { webhook: { id: string } } }>(
+          WEBHOOK_CREATE,
+          { data },
+        );
+        results.push({ name: String(data.name), id: res.webhook_create?.webhook?.id ?? null });
+      } catch (e: any) {
+        // Keep registering the rest — one type may already exist.
+        results.push({ name: String(data.name), id: null, error: e?.message });
+      }
+    }
+    return { id: results.find((r) => r.id)?.id ?? null, dryRun: false, raw: results };
   }
 }
 

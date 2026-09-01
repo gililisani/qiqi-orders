@@ -210,12 +210,48 @@ describe('buildShipHeroOrderInput', () => {
 });
 
 describe('parseShipHeroOrderFulfillment (pull)', () => {
-  it('maps a generic-carrier shipment to ready_for_pickup, no tracking', () => {
+  it('maps a generic-carrier shipment to shipped (close-out) with no tracking', () => {
+    // BrandFox creates the generic-label shipment at CLOSE-OUT, after the
+    // freight pickup — so a shipment means done, not "awaiting pickup".
     const snap = parseShipHeroOrderFulfillment({
       fulfillment_status: 'Tomorrow',
       shipments: [{ shipping_labels: { carrier: 'Wholesale Generic', shipping_method: 'genericlabel', tracking_number: 'X' } }],
     });
-    expect(snap).toMatchObject({ status: 'ready_for_pickup', trackingNumber: null });
+    expect(snap).toMatchObject({ status: 'shipped', trackingNumber: null });
+  });
+
+  it('maps packed order_history entries to ready_for_pickup', () => {
+    const snap = parseShipHeroOrderFulfillment({
+      fulfillment_status: 'Wholesale EDI',
+      shipments: [],
+      order_history: [
+        { information: 'Order created from https://shipsfor.us' },
+        { information: 'Order status updated to picking' },
+        { information: 'Order status updated to packed' },
+      ],
+    });
+    expect(snap.status).toBe('ready_for_pickup');
+  });
+
+  it('recognizes warehouse_completed as packed', () => {
+    const snap = parseShipHeroOrderFulfillment({
+      shipments: [],
+      order_history: [{ information: 'Order status updated to warehouse_completed' }],
+    });
+    expect(snap.status).toBe('ready_for_pickup');
+  });
+
+  it('does not treat packing NOTES or the packing stage as packed', () => {
+    const snap = parseShipHeroOrderFulfillment({
+      fulfillment_status: 'QMS-Large',
+      shipments: [],
+      order_history: [
+        { information: "We add the warehouse note 'SKUs require unboxing repacks with bubblewrap'" },
+        { information: 'Reference Air Freight Packing Guidelines - packing slip necessary' },
+        { information: 'Order status updated to packing' },
+      ],
+    });
+    expect(snap.status).toBe('pending');
   });
 
   it('maps a real-carrier shipment to shipped with tracking', () => {
@@ -235,7 +271,23 @@ describe('parseShipHeroOrderFulfillment (pull)', () => {
 });
 
 describe('parseShipHeroWebhook', () => {
-  it('normalizes a generic/pickup shipment to ready_for_pickup with no tracking', () => {
+  it('normalizes Order Packed Out to the ready signal', () => {
+    const ev = parseShipHeroWebhook({
+      webhook_type: 'Order Packed Out',
+      order_number: 'SO-555',
+      partner_order_id: 'uuid-123',
+      order_id: 'OID-1',
+    });
+    expect(ev).toMatchObject({
+      type: 'packed_out',
+      status: 'ready_for_pickup',
+      partnerOrderId: 'uuid-123',
+      orderNumber: 'SO-555',
+      externalOrderId: 'OID-1',
+    });
+  });
+
+  it('normalizes a generic-label shipment to shipped (close-out) with no tracking', () => {
     const ev = parseShipHeroWebhook({
       webhook_type: 'Shipment Update',
       order_number: 'SO-555',
@@ -247,7 +299,7 @@ describe('parseShipHeroWebhook', () => {
     });
     expect(ev).toMatchObject({
       type: 'shipment_update',
-      status: 'ready_for_pickup',
+      status: 'shipped',
       partnerOrderId: 'uuid-123',
       orderNumber: 'SO-555',
       externalOrderId: 'OID-1',
