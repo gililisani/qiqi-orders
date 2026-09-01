@@ -15,23 +15,18 @@ export default function NewAdminPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: '',
     enabled: true,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const onText = (key: 'name' | 'email' | 'password') => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const onText = (key: 'name' | 'email') => (e: React.ChangeEvent<HTMLInputElement>) =>
     setFormData((p) => ({ ...p, [key]: e.target.value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.email.trim() || !formData.password) {
-      setError('Name, email, and password are all required.');
-      return;
-    }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (!formData.name.trim() || !formData.email.trim()) {
+      setError('Name and email are required.');
       return;
     }
     setSaving(true);
@@ -44,7 +39,7 @@ export default function NewAdminPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to create admin.');
-      toast.success('Admin created.');
+      toast.success('Admin created — they received an email to set their password.');
       router.push('/admin/admins');
     } catch (err: any) {
       setError(err.message || 'Failed to create admin.');
@@ -69,20 +64,14 @@ export default function NewAdminPage() {
         <FormField label="Full name" required>
           <Input value={formData.name} onChange={onText('name')} autoFocus required />
         </FormField>
-        <FormField label="Email address" required>
+        <FormField
+          label="Email address"
+          required
+          helper="They'll receive an email with a secure link to set their own password (expires in 24 hours)."
+        >
           <Input type="email" value={formData.email} onChange={onText('email')} required />
         </FormField>
       </div>
-
-      <FormField label="Password" required helper="Minimum 6 characters.">
-        <Input
-          type="password"
-          value={formData.password}
-          onChange={onText('password')}
-          minLength={6}
-          required
-        />
-      </FormField>
 
       <label className="flex items-center gap-2 cursor-pointer select-none">
         <input

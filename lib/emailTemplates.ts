@@ -415,6 +415,83 @@ export function welcomeEmailTemplate(data: {
 }
 
 /**
+ * Admin Welcome Email — the admin counterpart of welcomeEmailTemplate.
+ * Same secure set-password flow (our hashed token, 24h expiry), admin copy.
+ */
+export function adminWelcomeEmailTemplate(data: {
+  userName: string;
+  userEmail: string;
+  setupLink: string;
+  siteUrl: string;
+}): { subject: string; html: string } {
+  const content = `
+    <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: #111827;">
+      Your Qiqi Hub admin account
+    </h1>
+
+    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
+      Hi <strong>${escapeHtml(data.userName)}</strong>,
+    </p>
+
+    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
+      An <strong>administrator account</strong> has been created for you on the Qiqi Hub.
+    </p>
+
+    <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="margin: 0 0 12px; color: #1e40af; font-weight: 600;">
+        📧 Your Login Email:
+      </p>
+      <p style="margin: 0; color: #1e3a8a; font-family: monospace; font-size: 15px;">
+        ${escapeHtml(data.userEmail)}
+      </p>
+    </div>
+
+    <h2 style="margin: 24px 0 16px; font-size: 20px; font-weight: 600; color: #111827;">
+      Next Step: Set Your Password
+    </h2>
+
+    <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
+      Click the button below to create your secure password. This link will expire in <strong>24 hours</strong> for security reasons.
+    </p>
+
+    <div style="margin: 30px 0; text-align: center;">
+      <a href="${escapeHtml(data.setupLink)}"
+         style="display: inline-block; padding: 16px 40px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
+        Set My Password →
+      </a>
+    </div>
+
+    <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px; font-weight: 600;">
+        🔒 Security Note:
+      </p>
+      <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+        You'll choose your own password — nobody else ever sees it. After your first
+        login you'll be asked to set up two-factor authentication. If the link
+        expires, ask another administrator to resend the setup email.
+      </p>
+    </div>
+
+    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p style="margin: 0 0 8px; color: #92400e; font-size: 14px; font-weight: 600;">
+        📧 Having trouble with the link? (Outlook/Email Client Users)
+      </p>
+      <p style="margin: 0 0 8px; color: #92400e; font-size: 14px; line-height: 1.5;">
+        If clicking the button above doesn't work, copy and paste this link into your browser:
+      </p>
+      <p style="margin: 0; word-break: break-all;">
+        <a href="${escapeHtml(data.setupLink)}" style="color: #1e40af; font-size: 12px; font-family: monospace;">${escapeHtml(data.setupLink)}</a>
+      </p>
+    </div>
+  `;
+
+  return {
+    subject: `Your Qiqi Hub admin account - Set Your Password`,
+    html: emailWrapper(content, data.siteUrl),
+  };
+}
+
+/**
  * Password Reset Email Template
  */
 export function passwordResetEmailTemplate(data: { 

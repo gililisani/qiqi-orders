@@ -16,7 +16,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { sendMail } from '../../../../lib/emailService';
-import { passwordResetEmailTemplate, welcomeEmailTemplate } from '../../../../lib/emailTemplates';
+import {
+  adminWelcomeEmailTemplate,
+  passwordResetEmailTemplate,
+  welcomeEmailTemplate,
+} from '../../../../lib/emailTemplates';
 import { createServiceRoleClient, requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { createPasswordSetupLink, deletePasswordSetupToken } from '../../../../lib/passwordSetupTokens';
 import {
@@ -28,7 +32,15 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const admin = await requireAdminWithPermission(request, 'users:manage');
+    // Either user-management permission works to get in; which one is
+    // actually required depends on the TARGET (checked below): client
+    // targets need users:manage, admin targets need admins:manage.
+    let admin: Awaited<ReturnType<typeof requireAdminWithPermission>>;
+    try {
+      admin = await requireAdminWithPermission(request, 'users:manage');
+    } catch {
+      admin = await requireAdminWithPermission(request, 'admins:manage');
+    }
 
     const body = await request.json();
     const { userId, userName, companyId, companyName } = body;
@@ -60,6 +72,29 @@ export async function POST(request: NextRequest) {
       );
     }
     const normalizedEmail = normalizeEmailForRateLimit(authUser.user.email);
+
+    // Admin targets get the admin welcome copy AND require admins:manage —
+    // users:manage alone must not operate on admin accounts.
+    const { data: targetAdminRow } = await supabaseAdmin
+      .from('admins')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+    const targetIsAdmin = !!targetAdminRow;
+    const requiredPermission = targetIsAdmin ? 'admins:manage' : 'users:manage';
+    if (
+      !admin.permissions.includes(requiredPermission) &&
+      !admin.permissions.includes('*')
+    ) {
+      return NextResponse.json(
+        {
+          error: targetIsAdmin
+            ? 'Managing admin accounts requires the Admins permission.'
+            : 'Managing client users requires the Users permission.',
+        },
+        { status: 403 }
+      );
+    }
 
     const limited = await enforceRateLimit(supabaseAdmin, {
       key: `send-reset-link:actor:${admin.id}:email:${normalizedEmail}`,
@@ -106,13 +141,20 @@ export async function POST(request: NextRequest) {
     const displayName = userName || normalizedEmail.split('@')[0];
 
     const emailTemplate = isNewUser
-      ? welcomeEmailTemplate({
-          userName: displayName,
-          userEmail: normalizedEmail,
-          companyName: companyDisplayName || 'Your Company',
-          setupLink: setupLink.url,
-          siteUrl,
-        })
+      ? targetIsAdmin
+        ? adminWelcomeEmailTemplate({
+            userName: displayName,
+            userEmail: normalizedEmail,
+            setupLink: setupLink.url,
+            siteUrl,
+          })
+        : welcomeEmailTemplate({
+            userName: displayName,
+            userEmail: normalizedEmail,
+            companyName: companyDisplayName || 'Your Company',
+            setupLink: setupLink.url,
+            siteUrl,
+          })
       : passwordResetEmailTemplate({
           userName: displayName,
           userEmail: normalizedEmail,

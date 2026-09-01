@@ -26,10 +26,9 @@ export default function EditAdminPage() {
     email: '',
     enabled: true,
     mfa_required: false,
-    changePassword: false,
-    newPassword: '',
     permissions: [...DEFAULT_ADMIN_PERMISSIONS] as string[],
   });
+  const [sendingReset, setSendingReset] = useState(false);
   const [originalEmail, setOriginalEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -51,8 +50,6 @@ export default function EditAdminPage() {
           email: data?.email || '',
           enabled: !!data?.enabled,
           mfa_required: !!data?.mfa_required,
-          changePassword: false,
-          newPassword: '',
           // Show EXACTLY what's stored — pre-checking defaults on an empty
           // array silently re-grants permissions on the next save.
           permissions: Array.isArray(data?.permissions) ? data.permissions : [],
@@ -72,10 +69,6 @@ export default function EditAdminPage() {
       setError('Name and email are required.');
       return;
     }
-    if (formData.changePassword && formData.newPassword.length < 8) {
-      setError('New password must be at least 8 characters.');
-      return;
-    }
     setSaving(true);
     setError(null);
     try {
@@ -92,9 +85,6 @@ export default function EditAdminPage() {
           enabled: formData.enabled,
           mfa_required: formData.mfa_required,
           permissions: formData.permissions,
-          ...(formData.changePassword && formData.newPassword
-            ? { password: formData.newPassword }
-            : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -106,6 +96,32 @@ export default function EditAdminPage() {
       setError(err.message || 'Failed to update admin.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Password setup/reset: mint our hashed 24h token and email the link.
+  // Same route the client flow uses; it picks setup vs reset copy by whether
+  // the target ever signed in, and admin targets get the admin template.
+  const handleSendResetLink = async () => {
+    setSendingReset(true);
+    setError(null);
+    try {
+      const res = await fetchWithAuth('/api/users/send-reset-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: adminId, userName: formData.name }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to send the link.');
+      toast.success(
+        data.isNewUser
+          ? 'Setup email sent — they have 24 hours to set their password.'
+          : 'Password reset email sent.',
+      );
+    } catch (err: any) {
+      setError(err.message || 'Failed to send the link.');
+    } finally {
+      setSendingReset(false);
     }
   };
 
@@ -254,31 +270,22 @@ export default function EditAdminPage() {
         </p>
       </div>
 
-      <div className="space-y-3 pt-2 border-t border-border">
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={formData.changePassword}
-            onChange={(e) =>
-              setFormData((p) => ({ ...p, changePassword: e.target.checked, newPassword: '' }))
-            }
-            disabled={loading}
-            className="h-4 w-4 accent-foreground"
-          />
-          <span className="text-sm font-medium">Change password</span>
-        </label>
-
-        {formData.changePassword && (
-          <FormField label="New password" required helper="Minimum 6 characters.">
-            <Input
-              type="password"
-              value={formData.newPassword}
-              onChange={(e) => setFormData((p) => ({ ...p, newPassword: e.target.value }))}
-              minLength={6}
-              required
-            />
-          </FormField>
-        )}
+      <div className="space-y-2 pt-2 border-t border-border">
+        <span className="text-sm font-medium">Password</span>
+        <p className="text-xs text-muted-foreground">
+          Passwords are never set by another admin. Send them a secure link instead —
+          it works both for a first-time setup and a reset, and expires in 24 hours.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleSendResetLink}
+          loading={sendingReset}
+          disabled={loading}
+        >
+          {sendingReset ? 'Sending…' : 'Send password setup / reset link'}
+        </Button>
       </div>
     </AdminFormShell>
   );
