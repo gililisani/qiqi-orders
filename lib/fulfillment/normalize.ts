@@ -119,20 +119,32 @@ export function buildNormalizedOrder(params: {
     clean(order.po_number) ||
     order.id.substring(0, 8);
 
-  const lineItems: NormalizedLineItem[] = (items || [])
-    .map((item, idx): NormalizedLineItem | null => {
-      const sku = clean(item.product?.sku);
-      if (!sku) return null; // a line with no SKU can't be fulfilled — drop it
-      return {
+  // Consolidate duplicate SKUs by (sku, unit_price) — the SAME rule as the
+  // NetSuite push (lib/netsuite.ts): a product ordered both regularly and as
+  // a support-fund item is one warehouse line, not two. Verified against the
+  // first live ShipHero test (2026-09-02), where the split lines confused
+  // the warehouse view.
+  const consolidated = new Map<string, NormalizedLineItem>();
+  (items || []).forEach((item, idx) => {
+    const sku = clean(item.product?.sku);
+    if (!sku) return; // a line with no SKU can't be fulfilled — drop it
+    const unitPrice = Number(item.unit_price) || 0;
+    const key = `${sku}_${unitPrice}`;
+    const existing = consolidated.get(key);
+    if (existing) {
+      existing.quantity += Number(item.quantity) || 0;
+    } else {
+      consolidated.set(key, {
         sku,
         quantity: Number(item.quantity) || 0,
-        unitPrice: Number(item.unit_price) || 0,
+        unitPrice,
         // Stable per-line id so the provider can echo it back on webhooks.
         partnerLineItemId: clean(item.id) || `${order.id}-${idx}`,
         productName: clean(item.product?.item_name),
-      };
-    })
-    .filter((x): x is NormalizedLineItem => x !== null);
+      });
+    }
+  });
+  const lineItems: NormalizedLineItem[] = [...consolidated.values()];
 
   return {
     orderId: order.id,

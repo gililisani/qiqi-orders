@@ -15,6 +15,11 @@
  * against the ShipHero account ("WHOLESALE-…"); the doc's "WHOLSALE-…"
  * was a typo (owner-confirmed). Don't "correct" them back.
  *
+ * Carrier is ShipHero's MACHINE key 'genericlabel', not the UI label
+ * "Generic" — verified against the first live test (2026-09-02): sending
+ * 'Generic' isn't recognized and ShipHero's UI falls back to a wrong
+ * carrier ("Amazon Carrier"). Manual orders store carrier=genericlabel.
+ *
  * "Cheapest"/"4" = ShipHero rate shopping (cheapest rate, 4-day window) —
  * how the API encodes it must be verified against a live order before the
  * first STANDARD/DDP push (no such order exists yet to copy from).
@@ -37,21 +42,21 @@ export const SHIPMENT_TYPES: readonly ShipmentType[] = [
     code: 'SEA',
     label: 'International Sea Freight',
     tags: ['WHOLESALE-SEAFREIGHT'],
-    carrier: 'Generic',
+    carrier: 'genericlabel',
     method: 'genericlabel',
   },
   {
     code: 'AIR',
     label: 'International Air Freight',
     tags: ['WHOLESALE-AIRFREIGHT'],
-    carrier: 'Generic',
+    carrier: 'genericlabel',
     method: 'genericlabel',
   },
   {
     code: 'LTL',
     label: 'USA Domestic – LTL',
     tags: ['WHOLESALE-DOMESTIC'],
-    carrier: 'Generic',
+    carrier: 'genericlabel',
     method: 'genericlabel',
   },
   {
@@ -72,7 +77,7 @@ export const SHIPMENT_TYPES: readonly ShipmentType[] = [
     code: 'LABELS',
     label: 'International – Use My Labels',
     tags: ['LABELS-ATTACHED'],
-    carrier: 'Generic',
+    carrier: 'genericlabel',
     method: 'genericlabel',
   },
 ] as const;

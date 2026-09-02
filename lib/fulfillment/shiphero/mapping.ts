@@ -35,7 +35,9 @@ const PACKED_HISTORY_TOKENS = ['packed', 'warehouse_completed'];
 // normal source since 2026-09).
 export const PICKUP_SHIPPING_LINE = {
   title: 'Wholesale Generic',
-  carrier: 'Generic',
+  // ShipHero's machine key — "Generic" is only the UI label (see
+  // lib/shipmentTypes.ts, verified against the 2026-09-02 live test).
+  carrier: 'genericlabel',
   method: 'genericlabel',
 } as const;
 

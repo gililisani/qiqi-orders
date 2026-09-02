@@ -75,6 +75,32 @@ describe('buildNormalizedOrder', () => {
     expect(noNums.orderNumber).toBe('abcdef12');
   });
 
+  it('consolidates same-SKU lines (regular + support-fund) like the NetSuite push', () => {
+    const n = buildNormalizedOrder({
+      ...hubOrder,
+      items: [
+        { id: 'li-1', quantity: 72, unit_price: 25, product: { sku: 'FPS0023', item_name: 'Mask' } },
+        { id: 'li-2', quantity: 18, unit_price: 15, product: { sku: 'FPS0020', item_name: 'Serum' } },
+        // the support-fund line of the same product at the same catalog price
+        { id: 'li-3', quantity: 48, unit_price: 25, product: { sku: 'FPS0023', item_name: 'Mask' } },
+      ],
+    });
+    expect(n.lineItems).toHaveLength(2);
+    expect(n.lineItems.find((l) => l.sku === 'FPS0023')).toMatchObject({ quantity: 120, unitPrice: 25 });
+    expect(n.lineItems.find((l) => l.sku === 'FPS0020')).toMatchObject({ quantity: 18 });
+  });
+
+  it('keeps same-SKU lines separate when the unit price differs (NS rule)', () => {
+    const n = buildNormalizedOrder({
+      ...hubOrder,
+      items: [
+        { id: 'li-1', quantity: 10, unit_price: 25, product: { sku: 'FPS0023', item_name: 'Mask' } },
+        { id: 'li-2', quantity: 5, unit_price: 20, product: { sku: 'FPS0023', item_name: 'Mask' } },
+      ],
+    });
+    expect(n.lineItems).toHaveLength(2);
+  });
+
   it('drops line items with no SKU', () => {
     const n = buildNormalizedOrder({
       ...hubOrder,
@@ -91,7 +117,7 @@ describe('buildNormalizedOrder', () => {
     });
     expect(n.orderNumber).toBe('SOIL10999-Greece-SEA'); // owner's doc example
     expect(n.tags).toEqual(['WHOLESALE-SEAFREIGHT']);
-    expect(n.shippingLine).toMatchObject({ carrier: 'Generic', method: 'genericlabel' });
+    expect(n.shippingLine).toMatchObject({ carrier: 'genericlabel', method: 'genericlabel' });
   });
 
   it('has no tags and the Cheapest line for Qiqi-Shipping types', () => {
@@ -192,13 +218,13 @@ describe('buildShipHeroOrderInput', () => {
     const input = buildShipHeroOrderInput(n, cfg(), PUSH_DATE);
     expect(input.order_number).toBe('SOIL10776-Lithuania-AIR');
     expect(input.tags).toEqual(['WHOLESALE-AIRFREIGHT']);
-    expect(input.shipping_lines).toMatchObject({ carrier: 'Generic', method: 'genericlabel' });
+    expect(input.shipping_lines).toMatchObject({ carrier: 'genericlabel', method: 'genericlabel' });
   });
 
   it('omits tags and falls back to the generic line without a shipment type', () => {
     const input = buildShipHeroOrderInput(buildNormalizedOrder(hubOrder), cfg(), PUSH_DATE);
     expect(input.tags).toBeUndefined();
-    expect(input.shipping_lines).toMatchObject({ carrier: 'Generic', method: 'genericlabel' });
+    expect(input.shipping_lines).toMatchObject({ carrier: 'genericlabel', method: 'genericlabel' });
   });
 
   it('pins line-item warehouse_id only when configured', () => {

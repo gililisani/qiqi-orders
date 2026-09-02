@@ -13,12 +13,12 @@ describe('SHIPMENT_TYPES', () => {
   it('matches the owner spec exactly', () => {
     expect(SHIPMENT_TYPE_CODES).toEqual(['SEA', 'AIR', 'LTL', 'STANDARD', 'DDP', 'LABELS']);
     const byCode = Object.fromEntries(SHIPMENT_TYPES.map((t) => [t.code, t]));
-    expect(byCode.SEA).toMatchObject({ tags: ['WHOLESALE-SEAFREIGHT'], carrier: 'Generic', method: 'genericlabel' });
-    expect(byCode.AIR).toMatchObject({ tags: ['WHOLESALE-AIRFREIGHT'], carrier: 'Generic', method: 'genericlabel' });
-    expect(byCode.LTL).toMatchObject({ tags: ['WHOLESALE-DOMESTIC'], carrier: 'Generic', method: 'genericlabel' });
+    expect(byCode.SEA).toMatchObject({ tags: ['WHOLESALE-SEAFREIGHT'], carrier: 'genericlabel', method: 'genericlabel' });
+    expect(byCode.AIR).toMatchObject({ tags: ['WHOLESALE-AIRFREIGHT'], carrier: 'genericlabel', method: 'genericlabel' });
+    expect(byCode.LTL).toMatchObject({ tags: ['WHOLESALE-DOMESTIC'], carrier: 'genericlabel', method: 'genericlabel' });
     expect(byCode.STANDARD).toMatchObject({ tags: [], carrier: 'Cheapest', method: '4' });
     expect(byCode.DDP).toMatchObject({ tags: [], carrier: 'Cheapest', method: '4' });
-    expect(byCode.LABELS).toMatchObject({ tags: ['LABELS-ATTACHED'], carrier: 'Generic', method: 'genericlabel' });
+    expect(byCode.LABELS).toMatchObject({ tags: ['LABELS-ATTACHED'], carrier: 'genericlabel', method: 'genericlabel' });
   });
 
   it('every label is the exact display name from the doc', () => {
