@@ -1021,11 +1021,14 @@ export default function AdminOrderDetailsView({
   const paymentPending = order.payment_status === 'pending';
   const canSendForPayment = ccEnabled && !paymentPaid && !paymentPending && !!order.netsuite_so_id;
 
+  // Header actions key off the SAVED status (originalStatus), never the
+  // dropdown's unsaved selection — picking "Open" in the status select must
+  // not reveal Open-only actions before Save (QA finding 2026-09-02).
   const nsPrimary = (() => {
-    if (order.status === 'Draft') return null;
+    if (originalStatus === 'Draft') return null;
     // A cancelled order gets no NS actions — Reinstate first (it returns the
     // order to Open, where the Accept flow takes over).
-    if (order.status === 'Cancelled') return null;
+    if (originalStatus === 'Cancelled') return null;
     // While reconciliation is in flight on an order with so_number but no
     // netsuite_so_id, suppress the Push button — we may be about to discover
     // the SO already exists in NetSuite and showing Push would be wrong.
@@ -1040,7 +1043,7 @@ export default function AdminOrderDetailsView({
       // Open orders get the one-click Accept (NS SO + warehouse push).
       // The bare NetSuite push remains for edge cases: an order past Open
       // whose SO link was removed (unlink / manual fixes).
-      if (order.status === 'Open') {
+      if (originalStatus === 'Open') {
         return {
           action: 'accept' as const,
           label: accepting ? 'Accepting…' : 'Accept Order',
@@ -1085,18 +1088,21 @@ export default function AdminOrderDetailsView({
   // Product rule: edit is allowed only in Draft / Open. Once the order
   // moves to In Process / Ready / Done / Cancelled, the data is frozen
   // (it's been pushed to NS, fulfilled by 3PL, etc.).
-  const canEdit = canEditOrder(order.status);
+  const canEdit = canEditOrder(originalStatus);
 
   const showPackingSlipBtn = canShowPackingSlip(originalStatus);
-  const canSLI = ['Ready', 'Done'].includes(order.status);
+  const canSLI = ['Ready', 'Done'].includes(originalStatus);
   // ShipHero (3PL) fulfillment: NetSuite-first is a hard requirement, so the
   // push is only offered once the order has a NetSuite SO (which also moves it
   // to In Process). Once sent, show status/actions instead of the push.
   const alreadyInShipHero = !!(order as any).external_fulfillment_id;
+  // Re-push is allowed when the linked ShipHero order was CANCELLED there —
+  // a reinstated order needs a fresh warehouse order (QA finding 2026-09-02).
+  const shipHeroCancelled = (order as any).fulfillment_status === 'cancelled';
   const canSendToShipHero =
     !!order.netsuite_so_id &&
-    ['In Process', 'Ready', 'Done'].includes(order.status) &&
-    !alreadyInShipHero;
+    ['In Process', 'Ready', 'Done'].includes(originalStatus) &&
+    (!alreadyInShipHero || shipHeroCancelled);
 
   // --------------------------------------------------------------------------
   // Render
@@ -1220,7 +1226,7 @@ export default function AdminOrderDetailsView({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                {order.status !== 'Draft' && (
+                {originalStatus !== 'Draft' && (
                   <DropdownMenuItem onClick={handleDownloadCSV}>
                     <Download className="h-4 w-4 mr-2" /> Download CSV
                   </DropdownMenuItem>
@@ -1228,10 +1234,14 @@ export default function AdminOrderDetailsView({
                 {canSendToShipHero && (
                   <DropdownMenuItem onClick={handleSendToShipHero} disabled={shipHeroLoading}>
                     <Truck className="h-4 w-4 mr-2" />
-                    {shipHeroLoading ? 'Sending…' : 'Send to ShipHero'}
+                    {shipHeroLoading
+                      ? 'Sending…'
+                      : alreadyInShipHero
+                        ? 'Send to ShipHero again'
+                        : 'Send to ShipHero'}
                   </DropdownMenuItem>
                 )}
-                {alreadyInShipHero && (
+                {alreadyInShipHero && !shipHeroCancelled && (
                   <>
                     <DropdownMenuItem onClick={handleSyncShipHero} disabled={shipHeroLoading}>
                       <RefreshCw className="h-4 w-4 mr-2" /> Refresh ShipHero status

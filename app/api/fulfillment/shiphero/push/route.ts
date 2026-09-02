@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
         shipment_type,
         netsuite_so_id,
         external_fulfillment_id,
+        fulfillment_status,
         company:companies(
           company_name,
           ship_to_contact_name,
@@ -60,7 +61,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    if (order.external_fulfillment_id) {
+    // Idempotency guard — but a CANCELLED warehouse order is dead, so a
+    // re-push creates a fresh one (reinstated orders; new SO number = new
+    // warehouse order number, no collision on ShipHero's side).
+    if (order.external_fulfillment_id && order.fulfillment_status !== 'cancelled') {
       return NextResponse.json(
         { error: `This order was already sent to ShipHero (${order.external_fulfillment_id}).` },
         { status: 409 },

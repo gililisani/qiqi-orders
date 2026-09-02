@@ -46,7 +46,18 @@ export async function POST(request: NextRequest) {
     // Atomic claim so a double-click can't produce two history entries.
     const { data: claimed, error: updateError } = await supabase
       .from('orders')
-      .update({ status: 'Open' })
+      .update({
+        status: 'Open',
+        // Fresh fulfillment slate — the old warehouse order (if any) was
+        // cancelled; a new accept pushes a brand-new one.
+        fulfillment_provider: null,
+        fulfillment_status: null,
+        fulfillment_synced_at: null,
+        external_fulfillment_id: null,
+        external_fulfillment_legacy_id: null,
+        tracking_number: null,
+        tracking_carrier: null,
+      })
       .eq('id', orderId)
       .eq('status', 'Cancelled')
       .select('id');

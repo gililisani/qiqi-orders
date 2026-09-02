@@ -103,6 +103,11 @@ export async function POST(request: NextRequest) {
         status: 'Cancelled',
         netsuite_so_id: null,
         so_number: null,
+        // The ShipHero order is cancelled and dead — clear the link so a
+        // reinstated order can be pushed fresh (fulfillment_status keeps
+        // 'cancelled' for the record; reinstate resets it).
+        external_fulfillment_id: null,
+        external_fulfillment_legacy_id: null,
       })
       .eq('id', orderId);
     if (updateError) {
