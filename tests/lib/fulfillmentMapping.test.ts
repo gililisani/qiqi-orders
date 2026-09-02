@@ -62,7 +62,9 @@ describe('buildNormalizedOrder', () => {
     expect(n.orderNumber).toBe('SO-555'); // SO preferred over PO
     expect(n.shipTo.city).toBe('Phoenix');
     expect(n.lineItems).toHaveLength(2);
-    expect(n.lineItems[0]).toMatchObject({ sku: 'SKU-A', quantity: 2, unitPrice: 12.5, partnerLineItemId: 'li-1' });
+    expect(n.lineItems[0]).toMatchObject({ sku: 'SKU-A', quantity: 2, unitPrice: 12.5 });
+    // Salted per push — ShipHero refuses reused partner_line_item_ids.
+    expect(n.lineItems[0].partnerLineItemId).toMatch(/^li-1\./);
   });
 
   it('falls back PO then UUID slice for order number', () => {
@@ -195,7 +197,8 @@ describe('buildShipHeroOrderInput', () => {
     expect(input.customer_account_id).toBe('97016');
     expect(input.shipping_address.city).toBe('Phoenix');
     expect(input.shipping_address.first_name).toBe('Jane');
-    expect(input.line_items[0]).toMatchObject({ sku: 'SKU-A', quantity: 2, price: '12.50', partner_line_item_id: 'li-1' });
+    expect(input.line_items[0]).toMatchObject({ sku: 'SKU-A', quantity: 2, price: '12.50' });
+    expect(input.line_items[0].partner_line_item_id).toMatch(/^li-1\./);
   });
 
   it('uses the passed submission date as order_date, not the hub creation date', () => {

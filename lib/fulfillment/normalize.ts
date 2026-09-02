@@ -119,6 +119,14 @@ export function buildNormalizedOrder(params: {
     clean(order.po_number) ||
     order.id.substring(0, 8);
 
+  // ShipHero rejects a partner_line_item_id it has EVER seen on the account —
+  // including on cancelled orders — so a re-push after cancel/reinstate needs
+  // fresh line references (live finding 2026-09-02: "Duplicate
+  // partner_line_item_id not allowed"). The field is only an echo reference
+  // (order matching uses partner_order_id / order id / order number), so a
+  // per-push salt is safe.
+  const pushSalt = Date.now().toString(36);
+
   // Consolidate duplicate SKUs by (sku, unit_price) — the SAME rule as the
   // NetSuite push (lib/netsuite.ts): a product ordered both regularly and as
   // a support-fund item is one warehouse line, not two. Verified against the
@@ -138,8 +146,7 @@ export function buildNormalizedOrder(params: {
         sku,
         quantity: Number(item.quantity) || 0,
         unitPrice,
-        // Stable per-line id so the provider can echo it back on webhooks.
-        partnerLineItemId: clean(item.id) || `${order.id}-${idx}`,
+        partnerLineItemId: `${clean(item.id) || `${order.id}-${idx}`}.${pushSalt}`,
         productName: clean(item.product?.item_name),
       });
     }
