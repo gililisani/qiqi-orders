@@ -1,40 +1,46 @@
 /**
  * Email notifications for the Amazon FBA monthly automation.
- * Sent via the existing Microsoft Graph service (orders@qiqiglobal.com).
+ * Sent via the existing Microsoft Graph service (orders@qiqiglobal.com),
+ * in the shared Hub email design (lib/emailTemplates.ts blocks).
  */
 
 import { sendMail } from '../emailService';
 import { escapeHtml } from '../htmlEscape';
+import {
+  emailWrapper,
+  emailHeading,
+  emailFactCard,
+  emailButton,
+  emailNote,
+  type FactRow,
+} from '../emailTemplates';
 import type { MonthPreview } from './parseReport';
 import type { PushStepResult } from './pushToNetSuite';
 
 const money = (n: number) =>
   `${n < 0 ? '-' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-function totalsTable(preview: MonthPreview): string {
-  const rows: [string, string][] = [
-    ['Gross sales', money(preview.grossSales)],
-    ['Seller-funded promotions', money(preview.discountTotal)],
-    ['Refunds', money(preview.refundTotal)],
-    ['Amazon fees', money(-preview.feeTotal)],
-    ['Reimbursements', money(preview.reimbursementTotal)],
-    ['Net', money(preview.computedNet)],
-    ['Orders', String(preview.orderCount)],
+const INTERNAL_FOOTER = { footerNote: 'Automated internal notification from the Qiqi Partners Hub.' };
+
+function totalsCard(preview: MonthPreview): string {
+  const rows: FactRow[] = [
+    { label: 'Gross sales', value: escapeHtml(money(preview.grossSales)), mono: true },
+    { label: 'Seller-funded promotions', value: escapeHtml(money(preview.discountTotal)), mono: true },
+    { label: 'Refunds', value: escapeHtml(money(preview.refundTotal)), mono: true },
+    { label: 'Amazon fees', value: escapeHtml(money(-preview.feeTotal)), mono: true },
+    { label: 'Reimbursements', value: escapeHtml(money(preview.reimbursementTotal)), mono: true },
+    { label: 'Net', value: escapeHtml(money(preview.computedNet)), mono: true },
+    { label: 'Orders', value: escapeHtml(String(preview.orderCount)) },
   ];
   if (preview.returns) {
-    rows.push([
-      'Physical returns',
-      `${preview.returns.restockUnits} restock, ${preview.returns.nonRestockUnits} damaged`,
-    ]);
+    rows.push({
+      label: 'Physical returns',
+      value: escapeHtml(`${preview.returns.restockUnits} restock, ${preview.returns.nonRestockUnits} damaged`),
+    });
   } else if (preview.returnsError) {
-    rows.push(['Physical returns', 'report unavailable — money-only push']);
+    rows.push({ label: 'Physical returns', value: 'report unavailable — money-only push' });
   }
-  return `<table cellpadding="6" style="border-collapse:collapse">${rows
-    .map(
-      ([label, value]) =>
-        `<tr><td style="border:1px solid #ddd">${escapeHtml(label)}</td><td style="border:1px solid #ddd;text-align:right;font-family:monospace">${escapeHtml(value)}</td></tr>`
-    )
-    .join('')}</table>`;
+  return emailFactCard(rows);
 }
 
 const PAGE_URL = 'https://partners.qiqiglobal.com/admin/netsuite/amazon-fba';
@@ -52,14 +58,17 @@ export async function notifyMonthPrepared(
   const attention = preview.needsAttention
     .map((a) => `<li>${escapeHtml(a.reason)}: ${escapeHtml(a.row.product)} (${escapeHtml(a.row.orderId || '—')})</li>`)
     .join('');
-  const html = `
-    <p>The Hub fetched <strong>${escapeHtml(preview.periodLabel)}</strong> from Amazon:</p>
-    ${totalsTable(preview)}
-    ${ready
-      ? '<p>Everything reconciles. Review and push:</p>'
-      : `<p>The following must be resolved first:</p><ul>${attention}</ul>`}
-    <p><a href="${PAGE_URL}">Open the Amazon FBA page</a></p>`;
-  await sendMail({ to: notifyEmail, subject, html });
+  const content = `
+    ${emailHeading('Amazon FBA', ready ? `${preview.periodLabel} is ready to push` : `${preview.periodLabel} needs attention`)}
+    ${totalsCard(preview)}
+    ${
+      ready
+        ? emailNote('Everything reconciles. Review and push from the Amazon FBA page.')
+        : emailNote(`<strong>Resolve these before pushing:</strong><ul style="margin:8px 0 0 18px;padding:0;">${attention}</ul>`)
+    }
+    ${emailButton('Open the Amazon FBA page', PAGE_URL)}
+  `;
+  await sendMail({ to: notifyEmail, subject, html: emailWrapper(content, INTERNAL_FOOTER) });
 }
 
 export async function notifyMonthPushed(
@@ -71,15 +80,16 @@ export async function notifyMonthPushed(
     .filter((r) => r.status !== 'skipped')
     .map((r) => `<li>${escapeHtml(r.step)}: ${escapeHtml(r.tranId || r.nsId || '')} (${escapeHtml(r.status)})</li>`)
     .join('');
-  const html = `
-    <p><strong>${escapeHtml(preview.periodLabel)}</strong> was pushed to NetSuite automatically:</p>
-    ${totalsTable(preview)}
-    <ul>${lines}</ul>
-    <p><a href="${PAGE_URL}">Open the Amazon FBA page</a></p>`;
+  const content = `
+    ${emailHeading('Amazon FBA', `${preview.periodLabel} pushed to NetSuite`)}
+    ${totalsCard(preview)}
+    ${emailNote(`<strong>Records created:</strong><ul style="margin:8px 0 0 18px;padding:0;">${lines}</ul>`)}
+    ${emailButton('Open the Amazon FBA page', PAGE_URL)}
+  `;
   await sendMail({
     to: notifyEmail,
     subject: `Amazon ${preview.periodLabel} pushed to NetSuite automatically`,
-    html,
+    html: emailWrapper(content, INTERNAL_FOOTER),
   });
 }
 
@@ -88,14 +98,15 @@ export async function notifyMonthFailed(
   periodLabel: string,
   errorMessage: string
 ): Promise<void> {
-  const html = `
-    <p>The automatic Amazon import for <strong>${escapeHtml(periodLabel)}</strong> hit a problem:</p>
-    <p style="color:#b00">${escapeHtml(errorMessage)}</p>
-    <p>Nothing was double-booked — records already created are kept and retrying only creates what's missing.</p>
-    <p><a href="${PAGE_URL}">Open the Amazon FBA page to fix and retry</a></p>`;
+  const content = `
+    ${emailHeading('Amazon FBA', `${periodLabel} import needs help`)}
+    ${emailNote(`<strong>The automatic import hit a problem:</strong><br>${escapeHtml(errorMessage)}`)}
+    ${emailNote("Nothing was double-booked — records already created are kept, and retrying only creates what's missing.")}
+    ${emailButton('Open the Amazon FBA page to fix and retry', PAGE_URL)}
+  `;
   await sendMail({
     to: notifyEmail,
     subject: `Amazon ${periodLabel} import needs help`,
-    html,
+    html: emailWrapper(content, INTERNAL_FOOTER),
   });
 }

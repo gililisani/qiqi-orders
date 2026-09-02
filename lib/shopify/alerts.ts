@@ -6,6 +6,7 @@
  */
 import { sendMail } from '../emailService';
 import { escapeHtml } from '../htmlEscape';
+import { emailWrapper, emailHeading, emailButton, emailNote } from '../emailTemplates';
 import type { ShopifySyncStore } from './store';
 
 const DIGEST_MIN_INTERVAL_MS = 20 * 3600_000; // ~daily
@@ -35,19 +36,21 @@ export async function maybeSendErrorDigest(
     .slice(0, 20)
     .map(
       (e) =>
-        `<tr><td style="padding:4px 8px">${escapeHtml(e.order_name)}</td>` +
-        `<td style="padding:4px 8px">${escapeHtml(e.error_code ?? '')}</td>` +
-        `<td style="padding:4px 8px">${escapeHtml((e.error_message ?? '').slice(0, 140))}</td></tr>`,
+        `<tr><td style="padding:6px 8px;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;color:#111111;border-bottom:1px solid #E7E5E4;">${escapeHtml(e.order_name)}</td>` +
+        `<td style="padding:6px 8px;font-family:'Courier New',monospace;font-size:12px;color:#44403C;border-bottom:1px solid #E7E5E4;">${escapeHtml(e.error_code ?? '')}</td>` +
+        `<td style="padding:6px 8px;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;color:#78716C;border-bottom:1px solid #E7E5E4;">${escapeHtml((e.error_message ?? '').slice(0, 140))}</td></tr>`,
     )
     .join('');
+  const content = `
+    ${emailHeading('Shopify sync', `${errors.length} order${errors.length === 1 ? '' : 's'} need attention`)}
+    ${emailNote(`${errors.length} Shopify order${errors.length === 1 ? ' is' : 's are'} parked in the sync error queue.`)}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:12px 0 4px;">${rows}</table>
+    ${emailButton('Open Shopify Sync to fix and retry', 'https://partners.qiqiglobal.com/admin/shopify')}
+  `;
   await sendMail({
     to,
     subject: `Shopify sync: ${errors.length} order(s) need attention`,
-    html:
-      `<p>${errors.length} Shopify order(s) are parked in the sync error queue.</p>` +
-      `<table border="0" cellspacing="0" style="border-collapse:collapse;font-family:sans-serif;font-size:13px">` +
-      `<tr><th align="left" style="padding:4px 8px">Order</th><th align="left" style="padding:4px 8px">Code</th><th align="left" style="padding:4px 8px">Message</th></tr>${rows}</table>` +
-      `<p>Open the HUB → Shopify Sync to fix and retry.</p>`,
+    html: emailWrapper(content, { footerNote: 'Automated internal notification from the Qiqi Partners Hub.' }),
   }).catch((e) => console.error('[shopify-alerts] digest failed:', String(e?.message ?? e)));
 }
 
@@ -55,9 +58,15 @@ export async function maybeSendPollFailure(store: ShopifySyncStore, message: str
   const to = alertRecipient();
   if (!to || !process.env.AZURE_CLIENT_ID) return;
   if (!(await throttled(store, FAILURE_MIN_INTERVAL_MS))) return;
+  const content = `
+    ${emailHeading('Shopify sync', 'The order poller failed')}
+    ${emailNote(`<strong>Error:</strong><br><span style="font-family:'Courier New',monospace;font-size:12px;word-break:break-word;">${escapeHtml(message.slice(0, 800))}</span>`)}
+    ${emailNote('Orders are not being synced until this is resolved.')}
+    ${emailButton('Open Shopify Sync', 'https://partners.qiqiglobal.com/admin/shopify')}
+  `;
   await sendMail({
     to,
     subject: 'Shopify sync: poll FAILED',
-    html: `<p>The Shopify sync poller failed:</p><pre>${escapeHtml(message.slice(0, 800))}</pre><p>Orders are not being synced until this is resolved.</p>`,
+    html: emailWrapper(content, { footerNote: 'Automated internal notification from the Qiqi Partners Hub.' }),
   }).catch((e) => console.error('[shopify-alerts] failure mail failed:', String(e?.message ?? e)));
 }

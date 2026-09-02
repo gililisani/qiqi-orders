@@ -1,11 +1,190 @@
 /**
- * Email Templates - HTML templates for order notifications
- * 
- * This module contains all email templates used for order notifications.
+ * Email templates — the Hub's outbound email design system.
+ *
+ * Redesigned 2026-09-01 (owner-approved, see artifact "Qiqi Email Redesign"):
+ * one shared wrapper (logo header over a 2px ink rule, 600px card, real
+ * footer) and a small set of blocks — eyebrow+heading, fact card, items
+ * table, one black button, quiet note box. No emoji headers, no colored
+ * callouts. Table layout + inline styles + system fonts only, so rendering
+ * matches across Outlook / Gmail / Apple Mail.
+ *
+ * The blocks are exported so internal alert emails (Amazon, Shopify,
+ * feedback, new-order notification) share the same shell.
  */
 
-import { formatCurrency, formatQuantity } from './formatters';
+import { formatCurrency } from './formatters';
 import { escapeHtml, sanitizeEmailHeader } from './htmlEscape';
+
+// ---------------------------------------------------------------------------
+// Design tokens (email-safe: literal colors, system font stacks)
+// ---------------------------------------------------------------------------
+const FONT = "-apple-system,'Segoe UI',Helvetica,Arial,sans-serif";
+const MONO = "'Courier New',monospace";
+const INK = '#111111';
+const BODY = '#44403C';
+const MUTED = '#78716C';
+const FAINT = '#A8A29E';
+const HAIRLINE = '#E7E5E4';
+const WASH = '#FAFAF9';
+const GROUND = '#F5F5F4';
+
+const LOGO_URL = 'https://partners.qiqiglobal.com/logo.png';
+
+const DEFAULT_FOOTER =
+  'Questions about this email? Reply to it — it reaches the team at orders@qiqiglobal.com.';
+
+// ---------------------------------------------------------------------------
+// Shared blocks
+// ---------------------------------------------------------------------------
+
+/** The shell every Hub email ships in. `content` is trusted template HTML —
+ *  every user-supplied value inside it must already be escapeHtml'd. */
+export function emailWrapper(content: string, opts?: { footerNote?: string }): string {
+  const footerNote = opts?.footerNote ?? DEFAULT_FOOTER;
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Qiqi Partners Hub</title>
+</head>
+<body style="margin:0;padding:0;background-color:${GROUND};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background-color:${GROUND};padding:0;">
+    <tr><td align="center" style="padding:28px 12px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:600px;max-width:100%;background:#FFFFFF;border:1px solid ${HAIRLINE};border-radius:8px;overflow:hidden;">
+        <tr><td style="padding:28px 40px 24px;border-bottom:2px solid ${INK};">
+          <img src="${LOGO_URL}" alt="Qiqi" height="30" style="display:block;height:30px;">
+        </td></tr>
+        <tr><td style="padding:36px 40px 8px;font-family:${FONT};">
+          ${content}
+        </td></tr>
+        <tr><td style="padding:28px 40px 30px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:1px solid ${HAIRLINE};">
+            <tr><td style="padding:18px 0 0;font-family:${FONT};font-size:12px;line-height:1.7;color:${FAINT};">
+              Qiqi Global · Partners Hub<br>
+              ${footerNote}
+            </td></tr>
+          </table>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+/** Small-caps eyebrow naming the event + the plain-language heading. */
+export function emailHeading(eyebrow: string, heading: string): string {
+  return `
+    <p style="margin:0 0 10px;font-family:${FONT};font-size:12px;font-weight:700;letter-spacing:2px;color:${MUTED};">${eyebrow.toUpperCase()}</p>
+    <h1 style="margin:0 0 14px;font-family:${FONT};font-size:24px;line-height:1.25;font-weight:700;color:${INK};">${heading}</h1>
+  `;
+}
+
+export function emailPara(html: string): string {
+  return `<p style="margin:0 0 20px;font-family:${FONT};font-size:15px;line-height:1.6;color:${BODY};">${html}</p>`;
+}
+
+export interface FactRow {
+  label: string;
+  /** Already-escaped HTML value. */
+  value: string;
+  mono?: boolean;
+}
+
+/** The gray facts card: label left, value right. */
+export function emailFactCard(rows: FactRow[]): string {
+  const body = rows
+    .map((r, i) => {
+      const padTop = i === 0 ? '16px' : '4px';
+      const padBottom = i === rows.length - 1 ? '16px' : '4px';
+      const valueStyle = r.mono
+        ? `font-family:${MONO};font-size:14px;font-weight:700;`
+        : `font-family:${FONT};font-size:13px;${i === 0 ? 'font-weight:600;' : ''}`;
+      return `
+        <tr>
+          <td style="padding:${padTop} 20px ${padBottom};font-family:${FONT};font-size:13px;color:${MUTED};">${escapeHtml(r.label)}</td>
+          <td style="padding:${padTop} 20px ${padBottom};${valueStyle}color:${INK};text-align:right;">${r.value}</td>
+        </tr>`;
+    })
+    .join('');
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:${WASH};border:1px solid ${HAIRLINE};border-radius:6px;margin:0 0 4px;">
+      ${body}
+    </table>
+  `;
+}
+
+/** Order line items with a strong total rule. */
+export function emailItemsTable(
+  items: Array<{ productName: string; quantity: number; totalPrice: number }>,
+  totalAmount?: number,
+): string {
+  if (!items.length) return '';
+  const rows = items
+    .map((item, i) => {
+      const border = i < items.length - 1 ? `border-bottom:1px solid ${HAIRLINE};` : '';
+      return `
+        <tr>
+          <td style="padding:8px 0;font-family:${FONT};font-size:14px;color:${BODY};${border}">${escapeHtml(item.productName)}</td>
+          <td style="padding:8px 0;font-family:${FONT};font-size:14px;color:${MUTED};text-align:center;white-space:nowrap;${border}">${escapeHtml(item.quantity)}</td>
+          <td style="padding:8px 0;font-family:${FONT};font-size:14px;color:${INK};text-align:right;white-space:nowrap;${border}">${escapeHtml(formatCurrency(item.totalPrice))}</td>
+        </tr>`;
+    })
+    .join('');
+  const total =
+    totalAmount != null
+      ? `
+        <tr>
+          <td colspan="2" style="padding:12px 0 0;font-family:${FONT};font-size:14px;font-weight:700;color:${INK};border-top:2px solid ${INK};">Order total</td>
+          <td style="padding:12px 0 0;font-family:${FONT};font-size:16px;font-weight:700;color:${INK};text-align:right;border-top:2px solid ${INK};white-space:nowrap;">${escapeHtml(formatCurrency(totalAmount))}</td>
+        </tr>`
+      : '';
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:16px 0 4px;">
+      ${rows}
+      ${total}
+    </table>
+  `;
+}
+
+/** The single black action button, with a plain-link fallback underneath. */
+export function emailButton(label: string, url: string, fallbackLabel = 'Open it in your browser'): string {
+  const safeUrl = escapeHtml(url);
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr><td align="center" style="padding:28px 0 8px;">
+        <a href="${safeUrl}" style="display:inline-block;background:${INK};color:#FFFFFF;font-family:${FONT};font-size:15px;font-weight:600;text-decoration:none;padding:13px 36px;border-radius:6px;">${escapeHtml(label)}</a>
+        <p style="margin:12px 0 0;font-family:${FONT};font-size:12px;color:${FAINT};">Button not working? <a href="${safeUrl}" style="color:${MUTED};">${escapeHtml(fallbackLabel)}</a></p>
+      </td></tr>
+    </table>
+  `;
+}
+
+/** Quiet gray note box for secondary information. `html` is trusted template
+ *  HTML — escape user values before passing them in. */
+export function emailNote(html: string): string {
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:${WASH};border:1px solid ${HAIRLINE};border-radius:6px;margin:16px 0 4px;">
+      <tr><td style="padding:14px 20px;font-family:${FONT};font-size:12.5px;line-height:1.7;color:${MUTED};">${html}</td></tr>
+    </table>
+  `;
+}
+
+/** The scanner-proof fallback block used under set-password buttons. */
+function linkFallbackNote(url: string): string {
+  const safeUrl = escapeHtml(url);
+  return emailNote(`
+    <strong style="color:${BODY};">If the button doesn't work</strong> (common in Outlook): copy this link into your browser instead —<br>
+    <a href="${safeUrl}" style="color:${MUTED};word-break:break-all;font-family:${MONO};font-size:11.5px;">${safeUrl}</a>
+  `);
+}
+
+// ---------------------------------------------------------------------------
+// Order lifecycle templates
+// ---------------------------------------------------------------------------
 
 interface OrderEmailData {
   poNumber: string; // Use PO number as the main order identifier
@@ -23,401 +202,164 @@ interface OrderEmailData {
   siteUrl: string;
 }
 
-/**
- * Base email template wrapper
- */
-function emailWrapper(content: string, siteUrl: string): string {
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Qiqi Orders Notification</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px 0;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <!-- Header with Logo -->
-          <tr>
-            <td style="background-color: #ffffff; padding: 40px 30px; text-align: center;">
-              <img src="https://partners.qiqiglobal.com/logo.png" alt="Qiqi" style="height: 50px; width: auto; display: block; margin: 0 auto;" />
-            </td>
-          </tr>
-          
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px 30px;">
-              ${content}
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `.trim();
+function orderUrl(data: OrderEmailData): string {
+  return `${data.siteUrl}/client/orders/${data.orderId}`;
 }
 
-/**
- * Order Created Email Template
- */
+function orderFacts(data: OrderEmailData, extra: FactRow[] = []): string {
+  const rows: FactRow[] = [
+    { label: 'PO number', value: escapeHtml(data.poNumber) },
+    ...(data.soNumber ? [{ label: 'Sales order', value: escapeHtml(data.soNumber) }] : []),
+    { label: 'Company', value: escapeHtml(data.companyName) },
+    ...extra,
+  ];
+  return emailFactCard(rows);
+}
+
+/** Order Created — sent to the client right after they place an order. */
 export function orderCreatedTemplate(data: OrderEmailData): { subject: string; html: string } {
-  const itemsHtml = data.items
-    ?.map(
-      (item) => `
-        <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(item.productName)}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${escapeHtml(item.quantity)}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        </tr>
-      `
-    )
-    .join('');
-
   const content = `
-    <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Confirmation</h2>
-    
-    <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Your order <strong>${escapeHtml(data.poNumber)}</strong> has been successfully created and is being processed.
-    </p>
-    
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
-      <tr>
-        <td>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${escapeHtml(data.companyName)}</p>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> ${escapeHtml(data.status)}</p>
-          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${escapeHtml(data.poNumber)}</p>` : ''}
-          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${escapeHtml(data.soNumber)}</p>` : ''}
-        </td>
-      </tr>
-    </table>
-    
-    ${
-      data.items && data.items.length > 0
-        ? `
-    <h3 style="margin: 30px 0 15px; color: #1e293b; font-size: 18px;">Order Items</h3>
-    <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
-      <thead>
-        <tr style="background-color: #f8f9fa;">
-          <th style="padding: 12px; text-align: left; color: #374151; font-size: 14px; font-weight: 600;">Product</th>
-          <th style="padding: 12px; text-align: center; color: #374151; font-size: 14px; font-weight: 600;">Quantity</th>
-                            <th style="padding: 12px; text-align: right; color: #374151; font-size: 14px; font-weight: 600;">Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${itemsHtml}
-      </tbody>
-      ${
-        data.totalAmount
-          ? `
-      <tfoot>
-        <tr style="background-color: #f8f9fa;">
-          <td colspan="2" style="padding: 12px; text-align: right; color: #374151; font-size: 16px; font-weight: 600;">Total:</td>
-          <td style="padding: 12px; text-align: right; color: #374151; font-size: 16px; font-weight: 600;">$${data.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        </tr>
-      </tfoot>
-      `
-          : ''
-      }
-    </table>
-    `
-        : ''
-    }
-    
-    <div style="margin: 30px 0; text-align: center;">
-      <a href="${escapeHtml(`${data.siteUrl}/client/orders/${data.orderId}`)}" 
-         style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
-        View Order Details
-      </a>
-    </div>
-    
-    <p style="margin: 20px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-      We will notify you when your order status changes. If you have any questions, please contact our support team.
-    </p>
+    ${emailHeading('Order received', "We've got your order")}
+    ${emailPara(
+      `Order <strong>${escapeHtml(data.poNumber)}</strong> for ${escapeHtml(data.companyName)} was received and is waiting for review by the Qiqi team. We'll email you as soon as it's accepted.`,
+    )}
+    ${orderFacts(data)}
+    ${data.items && data.items.length > 0 ? emailItemsTable(data.items, data.totalAmount) : ''}
+    ${emailButton('View your order', orderUrl(data))}
   `;
-
   return {
-    subject: `New Order created`,
-    html: emailWrapper(content, data.siteUrl),
+    subject: `Order ${sanitizeEmailHeader(data.poNumber)} received — Qiqi Partners Hub`,
+    html: emailWrapper(content),
   };
 }
 
-/**
- * Order In Process Email Template
- */
+/** Order In Process — sent when the order is accepted into fulfillment. */
 export function orderInProcessTemplate(data: OrderEmailData): { subject: string; html: string } {
   const content = `
-    <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order In Process</h2>
-    
-    <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Great news! Your order <strong>${escapeHtml(data.poNumber)}</strong> is now being processed.
-    </p>
-    
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
-      <tr>
-        <td>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${escapeHtml(data.companyName)}</p>
-            <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #000000;">In Process</span></p>
-          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${escapeHtml(data.poNumber)}</p>` : ''}
-          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${escapeHtml(data.soNumber)}</p>` : ''}
-        </td>
-      </tr>
-    </table>
-    
-    <p style="margin: 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-      We're working on your order and will notify you once it's ready for pickup/delivery.
-    </p>
-    
-    <div style="margin: 30px 0; text-align: center;">
-      <a href="${escapeHtml(`${data.siteUrl}/client/orders/${data.orderId}`)}" 
-         style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
-        Track Order Status
-      </a>
-    </div>
+    ${emailHeading('Order accepted', 'Your order is in process')}
+    ${emailPara(
+      `Order <strong>${escapeHtml(data.poNumber)}</strong> was accepted and sent to fulfillment. We'll let you know the moment it's packed and ready.`,
+    )}
+    ${orderFacts(data)}
+    ${emailButton('Track your order', orderUrl(data))}
   `;
-
   return {
     subject: `Your order ${sanitizeEmailHeader(data.soNumber || data.poNumber)} is being processed`,
-    html: emailWrapper(content, data.siteUrl),
+    html: emailWrapper(content),
   };
 }
 
-/**
- * Order Ready Email Template
- */
+/** Order Ready — the automation email, sent when the warehouse finishes packing. */
 export function orderReadyTemplate(data: OrderEmailData): { subject: string; html: string } {
   const content = `
-    <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Ready!</h2>
-    
-    <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Excellent news! Your order <strong>${escapeHtml(data.soNumber || data.poNumber)}</strong> is now ready for pickup. You may Edit and/or Print your packing slip.
-    </p>
-    
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
-      <tr>
-        <td>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${escapeHtml(data.companyName)}</p>
-            <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #000000;">Ready</span></p>
-          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${escapeHtml(data.poNumber)}</p>` : ''}
-          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${escapeHtml(data.soNumber)}</p>` : ''}
-        </td>
-      </tr>
-    </table>
-    
-    <p style="margin: 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-      Please contact us to arrange pickup or confirm delivery details.
-    </p>
-    
-    <div style="margin: 30px 0; text-align: center;">
-      <a href="${escapeHtml(`${data.siteUrl}/client/orders/${data.orderId}`)}" 
-         style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
-        View Order Details
-      </a>
-    </div>
+    ${emailHeading('Ready for pickup', 'Your order is packed and ready')}
+    ${emailPara(
+      `The warehouse has finished packing order <strong>${escapeHtml(data.poNumber)}</strong>. It's ready for your freight forwarder to collect — share the reference below when booking the pickup.`,
+    )}
+    ${emailFactCard([
+      ...(data.soNumber
+        ? [{ label: 'Pickup reference', value: escapeHtml(data.soNumber), mono: true }]
+        : [{ label: 'PO number', value: escapeHtml(data.poNumber), mono: true }]),
+      { label: 'Company', value: escapeHtml(data.companyName) },
+      { label: 'Invoice', value: 'Available on your order page' },
+    ])}
+    ${emailButton('View order & invoice', orderUrl(data))}
   `;
-
   return {
-    subject: `Order ${sanitizeEmailHeader(data.soNumber || data.poNumber)} is ready for pickup!`,
-    html: emailWrapper(content, data.siteUrl),
+    subject: `Order ${sanitizeEmailHeader(data.soNumber || data.poNumber)} is ready for pickup`,
+    html: emailWrapper(content),
   };
 }
 
-/**
- * Order Cancelled Email Template
- */
+/** Order Cancelled. */
 export function orderCancelledTemplate(data: OrderEmailData): { subject: string; html: string } {
   const content = `
-    <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Cancelled</h2>
-    
-    <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Your order <strong>${escapeHtml(data.poNumber)}</strong> has been cancelled.
-    </p>
-    
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
-      <tr>
-        <td>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${escapeHtml(data.companyName)}</p>
-            <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> <span style="color: #000000;">Cancelled</span></p>
-          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${escapeHtml(data.poNumber)}</p>` : ''}
-          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${escapeHtml(data.soNumber)}</p>` : ''}
-        </td>
-      </tr>
-    </table>
-    
-    <p style="margin: 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-      If you have any questions about this cancellation, please contact our support team.
-    </p>
-    
-    <div style="margin: 30px 0; text-align: center;">
-      <a href="${escapeHtml(`${data.siteUrl}/client/orders/${data.orderId}`)}" 
-         style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
-        View Order Details
-      </a>
-    </div>
+    ${emailHeading('Order cancelled', 'Your order was cancelled')}
+    ${emailPara(
+      `Order <strong>${escapeHtml(data.poNumber)}</strong> has been cancelled. If this is unexpected, reply to this email and we'll sort it out.`,
+    )}
+    ${orderFacts(data)}
+    ${emailButton('View the order', orderUrl(data))}
   `;
-
   return {
     subject: `Order ${sanitizeEmailHeader(data.soNumber || data.poNumber)} has been cancelled`,
-    html: emailWrapper(content, data.siteUrl),
+    html: emailWrapper(content),
   };
 }
 
-/**
- * Custom Update Email Template
- */
+/** Custom Update — an admin-written message about the order (also carries the
+ *  request-changes / stock-shortage flow). */
 export function customUpdateTemplate(data: OrderEmailData): { subject: string; html: string } {
+  const message = data.customMessage
+    ? `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:${WASH};border-left:3px solid ${INK};border-radius:0 6px 6px 0;margin:0 0 20px;">
+        <tr><td style="padding:16px 20px;font-family:${FONT};font-size:15px;line-height:1.6;color:${BODY};">${escapeHtml(data.customMessage)}</td></tr>
+      </table>`
+    : '';
   const content = `
-    <h2 style="margin: 0 0 20px; color: #000000; font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;">Order Update</h2>
-    
-    <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-      We have an update regarding your order <strong>${escapeHtml(data.poNumber)}</strong>.
-    </p>
-    
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
-      <tr>
-        <td>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Company:</strong> ${escapeHtml(data.companyName)}</p>
-          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>Status:</strong> ${escapeHtml(data.status)}</p>
-          ${data.poNumber ? `<p style="margin: 0 0 10px; color: #6b7280; font-size: 14px;"><strong>PO Number:</strong> ${escapeHtml(data.poNumber)}</p>` : ''}
-          ${data.soNumber ? `<p style="margin: 0; color: #6b7280; font-size: 14px;"><strong>SO Number:</strong> ${escapeHtml(data.soNumber)}</p>` : ''}
-        </td>
-      </tr>
-    </table>
-    
-    ${
-      data.customMessage
-        ? `
-    <div style="margin: 20px 0; padding: 20px; background-color: #f8f9fa; border-left: 4px solid #000000; border-radius: 6px;">
-      <p style="margin: 0; color: #374151; font-size: 16px; line-height: 1.6;">
-        ${escapeHtml(data.customMessage)}
-      </p>
-    </div>
-    `
-        : ''
-    }
-    
-    <div style="margin: 30px 0; text-align: center;">
-      <a href="${escapeHtml(`${data.siteUrl}/client/orders/${data.orderId}`)}" 
-         style="display: inline-block; padding: 14px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
-        View Order Details
-      </a>
-    </div>
-    
-    <p style="margin: 20px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-      If you have any questions, please contact our support team.
-    </p>
+    ${emailHeading('Order update', `A message about order ${escapeHtml(data.poNumber)}`)}
+    ${message}
+    ${orderFacts(data, [{ label: 'Status', value: escapeHtml(data.status) }])}
+    ${emailButton('View your order', orderUrl(data))}
   `;
-
   return {
     subject: `Order Update - ${sanitizeEmailHeader(data.poNumber)}`,
-    html: emailWrapper(content, data.siteUrl),
+    html: emailWrapper(content),
   };
 }
 
-/**
- * Welcome / Password Setup Email Template
- */
-export function welcomeEmailTemplate(data: { 
-  userName: string; 
+/** Order Updated — sent after the client (or Qiqi) edits an order. */
+export function orderUpdatedTemplate(data: OrderEmailData): { subject: string; html: string } {
+  const content = `
+    ${emailHeading('Order updated', 'Your order was updated')}
+    ${emailPara(
+      `Order <strong>${escapeHtml(data.poNumber)}</strong> was updated. The latest items and totals are on your order page.`,
+    )}
+    ${orderFacts(data, [
+      { label: 'Status', value: escapeHtml(data.status) },
+      ...(data.totalAmount != null
+        ? [{ label: 'Order total', value: escapeHtml(formatCurrency(data.totalAmount)) }]
+        : []),
+    ])}
+    ${emailButton('View the updated order', orderUrl(data))}
+  `;
+  return {
+    subject: `Order ${sanitizeEmailHeader(data.poNumber)} Updated - Qiqi Partners Hub`,
+    html: emailWrapper(content),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Account templates
+// ---------------------------------------------------------------------------
+
+/** Welcome / Password Setup — new client user. */
+export function welcomeEmailTemplate(data: {
+  userName: string;
   userEmail: string;
   companyName: string;
   setupLink: string;
   siteUrl: string;
 }): { subject: string; html: string } {
   const content = `
-    <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: #111827;">
-      Welcome to Qiqi Partners Hub! 🎉
-    </h1>
-    
-    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Hi <strong>${escapeHtml(data.userName)}</strong>,
-    </p>
-    
-    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Your account has been created for <strong>${escapeHtml(data.companyName)}</strong>. You're now ready to start placing orders through our Partners Hub.
-    </p>
-    
-    <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 4px;">
-      <p style="margin: 0 0 12px; color: #1e40af; font-weight: 600;">
-        📧 Your Login Email:
-      </p>
-      <p style="margin: 0; color: #1e3a8a; font-family: monospace; font-size: 15px;">
-        ${escapeHtml(data.userEmail)}
-      </p>
-    </div>
-    
-    <h2 style="margin: 24px 0 16px; font-size: 20px; font-weight: 600; color: #111827;">
-      Next Step: Set Your Password
-    </h2>
-    
-    <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Click the button below to create your secure password. This link will expire in <strong>24 hours</strong> for security reasons.
-    </p>
-    
-    <div style="margin: 30px 0; text-align: center;">
-      <a href="${escapeHtml(data.setupLink)}" 
-         style="display: inline-block; padding: 16px 40px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
-        Set My Password →
-      </a>
-    </div>
-    
-    <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 16px; margin: 24px 0; border-radius: 4px;">
-      <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px; font-weight: 600;">
-        🔒 Security Note:
-      </p>
-      <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
-        No temporary password needed! You'll choose your own secure password. If the link expires, contact your administrator to resend the setup email.
-      </p>
-    </div>
-    
-    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
-      <p style="margin: 0 0 8px; color: #92400e; font-size: 14px; font-weight: 600;">
-        📧 Having trouble with the link? (Outlook/Email Client Users)
-      </p>
-      <p style="margin: 0 0 8px; color: #92400e; font-size: 14px; line-height: 1.5;">
-        If clicking the button above doesn't work (especially in Outlook), try this:
-      </p>
-      <ol style="margin: 8px 0 0 20px; color: #92400e; font-size: 14px; line-height: 1.8;">
-        <li>Right-click the button and select "Copy link address"</li>
-        <li>Paste the full link directly into your browser's address bar</li>
-        <li>Or mark <strong>orders@qiqiglobal.com</strong> as a trusted sender in your email client</li>
-      </ol>
-      <p style="margin: 12px 0 0; color: #92400e; font-size: 13px; line-height: 1.5;">
-        <strong>Alternative:</strong> If the link still doesn't work, copy and paste this entire link into your browser:<br/>
-        <a href="${escapeHtml(data.setupLink)}" style="color: #1e40af; word-break: break-all; font-size: 12px; font-family: monospace;">${escapeHtml(data.setupLink)}</a>
-      </p>
-    </div>
-    
-    <h2 style="margin: 24px 0 16px; font-size: 18px; font-weight: 600; color: #111827;">
-      What's Next?
-    </h2>
-    
-    <ul style="margin: 0 0 24px 20px; color: #374151; font-size: 15px; line-height: 1.8;">
-      <li>Set your password using the link above</li>
-      <li>Log in to the Partners Hub</li>
-      <li>Browse products and place orders</li>
-      <li>Track your order status in real-time</li>
-    </ul>
-    
-    <p style="margin: 24px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-      Questions? Contact our support team or your account administrator.
-    </p>
+    ${emailHeading('Welcome', 'Your Partners Hub account is ready')}
+    ${emailPara(
+      `Hi ${escapeHtml(data.userName)} — an account was created for you at ${escapeHtml(data.companyName)}. One step left: choose your password. The link below works for 24 hours.`,
+    )}
+    ${emailFactCard([{ label: "You'll sign in as", value: escapeHtml(data.userEmail), mono: true }])}
+    ${emailButton('Set my password', data.setupLink)}
+    ${linkFallbackNote(data.setupLink)}
   `;
-
   return {
     subject: `Welcome to Qiqi Partners Hub - Set Your Password`,
-    html: emailWrapper(content, data.siteUrl),
+    html: emailWrapper(content, {
+      footerNote:
+        'Nobody at Qiqi will ever ask you for this link or your password. If the link expires, your account manager can send a new one.',
+    }),
   };
 }
 
-/**
- * Admin Welcome Email — the admin counterpart of welcomeEmailTemplate.
- * Same secure set-password flow (our hashed token, 24h expiry), admin copy.
- */
+/** Admin Welcome — the admin counterpart of welcomeEmailTemplate. */
 export function adminWelcomeEmailTemplate(data: {
   userName: string;
   userEmail: string;
@@ -425,160 +367,52 @@ export function adminWelcomeEmailTemplate(data: {
   siteUrl: string;
 }): { subject: string; html: string } {
   const content = `
-    <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: #111827;">
-      Your Qiqi Hub admin account
-    </h1>
-
-    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Hi <strong>${escapeHtml(data.userName)}</strong>,
-    </p>
-
-    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
-      An <strong>administrator account</strong> has been created for you on the Qiqi Hub.
-    </p>
-
-    <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 4px;">
-      <p style="margin: 0 0 12px; color: #1e40af; font-weight: 600;">
-        📧 Your Login Email:
-      </p>
-      <p style="margin: 0; color: #1e3a8a; font-family: monospace; font-size: 15px;">
-        ${escapeHtml(data.userEmail)}
-      </p>
-    </div>
-
-    <h2 style="margin: 24px 0 16px; font-size: 20px; font-weight: 600; color: #111827;">
-      Next Step: Set Your Password
-    </h2>
-
-    <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Click the button below to create your secure password. This link will expire in <strong>24 hours</strong> for security reasons.
-    </p>
-
-    <div style="margin: 30px 0; text-align: center;">
-      <a href="${escapeHtml(data.setupLink)}"
-         style="display: inline-block; padding: 16px 40px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
-        Set My Password →
-      </a>
-    </div>
-
-    <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 16px; margin: 24px 0; border-radius: 4px;">
-      <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px; font-weight: 600;">
-        🔒 Security Note:
-      </p>
-      <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
-        You'll choose your own password — nobody else ever sees it. After your first
-        login you'll be asked to set up two-factor authentication. If the link
-        expires, ask another administrator to resend the setup email.
-      </p>
-    </div>
-
-    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
-      <p style="margin: 0 0 8px; color: #92400e; font-size: 14px; font-weight: 600;">
-        📧 Having trouble with the link? (Outlook/Email Client Users)
-      </p>
-      <p style="margin: 0 0 8px; color: #92400e; font-size: 14px; line-height: 1.5;">
-        If clicking the button above doesn't work, copy and paste this link into your browser:
-      </p>
-      <p style="margin: 0; word-break: break-all;">
-        <a href="${escapeHtml(data.setupLink)}" style="color: #1e40af; font-size: 12px; font-family: monospace;">${escapeHtml(data.setupLink)}</a>
-      </p>
-    </div>
+    ${emailHeading('Welcome', 'Your Qiqi Hub admin account')}
+    ${emailPara(
+      `Hi ${escapeHtml(data.userName)} — an <strong>administrator account</strong> was created for you on the Qiqi Hub. Choose your password with the link below (valid for 24 hours). After your first sign-in you'll be asked to set up two-factor authentication.`,
+    )}
+    ${emailFactCard([{ label: "You'll sign in as", value: escapeHtml(data.userEmail), mono: true }])}
+    ${emailButton('Set my password', data.setupLink)}
+    ${linkFallbackNote(data.setupLink)}
   `;
-
   return {
     subject: `Your Qiqi Hub admin account - Set Your Password`,
-    html: emailWrapper(content, data.siteUrl),
+    html: emailWrapper(content, {
+      footerNote:
+        'Nobody at Qiqi will ever ask you for this link or your password. If the link expires, another administrator can send a new one.',
+    }),
   };
 }
 
-/**
- * Password Reset Email Template
- */
-export function passwordResetEmailTemplate(data: { 
-  userName: string; 
+/** Password Reset. */
+export function passwordResetEmailTemplate(data: {
+  userName: string;
   userEmail: string;
   resetLink: string;
   siteUrl: string;
 }): { subject: string; html: string } {
   const content = `
-    <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: #111827;">
-      Reset Your Password 🔐
-    </h1>
-    
-    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Hi <strong>${escapeHtml(data.userName)}</strong>,
-    </p>
-    
-    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
-      We received a request to reset your password for your Qiqi Partners Hub account.
-    </p>
-    
-    <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0; border-radius: 4px;">
-      <p style="margin: 0 0 12px; color: #1e40af; font-weight: 600;">
-        📧 Your Account Email:
-      </p>
-      <p style="margin: 0; color: #1e3a8a; font-family: monospace; font-size: 15px;">
-        ${escapeHtml(data.userEmail)}
-      </p>
-    </div>
-    
-    <h2 style="margin: 24px 0 16px; font-size: 20px; font-weight: 600; color: #111827;">
-      Reset Your Password
-    </h2>
-    
-    <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Click the button below to reset your password. This link will expire in <strong>24 hours</strong> for security reasons.
-    </p>
-    
-    <div style="margin: 30px 0; text-align: center;">
-      <a href="${escapeHtml(data.resetLink)}" 
-         style="display: inline-block; padding: 16px 40px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
-        Reset My Password →
-      </a>
-    </div>
-    
-    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
-      <p style="margin: 0 0 8px; color: #92400e; font-size: 14px; font-weight: 600;">
-        ⚠️ Security Notice:
-      </p>
-      <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.5;">
-        If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
-      </p>
-    </div>
-    
-    <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 16px; margin: 24px 0; border-radius: 4px;">
-      <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px; font-weight: 600;">
-        💡 Need Help?
-      </p>
-      <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px; line-height: 1.5;">
-        If the button doesn't work (especially in Outlook), try this:
-      </p>
-      <ol style="margin: 8px 0 0 20px; color: #6b7280; font-size: 14px; line-height: 1.8;">
-        <li>Right-click the button and select "Copy link address"</li>
-        <li>Paste the full link directly into your browser's address bar</li>
-        <li>Or mark <strong>orders@qiqiglobal.com</strong> as a trusted sender in Outlook</li>
-      </ol>
-      <p style="margin: 12px 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
-        <strong>Full link:</strong><br>
-        <a href="${escapeHtml(data.resetLink)}" style="color: #3b82f6; word-break: break-all; font-size: 12px; font-family: monospace;">${escapeHtml(data.resetLink)}</a>
-      </p>
-    </div>
-    
-    <p style="margin: 24px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-      Questions? Contact our support team or your account administrator.
-    </p>
+    ${emailHeading('Password reset', 'Reset your password')}
+    ${emailPara(
+      `Hi ${escapeHtml(data.userName)} — we received a request to reset the password for your Qiqi Partners Hub account. The link below works for 24 hours.`,
+    )}
+    ${emailFactCard([{ label: 'Account', value: escapeHtml(data.userEmail), mono: true }])}
+    ${emailButton('Reset my password', data.resetLink)}
+    ${linkFallbackNote(data.resetLink)}
+    ${emailNote(
+      `<strong style="color:${BODY};">Didn't request this?</strong> You can safely ignore this email — your password stays unchanged.`,
+    )}
   `;
-
   return {
     subject: `Reset Your Password - Qiqi Partners Hub`,
-    html: emailWrapper(content, data.siteUrl),
+    html: emailWrapper(content),
   };
 }
 
 /**
- * One-time login code email — for clients who want to log in without their password.
- * Code is 6 digits, valid for 10 minutes. The user types the code into the Hub,
- * we never send a clickable login link in the email (avoids link-scanner consumption).
+ * One-time login code email — for clients who want to log in without their
+ * password. Code is 6 digits, valid for 10 minutes; we never send a clickable
+ * login link (avoids link-scanner consumption).
  */
 export function loginCodeEmailTemplate(data: {
   userName: string;
@@ -587,105 +421,26 @@ export function loginCodeEmailTemplate(data: {
   siteUrl: string;
 }): { subject: string; html: string } {
   const content = `
-    <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: #111827;">
-      Your Login Code
-    </h1>
-
-    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Hi <strong>${escapeHtml(data.userName)}</strong>,
-    </p>
-
-    <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Use the code below to sign in to the Qiqi Partners Hub. This code is valid for <strong>10 minutes</strong>.
-    </p>
-
-    <div style="margin: 32px 0; text-align: center;">
-      <div style="display: inline-block; padding: 24px 40px; background-color: #f3f4f6; border: 2px solid #111827; border-radius: 8px;">
-        <p style="margin: 0 0 4px; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Your code</p>
-        <p style="margin: 0; color: #111827; font-size: 36px; font-weight: 700; font-family: 'Courier New', monospace; letter-spacing: 8px;">
-          ${escapeHtml(data.code)}
-        </p>
-      </div>
-    </div>
-
-    <p style="margin: 0 0 16px; color: #374151; font-size: 14px; line-height: 1.6;">
-      Return to the Hub and enter this code on the "Sign in with code" screen.
-    </p>
-
-    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
-      <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.5;">
-        If you didn't request this code, you can safely ignore this email. The code will expire on its own.
-      </p>
-    </div>
-
-    <p style="margin: 24px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-      Questions? Contact your administrator.
-    </p>
+    ${emailHeading('Sign in', 'Your login code')}
+    ${emailPara(
+      `Hi ${escapeHtml(data.userName)} — enter this code on the "Sign in with code" screen. It's valid for <strong>10 minutes</strong>.`,
+    )}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr><td align="center" style="padding:8px 0 4px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:${WASH};border:2px solid ${INK};border-radius:8px;">
+          <tr><td style="padding:20px 36px;text-align:center;">
+            <p style="margin:0 0 4px;font-family:${FONT};font-size:11px;font-weight:700;letter-spacing:2px;color:${MUTED};">YOUR CODE</p>
+            <p style="margin:0;font-family:${MONO};font-size:34px;font-weight:700;letter-spacing:8px;color:${INK};">${escapeHtml(data.code)}</p>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+    ${emailNote(
+      `<strong style="color:${BODY};">Didn't request this code?</strong> You can safely ignore this email — the code expires on its own.`,
+    )}
   `;
-
   return {
     subject: `Your Qiqi Partners Hub login code: ${data.code}`,
-    html: emailWrapper(content, data.siteUrl),
-  };
-}
-
-/**
- * Order Updated Email Template
- */
-export function orderUpdatedTemplate(data: OrderEmailData) {
-  const content = `
-    <h1 style="margin: 0 0 24px; font-size: 24px; font-weight: 700; color: #111827;">
-      Your Order Has Been Updated
-    </h1>
-    
-    <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
-      Your order has been updated. View your updated order.
-    </p>
-    
-    <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 20px; margin: 24px 0; border-radius: 6px;">
-      <h2 style="margin: 0 0 16px; font-size: 18px; font-weight: 600; color: #111827;">
-        Order Details
-      </h2>
-      
-      <div style="margin: 0 0 12px;">
-        <span style="color: #6b7280; font-size: 14px; font-weight: 600;">Order Number:</span>
-        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${escapeHtml(data.poNumber)}</span>
-      </div>
-      
-      <div style="margin: 0 0 12px;">
-        <span style="color: #6b7280; font-size: 14px; font-weight: 600;">Status:</span>
-        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${escapeHtml(data.status)}</span>
-      </div>
-      
-      ${data.totalAmount ? `
-      <div style="margin: 0 0 12px;">
-        <span style="color: #6b7280; font-size: 14px; font-weight: 600;">Total Value:</span>
-        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${escapeHtml(formatCurrency(data.totalAmount))}</span>
-      </div>
-      ` : ''}
-      
-      ${data.soNumber ? `
-      <div style="margin: 0 0 12px;">
-        <span style="color: #6b7280; font-size: 14px; font-weight: 600;">SO Number:</span>
-        <span style="color: #111827; font-size: 14px; margin-left: 8px;">${escapeHtml(data.soNumber)}</span>
-      </div>
-      ` : ''}
-    </div>
-    
-    <div style="margin: 30px 0; text-align: center;">
-      <a href="${escapeHtml(`${data.siteUrl}/client/orders/${data.orderId}`)}" 
-         style="display: inline-block; padding: 16px 40px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">
-        View Updated Order →
-      </a>
-    </div>
-    
-    <p style="margin: 24px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-      Questions? Contact our support team or your account administrator.
-    </p>
-  `;
-
-  return {
-    subject: `Order ${sanitizeEmailHeader(data.poNumber)} Updated - Qiqi Partners Hub`,
-    html: emailWrapper(content, data.siteUrl),
+    html: emailWrapper(content),
   };
 }
