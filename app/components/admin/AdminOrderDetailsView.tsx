@@ -35,6 +35,7 @@ import {
   XCircle,
   CheckCircle2,
   MessageSquare,
+  RotateCcw,
 } from 'lucide-react';
 
 import { supabase } from '../../../lib/supabaseClient';
@@ -417,6 +418,7 @@ export default function AdminOrderDetailsView({
   const [nsLoading, setNsLoading] = useState<string | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [cancellingOrder, setCancellingOrder] = useState(false);
+  const [reinstating, setReinstating] = useState(false);
   const [showRequestChangesModal, setShowRequestChangesModal] = useState(false);
   const [requestChangesMessage, setRequestChangesMessage] = useState('');
   const [sendingRequestChanges, setSendingRequestChanges] = useState(false);
@@ -646,6 +648,35 @@ export default function AdminOrderDetailsView({
       toast.error(err.message || 'Failed to cancel order.');
     } finally {
       setCancellingOrder(false);
+    }
+  };
+
+  // Reinstate — Cancelled → Open. The order becomes editable again and the
+  // Accept flow takes over from there.
+  const handleReinstateOrder = async () => {
+    const ok = await confirm({
+      title: 'Reinstate this order?',
+      description:
+        'The order returns to Open — the client can edit it again and you can accept it as usual.',
+      confirmLabel: 'Reinstate Order',
+    });
+    if (!ok) return;
+    setReinstating(true);
+    try {
+      const res = await fetchWithAuth('/api/orders/reinstate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Reinstate failed (${res.status})`);
+      toast.success('Order reinstated — back to Open.');
+      await fetchOrder();
+      await fetchOrderHistory();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to reinstate order.');
+    } finally {
+      setReinstating(false);
     }
   };
 
@@ -992,6 +1023,9 @@ export default function AdminOrderDetailsView({
 
   const nsPrimary = (() => {
     if (order.status === 'Draft') return null;
+    // A cancelled order gets no NS actions — Reinstate first (it returns the
+    // order to Open, where the Accept flow takes over).
+    if (order.status === 'Cancelled') return null;
     // While reconciliation is in flight on an order with so_number but no
     // netsuite_so_id, suppress the Push button — we may be about to discover
     // the SO already exists in NetSuite and showing Push would be wrong.
@@ -1132,6 +1166,18 @@ export default function AdminOrderDetailsView({
                 onClick={() => setShowRequestChangesModal(true)}
               >
                 <MessageSquare className="h-4 w-4" /> Request changes
+              </Button>
+            )}
+
+            {/* Reinstate — the only way back from Cancelled. */}
+            {originalStatus === 'Cancelled' && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleReinstateOrder}
+                loading={reinstating}
+              >
+                <RotateCcw className="h-4 w-4" /> Reinstate Order
               </Button>
             )}
 
@@ -1296,7 +1342,9 @@ export default function AdminOrderDetailsView({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm">Order Information</CardTitle>
-            {order.status !== 'Draft' && (
+            {/* No inline edit on Cancelled orders — Reinstate is the only
+                way back (single path, no sneaky status flips). */}
+            {order.status !== 'Draft' && originalStatus !== 'Cancelled' && (
               <Button
                 size="sm"
                 variant={editOrderInfoMode ? 'default' : 'ghost'}
