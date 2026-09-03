@@ -516,18 +516,6 @@ export default function AdminOrderDetailsView({
       }
       await fetchOrder();
 
-      // Step in the flow: right after a successful NS push, offer to send the
-      // order to the warehouse. "No" leaves it in NS only; the manual "Send to
-      // ShipHero" menu item remains available later.
-      if (action === 'push-so') {
-        const send = await confirm({
-          title: 'Send to warehouse?',
-          description: 'Would you like to send this order to the warehouse (ShipHero) for fulfillment now?',
-          confirmLabel: 'Send to ShipHero',
-          cancelLabel: 'Not now',
-        });
-        if (send) await handleSendToShipHero();
-      }
     } catch (err: any) {
       // A push can "fail" on the client (timeout → non-JSON response) even
       // though the SO was created in NetSuite. Recover by externalId: link the
@@ -1054,6 +1042,19 @@ export default function AdminOrderDetailsView({
         label: nsLoading === 'push-so' ? 'Pushing…' : 'Push to NetSuite',
       };
     }
+    // SO exists but the order never reached the warehouse (or its warehouse
+    // order was cancelled): the prepaid-client flow — SO first, collect
+    // payment, THEN ship. The primary action is completing the warehouse leg
+    // (owner spec 2026-09-03); invoice creation shows as a secondary button.
+    const inWarehouse =
+      !!(order as any).external_fulfillment_id &&
+      (order as any).fulfillment_status !== 'cancelled';
+    if (!inWarehouse && ['In Process', 'Ready', 'Done'].includes(originalStatus)) {
+      return {
+        action: 'push-warehouse' as const,
+        label: shipHeroLoading ? 'Sending…' : 'Push to Warehouse',
+      };
+    }
     // While checking NetSuite for an existing invoice, suppress the Create
     // button — we may be about to discover one already exists, and showing
     // Create then swapping it out would flicker.
@@ -1096,13 +1097,9 @@ export default function AdminOrderDetailsView({
   // push is only offered once the order has a NetSuite SO (which also moves it
   // to In Process). Once sent, show status/actions instead of the push.
   const alreadyInShipHero = !!(order as any).external_fulfillment_id;
-  // Re-push is allowed when the linked ShipHero order was CANCELLED there —
-  // a reinstated order needs a fresh warehouse order (QA finding 2026-09-02).
+  // A CANCELLED warehouse order counts as "not at the warehouse" — the
+  // primary Push to Warehouse button re-pushes fresh (QA 2026-09-02).
   const shipHeroCancelled = (order as any).fulfillment_status === 'cancelled';
-  const canSendToShipHero =
-    !!order.netsuite_so_id &&
-    ['In Process', 'Ready', 'Done'].includes(originalStatus) &&
-    (!alreadyInShipHero || shipHeroCancelled);
 
   // --------------------------------------------------------------------------
   // Render
@@ -1139,14 +1136,38 @@ export default function AdminOrderDetailsView({
                     onClick={() =>
                       nsPrimary.action === 'accept'
                         ? handleAcceptOrder()
-                        : handleNsAction(nsPrimary.action)
+                        : nsPrimary.action === 'push-warehouse'
+                          ? handleSendToShipHero()
+                          : handleNsAction(nsPrimary.action)
                     }
-                    loading={nsPrimary.action === 'accept' ? accepting : nsLoading === nsPrimary.action}
+                    loading={
+                      nsPrimary.action === 'accept'
+                        ? accepting
+                        : nsPrimary.action === 'push-warehouse'
+                          ? shipHeroLoading
+                          : nsLoading === nsPrimary.action
+                    }
                   >
                     {nsPrimary.action === 'accept' && <CheckCircle2 className="h-4 w-4" />}
+                    {nsPrimary.action === 'push-warehouse' && <Truck className="h-4 w-4" />}
                     {nsPrimary.label}
                   </Button>
                 )}
+                {/* Prepaid flow companion: while the warehouse leg is pending,
+                    invoice creation stays one click away (it powers the
+                    payment request). */}
+                {nsPrimary?.action === 'push-warehouse' &&
+                  !order.netsuite_invoice_id &&
+                  !detectingInvoice && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleNsAction('create-invoice')}
+                      loading={nsLoading === 'create-invoice'}
+                    >
+                      {nsLoading === 'create-invoice' ? 'Creating…' : 'Create NS Invoice'}
+                    </Button>
+                  )}
                 {/* Show a Recheck button when we tried and didn't find / errored,
                     so admin can retry after fixing the SO# without refreshing. */}
                 {!order.netsuite_so_id &&
@@ -1226,19 +1247,18 @@ export default function AdminOrderDetailsView({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
+                {/* Prepaid-client path: create the NetSuite SO WITHOUT
+                    sending to the warehouse (owner spec 2026-09-03). The
+                    warehouse leg follows via Push to Warehouse once paid. */}
+                {originalStatus === 'Open' && !order.netsuite_so_id && (
+                  <DropdownMenuItem onClick={() => handleNsAction('push-so')} disabled={nsLoading === 'push-so'}>
+                    <Package className="h-4 w-4 mr-2" />
+                    {nsLoading === 'push-so' ? 'Pushing…' : 'Push to NetSuite only'}
+                  </DropdownMenuItem>
+                )}
                 {originalStatus !== 'Draft' && (
                   <DropdownMenuItem onClick={handleDownloadCSV}>
                     <Download className="h-4 w-4 mr-2" /> Download CSV
-                  </DropdownMenuItem>
-                )}
-                {canSendToShipHero && (
-                  <DropdownMenuItem onClick={handleSendToShipHero} disabled={shipHeroLoading}>
-                    <Truck className="h-4 w-4 mr-2" />
-                    {shipHeroLoading
-                      ? 'Sending…'
-                      : alreadyInShipHero
-                        ? 'Send to ShipHero again'
-                        : 'Send to ShipHero'}
                   </DropdownMenuItem>
                 )}
                 {alreadyInShipHero && !shipHeroCancelled && (
