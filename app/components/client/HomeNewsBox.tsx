@@ -5,7 +5,7 @@
  * (client_home_settings): new-release card, banner image/video, latest DAM
  * uploads, or nothing (parent hides the box and stretches the activity
  * feed). The old "news scroller" mode was retired 2026-09-02 — live
- * announcements now always render on the dashboard strip (AnnouncementsRail)
+ * announcements now always render in the dashboard's news ticker (AnnouncementsTicker)
  * and no longer compete with this box; a legacy 'news_scroller' value is
  * treated as 'nothing'.
  */

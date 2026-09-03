@@ -23,7 +23,7 @@ interface FeedItem {
   href: string;
 }
 
-export function ActivityFeed() {
+export function ActivityFeed({ limit = 6 }: { limit?: number } = {}) {
   const router = useRouter();
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +68,7 @@ export function ActivityFeed() {
           });
         }
         feed.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-        if (!cancelled) setItems(feed.slice(0, 6));
+        if (!cancelled) setItems(feed.slice(0, limit));
       } catch {
         /* leave empty */
       } finally {
@@ -78,10 +78,10 @@ export function ActivityFeed() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [limit]);
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm">Recent activity</CardTitle>
       </CardHeader>

@@ -8,13 +8,12 @@ import { Plus, ShoppingCart, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatCurrency } from '../../lib/formatters';
 
-import { SupportFundGoalStrip } from '../components/client/SupportFundGoalStrip';
+import { DashboardStatStrip } from '../components/client/DashboardStatStrip';
 import { ActivityFeed } from '../components/client/ActivityFeed';
+import { AnnouncementsTicker } from '../components/client/AnnouncementsTicker';
 import { HomeNewsBox, type HomeSettings } from '../components/client/HomeNewsBox';
-import { invoiceInfo } from '../../lib/clientInvoices';
 
 import { PageHeader } from '../components/qq/page-header';
-import { AnnouncementsRail } from '../components/client/AnnouncementsRail';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/qq/card';
 import { Button } from '../components/qq/button';
 import { Alert, AlertDescription } from '../components/qq/alert';
@@ -37,7 +36,7 @@ interface Order {
   total_value: number;
   support_fund_used: number;
   credit_earned: number;
-  // NetSuite-synced invoice fields used by the outstanding balance badge.
+  // NetSuite-synced invoice fields used by the open-invoices stat tile.
   invoice_number?: string | null;
   invoice_amount_remaining?: number | null;
   invoice_due_date?: string | null;
@@ -116,11 +115,6 @@ export default function ClientDashboard() {
     <div className="px-6 py-8 space-y-6">
       <PageHeader
         title={company ? `Welcome, ${company.company_name}` : 'Welcome'}
-        description={
-          company?.netsuite_number
-            ? `NetSuite customer ${company.netsuite_number}`
-            : undefined
-        }
         actions={
           <Link href="/client/orders/new">
             <Button size="sm">
@@ -136,12 +130,11 @@ export default function ClientDashboard() {
         </Alert>
       )}
 
-      <OutstandingBalanceBadge orders={orders} />
+      <DashboardStatStrip orders={orders} />
 
-      <SupportFundGoalStrip />
-
-      {/* Activity feed + admin-controlled news box. Mode "nothing" hides
-          the box and the feed takes the full width (owner spec). */}
+      {/* Left column: news ticker (top) over the trimmed activity feed
+          (bottom) — together they match the hero box height. Mode "nothing"
+          hides the hero and the column takes the full width (owner spec). */}
       <div
         className={`grid grid-cols-1 gap-4 items-stretch ${
           homeSettings && ['new_release', 'banner', 'latest_dam'].includes(homeSettings.news_mode)
@@ -149,15 +142,16 @@ export default function ClientDashboard() {
             : ''
         }`}
       >
-        <ActivityFeed />
+        <div className="flex flex-col gap-4 min-h-0">
+          <AnnouncementsTicker />
+          <div className="flex-1 min-h-0">
+            <ActivityFeed limit={4} />
+          </div>
+        </div>
         {homeSettings && ['new_release', 'banner', 'latest_dam'].includes(homeSettings.news_mode) && (
           <HomeNewsBox settings={homeSettings} />
         )}
       </div>
-
-      {/* Live announcements — always visible when there are any, independent
-          of the news-box mode above (they used to compete for one slot). */}
-      <AnnouncementsRail />
 
       {/* Recent orders */}
       <Card>
@@ -229,76 +223,5 @@ export default function ClientDashboard() {
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Outstanding balance badge — aggregates invoice_amount_remaining across
-// orders that have an invoice with a non-zero open balance. Stays out of
-// the way when everything's paid.
-// ---------------------------------------------------------------------------
-function OutstandingBalanceBadge({ orders }: { orders: Order[] }) {
-  let totalOutstanding = 0;
-  let overdueOutstanding = 0;
-  let outstandingCount = 0;
-  let overdueCount = 0;
-  const now = Date.now();
-
-  for (const o of orders) {
-    if (!o.invoice_number) continue;
-    // Shared best-known-balance logic — same math as the Billing page.
-    const info = invoiceInfo(o, now);
-    if (info.remaining == null || info.remaining <= 0.005) continue;
-
-    totalOutstanding += info.remaining;
-    outstandingCount += 1;
-    if (info.overdue) {
-      overdueOutstanding += info.remaining;
-      overdueCount += 1;
-    }
-  }
-
-  if (outstandingCount === 0) {
-    return null; // nothing outstanding — don't clutter the dashboard
-  }
-
-  const isOverdue = overdueCount > 0;
-  return (
-    <Card
-      className={
-        isOverdue ? 'border-rose-200 bg-rose-50/40' : 'border-amber-200 bg-amber-50/40'
-      }
-    >
-      <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">
-            Outstanding balance
-          </p>
-          <p
-            className={`mt-0.5 text-2xl font-semibold font-mono tabular-nums ${
-              isOverdue ? 'text-rose-700' : 'text-amber-700'
-            }`}
-          >
-            {formatCurrency(totalOutstanding)}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Across {outstandingCount} invoice{outstandingCount === 1 ? '' : 's'}
-            {overdueCount > 0 && (
-              <>
-                {' '}·{' '}
-                <span className="text-rose-700 font-medium">
-                  {formatCurrency(overdueOutstanding)} overdue ({overdueCount})
-                </span>
-              </>
-            )}
-          </p>
-        </div>
-        <Link href="/client/billing">
-          <Button variant="outline" size="sm">
-            View billing
-          </Button>
-        </Link>
-      </CardContent>
-    </Card>
   );
 }

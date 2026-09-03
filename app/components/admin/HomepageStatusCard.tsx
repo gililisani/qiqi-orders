@@ -138,11 +138,11 @@ export function HomepageStatusCard() {
           {(liveCount ?? 0) > 0 ? (
             <>
               <strong className="text-foreground">{liveCount}</strong> live announcement
-              {liveCount === 1 ? '' : 's'} showing on the dashboard strip below the hero — always
+              {liveCount === 1 ? '' : 's'} showing in the dashboard&apos;s news ticker — always
               visible, independent of the box mode.
             </>
           ) : (
-            <>No live announcements right now — the dashboard strip is hidden.</>
+            <>No live announcements right now — the news ticker is hidden.</>
           )}
         </p>
       </CardContent>
