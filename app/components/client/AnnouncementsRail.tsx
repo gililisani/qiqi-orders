@@ -1,9 +1,12 @@
 'use client';
 
 /**
- * Homepage announcements — coming-soon teasers, launches, restocks, offers.
- * RLS only returns enabled rows inside their validity window, so this rail
- * can never show anything stale. Renders nothing when there's no news.
+ * Dashboard announcements strip — coming-soon teasers, launches, restocks,
+ * offers, with type badges and the announcement/product image. Revived
+ * 2026-09-02 (owner decision): announcements get their own always-on surface
+ * instead of competing with the homepage hero box for one slot.
+ * Only live rows render (enabled + inside the date window); nothing when
+ * there's no news.
  */
 
 import { useEffect, useState } from 'react';
@@ -36,9 +39,13 @@ export function AnnouncementsRail() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      const today = new Date().toISOString().slice(0, 10);
       const { data } = await supabase
         .from('announcements')
         .select('id, title, body, type, image_url, product:Products(item_name, picture_url)')
+        .eq('enabled', true)
+        .lte('starts_at', today)
+        .gte('ends_at', today)
         .order('starts_at', { ascending: false });
       if (!cancelled && data) setItems(data as unknown as Announcement[]);
     })();

@@ -14,6 +14,7 @@ import { HomeNewsBox, type HomeSettings } from '../components/client/HomeNewsBox
 import { invoiceInfo } from '../../lib/clientInvoices';
 
 import { PageHeader } from '../components/qq/page-header';
+import { AnnouncementsRail } from '../components/client/AnnouncementsRail';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/qq/card';
 import { Button } from '../components/qq/button';
 import { Alert, AlertDescription } from '../components/qq/alert';
@@ -151,6 +152,10 @@ export default function ClientDashboard() {
           <HomeNewsBox settings={homeSettings} />
         )}
       </div>
+
+      {/* Live announcements — always visible when there are any, independent
+          of the news-box mode above (they used to compete for one slot). */}
+      <AnnouncementsRail />
 
       {/* Recent orders */}
       <Card>
