@@ -51,19 +51,15 @@ function NewRelease({ s }: { s: HomeSettings }) {
   const upcoming = s.release_date && s.release_date > today;
   const dark = s.release_text_color === 'black';
   const text = dark ? 'text-black' : 'text-white';
-  // Readability scrims matched to the text color choice.
-  const scrim = dark
-    ? 'bg-gradient-to-t from-white/70 via-white/20 to-white/40'
-    : 'bg-gradient-to-t from-black/70 via-black/15 to-black/35';
 
   return (
     <Card className="overflow-hidden h-full">
-      {/* Full media with everything overlaid. object-CONTAIN so the whole
-          video/image is always visible (letterboxed on the black ground) —
-          cover cropped arbitrary-aspect media (QA 2026-09-02). The taller
-          min-height makes this a proper stage; the activity feed stretches
-          to match via the grid row. */}
-      <div className="relative w-full h-full min-h-[28rem] bg-black">
+      {/* Full media with everything overlaid, no scrim (owner 2026-09-02:
+          show the video untouched). object-CONTAIN so the whole video/image
+          is always visible; the letterbox ground is #F3F4F1 — the backdrop
+          color of Qiqi's own product videos (sampled from qiqiglobal.com),
+          so the bars blend into the footage. */}
+      <div className="relative w-full h-full min-h-[28rem] bg-[#F3F4F1]">
         {s.release_image_url &&
           (s.release_is_video ? (
             <video
@@ -82,8 +78,6 @@ function NewRelease({ s }: { s: HomeSettings }) {
               className="absolute inset-0 w-full h-full object-contain"
             />
           ))}
-        <div className={`absolute inset-0 pointer-events-none ${scrim}`} />
-
         <div className={`absolute inset-0 p-4 flex flex-col justify-between ${text}`}>
           <p className="text-sm font-semibold tracking-tight drop-shadow-sm">
             New Product Release
