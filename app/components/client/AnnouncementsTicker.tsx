@@ -78,7 +78,7 @@ export function AnnouncementsTicker() {
   );
 
   return (
-    <div className="flex-1 min-h-0">
+    <div className="flex-1 basis-0 min-h-0">
       <Card className="h-full flex flex-col">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">News &amp; announcements</CardTitle>

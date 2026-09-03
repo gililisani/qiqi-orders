@@ -142,9 +142,12 @@ export default function ClientDashboard() {
             : ''
         }`}
       >
-        <div className="flex flex-col gap-4 min-h-0">
+        {/* Fixed to the hero's height (28rem): the two halves split it
+            50/50 and clip internally — the column must never outgrow the
+            hero (owner: split the box, don't duplicate it). */}
+        <div className="flex flex-col gap-4 min-h-0 md:h-[28rem]">
           <AnnouncementsTicker />
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 basis-0 min-h-0">
             <ActivityFeed limit={4} />
           </div>
         </div>

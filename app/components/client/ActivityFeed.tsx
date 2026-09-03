@@ -81,11 +81,11 @@ export function ActivityFeed({ limit = 6 }: { limit?: number } = {}) {
   }, [limit]);
 
   return (
-    <Card className="h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm">Recent activity</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 min-h-0">
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : items.length === 0 ? (
@@ -93,7 +93,7 @@ export function ActivityFeed({ limit = 6 }: { limit?: number } = {}) {
             Updates about your orders and notes from Qiqi will appear here.
           </p>
         ) : (
-          <ul className="space-y-3 max-h-60 overflow-y-auto pr-1">
+          <ul className="space-y-3 h-full overflow-y-auto pr-1">
             {items.map((item) => (
               <li key={item.key}>
                 <button
