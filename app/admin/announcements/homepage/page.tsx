@@ -1,16 +1,22 @@
 'use client';
 
 /**
- * Homepage news-box settings — which of the five modes the partner
- * dashboard's right box shows. Scroller content is managed on the
- * announcements list; this page picks the mode + mode-specific fields.
+ * Client-homepage command center (owner QA 2026-09-02): the left pane is a
+ * LIVE preview — it renders the actual HomeNewsBox component clients see,
+ * fed by the UNSAVED form state, so every keystroke updates it and there is
+ * never a need to log in as a client to check. The right pane holds the
+ * mode + mode-specific fields.
  */
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 
 import { supabase } from '../../../../lib/supabaseClient';
-import { AdminFormShell } from '../../../components/admin/AdminFormShell';
+import { PageHeader } from '../../../components/qq/page-header';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/qq/card';
+import { Alert, AlertDescription } from '../../../components/qq/alert';
+import { Button } from '../../../components/qq/button';
 import { FormField } from '../../../components/qq/form-field';
 import { Input } from '../../../components/qq/input';
 import ImageUpload from '../../../components/ImageUpload';
@@ -22,6 +28,7 @@ import {
   SelectValue,
 } from '../../../components/qq/select';
 import { useToast } from '../../../components/ui/ToastProvider';
+import { HomeNewsBox, type HomeSettings } from '../../../components/client/HomeNewsBox';
 
 const MODES = [
   { value: 'nothing', label: 'Nothing — hide the box (activity feed takes the full width)' },
@@ -32,7 +39,6 @@ const MODES = [
 ] as const;
 
 export default function HomeNewsBoxSettingsPage() {
-  const router = useRouter();
   const toast = useToast();
 
   const [mode, setMode] = useState('nothing');
@@ -71,8 +77,20 @@ export default function HomeNewsBoxSettingsPage() {
     })();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // The unsaved draft, in exactly the shape the client dashboard consumes.
+  const draft: HomeSettings = {
+    news_mode: mode,
+    release_title: releaseTitle.trim() || null,
+    release_image_url: releaseImageUrl.trim() || null,
+    release_is_video: releaseIsVideo,
+    release_text_color: (releaseTextColor as 'white' | 'black') || 'white',
+    release_date: releaseDate || null,
+    release_link_url: releaseLinkUrl.trim() || null,
+    banner_url: bannerUrl.trim() || null,
+    banner_is_video: bannerIsVideo,
+  };
+
+  const handleSave = async () => {
     if (mode === 'new_release' && (!releaseTitle.trim() || !releaseImageUrl.trim())) {
       setError('A release needs at least a title and an image.');
       return;
@@ -102,8 +120,7 @@ export default function HomeNewsBoxSettingsPage() {
         })
         .eq('id', 1);
       if (err) throw err;
-      toast.success('Homepage box updated.');
-      router.push('/admin/announcements');
+      toast.success('Published — clients see this now.');
     } catch (err: any) {
       setError(err.message || 'Failed to save settings.');
     } finally {
@@ -112,120 +129,167 @@ export default function HomeNewsBoxSettingsPage() {
   };
 
   return (
-    <AdminFormShell
-      title="Homepage news box"
-      description="What partners see in the right box of their dashboard."
-      backHref="/admin/announcements"
-      backLabel="Back to announcements"
-      saving={saving || loading}
-      error={error}
-      onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/announcements')}
-      submitLabel="Save"
-    >
-      <FormField label="Display mode" required>
-        <Select value={mode} onValueChange={setMode}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {MODES.map((m) => (
-              <SelectItem key={m.value} value={m.value}>
-                {m.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </FormField>
+    <div className="px-6 py-8 space-y-6">
+      <div>
+        <Link
+          href="/admin/announcements"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to announcements
+        </Link>
+      </div>
 
-      {mode === 'new_release' && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Release title" required>
-              <Input
-                value={releaseTitle}
-                onChange={(e) => setReleaseTitle(e.target.value)}
-                placeholder="e.g. Meet the new Volume Code Mist"
-              />
-            </FormField>
-            <FormField label="Release date" helper="Shown as 'Releasing …' until the day, 'Released' after.">
-              <Input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
-            </FormField>
-          </div>
-          <FormField label="Media" required helper="Fills the whole box, 16:9 — 1920×1080 image or MP4 video. The text overlays it.">
-            <ImageUpload onImageUploaded={setReleaseImageUrl} currentImageUrl={!releaseIsVideo ? releaseImageUrl || undefined : undefined} />
-          </FormField>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Image or video URL">
-              <Input value={releaseImageUrl} onChange={(e) => setReleaseImageUrl(e.target.value)} placeholder="https://…" />
-            </FormField>
-            <FormField label="Link" helper="Optional — a product page or PDF partners can open.">
-              <Input value={releaseLinkUrl} onChange={(e) => setReleaseLinkUrl(e.target.value)} placeholder="https://…" />
-            </FormField>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-            <FormField
-              label="Overlay text color"
-              helper="White for dark media, black for bright media — whichever reads best."
-            >
-              <Select value={releaseTextColor} onValueChange={setReleaseTextColor}>
+      <PageHeader
+        title="Client homepage"
+        description="The right box of every partner's dashboard. The preview is the real thing — what you see is what they get."
+        actions={
+          <Button size="sm" onClick={handleSave} loading={saving} disabled={loading}>
+            {saving ? 'Publishing…' : 'Save & publish'}
+          </Button>
+        }
+      />
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        {/* ---- Live preview ---- */}
+        <div className="lg:sticky lg:top-6 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Live preview — updates as you type
+          </p>
+          {loading ? (
+            <div className="border border-dashed border-border rounded-lg p-10 text-center text-sm text-muted-foreground">
+              Loading…
+            </div>
+          ) : mode === 'nothing' ? (
+            <div className="border border-dashed border-border rounded-lg p-10 text-center text-sm text-muted-foreground">
+              The box is hidden — the activity feed takes the full width of the dashboard.
+            </div>
+          ) : (
+            <HomeNewsBox settings={draft} adminPreview />
+          )}
+          <p className="text-xs text-muted-foreground">
+            Nothing reaches clients until you press Save &amp; publish.
+          </p>
+        </div>
+
+        {/* ---- Controls ---- */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Settings</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <FormField label="Display mode" required>
+              <Select value={mode} onValueChange={setMode}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="white">White text (dark media)</SelectItem>
-                  <SelectItem value="black">Black text (bright media)</SelectItem>
+                  {MODES.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </FormField>
-            <label className="flex items-center gap-2 cursor-pointer select-none pb-2">
-              <input
-                type="checkbox"
-                checked={releaseIsVideo}
-                onChange={(e) => setReleaseIsVideo(e.target.checked)}
-                className="h-4 w-4 accent-foreground"
-              />
-              <span className="text-sm">The media URL is a video (plays muted, on loop)</span>
-            </label>
-          </div>
-        </>
-      )}
 
-      {mode === 'news_scroller' && (
-        <p className="text-sm text-muted-foreground">
-          The scroller shows every <span className="font-medium text-foreground">live</span>{' '}
-          announcement (enabled + inside its date window), newest first, and scrolls
-          automatically when there are more than fit. Manage the items on the
-          announcements list.
-        </p>
-      )}
+            {mode === 'new_release' && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField label="Release title" required>
+                    <Input
+                      value={releaseTitle}
+                      onChange={(e) => setReleaseTitle(e.target.value)}
+                      placeholder="e.g. Meet the new Volume Code Mist"
+                    />
+                  </FormField>
+                  <FormField label="Release date" helper="Shown as 'Releasing …' until the day, 'Released' after.">
+                    <Input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
+                  </FormField>
+                </div>
+                <FormField label="Media" required helper="Image upload below, or paste an image/MP4 URL. The whole clip always shows — off-format media letterboxes on the Qiqi backdrop color.">
+                  <ImageUpload onImageUploaded={setReleaseImageUrl} currentImageUrl={!releaseIsVideo ? releaseImageUrl || undefined : undefined} />
+                </FormField>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField label="Image or video URL">
+                    <Input value={releaseImageUrl} onChange={(e) => setReleaseImageUrl(e.target.value)} placeholder="https://…" />
+                  </FormField>
+                  <FormField label="Link" helper="Optional — a product page or PDF partners can open.">
+                    <Input value={releaseLinkUrl} onChange={(e) => setReleaseLinkUrl(e.target.value)} placeholder="https://…" />
+                  </FormField>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                  <FormField
+                    label="Overlay text color"
+                    helper="White for dark media, black for bright media — check the preview."
+                  >
+                    <Select value={releaseTextColor} onValueChange={setReleaseTextColor}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="white">White text (dark media)</SelectItem>
+                        <SelectItem value="black">Black text (bright media)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                  <label className="flex items-center gap-2 cursor-pointer select-none pb-2">
+                    <input
+                      type="checkbox"
+                      checked={releaseIsVideo}
+                      onChange={(e) => setReleaseIsVideo(e.target.checked)}
+                      className="h-4 w-4 accent-foreground"
+                    />
+                    <span className="text-sm">The media URL is a video (plays muted, on loop)</span>
+                  </label>
+                </div>
+              </>
+            )}
 
-      {mode === 'banner' && (
-        <>
-          <FormField label="Banner image" helper="Recommended 16:9 — 1920×1080 (or 1280×720). For video, paste the URL below; same 16:9 sizing, MP4 works best.">
-            <ImageUpload onImageUploaded={setBannerUrl} currentImageUrl={!bannerIsVideo ? bannerUrl || undefined : undefined} />
-          </FormField>
-          <FormField label="Image or video URL" required>
-            <Input value={bannerUrl} onChange={(e) => setBannerUrl(e.target.value)} placeholder="https://…" />
-          </FormField>
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={bannerIsVideo}
-              onChange={(e) => setBannerIsVideo(e.target.checked)}
-              className="h-4 w-4 accent-foreground"
-            />
-            <span className="text-sm">This URL is a video (plays muted, on loop)</span>
-          </label>
-        </>
-      )}
+            {mode === 'news_scroller' && (
+              <p className="text-sm text-muted-foreground">
+                The scroller shows every <span className="font-medium text-foreground">live</span>{' '}
+                announcement (enabled + inside its date window), newest first, and scrolls
+                automatically when there are more than fit. Manage the items on the
+                announcements list — the preview shows the real current set.
+              </p>
+            )}
 
-      {mode === 'latest_dam' && (
-        <p className="text-sm text-muted-foreground">
-          Shows the most recently uploaded media assets — six where the layout fits
-          them, four otherwise. No configuration needed.
-        </p>
-      )}
-    </AdminFormShell>
+            {mode === 'banner' && (
+              <>
+                <FormField label="Banner image" helper="Recommended 16:9 — 1920×1080 (or 1280×720). For video, paste the URL below; MP4 works best.">
+                  <ImageUpload onImageUploaded={setBannerUrl} currentImageUrl={!bannerIsVideo ? bannerUrl || undefined : undefined} />
+                </FormField>
+                <FormField label="Image or video URL" required>
+                  <Input value={bannerUrl} onChange={(e) => setBannerUrl(e.target.value)} placeholder="https://…" />
+                </FormField>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={bannerIsVideo}
+                    onChange={(e) => setBannerIsVideo(e.target.checked)}
+                    className="h-4 w-4 accent-foreground"
+                  />
+                  <span className="text-sm">This URL is a video (plays muted, on loop)</span>
+                </label>
+              </>
+            )}
+
+            {mode === 'latest_dam' && (
+              <p className="text-sm text-muted-foreground">
+                Shows each partner the most recently uploaded media assets they have
+                access to — six where the layout fits them, four otherwise. No
+                configuration needed.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }

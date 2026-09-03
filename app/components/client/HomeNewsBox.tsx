@@ -30,16 +30,24 @@ export interface HomeSettings {
   banner_is_video: boolean;
 }
 
-export function HomeNewsBox({ settings }: { settings: HomeSettings }) {
+/** adminPreview: rendered inside the admin command center — same pixels,
+ *  but client-entitlement-scoped data (latest DAM) shows a placeholder. */
+export function HomeNewsBox({
+  settings,
+  adminPreview = false,
+}: {
+  settings: HomeSettings;
+  adminPreview?: boolean;
+}) {
   switch (settings.news_mode) {
     case 'new_release':
       return <NewRelease s={settings} />;
     case 'news_scroller':
-      return <NewsScroller />;
+      return <NewsScroller adminPreview={adminPreview} />;
     case 'banner':
       return <Banner s={settings} />;
     case 'latest_dam':
-      return <LatestMedia />;
+      return <LatestMedia adminPreview={adminPreview} />;
     default:
       return null;
   }
@@ -128,7 +136,7 @@ interface NewsItem {
   body: string | null;
 }
 
-function NewsScroller() {
+function NewsScroller({ adminPreview = false }: { adminPreview?: boolean }) {
   const [items, setItems] = useState<NewsItem[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -136,10 +144,16 @@ function NewsScroller() {
 
   useEffect(() => {
     (async () => {
-      // RLS returns only enabled announcements inside their date window.
+      // Explicit live filter (enabled + inside window). Clients get the same
+      // set from RLS anyway; the filter matters for the ADMIN preview, where
+      // RLS would return every row including disabled/expired ones.
+      const today = new Date().toISOString().slice(0, 10);
       const { data } = await supabase
         .from('announcements')
         .select('id, title, body')
+        .eq('enabled', true)
+        .lte('starts_at', today)
+        .gte('ends_at', today)
         .order('starts_at', { ascending: false });
       setItems((data as NewsItem[]) || []);
     })();
@@ -152,7 +166,18 @@ function NewsScroller() {
     setOverflowing(content.scrollHeight > container.clientHeight + 8);
   }, [items]);
 
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    if (adminPreview) {
+      return (
+        <Card className="h-full">
+          <CardContent className="p-8 text-sm text-muted-foreground text-center">
+            No live announcements right now — the box would be empty for clients.
+          </CardContent>
+        </Card>
+      );
+    }
+    return null;
+  }
 
   const list = (
     <div className="space-y-3 pb-3">
@@ -239,10 +264,11 @@ interface DamAsset {
   current_version?: { previewPath?: string | null } | null;
 }
 
-function LatestMedia() {
+function LatestMedia({ adminPreview = false }: { adminPreview?: boolean }) {
   const [tiles, setTiles] = useState<Array<{ id: string; title: string; url: string | null }>>([]);
 
   useEffect(() => {
+    if (adminPreview) return; // entitlement-scoped per client — no admin fetch
     let cancelled = false;
     (async () => {
       try {
@@ -276,6 +302,30 @@ function LatestMedia() {
       cancelled = true;
     };
   }, []);
+
+  if (adminPreview) {
+    return (
+      <Card className="h-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Latest media</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 xl:grid-cols-3 gap-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className={`aspect-square rounded-md border border-dashed border-border bg-secondary/40 ${i >= 4 ? 'hidden xl:block' : ''}`}
+              />
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Each partner sees the six newest media assets they have access to —
+            the exact tiles vary per partner, so the preview shows placeholders.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (tiles.length === 0) return null;
 

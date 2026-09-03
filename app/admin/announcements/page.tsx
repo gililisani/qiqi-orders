@@ -11,6 +11,7 @@ import { Settings, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '../../components/qq/button';
 import { ANNOUNCEMENT_TYPES } from '../../components/admin/AnnouncementForm';
+import { HomepageStatusCard } from '../../components/admin/HomepageStatusCard';
 
 interface AnnouncementRow {
   id: string;
@@ -65,6 +66,7 @@ export default function AnnouncementsPage() {
           </Button>
         </Link>
       }
+      aboveTable={<HomepageStatusCard />}
       editUrl={(id) => `/admin/announcements/${id}/edit`}
       fetch={async () =>
         supabase

@@ -87,6 +87,10 @@ export interface AdminListPageProps<T extends { id: string | number }> {
    *  the page header (e.g. Import CSV). */
   extraHeaderActions?: ReactNode;
 
+  /** Optional content rendered between the header and the search/table —
+   *  e.g. a status card (announcements' homepage summary). */
+  aboveTable?: ReactNode;
+
   /** Optional empty-state copy override (when there are zero rows total). */
   emptyTitle?: string;
   emptyDescription?: string;
@@ -105,6 +109,7 @@ export function AdminListPage<T extends { id: string | number }>({
   columns,
   extraRowActions,
   extraHeaderActions,
+  aboveTable,
   emptyTitle,
   emptyDescription,
 }: AdminListPageProps<T>) {
@@ -170,6 +175,8 @@ export function AdminListPage<T extends { id: string | number }>({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
+      {aboveTable && <div className="mb-6">{aboveTable}</div>}
 
       {filterRow && (
         <div className="mb-4 max-w-sm">
