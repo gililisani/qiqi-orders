@@ -144,11 +144,13 @@ export default function ClientDashboard() {
           the box and the feed takes the full width (owner spec). */}
       <div
         className={`grid grid-cols-1 gap-4 items-stretch ${
-          homeSettings && homeSettings.news_mode !== 'nothing' ? 'md:grid-cols-2' : ''
+          homeSettings && ['new_release', 'banner', 'latest_dam'].includes(homeSettings.news_mode)
+            ? 'md:grid-cols-2'
+            : ''
         }`}
       >
         <ActivityFeed />
-        {homeSettings && homeSettings.news_mode !== 'nothing' && (
+        {homeSettings && ['new_release', 'banner', 'latest_dam'].includes(homeSettings.news_mode) && (
           <HomeNewsBox settings={homeSettings} />
         )}
       </div>

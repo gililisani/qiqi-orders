@@ -33,7 +33,6 @@ import { HomeNewsBox, type HomeSettings } from '../../../components/client/HomeN
 const MODES = [
   { value: 'nothing', label: 'Nothing — hide the box (activity feed takes the full width)' },
   { value: 'new_release', label: 'New product release' },
-  { value: 'news_scroller', label: 'News scroller (shows the live announcements)' },
   { value: 'banner', label: 'Banner — a single image or video' },
   { value: 'latest_dam', label: 'Latest media files (newest DAM uploads)' },
 ] as const;
@@ -63,7 +62,9 @@ export default function HomeNewsBoxSettingsPage() {
         .maybeSingle();
       if (err) setError(err.message);
       else if (data) {
-        setMode(data.news_mode ?? 'nothing');
+        // 'news_scroller' was retired 2026-09-02 (announcements now always
+        // show on the dashboard strip) — treat a legacy value as 'nothing'.
+        setMode(data.news_mode === 'news_scroller' ? 'nothing' : (data.news_mode ?? 'nothing'));
         setReleaseTitle(data.release_title ?? '');
         setReleaseImageUrl(data.release_image_url ?? '');
         setReleaseIsVideo(!!data.release_is_video);
@@ -249,15 +250,6 @@ export default function HomeNewsBoxSettingsPage() {
                   </label>
                 </div>
               </>
-            )}
-
-            {mode === 'news_scroller' && (
-              <p className="text-sm text-muted-foreground">
-                The scroller shows every <span className="font-medium text-foreground">live</span>{' '}
-                announcement (enabled + inside its date window), newest first, and scrolls
-                automatically when there are more than fit. Manage the items on the
-                announcements list — the preview shows the real current set.
-              </p>
             )}
 
             {mode === 'banner' && (

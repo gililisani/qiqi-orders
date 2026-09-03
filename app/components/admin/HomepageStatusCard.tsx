@@ -3,8 +3,8 @@
 /**
  * "What's on the client homepage RIGHT NOW" — the at-a-glance status card on
  * the announcements list (owner QA 2026-09-02: the live state was invisible
- * without clicking into the settings page). Also surfaces the silent-failure
- * cases: live announcements nobody can see, or a scroller with nothing in it.
+ * without clicking into the settings page). Shows the hero-box mode plus how
+ * many live announcements are on the dashboard strip.
  */
 
 import { useEffect, useState } from 'react';
@@ -14,7 +14,6 @@ import { Monitor, Pencil } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { formatDate } from '../../../lib/formatters';
 import { Card, CardContent } from '../qq/card';
-import { Alert, AlertDescription } from '../qq/alert';
 import { Button } from '../qq/button';
 import { Badge } from '../qq/badge';
 
@@ -30,10 +29,11 @@ interface HomeSettingsRow {
 
 const MODE_LABEL: Record<string, string> = {
   new_release: 'New Product Release',
-  news_scroller: 'News scroller',
   banner: 'Banner',
   latest_dam: 'Latest media',
   nothing: 'Nothing — box hidden',
+  // retired 2026-09-02; legacy value renders as hidden
+  news_scroller: 'Nothing — box hidden',
 };
 
 export function HomepageStatusCard() {
@@ -79,16 +79,11 @@ export function HomepageStatusCard() {
         ]
           .filter(Boolean)
           .join(' — ')
-      : mode === 'news_scroller'
-        ? `${liveCount ?? 0} live announcement${liveCount === 1 ? '' : 's'} scrolling`
-        : mode === 'latest_dam'
-          ? "each partner's six newest media assets"
-          : mode === 'banner'
-            ? 'a full-box image/video, no text'
-            : 'the activity feed takes the full width';
-
-  const hiddenAnnouncements = (liveCount ?? 0) > 0 && mode !== 'news_scroller';
-  const emptyScroller = mode === 'news_scroller' && (liveCount ?? 0) === 0;
+      : mode === 'latest_dam'
+        ? "each partner's six newest media assets"
+        : mode === 'banner'
+          ? 'a full-box image/video, no text'
+          : 'the activity feed takes the full width';
 
   return (
     <Card>
@@ -139,23 +134,17 @@ export function HomepageStatusCard() {
           </Link>
         </div>
 
-        {hiddenAnnouncements && (
-          <Alert variant="warning">
-            <AlertDescription>
-              {liveCount} live announcement{liveCount === 1 ? ' is' : 's are'} <strong>not visible to
-              clients</strong> — the homepage is showing {MODE_LABEL[mode] ?? mode}. Switch the box to
-              “News scroller” (or let the window pass) if they should be seen.
-            </AlertDescription>
-          </Alert>
-        )}
-        {emptyScroller && (
-          <Alert variant="warning">
-            <AlertDescription>
-              The news scroller is on but <strong>no announcements are live</strong> — clients see an
-              empty space. Enable an announcement or switch the box mode.
-            </AlertDescription>
-          </Alert>
-        )}
+        <p className="text-xs text-muted-foreground border-t border-border pt-3">
+          {(liveCount ?? 0) > 0 ? (
+            <>
+              <strong className="text-foreground">{liveCount}</strong> live announcement
+              {liveCount === 1 ? '' : 's'} showing on the dashboard strip below the hero — always
+              visible, independent of the box mode.
+            </>
+          ) : (
+            <>No live announcements right now — the dashboard strip is hidden.</>
+          )}
+        </p>
       </CardContent>
     </Card>
   );

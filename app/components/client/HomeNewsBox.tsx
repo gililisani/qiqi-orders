@@ -1,21 +1,22 @@
 'use client';
 
 /**
- * The dashboard's right box — admin picks one of five modes
- * (client_home_settings): new-release card, auto-scrolling news, banner
- * image/video, latest DAM uploads, or nothing (parent hides the box and
- * stretches the activity feed).
+ * The dashboard's right box — admin picks one of four modes
+ * (client_home_settings): new-release card, banner image/video, latest DAM
+ * uploads, or nothing (parent hides the box and stretches the activity
+ * feed). The old "news scroller" mode was retired 2026-09-02 — live
+ * announcements now always render on the dashboard strip (AnnouncementsRail)
+ * and no longer compete with this box; a legacy 'news_scroller' value is
+ * treated as 'nothing'.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 
 import { supabase } from '../../../lib/supabaseClient';
 import { formatDate } from '../../../lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '../qq/card';
-import { Badge } from '../qq/badge';
-import { Button } from '../qq/button';
 import { resolveSignedAssetUrl } from '../dam/utils';
 
 export interface HomeSettings {
@@ -42,8 +43,6 @@ export function HomeNewsBox({
   switch (settings.news_mode) {
     case 'new_release':
       return <NewRelease s={settings} />;
-    case 'news_scroller':
-      return <NewsScroller adminPreview={adminPreview} />;
     case 'banner':
       return <Banner s={settings} />;
     case 'latest_dam':
@@ -125,106 +124,6 @@ function NewRelease({ s }: { s: HomeSettings }) {
           </div>
         </div>
       </div>
-    </Card>
-  );
-}
-
-// --- Mode 2: news scroller -------------------------------------------------
-interface NewsItem {
-  id: string;
-  title: string;
-  body: string | null;
-}
-
-function NewsScroller({ adminPreview = false }: { adminPreview?: boolean }) {
-  const [items, setItems] = useState<NewsItem[]>([]);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [overflowing, setOverflowing] = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      // Explicit live filter (enabled + inside window). Clients get the same
-      // set from RLS anyway; the filter matters for the ADMIN preview, where
-      // RLS would return every row including disabled/expired ones.
-      const today = new Date().toISOString().slice(0, 10);
-      const { data } = await supabase
-        .from('announcements')
-        .select('id, title, body')
-        .eq('enabled', true)
-        .lte('starts_at', today)
-        .gte('ends_at', today)
-        .order('starts_at', { ascending: false });
-      setItems((data as NewsItem[]) || []);
-    })();
-  }, []);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    const content = contentRef.current;
-    if (!container || !content) return;
-    setOverflowing(content.scrollHeight > container.clientHeight + 8);
-  }, [items]);
-
-  if (items.length === 0) {
-    if (adminPreview) {
-      return (
-        <Card className="h-full">
-          <CardContent className="p-8 text-sm text-muted-foreground text-center">
-            No live announcements right now — the box would be empty for clients.
-          </CardContent>
-        </Card>
-      );
-    }
-    return null;
-  }
-
-  const list = (
-    <div className="space-y-3 pb-3">
-      {items.map((n) => (
-        <div key={n.id}>
-          <p className="text-sm font-medium leading-snug">{n.title}</p>
-          {n.body && <p className="text-xs text-muted-foreground mt-0.5">{n.body}</p>}
-        </div>
-      ))}
-    </div>
-  );
-
-  return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm">News</CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 min-h-0">
-        <div ref={containerRef} className="relative h-full min-h-40 overflow-hidden news-scroller">
-          <div
-            ref={contentRef}
-            className={overflowing ? 'animate-news-scroll' : ''}
-            style={
-              overflowing
-                ? { animationDuration: `${Math.max(12, items.length * 5)}s` }
-                : undefined
-            }
-          >
-            {list}
-            {/* duplicate for a seamless loop */}
-            {overflowing && list}
-          </div>
-        </div>
-        {/* Upward marquee: only runs when content overflows; pauses on hover. */}
-        <style jsx global>{`
-          @keyframes news-scroll-up {
-            from { transform: translateY(0); }
-            to { transform: translateY(-50%); }
-          }
-          .animate-news-scroll {
-            animation: news-scroll-up linear infinite;
-          }
-          .news-scroller:hover .animate-news-scroll {
-            animation-play-state: paused;
-          }
-        `}</style>
-      </CardContent>
     </Card>
   );
 }
