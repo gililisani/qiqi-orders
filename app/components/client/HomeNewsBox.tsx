@@ -58,9 +58,12 @@ function NewRelease({ s }: { s: HomeSettings }) {
 
   return (
     <Card className="overflow-hidden h-full">
-      {/* Full-bleed media with everything overlaid. Height comes from the
-          grid row (= the activity feed), so the two boxes always match. */}
-      <div className="relative w-full h-full min-h-56 bg-black">
+      {/* Full media with everything overlaid. object-CONTAIN so the whole
+          video/image is always visible (letterboxed on the black ground) —
+          cover cropped arbitrary-aspect media (QA 2026-09-02). The taller
+          min-height makes this a proper stage; the activity feed stretches
+          to match via the grid row. */}
+      <div className="relative w-full h-full min-h-[28rem] bg-black">
         {s.release_image_url &&
           (s.release_is_video ? (
             <video
@@ -69,14 +72,14 @@ function NewRelease({ s }: { s: HomeSettings }) {
               muted
               loop
               playsInline
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-contain"
             />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={s.release_image_url}
               alt={s.release_title || 'New release'}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-contain"
             />
           ))}
         <div className={`absolute inset-0 pointer-events-none ${scrim}`} />

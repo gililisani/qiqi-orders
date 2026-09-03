@@ -50,8 +50,13 @@ export function SupportFundGoalStrip() {
 
   if (!isEnrolled && !active) return null;
 
+  // Two cards side by side only when BOTH exist — a lone card (no active
+  // goal period, or not SF-enrolled) spans the full width instead of
+  // sitting in half the row (QA 2026-09-02).
+  const bothCards = isEnrolled && !!active;
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className={`grid grid-cols-1 gap-4 ${bothCards ? 'md:grid-cols-2' : ''}`}>
       {isEnrolled && (
         <Link href="/client/performance" className="block">
           <Card className="h-full border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50 transition-colors">
