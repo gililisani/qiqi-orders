@@ -1355,20 +1355,37 @@ export default function AdminOrderDetailsView({
             {/* No inline edit on Cancelled orders — Reinstate is the only
                 way back (single path, no sneaky status flips). */}
             {order.status !== 'Draft' && originalStatus !== 'Cancelled' && (
-              <Button
-                size="sm"
-                variant={editOrderInfoMode ? 'default' : 'ghost'}
-                onClick={() => {
-                  if (editOrderInfoMode) {
-                    handleSaveAdminOrderRefs();
-                  } else {
-                    setEditOrderInfoMode(true);
-                  }
-                }}
-                loading={savingAdminFields}
-              >
-                {editOrderInfoMode ? 'Save' : 'Edit'}
-              </Button>
+              <div className="flex items-center gap-1">
+                {editOrderInfoMode && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={savingAdminFields}
+                    onClick={async () => {
+                      // Discard unsaved edits (status pick, refs) — refetch
+                      // resets the order and every draft field.
+                      setEditOrderInfoMode(false);
+                      await fetchOrder();
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant={editOrderInfoMode ? 'default' : 'ghost'}
+                  onClick={() => {
+                    if (editOrderInfoMode) {
+                      handleSaveAdminOrderRefs();
+                    } else {
+                      setEditOrderInfoMode(true);
+                    }
+                  }}
+                  loading={savingAdminFields}
+                >
+                  {editOrderInfoMode ? 'Save' : 'Edit'}
+                </Button>
+              </div>
             )}
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
