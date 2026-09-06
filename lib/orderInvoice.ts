@@ -6,10 +6,14 @@ import { getNetSuiteItem } from './netsuiteItemMap';
  * NetSuite invoice creation for a Hub order — extracted from
  * /api/netsuite/create-invoice so the fulfillment automation (cron context,
  * no user session) can invoice an order the moment the warehouse marks it
- * packed. Behavior is identical to the route's original inline logic:
- * detect-first (never transforms an SO that already has an invoice), adds the
- * shipping line only to freshly-created invoices, writes the invoice columns
- * + status 'Ready' + a history row.
+ * packed. Detect-first (never transforms an SO that already has an invoice),
+ * adds the shipping line only to freshly-created invoices, writes the invoice
+ * columns + a history row.
+ *
+ * Deliberately does NOT touch order status (fix 2026-09-06): billing and the
+ * package are independent dimensions — 'Ready' means the goods are physically
+ * packed, and only the warehouse signal (or an admin) may set it. Creating an
+ * invoice early (prepaid clients) must not make an order look pickup-ready.
  */
 
 export type CreateInvoiceOutcome =
@@ -113,16 +117,15 @@ export async function createInvoiceForOrder(
       netsuite_invoice_status: result.status,
       invoice_amount_remaining: result.amountRemaining,
       invoice_due_date: result.dueDate,
-      status: 'Ready',
     })
     .eq('id', orderId);
 
   await supabase.from('order_history').insert([
     {
-      action_type: 'status_change',
+      action_type: 'order_updated',
       order_id: orderId,
       status_from: order.status,
-      status_to: 'Ready',
+      status_to: order.status,
       notes: linked
         ? `NetSuite Invoice linked (already existed in NetSuite): ${result.invoiceNumber}`
         : `NetSuite Invoice created: ${result.invoiceNumber}`,

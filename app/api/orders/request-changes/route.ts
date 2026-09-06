@@ -62,6 +62,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Badge the order "Awaiting client" until they re-save it (the save
+    // route clears the hold). Informational only — nothing is blocked.
+    const { error: holdErr } = await supabase
+      .from('orders')
+      .update({ hold: 'awaiting_client' })
+      .eq('id', orderId);
+    if (holdErr) console.error('request-changes: failed to set awaiting_client hold:', holdErr.message);
+
     const { data: adminProfile } = await supabase
       .from('admins')
       .select('name')

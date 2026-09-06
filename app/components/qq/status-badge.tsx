@@ -13,6 +13,7 @@ import { cn } from '../../../lib/utils';
  *  - In Process  → amber (in motion, action elsewhere)
  *  - Ready       → emerald-faint (almost done, awaits client)
  *  - Done        → emerald-solid (terminal positive)
+ *  - Closed      → solid ink (display-only: Done + fully paid, see lib/orderBadges)
  *  - Cancelled   → Magenta (terminal negative — Qiqi destructive)
  */
 
@@ -22,6 +23,7 @@ export type OrderStatus =
   | 'In Process'
   | 'Ready'
   | 'Done'
+  | 'Closed'
   | 'Cancelled';
 
 // Note: explicit hex values are used for emerald/sky/amber because Material Tailwind's
@@ -34,6 +36,7 @@ const STATUS_STYLES: Record<OrderStatus, string> = {
   'In Process': 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]',
   Ready:        'bg-[#DBEAFE] text-[#1D4ED8] border-[#BFDBFE]',
   Done:         'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]',
+  Closed:       'bg-[#111827] text-white border-[#111827]',
   Cancelled:    'bg-brand-magenta/15 text-brand-magenta border-brand-magenta/40',
 };
 

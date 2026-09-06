@@ -271,6 +271,54 @@ export function orderReadyTemplate(data: OrderEmailData): { subject: string; htm
   };
 }
 
+/** Order Picked Up — sent when the warehouse closes out the order (the
+ *  freight forwarder collected the goods). Fires on the Done transition. */
+export function orderPickedUpTemplate(data: OrderEmailData): { subject: string; html: string } {
+  const content = `
+    ${emailHeading('Order picked up', 'Your order is on its way')}
+    ${emailPara(
+      `Order <strong>${escapeHtml(data.poNumber)}</strong> was collected from the warehouse and is on its way to you. That completes the order on our side — the paperwork stays available on your order page.`,
+    )}
+    ${orderFacts(data)}
+    ${emailButton('View order & documents', orderUrl(data))}
+  `;
+  return {
+    subject: `Order ${sanitizeEmailHeader(data.soNumber || data.poNumber)} has been picked up`,
+    html: emailWrapper(content),
+  };
+}
+
+/** Payment Hold Released — INTERNAL notification to the Qiqi team. Sent when a
+ *  payment lands on an order that was blocked from the warehouse by a payment
+ *  hold: the hold auto-cleared and someone should now click Push to Warehouse. */
+export function paymentHoldReleasedTemplate(data: {
+  poNumber: string;
+  soNumber?: string | null;
+  companyName: string;
+  orderId: string;
+  siteUrl: string;
+  /** How the payment was detected, e.g. 'Stripe payment' or 'NetSuite invoice sync'. */
+  via: string;
+}): { subject: string; html: string } {
+  const content = `
+    ${emailHeading('Payment received', 'Payment hold released')}
+    ${emailPara(
+      `Order <strong>${escapeHtml(data.poNumber)}</strong> for ${escapeHtml(data.companyName)} was on a payment hold — the payment has now been received (${escapeHtml(data.via)}) and the hold cleared itself. The order is unlocked and waiting for <strong>Push to Warehouse</strong>.`,
+    )}
+    ${emailFactCard([
+      { label: 'PO number', value: escapeHtml(data.poNumber) },
+      ...(data.soNumber ? [{ label: 'Sales order', value: escapeHtml(data.soNumber), mono: true }] : []),
+      { label: 'Company', value: escapeHtml(data.companyName) },
+      { label: 'Next step', value: 'Push to Warehouse' },
+    ])}
+    ${emailButton('Open the order', `${data.siteUrl}/admin/orders/${data.orderId}`)}
+  `;
+  return {
+    subject: `Payment received — order ${sanitizeEmailHeader(data.soNumber || data.poNumber)} released for the warehouse`,
+    html: emailWrapper(content, { footerNote: 'Internal notification from the Qiqi Partners Hub.' }),
+  };
+}
+
 /** Order Cancelled. */
 export function orderCancelledTemplate(data: OrderEmailData): { subject: string; html: string } {
   const content = `

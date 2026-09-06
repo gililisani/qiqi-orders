@@ -3,6 +3,7 @@ import {
   orderCreatedTemplate,
   orderInProcessTemplate,
   orderReadyTemplate,
+  orderPickedUpTemplate,
   orderCancelledTemplate,
   customUpdateTemplate,
   orderUpdatedTemplate,
@@ -19,6 +20,7 @@ export const ORDER_EMAIL_TYPES = [
   'created',
   'in_process',
   'ready',
+  'picked_up',
   'cancelled',
   'custom',
   'updated',
@@ -108,6 +110,9 @@ export async function prepareOrderEmail(
       break;
     case 'ready':
       template = orderReadyTemplate(emailData);
+      break;
+    case 'picked_up':
+      template = orderPickedUpTemplate(emailData);
       break;
     case 'cancelled':
       template = orderCancelledTemplate(emailData);

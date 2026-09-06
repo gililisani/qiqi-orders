@@ -11,7 +11,8 @@ import { recalculateCompanyTargetPeriods } from '../targetPeriods';
  *       → create the NetSuite invoice, move the order to Ready,
  *         email the client "ready for pickup"
  *   warehouse close-out (fulfillment_status 'shipped' — their post-pickup step)
- *       → move the order to Done (invoicing first if packed was missed)
+ *       → move the order to Done (invoicing first if packed was missed),
+ *         email the client "picked up"
  *
  * Runs from the polling cron (and is safe to run repeatedly): every step is
  * guarded by an atomic status-claim UPDATE or by the invoice detect-first
@@ -28,7 +29,8 @@ export interface AutomationOrderRow {
 }
 
 export interface AutomationDecision {
-  /** Create the NS invoice (also moves the order to Ready). */
+  /** Create the NS invoice (status is claimed separately — invoicing itself
+   *  never moves an order, fix 2026-09-06). */
   invoice: boolean;
   /** Claim In Process → Ready without invoicing (invoice already exists). */
   markReady: boolean;
@@ -92,11 +94,15 @@ async function claimStatus(
   return data && data.length > 0 ? to : null;
 }
 
-async function sendReadyEmail(supabase: SupabaseClient, orderId: string): Promise<boolean> {
-  const prepared = await prepareOrderEmail(supabase, orderId, 'ready');
+async function sendClientEmail(
+  supabase: SupabaseClient,
+  orderId: string,
+  type: 'ready' | 'picked_up',
+): Promise<boolean> {
+  const prepared = await prepareOrderEmail(supabase, orderId, type);
   if (!prepared.ok) {
     if ('skipped' in prepared && prepared.skipped) return false;
-    console.error('[fulfillment-automation] ready email prepare failed:', 'error' in prepared ? prepared.error : '');
+    console.error(`[fulfillment-automation] ${type} email prepare failed:`, 'error' in prepared ? prepared.error : '');
     return false;
   }
   const sent = await sendMail({
@@ -105,7 +111,7 @@ async function sendReadyEmail(supabase: SupabaseClient, orderId: string): Promis
     html: prepared.html,
   });
   if (!sent.success) {
-    console.error('[fulfillment-automation] ready email send failed:', sent.error);
+    console.error(`[fulfillment-automation] ${type} email send failed:`, sent.error);
     return false;
   }
   return true;
@@ -134,18 +140,19 @@ export async function runFulfillmentAutomation(
     }
     const outcome = await createInvoiceForOrder(supabase, order.id);
     if (outcome.ok) {
-      // createInvoiceForOrder moved the order In Process → Ready.
       actions.push(outcome.linked ? 'invoice_linked' : 'invoice_created');
-      becameReady = order.status === 'In Process';
-    } else if (outcome.code === 'already_invoiced') {
-      // Raced with another runner (or an admin) — fall through to the claim.
-      becameReady = (await claimStatus(supabase, order.id, ['In Process'], 'Ready')) !== null;
-      if (becameReady) actions.push('marked_ready');
-    } else {
+    } else if (outcome.code !== 'already_invoiced') {
+      // already_invoiced just means we raced another runner (or an admin
+      // invoiced early — prepaid flow) — the status claim below still runs.
       console.error(`[fulfillment-automation] order ${order.id}: invoice failed (${outcome.code}): ${outcome.message}`);
       return actions;
     }
-  } else if (d.markReady) {
+  }
+
+  // Packed → Ready. Invoicing no longer moves status (2026-09-06 fix), so the
+  // claim happens here — and only on the packed path; the shipped close-out
+  // (d.markDone) goes straight to Done without a Ready detour.
+  if ((d.invoice || d.markReady) && !d.markDone) {
     becameReady = (await claimStatus(supabase, order.id, ['In Process'], 'Ready')) !== null;
     if (becameReady) actions.push('marked_ready');
   }
@@ -164,7 +171,7 @@ export async function runFulfillmentAutomation(
       },
     ]);
     if (d.sendReadyEmail) {
-      const sent = await sendReadyEmail(supabase, order.id);
+      const sent = await sendClientEmail(supabase, order.id, 'ready');
       if (sent) actions.push('ready_email_sent');
     }
   }
@@ -185,6 +192,10 @@ export async function runFulfillmentAutomation(
           visible_to_client: true,
         },
       ]);
+      // "Order picked up" client email (owner spec 2026-09-06) — fires exactly
+      // once because only the claimStatus winner reaches this branch.
+      const sent = await sendClientEmail(supabase, order.id, 'picked_up');
+      if (sent) actions.push('picked_up_email_sent');
       if (order.company_id) {
         try {
           await recalculateCompanyTargetPeriods(supabase, order.company_id);

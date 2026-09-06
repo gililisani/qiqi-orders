@@ -6,7 +6,7 @@ import { createInvoiceForOrder } from '../../../../lib/orderInvoice';
  * POST /api/netsuite/create-invoice  { orderId }
  *
  * Admin-triggered invoice creation. The core logic (detect-first, shipping
- * line, invoice columns + status 'Ready' + history) lives in
+ * line, invoice columns + history — deliberately NO status change) lives in
  * lib/orderInvoice.ts, shared with the fulfillment automation.
  */
 export async function POST(request: NextRequest) {

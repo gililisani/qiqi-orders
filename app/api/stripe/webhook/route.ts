@@ -3,6 +3,7 @@ import { createServiceRoleClient } from '../../../../platform/auth/guards';
 import { createStripeClient } from '../../../../lib/stripe';
 import { createNetSuiteAPI } from '../../../../lib/netsuite';
 import { getNetSuiteItem } from '../../../../lib/netsuiteItemMap';
+import { releasePaymentHoldIfSet } from '../../../../lib/orderHold';
 
 /**
  * POST /api/stripe/webhook
@@ -118,6 +119,10 @@ export async function POST(request: NextRequest) {
             // (a 500 here would re-run nothing: the paid gate skips it all).
             console.error('stripe webhook: history insert failed:', histErr.message);
           }
+
+          // Prepaid flow: the payment landing releases the payment hold and
+          // notifies the team that Push to Warehouse is now unlocked.
+          await releasePaymentHoldIfSet(supabase, order.id, 'Stripe payment');
         }
       } catch (e: any) {
         // Log and still 200 — Stripe retries on non-2xx; a DB hiccup shouldn't

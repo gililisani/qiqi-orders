@@ -32,6 +32,8 @@ import { Badge } from '../qq/badge';
 import { Alert, AlertDescription } from '../qq/alert';
 import { Separator } from '../qq/separator';
 import { StatusBadge } from '../qq/status-badge';
+import { displayOrderStatus } from '../../../lib/orderBadges';
+import { OrderBadges } from '../shared/OrderBadges';
 import {
   Table,
   TableHeader,
@@ -87,6 +89,9 @@ interface Order {
   payment_status?: string | null;
   stripe_hosted_url?: string | null;
   paid_at?: string | null;
+  hold?: string | null;
+  external_fulfillment_id?: string | null;
+  fulfillment_status?: string | null;
 }
 
 interface OrderItem {
@@ -281,7 +286,10 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <Field label="Status">
-              <StatusBadge status={order.status} />
+              <span className="inline-flex items-center gap-1.5 flex-wrap">
+                <StatusBadge status={displayOrderStatus(order)} />
+                <OrderBadges order={order} />
+              </span>
             </Field>
             <Field label="PO number">
               <span className="font-mono">

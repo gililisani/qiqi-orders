@@ -51,6 +51,8 @@ Notes:
 - Drafts: both admin and client can read and edit (save as draft or promote to Open).
 - Open: admin and client can edit. **Only admins can move past Open.**
 - Past Open (`Processing`, `Done`, etc.): client read-only.
+- **Status = package only** (redesign 2026-09-06): `Ready` is set exclusively by the warehouse packed signal or an admin — invoice creation/detection/payment-request must NEVER change status. Money + holds render as derived badges (`lib/orderBadges.ts`); "Closed" is a display-only state (Done + fully paid), never stored.
+- **`orders.hold`** (`awaiting_client` | `payment_hold` | null): `awaiting_client` set by Request Changes, cleared by the client's re-save. `payment_hold` set manually (or via the Push-to-NetSuite-only checkbox), **blocks the ShipHero push server-side**, auto-releases when payment lands (Stripe webhook / nightly invoice sync → history + email to orders@) — release is `lib/orderHold.ts`.
 - **Deletion** (single source: `orderDetailsUtils.ts` + `/api/orders/delete`): admins delete `Draft` or `Cancelled`; clients delete **`Cancelled` only** (product rule — a draft is cancelled first, then deleted).
 
 ## Email / files / integrations

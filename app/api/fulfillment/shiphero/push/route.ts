@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
         po_number,
         created_at,
         status,
+        hold,
         shipment_type,
         netsuite_so_id,
         external_fulfillment_id,
@@ -59,6 +60,20 @@ export async function POST(request: NextRequest) {
 
     if (orderError || !order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    // Payment hold gate (2026-09-06): the ONE server-side lock that keeps an
+    // unpaid prepaid order out of the warehouse. Accept composes this handler,
+    // so both paths are covered here. Clears automatically when payment lands
+    // (Stripe webhook / nightly invoice sync) or manually via /api/orders/hold.
+    if ((order as any).hold === 'payment_hold') {
+      return NextResponse.json(
+        {
+          error:
+            'This order is on a payment hold — it cannot go to the warehouse until the payment is received (or the hold is cleared).',
+        },
+        { status: 409 },
+      );
     }
 
     // Idempotency guard — but a CANCELLED warehouse order is dead, so a

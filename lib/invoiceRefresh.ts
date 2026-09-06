@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { NetSuiteAPI } from './netsuite';
+import { releasePaymentHoldIfSet } from './orderHold';
 
 /**
  * Shared core for refreshing the cached NetSuite invoice columns on orders
@@ -27,6 +28,7 @@ interface RefreshableOrder {
   po_number: string | null;
   netsuite_invoice_status: string | null;
   invoice_amount_remaining: number | null;
+  hold: string | null;
 }
 
 /** An invoice that is fully settled can't change — skip it in nightly runs. */
@@ -46,7 +48,7 @@ export async function refreshInvoices(
 ): Promise<RefreshResult> {
   let query = supabase
     .from('orders')
-    .select('id, netsuite_invoice_id, po_number, netsuite_invoice_status, invoice_amount_remaining')
+    .select('id, netsuite_invoice_id, po_number, netsuite_invoice_status, invoice_amount_remaining, hold')
     .not('netsuite_invoice_id', 'is', null);
 
   if (opts.onlyMissing) {
@@ -83,6 +85,18 @@ export async function refreshInvoices(
             .eq('id', o.id);
           if (updateErr) throw updateErr;
           refreshed += 1;
+
+          // A wire recorded in NetSuite settles the invoice overnight — that
+          // releases the payment hold (badge redesign 2026-09-06) and emails
+          // the team that Push to Warehouse is unlocked. Tolerant match, as
+          // always with NS status text.
+          const nowSettled = isSettled({
+            netsuite_invoice_status: inv.status ?? null,
+            invoice_amount_remaining: inv.amountRemaining,
+          });
+          if (o.hold === 'payment_hold' && nowSettled) {
+            await releasePaymentHoldIfSet(supabase, o.id, 'NetSuite invoice sync');
+          }
         } catch (err: any) {
           failures.push({
             orderId: o.id,

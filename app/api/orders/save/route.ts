@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
 
     const { data: existing, error: existingErr } = await supabase
       .from('orders')
-      .select('id, company_id, status')
+      .select('id, company_id, status, hold')
       .eq('id', orderId)
       .maybeSingle();
     if (existingErr) throw new Error(`order lookup: ${existingErr.message}`);
@@ -214,6 +214,17 @@ export async function POST(request: NextRequest) {
       p_items: money.items,
     });
     if (rpcErr) throw new Error(`order_save_update: ${rpcErr.message}`);
+
+    // A client re-saving after "Request changes" answers the request — the
+    // awaiting_client hold clears itself (badge redesign 2026-09-06). Only a
+    // non-draft client save counts; a draft is not yet an answer.
+    if (!isAdmin && (existing as any).hold === 'awaiting_client' && newStatus !== 'Draft') {
+      const { error: holdErr } = await supabase
+        .from('orders')
+        .update({ hold: null })
+        .eq('id', orderId);
+      if (holdErr) console.error('order save: failed to clear awaiting_client hold:', holdErr.message);
+    }
 
     const statusChanged = oldStatus !== newStatus;
     const { error: historyErr } = await supabase.from('order_history').insert({

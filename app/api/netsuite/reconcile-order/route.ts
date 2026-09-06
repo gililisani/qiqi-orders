@@ -118,10 +118,8 @@ export async function POST(request: NextRequest) {
       }
 
       const patch = await buildInvoicePatch(ns, invoice);
-      // An order with an invoice is "Ready". Only advance from In Process so we
-      // never move a Done/Cancelled order backwards.
-      const advanceToReady = order.status === 'In Process';
-      if (advanceToReady) patch.status = 'Ready';
+      // Deliberately no status change (fix 2026-09-06): billing is independent
+      // of the package — 'Ready' is the warehouse's (or an admin's) call.
 
       const { error: updateError } = await supabase
         .from('orders')
@@ -134,17 +132,15 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (advanceToReady) {
-        await supabase.from('order_history').insert([{
-          action_type: 'status_change',
-          order_id: orderId,
-          status_from: order.status,
-          status_to: 'Ready',
-          notes: `NetSuite Invoice detected (created in NetSuite): ${invoice.invoiceNumber}`,
-          changed_by_name: 'System',
-          changed_by_role: 'admin',
-        }]);
-      }
+      await supabase.from('order_history').insert([{
+        action_type: 'order_updated',
+        order_id: orderId,
+        status_from: order.status,
+        status_to: order.status,
+        notes: `NetSuite Invoice detected (created in NetSuite): ${invoice.invoiceNumber}`,
+        changed_by_name: 'System',
+        changed_by_role: 'admin',
+      }]);
 
       return NextResponse.json({
         reconciled: true,
@@ -205,9 +201,9 @@ export async function POST(request: NextRequest) {
       Object.assign(patch, await buildInvoicePatch(ns, invoice));
     }
 
-    const advanceToReady = !!invoice && order.status === 'In Process';
-    if (advanceToReady) patch.status = 'Ready';
-
+    // Deliberately no status change (fix 2026-09-06): an invoice existing in
+    // NetSuite says nothing about the package — 'Ready' stays with the
+    // warehouse signal (or an admin).
     const { error: updateError } = await supabase
       .from('orders')
       .update(patch)
@@ -220,13 +216,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (advanceToReady) {
+    if (invoice) {
       await supabase.from('order_history').insert([{
-        action_type: 'status_change',
+        action_type: 'order_updated',
         order_id: orderId,
         status_from: order.status,
-        status_to: 'Ready',
-        notes: `NetSuite Invoice detected (created in NetSuite): ${invoice!.invoiceNumber}`,
+        status_to: order.status,
+        notes: `NetSuite Invoice detected (created in NetSuite): ${invoice.invoiceNumber}`,
         changed_by_name: 'System',
         changed_by_role: 'admin',
       }]);

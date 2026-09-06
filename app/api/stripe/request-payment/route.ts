@@ -185,7 +185,8 @@ export async function POST(request: NextRequest) {
         stripe_invoice_number: stripeInvoice.number,
         stripe_hosted_url: stripeInvoice.hostedUrl,
         payment_status: 'pending',
-        status: 'Ready',
+        // No status change (fix 2026-09-06): requesting payment bills the
+        // order — it does not make the package pickup-ready.
       })
       .eq('id', orderId);
     if (persistErr) {
@@ -205,10 +206,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { error: histErr } = await supabase.from('order_history').insert([{
-      action_type: 'status_change',
+      action_type: 'order_updated',
       order_id: orderId,
       status_from: order.status,
-      status_to: 'Ready',
+      status_to: order.status,
       notes:
         `Sent for payment — Stripe invoice ${stripeInvoice.number} ($${nsTotal.toFixed(2)}), ` +
         `NetSuite invoice ${details.invoiceNumber} incl. ${feePercent}% card fee.`,

@@ -35,6 +35,8 @@ import { Alert, AlertDescription } from '../qq/alert';
 import { Pagination } from '../qq/pagination';
 import { EmptyState } from '../qq/empty-state';
 import { StatusBadge } from '../qq/status-badge';
+import { displayOrderStatus } from '../../../lib/orderBadges';
+import { HoldBadge } from '../shared/OrderBadges';
 import { SupportFundBadge } from '../qq/support-fund-badge';
 import {
   Table,
@@ -483,7 +485,10 @@ export default function AdminOrdersListView() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={order.status} />
+                        <span className="inline-flex items-center gap-1.5 flex-wrap">
+                          <StatusBadge status={displayOrderStatus(order as any)} />
+                          <HoldBadge hold={(order as any).hold} />
+                        </span>
                       </TableCell>
                       <TableCell
                         className={`text-right font-mono text-sm ${
