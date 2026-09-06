@@ -288,9 +288,13 @@ export function orderPickedUpTemplate(data: OrderEmailData): { subject: string; 
   };
 }
 
+/** What happened after a payment released a hold (owner spec 2026-09-06). */
+export type HoldReleaseOutcome = 'auto_pushed' | 'push_manually' | 'already_at_warehouse';
+
 /** Payment Hold Released — INTERNAL notification to the Qiqi team. Sent when a
- *  payment lands on an order that was blocked from the warehouse by a payment
- *  hold: the hold auto-cleared and someone should now click Push to Warehouse. */
+ *  payment lands on a held order: the hold auto-cleared and the Hub either
+ *  pushed to the warehouse automatically, found the order already there, or
+ *  needs an admin to push manually (with the reason). */
 export function paymentHoldReleasedTemplate(data: {
   poNumber: string;
   soNumber?: string | null;
@@ -299,22 +303,48 @@ export function paymentHoldReleasedTemplate(data: {
   siteUrl: string;
   /** How the payment was detected, e.g. 'Stripe payment' or 'NetSuite invoice sync'. */
   via: string;
+  outcome: HoldReleaseOutcome;
+  /** For 'push_manually': why the auto-push did not run. */
+  detail?: string;
 }): { subject: string; html: string } {
+  const orderRef = `Order <strong>${escapeHtml(data.poNumber)}</strong> for ${escapeHtml(data.companyName)}`;
+  const received = `the payment has been received (${escapeHtml(data.via)}) and the payment hold cleared itself`;
+
+  let heading: string;
+  let para: string;
+  let nextStep: string;
+  if (data.outcome === 'auto_pushed') {
+    heading = 'Paid — sent to the warehouse';
+    para = `${orderRef} was on a payment hold — ${received}. The order was pushed to the warehouse automatically; BrandFox takes it from here.`;
+    nextStep = 'None — the warehouse is packing';
+  } else if (data.outcome === 'already_at_warehouse') {
+    heading = 'Payment received';
+    para = `${orderRef} was on a payment hold — ${received}. The order is already at the warehouse, so there is nothing left to do.`;
+    nextStep = 'None';
+  } else {
+    heading = 'Payment hold released — push manually';
+    para = `${orderRef} was on a payment hold — ${received}. The order could <strong>not</strong> be pushed to the warehouse automatically${
+      data.detail ? `: ${escapeHtml(data.detail)}` : ''
+    }. Please push it manually.`;
+    nextStep = 'Push to Warehouse';
+  }
+
   const content = `
-    ${emailHeading('Payment received', 'Payment hold released')}
-    ${emailPara(
-      `Order <strong>${escapeHtml(data.poNumber)}</strong> for ${escapeHtml(data.companyName)} was on a payment hold — the payment has now been received (${escapeHtml(data.via)}) and the hold cleared itself. The order is unlocked and waiting for <strong>Push to Warehouse</strong>.`,
-    )}
+    ${emailHeading('Payment received', heading)}
+    ${emailPara(para)}
     ${emailFactCard([
       { label: 'PO number', value: escapeHtml(data.poNumber) },
       ...(data.soNumber ? [{ label: 'Sales order', value: escapeHtml(data.soNumber), mono: true }] : []),
       { label: 'Company', value: escapeHtml(data.companyName) },
-      { label: 'Next step', value: 'Push to Warehouse' },
+      { label: 'Next step', value: escapeHtml(nextStep) },
     ])}
     ${emailButton('Open the order', `${data.siteUrl}/admin/orders/${data.orderId}`)}
   `;
   return {
-    subject: `Payment received — order ${sanitizeEmailHeader(data.soNumber || data.poNumber)} released for the warehouse`,
+    subject:
+      data.outcome === 'auto_pushed'
+        ? `Paid — order ${sanitizeEmailHeader(data.soNumber || data.poNumber)} sent to the warehouse`
+        : `Payment received — order ${sanitizeEmailHeader(data.soNumber || data.poNumber)} hold released`,
     html: emailWrapper(content, { footerNote: 'Internal notification from the Qiqi Partners Hub.' }),
   };
 }

@@ -1,19 +1,23 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { sendMail } from './emailService';
-import { paymentHoldReleasedTemplate } from './emailTemplates';
+import { paymentHoldReleasedTemplate, type HoldReleaseOutcome } from './emailTemplates';
+import { pushOrderToWarehouse } from './fulfillment/pushOrder';
 
 /**
- * Payment-hold auto-release (status/badge redesign 2026-09-06).
+ * Payment-hold auto-release (status/badge redesign, owner spec 2026-09-06).
  *
  * Called from the two places a payment can land without an admin looking at
  * the order: the Stripe invoice.paid webhook and the nightly NetSuite invoice
- * sync. If the order carries a payment hold, clear it atomically, write a
- * history line, and email the team so the unlocked order doesn't sit
- * forgotten — the warehouse push stays a HUMAN click.
+ * sync. If the order carries a payment hold:
  *
- * Safe to call unconditionally: does nothing when no payment hold is set,
- * and the conditional UPDATE means concurrent callers release (and email)
- * at most once.
+ *   1. clear it atomically (concurrent callers act at most once),
+ *   2. AUTO-PUSH to ShipHero when the order has an SO and no live warehouse
+ *      order — setting the hold WAS the human decision "ship the moment the
+ *      money clears", so the automation just executes it,
+ *   3. email the team what happened (pushed automatically / push manually
+ *      with the reason / already at the warehouse), plus a history line.
+ *
+ * Safe to call unconditionally: does nothing when no payment hold is set.
  */
 export async function releasePaymentHoldIfSet(
   supabase: SupabaseClient,
@@ -26,7 +30,9 @@ export async function releasePaymentHoldIfSet(
     .update({ hold: null })
     .eq('id', orderId)
     .eq('hold', 'payment_hold')
-    .select('id, status, po_number, so_number, company_id');
+    .select(
+      'id, status, po_number, so_number, company_id, netsuite_so_id, external_fulfillment_id, fulfillment_status',
+    );
   if (error) {
     console.error('[payment-hold] release failed:', error.message);
     return false;
@@ -35,19 +41,55 @@ export async function releasePaymentHoldIfSet(
 
   const order = released[0];
 
+  // ---- Auto-push decision ----
+  const atWarehouse =
+    !!order.external_fulfillment_id && order.fulfillment_status !== 'cancelled';
+  let outcome: HoldReleaseOutcome;
+  let detail = '';
+
+  if (atWarehouse) {
+    outcome = 'already_at_warehouse';
+  } else if (!order.netsuite_so_id) {
+    outcome = 'push_manually';
+    detail = 'the order has no NetSuite Sales Order yet';
+  } else if (!['In Process', 'Ready'].includes(order.status)) {
+    // Conservative gate for the automated path only — manual push stays
+    // available regardless of status, same as before.
+    outcome = 'push_manually';
+    detail = `the order status is "${order.status}"`;
+  } else {
+    const push = await pushOrderToWarehouse(supabase, orderId, { trigger: 'payment_release' });
+    if (push.ok && !push.dryRun) {
+      outcome = 'auto_pushed';
+      if (push.warning) detail = push.warning;
+    } else if (push.ok && push.dryRun) {
+      outcome = 'push_manually';
+      detail = 'ShipHero dry-run mode is on — nothing was sent';
+    } else {
+      outcome = 'push_manually';
+      detail = push.message;
+    }
+  }
+
   await supabase.from('order_history').insert([
     {
       action_type: 'order_updated',
       order_id: orderId,
       status_from: order.status,
       status_to: order.status,
-      notes: `Payment received (${via}) — payment hold released. The order can now be pushed to the warehouse.`,
+      notes:
+        `Payment received (${via}) — payment hold released.` +
+        (outcome === 'auto_pushed'
+          ? ' Order pushed to the warehouse automatically.'
+          : outcome === 'already_at_warehouse'
+            ? ' Order is already at the warehouse.'
+            : ` Auto-push to the warehouse did not run (${detail}) — push manually.`),
       changed_by_name: 'System',
       changed_by_role: 'admin',
     },
   ]);
 
-  // Internal heads-up so the unlocked order gets its Push to Warehouse click.
+  // Internal heads-up so the team knows what happened (and what's left to do).
   try {
     let companyName = 'Unknown company';
     if (order.company_id) {
@@ -66,6 +108,8 @@ export async function releasePaymentHoldIfSet(
       orderId,
       siteUrl,
       via,
+      outcome,
+      detail,
     });
     const sent = await sendMail({
       to: 'orders@qiqiglobal.com',

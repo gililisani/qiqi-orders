@@ -7,11 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     await requireAdminWithPermission(request, 'orders:edit');
 
-    // paymentHold: the "Hold warehouse push until payment received" checkbox
-    // on "Push to NetSuite only" (prepaid flow, 2026-09-06). Setting it here,
-    // in the same server action, means the SO can never exist without its
-    // intended lock. Accept never sends it.
-    const { orderId, paymentHold } = await request.json();
+    const { orderId } = await request.json();
     if (!orderId) {
       return NextResponse.json({ error: 'orderId is required' }, { status: 400 });
     }
@@ -140,7 +136,6 @@ export async function POST(request: NextRequest) {
         so_number: soNumber,
         status: 'In Process',
         location_id: resolvedLocationId,
-        ...(paymentHold === true ? { hold: 'payment_hold' } : {}),
       })
       .eq('id', orderId);
 
@@ -159,19 +154,6 @@ export async function POST(request: NextRequest) {
       changed_by_name: 'System',
       changed_by_role: 'admin',
     }]);
-
-    if (paymentHold === true) {
-      await supabase.from('order_history').insert([{
-        action_type: 'order_updated',
-        order_id: orderId,
-        status_from: 'In Process',
-        status_to: 'In Process',
-        notes:
-          'Payment hold set — the order will not go to the warehouse until the payment is received (or the hold is cleared).',
-        changed_by_name: 'System',
-        changed_by_role: 'admin',
-      }]);
-    }
 
     return NextResponse.json({ success: true, nsSOId, soNumber });
   } catch (error: any) {

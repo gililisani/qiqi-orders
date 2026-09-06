@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../platform/auth/guards';
-import { getFulfillmentProvider } from '../../../../../lib/fulfillment';
-import { buildNormalizedOrder, countryToken } from '../../../../../lib/fulfillment/normalize';
-import { shipmentTypeByCode } from '../../../../../lib/shipmentTypes';
+import { pushOrderToWarehouse } from '../../../../../lib/fulfillment/pushOrder';
 
 /**
  * POST /api/fulfillment/shiphero/push  { orderId }
  *
- * Admin-only manual push of a Hub order to ShipHero, mirroring the NetSuite
- * "push SO" action. Idempotent: refuses if the order already has a fulfillment
- * id. Respects the dry-run gate — in dry-run nothing is sent and nothing is
- * written; we return the exact payload that WOULD be sent for review.
+ * Admin-triggered push of a Hub order to ShipHero. The core (validations,
+ * idempotency, dry-run gate, hold-clearing) lives in lib/fulfillment/
+ * pushOrder.ts, shared with the payment-hold auto-release. Pushing a held
+ * order is a deliberate override — the UI confirms first, and the push
+ * clears the hold.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -22,170 +21,19 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createServiceRoleClient();
+    const outcome = await pushOrderToWarehouse(supabase, orderId, { trigger: 'manual' });
 
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select(`
-        id,
-        so_number,
-        po_number,
-        created_at,
-        status,
-        hold,
-        shipment_type,
-        netsuite_so_id,
-        external_fulfillment_id,
-        fulfillment_status,
-        company:companies(
-          company_name,
-          ship_to_contact_name,
-          ship_to_contact_email,
-          ship_to_contact_phone,
-          ship_to_street_line_1,
-          ship_to_street_line_2,
-          ship_to_city,
-          ship_to_state,
-          ship_to_postal_code,
-          ship_to_country
-        ),
-        order_items(
-          id,
-          quantity,
-          unit_price,
-          product:Products(sku, item_name)
-        )
-      `)
-      .eq('id', orderId)
-      .single();
-
-    if (orderError || !order) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    if (!outcome.ok) {
+      return NextResponse.json({ error: outcome.message }, { status: outcome.httpStatus });
     }
-
-    // Payment hold gate (2026-09-06): the ONE server-side lock that keeps an
-    // unpaid prepaid order out of the warehouse. Accept composes this handler,
-    // so both paths are covered here. Clears automatically when payment lands
-    // (Stripe webhook / nightly invoice sync) or manually via /api/orders/hold.
-    if ((order as any).hold === 'payment_hold') {
-      return NextResponse.json(
-        {
-          error:
-            'This order is on a payment hold — it cannot go to the warehouse until the payment is received (or the hold is cleared).',
-        },
-        { status: 409 },
-      );
+    if (outcome.dryRun) {
+      return NextResponse.json({ success: true, dryRun: true, request: outcome.request });
     }
-
-    // Idempotency guard — but a CANCELLED warehouse order is dead, so a
-    // re-push creates a fresh one (reinstated orders; new SO number = new
-    // warehouse order number, no collision on ShipHero's side).
-    if (order.external_fulfillment_id && order.fulfillment_status !== 'cancelled') {
-      return NextResponse.json(
-        { error: `This order was already sent to ShipHero (${order.external_fulfillment_id}).` },
-        { status: 409 },
-      );
-    }
-
-    // NetSuite-first is a hard requirement: the order must have a NetSuite Sales
-    // Order before it can go to the warehouse.
-    if (!order.netsuite_so_id) {
-      return NextResponse.json(
-        { error: 'Create the NetSuite Sales Order before sending this order to ShipHero.' },
-        { status: 400 },
-      );
-    }
-
-    const company = Array.isArray(order.company) ? order.company[0] : order.company;
-    if (!company) {
-      return NextResponse.json({ error: 'Order has no company' }, { status: 400 });
-    }
-
-    // The warehouse order number is {SO}-{Country}-{type code} — every segment
-    // must exist before we push, so failures are clear instead of a malformed
-    // number landing at BrandFox.
-    if (!shipmentTypeByCode(order.shipment_type)) {
-      return NextResponse.json(
-        { error: 'Set the order\'s Shipment Type before sending it to the warehouse.' },
-        { status: 400 },
-      );
-    }
-    if (!order.so_number?.trim()) {
-      return NextResponse.json(
-        { error: 'The order has no NetSuite SO number yet — needed for the warehouse order number.' },
-        { status: 400 },
-      );
-    }
-    if (!countryToken(company.ship_to_country)) {
-      return NextResponse.json(
-        { error: 'The company has no Ship To country — needed for the warehouse order number.' },
-        { status: 400 },
-      );
-    }
-
-    const normalized = buildNormalizedOrder({
-      order: {
-        id: order.id,
-        so_number: order.so_number,
-        po_number: order.po_number,
-        created_at: order.created_at,
-        shipment_type: order.shipment_type,
-      },
-      company,
-      items: (order.order_items ?? []).map((it: any) => ({
-        id: it.id,
-        quantity: it.quantity,
-        unit_price: it.unit_price,
-        product: Array.isArray(it.product) ? it.product[0] : it.product,
-      })),
+    return NextResponse.json({
+      success: true,
+      externalId: outcome.externalId,
+      ...(outcome.warning ? { warning: outcome.warning } : {}),
     });
-
-    if (normalized.lineItems.length === 0) {
-      return NextResponse.json({ error: 'Order has no fulfillable line items (missing SKUs).' }, { status: 400 });
-    }
-
-    const provider = getFulfillmentProvider('shiphero');
-    const result = await provider.createOrder(normalized);
-
-    // Dry-run: report what would be sent, write nothing.
-    if (result.dryRun) {
-      return NextResponse.json({ success: true, dryRun: true, request: result.request });
-    }
-
-    const { error: updateError } = await supabase
-      .from('orders')
-      .update({
-        fulfillment_provider: provider.name,
-        external_fulfillment_id: result.externalId,
-        external_fulfillment_legacy_id: result.externalLegacyId ?? null,
-        fulfillment_status: 'pending',
-        fulfillment_synced_at: new Date().toISOString(),
-      })
-      .eq('id', orderId);
-
-    if (updateError) {
-      console.error('shiphero push: failed to store fulfillment id:', updateError);
-      // The order WAS created in ShipHero — surface success so the admin knows,
-      // but flag that the Hub link didn't save.
-      return NextResponse.json({
-        success: true,
-        externalId: result.externalId,
-        warning: 'Order created in ShipHero but the Hub link failed to save.',
-      });
-    }
-
-    await supabase.from('order_history').insert([
-      {
-        action_type: 'order_updated',
-        order_id: orderId,
-        status_from: order.status,
-        status_to: order.status,
-        notes: `Sent to ShipHero for fulfillment (id ${result.externalId}).`,
-        changed_by_name: 'System',
-        changed_by_role: 'admin',
-      },
-    ]);
-
-    return NextResponse.json({ success: true, externalId: result.externalId });
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('shiphero push error:', error);

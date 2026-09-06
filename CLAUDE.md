@@ -52,7 +52,7 @@ Notes:
 - Open: admin and client can edit. **Only admins can move past Open.**
 - Past Open (`Processing`, `Done`, etc.): client read-only.
 - **Status = package only** (redesign 2026-09-06): `Ready` is set exclusively by the warehouse packed signal or an admin — invoice creation/detection/payment-request must NEVER change status. Money + holds render as derived badges (`lib/orderBadges.ts`); "Closed" is a display-only state (Done + fully paid), never stored.
-- **`orders.hold`** (`awaiting_client` | `payment_hold` | null): `awaiting_client` set by Request Changes, cleared by the client's re-save. `payment_hold` set manually (or via the Push-to-NetSuite-only checkbox), **blocks the ShipHero push server-side**, auto-releases when payment lands (Stripe webhook / nightly invoice sync → history + email to orders@) — release is `lib/orderHold.ts`.
+- **`orders.hold`** (`awaiting_client` | `payment_hold` | null): `awaiting_client` set by Request Changes, cleared by the client's re-save. `payment_hold` is a **marker + automation trigger, NOT a lock** (owner spec 2026-09-06): set/cleared manually via the ⋯ menu (Open→Ready); when payment is recorded (Stripe webhook instantly, NetSuite wires via nightly invoice sync) the hold clears and the order **auto-pushes to ShipHero** if it has an SO and no live warehouse order (`lib/orderHold.ts` → `lib/fulfillment/pushOrder.ts`), with history + outcome email to orders@. Accepting/pushing a held order manually is allowed — the UI warns and the push clears the hold server-side.
 - **Deletion** (single source: `orderDetailsUtils.ts` + `/api/orders/delete`): admins delete `Draft` or `Cancelled`; clients delete **`Cancelled` only** (product rule — a draft is cancelled first, then deleted).
 
 ## Email / files / integrations

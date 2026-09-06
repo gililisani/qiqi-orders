@@ -428,9 +428,6 @@ export default function AdminOrderDetailsView({
   const [requestChangesMessage, setRequestChangesMessage] = useState('');
   const [sendingRequestChanges, setSendingRequestChanges] = useState(false);
   const [shipHeroLoading, setShipHeroLoading] = useState(false);
-  // "Push to NetSuite only" modal (prepaid flow) + its payment-hold checkbox.
-  const [showPushNsOnlyModal, setShowPushNsOnlyModal] = useState(false);
-  const [pushNsHold, setPushNsHold] = useState(false);
   const [holdLoading, setHoldLoading] = useState(false);
 
   // Reconciliation runs once per (orderId) when an order has a so_number set
@@ -488,16 +485,13 @@ export default function AdminOrderDetailsView({
     runReconcile();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only fetch; fn identity changes every render
   }, [order?.id, order?.netsuite_so_id, order?.so_number, order?.netsuite_invoice_id, runReconcile]);
-  const handleNsAction = async (
-    action: 'push-so' | 'create-invoice' | 'sync-invoice',
-    opts?: { skipConfirm?: boolean; extraBody?: Record<string, unknown> },
-  ) => {
-    if (action === 'push-so' && !opts?.skipConfirm) {
+  const handleNsAction = async (action: 'push-so' | 'create-invoice' | 'sync-invoice') => {
+    if (action === 'push-so') {
       const ok = await confirm({
-        title: 'Push order to NetSuite?',
+        title: 'Create the NetSuite Sales Order?',
         description:
-          'This action will create a Sales Order in NetSuite. Are you sure you want to continue?',
-        confirmLabel: 'Push to NetSuite',
+          'This creates the Sales Order in NetSuite and moves the order to In Process — without sending it to the warehouse.',
+        confirmLabel: 'Create NS SO',
       });
       if (!ok) return;
     }
@@ -506,19 +500,15 @@ export default function AdminOrderDetailsView({
       const res = await fetchWithAuth(`/api/netsuite/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, ...(opts?.extraBody ?? {}) }),
+        body: JSON.stringify({ orderId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
 
       if (action === 'push-so') {
         const url = salesOrderUrl(data.nsSOId);
-        const heldNote =
-          opts?.extraBody?.paymentHold === true
-            ? ' Payment hold set — the warehouse push stays locked until the payment lands.'
-            : '';
         toast.success(
-          `Sales Order ${data.soNumber} created in NetSuite. Status moved to "In Process".${heldNote}`,
+          `Sales Order ${data.soNumber} created in NetSuite. Status moved to "In Process".`,
           url ? { href: { url, label: 'View in NetSuite' } } : undefined
         );
       } else if (action === 'create-invoice') {
@@ -565,10 +555,18 @@ export default function AdminOrderDetailsView({
   // orchestration in /api/orders/accept). Replaces the old two-step
   // Push-to-NetSuite → "Send to warehouse?" flow for Open orders.
   const handleAcceptOrder = async () => {
+    const held = order?.hold === 'payment_hold';
     const ok = await confirm({
       title: 'Accept this order?',
       description:
         'This creates the NetSuite Sales Order and sends the order to the warehouse (BrandFox) for fulfillment.',
+      // Overriding a payment hold is allowed but never accidental.
+      ...(held
+        ? {
+            warning:
+              'This order is on a payment hold — accepting sends it to the warehouse BEFORE payment. The hold will be cleared.',
+          }
+        : {}),
       confirmLabel: 'Accept Order',
     });
     if (!ok) return;
@@ -715,23 +713,25 @@ export default function AdminOrderDetailsView({
     }
   };
 
-  // Manual payment-hold toggle (badge redesign 2026-09-06). Setting it locks
-  // Push to Warehouse server-side; clearing unlocks. The automatic release
-  // (payment lands) happens without this — Stripe webhook / nightly NS sync.
+  // Manual payment-hold toggle (owner spec 2026-09-06). The hold is a marker
+  // + automation trigger, not a lock: when payment is recorded (Stripe
+  // instantly, NetSuite wires on the nightly sync) the hold clears and the
+  // order pushes to the warehouse AUTOMATICALLY. Accepting or pushing a held
+  // order manually is allowed — it warns first and clears the hold.
   const handleSetHold = async (hold: 'payment_hold' | null) => {
     const ok = await confirm(
       hold === 'payment_hold'
         ? {
             title: 'Set payment hold?',
             description:
-              'The order will not go to the warehouse until the payment is received. The hold releases itself when the payment lands (Stripe instantly, bank wires after the nightly NetSuite sync) — or you can clear it manually anytime.',
+              'Marks the order as waiting for payment, so every admin sees why it is not at the warehouse. When the payment is recorded (Stripe instantly, bank wires after the nightly NetSuite sync), the hold clears and the order is pushed to the warehouse automatically. You can also push manually anytime — that clears the hold too.',
             confirmLabel: 'Set payment hold',
           }
         : {
             title: 'Clear the hold?',
             description:
               order?.hold === 'payment_hold'
-                ? 'This unlocks Push to Warehouse even though the payment has not been received yet.'
+                ? 'This removes the payment-hold badge. The order will NOT be pushed to the warehouse automatically when payment lands — pushing becomes your call.'
                 : 'This removes the "Awaiting client" badge without waiting for the client to re-save the order.',
             confirmLabel: 'Clear hold',
           },
@@ -808,6 +808,17 @@ export default function AdminOrderDetailsView({
   // gate (in dry-run nothing is sent and we surface the would-send payload).
   const handleSendToShipHero = async () => {
     if (!order || shipHeroLoading) return;
+    // No confirm on the normal path — but pushing a HELD order is an
+    // override: warn, and the push clears the hold (server-side).
+    if (order.hold === 'payment_hold') {
+      const ok = await confirm({
+        title: 'Push despite the payment hold?',
+        description:
+          'The payment has not been received yet. Pushing sends the order to the warehouse now and clears the payment hold.',
+        confirmLabel: 'Push to Warehouse',
+      });
+      if (!ok) return;
+    }
     setShipHeroLoading(true);
     try {
       const res = await fetchWithAuth('/api/fulfillment/shiphero/push', {
@@ -1089,16 +1100,6 @@ export default function AdminOrderDetailsView({
       // The bare NetSuite push remains for edge cases: an order past Open
       // whose SO link was removed (unlink / manual fixes).
       if (originalStatus === 'Open') {
-        // A payment hold on an Open order (prepaid client, flagged on
-        // arrival) replaces Accept with the NS-only push: the SO/invoice is
-        // needed to collect payment, while the warehouse leg stays locked
-        // until the hold releases (owner fix 2026-09-06).
-        if (order.hold === 'payment_hold') {
-          return {
-            action: 'push-so' as const,
-            label: nsLoading === 'push-so' ? 'Pushing…' : 'Push to NetSuite',
-          };
-        }
         return {
           action: 'accept' as const,
           label: accepting ? 'Accepting…' : 'Accept Order',
@@ -1117,12 +1118,12 @@ export default function AdminOrderDetailsView({
       !!(order as any).external_fulfillment_id &&
       (order as any).fulfillment_status !== 'cancelled';
     if (!inWarehouse && ['In Process', 'Ready', 'Done'].includes(originalStatus)) {
-      // Payment hold locks the button (server-side too) — visible but
-      // disabled, so it's obvious WHY the order isn't moving.
+      // A payment hold does NOT disable the button (owner spec 2026-09-06):
+      // pushing a held order is allowed as a deliberate override — the click
+      // handler warns first, and the push clears the hold.
       return {
         action: 'push-warehouse' as const,
         label: shipHeroLoading ? 'Sending…' : 'Push to Warehouse',
-        locked: order.hold === 'payment_hold',
       };
     }
     // While checking NetSuite for an existing invoice, suppress the Create
@@ -1210,12 +1211,6 @@ export default function AdminOrderDetailsView({
                           ? handleSendToShipHero()
                           : handleNsAction(nsPrimary.action)
                     }
-                    disabled={'locked' in nsPrimary && nsPrimary.locked}
-                    title={
-                      'locked' in nsPrimary && nsPrimary.locked
-                        ? 'Payment hold — releases when the payment lands, or clear it from the ⋯ menu.'
-                        : undefined
-                    }
                     loading={
                       nsPrimary.action === 'accept'
                         ? accepting
@@ -1225,12 +1220,7 @@ export default function AdminOrderDetailsView({
                     }
                   >
                     {nsPrimary.action === 'accept' && <CheckCircle2 className="h-4 w-4" />}
-                    {nsPrimary.action === 'push-warehouse' &&
-                      ('locked' in nsPrimary && nsPrimary.locked ? (
-                        <Lock className="h-4 w-4" />
-                      ) : (
-                        <Truck className="h-4 w-4" />
-                      ))}
+                    {nsPrimary.action === 'push-warehouse' && <Truck className="h-4 w-4" />}
                     {nsPrimary.label}
                   </Button>
                 )}
@@ -1331,18 +1321,12 @@ export default function AdminOrderDetailsView({
                 {/* Prepaid-client path: create the NetSuite SO WITHOUT
                     sending to the warehouse (owner spec 2026-09-03). The
                     warehouse leg follows via Push to Warehouse once paid. */}
-                {/* Hidden once a payment hold is set — the primary button IS
-                    the NS-only push then, checkbox no longer needed. */}
-                {originalStatus === 'Open' && !order.netsuite_so_id && order.hold !== 'payment_hold' && (
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setPushNsHold(false);
-                      setShowPushNsOnlyModal(true);
-                    }}
-                    disabled={nsLoading === 'push-so'}
-                  >
+                {/* Prepaid path: create the SO without the warehouse leg —
+                    invoice next, then the payment hold does the waiting. */}
+                {originalStatus === 'Open' && !order.netsuite_so_id && (
+                  <DropdownMenuItem onClick={() => handleNsAction('push-so')} disabled={nsLoading === 'push-so'}>
                     <Package className="h-4 w-4 mr-2" />
-                    {nsLoading === 'push-so' ? 'Pushing…' : 'Push to NetSuite only'}
+                    {nsLoading === 'push-so' ? 'Creating…' : 'Create NetSuite SO'}
                   </DropdownMenuItem>
                 )}
                 {/* Manual payment-hold toggle. Offered from the moment the
@@ -2173,77 +2157,6 @@ export default function AdminOrderDetailsView({
             </Button>
             <Button onClick={handleRequestChanges} loading={sendingRequestChanges}>
               {sendingRequestChanges ? 'Sending…' : 'Send request'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Push to NetSuite only — the prepaid flow (owner spec 2026-09-06):
-          create the SO without sending to the warehouse, with a deliberately
-          BIG hold checkbox so the "wait for the money" decision can't be
-          missed. */}
-      <Dialog open={showPushNsOnlyModal} onOpenChange={setShowPushNsOnlyModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Push to NetSuite only</DialogTitle>
-            <DialogDescription>
-              Creates the Sales Order in NetSuite and moves the order to In Process — without
-              sending it to the warehouse. The warehouse push stays a separate click.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-2">
-            <button
-              type="button"
-              onClick={() => setPushNsHold((v) => !v)}
-              className={`w-full text-left rounded-lg border-2 p-4 transition-colors ${
-                pushNsHold
-                  ? 'border-foreground bg-secondary'
-                  : 'border-border hover:border-muted-foreground/50'
-              }`}
-            >
-              <span className="flex items-start gap-3">
-                <span
-                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded border-2 ${
-                    pushNsHold
-                      ? 'border-foreground bg-foreground text-background'
-                      : 'border-muted-foreground/40'
-                  }`}
-                  aria-hidden
-                >
-                  {pushNsHold && <CheckCircle2 className="h-4 w-4" />}
-                </span>
-                <span>
-                  <span className="block text-sm font-semibold text-foreground">
-                    Hold the warehouse push until payment is received
-                  </span>
-                  <span className="mt-1 block text-xs text-muted-foreground leading-relaxed">
-                    Locks Push to Warehouse. The hold releases itself when the payment lands
-                    (Stripe instantly, bank wires after the nightly NetSuite sync) — or you can
-                    clear it manually anytime from the ⋯ menu.
-                  </span>
-                </span>
-              </span>
-            </button>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowPushNsOnlyModal(false)}
-              disabled={nsLoading === 'push-so'}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                setShowPushNsOnlyModal(false);
-                await handleNsAction('push-so', {
-                  skipConfirm: true,
-                  extraBody: { paymentHold: pushNsHold },
-                });
-              }}
-              loading={nsLoading === 'push-so'}
-            >
-              {pushNsHold ? 'Push to NetSuite & hold' : 'Push to NetSuite'}
             </Button>
           </DialogFooter>
         </DialogContent>
