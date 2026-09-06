@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       .select(`
         id,
         status,
+        hold,
         netsuite_so_id,
         so_number,
         shipment_type,
@@ -54,6 +55,20 @@ export async function POST(request: NextRequest) {
     }
 
     const company = Array.isArray(order.company) ? order.company[0] : order.company;
+
+    // Payment hold blocks Accept up front (2026-09-06): half of Accept is the
+    // warehouse push, which the hold locks. The right move for a held order
+    // is Push to NetSuite (SO/invoice to collect payment) — the warehouse
+    // leg unlocks when the payment lands.
+    if ((order as any).hold === 'payment_hold') {
+      return NextResponse.json(
+        {
+          error:
+            'This order is on a payment hold — use "Push to NetSuite" to create the Sales Order and collect payment; the warehouse push unlocks when the payment is received (or the hold is cleared).',
+        },
+        { status: 409 },
+      );
+    }
 
     const isFreshAccept = order.status === 'Open' && !order.netsuite_so_id;
     const isResume =

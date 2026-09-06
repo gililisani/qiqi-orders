@@ -1089,6 +1089,16 @@ export default function AdminOrderDetailsView({
       // The bare NetSuite push remains for edge cases: an order past Open
       // whose SO link was removed (unlink / manual fixes).
       if (originalStatus === 'Open') {
+        // A payment hold on an Open order (prepaid client, flagged on
+        // arrival) replaces Accept with the NS-only push: the SO/invoice is
+        // needed to collect payment, while the warehouse leg stays locked
+        // until the hold releases (owner fix 2026-09-06).
+        if (order.hold === 'payment_hold') {
+          return {
+            action: 'push-so' as const,
+            label: nsLoading === 'push-so' ? 'Pushing…' : 'Push to NetSuite',
+          };
+        }
         return {
           action: 'accept' as const,
           label: accepting ? 'Accepting…' : 'Accept Order',
@@ -1321,7 +1331,9 @@ export default function AdminOrderDetailsView({
                 {/* Prepaid-client path: create the NetSuite SO WITHOUT
                     sending to the warehouse (owner spec 2026-09-03). The
                     warehouse leg follows via Push to Warehouse once paid. */}
-                {originalStatus === 'Open' && !order.netsuite_so_id && (
+                {/* Hidden once a payment hold is set — the primary button IS
+                    the NS-only push then, checkbox no longer needed. */}
+                {originalStatus === 'Open' && !order.netsuite_so_id && order.hold !== 'payment_hold' && (
                   <DropdownMenuItem
                     onClick={() => {
                       setPushNsHold(false);
@@ -1333,11 +1345,13 @@ export default function AdminOrderDetailsView({
                     {nsLoading === 'push-so' ? 'Pushing…' : 'Push to NetSuite only'}
                   </DropdownMenuItem>
                 )}
-                {/* Manual payment-hold toggle. Setting is offered while the
-                    order is in flight and unpaid; clearing whenever a hold
-                    exists (payment_hold or a stale awaiting_client). */}
+                {/* Manual payment-hold toggle. Offered from the moment the
+                    order arrives (Open — flag prepaid clients on sight, so
+                    every admin sees why it isn't accepted) until it's paid;
+                    clearing whenever a hold exists (payment_hold or a stale
+                    awaiting_client). */}
                 {!order.hold &&
-                  ['In Process', 'Ready'].includes(originalStatus) &&
+                  ['Open', 'In Process', 'Ready'].includes(originalStatus) &&
                   !isOrderPaid(order as any) && (
                     <DropdownMenuItem
                       onClick={() => handleSetHold('payment_hold')}
