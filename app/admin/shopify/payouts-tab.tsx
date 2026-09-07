@@ -168,8 +168,15 @@ function ShopifyPayoutsCard() {
                     <NsLink href={p.links.bill} label="Fee bill" />
                     <NsLink href={p.links.journal} label="Journal" />
                   </div>
+                ) : p.issued_at < '2026-08-20' ? (
+                  // Before the Loop E cutover — booked manually by the
+                  // bookkeeper, so no Hub links exist. Expected.
+                  <span className="text-xs text-muted-foreground">pre-Hub (manual era)</span>
                 ) : (
-                  <span className="text-xs text-muted-foreground">pre-Hub</span>
+                  // Cutover-era payout the daily 14:00 UTC cron hasn't
+                  // booked yet (it books payouts once Shopify marks them
+                  // PAID) — links appear after the next run.
+                  <span className="text-xs text-muted-foreground">awaiting daily booking</span>
                 )}
               </TableCell>
             </TableRow>
