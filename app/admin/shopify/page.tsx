@@ -9,7 +9,7 @@ import { Skeleton } from '../../components/qq/skeleton';
 import { Button } from '../../components/qq/button';
 import { ReportsCard } from './reports-card';
 import { StatementsTab } from './statements-tab';
-import { AffirmRemittances } from './affirm-remittances';
+import { PayoutsTab } from './payouts-tab';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/qq/tabs';
 import {
   Table,
@@ -616,55 +616,9 @@ export default function ShopifySyncDashboard() {
             </TabsContent>
 
             <TabsContent value="payouts">
-          {/* Payouts */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Payouts</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.payouts.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No payouts booked yet.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Payout</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-right">Net to bank</TableHead>
-                      <TableHead className="text-right">Fees</TableHead>
-                      <TableHead>State</TableHead>
-                      <TableHead>NetSuite</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.payouts.map((p) => (
-                      <TableRow key={p.shopify_payout_id}>
-                        <TableCell className="font-mono text-xs">{p.shopify_payout_id}</TableCell>
-                        <TableCell>{new Date(p.issued_at).toLocaleDateString()}</TableCell>
-                        <TableCell className={cn('text-right tabular-nums', p.net_cents < 0 && 'text-brand-magenta')}>
-                          {money(p.net_cents)}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">{money(p.fee_cents)}</TableCell>
-                        <TableCell>
-                          <StateBadge state={p.state === 'booked' ? 'fulfilled' : p.state} label={p.state === 'booked' ? 'paid' : undefined} />
-                          {p.error_message && (
-                            <span className="ml-1 text-xs text-muted-foreground">{p.error_message.slice(0, 60)}</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2 text-xs">
-                            <NsLink href={p.links.bill} label="Fee bill" />
-                            <NsLink href={p.links.journal} label="Journal" />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-          <AffirmRemittances />
+              {/* Full-2026 payout activity: Shopify / PayPal / Affirm, each
+                  paged at 10 rows (payouts-tab.tsx). */}
+              <PayoutsTab />
             </TabsContent>
 
             <TabsContent value="reports">

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   try {
     await requireAdminWithPermission(request, 'shopify:view');
     const to = new Date().toISOString().slice(0, 10);
-    const from = new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10);
+    const from = '2026-01-01'; // full-year payout activity (owner 2026-09-07)
     const events = await fetchAffirmEvents({ after: from, before: to });
     const byDeposit = new Map<string, { date: string; sales: number; refunds: number; fees: number; net: number; events: number }>();
     for (const e of events) {

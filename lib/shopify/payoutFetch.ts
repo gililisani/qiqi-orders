@@ -126,3 +126,52 @@ export async function fetchRecentPayouts(opts: { count: number }): Promise<Fetch
     txns: grouped.get(`gid://shopify/ShopifyPaymentsPayout/${p.legacyResourceId}`) ?? [],
   }));
 }
+
+/**
+ * Light payout listing for the dashboard's Payouts tab: every payout since
+ * `sinceDate` (any status), newest-first, WITHOUT the balance-transaction
+ * expansion fetchRecentPayouts does — cheap enough for a full year.
+ */
+export async function fetchPayoutList(sinceDate: string): Promise<ShopifyPayoutNode[]> {
+  const out: ShopifyPayoutNode[] = [];
+  let cursor: string | null = null;
+  for (let page = 0; page < 40; page++) {
+    const data: any = await shopifyGraphQL(
+      `query P($cursor: String) {
+        shopifyPaymentsAccount {
+          payouts(first: 50, after: $cursor, sortKey: ISSUED_AT, reverse: true) {
+            nodes {
+              id legacyResourceId issuedAt status transactionType
+              net { amount currencyCode }
+              summary {
+                adjustmentsFee { amount }
+                adjustmentsGross { amount }
+                chargesFee { amount }
+                chargesGross { amount }
+                refundsFee { amount }
+                refundsFeeGross { amount }
+                reservedFundsFee { amount }
+                reservedFundsGross { amount }
+                retriedPayoutsFee { amount }
+                retriedPayoutsGross { amount }
+              }
+            }
+            pageInfo { hasNextPage endCursor }
+          }
+        }
+      }`,
+      { cursor },
+    );
+    const conn = data.shopifyPaymentsAccount?.payouts;
+    if (!conn) break;
+    let past = false;
+    for (const p of conn.nodes as ShopifyPayoutNode[]) {
+      const d = String(p.issuedAt).slice(0, 10);
+      if (d >= sinceDate) out.push(p);
+      else past = true;
+    }
+    if (past || !conn.pageInfo.hasNextPage) break;
+    cursor = conn.pageInfo.endCursor;
+  }
+  return out;
+}
