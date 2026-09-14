@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildOrderPlan } from '@/lib/shopify/core/orderTransform';
-import { runOrderPipeline, PipelineError, type NsApi } from '@/lib/shopify/engine/pipeline';
+import { runOrderPipeline, clampNsCity, PipelineError, type NsApi } from '@/lib/shopify/engine/pipeline';
 import { ENGINE_CONFIG, type EngineConfig } from '@/lib/shopify/engine/config';
 import { loadOrder, fixtureSkus } from '../helpers/shopifyFixtures';
 
@@ -172,6 +172,53 @@ describe('runOrderPipeline', () => {
     const { ns, creates } = fakeNs();
     await expect(runOrderPipeline(plan, ns, CONFIG)).rejects.toThrow(/no clearing account/);
     expect(creates).toEqual([]);
+  });
+
+  it('#7418 shape: full address pasted into city — clamped, order still books', async () => {
+    // Real production case: Taiwanese salon, Chinese company name, the
+    // whole street address duplicated into city (72 chars > NS max 50).
+    const longAddr = '1F, No. 25, Lane 737, Section 1, Neihu Road, Neihu District, Taipei City';
+    const plan = buildOrderPlan(loadOrder('b2b-latest'));
+    plan.buyer.companyName = '曼都髮型西湖店';
+    plan.buyer.displayName = '曼都髮型西湖店';
+    for (const key of ['billingAddress', 'shippingAddress'] as const) {
+      plan.buyer[key] = {
+        ...(plan.buyer[key] ?? ({} as any)),
+        name: 'Lin cheng',
+        address1: longAddr,
+        city: longAddr,
+        provinceCode: null,
+        zip: '114',
+        countryCodeV2: 'TW',
+      };
+    }
+    const { ns, creates } = fakeNs();
+    await runOrderPipeline(plan, ns, CONFIG);
+    const cust = creates.find((c) => c.type === 'customer')!;
+    expect(cust.payload.companyName).toBe('曼都髮型西湖店'); // unicode passes through untouched
+    for (const item of cust.payload.addressBook.items) {
+      const a = item.addressBookAddress;
+      expect(a.city).toBe('Taipei City'); // real city recovered from the tail
+      expect(a.addr1).toBe(longAddr); // street line fits NS's 150 — kept whole
+    }
+  });
+});
+
+describe('NetSuite field clamps', () => {
+  it('short and null cities pass through', () => {
+    expect(clampNsCity('Taipei City')).toBe('Taipei City');
+    expect(clampNsCity(null)).toBeNull();
+    expect(clampNsCity(undefined)).toBeUndefined();
+  });
+
+  it('overlong pasted address keeps the last comma segment', () => {
+    expect(clampNsCity('1F, No. 25, Lane 737, Section 1, Neihu Road, Neihu District, Taipei City')).toBe('Taipei City');
+  });
+
+  it('overlong city with no usable tail head-truncates to 50', () => {
+    const monster = 'X'.repeat(80);
+    expect(clampNsCity(monster)).toBe('X'.repeat(50));
+    expect(clampNsCity(`${'Y'.repeat(60)}, ${'Z'.repeat(60)}`)!.length).toBeLessThanOrEqual(50);
   });
 });
 

@@ -20,6 +20,34 @@ import type { NsCustomerCandidate, OrderPlan, SyncIssue } from '../core/types';
 import { gatewayAccountId, type EngineConfig } from './config';
 import { normalizeNsDate } from '../../netsuite';
 
+/**
+ * NetSuite hard character limits on the fields we write. Overflow bounces
+ * the ENTIRE record create ("The field city contained more than the
+ * maximum number ( 50 ) of characters allowed"), parking the order in
+ * error — so clamp instead: the NS address book is bookkeeping, Shopify
+ * remains the shipping source of truth. Seen live on #7418, where a
+ * Taiwanese buyer pasted their full street address into the city field.
+ */
+const NS_MAX = { addressee: 83, addr1: 150, city: 50, state: 50, zip: 36, companyName: 83 } as const;
+
+function clampNs(value: string | null | undefined, max: number): string | null | undefined {
+  if (value == null) return value;
+  const v = value.trim();
+  return v.length <= max ? v : v.slice(0, max).trimEnd();
+}
+
+/**
+ * An over-limit city is almost always a pasted full address, and the real
+ * city sits in the LAST comma segment ("1F, No. 25, Lane 737, ... , Taipei
+ * City" → "Taipei City"). Fall back to a plain head-truncate when the tail
+ * segment doesn't fit either.
+ */
+export function clampNsCity(value: string | null | undefined): string | null | undefined {
+  if (value == null || value.trim().length <= NS_MAX.city) return clampNs(value, NS_MAX.city);
+  const tail = value.split(',').map((s) => s.trim()).filter(Boolean).pop();
+  return tail && tail.length <= NS_MAX.city ? tail : clampNs(value, NS_MAX.city);
+}
+
 /** The NetSuiteAPI surface the pipeline needs (test seam). */
 export interface NsApi {
   findRecordIdByExternalId(recordType: string, externalId: string): Promise<string | null>;
@@ -365,11 +393,11 @@ async function ensureCustomer(
   // Address book: CPA wants sales-by-state visible on the customer record.
   const addressItems: Array<Record<string, unknown>> = [];
   const toNsAddress = (a: NonNullable<typeof buyer.billingAddress>) => ({
-    addressee: a.name ?? buyer.displayName,
-    addr1: a.address1,
-    city: a.city,
-    state: a.provinceCode,
-    zip: a.zip,
+    addressee: clampNs(a.name ?? buyer.displayName, NS_MAX.addressee),
+    addr1: clampNs(a.address1, NS_MAX.addr1),
+    city: clampNsCity(a.city),
+    state: clampNs(a.provinceCode, NS_MAX.state),
+    zip: clampNs(a.zip, NS_MAX.zip),
     country: { id: a.countryCodeV2 ?? 'US' },
   });
   const billing = buyer.billingAddress;
@@ -398,7 +426,7 @@ async function ensureCustomer(
   };
   if (buyer.kind === 'b2b') {
     payload.isPerson = false;
-    payload.companyName = buyer.companyName ?? buyer.displayName;
+    payload.companyName = clampNs(buyer.companyName ?? buyer.displayName, NS_MAX.companyName);
   } else {
     payload.isPerson = true;
     payload.firstName = buyer.firstName ?? buyer.displayName;
