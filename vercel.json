@@ -74,6 +74,10 @@
     {
       "path": "/api/cron/fulfillment-poll",
       "schedule": "5,20,35,50 * * * *"
+    },
+    {
+      "path": "/api/cron/amazon-claims",
+      "schedule": "0 7 * * 1"
     }
   ]
 }

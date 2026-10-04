@@ -24,6 +24,7 @@ const ALLOWLIST: Record<string, string> = {
   'cron/refresh-reports': 'cron secret auth',
   'cron/amazon-fba-monthly': 'cron secret auth',
   'cron/refresh-invoices': 'cron secret auth',
+  'cron/amazon-claims': 'cron secret auth',
   'cron/shopify-poll': 'cron secret auth',
   'cron/shopify-reconcile': 'cron secret auth',
   'cron/shopify-payouts': 'cron secret auth',

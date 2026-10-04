@@ -10,6 +10,7 @@
  */
 
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { AmazonFbaClaimsPanel } from '../../../components/admin/amazonFba/AmazonFbaClaimsPanel';
 import { BadgeCheck, ChevronRight, CloudDownload, FileUp, Settings2, Trash2, XCircle } from 'lucide-react';
 
 import { supabase } from '../../../../lib/supabaseClient';
@@ -332,6 +333,9 @@ export default function AmazonFbaPage() {
         <AmazonFbaSettings config={config} onConfigChange={setConfig} />
       )}
 
+      {/* Lost/damaged at Amazon, unreimbursed, inside the 60-day claim
+          window — replaces the Stock Drift panel (owner 2026-10-03). */}
+      <AmazonFbaClaimsPanel />
 
       {/* Get data: fetch from Amazon (primary) or upload a CSV (fallback) */}
       <Card>
