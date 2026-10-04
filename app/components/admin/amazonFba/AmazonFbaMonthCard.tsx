@@ -59,12 +59,21 @@ export function AmazonFbaMonthCard({
   missingConfig,
   onRequestMapProduct,
   onPushed,
+  recap = false,
 }: {
   preview: MonthPreview;
   batch: BatchInfo | null;
   missingConfig: string[];
   onRequestMapProduct: (amazonName: string, suggestedPrice: number) => void;
   onPushed: () => void;
+  /**
+   * Import-history recap: the preview IS the batch's stored payload, so the
+   * CSV-vs-pushed audit would be a meaningless self-comparison — and worse,
+   * it would be PERSISTED as a "CSV verified" stamp (bug found 2026-10-04:
+   * expanding September's history row stamped a bogus verification).
+   * Recap mode disables the audit machinery entirely.
+   */
+  recap?: boolean;
 }) {
   const toast = useToast();
   const [resolutions, setResolutions] = useState<RowResolution[]>([]);
@@ -84,7 +93,7 @@ export function AmazonFbaMonthCard({
   // Audit mode: a CSV uploaded over an already-pushed month → compare the
   // CSV-derived totals against what was actually pushed to NetSuite. This is
   // the accounting team's independent verification (docs/AMAZON_CSV_VERIFICATION.md).
-  const pushedTotals = pushed ? normalizeStoredPreview((batch as any)?.payload) : null;
+  const pushedTotals = pushed && !recap ? normalizeStoredPreview((batch as any)?.payload) : null;
   const lastRecordedAudit = useRef<string>('');
   const auditRows = pushedTotals
     ? ([

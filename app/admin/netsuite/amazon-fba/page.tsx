@@ -498,6 +498,7 @@ export default function AmazonFbaPage() {
                                 missingConfig={[]}
                                 onRequestMapProduct={openMapModal}
                                 onPushed={refreshBatches}
+                                recap
                               />
                             ) : (
                               <p className="text-sm text-muted-foreground">
