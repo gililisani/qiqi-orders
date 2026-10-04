@@ -36,7 +36,6 @@ import {
   type AmazonFbaConfigRow,
 } from '../../../components/admin/amazonFba/AmazonFbaSettings';
 import { AmazonFbaMonthCard } from '../../../components/admin/amazonFba/AmazonFbaMonthCard';
-import { AmazonFbaDriftPanel } from '../../../components/admin/amazonFba/AmazonFbaDriftPanel';
 import { NsItemSearchInput, type NsItem } from '../../../components/admin/amazonFba/NsItemSearchInput';
 
 interface Mapping {
@@ -333,7 +332,6 @@ export default function AmazonFbaPage() {
         <AmazonFbaSettings config={config} onConfigChange={setConfig} />
       )}
 
-      <AmazonFbaDriftPanel />
 
       {/* Get data: fetch from Amazon (primary) or upload a CSV (fallback) */}
       <Card>
