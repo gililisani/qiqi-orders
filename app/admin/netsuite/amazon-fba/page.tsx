@@ -9,8 +9,8 @@
  * idempotent via AMAZON-FBA-* external IDs + a batch registry.
  */
 
-import { useEffect, useRef, useState } from 'react';
-import { BadgeCheck, CloudDownload, FileUp, Settings2, Trash2, XCircle } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import { BadgeCheck, ChevronRight, CloudDownload, FileUp, Settings2, Trash2, XCircle } from 'lucide-react';
 
 import { supabase } from '../../../../lib/supabaseClient';
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
@@ -110,6 +110,9 @@ export default function AmazonFbaPage() {
   const [previews, setPreviews] = useState<MonthPreview[]>([]);
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
+  // Import-history row expanded to its stored month summary (owner request
+  // 2026-10-03: recap a pushed month exactly as it looked before the push).
+  const [expandedPeriod, setExpandedPeriod] = useState<string | null>(null);
   const [config, setConfig] = useState<AmazonFbaConfigRow | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -396,8 +399,21 @@ export default function AmazonFbaPage() {
               </TableHeader>
               <TableBody>
                 {batches.map((b) => (
-                  <TableRow key={b.period}>
-                    <TableCell className="text-sm font-medium">{periodLabel(b.period)}</TableCell>
+                  <Fragment key={b.period}>
+                  <TableRow
+                    onClick={() => setExpandedPeriod(expandedPeriod === b.period ? null : b.period)}
+                    className="cursor-pointer"
+                  >
+                    <TableCell className="text-sm font-medium">
+                      <span className="inline-flex items-center gap-1.5">
+                        <ChevronRight
+                          className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${
+                            expandedPeriod === b.period ? 'rotate-90' : ''
+                          }`}
+                        />
+                        {periodLabel(b.period)}
+                      </span>
+                    </TableCell>
                     <TableCell>
                       {b.status === 'pushed' ? (
                         <span className="inline-flex items-center gap-1.5 flex-wrap">
@@ -431,7 +447,7 @@ export default function AmazonFbaPage() {
                         <span className="text-xs text-muted-foreground">In progress…</span>
                       )}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">
+                    <TableCell className="hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
                       <span className="font-mono text-xs text-muted-foreground">
                         {(() => {
                           const refs = Object.entries(b.ns_refs || {}).filter(([, r]) => r.tranId);
@@ -464,6 +480,34 @@ export default function AmazonFbaPage() {
                       {b.created_at ? new Date(b.created_at).toLocaleDateString() : '—'}
                     </TableCell>
                   </TableRow>
+                  {expandedPeriod === b.period &&
+                    (() => {
+                      // Same summary as before the push, rebuilt from the
+                      // batch's stored payload. The card hides its Push
+                      // button for pushed batches — recap only.
+                      const stored = normalizeStoredPreview(b.payload);
+                      return (
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell colSpan={5} className="bg-muted/30 p-4">
+                            {stored ? (
+                              <AmazonFbaMonthCard
+                                preview={stored}
+                                batch={b}
+                                missingConfig={[]}
+                                onRequestMapProduct={openMapModal}
+                                onPushed={refreshBatches}
+                              />
+                            ) : (
+                              <p className="text-sm text-muted-foreground">
+                                No stored summary for this month (imported before summaries were
+                                kept).
+                              </p>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })()}
+                  </Fragment>
                 ))}
               </TableBody>
             </Table>
