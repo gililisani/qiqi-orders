@@ -63,8 +63,28 @@ describe('buildNormalizedOrder', () => {
     expect(n.shipTo.city).toBe('Phoenix');
     expect(n.lineItems).toHaveLength(2);
     expect(n.lineItems[0]).toMatchObject({ sku: 'SKU-A', quantity: 2, unitPrice: 12.5 });
-    // Salted per push — ShipHero refuses reused partner_line_item_ids.
-    expect(n.lineItems[0].partnerLineItemId).toMatch(/^li-1\./);
+    // Salt-first per push (ShipHero refuses reused partner_line_item_ids),
+    // base dashless after it.
+    expect(n.lineItems[0].partnerLineItemId).toMatch(/^[0-9a-z]+\.li1$/);
+  });
+
+  it('keeps partner_line_item_id within ShipHero\'s 44-char cap for uuid item ids', () => {
+    // Real order_items ids are 36-char uuids; <uuid>.<salt> was 45 chars and
+    // every line failed with "cannot exceed 44 characters" (2026-10-03).
+    const n = buildNormalizedOrder({
+      ...hubOrder,
+      items: [
+        {
+          id: 'a1b2c3d4-e5f6-7890-abcd-ef0123456789',
+          quantity: 1,
+          unit_price: 10,
+          product: { sku: 'FPS0025', item_name: 'Hair Controller' },
+        },
+      ],
+    } as any);
+    const ref = n.lineItems[0].partnerLineItemId;
+    expect(ref.length).toBeLessThanOrEqual(44);
+    expect(ref).toMatch(/\.a1b2c3d4e5f67890abcdef0123456789$/);
   });
 
   it('falls back PO then UUID slice for order number', () => {
@@ -198,7 +218,7 @@ describe('buildShipHeroOrderInput', () => {
     expect(input.shipping_address.city).toBe('Phoenix');
     expect(input.shipping_address.first_name).toBe('Jane');
     expect(input.line_items[0]).toMatchObject({ sku: 'SKU-A', quantity: 2, price: '12.50' });
-    expect(input.line_items[0].partner_line_item_id).toMatch(/^li-1\./);
+    expect(input.line_items[0].partner_line_item_id).toMatch(/^[0-9a-z]+\.li1$/);
   });
 
   it('uses the passed submission date as order_date, not the hub creation date', () => {

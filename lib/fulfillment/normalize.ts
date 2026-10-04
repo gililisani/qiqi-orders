@@ -125,7 +125,13 @@ export function buildNormalizedOrder(params: {
   // partner_line_item_id not allowed"). The field is only an echo reference
   // (order matching uses partner_order_id / order id / order number), so a
   // per-push salt is safe.
+  //
+  // It is ALSO capped at 44 characters (live finding 2026-10-03:
+  // "partner_line_item_id cannot exceed 44 characters" — `<uuid>.<salt>` was
+  // 45 and every push failed). Salt goes FIRST so truncation can never cut
+  // the per-push freshness, and the uuid is dashless: 8 + 1 + 32 = 41.
   const pushSalt = Date.now().toString(36);
+  const lineRef = (base: string) => `${pushSalt}.${base.replace(/-/g, '')}`.slice(0, 44);
 
   // Consolidate duplicate SKUs by (sku, unit_price) — the SAME rule as the
   // NetSuite push (lib/netsuite.ts): a product ordered both regularly and as
@@ -146,7 +152,7 @@ export function buildNormalizedOrder(params: {
         sku,
         quantity: Number(item.quantity) || 0,
         unitPrice,
-        partnerLineItemId: `${clean(item.id) || `${order.id}-${idx}`}.${pushSalt}`,
+        partnerLineItemId: lineRef(clean(item.id) || `${order.id}${idx}`),
         productName: clean(item.product?.item_name),
       });
     }
