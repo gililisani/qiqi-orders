@@ -33,6 +33,8 @@ import {
   filterPricedProducts,
   filterProductsForRegion,
   groupProductsByCategory,
+  manualPriceKey,
+  manualPricesOf,
   pricingContextOf,
   productPriceForCompany,
   repriceLoadedLines,
@@ -156,6 +158,9 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
   const [showSupportFundReminder, setShowSupportFundReminder] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [priceTarget, setPriceTarget] = useState<ManualPriceTarget | null>(null);
+  // Manual prices survive a line being removed and re-added (e.g. clearing
+  // the quantity box to retype it) — keyed by manualPriceKey.
+  const manualPricesRef = useRef<Map<string, number>>(new Map());
   const performSaveInFlightRef = useRef(false);
 
   // Cart scroll handling
@@ -272,7 +277,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
     }
   };
 
-  const fetchProductsForCompany = async (companyData: Company) => {
+  const fetchProductsForCompany = async (companyData: Company, keepIds?: Set<number>) => {
     try {
       const { data, error } = await supabase
         .from('Products')
@@ -286,11 +291,13 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
       // Region visibility: an admin ordering FOR a company sees exactly the
       // catalog that company's class is allowed to see — same rule as the
       // client form (flags were configured for years but applied nowhere).
-      // Pricing tier: only products the company has a catalog price for.
+      // Pricing tier: only products the company has a catalog price for
+      // (plus any already on this order — see filterPricedProducts).
       setProducts(
         filterPricedProducts(
           filterProductsForRegion((data || []) as Product[], companyData.class?.name),
           companyData,
+          keepIds,
         ),
       );
     } catch (err: any) {
@@ -330,10 +337,19 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
         total_price: Number(i.total_price),
         price_override: !!i.price_override,
       });
-      setOrderItems(repriceLoadedLines(regular.map(toLine), orderData.company));
-      setSupportFundItems(repriceLoadedLines(sf.map(toLine), orderData.company));
+      const regularLines = regular.map(toLine);
+      const sfLines = sf.map(toLine);
+      manualPricesRef.current = new Map([
+        ...manualPricesOf(regularLines, false),
+        ...manualPricesOf(sfLines, true),
+      ]);
+      setOrderItems(repriceLoadedLines(regularLines, orderData.company));
+      setSupportFundItems(repriceLoadedLines(sfLines, orderData.company));
 
-      await fetchProductsForCompany(orderData.company as Company);
+      await fetchProductsForCompany(
+        orderData.company as Company,
+        new Set((items || []).map((i: any) => Number(i.product_id))),
+      );
     } catch (err: any) {
       setError(err.message || 'Failed to load order.');
     }
@@ -360,7 +376,8 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
   };
 
   // ---- Shared order-form logic (single source with the client form) ----
-  const getProductPrice = (product: Product) => productPriceForCompany(company, product) ?? 0;
+  /** Catalog price at the company's tier; null = the catalog has none. */
+  const getProductPrice = (product: Product) => productPriceForCompany(company, product);
 
   const pricingCtx = pricingContextOf(company);
   const tierLabel = PRICE_TIER_LABELS[effectivePriceTier(pricingCtx)];
@@ -381,8 +398,11 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
   const applyPriceTarget = (price: number | null) => {
     if (!priceTarget) return;
     const { productId, isSupportFund, catalogPrice } = priceTarget;
+    const key = manualPriceKey(productId, isSupportFund);
+    if (price === null) manualPricesRef.current.delete(key);
+    else manualPricesRef.current.set(key, price);
     const setter = isSupportFund ? setSupportFundItems : setOrderItems;
-    setter((prev) => applyManualPrice(prev, productId, price, catalogPrice));
+    setter((prev) => applyManualPrice(prev, productId, price, catalogPrice ?? 0));
     setHasUnsavedChanges(true);
     setPriceTarget(null);
   };
@@ -395,7 +415,13 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
     setOrderItems((prev) => {
       const product = products.find((p) => p.id === productId);
       return product
-        ? applyCaseQtyChange(prev, product, newCaseQty, getProductPrice(product))
+        ? applyCaseQtyChange(
+            prev,
+            product,
+            newCaseQty,
+            getProductPrice(product),
+            manualPricesRef.current.get(manualPriceKey(productId, false)) ?? null,
+          )
         : prev;
     });
   };
@@ -405,7 +431,13 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
     setSupportFundItems((prev) => {
       const product = products.find((p) => p.id === productId);
       return product
-        ? applyCaseQtyChange(prev, product, newCaseQty, getProductPrice(product))
+        ? applyCaseQtyChange(
+            prev,
+            product,
+            newCaseQty,
+            getProductPrice(product),
+            manualPricesRef.current.get(manualPriceKey(productId, true)) ?? null,
+          )
         : prev;
     });
   };
@@ -726,6 +758,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                         supportFundItems={supportFundItems}
                         orderItems={orderItems}
                         getProductPrice={getProductPrice}
+                        tierLabel={tierLabel}
                         onEditPrice={(product, item) =>
                           openPriceEditor(product, item, showSupportFundTab)
                         }
@@ -1059,7 +1092,8 @@ interface CategoryAccordionProps {
   showSupportFundRedemption: boolean;
   supportFundItems: SupportFundItem[];
   orderItems: OrderItem[];
-  getProductPrice: (product: Product) => number;
+  getProductPrice: (product: Product) => number | null;
+  tierLabel: string;
   onEditPrice: (product: Product, item: OrderItem) => void;
   handleSupportFundItemChange: (productId: number, qty: number) => void;
   handleCaseQtyChange: (productId: number, qty: number) => void;
@@ -1075,6 +1109,7 @@ function CategoryAccordion({
   supportFundItems,
   orderItems,
   getProductPrice,
+  tierLabel,
   onEditPrice,
   handleSupportFundItemChange,
   handleCaseQtyChange,
@@ -1177,9 +1212,11 @@ function CategoryAccordion({
                 const orderItem = showSupportFundRedemption
                   ? supportFundItems.find((i) => i.product_id === product.id)
                   : orderItems.find((i) => i.product_id === product.id);
+                const tierPrice = getProductPrice(product);
                 const unitPrice = orderItem?.price_override
                   ? orderItem.unit_price
-                  : getProductPrice(product);
+                  : (tierPrice ?? orderItem?.unit_price ?? null);
+                const noTierPrice = tierPrice === null && !orderItem?.price_override;
                 const isHighlighted = highlightedProductId === product.id.toString();
                 const hasQty = (orderItem?.case_qty || 0) > 0;
 
@@ -1254,15 +1291,22 @@ function CategoryAccordion({
                               : 'Set a manual price for this order'
                           }
                         >
-                          {formatCurrency(unitPrice)}
+                          {unitPrice === null ? '—' : formatCurrency(unitPrice)}
                           <Pencil className="h-3 w-3 opacity-50" />
                         </button>
+                      ) : unitPrice === null ? (
+                        '—'
                       ) : (
                         formatCurrency(unitPrice)
                       )}
                       {orderItem?.price_override && (
                         <div className="text-[9px] font-sans uppercase tracking-wide text-amber-700">
                           Manual
+                        </div>
+                      )}
+                      {noTierPrice && (
+                        <div className="text-[9px] font-sans uppercase tracking-wide text-destructive">
+                          No {tierLabel} price
                         </div>
                       )}
                     </td>

@@ -9,6 +9,8 @@ import {
   filterPricedProducts,
   repriceLoadedLines,
   applyManualPrice,
+  manualPriceKey,
+  manualPricesOf,
   type FormProduct,
 } from '@/app/components/shared/orderForm/orderFormLogic';
 
@@ -43,6 +45,8 @@ describe('productPriceForCompany', () => {
     const list = [P({ id: 1, salon_price: 28 }), P({ id: 2 })];
     expect(filterPricedProducts(list, co('International', 'salon')).map((p) => p.id)).toEqual([1]);
     expect(filterPricedProducts(list, co('International')).map((p) => p.id)).toEqual([1, 2]);
+    // A product already on the order stays listed even without a tier price.
+    expect(filterPricedProducts(list, co('International', 'salon'), new Set([2])).map((p) => p.id)).toEqual([1, 2]);
   });
 });
 
@@ -68,6 +72,26 @@ describe('manual line prices', () => {
     expect(set[0]).toMatchObject({ unit_price: 20, total_price: 240, price_override: true });
     const cleared = applyManualPrice(set, 1, null, 13.5);
     expect(cleared[0]).toMatchObject({ unit_price: 13.5, total_price: 162, price_override: false });
+  });
+
+  it('a line removed and re-added gets its remembered manual price back', () => {
+    const removed = applyCaseQtyChange([line({ unit_price: 20, total_price: 240, price_override: true })], P() as FormProduct, 0, 13.5);
+    expect(removed).toEqual([]);
+    const readded = applyCaseQtyChange(removed, P() as FormProduct, 2, 13.5, 20);
+    expect(readded[0]).toMatchObject({ quantity: 24, unit_price: 20, total_price: 480, price_override: true });
+    const plain = applyCaseQtyChange([], P() as FormProduct, 1, 13.5);
+    expect(plain[0]).toMatchObject({ unit_price: 13.5, price_override: false });
+  });
+
+  it('a line whose product has no tier price keeps its price on quantity change', () => {
+    const next = applyCaseQtyChange([line({ unit_price: 13.5, total_price: 162 })], P() as FormProduct, 2, null);
+    expect(next[0]).toMatchObject({ quantity: 24, unit_price: 13.5, total_price: 324 });
+  });
+
+  it('manualPricesOf / manualPriceKey key regular and SF lines separately', () => {
+    const lines = [line({ unit_price: 20, price_override: true }), line({ product_id: 2 })];
+    expect(manualPricesOf(lines as any, false)).toEqual([[manualPriceKey(1, false), 20]]);
+    expect(manualPriceKey(1, false)).not.toBe(manualPriceKey(1, true));
   });
 
   it('repriceLoadedLines shows the current tier price, leaving manual lines alone', () => {

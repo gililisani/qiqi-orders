@@ -32,10 +32,12 @@ import { SHIPMENT_TYPE_CODES } from '../../../../lib/shipmentTypes';
  *   otherwise keep the current status. Clients only for their own company;
  *   admins for any.
  *
- * Manual prices: `unit_price_override` is honoured ONLY from admins (the
- * admin payload is the full truth — omitting it clears the override). A
- * client's save ignores it and instead carries over the overrides already
- * stored on the order, so a client edit can never undo an admin's price.
+ * Manual prices: `unit_price_override` is honoured ONLY from an admin whose
+ * payload carries `manualPrices: true` (the admin form — its payload is the
+ * full truth, so an omitted override clears it). Every other save (clients,
+ * a stale admin bundle, a user who is both admin and client saving through
+ * the client form) ignores sent overrides and carries over the ones already
+ * stored on the order, so nothing but an admin's explicit edit changes them.
  */
 
 const EDITABLE_STATUSES = ['Draft', 'Open'];
@@ -108,7 +110,7 @@ export async function POST(request: NextRequest) {
     // ---- Update: the existing order + its current lines (for overrides) ----
     const orderId = typeof body.orderId === 'string' ? body.orderId : null;
     let existing: { id: string; company_id: string; status: string; hold: string | null } | null = null;
-    const existingLines = new Map<string, { unit_price: number; price_override: boolean }>();
+    const existingLines = new Map<string, { unit_price: number; price_override: boolean; quantity: number }>();
     if (mode === 'update') {
       if (!orderId) {
         return NextResponse.json({ error: 'orderId is required for update.' }, { status: 400 });
@@ -132,18 +134,20 @@ export async function POST(request: NextRequest) {
 
       const { data: lines, error: linesErr } = await supabase
         .from('order_items')
-        .select('product_id, is_support_fund_item, unit_price, price_override')
+        .select('product_id, is_support_fund_item, unit_price, price_override, quantity')
         .eq('order_id', orderId);
       if (linesErr) throw new Error(`order lines lookup: ${linesErr.message}`);
       for (const l of lines ?? []) {
         existingLines.set(lineKey(l.product_id, l.is_support_fund_item), {
           unit_price: Number(l.unit_price) || 0,
           price_override: !!l.price_override,
+          quantity: Number(l.quantity) || 0,
         });
       }
     }
 
     // ---- Which manual prices are trusted (see header) ----
+    const trustPayloadPrices = isAdmin && body.manualPrices === true;
     const items: SaveItemInput[] = rawItems.map((i: any) => {
       const key = lineKey(i.product_id, i.is_support_fund_item);
       const stored = existingLines.get(key);
@@ -152,7 +156,7 @@ export async function POST(request: NextRequest) {
         quantity: i.quantity,
         case_qty: i.case_qty,
         is_support_fund_item: !!i.is_support_fund_item,
-        unit_price_override: isAdmin
+        unit_price_override: trustPayloadPrices
           ? (i.unit_price_override ?? null)
           : stored?.price_override
             ? stored.unit_price
@@ -182,10 +186,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
 
-    // ---- Manual-price audit lines (admin saves only; clients can't change them) ----
+    // ---- Manual-price audit lines ----
     const priceChanges: string[] = [];
-    if (isAdmin) {
-      const fmt = (n: number) => `$${n.toFixed(2)}`;
+    const fmt = (n: number) => `$${n.toFixed(2)}`;
+    if (!trustPayloadPrices) {
+      // Overrides were carried over unchanged — but a quantity change on a
+      // manually priced line is worth an internal note (e.g. a $0 line).
+      for (const item of money.items) {
+        if (!item.price_override) continue;
+        const before = existingLines.get(lineKey(item.product_id, item.is_support_fund_item));
+        if (before && before.quantity !== item.quantity) {
+          const sku = (productsById.get(item.product_id) as any)?.sku ?? `Product ${item.product_id}`;
+          priceChanges.push(
+            `${sku}${item.is_support_fund_item ? ' (support funds)' : ''}: quantity ${before.quantity} → ` +
+              `${item.quantity} at manual price ${fmt(item.unit_price)}`,
+          );
+        }
+      }
+    } else {
       for (const item of money.items) {
         const product = productsById.get(item.product_id) as any;
         const sku = product?.sku ?? `Product ${item.product_id}`;

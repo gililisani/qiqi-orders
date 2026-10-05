@@ -56,11 +56,13 @@ export default function ClientPriceListPage() {
         if (!user) throw new Error('Not authenticated.');
 
         // Region = the company's class (RLS: own company + its linked class).
-        const { data: client } = await supabase
+        // A failed lookup must not fall back to some other tier's prices.
+        const { data: client, error: clientErr } = await supabase
           .from('clients')
           .select('company:companies(price_tier, class:classes(name))')
           .eq('id', user.id)
           .single();
+        if (clientErr) throw clientErr;
         const companyRaw: any = Array.isArray(client?.company)
           ? client?.company?.[0]
           : client?.company;

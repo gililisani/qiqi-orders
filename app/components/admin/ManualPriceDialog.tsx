@@ -28,8 +28,8 @@ export interface ManualPriceTarget {
   isSupportFund: boolean;
   sku: string;
   name: string;
-  /** Catalog price at the company's tier. */
-  catalogPrice: number;
+  /** Catalog price at the company's tier (null = the catalog has none). */
+  catalogPrice: number | null;
   tierLabel: string;
   currentPrice: number;
   isManual: boolean;
@@ -63,7 +63,8 @@ export function ManualPriceDialog({
     }
     const price = Math.round(n * 100) / 100;
     // Typing the catalog price back in is the same as resetting it.
-    onApply(target && Math.abs(price - target.catalogPrice) < 0.005 ? null : price);
+    const catalog = target?.catalogPrice ?? null;
+    onApply(catalog !== null && Math.abs(price - catalog) < 0.005 ? null : price);
   };
 
   return (
@@ -77,10 +78,17 @@ export function ManualPriceDialog({
         </DialogHeader>
         {target && (
           <div className="space-y-3 py-1">
-            <p className="text-sm text-muted-foreground">
-              Catalog price ({target.tierLabel}):{' '}
-              <span className="font-mono text-foreground">{formatCurrency(target.catalogPrice)}</span>
-            </p>
+            {target.catalogPrice !== null ? (
+              <p className="text-sm text-muted-foreground">
+                Catalog price ({target.tierLabel}):{' '}
+                <span className="font-mono text-foreground">{formatCurrency(target.catalogPrice)}</span>
+              </p>
+            ) : (
+              <p className="text-sm text-amber-700">
+                The catalog has no {target.tierLabel} price for this product — the line needs a
+                manual price (or remove it from the order).
+              </p>
+            )}
             <div>
               <Label htmlFor="manual-price" className="text-sm font-medium">
                 Price per unit (USD)
@@ -89,6 +97,7 @@ export function ManualPriceDialog({
                 id="manual-price"
                 inputMode="decimal"
                 autoFocus
+                onFocus={(e) => e.target.select()}
                 value={value}
                 onChange={(e) => {
                   setValue(e.target.value);
@@ -111,7 +120,7 @@ export function ManualPriceDialog({
           </div>
         )}
         <DialogFooter className="gap-2 sm:gap-2">
-          {target?.isManual && (
+          {target?.isManual && target.catalogPrice !== null && (
             <Button variant="outline" onClick={() => onApply(null)} className="sm:mr-auto">
               Use catalog price
             </Button>

@@ -72,9 +72,33 @@ export function productPriceForCompany(company: any, product: FormProduct): numb
 }
 
 /** Products the company can actually be priced for — a product with no
- *  price at its tier is not offered (the server would refuse it). */
-export function filterPricedProducts<P extends FormProduct>(products: P[], company: any): P[] {
-  return products.filter((p) => productPriceForCompany(company, p) !== null);
+ *  price at its tier is not offered (the server would refuse it). Products
+ *  already on the order (`keepIds`) stay listed regardless, so a line whose
+ *  product lost its tier price can still be given a manual price or removed
+ *  instead of becoming an invisible, unsaveable line. */
+export function filterPricedProducts<P extends FormProduct>(
+  products: P[],
+  company: any,
+  keepIds?: Set<number>,
+): P[] {
+  return products.filter(
+    (p) => productPriceForCompany(company, p) !== null || !!keepIds?.has(Number(p.id)),
+  );
+}
+
+/** Key of a line within a form: regular and support-fund lines of the same
+ *  product are separate lines (mirrors lib/orderSave lineKey). */
+export function manualPriceKey(productId: number, isSupportFund: boolean): string {
+  return `${Number(productId)}:${isSupportFund ? 'sf' : 'reg'}`;
+}
+
+/** Manual prices of an order's loaded lines, keyed by manualPriceKey — kept
+ *  by the forms so a line removed and re-added (e.g. while retyping its
+ *  quantity) gets its manual price back. */
+export function manualPricesOf(items: FormOrderItem[], isSupportFund: boolean): Array<[string, number]> {
+  return items
+    .filter((i) => i.price_override)
+    .map((i) => [manualPriceKey(i.product_id, isSupportFund), Number(i.unit_price)]);
 }
 
 /**
@@ -161,26 +185,33 @@ export function groupProductsByCategory<P extends FormProduct>(
 /**
  * Pure item-list transition for a case-quantity change (used by both the
  * order list and the support-fund list). quantity = cases × case_pack.
+ *
+ * `unitPrice` is the catalog price at the company's tier (null = none).
+ * `manualPrice` is a remembered manual price for this line, applied when the
+ * line is (re-)added. An existing line keeps its manual price.
  */
 export function applyCaseQtyChange<I extends FormOrderItem, P extends FormProduct>(
   prev: I[],
   product: P,
   newCaseQty: number,
-  unitPrice: number,
+  unitPrice: number | null,
+  manualPrice: number | null = null,
 ): I[] {
   if (newCaseQty === 0) return prev.filter((i) => i.product_id !== product.id);
   const quantity = newCaseQty * (product.case_pack || 1);
   const existing = prev.find((i) => i.product_id === product.id);
   if (existing) {
-    // A manual price sticks to the line through quantity changes.
-    const lineUnit = existing.price_override ? existing.unit_price : unitPrice;
+    // A manual price sticks to the line through quantity changes; a line
+    // whose product has no tier price keeps the price it has.
+    const lineUnit =
+      existing.price_override || unitPrice === null ? existing.unit_price : unitPrice;
     return prev.map((i) =>
       i.product_id === product.id
         ? { ...i, case_qty: newCaseQty, quantity, unit_price: lineUnit, total_price: quantity * lineUnit }
         : i,
     );
   }
-  const totalPrice = quantity * unitPrice;
+  const lineUnit = manualPrice ?? unitPrice ?? 0;
   return [
     ...prev,
     {
@@ -188,8 +219,9 @@ export function applyCaseQtyChange<I extends FormOrderItem, P extends FormProduc
       product,
       case_qty: newCaseQty,
       quantity,
-      unit_price: unitPrice,
-      total_price: totalPrice,
+      unit_price: lineUnit,
+      total_price: quantity * lineUnit,
+      price_override: manualPrice !== null,
     } as unknown as I,
   ];
 }

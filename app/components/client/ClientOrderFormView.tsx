@@ -27,6 +27,8 @@ import {
   filterPricedProducts,
   filterProductsForRegion,
   groupProductsByCategory,
+  manualPriceKey,
+  manualPricesOf,
   productPriceForCompany,
   repriceLoadedLines,
   resolveSupportFundPercent,
@@ -141,6 +143,9 @@ export default function ClientOrderFormView({ orderId, backUrl }: ClientOrderFor
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
   const [showSupportFundReminder, setShowSupportFundReminder] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  // Admin-set prices on this order: a line removed and re-added shows its
+  // agreed price again (the server keeps it regardless).
+  const manualPricesRef = useRef<Map<string, number>>(new Map());
   const performSaveInFlightRef = useRef(false);
 
   // Cart scroll handling
@@ -241,7 +246,7 @@ export default function ClientOrderFormView({ orderId, backUrl }: ClientOrderFor
     return c as Company;
   };
 
-  const fetchProductsForCompany = async (companyData: Company) => {
+  const fetchProductsForCompany = async (companyData: Company, keepIds?: Set<number>) => {
     const { data, error } = await supabase
       .from('Products')
       .select('*, category:categories(*)')
@@ -253,11 +258,13 @@ export default function ClientOrderFormView({ orderId, backUrl }: ClientOrderFor
     if (error) throw error;
     // Region visibility: the visible_to_* flags on products/categories are
     // finally enforced (they were configured for years but applied nowhere).
-    // Pricing tier: only products the company has a catalog price for.
+    // Pricing tier: only products the company has a catalog price for
+    // (plus any already on this order — see filterPricedProducts).
     setProducts(
       filterPricedProducts(
         filterProductsForRegion((data || []) as Product[], companyData.class?.name),
         companyData,
+        keepIds,
       ),
     );
   };
@@ -291,10 +298,19 @@ export default function ClientOrderFormView({ orderId, backUrl }: ClientOrderFor
       total_price: Number(i.total_price),
       price_override: !!i.price_override,
     });
-    setOrderItems(repriceLoadedLines(regular.map(toLine), orderData.company));
-    setSupportFundItems(repriceLoadedLines(sf.map(toLine), orderData.company));
+    const regularLines = regular.map(toLine);
+    const sfLines = sf.map(toLine);
+    manualPricesRef.current = new Map([
+      ...manualPricesOf(regularLines, false),
+      ...manualPricesOf(sfLines, true),
+    ]);
+    setOrderItems(repriceLoadedLines(regularLines, orderData.company));
+    setSupportFundItems(repriceLoadedLines(sfLines, orderData.company));
 
-    await fetchProductsForCompany(orderData.company as Company);
+    await fetchProductsForCompany(
+      orderData.company as Company,
+      new Set((items || []).map((i: any) => Number(i.product_id))),
+    );
   };
 
   useEffect(() => {
@@ -316,7 +332,8 @@ export default function ClientOrderFormView({ orderId, backUrl }: ClientOrderFor
   }, [orderId]);
 
   // ---- Shared order-form logic (single source with the admin form) ----
-  const getProductPrice = (product: Product) => productPriceForCompany(company, product) ?? 0;
+  /** Catalog price at the company's tier; null = the catalog has none. */
+  const getProductPrice = (product: Product) => productPriceForCompany(company, product);
 
   const getProductsByCategory = () => groupProductsByCategory(products);
 
@@ -326,7 +343,13 @@ export default function ClientOrderFormView({ orderId, backUrl }: ClientOrderFor
     setOrderItems((prev) => {
       const product = products.find((p) => p.id === productId);
       return product
-        ? applyCaseQtyChange(prev, product, newCaseQty, getProductPrice(product))
+        ? applyCaseQtyChange(
+            prev,
+            product,
+            newCaseQty,
+            getProductPrice(product),
+            manualPricesRef.current.get(manualPriceKey(productId, false)) ?? null,
+          )
         : prev;
     });
   };
@@ -336,7 +359,13 @@ export default function ClientOrderFormView({ orderId, backUrl }: ClientOrderFor
     setSupportFundItems((prev) => {
       const product = products.find((p) => p.id === productId);
       return product
-        ? applyCaseQtyChange(prev, product, newCaseQty, getProductPrice(product))
+        ? applyCaseQtyChange(
+            prev,
+            product,
+            newCaseQty,
+            getProductPrice(product),
+            manualPricesRef.current.get(manualPriceKey(productId, true)) ?? null,
+          )
         : prev;
     });
   };
@@ -897,7 +926,7 @@ interface CategoryAccordionProps {
   showSupportFundRedemption: boolean;
   supportFundItems: SupportFundItem[];
   orderItems: OrderItem[];
-  getProductPrice: (product: Product) => number;
+  getProductPrice: (product: Product) => number | null;
   handleSupportFundItemChange: (productId: number, qty: number) => void;
   handleCaseQtyChange: (productId: number, qty: number) => void;
   highlightedProductId: string | null;
@@ -973,9 +1002,11 @@ function CategoryAccordion({
                 const orderItem = showSupportFundRedemption
                   ? supportFundItems.find((i) => i.product_id === product.id)
                   : orderItems.find((i) => i.product_id === product.id);
+                const tierPrice = getProductPrice(product);
                 const unitPrice = orderItem?.price_override
                   ? orderItem.unit_price
-                  : getProductPrice(product);
+                  : (tierPrice ?? orderItem?.unit_price ?? null);
+                const unavailable = tierPrice === null && !orderItem?.price_override;
                 const isHighlighted = highlightedProductId === product.id.toString();
                 const hasQty = (orderItem?.case_qty || 0) > 0;
                 const baseRowBg = showSupportFundRedemption
@@ -1036,7 +1067,12 @@ function CategoryAccordion({
                       {product.case_pack}
                     </td>
                     <td className="px-2 py-2.5 text-right text-xs font-mono">
-                      {formatCurrency(unitPrice)}
+                      {unitPrice === null ? '—' : formatCurrency(unitPrice)}
+                      {unavailable && (
+                        <div className="text-[9px] font-sans uppercase tracking-wide text-destructive">
+                          Unavailable
+                        </div>
+                      )}
                     </td>
                     <td className="px-1 py-2.5">
                       <div className="flex items-center justify-center gap-1">
@@ -1067,13 +1103,14 @@ function CategoryAccordion({
                         />
                         <button
                           type="button"
+                          disabled={unavailable}
                           onClick={() => {
                             const current = orderItem?.case_qty || 0;
                             showSupportFundRedemption
                               ? handleSupportFundItemChange(product.id, current + 1)
                               : handleCaseQtyChange(product.id, current + 1);
                           }}
-                          className="h-6 w-6 inline-flex items-center justify-center rounded border border-border hover:bg-muted transition-colors"
+                          className="h-6 w-6 inline-flex items-center justify-center rounded border border-border hover:bg-muted transition-colors disabled:opacity-40 disabled:pointer-events-none"
                           aria-label="Increase quantity"
                         >
                           <Plus className="h-3 w-3" />

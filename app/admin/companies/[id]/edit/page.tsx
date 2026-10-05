@@ -523,16 +523,14 @@ export default function EditCompanyPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NONE}>
-                    Automatic —{' '}
-                    {
+                    {`Automatic (${
                       PRICE_TIER_LABELS[
                         effectivePriceTier({
                           className:
                             options.classes.find((c) => c.id === formData.class_id)?.name ?? null,
                         })
                       ]
-                    }{' '}
-                    (from class)
+                    })`}
                   </SelectItem>
                   {PRICE_TIERS.map((t) => (
                     <SelectItem key={t} value={t}>
@@ -543,8 +541,8 @@ export default function EditCompanyPage() {
               </Select>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Which catalog prices this company pays. Hub only — NetSuite keeps the class. Open
-              and draft orders re-price when they are next saved.
+              Which catalog prices this company pays. Automatic follows the class. Hub only —
+              NetSuite keeps the class. Open and draft orders re-price when they are next saved.
             </p>
           </div>
           <div>

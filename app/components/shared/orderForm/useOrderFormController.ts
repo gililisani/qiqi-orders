@@ -147,6 +147,10 @@ export function useOrderFormController(params: {
             shipmentType: (order && order.shipment_type) || null,
             asDraft,
             items: itemsPayload,
+            // The admin form's payload is the full truth for manual prices
+            // (an absent override = cleared). Without this marker the server
+            // keeps the stored ones.
+            ...(role === 'admin' ? { manualPrices: true } : {}),
           }),
         });
         const data = await res.json().catch(() => ({}));
