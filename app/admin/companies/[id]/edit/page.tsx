@@ -19,6 +19,11 @@ import {
   SelectValue,
 } from '../../../../components/qq/select';
 import { useToast } from '../../../../components/ui/ToastProvider';
+import {
+  PRICE_TIERS,
+  PRICE_TIER_LABELS,
+  effectivePriceTier,
+} from '../../../../../lib/orderPricing';
 
 interface Option {
   id: string;
@@ -101,6 +106,7 @@ export default function EditCompanyPage() {
     support_fund_id: '',
     subsidiary_id: '',
     class_id: '',
+    price_tier: '',
     location_id: '',
     cross_subsidiary_fulfillment: false,
     enable_credit_card_payments: false,
@@ -156,6 +162,7 @@ export default function EditCompanyPage() {
           support_fund_id: c.support_fund_id || '',
           subsidiary_id: c.subsidiary_id || '',
           class_id: c.class_id || '',
+          price_tier: c.price_tier || '',
           location_id: c.location_id || '',
           cross_subsidiary_fulfillment: c.cross_subsidiary_fulfillment ?? false,
           enable_credit_card_payments: c.enable_credit_card_payments ?? false,
@@ -360,6 +367,7 @@ export default function EditCompanyPage() {
           support_fund_id: formData.support_fund_id || null,
           subsidiary_id: formData.subsidiary_id || null,
           class_id: formData.class_id || null,
+          price_tier: formData.price_tier || null,
           location_id: formData.location_id || null,
           cross_subsidiary_fulfillment: formData.cross_subsidiary_fulfillment,
           // Card payments are Qiqi-INC-only — never persist them for other subs.
@@ -501,6 +509,44 @@ export default function EditCompanyPage() {
             onChange={setSelect('class_id')}
             options={options.classes}
           />
+          <div>
+            <Label className="text-sm font-medium">Pricing tier</Label>
+            <div className="mt-1.5">
+              <Select
+                value={formData.price_tier || NONE}
+                onValueChange={(v) =>
+                  setFormData((p) => ({ ...p, price_tier: v === NONE ? '' : v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>
+                    Automatic —{' '}
+                    {
+                      PRICE_TIER_LABELS[
+                        effectivePriceTier({
+                          className:
+                            options.classes.find((c) => c.id === formData.class_id)?.name ?? null,
+                        })
+                      ]
+                    }{' '}
+                    (from class)
+                  </SelectItem>
+                  {PRICE_TIERS.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {PRICE_TIER_LABELS[t]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Which catalog prices this company pays. Hub only — NetSuite keeps the class. Open
+              and draft orders re-price when they are next saved.
+            </p>
+          </div>
           <div>
             <SelectField
               label="Location"

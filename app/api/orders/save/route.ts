@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireWithPermission } from '../../../../platform/auth/guards';
-import { computeOrderMoney, type SaveItemInput } from '../../../../lib/orderSave';
+import { computeOrderMoney, lineKey, type SaveItemInput } from '../../../../lib/orderSave';
+import { resolveUnitPrice } from '../../../../lib/orderPricing';
 import { SHIPMENT_TYPE_CODES } from '../../../../lib/shipmentTypes';
 
 /**
@@ -20,7 +21,8 @@ import { SHIPMENT_TYPE_CODES } from '../../../../lib/shipmentTypes';
  *   companyId: string,
  *   poNumber?: string | null,       // generated server-side when empty
  *   asDraft: boolean,
- *   items: Array<{ product_id, quantity, case_qty?, is_support_fund_item }>,
+ *   items: Array<{ product_id, quantity, case_qty?, is_support_fund_item,
+ *                  unit_price_override? }>,
  *     // in DISPLAY order — sort_order is assigned by position
  * }
  *
@@ -29,6 +31,11 @@ import { SHIPMENT_TYPE_CODES } from '../../../../lib/shipmentTypes';
  *   Draft saves stay/become Draft, non-draft saves promote Draft→Open and
  *   otherwise keep the current status. Clients only for their own company;
  *   admins for any.
+ *
+ * Manual prices: `unit_price_override` is honoured ONLY from admins (the
+ * admin payload is the full truth — omitting it clears the override). A
+ * client's save ignores it and instead carries over the overrides already
+ * stored on the order, so a client edit can never undo an admin's price.
  */
 
 const EDITABLE_STATUSES = ['Draft', 'Open'];
@@ -80,10 +87,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ---- Company: class (pricing region), SF tier, fulfilling location ----
+    // ---- Company: pricing tier + class, SF tier, fulfilling location ----
     const { data: company, error: companyErr } = await supabase
       .from('companies')
-      .select('id, location_id, class:classes(name), support_fund:support_fund_levels(percent)')
+      .select('id, location_id, price_tier, class:classes(name), support_fund:support_fund_levels(percent)')
       .eq('id', companyId)
       .maybeSingle();
     if (companyErr) throw new Error(`company lookup: ${companyErr.message}`);
@@ -96,12 +103,68 @@ export async function POST(request: NextRequest) {
     const sfPercent: number | null =
       (Array.isArray(companyRaw.support_fund) ? companyRaw.support_fund[0] : companyRaw.support_fund)
         ?.percent ?? null;
+    const priceTier: string | null = companyRaw.price_tier ?? null;
 
-    // ---- Catalog: the ONLY source of prices ----
-    const productIds = [...new Set(rawItems.map((i) => Number(i.product_id)))];
+    // ---- Update: the existing order + its current lines (for overrides) ----
+    const orderId = typeof body.orderId === 'string' ? body.orderId : null;
+    let existing: { id: string; company_id: string; status: string; hold: string | null } | null = null;
+    const existingLines = new Map<string, { unit_price: number; price_override: boolean }>();
+    if (mode === 'update') {
+      if (!orderId) {
+        return NextResponse.json({ error: 'orderId is required for update.' }, { status: 400 });
+      }
+      const { data: existingRow, error: existingErr } = await supabase
+        .from('orders')
+        .select('id, company_id, status, hold')
+        .eq('id', orderId)
+        .maybeSingle();
+      if (existingErr) throw new Error(`order lookup: ${existingErr.message}`);
+      if (!existingRow || existingRow.company_id !== companyId) {
+        return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
+      }
+      if (!EDITABLE_STATUSES.includes(existingRow.status)) {
+        return NextResponse.json(
+          { error: `Orders in status "${existingRow.status}" cannot be edited.` },
+          { status: 409 },
+        );
+      }
+      existing = existingRow as any;
+
+      const { data: lines, error: linesErr } = await supabase
+        .from('order_items')
+        .select('product_id, is_support_fund_item, unit_price, price_override')
+        .eq('order_id', orderId);
+      if (linesErr) throw new Error(`order lines lookup: ${linesErr.message}`);
+      for (const l of lines ?? []) {
+        existingLines.set(lineKey(l.product_id, l.is_support_fund_item), {
+          unit_price: Number(l.unit_price) || 0,
+          price_override: !!l.price_override,
+        });
+      }
+    }
+
+    // ---- Which manual prices are trusted (see header) ----
+    const items: SaveItemInput[] = rawItems.map((i: any) => {
+      const key = lineKey(i.product_id, i.is_support_fund_item);
+      const stored = existingLines.get(key);
+      return {
+        product_id: Number(i.product_id),
+        quantity: i.quantity,
+        case_qty: i.case_qty,
+        is_support_fund_item: !!i.is_support_fund_item,
+        unit_price_override: isAdmin
+          ? (i.unit_price_override ?? null)
+          : stored?.price_override
+            ? stored.unit_price
+            : null,
+      };
+    });
+
+    // ---- Catalog: the source of every non-manual price ----
+    const productIds = [...new Set(items.map((i) => i.product_id))];
     const { data: products, error: productsErr } = await supabase
       .from('Products')
-      .select('id, sku, price_americas, price_international, qualifies_for_credit_earning, enable')
+      .select('id, sku, price_americas, price_international, salon_price, msrp, qualifies_for_credit_earning, enable')
       .in('id', productIds);
     if (productsErr) throw new Error(`catalog lookup: ${productsErr.message}`);
     const productsById = new Map((products ?? []).map((p: any) => [Number(p.id), p]));
@@ -109,13 +172,39 @@ export async function POST(request: NextRequest) {
     let money;
     try {
       money = computeOrderMoney({
-        items: rawItems,
+        items,
         productsById,
         companyClassName: className,
+        companyPriceTier: priceTier,
         supportFundPercent: sfPercent,
       });
     } catch (err: any) {
       return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+
+    // ---- Manual-price audit lines (admin saves only; clients can't change them) ----
+    const priceChanges: string[] = [];
+    if (isAdmin) {
+      const fmt = (n: number) => `$${n.toFixed(2)}`;
+      for (const item of money.items) {
+        const product = productsById.get(item.product_id) as any;
+        const sku = product?.sku ?? `Product ${item.product_id}`;
+        const catalog = resolveUnitPrice({ priceTier, className }, product ?? {});
+        const before = existingLines.get(lineKey(item.product_id, item.is_support_fund_item));
+        const sfTag = item.is_support_fund_item ? ' (support funds)' : '';
+        if (item.price_override) {
+          const unchanged =
+            before?.price_override && Math.abs(before.unit_price - item.unit_price) < 0.005;
+          if (!unchanged) {
+            priceChanges.push(
+              `${sku}${sfTag}: manual price ${fmt(item.unit_price)}` +
+                (catalog !== null ? ` (catalog ${fmt(catalog)})` : ''),
+            );
+          }
+        } else if (before?.price_override) {
+          priceChanges.push(`${sku}${sfTag}: back to catalog price ${fmt(item.unit_price)}`);
+        }
+      }
     }
 
     // ---- History writer identity ----
@@ -126,6 +215,23 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     const changedByName = profile?.name || (isAdmin ? 'Admin' : 'Client');
     const changedByRole = isAdmin ? 'admin' : 'client';
+
+    // Internal only: the client sees their prices, never the catalog/tier
+    // comparison these notes carry (owner rule 2026-10-05).
+    const writePriceHistory = async (forOrderId: string) => {
+      if (priceChanges.length === 0) return;
+      const { error } = await supabase.from('order_history').insert({
+        order_id: forOrderId,
+        action_type: 'price_override',
+        notes: `Manual pricing — ${priceChanges.join('; ')}`,
+        metadata: { changes: priceChanges },
+        changed_by_id: user.id,
+        changed_by_name: changedByName,
+        changed_by_role: changedByRole,
+        visible_to_client: false,
+      });
+      if (error) console.error('price_override history insert failed:', error.message);
+    };
 
     if (mode === 'create') {
       const poNumber =
@@ -170,30 +276,14 @@ export async function POST(request: NextRequest) {
         visible_to_client: true,
       });
       if (historyErr) console.error('order_created history insert failed:', historyErr.message);
+      await writePriceHistory(newOrderId);
 
       return NextResponse.json({ success: true, orderId: newOrderId, status });
     }
 
-    // ---- mode === 'update' ----
-    const orderId = typeof body.orderId === 'string' ? body.orderId : null;
-    if (!orderId) {
-      return NextResponse.json({ error: 'orderId is required for update.' }, { status: 400 });
-    }
-
-    const { data: existing, error: existingErr } = await supabase
-      .from('orders')
-      .select('id, company_id, status, hold')
-      .eq('id', orderId)
-      .maybeSingle();
-    if (existingErr) throw new Error(`order lookup: ${existingErr.message}`);
-    if (!existing || existing.company_id !== companyId) {
+    // ---- mode === 'update' (order + status validated above) ----
+    if (!existing || !orderId) {
       return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
-    }
-    if (!EDITABLE_STATUSES.includes(existing.status)) {
-      return NextResponse.json(
-        { error: `Orders in status "${existing.status}" cannot be edited.` },
-        { status: 409 },
-      );
     }
 
     const oldStatus = existing.status;
@@ -247,6 +337,7 @@ export async function POST(request: NextRequest) {
       visible_to_client: true,
     });
     if (historyErr) console.error('order_updated history insert failed:', historyErr.message);
+    await writePriceHistory(orderId);
 
     return NextResponse.json({
       success: true,

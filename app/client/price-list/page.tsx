@@ -1,9 +1,11 @@
 'use client';
 
 /**
- * Price list — region-specific: the caller sees THEIR distributor price
- * (Americas vs International resolved from their company's class, same
- * tolerant match the order pricing uses), plus Salon Price and MSRP.
+ * Price list — the caller sees THEIR price: the company's pricing tier
+ * (explicit on the company, else Americas/International from its class —
+ * the same rule the order pricing uses), plus the suggested resale prices
+ * ABOVE their tier only. A company priced at Salon never sees distributor
+ * or salon columns — "his pricing and nothing else" (owner 2026-10-05).
  * On-screen table + a designed on-the-fly PDF that can never go stale.
  */
 
@@ -12,7 +14,7 @@ import { Download } from 'lucide-react';
 
 import { supabase } from '../../../lib/supabaseClient';
 import { formatCurrency } from '../../../lib/formatters';
-import { resolveCatalogPrice } from '../../../lib/orderPricing';
+import { effectivePriceTier, priceForTier, type PriceTier } from '../../../lib/orderPricing';
 import type { PriceListRow } from '../../../lib/pdf/components/PriceListDocument';
 
 import { PageHeader } from '../../components/qq/page-header';
@@ -42,6 +44,7 @@ interface ProductRow {
 
 export default function ClientPriceListPage() {
   const [rows, setRows] = useState<PriceListRow[]>([]);
+  const [tier, setTier] = useState<PriceTier | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +58,7 @@ export default function ClientPriceListPage() {
         // Region = the company's class (RLS: own company + its linked class).
         const { data: client } = await supabase
           .from('clients')
-          .select('company:companies(class:classes(name))')
+          .select('company:companies(price_tier, class:classes(name))')
           .eq('id', user.id)
           .single();
         const companyRaw: any = Array.isArray(client?.company)
@@ -75,8 +78,14 @@ export default function ClientPriceListPage() {
           .order('sort_order', { ascending: true, nullsFirst: false });
         if (err) throw err;
 
-        // Same tolerant region match as order pricing (never strict-equal).
+        // Region (product visibility) still follows the class — tolerant
+        // match, never strict-equal. The PRICE follows the pricing tier.
         const isAmericas = (className || '').toLowerCase().includes('america');
+        const companyTier = effectivePriceTier({
+          priceTier: companyRaw?.price_tier ?? null,
+          className,
+        });
+        setTier(companyTier);
 
         setRows(
           ((products as unknown as ProductRow[]) || [])
@@ -85,10 +94,12 @@ export default function ClientPriceListPage() {
             .filter((p) =>
               isAmericas ? p.visible_to_americas !== false : p.visible_to_international !== false,
             )
+            // Not priced at their tier = not orderable by them = not listed.
+            .filter((p) => priceForTier(companyTier, p) !== null)
             .map((p) => ({
               name: p.item_name || p.sku || '—',
               casePack: p.case_pack,
-              distributor: resolveCatalogPrice(className, p) || null,
+              distributor: priceForTier(companyTier, p),
               salon: p.salon_price,
               msrp: p.msrp,
             })),
@@ -100,6 +111,10 @@ export default function ClientPriceListPage() {
       }
     })();
   }, []);
+
+  // Only resale prices above the company's own tier are shown.
+  const showSalon = tier === 'americas' || tier === 'international';
+  const showMsrp = tier !== null && tier !== 'msrp';
 
   const handleDownload = async () => {
     try {
@@ -115,6 +130,8 @@ export default function ClientPriceListPage() {
       const blob = await pdf(
         React.createElement(PriceListDocument, {
           rows,
+          showSalon,
+          showMsrp,
           generatedAt,
           logoUrl: `${origin}/logo.png`,
           taglineUrl: `${origin}/Qiqi_Tagline_Black.png`,
@@ -137,7 +154,15 @@ export default function ClientPriceListPage() {
     <div className="px-6 py-8 space-y-6">
       <PageHeader
         title="Price list"
-        description="Your distributor prices with suggested salon and retail pricing — always current."
+        description={
+          tier === null
+            ? undefined
+            : showSalon
+            ? 'Your distributor prices with suggested salon and retail pricing — always current.'
+            : showMsrp
+              ? 'Your prices with suggested retail pricing — always current.'
+              : 'Your prices — always current.'
+        }
         actions={
           <Button
             size="sm"
@@ -168,8 +193,8 @@ export default function ClientPriceListPage() {
                   <TableHead>Product</TableHead>
                   <TableHead className="text-right">Case Pack</TableHead>
                   <TableHead className="text-right">Distributor (USD)</TableHead>
-                  <TableHead className="text-right">Salon (USD)</TableHead>
-                  <TableHead className="text-right">MSRP (USD)</TableHead>
+                  {showSalon && <TableHead className="text-right">Salon (USD)</TableHead>}
+                  {showMsrp && <TableHead className="text-right">MSRP (USD)</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -182,16 +207,20 @@ export default function ClientPriceListPage() {
                     <TableCell className="text-right font-mono text-sm font-semibold">
                       {r.distributor ? formatCurrency(r.distributor) : '—'}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {r.salon ? formatCurrency(r.salon) : '—'}
-                    </TableCell>
-                    <TableCell className="text-right text-sm">
-                      {r.msrp ? (
-                        <span className="font-mono">{formatCurrency(r.msrp)}</span>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">Pro use</span>
-                      )}
-                    </TableCell>
+                    {showSalon && (
+                      <TableCell className="text-right font-mono text-sm">
+                        {r.salon ? formatCurrency(r.salon) : '—'}
+                      </TableCell>
+                    )}
+                    {showMsrp && (
+                      <TableCell className="text-right text-sm">
+                        {r.msrp ? (
+                          <span className="font-mono">{formatCurrency(r.msrp)}</span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Pro use</span>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

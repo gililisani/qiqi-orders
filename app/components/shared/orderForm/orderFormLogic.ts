@@ -6,12 +6,12 @@
  *
  * Everything here is a pure function: inputs in, value out, no React.
  *
- * Pricing note: the region price rule is IMPORTED from lib/orderPricing —
- * the exact function the server uses to validate orders before they reach
- * NetSuite. Forms and validator cannot drift.
+ * Pricing note: the tier price rule is IMPORTED from lib/orderPricing —
+ * the exact function the server uses to compute and validate orders before
+ * they reach NetSuite. Forms and server cannot drift.
  */
 
-import { resolveCatalogPrice } from '../../../../lib/orderPricing';
+import { resolveUnitPrice } from '../../../../lib/orderPricing';
 
 // Structural types — deliberately loose (`[k: string]: any`) so each view's
 // richer local interfaces satisfy them without a big type unification.
@@ -43,7 +43,16 @@ export interface FormOrderItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  /** Admin-set manual price — unit_price is kept through quantity changes. */
+  price_override?: boolean;
   [k: string]: any;
+}
+
+/** The pricing inputs of a company row as the forms load it
+ *  (`companies(*, class:classes(name))`). */
+export function pricingContextOf(company: any): { priceTier: string | null; className: string | null } {
+  const cls = Array.isArray(company?.class) ? company.class[0] : company?.class;
+  return { priceTier: company?.price_tier ?? null, className: cls?.name ?? null };
 }
 
 /** Tolerant class-region rule — substring match, never strict equality. */
@@ -51,14 +60,54 @@ export function isAmericasClass(className: string | null | undefined): boolean {
   return (className || '').toLowerCase().includes('america');
 }
 
-/** Unit price for a product under a company's class (server-validated rule). */
-export function productPriceForClass(
-  className: string | null | undefined,
-  product: FormProduct,
-): number {
-  return resolveCatalogPrice(className, {
+/** Catalog unit price for a product at the company's pricing tier (the
+ *  server's rule); null when the catalog has no price at that tier. */
+export function productPriceForCompany(company: any, product: FormProduct): number | null {
+  return resolveUnitPrice(pricingContextOf(company), {
     price_americas: product.price_americas ?? null,
     price_international: product.price_international ?? null,
+    salon_price: product.salon_price ?? null,
+    msrp: product.msrp ?? null,
+  });
+}
+
+/** Products the company can actually be priced for — a product with no
+ *  price at its tier is not offered (the server would refuse it). */
+export function filterPricedProducts<P extends FormProduct>(products: P[], company: any): P[] {
+  return products.filter((p) => productPriceForCompany(company, p) !== null);
+}
+
+/**
+ * Lines loaded from a saved order, re-priced for display the way the
+ * server will price them on save: catalog lines at the CURRENT tier price
+ * (a tier or catalog change since the last save shows up before saving,
+ * not after), manual-price lines untouched.
+ */
+export function repriceLoadedLines<I extends FormOrderItem>(items: I[], company: any): I[] {
+  return items.map((i) => {
+    if (i.price_override || !i.product) return i;
+    const unit = productPriceForCompany(company, i.product);
+    if (unit === null) return i;
+    return { ...i, unit_price: unit, total_price: (Number(i.quantity) || 0) * unit };
+  });
+}
+
+/** An admin's manual price on a line (null = back to the catalog price). */
+export function applyManualPrice<I extends FormOrderItem>(
+  prev: I[],
+  productId: number,
+  manualPrice: number | null,
+  catalogPrice: number,
+): I[] {
+  return prev.map((i) => {
+    if (i.product_id !== productId) return i;
+    const unit = manualPrice ?? catalogPrice;
+    return {
+      ...i,
+      unit_price: unit,
+      total_price: (Number(i.quantity) || 0) * unit,
+      price_override: manualPrice !== null,
+    };
   });
 }
 
@@ -121,15 +170,17 @@ export function applyCaseQtyChange<I extends FormOrderItem, P extends FormProduc
 ): I[] {
   if (newCaseQty === 0) return prev.filter((i) => i.product_id !== product.id);
   const quantity = newCaseQty * (product.case_pack || 1);
-  const totalPrice = quantity * unitPrice;
   const existing = prev.find((i) => i.product_id === product.id);
   if (existing) {
+    // A manual price sticks to the line through quantity changes.
+    const lineUnit = existing.price_override ? existing.unit_price : unitPrice;
     return prev.map((i) =>
       i.product_id === product.id
-        ? { ...i, case_qty: newCaseQty, quantity, unit_price: unitPrice, total_price: totalPrice }
+        ? { ...i, case_qty: newCaseQty, quantity, unit_price: lineUnit, total_price: quantity * lineUnit }
         : i,
     );
   }
+  const totalPrice = quantity * unitPrice;
   return [
     ...prev,
     {

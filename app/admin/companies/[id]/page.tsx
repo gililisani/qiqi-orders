@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { supabase } from '../../../../lib/supabaseClient';
+import { PRICE_TIER_LABELS, effectivePriceTier } from '../../../../lib/orderPricing';
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 
 import { PageHeader } from '../../../components/qq/page-header';
@@ -56,6 +57,7 @@ interface Company {
   support_fund?: { percent: number };
   subsidiary?: { name: string };
   class?: { name: string };
+  price_tier?: string | null;
   location?: { location_name: string };
   incoterm?: { name: string };
   payment_term?: { name: string };
@@ -287,6 +289,17 @@ export default function CompanyViewPage() {
             </div>
             <View label="Subsidiary" value={company.subsidiary?.name || '—'} />
             <View label="Class" value={company.class?.name || '—'} />
+            <View
+              label="Pricing tier"
+              value={
+                PRICE_TIER_LABELS[
+                  effectivePriceTier({
+                    priceTier: company.price_tier,
+                    className: company.class?.name ?? null,
+                  })
+                ] + (company.price_tier ? '' : ' (automatic, from class)')
+              }
+            />
             <View label="Location" value={company.location?.location_name || '—'} />
             {company.incoterm?.name && <View label="Incoterm" value={company.incoterm.name} />}
             {company.payment_term?.name && (

@@ -24,9 +24,11 @@ import {
   applyCaseQtyChange,
   computeOrderTotals,
   computeSupportFundTotals,
+  filterPricedProducts,
   filterProductsForRegion,
   groupProductsByCategory,
-  productPriceForClass,
+  productPriceForCompany,
+  repriceLoadedLines,
   resolveSupportFundPercent,
 } from '../shared/orderForm/orderFormLogic';
 
@@ -88,6 +90,7 @@ interface Company {
   id: string;
   company_name: string;
   netsuite_number: string;
+  price_tier?: string | null;
   support_fund?: { percent: number }[];
   class?: { name: string };
 }
@@ -99,6 +102,7 @@ interface OrderItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  price_override?: boolean;
 }
 
 interface SupportFundItem extends OrderItem {}
@@ -249,8 +253,12 @@ export default function ClientOrderFormView({ orderId, backUrl }: ClientOrderFor
     if (error) throw error;
     // Region visibility: the visible_to_* flags on products/categories are
     // finally enforced (they were configured for years but applied nowhere).
+    // Pricing tier: only products the company has a catalog price for.
     setProducts(
-      filterProductsForRegion((data || []) as Product[], companyData.class?.name),
+      filterPricedProducts(
+        filterProductsForRegion((data || []) as Product[], companyData.class?.name),
+        companyData,
+      ),
     );
   };
 
@@ -274,26 +282,17 @@ export default function ClientOrderFormView({ orderId, backUrl }: ClientOrderFor
     if (itemsError) throw itemsError;
     const regular = (items || []).filter((i: any) => !i.is_support_fund_item);
     const sf = (items || []).filter((i: any) => i.is_support_fund_item);
-    setOrderItems(
-      regular.map((i: any) => ({
-        product_id: i.product_id,
-        product: i.product,
-        case_qty: i.case_qty,
-        quantity: i.quantity,
-        unit_price: i.unit_price,
-        total_price: i.total_price,
-      }))
-    );
-    setSupportFundItems(
-      sf.map((i: any) => ({
-        product_id: i.product_id,
-        product: i.product,
-        case_qty: i.case_qty,
-        quantity: i.quantity,
-        unit_price: i.unit_price,
-        total_price: i.total_price,
-      }))
-    );
+    const toLine = (i: any): OrderItem => ({
+      product_id: i.product_id,
+      product: i.product,
+      case_qty: i.case_qty,
+      quantity: i.quantity,
+      unit_price: Number(i.unit_price),
+      total_price: Number(i.total_price),
+      price_override: !!i.price_override,
+    });
+    setOrderItems(repriceLoadedLines(regular.map(toLine), orderData.company));
+    setSupportFundItems(repriceLoadedLines(sf.map(toLine), orderData.company));
 
     await fetchProductsForCompany(orderData.company as Company);
   };
@@ -317,8 +316,7 @@ export default function ClientOrderFormView({ orderId, backUrl }: ClientOrderFor
   }, [orderId]);
 
   // ---- Shared order-form logic (single source with the admin form) ----
-  const getProductPrice = (product: Product) =>
-    productPriceForClass(company?.class?.name, product);
+  const getProductPrice = (product: Product) => productPriceForCompany(company, product) ?? 0;
 
   const getProductsByCategory = () => groupProductsByCategory(products);
 
@@ -975,7 +973,9 @@ function CategoryAccordion({
                 const orderItem = showSupportFundRedemption
                   ? supportFundItems.find((i) => i.product_id === product.id)
                   : orderItems.find((i) => i.product_id === product.id);
-                const unitPrice = getProductPrice(product);
+                const unitPrice = orderItem?.price_override
+                  ? orderItem.unit_price
+                  : getProductPrice(product);
                 const isHighlighted = highlightedProductId === product.id.toString();
                 const hasQty = (orderItem?.case_qty || 0) > 0;
                 const baseRowBg = showSupportFundRedemption

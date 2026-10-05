@@ -115,18 +115,24 @@ export function useOrderFormController(params: {
         // one transaction. The on-screen totals (getOrderTotals) are display
         // only — the server's math is the same, but the server's is the one
         // that's stored.
+        // Manual line prices travel only from the admin form; the server
+        // ignores them from clients and keeps the stored ones instead.
+        const manualPrice = (item: any) =>
+          role === 'admin' && item.price_override ? { unit_price_override: item.unit_price } : {};
         const itemsPayload = [
           ...orderItems.map((item: any) => ({
             product_id: item.product_id,
             quantity: item.quantity,
             case_qty: item.case_qty || 0,
             is_support_fund_item: false,
+            ...manualPrice(item),
           })),
           ...supportFundItems.map((item: any) => ({
             product_id: item.product_id,
             quantity: item.quantity,
             case_qty: item.case_qty || 0,
             is_support_fund_item: true,
+            ...manualPrice(item),
           })),
         ];
 

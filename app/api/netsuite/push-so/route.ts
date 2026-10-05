@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
             netsuite_id,
             subsidiary:subsidiaries(netsuite_id)
           ),
+          price_tier,
           class:classes(name),
           support_fund:support_fund_levels(percent)
         ),
@@ -54,7 +55,8 @@ export async function POST(request: NextRequest) {
           unit_price,
           total_price,
           is_support_fund_item,
-          product:Products(sku, item_name, netsuite_name, price_americas, price_international, qualifies_for_credit_earning)
+          price_override,
+          product:Products(sku, item_name, netsuite_name, price_americas, price_international, salon_price, msrp, qualifies_for_credit_earning)
         )
       `)
       .eq('id', orderId)
@@ -79,6 +81,7 @@ export async function POST(request: NextRequest) {
     const pricingCheck = validateOrderPricing({
       items: (order.order_items ?? []) as any[],
       companyClassName: companyRaw?.class?.name ?? null,
+      companyPriceTier: companyRaw?.price_tier ?? null,
       supportFundPercent: companyRaw?.support_fund?.percent ?? null,
       orderTotalValue: (order as any).total_value,
       orderCreditEarned: (order as any).credit_earned,
@@ -93,7 +96,7 @@ export async function POST(request: NextRequest) {
         {
           error:
             'Order pricing does not match the catalog — push blocked. ' +
-            'If a product price legitimately changed since this order was created, ' +
+            'If a product price or the company\'s pricing tier legitimately changed since this order was saved, ' +
             'open the order, re-save it to reprice, and push again.',
           violations: pricingCheck.violations.map((v) => v.detail),
         },

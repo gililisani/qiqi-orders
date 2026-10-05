@@ -4,8 +4,10 @@
  * real brand assets from /public), ABC P3rman3nt (the Hub's brand font),
  * single thin black grid (no doubled borders), left-aligned $9.5-style
  * prices, "Pro use" where there is no MSRP, contact-only footer.
- * Region-specific: the caller's distributor price and ONLY the products
- * visible to their region.
+ * Region-specific: the caller's own price (their pricing tier) and ONLY
+ * the products visible to their region. The Salon / MSRP columns are shown
+ * only when they sit ABOVE the caller's tier (a Salon-priced distributor
+ * gets no Salon column) — defaults keep the original template.
  */
 
 import React from 'react';
@@ -104,11 +106,15 @@ function money(v: number | null): string {
 
 export function PriceListDocument({
   rows,
+  showSalon = true,
+  showMsrp = true,
   generatedAt,
   logoUrl,
   taglineUrl,
 }: {
   rows: PriceListRow[];
+  showSalon?: boolean;
+  showMsrp?: boolean;
   generatedAt: string;
   logoUrl?: string;
   taglineUrl?: string;
@@ -141,12 +147,16 @@ export function PriceListDocument({
             <View style={[styles.cell, styles.colPrice]}>
               <Text style={styles.headText}>Distributor Price (USD)</Text>
             </View>
-            <View style={[styles.cell, styles.colPrice]}>
-              <Text style={styles.headText}>Salon Price (USD)</Text>
-            </View>
-            <View style={[styles.cell, styles.colMsrp]}>
-              <Text style={styles.headText}>MSRP (USD)</Text>
-            </View>
+            {showSalon && (
+              <View style={[styles.cell, styles.colPrice]}>
+                <Text style={styles.headText}>Salon Price (USD)</Text>
+              </View>
+            )}
+            {showMsrp && (
+              <View style={[styles.cell, styles.colMsrp]}>
+                <Text style={styles.headText}>MSRP (USD)</Text>
+              </View>
+            )}
           </View>
 
           {rows.map((r, i) => (
@@ -160,12 +170,16 @@ export function PriceListDocument({
               <View style={[styles.cell, styles.colPrice]}>
                 <Text>{money(r.distributor)}</Text>
               </View>
-              <View style={[styles.cell, styles.colPrice]}>
-                <Text>{money(r.salon)}</Text>
-              </View>
-              <View style={[styles.cell, styles.colMsrp]}>
-                <Text>{r.msrp == null ? 'Pro use' : money(r.msrp)}</Text>
-              </View>
+              {showSalon && (
+                <View style={[styles.cell, styles.colPrice]}>
+                  <Text>{money(r.salon)}</Text>
+                </View>
+              )}
+              {showMsrp && (
+                <View style={[styles.cell, styles.colMsrp]}>
+                  <Text>{r.msrp == null ? 'Pro use' : money(r.msrp)}</Text>
+                </View>
+              )}
             </View>
           ))}
         </View>

@@ -5,7 +5,10 @@ import {
   computeSupportFundTotals,
   filterProductsForRegion,
   groupProductsByCategory,
-  productPriceForClass,
+  productPriceForCompany,
+  filterPricedProducts,
+  repriceLoadedLines,
+  applyManualPrice,
   type FormProduct,
 } from '@/app/components/shared/orderForm/orderFormLogic';
 
@@ -18,11 +21,60 @@ const P = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-describe('productPriceForClass', () => {
-  it('mirrors the server-side validator rule (tolerant substring)', () => {
-    expect(productPriceForClass('North America Distributors', P())).toBe(14);
-    expect(productPriceForClass('International Distributors', P())).toBe(13.5);
-    expect(productPriceForClass(null, P())).toBe(13.5); // no class → international
+const co = (className: string | null, price_tier: string | null = null) => ({
+  price_tier,
+  class: className ? { name: className } : null,
+});
+
+describe('productPriceForCompany', () => {
+  it('mirrors the server-side rule (tolerant class match when no tier)', () => {
+    expect(productPriceForCompany(co('North America Distributors'), P())).toBe(14);
+    expect(productPriceForCompany(co('International Distributors'), P())).toBe(13.5);
+    expect(productPriceForCompany(co(null), P())).toBe(13.5); // no class → international
+    expect(productPriceForCompany({ class: [{ name: 'North America Distributors' }] }, P())).toBe(14);
+  });
+
+  it('uses the company pricing tier when set', () => {
+    expect(productPriceForCompany(co('International Distributors', 'salon'), P({ salon_price: 28 }))).toBe(28);
+    expect(productPriceForCompany(co('International Distributors', 'salon'), P())).toBeNull();
+  });
+
+  it('filterPricedProducts drops products with no price at the tier', () => {
+    const list = [P({ id: 1, salon_price: 28 }), P({ id: 2 })];
+    expect(filterPricedProducts(list, co('International', 'salon')).map((p) => p.id)).toEqual([1]);
+    expect(filterPricedProducts(list, co('International')).map((p) => p.id)).toEqual([1, 2]);
+  });
+});
+
+describe('manual line prices', () => {
+  const line = (over: Record<string, unknown> = {}) => ({
+    product_id: 1,
+    product: P({ salon_price: 28 }) as FormProduct,
+    case_qty: 1,
+    quantity: 12,
+    unit_price: 13.5,
+    total_price: 162,
+    ...over,
+  });
+
+  it('applyCaseQtyChange keeps a manual price through quantity changes', () => {
+    const prev = [line({ unit_price: 20, total_price: 240, price_override: true })];
+    const next = applyCaseQtyChange(prev, P() as FormProduct, 2, 13.5);
+    expect(next[0]).toMatchObject({ quantity: 24, unit_price: 20, total_price: 480, price_override: true });
+  });
+
+  it('applyManualPrice sets and clears the override', () => {
+    const set = applyManualPrice([line()], 1, 20, 13.5);
+    expect(set[0]).toMatchObject({ unit_price: 20, total_price: 240, price_override: true });
+    const cleared = applyManualPrice(set, 1, null, 13.5);
+    expect(cleared[0]).toMatchObject({ unit_price: 13.5, total_price: 162, price_override: false });
+  });
+
+  it('repriceLoadedLines shows the current tier price, leaving manual lines alone', () => {
+    const lines = [line(), line({ product_id: 2, unit_price: 9, total_price: 108, price_override: true })];
+    const out = repriceLoadedLines(lines, co('International Distributors', 'salon'));
+    expect(out[0]).toMatchObject({ unit_price: 28, total_price: 336 });
+    expect(out[1]).toMatchObject({ unit_price: 9, total_price: 108 });
   });
 });
 

@@ -49,6 +49,7 @@ const ACTION_LABELS: Record<string, string> = {
   document_deleted: 'Document deleted',
   packing_slip_created: 'Packing slip created',
   order_updated: 'Order updated',
+  price_override: 'Price changed (internal)',
 };
 
 const ROLE_VARIANT: Record<string, 'accent' | 'secondary' | 'muted'> = {
@@ -72,6 +73,8 @@ function actionIcon(type: string) {
       return <Package className={`${cls} text-amber-600`} />;
     case 'order_updated':
       return <Edit3 className={`${cls} text-muted-foreground`} />;
+    case 'price_override':
+      return <Edit3 className={`${cls} text-amber-600`} />;
     default:
       return <Info className={`${cls} text-muted-foreground`} />;
   }

@@ -11,8 +11,8 @@
  *
  * The math EXACTLY mirrors the order forms (ClientOrderFormView /
  * AdminOrderFormView / useOrderFormController):
- *   unit price   = class name contains "america" (tolerant, case-insensitive)
- *                  → price_americas, else price_international
+ *   unit price   = the company's pricing tier price (resolveUnitPrice), or
+ *                  the line's admin price override when price_override is set
  *   line total   = quantity × unit_price
  *   earned       = Σ(non-SF line totals where qualifies_for_credit_earning)
  *                  × tier% / 100
@@ -27,17 +27,77 @@
 /** Cent-level slack for float arithmetic the browser did in doubles. */
 const EPSILON = 0.011;
 
+/**
+ * Pricing tiers. A company's tier is `companies.price_tier` when set, and
+ * otherwise follows its NetSuite class (the automatic default). The tier is
+ * a Hub-only commercial decision: the NetSuite class keeps driving
+ * accounting/reporting, so a distributor can pay Salon prices while staying
+ * a distributor in NetSuite (owner 2026-10-05, Simply Natural).
+ */
+export const PRICE_TIERS = ['americas', 'international', 'salon', 'msrp'] as const;
+export type PriceTier = (typeof PRICE_TIERS)[number];
+
+export const PRICE_TIER_LABELS: Record<PriceTier, string> = {
+  americas: 'Americas distributor',
+  international: 'International distributor',
+  salon: 'Salon',
+  msrp: 'MSRP (consumer)',
+};
+
+export interface PricingContext {
+  /** companies.price_tier — null/unknown = automatic (from the class). */
+  priceTier?: string | null;
+  /** The company's NetSuite class name (drives the automatic tier). */
+  className?: string | null;
+}
+
+export interface TierPricedProduct {
+  price_americas: number | string | null;
+  price_international: number | string | null;
+  salon_price?: number | string | null;
+  msrp?: number | string | null;
+}
+
+/** The tier a company actually pays. Explicit tier wins; otherwise the
+ *  tolerant class rule — substring match, never strict-equal (2026-05-28). */
+export function effectivePriceTier(ctx: PricingContext): PriceTier {
+  const explicit = (ctx.priceTier || '').toLowerCase().trim();
+  if ((PRICE_TIERS as readonly string[]).includes(explicit)) return explicit as PriceTier;
+  return (ctx.className || '').toLowerCase().includes('america') ? 'americas' : 'international';
+}
+
+/** A product's catalog price at a tier; null when the catalog has none
+ *  (e.g. a pro-use product has no MSRP) — never silently priced at $0. */
+export function priceForTier(tier: PriceTier, product: TierPricedProduct): number | null {
+  const raw =
+    tier === 'americas'
+      ? product.price_americas
+      : tier === 'international'
+        ? product.price_international
+        : tier === 'salon'
+          ? product.salon_price
+          : product.msrp;
+  if (raw === null || raw === undefined || raw === '') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** Unit price a company pays for a product (null = not priced at its tier). */
+export function resolveUnitPrice(ctx: PricingContext, product: TierPricedProduct): number | null {
+  return priceForTier(effectivePriceTier(ctx), product);
+}
+
 export interface PricingItemInput {
   quantity: number | null;
   unit_price: number | string | null;
   total_price: number | string | null;
   is_support_fund_item: boolean | null;
-  product: {
+  /** Admin-set manual price — the stored unit_price IS the price. */
+  price_override?: boolean | null;
+  product: (TierPricedProduct & {
     sku: string | null;
-    price_americas: number | string | null;
-    price_international: number | string | null;
     qualifies_for_credit_earning: boolean | null;
-  } | null;
+  }) | null;
 }
 
 export interface PricingViolation {
@@ -53,20 +113,11 @@ export interface OrderPricingResult {
   violations: PricingViolation[];
 }
 
-/** Mirror of the forms' getProductPrice — tolerant substring match on the
- *  class name (never strict-equal against domain text; see 2026-05-28). */
-export function resolveCatalogPrice(
-  companyClassName: string | null | undefined,
-  product: { price_americas: number | string | null; price_international: number | string | null },
-): number {
-  const className = (companyClassName || '').toLowerCase();
-  if (className.includes('america')) return Number(product.price_americas) || 0;
-  return Number(product.price_international) || 0;
-}
-
 export function validateOrderPricing(args: {
   items: PricingItemInput[];
   companyClassName: string | null | undefined;
+  /** companies.price_tier (null = automatic from the class). */
+  companyPriceTier?: string | null;
   /** Company's support-fund tier percent; 0 / null when not enrolled. */
   supportFundPercent: number | null | undefined;
   orderTotalValue: number | string | null;
@@ -75,6 +126,10 @@ export function validateOrderPricing(args: {
 }): OrderPricingResult {
   const violations: PricingViolation[] = [];
   const pct = Number(args.supportFundPercent) || 0;
+  const tier = effectivePriceTier({
+    priceTier: args.companyPriceTier,
+    className: args.companyClassName,
+  });
 
   let regularSubtotal = 0;
   let creditEarningSubtotal = 0;
@@ -86,18 +141,39 @@ export function validateOrderPricing(args: {
     const storedUnit = Number(item.unit_price) || 0;
     const storedTotal = Number(item.total_price) || 0;
 
-    if (item.product) {
-      const catalogUnit = resolveCatalogPrice(args.companyClassName, item.product);
-      if (Math.abs(storedUnit - catalogUnit) > EPSILON) {
+    if (item.price_override) {
+      // Admin-set price: no catalog comparison, but it must be a real price.
+      if (!(storedUnit >= 0)) {
+        violations.push({
+          field: 'unit_price',
+          sku,
+          stored: storedUnit,
+          expected: 0,
+          detail: `${sku ?? 'item'}: manual price $${storedUnit.toFixed(2)} is not a valid price.`,
+        });
+      }
+    } else if (item.product) {
+      const catalogUnit = priceForTier(tier, item.product);
+      if (catalogUnit === null) {
+        violations.push({
+          field: 'unit_price',
+          sku,
+          stored: storedUnit,
+          expected: 0,
+          detail:
+            `${sku ?? 'item'}: the catalog has no ${PRICE_TIER_LABELS[tier]} price for this ` +
+            `product. Set one on the product, or give the line a manual price.`,
+        });
+      } else if (Math.abs(storedUnit - catalogUnit) > EPSILON) {
         violations.push({
           field: 'unit_price',
           sku,
           stored: storedUnit,
           expected: catalogUnit,
           detail:
-            `${sku ?? 'item'}: stored unit price $${storedUnit.toFixed(2)} ≠ catalog ` +
-            `$${catalogUnit.toFixed(2)}. Either the order was tampered with or the product's ` +
-            `catalog price changed after the order was created.`,
+            `${sku ?? 'item'}: stored unit price $${storedUnit.toFixed(2)} ≠ ${PRICE_TIER_LABELS[tier]} ` +
+            `catalog price $${catalogUnit.toFixed(2)}. Either the order was tampered with, or the ` +
+            `product's catalog price or the company's pricing tier changed after the order was saved.`,
         });
       }
     }

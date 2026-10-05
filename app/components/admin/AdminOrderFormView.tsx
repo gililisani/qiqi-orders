@@ -21,19 +21,25 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { formatCurrency } from '../../../lib/formatters';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronDown, Gift, Minus, Plus, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Gift, Minus, Pencil, Plus, RotateCcw } from 'lucide-react';
 
 import { useSupabase } from '../../../lib/supabase-provider';
 import { useOrderFormController } from '../shared/orderForm/useOrderFormController';
 import {
   applyCaseQtyChange,
+  applyManualPrice,
   computeOrderTotals,
   computeSupportFundTotals,
+  filterPricedProducts,
   filterProductsForRegion,
   groupProductsByCategory,
-  productPriceForClass,
+  pricingContextOf,
+  productPriceForCompany,
+  repriceLoadedLines,
   resolveSupportFundPercent,
 } from '../shared/orderForm/orderFormLogic';
+import { PRICE_TIER_LABELS, effectivePriceTier } from '../../../lib/orderPricing';
+import { ManualPriceDialog, type ManualPriceTarget } from './ManualPriceDialog';
 
 import { PageHeader } from '../qq/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../qq/card';
@@ -93,6 +99,7 @@ interface Company {
   id: string;
   company_name: string;
   netsuite_number: string;
+  price_tier?: string | null;
   support_fund?: { percent: number }[];
   class?: { name: string };
 }
@@ -104,6 +111,7 @@ interface OrderItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  price_override?: boolean;
 }
 
 interface SupportFundItem extends OrderItem {}
@@ -147,6 +155,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
   const [showSupportFundReminder, setShowSupportFundReminder] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [priceTarget, setPriceTarget] = useState<ManualPriceTarget | null>(null);
   const performSaveInFlightRef = useRef(false);
 
   // Cart scroll handling
@@ -253,7 +262,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
       const { data, error } = await supabase
         .from('companies')
         .select(
-          `id, company_name, netsuite_number, location_id, support_fund:support_fund_levels(percent), class:classes(name)`
+          `id, company_name, netsuite_number, location_id, price_tier, support_fund:support_fund_levels(percent), class:classes(name)`
         )
         .order('company_name', { ascending: true });
       if (error) throw error;
@@ -277,8 +286,12 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
       // Region visibility: an admin ordering FOR a company sees exactly the
       // catalog that company's class is allowed to see — same rule as the
       // client form (flags were configured for years but applied nowhere).
+      // Pricing tier: only products the company has a catalog price for.
       setProducts(
-        filterProductsForRegion((data || []) as Product[], companyData.class?.name),
+        filterPricedProducts(
+          filterProductsForRegion((data || []) as Product[], companyData.class?.name),
+          companyData,
+        ),
       );
     } catch (err: any) {
       console.error('Failed to fetch products', err);
@@ -308,26 +321,17 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
       if (itemsError) throw itemsError;
       const regular = (items || []).filter((i: any) => !i.is_support_fund_item);
       const sf = (items || []).filter((i: any) => i.is_support_fund_item);
-      setOrderItems(
-        regular.map((i: any) => ({
-          product_id: i.product_id,
-          product: i.product,
-          case_qty: i.case_qty,
-          quantity: i.quantity,
-          unit_price: i.unit_price,
-          total_price: i.total_price,
-        }))
-      );
-      setSupportFundItems(
-        sf.map((i: any) => ({
-          product_id: i.product_id,
-          product: i.product,
-          case_qty: i.case_qty,
-          quantity: i.quantity,
-          unit_price: i.unit_price,
-          total_price: i.total_price,
-        }))
-      );
+      const toLine = (i: any): OrderItem => ({
+        product_id: i.product_id,
+        product: i.product,
+        case_qty: i.case_qty,
+        quantity: i.quantity,
+        unit_price: Number(i.unit_price),
+        total_price: Number(i.total_price),
+        price_override: !!i.price_override,
+      });
+      setOrderItems(repriceLoadedLines(regular.map(toLine), orderData.company));
+      setSupportFundItems(repriceLoadedLines(sf.map(toLine), orderData.company));
 
       await fetchProductsForCompany(orderData.company as Company);
     } catch (err: any) {
@@ -356,8 +360,32 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
   };
 
   // ---- Shared order-form logic (single source with the client form) ----
-  const getProductPrice = (product: Product) =>
-    productPriceForClass(company?.class?.name, product);
+  const getProductPrice = (product: Product) => productPriceForCompany(company, product) ?? 0;
+
+  const pricingCtx = pricingContextOf(company);
+  const tierLabel = PRICE_TIER_LABELS[effectivePriceTier(pricingCtx)];
+
+  // ---- Manual line prices (admin only) ----
+  const openPriceEditor = (product: Product, item: OrderItem, isSupportFund: boolean) =>
+    setPriceTarget({
+      productId: product.id,
+      isSupportFund,
+      sku: product.sku,
+      name: product.item_name,
+      catalogPrice: getProductPrice(product),
+      tierLabel,
+      currentPrice: item.unit_price,
+      isManual: !!item.price_override,
+    });
+
+  const applyPriceTarget = (price: number | null) => {
+    if (!priceTarget) return;
+    const { productId, isSupportFund, catalogPrice } = priceTarget;
+    const setter = isSupportFund ? setSupportFundItems : setOrderItems;
+    setter((prev) => applyManualPrice(prev, productId, price, catalogPrice));
+    setHasUnsavedChanges(true);
+    setPriceTarget(null);
+  };
 
   const getProductsByCategory = () => groupProductsByCategory(products);
 
@@ -553,10 +581,19 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                 <CardTitle className="text-sm">Company information</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Company</p>
                     <p className="font-medium">{company.company_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Pricing</p>
+                    <p className="font-medium">
+                      {tierLabel}
+                      {!company.price_tier && (
+                        <span className="text-xs font-normal text-muted-foreground"> · from class</span>
+                      )}
+                    </p>
                   </div>
                   {company.netsuite_number && (
                     <div>
@@ -689,6 +726,9 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                         supportFundItems={supportFundItems}
                         orderItems={orderItems}
                         getProductPrice={getProductPrice}
+                        onEditPrice={(product, item) =>
+                          openPriceEditor(product, item, showSupportFundTab)
+                        }
                         handleSupportFundItemChange={handleSupportFundItemChange}
                         handleCaseQtyChange={handleCaseQtyChange}
                         highlightedProductId={highlightedProductId}
@@ -794,7 +834,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                         <SummaryLine
                           key={`order-${item.product_id}`}
                           sku={item.product.sku}
-                          detail={`${item.quantity} units · ${item.case_qty} case${item.case_qty !== 1 ? 's' : ''}`}
+                          detail={`${item.quantity} units · ${item.case_qty} case${item.case_qty !== 1 ? 's' : ''}${item.price_override ? ' · manual price' : ''}`}
                           total={item.total_price}
                           onClick={() => scrollToProduct(item.product_id.toString(), false)}
                         />
@@ -823,7 +863,7 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
                       <SummaryLine
                         key={`sf-${item.product_id}`}
                         sku={item.product.sku}
-                        detail={`${item.quantity} units · ${item.case_qty} case${item.case_qty !== 1 ? 's' : ''}`}
+                        detail={`${item.quantity} units · ${item.case_qty} case${item.case_qty !== 1 ? 's' : ''}${item.price_override ? ' · manual price' : ''}`}
                         total={item.total_price}
                         accent="success"
                         onClick={() => scrollToProduct(item.product_id.toString(), true)}
@@ -976,6 +1016,12 @@ export default function AdminOrderFormView({ orderId, backUrl }: AdminOrderFormV
         </div>
       )}
 
+      <ManualPriceDialog
+        target={priceTarget}
+        onClose={() => setPriceTarget(null)}
+        onApply={applyPriceTarget}
+      />
+
       {/* Support-fund reminder dialog */}
       <Dialog open={showSupportFundReminder} onOpenChange={setShowSupportFundReminder}>
         <DialogContent className="max-w-md">
@@ -1014,6 +1060,7 @@ interface CategoryAccordionProps {
   supportFundItems: SupportFundItem[];
   orderItems: OrderItem[];
   getProductPrice: (product: Product) => number;
+  onEditPrice: (product: Product, item: OrderItem) => void;
   handleSupportFundItemChange: (productId: number, qty: number) => void;
   handleCaseQtyChange: (productId: number, qty: number) => void;
   highlightedProductId: string | null;
@@ -1028,6 +1075,7 @@ function CategoryAccordion({
   supportFundItems,
   orderItems,
   getProductPrice,
+  onEditPrice,
   handleSupportFundItemChange,
   handleCaseQtyChange,
   highlightedProductId,
@@ -1129,7 +1177,9 @@ function CategoryAccordion({
                 const orderItem = showSupportFundRedemption
                   ? supportFundItems.find((i) => i.product_id === product.id)
                   : orderItems.find((i) => i.product_id === product.id);
-                const unitPrice = getProductPrice(product);
+                const unitPrice = orderItem?.price_override
+                  ? orderItem.unit_price
+                  : getProductPrice(product);
                 const isHighlighted = highlightedProductId === product.id.toString();
                 const hasQty = (orderItem?.case_qty || 0) > 0;
 
@@ -1191,7 +1241,30 @@ function CategoryAccordion({
                       {product.case_pack}
                     </td>
                     <td className="px-2 py-2.5 text-right text-xs font-mono">
-                      {formatCurrency(unitPrice)}
+                      {orderItem ? (
+                        <button
+                          type="button"
+                          onClick={() => onEditPrice(product, orderItem)}
+                          className={`inline-flex items-center gap-1 rounded px-1 -mr-1 hover:bg-muted transition-colors ${
+                            orderItem.price_override ? 'text-amber-700 font-semibold' : ''
+                          }`}
+                          title={
+                            orderItem.price_override
+                              ? 'Manual price — click to change'
+                              : 'Set a manual price for this order'
+                          }
+                        >
+                          {formatCurrency(unitPrice)}
+                          <Pencil className="h-3 w-3 opacity-50" />
+                        </button>
+                      ) : (
+                        formatCurrency(unitPrice)
+                      )}
+                      {orderItem?.price_override && (
+                        <div className="text-[9px] font-sans uppercase tracking-wide text-amber-700">
+                          Manual
+                        </div>
+                      )}
                     </td>
                     <td className="px-1 py-2.5">
                       <div className="flex items-center justify-center gap-1">
