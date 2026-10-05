@@ -15,6 +15,7 @@ import {
 
 import { supabase } from '../../../../lib/supabaseClient';
 import { PRICE_TIER_LABELS, effectivePriceTier } from '../../../../lib/orderPricing';
+import { useFulfillmentRouting } from '../../../components/admin/useFulfillmentRouting';
 import { fetchWithAuth } from '../../../../lib/fetchWithAuth';
 
 import { PageHeader } from '../../../components/qq/page-header';
@@ -58,7 +59,7 @@ interface Company {
   subsidiary?: { name: string };
   class?: { name: string };
   price_tier?: string | null;
-  location?: { location_name: string };
+  subsidiary_id?: string | null;
   incoterm?: { name: string };
   payment_term?: { name: string };
   enable_credit_card_payments?: boolean;
@@ -103,6 +104,7 @@ export default function CompanyViewPage() {
   const confirm = useConfirm();
 
   const [company, setCompany] = useState<Company | null>(null);
+  const routing = useFulfillmentRouting();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -147,7 +149,6 @@ export default function CompanyViewPage() {
               support_fund:support_fund_levels(percent),
               subsidiary:subsidiaries(name),
               class:classes(name),
-              location:Locations(location_name),
               incoterm:incoterms(name),
               payment_term:payment_terms(name)
             `)
@@ -300,7 +301,20 @@ export default function CompanyViewPage() {
                 ] + (company.price_tier ? '' : ' (automatic, from class)')
               }
             />
-            <View label="Location" value={company.location?.location_name || '—'} />
+            <View
+              label="Ships from"
+              value={
+                !routing.loaded
+                  ? '…'
+                  : (() => {
+                      const r = routing.resolve(company);
+                      if (!r.ok) return r.error;
+                      return `${r.warehouse.name}${r.source === 'customer' ? ' (customer exception)' : ''}${
+                        r.crossSubsidiary ? ' · cross-subsidiary' : ''
+                      }`;
+                    })()
+              }
+            />
             {company.incoterm?.name && <View label="Incoterm" value={company.incoterm.name} />}
             {company.payment_term?.name && (
               <View label="Payment terms" value={company.payment_term.name} />

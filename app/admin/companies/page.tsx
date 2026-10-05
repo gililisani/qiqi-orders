@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import { AdminListPage } from '../../components/admin/AdminListPage';
 import { Badge } from '../../components/qq/badge';
 import { SupportFundBadge } from '../../components/qq/support-fund-badge';
+import { useFulfillmentRouting } from '../../components/admin/useFulfillmentRouting';
 
 interface Company {
   id: string;
@@ -11,7 +12,7 @@ interface Company {
   netsuite_number: string;
   support_fund?: { percent: number } | null;
   subsidiary?: { name: string } | null;
-  location?: { location_name: string } | null;
+  subsidiary_id?: string | null;
   user_count: number;
   order_count: number;
 }
@@ -24,8 +25,8 @@ async function fetchCompanies(): Promise<{ data: Company[] | null; error: any }>
       company_name,
       netsuite_number,
       support_fund:support_fund_levels(percent),
-      subsidiary:subsidiaries(name),
-      location:Locations(location_name)
+      subsidiary_id,
+      subsidiary:subsidiaries(name)
     `)
     .order('company_name', { ascending: true });
 
@@ -51,6 +52,7 @@ async function fetchCompanies(): Promise<{ data: Company[] | null; error: any }>
 }
 
 export default function CompaniesPage() {
+  const routing = useFulfillmentRouting();
   return (
     <AdminListPage<Company>
       title="Companies"
@@ -109,9 +111,18 @@ export default function CompaniesPage() {
           ),
         },
         {
-          header: 'Location',
+          header: 'Ships from',
           className: 'hidden lg:table-cell',
-          cell: (c) => c.location?.location_name || <span className="text-muted-foreground">—</span>,
+          cell: (c) =>
+            routing.loaded ? (
+              routing.resolve(c).ok ? (
+                <span className="text-sm">{routing.label(c)}</span>
+              ) : (
+                <span className="text-xs text-destructive">Not set</span>
+              )
+            ) : (
+              <span className="text-muted-foreground">…</span>
+            ),
         },
       ]}
     />

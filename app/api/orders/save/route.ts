@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireWithPermission } from '../../../../platform/auth/guards';
 import { computeOrderMoney, lineKey, type SaveItemInput } from '../../../../lib/orderSave';
 import { resolveUnitPrice } from '../../../../lib/orderPricing';
+import { loadFulfillmentRoute } from '../../../../lib/fulfillmentRouting';
 import { SHIPMENT_TYPE_CODES } from '../../../../lib/shipmentTypes';
 
 /**
@@ -89,10 +90,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ---- Company: pricing tier + class, SF tier, fulfilling location ----
+    // ---- Company: pricing tier + class, SF tier ----
     const { data: company, error: companyErr } = await supabase
       .from('companies')
-      .select('id, location_id, price_tier, class:classes(name), support_fund:support_fund_levels(percent)')
+      .select('id, price_tier, class:classes(name), support_fund:support_fund_levels(percent)')
       .eq('id', companyId)
       .maybeSingle();
     if (companyErr) throw new Error(`company lookup: ${companyErr.message}`);
@@ -258,15 +259,23 @@ export async function POST(request: NextRequest) {
           : generatePoNumber();
       const status = asDraft ? 'Draft' : 'Open';
 
-      // location_id snapshot: freeze the company's CURRENT fulfilling
-      // location on the order (cross-subsidiary fulfillment depends on it).
+      // location_id snapshot: the warehouse the order would ship from today
+      // (informational — the NetSuite push re-resolves routing at push time,
+      // so a routing gap never blocks creating the order).
+      let snapshotLocationId: string | null = null;
+      try {
+        const route = await loadFulfillmentRoute(supabase, companyId);
+        snapshotLocationId = route.ok ? route.warehouse.id : null;
+      } catch (err: any) {
+        console.error('order save: fulfillment routing lookup failed:', err?.message);
+      }
       const { data: newOrderId, error: rpcErr } = await supabase.rpc('order_save_create', {
         p_order: {
           company_id: companyId,
           user_id: user.id,
           po_number: poNumber,
           status,
-          location_id: company.location_id ?? null,
+          location_id: snapshotLocationId,
           shipment_type: shipmentType,
           total_value: money.total_value,
           support_fund_used: money.support_fund_used,

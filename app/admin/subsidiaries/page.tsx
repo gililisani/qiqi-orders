@@ -10,17 +10,23 @@ interface Subsidiary {
   ship_from_address?: string;
   phone?: string;
   email?: string;
+  route?: { location?: { location_name: string } | null } | null;
 }
 
 export default function SubsidiariesPage() {
   return (
     <AdminListPage<Subsidiary>
       title="Subsidiaries"
-      description="Qiqi legal entities used for order routing in NetSuite."
+      description="Your legal entities (NetSuite subsidiaries). Where each one ships from is set in Settings → Fulfillment."
       newUrl="/admin/subsidiaries/new"
       newLabel="Add subsidiary"
       editUrl={(id) => `/admin/subsidiaries/${id}/edit`}
-      fetch={() => supabase.from('subsidiaries').select('*').order('name')}
+      fetch={() =>
+        supabase
+          .from('subsidiaries')
+          .select('*, route:fulfillment_routes(location:Locations(location_name))')
+          .order('name')
+      }
       searchPlaceholder="Search subsidiaries…"
       filterRow={(s, q) => (s.name ?? '').toLowerCase().includes(q)}
       columns={[
@@ -45,6 +51,15 @@ export default function SubsidiariesPage() {
               <span className="font-mono text-xs">{s.netsuite_id}</span>
             ) : (
               <span className="text-muted-foreground text-xs">—</span>
+            ),
+        },
+        {
+          header: 'Ships from',
+          cell: (s) =>
+            s.route?.location?.location_name ? (
+              <span className="text-sm">{s.route.location.location_name}</span>
+            ) : (
+              <span className="text-xs text-muted-foreground">Not set</span>
             ),
         },
         {

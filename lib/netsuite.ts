@@ -29,10 +29,9 @@ interface HubOrderForSync {
     netsuite_number: string;
     netsuite_internal_id: string;
     subsidiary: { name: string; netsuite_id: string } | null;
-    // The location passed here is the FULFILLING location (typically the
-    // snapshot from orders.location_id, falling back to companies.location_id).
-    // Includes the location's own subsidiary so push-SO can detect cross-sub
-    // fulfillment (location.subsidiary.netsuite_id !== company.subsidiary.netsuite_id).
+    // The FULFILLING warehouse, resolved by lib/fulfillmentRouting at push
+    // time. Includes the warehouse's own subsidiary as a fallback signal for
+    // cross-sub detection when `fulfillment` isn't passed.
     location: {
       location_name: string;
       netsuite_id: string;
@@ -48,6 +47,8 @@ interface HubOrderForSync {
     product: { sku: string; item_name: string; netsuite_name: string | null };
   }>;
   support_fund_used: number | null;
+  /** The routing decision (lib/fulfillmentRouting) — authoritative when set. */
+  fulfillment?: { crossSubsidiary: boolean };
 }
 
 export interface NSSalesOrderResult {
@@ -574,8 +575,8 @@ export class NetSuiteAPI {
     // Same-subsidiary orders fall through to the simpler header-only location.
     const locationSubsidiaryNsId = company.location.subsidiary?.netsuite_id;
     const isCrossSubsidiary =
-      !!locationSubsidiaryNsId &&
-      locationSubsidiaryNsId !== company.subsidiary.netsuite_id;
+      order.fulfillment?.crossSubsidiary ??
+      (!!locationSubsidiaryNsId && locationSubsidiaryNsId !== company.subsidiary.netsuite_id);
 
     const lineItems: object[] = [];
     for (const item of consolidated.values()) {

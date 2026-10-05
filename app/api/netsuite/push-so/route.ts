@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { createNetSuiteAPI } from '../../../../lib/netsuite';
 import { validateOrderPricing } from '../../../../lib/orderPricing';
+import { loadFulfillmentRoute } from '../../../../lib/fulfillmentRouting';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,10 +15,8 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceRoleClient();
 
-    // Fetch order with all NS-relevant fields. We pull the company's CURRENT
-    // location (companies.location_id → Locations) which is what we actually
-    // push, plus the order's frozen snapshot (orders.location_id) as a
-    // legacy fallback for companies that have no location set.
+    // Fetch order with all NS-relevant fields. The fulfilling warehouse is
+    // resolved separately (lib/fulfillmentRouting) from the tenant's settings.
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(`
@@ -29,23 +28,12 @@ export async function POST(request: NextRequest) {
         credit_earned,
         support_fund_used,
         netsuite_so_id,
-        location_id,
-        snapshot_location:Locations!orders_location_id_fkey(
-          location_name,
-          netsuite_id,
-          subsidiary:subsidiaries(netsuite_id)
-        ),
+        company_id,
         company:companies(
           company_name,
           netsuite_number,
           netsuite_internal_id,
-          location_id,
           subsidiary:subsidiaries(name, netsuite_id),
-          location:Locations(
-            location_name,
-            netsuite_id,
-            subsidiary:subsidiaries(netsuite_id)
-          ),
           price_tier,
           class:classes(name),
           support_fund:support_fund_levels(percent)
@@ -104,28 +92,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Re-resolve the fulfilling location from the company's CURRENT location
-    // at push time. A (re)push recreates the SO *now*, so it must reflect the
-    // client's current config — NOT orders.location_id, which is frozen at
-    // creation. The freeze protects already-pushed historical orders from
-    // later 3PL re-pointing, but it also caused the CSF bug: unlink → delete
-    // NS SO → re-push re-used the stale snapshot (Packable-INC) and cross-sub
-    // never fired. We push the company's current location; fall back to the
-    // frozen snapshot only when the company has no location set (legacy).
-    const orderForNs: any = { ...order };
-    const companyLocation = orderForNs.company?.location ?? null;
-    const resolvedLocation = companyLocation ?? orderForNs.snapshot_location ?? null;
-    if (orderForNs.company) {
-      orderForNs.company = {
-        ...orderForNs.company,
-        location: resolvedLocation,
-      };
+    // Fulfillment routing, resolved NOW from the tenant's settings (a re-push
+    // recreates the SO, so it must reflect the current routing — never the
+    // frozen orders.location_id snapshot; see the 2026-06-15 CSF re-push bug).
+    // Any gap (no "ships from", retired warehouse, CSF switched off) blocks
+    // the push with the setting to fix — the Hub never guesses a warehouse.
+    const route = await loadFulfillmentRoute(supabase, (order as any).company_id);
+    if (!route.ok) {
+      return NextResponse.json(
+        { error: `Can't create the Sales Order — ${route.error}` },
+        { status: 409 },
+      );
     }
-    // The location_id we stamp back onto the order so it reflects what was
-    // actually pushed: the company's current location, falling back to the
-    // existing snapshot if the company has none.
-    const resolvedLocationId =
-      (order as any).company?.location_id ?? order.location_id ?? null;
+    const orderForNs: any = {
+      ...order,
+      company: {
+        ...companyRaw,
+        location: {
+          location_name: route.warehouse.name,
+          netsuite_id: route.warehouse.netsuiteId,
+          subsidiary: { netsuite_id: route.warehouseSubsidiaryNetsuiteId ?? null },
+        },
+      },
+      fulfillment: { crossSubsidiary: route.crossSubsidiary },
+    };
+    // Stamped back onto the order: the warehouse actually pushed.
+    const resolvedLocationId = route.warehouse.id;
 
     const ns = createNetSuiteAPI();
     const { nsSOId, soNumber } = await ns.pushOrderToNetSuite(orderForNs);

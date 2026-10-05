@@ -13,6 +13,7 @@ import { Badge } from '../../../components/qq/badge';
 import { Alert, AlertDescription } from '../../../components/qq/alert';
 import { Label } from '../../../components/qq/label';
 import { useToast } from '../../../components/ui/ToastProvider';
+import { useFulfillmentRouting } from '../../../components/admin/useFulfillmentRouting';
 
 interface Client {
   id: string;
@@ -27,7 +28,8 @@ interface Client {
     support_fund?: { percent: number } | null;
     subsidiary?: { name: string } | null;
     class?: { name: string } | null;
-    location?: { location_name: string } | null;
+    id?: string | null;
+    subsidiary_id?: string | null;
   };
 }
 
@@ -37,6 +39,7 @@ export default function UserViewPage() {
   const toast = useToast();
 
   const [client, setClient] = useState<Client | null>(null);
+  const routing = useFulfillmentRouting();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +57,8 @@ export default function UserViewPage() {
               support_fund:support_fund_levels(percent),
               subsidiary:subsidiaries(name),
               class:classes(name),
-              location:Locations(location_name)
+              id,
+              subsidiary_id
             )
           `)
           .eq('id', userId)
@@ -188,8 +192,8 @@ export default function UserViewPage() {
                 <ViewField label="Subsidiary" value={client.company.subsidiary?.name || '—'} />
                 <ViewField label="Class" value={client.company.class?.name || '—'} />
                 <ViewField
-                  label="Location"
-                  value={client.company.location?.location_name || '—'}
+                  label="Ships from"
+                  value={routing.loaded ? routing.label(client.company) : '…'}
                 />
                 <div className="pt-1">
                   <Link

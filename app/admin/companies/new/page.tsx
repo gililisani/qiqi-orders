@@ -17,11 +17,11 @@ import {
   SelectValue,
 } from '../../../components/qq/select';
 import { useToast } from '../../../components/ui/ToastProvider';
+import { CompanyFulfillmentField } from '../../../components/admin/CompanyFulfillmentField';
 
 interface Option {
   id: string;
   name: string;
-  subsidiaryId?: string; // populated for locations, to filter by subsidiary (CSF)
 }
 interface SupportFundOption {
   id: string;
@@ -41,8 +41,7 @@ export default function NewCompanyPage() {
     support_fund_id: '',
     subsidiary_id: '',
     class_id: '',
-    location_id: '',
-    cross_subsidiary_fulfillment: false,
+    fulfillment_location_override_id: '',
     enable_credit_card_payments: false,
     credit_card_fee_percent: '',
     incoterm_id: '',
@@ -66,7 +65,6 @@ export default function NewCompanyPage() {
     supportFunds: [] as SupportFundOption[],
     subsidiaries: [] as Option[],
     classes: [] as Option[],
-    locations: [] as Option[],
     incoterms: [] as Option[],
     paymentTerms: [] as Option[],
   });
@@ -79,12 +77,11 @@ export default function NewCompanyPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [supportFunds, subsidiaries, classes, locations, incoterms, paymentTerms] =
+        const [supportFunds, subsidiaries, classes, incoterms, paymentTerms] =
           await Promise.all([
             supabase.from('support_fund_levels').select('id, percent').order('percent'),
             supabase.from('subsidiaries').select('id, name, netsuite_id').order('name'),
             supabase.from('classes').select('id, name').order('name'),
-            supabase.from('Locations').select('id, location_name, subsidiary_id').order('location_name'),
             supabase.from('incoterms').select('id, name').order('name'),
             supabase.from('payment_terms').select('id, name').order('name'),
           ]);
@@ -94,7 +91,6 @@ export default function NewCompanyPage() {
           supportFunds: supportFunds.data || [],
           subsidiaries: subsidiaries.data || [],
           classes: classes.data || [],
-          locations: (locations.data || []).map((l: any) => ({ id: l.id, name: l.location_name, subsidiaryId: l.subsidiary_id })),
           incoterms: incoterms.data || [],
           paymentTerms: paymentTerms.data || [],
         });
@@ -110,49 +106,25 @@ export default function NewCompanyPage() {
   const setSelect = (key: keyof typeof formData) => (value: string) =>
     setFormData((p) => ({ ...p, [key]: value === NONE ? '' : value }));
 
-  // CSF: scope the Location list to the client's own subsidiary — or, when
-  // Cross-Subsidiary Fulfillment is on, to the OTHER subsidiaries' locations.
-  const filteredLocations = options.locations.filter((l) =>
-    !formData.subsidiary_id
-      ? false
-      : formData.cross_subsidiary_fulfillment
-        ? l.subsidiaryId !== formData.subsidiary_id
-        : l.subsidiaryId === formData.subsidiary_id,
-  );
   const onChangeSubsidiary = (value: string) => {
     const newSub = value === NONE ? '' : value;
     const stillInc = !!incSubsidiaryId && newSub === incSubsidiaryId;
     setFormData((p) => ({
       ...p,
       subsidiary_id: newSub,
-      location_id: '',
+      fulfillment_location_override_id: '',
       enable_credit_card_payments: stillInc ? p.enable_credit_card_payments : false,
       credit_card_fee_percent: stillInc ? p.credit_card_fee_percent : '',
     }));
   };
 
   const isIncCompany = !!incSubsidiaryId && formData.subsidiary_id === incSubsidiaryId;
-  const onToggleCsf = (checked: boolean) =>
-    setFormData((p) => ({ ...p, cross_subsidiary_fulfillment: checked, location_id: '' }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.company_name.trim() || !formData.netsuite_number.trim()) {
       setError('Company name and NetSuite number are required.');
       return;
-    }
-    // CSF guardrail: when on, the location MUST be a different subsidiary's
-    // (it becomes the SO Inventory Location). Block the inconsistent state.
-    if (formData.cross_subsidiary_fulfillment) {
-      const loc = options.locations.find((l) => l.id === formData.location_id);
-      if (!loc) {
-        setError('Cross-Subsidiary Fulfillment is on — choose a fulfillment location from another subsidiary.');
-        return;
-      }
-      if (loc.subsidiaryId === formData.subsidiary_id) {
-        setError('Cross-Subsidiary Fulfillment requires a location in a DIFFERENT subsidiary than the client.');
-        return;
-      }
     }
     // Credit-card fee must be a valid percent when card payments are enabled.
     if (formData.enable_credit_card_payments && formData.credit_card_fee_percent.trim() !== '') {
@@ -188,8 +160,6 @@ export default function NewCompanyPage() {
           support_fund_id: formData.support_fund_id || null,
           subsidiary_id: formData.subsidiary_id || null,
           class_id: formData.class_id || null,
-          location_id: formData.location_id || null,
-          cross_subsidiary_fulfillment: formData.cross_subsidiary_fulfillment,
           // Card payments are Qiqi-INC-only.
           enable_credit_card_payments: isIncCompany && formData.enable_credit_card_payments,
           credit_card_fee_percent:
@@ -221,6 +191,15 @@ export default function NewCompanyPage() {
           throw insertError;
         }
         return;
+      }
+
+      // Warehouse exception (fulfillment module table).
+      if (created?.id && formData.fulfillment_location_override_id) {
+        const { error: overrideError } = await supabase.from('fulfillment_customer_overrides').insert({
+          company_id: created.id,
+          location_id: formData.fulfillment_location_override_id,
+        });
+        if (overrideError) throw overrideError;
       }
 
       // Land on the edit page, not the list: contract, territories and
@@ -289,30 +268,13 @@ export default function NewCompanyPage() {
             onChange={setSelect('class_id')}
             options={options.classes}
           />
-          <div>
-            <SelectField
-              label="Location"
-              value={formData.location_id}
-              onChange={setSelect('location_id')}
-              options={filteredLocations}
-            />
-            <label className="mt-2 flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={formData.cross_subsidiary_fulfillment}
-                onChange={(e) => onToggleCsf(e.target.checked)}
-                className="h-4 w-4 rounded border-input"
-              />
-              Cross-Subsidiary Fulfillment
-            </label>
-            {!formData.subsidiary_id ? (
-              <p className="mt-1 text-xs text-amber-700">Choose a subsidiary first.</p>
-            ) : formData.cross_subsidiary_fulfillment ? (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Showing other subsidiaries&apos; locations — orders use this as the Inventory Location (fulfilled on this client&apos;s behalf).
-              </p>
-            ) : null}
-          </div>
+          <CompanyFulfillmentField
+            subsidiaryId={formData.subsidiary_id}
+            overrideLocationId={formData.fulfillment_location_override_id}
+            onOverrideChange={(id) =>
+              setFormData((p) => ({ ...p, fulfillment_location_override_id: id }))
+            }
+          />
           <SelectField
             label="Support fund %"
             value={formData.support_fund_id}

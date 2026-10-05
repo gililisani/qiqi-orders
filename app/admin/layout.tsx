@@ -139,6 +139,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Configuration',
     items: [
+      { label: 'Settings',             href: '/admin/settings',      icon: <Settings />, permission: 'config:view' },
       { label: 'NetSuite Data',        href: '/admin/netsuite-data', icon: <Building />, permission: 'config:view' },
       { label: 'NetSuite Integration', href: '/admin/netsuite',      icon: <Plug />,     permission: 'config:view' },
       { label: 'NS Inventory Sync',    href: '/admin/inventory',     icon: <Package />,  permission: 'config:view' },
@@ -171,6 +172,7 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: string }> = [
   { prefix: '/admin/payment-terms', permission: 'config:view' },
   { prefix: '/admin/support-funds', permission: 'config:view' },
   { prefix: '/admin/netsuite-data', permission: 'config:view' },
+  { prefix: '/admin/settings', permission: 'config:view' },
   { prefix: '/admin/design', permission: 'config:view' },
   { prefix: '/admin/dam', permission: 'assets:view' },
   { prefix: '/admin/reports', permission: 'insights' },

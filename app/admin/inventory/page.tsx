@@ -59,6 +59,7 @@ export default function InventorySyncPage() {
     supabase
       .from('Locations')
       .select('id, location_name, netsuite_id')
+      .neq('active', false)
       .order('location_name')
       .then(({ data }) => {
         setLocations(data || []);
