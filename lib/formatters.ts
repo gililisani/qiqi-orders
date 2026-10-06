@@ -72,7 +72,11 @@ export function formatPercentage(value: number | null | undefined, decimals: num
  */
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString('en-US', {
+  // A bare calendar date ("2023-01-01", e.g. a DATE column) is that day
+  // everywhere — `new Date('2023-01-01')` is UTC midnight, which renders as
+  // Dec 31 west of UTC. Pin it to local noon instead.
+  const value = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : iso;
+  return new Date(value).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

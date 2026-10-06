@@ -47,7 +47,9 @@ export function PageHeader({
         <div className="text-sm text-muted-foreground">{breadcrumbs}</div>
       )}
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="min-w-0 flex-1">
+        {/* min width: when the actions don't fit beside the title they wrap
+            below it, instead of squeezing the title to a sliver. */}
+        <div className="min-w-[16rem] flex-1">
           {title && (
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               {title}
@@ -58,7 +60,7 @@ export function PageHeader({
           )}
         </div>
         {actions && (
-          <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>
+          <div className="flex flex-wrap items-center gap-2">{actions}</div>
         )}
       </div>
     </div>

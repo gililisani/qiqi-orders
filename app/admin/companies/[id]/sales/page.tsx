@@ -98,7 +98,7 @@ const DOC_TYPE: Record<string, string> = {
   cash_refund: 'Cash refund',
 };
 
-const money = (n: number) => formatCurrency(n);
+const money = (n: number) => (n < 0 ? `−${formatCurrency(-n)}` : formatCurrency(n));
 
 export default function CompanySalesLedgerPage() {
   const params = useParams<{ id: string }>();
@@ -389,14 +389,28 @@ export default function CompanySalesLedgerPage() {
                                       )}
                                     </td>
                                     <td className="py-1">
-                                      {l.kind === 'product' ? 'Sale' : l.kind === 'discount' ? 'Discount / support fund' : 'Not counted'}
+                                      {l.kind === 'product'
+                                        ? l.amount === 0
+                                          ? 'Sale (free goods)'
+                                          : 'Sale'
+                                        : l.kind === 'discount'
+                                          ? 'Support fund / discount'
+                                          : 'Not counted'}
                                     </td>
                                     <td className="py-1 text-right tabular-nums">{l.kind === 'product' ? l.quantity : ''}</td>
-                                    <td className="py-1 text-right tabular-nums">{money(l.amount)}</td>
+                                    <td className="py-1 text-right tabular-nums">
+                                      {l.kind === 'discount' ? money(Math.abs(l.amount)) : money(l.amount)}
+                                    </td>
                                   </tr>
                                 ))}
                               </tbody>
                             </table>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Document total {money(d.totalAmount)}
+                              {d.excluded_amount ? ` − not counted ${money(d.excluded_amount)}` : ''} = sales{' '}
+                              {money(d.sales_amount)}. Support-fund lines show the value redeemed; the reduction is
+                              already inside the document total.
+                            </p>
                           </TableCell>
                         </TableRow>
                       )}
