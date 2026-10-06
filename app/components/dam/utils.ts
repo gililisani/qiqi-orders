@@ -65,6 +65,76 @@ export function buildAuthHeaders(token: string | null): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
 }
 
+// Signed-URL lookups in flight, by cache key. Concurrent callers for the same
+// key share one request, and a card whose thumbnail is in a running page batch
+// waits for that batch instead of racing it with its own request.
+type InflightSign = { promise: Promise<string>; fromBatch: boolean };
+const inflightSigns = new Map<string, InflightSign>();
+
+// Per-card sign requests are throttled. Every sign is a Supabase Storage →
+// Postgres round trip; a page of cards signing in parallel exhausted Storage's
+// connection pool in production ("Too many connections issued to the database").
+const MAX_PARALLEL_SIGNS = 4;
+let activeSigns = 0;
+const signQueue: Array<() => void> = [];
+
+async function withSignSlot<T>(fn: () => Promise<T>): Promise<T> {
+  if (activeSigns < MAX_PARALLEL_SIGNS) {
+    activeSigns++;
+  } else {
+    // The releasing caller hands its slot straight to us (no re-count).
+    await new Promise<void>((resolve) => signQueue.push(resolve));
+  }
+  try {
+    return await fn();
+  } finally {
+    const next = signQueue.shift();
+    if (next) next();
+    else activeSigns--;
+  }
+}
+
+function signedUrlRequest(apiPath: string): { url: string; cacheKey: string } {
+  const rawUrl = apiPath.startsWith('/') ? apiPath : `/${apiPath}`;
+  const url = rawUrl.includes('?') ? `${rawUrl}&format=json` : `${rawUrl}?format=json`;
+  return { url, cacheKey: `signed:${url}` };
+}
+
+function fetchSignedUrl(url: string, cacheKey: string, accessToken: string): Promise<string> {
+  const existing = inflightSigns.get(cacheKey);
+  if (existing && !existing.fromBatch) return existing.promise;
+
+  const promise = withSignSlot(async () => {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        ...buildAuthHeaders(accessToken),
+        Accept: 'application/json',
+      },
+      credentials: 'same-origin',
+    });
+
+    if (res.ok) {
+      const data = (await res.json().catch(() => null)) as { url?: string } | null;
+      const signed = typeof data?.url === 'string' ? data.url : '';
+      if (signed) {
+        setCachedUrl(cacheKey, signed);
+        return signed;
+      }
+    }
+
+    // If server returned JSON error, don't cache; return empty string so callers can show fallback.
+    return '';
+  })
+    .catch(() => '')
+    .finally(() => {
+      if (inflightSigns.get(cacheKey)?.promise === promise) inflightSigns.delete(cacheKey);
+    });
+
+  inflightSigns.set(cacheKey, { promise, fromBatch: false });
+  return promise;
+}
+
 /**
  * Resolve a protected `/api/assets/...` URL into a short-lived signed URL by
  * following the server-side 302 redirect with an Authorization header.
@@ -80,38 +150,26 @@ export async function resolveSignedAssetUrl(
   if (apiPath.startsWith('http')) return apiPath;
   if (!accessToken) return '';
 
-  const rawUrl = apiPath.startsWith('/') ? apiPath : `/${apiPath}`;
-  const url = rawUrl.includes('?') ? `${rawUrl}&format=json` : `${rawUrl}?format=json`;
-  const cacheKey = `signed:${url}`;
+  const { url, cacheKey } = signedUrlRequest(apiPath);
   const cached = getCachedUrl(cacheKey);
   if (cached) return cached;
 
-  const res = await fetch(url, {
-    method: 'GET',
-    headers: {
-      ...buildAuthHeaders(accessToken),
-      Accept: 'application/json',
-    },
-    credentials: 'same-origin',
-  });
-
-  if (res.ok) {
-    const data = (await res.json().catch(() => null)) as { url?: string } | null;
-    const signed = typeof data?.url === 'string' ? data.url : '';
-    if (signed) {
-      setCachedUrl(cacheKey, signed);
-      return signed;
-    }
+  const pending = inflightSigns.get(cacheKey);
+  if (pending?.fromBatch) {
+    const signed = await pending.promise;
+    if (signed) return signed;
+    // The batch failed or skipped this path: fall back to a single request.
   }
 
-  // If server returned JSON error, don't cache; return empty string so callers can show fallback.
-  return '';
+  return fetchSignedUrl(url, cacheKey, accessToken);
 }
 
 /**
  * Batch-resolve a list of protected preview API paths into signed URLs.
  * This reduces per-card request waterfalls; results are also primed into the same cache
  * used by `resolveSignedAssetUrl` so existing card code can benefit without refactors.
+ * Paths are registered as in flight before the request starts, so cards that
+ * render meanwhile wait for this batch instead of signing one by one.
  */
 export async function resolveSignedPreviewUrlsBatch(
   apiPaths: Array<string | null | undefined>,
@@ -124,30 +182,50 @@ export async function resolveSignedPreviewUrlsBatch(
     .map((p) => (p.startsWith('/') ? p : `/${p}`))
     .filter((p) => !p.startsWith('http'));
 
-  const uniquePaths = Array.from(new Set(rawPaths)).slice(0, 100);
-  if (uniquePaths.length === 0) return {};
+  // Must stay synchronous up to the fetch: callers fire this right after
+  // setAssets(), and cards mounting from that render have to find these
+  // entries already registered.
+  const waiting = new Map<string, (signed: string) => void>();
+  for (const path of Array.from(new Set(rawPaths)).slice(0, 100)) {
+    const { cacheKey } = signedUrlRequest(path);
+    if (getCachedUrl(cacheKey) || inflightSigns.has(cacheKey)) continue;
+    let settle!: (signed: string) => void;
+    const promise = new Promise<string>((resolve) => {
+      settle = resolve;
+    });
+    inflightSigns.set(cacheKey, { promise, fromBatch: true });
+    waiting.set(path, settle);
+  }
+  if (waiting.size === 0) return {};
 
-  const res = await fetch('/api/assets/preview/resolve-batch', {
-    method: 'POST',
-    headers: {
-      ...buildAuthHeaders(accessToken),
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-    credentials: 'same-origin',
-    body: JSON.stringify({ paths: uniquePaths }),
-  });
-
-  if (!res.ok) return {};
-  const data = (await res.json().catch(() => null)) as { urls?: Record<string, string> } | null;
-  const urls = data?.urls && typeof data.urls === 'object' ? data.urls : {};
-
-  // Prime cache using the same key scheme as `resolveSignedAssetUrl`.
-  for (const [path, signed] of Object.entries(urls)) {
-    if (!signed) continue;
-    const urlWithFormat = path.includes('?') ? `${path}&format=json` : `${path}?format=json`;
-    const cacheKey = `signed:${urlWithFormat}`;
-    setCachedUrl(cacheKey, signed);
+  let urls: Record<string, string> = {};
+  try {
+    const res = await fetch('/api/assets/preview/resolve-batch', {
+      method: 'POST',
+      headers: {
+        ...buildAuthHeaders(accessToken),
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({ paths: Array.from(waiting.keys()) }),
+    });
+    if (res.ok) {
+      const data = (await res.json().catch(() => null)) as { urls?: Record<string, string> } | null;
+      urls = data?.urls && typeof data.urls === 'object' ? data.urls : {};
+    }
+  } catch {
+    // Best-effort: waiting cards fall back to throttled single requests.
+  } finally {
+    // Prime the cache and release waiters. Entries are removed before
+    // settling so a waiter whose path failed starts a fresh single request.
+    for (const [path, settle] of waiting) {
+      const { cacheKey } = signedUrlRequest(path);
+      const signed = typeof urls[path] === 'string' ? urls[path] : '';
+      if (signed) setCachedUrl(cacheKey, signed);
+      inflightSigns.delete(cacheKey);
+      settle(signed);
+    }
   }
 
   return urls;

@@ -33,6 +33,8 @@ function getSupabaseServiceClient() {
   });
 }
 
+const SIGN_BATCH_SIZE = 100;
+
 export function createSupabaseStorage(): ObjectStorage {
   const supabase = getSupabaseServiceClient();
   const bucket = getEnv('SUPABASE_STORAGE_BUCKET') ?? 'dam-assets';
@@ -103,6 +105,25 @@ export function createSupabaseStorage(): ObjectStorage {
       }
 
       return data.signedUrl;
+    },
+
+    async getSignedUrls(paths, opts) {
+      const unique = Array.from(new Set(paths.filter(Boolean)));
+      const urls: Record<string, string> = {};
+      // One Storage request (one DB query) per chunk instead of one per object.
+      for (let i = 0; i < unique.length; i += SIGN_BATCH_SIZE) {
+        const chunk = unique.slice(i, i + SIGN_BATCH_SIZE);
+        const { data, error } = await supabase.storage.from(bucket).createSignedUrls(chunk, opts.expiresIn);
+        if (error) {
+          throw error;
+        }
+        for (const row of data ?? []) {
+          if (row.path && row.signedUrl && !row.error) {
+            urls[row.path] = row.signedUrl;
+          }
+        }
+      }
+      return urls;
     },
 
     async deleteObject(path) {

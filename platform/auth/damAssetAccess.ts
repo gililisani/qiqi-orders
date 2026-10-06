@@ -35,6 +35,22 @@ export async function assertDamAssetDeliveryEntitlement(
     return NextResponse.json({ error: 'Asset mismatch' }, { status: 404 });
   }
 
+  return assertDamDeliveryAccess(supabase, auth);
+}
+
+/**
+ * The caller-level half of the check (does this user get DAM delivery at
+ * all?), with no per-asset dimension. Batch routes call it once per request
+ * and do the per-asset mismatch/archived checks themselves.
+ */
+export async function assertDamDeliveryAccess(
+  supabase: SupabaseClient,
+  auth: { userId: string; isAdmin: boolean }
+): Promise<NextResponse | null> {
+  if (auth.isAdmin) {
+    return null;
+  }
+
   const { data: clientRow, error: clientErr } = await supabase
     .from('clients')
     .select('company_id')
@@ -50,8 +66,6 @@ export async function assertDamAssetDeliveryEntitlement(
   if (!clientRow?.company_id) {
     return NextResponse.json({ error: 'Access denied' }, { status: 403 });
   }
-
-  const companyId = clientRow.company_id;
 
   // Region and audience restrictions removed by product decision.
   // Locale codes are treated as languages only and do not restrict delivery.

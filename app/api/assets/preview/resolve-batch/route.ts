@@ -1,47 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createStorage } from '../../../../../platform/storage';
 import { createServiceRoleClient, requireAnyRole } from '../../../../../platform/auth/guards';
-import { assertDamAssetDeliveryEntitlement } from '../../../../../platform/auth/damAssetAccess';
+import { assertDamDeliveryAccess } from '../../../../../platform/auth/damAssetAccess';
+import {
+  normalizeApiPath,
+  parsePreviewPath,
+  planPreviewTargets,
+  type ParsedPreviewPath,
+  type PreviewAssetRow,
+  type PreviewVersionRow,
+} from '@/lib/damPreviewBatch';
 
 type Body = {
   paths?: string[];
 };
 
-function normalizeApiPath(p: string): string {
-  if (!p) return '';
-  if (p.startsWith('http://') || p.startsWith('https://')) return '';
-  return p.startsWith('/') ? p : `/${p}`;
-}
-
-type ParsedPreviewPath =
-  | { ok: true; assetId: string; versionId: string; rendition: string | null }
-  | { ok: false };
-
-function parsePreviewPath(path: string): ParsedPreviewPath {
-  // Expected: /api/assets/:assetId/preview?version=...&rendition=thumbnail|original
-  try {
-    const url = new URL(path, 'http://local');
-    const m = url.pathname.match(/^\/api\/assets\/([^/]+)\/preview$/);
-    if (!m?.[1]) return { ok: false };
-    const versionId = url.searchParams.get('version') || '';
-    if (!versionId) return { ok: false };
-    return {
-      ok: true,
-      assetId: m[1],
-      versionId,
-      rendition: url.searchParams.get('rendition'),
-    };
-  } catch {
-    return { ok: false };
-  }
-}
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAnyRole(request, ['admin', 'client']);
     const isAdmin = user.roles.includes('admin');
     const supabaseAdmin = createServiceRoleClient();
-    const storage = createStorage();
 
     const body = (await request.json().catch(() => null)) as Body | null;
     const inputPaths = Array.isArray(body?.paths) ? body!.paths : [];
@@ -56,57 +36,55 @@ export async function POST(request: NextRequest) {
     ).slice(0, 100);
 
     const urls: Record<string, string> = {};
-    if (uniquePaths.length === 0) {
+    // Ids go into one `in (...)` filter — a malformed id would fail the whole
+    // query, so drop it here (it could never match a row anyway).
+    const requests = uniquePaths
+      .map(parsePreviewPath)
+      .filter((r): r is ParsedPreviewPath => !!r && UUID_RE.test(r.versionId) && UUID_RE.test(r.assetId));
+    if (requests.length === 0) {
       return NextResponse.json({ urls }, { status: 200 });
     }
 
-    for (const path of uniquePaths) {
-      const parsed = parsePreviewPath(path);
-      if (!parsed.ok) continue;
+    const denied = await assertDamDeliveryAccess(supabaseAdmin, { userId: user.id, isAdmin });
+    if (denied) return denied;
 
-      // Fetch version
-      const { data: version, error: versionError } = await supabaseAdmin
-        .from('dam_asset_versions')
-        .select('*')
-        .eq('id', parsed.versionId)
-        .maybeSingle();
-      if (versionError || !version) continue;
+    const { data: versions, error: versionError } = await supabaseAdmin
+      .from('dam_asset_versions')
+      .select('id, asset_id, storage_path, thumbnail_path')
+      .in('id', Array.from(new Set(requests.map((r) => r.versionId))));
+    if (versionError) throw versionError;
 
-      // Fetch asset
-      const { data: asset, error: assetError } = await supabaseAdmin
+    const versionsById = new Map<string, PreviewVersionRow>(
+      ((versions ?? []) as PreviewVersionRow[]).map((v) => [v.id, v])
+    );
+    const assetIds = Array.from(new Set(Array.from(versionsById.values()).map((v) => v.asset_id)));
+    const assetsById = new Map<string, PreviewAssetRow>();
+    if (assetIds.length > 0) {
+      const { data: assets, error: assetError } = await supabaseAdmin
         .from('dam_assets')
         .select('id, is_archived')
-        .eq('id', version.asset_id)
-        .maybeSingle();
-      if (assetError || !asset) continue;
+        .in('id', assetIds);
+      if (assetError) throw assetError;
+      for (const a of (assets ?? []) as PreviewAssetRow[]) assetsById.set(a.id, a);
+    }
 
-      // Validate path assetId matches the version's asset
-      if (asset.id !== parsed.assetId) continue;
-      if (asset.is_archived) continue;
+    const targets = planPreviewTargets(requests, versionsById, assetsById);
+    if (targets.size === 0) {
+      return NextResponse.json({ urls }, { status: 200 });
+    }
 
-      const entitlement = await assertDamAssetDeliveryEntitlement(
-        supabaseAdmin,
-        { userId: user.id, isAdmin },
-        { id: asset.id, is_archived: asset.is_archived },
-        parsed.assetId,
-        { id: version.id, asset_id: version.asset_id }
-      );
-      if (entitlement) continue;
-
-      let targetPath: string | null = version.storage_path;
-      if (parsed.rendition === 'thumbnail' && version.thumbnail_path) {
-        targetPath = version.thumbnail_path;
-      }
-      if (!targetPath) continue;
-
-      const signedUrl = await storage.getSignedUrl(targetPath, { expiresIn: 5 * 60 });
-      urls[path] = signedUrl;
+    // One storage call for the whole page (see lib/damPreviewBatch.ts).
+    const signed = await createStorage().getSignedUrls(Array.from(new Set(targets.values())), {
+      expiresIn: 5 * 60,
+    });
+    for (const [apiPath, target] of targets) {
+      if (signed[target]) urls[apiPath] = signed[target];
     }
 
     return NextResponse.json({ urls }, { status: 200 });
   } catch (err: any) {
     if (err instanceof Response) return err;
+    console.error('Preview batch error', { message: err?.message });
     return NextResponse.json({ error: err.message || 'Failed to resolve preview URLs' }, { status: 500 });
   }
 }
-

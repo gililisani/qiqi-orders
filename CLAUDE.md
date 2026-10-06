@@ -59,7 +59,7 @@ Notes:
 
 - Outbound mail goes through Microsoft Graph (`lib/emailService.ts`). Sender is locked to `orders@qiqiglobal.com`.
 - HTML email bodies must HTML-escape every user-supplied field — use `lib/htmlEscape.ts`. Header fields (subject) must also strip CR/LF.
-- DAM uses AWS S3. Storage path: `{assetId}/{timestamp}-{sanitizedFileName}`. Filename sanitization lives inline in `app/api/dam/assets/init/route.ts`.
+- DAM files live in **Supabase Storage** (bucket `dam-assets`) via `platform/storage` — `STORAGE_DRIVER` is unset in prod, so the S3 driver is unused. Storage path: `{assetId}/{timestamp}-{sanitizedFileName}`. Filename sanitization lives inline in `app/api/dam/assets/init/route.ts`. Every Supabase sign is a Storage → Postgres round trip (small compute, `max_connections` 60): sign grids with `getSignedUrls` (one call), never a per-object loop — a per-card burst exhausted Storage's pool in prod (2026-10-06).
 - NetSuite (`lib/netsuite.ts`) — **fully wired**: order → Sales Order → Invoice → reconcile, cross-subsidiary fulfilment, Amazon FBA monthly import. ~19 API routes under `app/api/netsuite/*`.
 - **Stripe card payments are LIVE** (`lib/stripe.ts`, `app/api/stripe/{request-payment,void-payment,webhook}`). Admin sends a payment request → NetSuite invoice gets shipping + card-fee lines → Stripe invoice is created, finalised and emailed → `invoice.paid` webhook flips the order to paid and records a NetSuite Customer Payment. Gated to Qiqi INC companies via `companies.enable_credit_card_payments`. **See `docs/AUDIT-2026-08-02.md` Part 8 before touching this — there are known unfixed money-loss paths.**
 - ShipHero / 3PL (`lib/fulfillment/`) — provider-adapter scaffolding; correctness **not yet audited**.

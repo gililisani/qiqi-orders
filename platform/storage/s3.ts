@@ -86,6 +86,17 @@ export function createS3Storage(): ObjectStorage {
       return awsGetSignedUrl(client, command, { expiresIn: opts.expiresIn });
     },
 
+    async getSignedUrls(paths, opts) {
+      // S3 presigning is local (no network), so per-object signing is fine.
+      const unique = Array.from(new Set(paths.filter(Boolean)));
+      const signed = await Promise.all(
+        unique.map((path) =>
+          awsGetSignedUrl(client, new GetObjectCommand({ Bucket: bucket, Key: path }), { expiresIn: opts.expiresIn })
+        )
+      );
+      return Object.fromEntries(unique.map((path, i) => [path, signed[i]]));
+    },
+
     async deleteObject(path) {
       const command = new DeleteObjectCommand({ Bucket: bucket, Key: path });
       await client.send(command);
