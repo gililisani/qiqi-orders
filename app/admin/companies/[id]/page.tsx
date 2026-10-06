@@ -12,6 +12,7 @@ import {
   Plus,
   Trash2,
   TrendingUp,
+  Receipt,
 } from 'lucide-react';
 
 import { supabase } from '../../../../lib/supabaseClient';
@@ -256,6 +257,11 @@ export default function CompanyViewPage() {
             <Link href={`/admin/companies/${company.id}/notes`}>
               <Button variant="outline" size="sm">
                 <StickyNote className="h-4 w-4" /> Notes
+              </Button>
+            </Link>
+            <Link href={`/admin/companies/${company.id}/sales`}>
+              <Button variant="outline" size="sm">
+                <Receipt className="h-4 w-4" /> Sales (NetSuite)
               </Button>
             </Link>
             <Link href={`/admin/companies/${company.id}/historical-sales`}>

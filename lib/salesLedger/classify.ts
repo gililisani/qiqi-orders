@@ -1,0 +1,171 @@
+/**
+ * Sales ledger — turning one ERP billing document into ledger numbers.
+ *
+ * Pure (no I/O) so the money rules are unit-tested. The ERP adapter
+ * (lib/salesLedger/netsuite.ts) supplies documents in this neutral shape.
+ *
+ * Rules (owner-confirmed 2026-10-06):
+ *  - sales_amount = document total MINUS every excluded line. Starting from
+ *    the total matters: on most invoices this account's discount lines are
+ *    informational (the support-fund value is already inside $0 / negative-
+ *    priced product lines), on newer ones they really reduce the total —
+ *    the total is the only figure that is right in both cases.
+ *  - A line is a PRODUCT when its SKU is in the Hub catalog or starts with a
+ *    configured prefix (Settings → Sales; e.g. discontinued versions);
+ *    a DISCOUNT when it is a discount-type item, an item-less discount line,
+ *    or a configured discount item; everything else is EXCLUDED (shipping,
+ *    card fees / surcharges, services, private label, other charges, tax).
+ *  - Amounts are converted to the reporting currency with the exchange rate
+ *    recorded on the document.
+ *  - support_fund (SF redeemed) = every product/discount line that reduces
+ *    an invoice or cash sale ("all discounts are support funds", owner
+ *    2026-08-20). Credit memos redeem nothing.
+ */
+
+export type ErpDocType = 'invoice' | 'credit_memo' | 'cash_sale' | 'cash_refund';
+export type LineKind = 'product' | 'discount' | 'excluded';
+
+export interface SalesRule {
+  historyStartDate: string | null; // YYYY-MM-DD; null = sync off
+  productSkuPrefixes: string[];
+  discountItemNames: string[];
+}
+
+export interface ErpLine {
+  lineNo: number;
+  sku: string | null; // null = item-less line (header discount / markup)
+  itemName: string | null;
+  itemType: string | null; // ERP item type, or the line type for item-less lines
+  isTax: boolean;
+  quantity: number | null; // ERP sign as-is
+  foreignAmount: number; // ERP sign as-is (revenue negative on invoices)
+}
+
+export interface ErpDocument {
+  erpId: string;
+  type: ErpDocType;
+  tranid: string;
+  date: string; // YYYY-MM-DD
+  currency: string;
+  exchangeRate: number;
+  foreignTotal: number;
+  status: string | null;
+  memo: string | null;
+  poRef: string | null;
+  soErpId: string | null;
+  soTranid: string | null;
+  lines: ErpLine[];
+}
+
+export interface LedgerLine {
+  line_no: number;
+  kind: LineKind;
+  product_id: number | null;
+  sku: string | null;
+  item_name: string | null;
+  item_type: string | null;
+  quantity: number;
+  amount: number;
+}
+
+export interface LedgerDocument {
+  netsuite_id: string;
+  doc_type: ErpDocType;
+  tranid: string;
+  doc_date: string;
+  currency: string;
+  exchange_rate: number;
+  total_foreign: number;
+  total_amount: number;
+  sales_amount: number;
+  excluded_amount: number;
+  support_fund: number;
+  netsuite_so_id: string | null;
+  so_tranid: string | null;
+  po_ref: string | null;
+  memo: string | null;
+  ns_status: string | null;
+  lines: LedgerLine[];
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100 || 0; // never -0
+const norm = (s: string | null | undefined) => String(s ?? '').trim().toUpperCase();
+
+export function classifyLine(line: ErpLine, rule: SalesRule, catalogSkus: Set<string>): LineKind {
+  if (line.isTax) return 'excluded';
+  const sku = norm(line.sku);
+  const type = line.itemType ?? '';
+  if (!sku) return type === 'Markup' ? 'excluded' : 'discount';
+  if (type === 'Discount') return 'discount';
+  if (catalogSkus.has(sku)) return 'product';
+  if (rule.productSkuPrefixes.some((p) => norm(p) && sku.startsWith(norm(p)))) return 'product';
+  const name = norm(line.itemName);
+  if (rule.discountItemNames.some((n) => norm(n) && (norm(n) === sku || norm(n) === name))) return 'discount';
+  return 'excluded';
+}
+
+/**
+ * Ledger numbers for one document. `productIdBySku` = Hub catalog (upper-
+ * cased SKU → product id); it also defines which SKUs always count.
+ */
+export function buildLedgerDocument(
+  doc: ErpDocument,
+  rule: SalesRule,
+  productIdBySku: Map<string, number>
+): LedgerDocument {
+  const catalog = new Set(productIdBySku.keys());
+  const rate = Number.isFinite(doc.exchangeRate) && doc.exchangeRate > 0 ? doc.exchangeRate : 1;
+  const redeems = doc.type === 'invoice' || doc.type === 'cash_sale';
+
+  let excludedForeign = 0;
+  let sfForeign = 0;
+  const lines: LedgerLine[] = [];
+  for (const line of doc.lines) {
+    const kind = classifyLine(line, rule, catalog);
+    const effect = -(Number(line.foreignAmount) || 0); // effect on the document total
+    const units = -(Number(line.quantity) || 0);
+    if (kind === 'excluded') excludedForeign += effect;
+    if (redeems && kind !== 'excluded' && effect < 0) sfForeign += -effect;
+    if (effect === 0 && kind !== 'product') continue; // informational zero lines add nothing
+    lines.push({
+      line_no: line.lineNo,
+      kind,
+      product_id: kind === 'product' ? productIdBySku.get(norm(line.sku)) ?? null : null,
+      sku: line.sku ? line.sku.trim() : null,
+      item_name: line.itemName ? line.itemName.trim() : null,
+      item_type: line.isTax ? 'Tax' : line.itemType,
+      quantity: round2(units),
+      amount: round2(effect * rate),
+    });
+  }
+
+  return {
+    netsuite_id: doc.erpId,
+    doc_type: doc.type,
+    tranid: doc.tranid,
+    doc_date: doc.date,
+    currency: doc.currency || 'USD',
+    exchange_rate: rate,
+    total_foreign: round2(doc.foreignTotal),
+    total_amount: round2(doc.foreignTotal * rate),
+    sales_amount: round2((doc.foreignTotal - excludedForeign) * rate),
+    excluded_amount: round2(excludedForeign * rate),
+    support_fund: round2(sfForeign * rate),
+    netsuite_so_id: doc.soErpId,
+    so_tranid: doc.soTranid,
+    po_ref: doc.poRef?.trim() || null,
+    memo: doc.memo?.trim() || null,
+    ns_status: doc.status,
+    lines,
+  };
+}
+
+export function toSalesRule(row: any): SalesRule {
+  const list = (v: unknown) =>
+    Array.isArray(v) ? v.map((s) => String(s).trim()).filter(Boolean) : [];
+  return {
+    historyStartDate: row?.history_start_date ? String(row.history_start_date).slice(0, 10) : null,
+    productSkuPrefixes: list(row?.product_sku_prefixes),
+    discountItemNames: list(row?.discount_item_names),
+  };
+}

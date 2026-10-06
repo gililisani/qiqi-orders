@@ -3,7 +3,7 @@
 /**
  * Settings — how the Hub is configured for this business. One home for
  * product configuration (as opposed to daily-work pages): each section is a
- * module's settings. Fulfillment is the first; pricing, payments and the
+ * module's settings (Fulfillment, Sales); pricing, payments and the
  * integration connections (NetSuite, Shopify, Amazon, ShipHero) join here as
  * they're productized.
  */
@@ -14,9 +14,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '../../components/qq/page-header';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/qq/tabs';
 import { FulfillmentSettings } from '../../components/admin/settings/FulfillmentSettings';
+import { SalesSettings } from '../../components/admin/settings/SalesSettings';
 
 const SECTIONS = [
   { value: 'fulfillment', label: 'Fulfillment', component: <FulfillmentSettings /> },
+  { value: 'sales', label: 'Sales', component: <SalesSettings /> },
 ];
 
 function SettingsTabs() {
