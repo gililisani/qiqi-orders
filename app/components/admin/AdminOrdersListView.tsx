@@ -26,6 +26,7 @@ import Link from 'next/link';
 import { Search, Plus, X } from 'lucide-react';
 
 import { useSupabase } from '../../../lib/supabase-provider';
+import { buildOrderSearchOr, parseSearchDate, sanitizeSearchTerm } from '../../../lib/orderSearch';
 
 import { PageHeader } from '../qq/page-header';
 import { Card } from '../qq/card';
@@ -161,37 +162,25 @@ export default function AdminOrdersListView() {
         query = query.lte('created_at', `${dateTo}T23:59:59`);
       }
 
-      if (searchTerm) {
-        const dateMatch = searchTerm.match(/\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|\d{2}-\d{2}-\d{4}/);
-        if (dateMatch) {
-          let dateStr = dateMatch[0];
-          if (dateStr.includes('/')) {
-            const [m, d, y] = dateStr.split('/');
-            dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-          } else if (dateStr.length === 10 && dateStr.split('-')[0].length === 2) {
-            const [m, d, y] = dateStr.split('-');
-            dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-          }
-          query = query.gte('created_at', `${dateStr}T00:00:00`).lte('created_at', `${dateStr}T23:59:59`);
+      if (searchTerm.trim()) {
+        const day = parseSearchDate(searchTerm);
+        if (day) {
+          query = query.gte('created_at', `${day}T00:00:00`).lte('created_at', `${day}T23:59:59`);
         } else {
-          const { data: matchingCompanies } = await supabase
-            .from('companies')
-            .select('id')
-            .ilike('company_name', `%${searchTerm}%`);
-          const matchingCompanyIds = matchingCompanies?.map((c: { id: string }) => c.id) || [];
-          if (matchingCompanyIds.length > 0) {
-            query = query.in('company_id', matchingCompanyIds);
-          } else {
-            const numericValue = parseFloat(searchTerm.replace(/[^0-9.-]/g, ''));
-            if (!isNaN(numericValue) && numericValue > 0) {
-              query = query.gte('total_value', numericValue - 0.01).lte('total_value', numericValue + 0.01);
-            } else {
-              // Match either identifier the column can display. Strip characters
-              // that would break PostgREST's or() filter syntax.
-              const term = searchTerm.replace(/[(),]/g, '');
-              query = query.or(`po_number.ilike.%${term}%,so_number.ilike.%${term}%`);
-            }
-          }
+          // PO / SO / invoice number, company name or NetSuite number, amount —
+          // all OR-ed (lib/orderSearch).
+          const term = sanitizeSearchTerm(searchTerm);
+          const { data: matchingCompanies } = term
+            ? await supabase
+                .from('companies')
+                .select('id')
+                .or(`company_name.ilike."%${term}%",netsuite_number.ilike."%${term}%"`)
+            : { data: [] as Array<{ id: string }> };
+          const filter = buildOrderSearchOr(
+            searchTerm,
+            (matchingCompanies ?? []).map((c: { id: string }) => c.id),
+          );
+          if (filter) query = query.or(filter);
         }
       }
 
@@ -275,7 +264,7 @@ export default function AdminOrdersListView() {
         <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Search PO/SO, company, date, amount…"
+            placeholder="Search PO/SO/invoice, company, date, amount…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9"

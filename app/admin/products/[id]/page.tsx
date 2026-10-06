@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Edit } from 'lucide-react';
 
 import { supabase } from '../../../../lib/supabaseClient';
+import { PRICE_TIERS, PRICE_TIER_LABELS, priceForTier } from '../../../../lib/orderPricing';
 import { PageHeader } from '../../../components/qq/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/qq/card';
 import { Button } from '../../../components/qq/button';
@@ -15,8 +16,10 @@ interface Product {
   id: number;
   item_name: string;
   sku: string;
-  price_international: number;
-  price_americas: number;
+  price_international: number | null;
+  price_americas: number | null;
+  salon_price: number | null;
+  msrp: number | null;
   enable: boolean;
   list_in_support_funds: boolean;
   visible_to_americas: boolean;
@@ -151,19 +154,23 @@ export default function ProductViewPage(props: { params: Promise<{ id: string }>
               <CardTitle className="text-sm">Pricing</CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Every pricing tier the Hub prices orders at (lib/orderPricing). */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Americas</p>
-                  <p className="text-xl font-medium font-mono">
-                    ${product.price_americas.toFixed(2)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">International</p>
-                  <p className="text-xl font-medium font-mono">
-                    ${product.price_international.toFixed(2)}
-                  </p>
-                </div>
+                {PRICE_TIERS.map((tier) => {
+                  const price = priceForTier(tier, product);
+                  return (
+                    <div key={tier}>
+                      <p className="text-xs text-muted-foreground mb-1">{PRICE_TIER_LABELS[tier]}</p>
+                      {price !== null ? (
+                        <p className="text-xl font-medium font-mono">${price.toFixed(2)}</p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground pt-1.5">
+                          {tier === 'msrp' ? 'Pro use' : 'Not set'}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

@@ -11,6 +11,7 @@ import {
   History,
   Plus,
   Trash2,
+  TrendingUp,
 } from 'lucide-react';
 
 import { supabase } from '../../../../lib/supabaseClient';
@@ -245,6 +246,11 @@ export default function CompanyViewPage() {
             <Link href={`/admin/orders?company_id=${company.id}`}>
               <Button variant="outline" size="sm">
                 <ShoppingCart className="h-4 w-4" /> Orders
+              </Button>
+            </Link>
+            <Link href={`/admin/reports/company-performance/${company.id}`}>
+              <Button variant="outline" size="sm">
+                <TrendingUp className="h-4 w-4" /> Performance
               </Button>
             </Link>
             <Link href={`/admin/companies/${company.id}/notes`}>

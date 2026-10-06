@@ -1190,7 +1190,18 @@ export default function AdminOrderDetailsView({
       {/* Page header */}
       <PageHeader
         title={`Order ${order.po_number || order.id.substring(0, 6)}`}
-        description={order.company?.company_name}
+        description={
+          order.company?.company_name && order.company_id ? (
+            <Link
+              href={`/admin/companies/${order.company_id}`}
+              className="hover:text-foreground hover:underline underline-offset-2"
+            >
+              {order.company.company_name}
+            </Link>
+          ) : (
+            order.company?.company_name
+          )
+        }
         actions={
           <>
             {/* Primary NS contextual action */}

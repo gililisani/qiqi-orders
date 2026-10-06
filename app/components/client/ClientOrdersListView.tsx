@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { Search, Plus, MoreHorizontal, Eye } from 'lucide-react';
 
 import { supabase } from '../../../lib/supabaseClient';
+import { buildOrderSearchOr, parseSearchDate } from '../../../lib/orderSearch';
 
 import { PageHeader } from '../qq/page-header';
 import { Card } from '../qq/card';
@@ -131,29 +132,14 @@ export default function ClientOrdersListView() {
         query = query.eq('status', statusFilter);
       }
 
-      if (searchTerm) {
-        const dateMatch = searchTerm.match(/\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|\d{2}-\d{2}-\d{4}/);
-        if (dateMatch) {
-          let dateStr = dateMatch[0];
-          if (dateStr.includes('/')) {
-            const [m, d, y] = dateStr.split('/');
-            dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-          } else if (dateStr.length === 10 && dateStr.split('-')[0].length === 2) {
-            const [m, d, y] = dateStr.split('-');
-            dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-          }
-          query = query
-            .gte('created_at', `${dateStr}T00:00:00`)
-            .lte('created_at', `${dateStr}T23:59:59`);
+      if (searchTerm.trim()) {
+        const day = parseSearchDate(searchTerm);
+        if (day) {
+          query = query.gte('created_at', `${day}T00:00:00`).lte('created_at', `${day}T23:59:59`);
         } else {
-          const numericValue = parseFloat(searchTerm.replace(/[^0-9.-]/g, ''));
-          if (!isNaN(numericValue) && numericValue > 0) {
-            query = query
-              .gte('total_value', numericValue - 0.01)
-              .lte('total_value', numericValue + 0.01);
-          } else {
-            query = query.ilike('po_number', `%${searchTerm}%`);
-          }
+          // PO / SO / invoice number or amount, OR-ed (lib/orderSearch).
+          const filter = buildOrderSearchOr(searchTerm);
+          if (filter) query = query.or(filter);
         }
       }
 
@@ -202,7 +188,7 @@ export default function ClientOrdersListView() {
         <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Search PO, date, amount…"
+            placeholder="Search PO/SO/invoice, date, amount…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9"
