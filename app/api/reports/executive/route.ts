@@ -385,6 +385,7 @@ export async function GET(request: NextRequest) {
       topProducts,
     });
   } catch (err: any) {
+    if (err instanceof Response) return err; // guard refusals keep their 401/403
     const msg = err?.message ?? 'Unknown error';
     const status = msg === 'Not authenticated' || msg === 'Forbidden' ? 401 : 500;
     return NextResponse.json({ error: msg }, { status });
