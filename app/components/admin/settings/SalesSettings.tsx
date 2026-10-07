@@ -166,16 +166,16 @@ export function SalesSettings() {
             <Input id="sales-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </FormField>
           <FormField
-            label="Also count items whose SKU starts with"
+            label="Product families that count toward sales"
             htmlFor="sales-prefixes"
-            helper="Comma-separated. Products in the Hub catalog always count — add prefixes for items outside the catalog, such as discontinued versions."
+            helper="SKU prefixes, comma-separated. Items whose SKU starts with one of these count toward sales and targets, as does every product in the Hub catalog. Anything else on an invoice — shipping, fees, other items — doesn't count. Discounts reduce sales automatically."
           >
             <Input id="sales-prefixes" value={prefixes} onChange={(e) => setPrefixes(e.target.value)} placeholder="FPS, KIT, TOL" />
           </FormField>
           <FormField
-            label="Also treat these items as discounts"
+            label="Other items that reduce a sale (optional)"
             htmlFor="sales-discounts"
-            helper="Comma-separated NetSuite item names. Discount-type items are always discounts; list other items that reduce a sale."
+            helper="Comma-separated NetSuite item names. Only needed for items that work as discounts but aren't set up as discount items in NetSuite."
           >
             <Input id="sales-discounts" value={discounts} onChange={(e) => setDiscounts(e.target.value)} placeholder="Customer Discount" />
           </FormField>
