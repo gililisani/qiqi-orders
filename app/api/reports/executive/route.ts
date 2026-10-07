@@ -8,10 +8,11 @@ import { createServiceRoleClient, requireAdminWithPermission } from '../../../..
  *   { period, prevPeriod, kpis, trend, funnel, topCompanies, topProducts }
  *
  * Data sources:
- *   - Revenue / Active Partners / Top Companies / Trend: orders (committed)
- *     UNION historical_sales (pre-NetSuite backfill table).
- *   - AOV: orders only (historical_sales has no order concept).
- *   - Top Products / Order Status Funnel / Support Fund Used: orders only.
+ *   - Sales / Active Partners / Top Companies / Top Products / Trend /
+ *     Support Fund Used / Invoices / Avg invoice value: the SALES LEDGER
+ *     (sales_documents — what NetSuite billed, by document date, credit
+ *     memos negative; owner 2026-10-06).
+ *   - Order Status Funnel: Hub orders, live (order flow, not sales).
  *
  * Presets (30d / 90d / ytd) read pre-rolled MVs; custom windows aggregate
  * live (slower, exact, admin-only so volume is low).
@@ -19,7 +20,7 @@ import { createServiceRoleClient, requireAdminWithPermission } from '../../../..
 
 type WindowKey = '30d' | '90d' | 'this-month' | 'last-month' | 'ytd' | 'custom';
 
-const COMMITTED_STATUSES = ['Open', 'In Process', 'Ready', 'Done'];
+const INVOICE_TYPES = ['invoice', 'cash_sale'];
 
 function periodRange(window: WindowKey, fromParam: string | null, toParam: string | null) {
   const now = new Date();
@@ -54,17 +55,18 @@ function periodRange(window: WindowKey, fromParam: string | null, toParam: strin
 
 interface DailyRow {
   day: string;
-  source: 'orders' | 'historical';
-  orders: number | string | null;
-  revenue: number | string | null;
+  source: string;
+  orders: number | string | null; // invoices + cash sales
+  revenue: number | string | null; // all documents (credit memos negative)
+  invoice_revenue: number | string | null; // invoices + cash sales only
   support_fund_used: number | string | null;
 }
 
 interface DailyAgg {
-  revenue: number;          // orders + historical
-  supportFundUsed: number;  // orders only (historical contributes 0)
-  orders: number;           // orders only
-  ordersRevenue: number;    // orders only — denominator-side of AOV
+  revenue: number;          // billed sales, net of credit memos
+  supportFundUsed: number;  // redeemed on the documents
+  orders: number;           // invoices + cash sales
+  ordersRevenue: number;    // their sales — numerator of the average invoice value
 }
 
 function aggregateDaily(rows: DailyRow[]): Map<string, DailyAgg> {
@@ -82,7 +84,7 @@ function aggregateDaily(rows: DailyRow[]): Map<string, DailyAgg> {
     entry.revenue += rev;
     entry.supportFundUsed += sf;
     entry.orders += ord;
-    if (r.source === 'orders') entry.ordersRevenue += rev;
+    entry.ordersRevenue += Number(r.invoice_revenue) || 0;
     out.set(r.day, entry);
   }
   return out;
@@ -99,18 +101,18 @@ export async function GET(request: NextRequest) {
     const { from, to, prevFrom, prevTo } = periodRange(window, fromParam, toParam);
     const supabase = createServiceRoleClient();
 
-    // --- KPIs + sales trend: from mv_daily_sales (orders + historical). ---
+    // --- KPIs + sales trend: from mv_daily_sales (the sales ledger). ---
     const fetchDaily = () =>
       Promise.all([
         supabase
           .from('mv_daily_sales')
-          .select('day, source, orders, revenue, support_fund_used')
+          .select('day, source, orders, revenue, invoice_revenue, support_fund_used')
           .gte('day', from.toISOString().slice(0, 10))
           .lte('day', to.toISOString().slice(0, 10))
           .order('day', { ascending: true }),
         supabase
           .from('mv_daily_sales')
-          .select('day, source, orders, revenue, support_fund_used')
+          .select('day, source, orders, revenue, invoice_revenue, support_fund_used')
           .gte('day', prevFrom.toISOString().slice(0, 10))
           .lte('day', prevTo.toISOString().slice(0, 10)),
       ]);
@@ -179,54 +181,22 @@ export async function GET(request: NextRequest) {
     }
     const prevAov = prevOrders > 0 ? prevOrdersRevenue / prevOrders : 0;
 
-    // --- Active partners: union of committed-order companies + historical
-    //     companies in the period. ---
-    const [
-      { data: orderPartnerRows, error: orderPartnerErr },
-      { data: histPartnerRows, error: histPartnerErr },
-      { data: prevOrderPartnerRows, error: prevOrderPartnerErr },
-      { data: prevHistPartnerRows, error: prevHistPartnerErr },
-    ] = await Promise.all([
-      supabase
-        .from('orders')
+    // --- Active partners: companies invoiced in the period. ---
+    const partnersIn = async (a: Date, b: Date) => {
+      const { data, error } = await supabase
+        .from('sales_documents')
         .select('company_id')
-        .gte('created_at', from.toISOString())
-        .lte('created_at', to.toISOString())
-        .in('status', COMMITTED_STATUSES)
-        .not('company_id', 'is', null),
-      supabase
-        .from('historical_sales')
-        .select('company_id')
-        .gte('sale_date', from.toISOString().slice(0, 10))
-        .lte('sale_date', to.toISOString().slice(0, 10)),
-      supabase
-        .from('orders')
-        .select('company_id')
-        .gte('created_at', prevFrom.toISOString())
-        .lte('created_at', prevTo.toISOString())
-        .in('status', COMMITTED_STATUSES)
-        .not('company_id', 'is', null),
-      supabase
-        .from('historical_sales')
-        .select('company_id')
-        .gte('sale_date', prevFrom.toISOString().slice(0, 10))
-        .lte('sale_date', prevTo.toISOString().slice(0, 10)),
+        .in('doc_type', INVOICE_TYPES)
+        .gte('doc_date', a.toISOString().slice(0, 10))
+        .lte('doc_date', b.toISOString().slice(0, 10))
+        .range(0, 9999);
+      if (error) throw error;
+      return new Set((data ?? []).map((r: any) => r.company_id).filter(Boolean)).size;
+    };
+    const [activePartners, prevActivePartners] = await Promise.all([
+      partnersIn(from, to),
+      partnersIn(prevFrom, prevTo),
     ]);
-
-    if (orderPartnerErr) throw orderPartnerErr;
-    if (histPartnerErr) throw histPartnerErr;
-    if (prevOrderPartnerErr) throw prevOrderPartnerErr;
-    if (prevHistPartnerErr) throw prevHistPartnerErr;
-
-    const partnerSet = new Set<string>();
-    for (const r of orderPartnerRows ?? []) if (r.company_id) partnerSet.add(r.company_id);
-    for (const r of histPartnerRows ?? []) if (r.company_id) partnerSet.add(r.company_id);
-    const activePartners = partnerSet.size;
-
-    const prevPartnerSet = new Set<string>();
-    for (const r of prevOrderPartnerRows ?? []) if (r.company_id) prevPartnerSet.add(r.company_id);
-    for (const r of prevHistPartnerRows ?? []) if (r.company_id) prevPartnerSet.add(r.company_id);
-    const prevActivePartners = prevPartnerSet.size;
 
     // --- Order status funnel: live, current period, orders only. ---
     const { data: funnelRows, error: funnelErr } = await supabase
@@ -334,79 +304,64 @@ export async function GET(request: NextRequest) {
         };
       });
     } else {
-      // Custom window: live aggregate across orders + historical_sales.
-      const [liveOrdersRes, liveHistRes] = await Promise.all([
+      // Custom window: live aggregate over the sales ledger.
+      const fromDay = from.toISOString().slice(0, 10);
+      const toDay = to.toISOString().slice(0, 10);
+      const [liveDocsRes, liveLinesRes] = await Promise.all([
         supabase
-          .from('orders')
-          .select('id, company_id, total_value, companies:company_id(company_name)')
-          .gte('created_at', from.toISOString())
-          .lte('created_at', to.toISOString())
-          .in('status', COMMITTED_STATUSES),
+          .from('sales_documents')
+          .select('company_id, doc_type, sales_amount, companies:company_id(company_name)')
+          .gte('doc_date', fromDay)
+          .lte('doc_date', toDay)
+          .range(0, 19999),
         supabase
-          .from('historical_sales')
-          .select('company_id, amount, companies:company_id(company_name)')
-          .gte('sale_date', from.toISOString().slice(0, 10))
-          .lte('sale_date', to.toISOString().slice(0, 10)),
+          .from('sales_document_lines')
+          .select('product_id, quantity, amount, Products:product_id(sku, item_name), doc:sales_documents!inner(doc_date)')
+          .eq('kind', 'product')
+          .not('product_id', 'is', null)
+          .gte('doc.doc_date', fromDay)
+          .lte('doc.doc_date', toDay)
+          .range(0, 49999),
       ]);
 
-      if (liveOrdersRes.error) throw liveOrdersRes.error;
-      if (liveHistRes.error) throw liveHistRes.error;
-      const liveOrders = liveOrdersRes.data ?? [];
+      if (liveDocsRes.error) throw liveDocsRes.error;
+      if (liveLinesRes.error) throw liveLinesRes.error;
 
       const compMap = new Map<string, { name: string; orders: number; revenue: number }>();
-      for (const o of liveOrders) {
-        if (!o.company_id) continue;
-        const entry = compMap.get(o.company_id) ?? {
-          name: (o as any).companies?.company_name ?? 'Unknown',
+      for (const d of liveDocsRes.data ?? []) {
+        if (!d.company_id) continue;
+        const entry = compMap.get(d.company_id) ?? {
+          name: (d as any).companies?.company_name ?? 'Unknown',
           orders: 0,
           revenue: 0,
         };
-        entry.orders += 1;
-        entry.revenue += Number(o.total_value) || 0;
-        compMap.set(o.company_id, entry);
-      }
-      for (const h of liveHistRes.data ?? []) {
-        if (!h.company_id) continue;
-        const entry = compMap.get(h.company_id) ?? {
-          name: (h as any).companies?.company_name ?? 'Unknown',
-          orders: 0,
-          revenue: 0,
-        };
-        entry.revenue += Number(h.amount) || 0;
-        compMap.set(h.company_id, entry);
+        if (INVOICE_TYPES.includes(d.doc_type)) entry.orders += 1;
+        entry.revenue += Number(d.sales_amount) || 0;
+        compMap.set(d.company_id, entry);
       }
       topCompanies = Array.from(compMap.entries())
         .map(([companyId, v]) => ({ companyId, ...v }))
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 10);
 
-      const orderIds = liveOrders.map((o) => o.id);
-      if (orderIds.length > 0) {
-        const { data: liveItems, error: liveItemsErr } = await supabase
-          .from('order_items')
-          .select('product_id, quantity, total_price, Products:product_id(sku, item_name)')
-          .in('order_id', orderIds);
-
-        if (liveItemsErr) throw liveItemsErr;
-
-        const prodMap = new Map<number, { sku: string | null; name: string | null; units: number; revenue: number }>();
-        for (const it of liveItems ?? []) {
-          if (it.product_id == null) continue;
-          const entry = prodMap.get(it.product_id) ?? {
-            sku: (it as any).Products?.sku ?? null,
-            name: (it as any).Products?.item_name ?? null,
-            units: 0,
-            revenue: 0,
-          };
-          entry.units += Number(it.quantity) || 0;
-          entry.revenue += Number(it.total_price) || 0;
-          prodMap.set(it.product_id, entry);
-        }
-        topProducts = Array.from(prodMap.entries())
-          .map(([productId, v]) => ({ productId, ...v }))
-          .sort((a, b) => b.revenue - a.revenue)
-          .slice(0, 10);
+      const prodMap = new Map<number, { sku: string | null; name: string | null; units: number; revenue: number }>();
+      for (const it of liveLinesRes.data ?? []) {
+        if (it.product_id == null) continue;
+        const meta = Array.isArray((it as any).Products) ? (it as any).Products[0] : (it as any).Products;
+        const entry = prodMap.get(it.product_id) ?? {
+          sku: meta?.sku ?? null,
+          name: meta?.item_name ?? null,
+          units: 0,
+          revenue: 0,
+        };
+        entry.units += Number(it.quantity) || 0;
+        entry.revenue += Number(it.amount) || 0;
+        prodMap.set(it.product_id, entry);
       }
+      topProducts = Array.from(prodMap.entries())
+        .map(([productId, v]) => ({ productId, ...v }))
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 10);
     }
 
     const pct = (curr: number, prev: number): number | null => {

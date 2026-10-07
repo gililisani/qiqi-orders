@@ -8,7 +8,6 @@ import {
   Edit,
   ShoppingCart,
   StickyNote,
-  History,
   Plus,
   Trash2,
   TrendingUp,
@@ -262,11 +261,6 @@ export default function CompanyViewPage() {
             <Link href={`/admin/companies/${company.id}/sales`}>
               <Button variant="outline" size="sm">
                 <Receipt className="h-4 w-4" /> Sales (NetSuite)
-              </Button>
-            </Link>
-            <Link href={`/admin/companies/${company.id}/historical-sales`}>
-              <Button variant="outline" size="sm">
-                <History className="h-4 w-4" /> Historical sales
               </Button>
             </Link>
             <Link href={`/admin/companies/${company.id}/edit`}>

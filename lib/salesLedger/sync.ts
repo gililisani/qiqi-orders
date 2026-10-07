@@ -14,12 +14,15 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { NetSuiteAPI } from '../netsuite';
-import { buildLedgerDocument, toSalesRule, type ErpDocument, type LedgerDocument, type SalesRule } from './classify';
+import { buildLedgerDocument, toSalesRule, type CatalogProduct, type ErpDocument, type LedgerDocument, type SalesRule } from './classify';
 import { fetchErpDocuments } from './netsuite';
+import { recalculateCompanyTargetPeriods } from '../targetPeriods';
 
 export interface SyncSummary {
   skipped?: string;
   companies: number;
+  targetsRecalculated: number;
+  reportsRefreshed: boolean;
   documents: number;
   lines: number;
   removed: number;
@@ -88,7 +91,16 @@ export async function syncSalesLedger(
   opts: { companyIds?: string[] } = {}
 ): Promise<SyncSummary> {
   const started = Date.now();
-  const summary: SyncSummary = { companies: 0, documents: 0, lines: 0, removed: 0, errors: [], durationMs: 0 };
+  const summary: SyncSummary = {
+    companies: 0,
+    targetsRecalculated: 0,
+    reportsRefreshed: false,
+    documents: 0,
+    lines: 0,
+    removed: 0,
+    errors: [],
+    durationMs: 0,
+  };
   const rule = await loadRule(supabase);
   if (!rule.historyStartDate) {
     return { ...summary, skipped: 'Settings → Sales has no history start date yet.', durationMs: Date.now() - started };
@@ -100,7 +112,9 @@ export async function syncSalesLedger(
       if (opts.companyIds?.length) q = q.in('id', opts.companyIds);
       return q;
     }),
-    selectAll<any>((a, b) => supabase.from('Products').select('id, sku').order('id').range(a, b)),
+    selectAll<any>((a, b) =>
+      supabase.from('Products').select('id, sku, qualifies_for_credit_earning').order('id').range(a, b)
+    ),
     selectAll<HubOrderLink>((a, b) =>
       supabase
         .from('orders')
@@ -111,8 +125,13 @@ export async function syncSalesLedger(
   ]);
 
   const companies = allCompanies.filter((c) => /^\d+$/.test(String(c.netsuite_internal_id ?? '').trim()));
-  const productIdBySku = new Map<string, number>(
-    products.filter((p) => p.sku).map((p) => [String(p.sku).trim().toUpperCase(), Number(p.id)])
+  const catalog = new Map<string, CatalogProduct>(
+    products
+      .filter((p) => p.sku)
+      .map((p) => [
+        String(p.sku).trim().toUpperCase(),
+        { id: Number(p.id), earnsSupportFund: p.qualifies_for_credit_earning !== false },
+      ])
   );
 
   const byCustomer = await fetchErpDocuments(
@@ -126,7 +145,7 @@ export async function syncSalesLedger(
     try {
       const erpDocs: ErpDocument[] = byCustomer.get(String(company.netsuite_internal_id).trim()) ?? [];
       const companyOrders = orders.filter((o) => o.company_id === companyId);
-      const built = erpDocs.map((d) => buildLedgerDocument(d, rule, productIdBySku));
+      const built = erpDocs.map((d) => buildLedgerDocument(d, rule, catalog));
       const now = new Date().toISOString();
 
       const rows = built.map(({ lines, ...doc }) => ({
@@ -194,6 +213,22 @@ export async function syncSalesLedger(
         .upsert({ company_id: companyId, last_error: message.slice(0, 500) });
     }
   }
+
+  // The ledger drives targets and the executive dashboard — bring them in
+  // line with what was just synced.
+  for (const company of companies) {
+    const companyId = String(company.id);
+    if (summary.errors.some((e) => e.companyId === companyId)) continue;
+    try {
+      await recalculateCompanyTargetPeriods(supabase, companyId);
+      summary.targetsRecalculated += 1;
+    } catch (err: any) {
+      summary.errors.push({ companyId, company: String(company.company_name), error: `targets: ${String(err?.message || err)}` });
+    }
+  }
+  const { error: refreshError } = await supabase.rpc('refresh_executive_reports');
+  if (refreshError) summary.errors.push({ companyId: '', company: 'Executive dashboard', error: refreshError.message });
+  else summary.reportsRefreshed = true;
 
   summary.durationMs = Date.now() - started;
   return summary;

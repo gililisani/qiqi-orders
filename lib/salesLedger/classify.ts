@@ -20,6 +20,13 @@
  *  - support_fund (SF redeemed) = every product/discount line that reduces
  *    an invoice or cash sale ("all discounts are support funds", owner
  *    2026-08-20). Credit memos redeem nothing.
+ *  - credit_base_amount = the part of sales that EARNS support funds: the
+ *    document's sales split by the share of products that earn (catalog
+ *    flag `qualifies_for_credit_earning`; an item outside the catalog
+ *    follows its family — a SKU family whose catalog items all don't earn,
+ *    e.g. kits, doesn't earn). Splitting the NET sales (not gross product
+ *    lines) keeps goods paid for with support funds from earning more
+ *    support funds, whichever way the invoice recorded them.
  */
 
 export type ErpDocType = 'invoice' | 'credit_memo' | 'cash_sale' | 'cash_refund';
@@ -68,6 +75,11 @@ export interface LedgerLine {
   amount: number;
 }
 
+export interface CatalogProduct {
+  id: number;
+  earnsSupportFund: boolean;
+}
+
 export interface LedgerDocument {
   netsuite_id: string;
   doc_type: ErpDocType;
@@ -80,6 +92,7 @@ export interface LedgerDocument {
   sales_amount: number;
   excluded_amount: number;
   support_fund: number;
+  credit_base_amount: number;
   netsuite_so_id: string | null;
   so_tranid: string | null;
   po_ref: string | null;
@@ -104,33 +117,61 @@ export function classifyLine(line: ErpLine, rule: SalesRule, catalogSkus: Set<st
   return 'excluded';
 }
 
+const family = (sku: string) => sku.replace(/\d.*$/, '');
+
+/** Does a product SKU earn support funds? Catalog flag; otherwise its family's. */
+export function makeEarnsSupportFund(catalog: Map<string, CatalogProduct>): (sku: string) => boolean {
+  const families = new Map<string, { earn: number; noEarn: number }>();
+  for (const [sku, p] of catalog) {
+    const f = families.get(family(sku)) ?? { earn: 0, noEarn: 0 };
+    if (p.earnsSupportFund) f.earn += 1;
+    else f.noEarn += 1;
+    families.set(family(sku), f);
+  }
+  return (rawSku: string) => {
+    const sku = norm(rawSku);
+    const product = catalog.get(sku);
+    if (product) return product.earnsSupportFund;
+    const f = families.get(family(sku));
+    return !(f && f.earn === 0 && f.noEarn > 0);
+  };
+}
+
 /**
- * Ledger numbers for one document. `productIdBySku` = Hub catalog (upper-
- * cased SKU → product id); it also defines which SKUs always count.
+ * Ledger numbers for one document. `catalog` = Hub catalog (upper-cased
+ * SKU → product id + whether it earns support funds); catalog SKUs always
+ * count as products.
  */
 export function buildLedgerDocument(
   doc: ErpDocument,
   rule: SalesRule,
-  productIdBySku: Map<string, number>
+  catalog: Map<string, CatalogProduct>
 ): LedgerDocument {
-  const catalog = new Set(productIdBySku.keys());
+  const catalogSkus = new Set(catalog.keys());
+  const earns = makeEarnsSupportFund(catalog);
   const rate = Number.isFinite(doc.exchangeRate) && doc.exchangeRate > 0 ? doc.exchangeRate : 1;
   const redeems = doc.type === 'invoice' || doc.type === 'cash_sale';
 
   let excludedForeign = 0;
   let sfForeign = 0;
+  let productsForeign = 0;
+  let earningForeign = 0;
   const lines: LedgerLine[] = [];
   for (const line of doc.lines) {
-    const kind = classifyLine(line, rule, catalog);
+    const kind = classifyLine(line, rule, catalogSkus);
     const effect = -(Number(line.foreignAmount) || 0); // effect on the document total
     const units = -(Number(line.quantity) || 0);
     if (kind === 'excluded') excludedForeign += effect;
     if (redeems && kind !== 'excluded' && effect < 0) sfForeign += -effect;
+    if (kind === 'product') {
+      productsForeign += effect;
+      if (earns(line.sku ?? '')) earningForeign += effect;
+    }
     if (effect === 0 && kind !== 'product') continue; // informational zero lines add nothing
     lines.push({
       line_no: line.lineNo,
       kind,
-      product_id: kind === 'product' ? productIdBySku.get(norm(line.sku)) ?? null : null,
+      product_id: kind === 'product' ? catalog.get(norm(line.sku))?.id ?? null : null,
       sku: line.sku ? line.sku.trim() : null,
       item_name: line.itemName ? line.itemName.trim() : null,
       item_type: line.isTax ? 'Tax' : line.itemType,
@@ -138,6 +179,14 @@ export function buildLedgerDocument(
       amount: round2(effect * rate),
     });
   }
+
+  const salesForeign = doc.foreignTotal - excludedForeign;
+  // Earning share of the net sales; 0 when there are no product lines or the
+  // signs disagree (e.g. a credit that isn't a product return).
+  const earningShare =
+    productsForeign !== 0 && Math.sign(productsForeign) === Math.sign(salesForeign)
+      ? Math.min(1, Math.max(0, earningForeign / productsForeign))
+      : 0;
 
   return {
     netsuite_id: doc.erpId,
@@ -148,9 +197,10 @@ export function buildLedgerDocument(
     exchange_rate: rate,
     total_foreign: round2(doc.foreignTotal),
     total_amount: round2(doc.foreignTotal * rate),
-    sales_amount: round2((doc.foreignTotal - excludedForeign) * rate),
+    sales_amount: round2(salesForeign * rate),
     excluded_amount: round2(excludedForeign * rate),
     support_fund: round2(sfForeign * rate),
+    credit_base_amount: round2(salesForeign * earningShare * rate),
     netsuite_so_id: doc.soErpId,
     so_tranid: doc.soTranid,
     po_ref: doc.poRef?.trim() || null,

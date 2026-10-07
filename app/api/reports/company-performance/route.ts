@@ -4,12 +4,11 @@ import {
   requireAdminWithPermission,
 } from '../../../../platform/auth/guards';
 import {
-  buildSfUsedByOrder,
   computePeriodMetrics,
   computeSfBehaviorDistribution,
   fetchRevenueInputs,
+  type LedgerSale,
   type PeriodStatus,
-  type RevenueInputs,
 } from '../../../../lib/companyPerformance';
 
 /**
@@ -24,16 +23,10 @@ import {
  * per-company drill-down and target-period recalculation use the same
  * builder, so every view agrees.
  *
- * Support-fund semantics (important — see useOrderFormController.ts):
- *   `orders.support_fund_used` is CAPPED at `orders.credit_earned`, so
- *   it can never directly reveal a top-up. What the client actually
- *   claimed lives in the SF line items — `order_items.total_price`
- *   where `is_support_fund_item = true`. That sum is the canonical
- *   "credit used" from the user's perspective, and balance is:
- *       balance = credit_earned − credit_claimed
- *   Positive → leftover (under-redeemed). Negative → top-up
- *   (client claimed more SF products than they earned and paid the
- *   difference). Zero → exact match.
+ * Revenue = the sales ledger (what NetSuite billed, dated by document).
+ * Support funds: used = SF redeemed on the period's documents; earned =
+ * SF% of their earning base. Balance = earned − used: positive → leftover
+ * (under-redeemed), negative → top-up.
  *
  * Companies whose `companies.support_fund_id` is NULL are flagged
  * `isEnrolled = false` and excluded from SF KPIs / SF behavior — they
@@ -168,19 +161,12 @@ export async function GET(request: NextRequest) {
     // ---- Batched inputs: fixed query count regardless of period count ----
     const companyIds = Array.from(new Set(periods.map((p: any) => p.company_id)));
     const inputs = await fetchRevenueInputs(supabase, companyIds);
-    const sfUsedByOrder = buildSfUsedByOrder(inputs.sfItems);
 
-    const ordersByCompany = new Map<string, RevenueInputs['doneOrders']>();
-    for (const o of inputs.doneOrders) {
-      const list = ordersByCompany.get(o.company_id) ?? [];
-      list.push(o);
-      ordersByCompany.set(o.company_id, list);
-    }
-    const historicalByCompany = new Map<string, RevenueInputs['historical']>();
-    for (const h of inputs.historical) {
-      const list = historicalByCompany.get(h.company_id) ?? [];
-      list.push(h);
-      historicalByCompany.set(h.company_id, list);
+    const salesByCompany = new Map<string, LedgerSale[]>();
+    for (const sale of inputs.sales) {
+      const list = salesByCompany.get(sale.company_id) ?? [];
+      list.push(sale);
+      salesByCompany.set(sale.company_id, list);
     }
 
     // ---- Per-period rows (pure — no queries) ----
@@ -197,11 +183,9 @@ export async function GET(request: NextRequest) {
       const m = computePeriodMetrics(
         now,
         p,
-        ordersByCompany.get(p.company_id) ?? [],
-        inputs.firstDone,
-        sfUsedByOrder,
-        historicalByCompany.get(p.company_id) ?? [],
+        salesByCompany.get(p.company_id) ?? [],
         sfPercent,
+        inputs.contractDateByCompany.get(p.company_id) ?? null,
       );
 
       return {
@@ -236,11 +220,9 @@ export async function GET(request: NextRequest) {
     );
     const sfBehavior = computeSfBehaviorDistribution(
       enrolledPeriods,
-      inputs.doneOrders,
-      inputs.firstDone,
-      sfUsedByOrder,
-      inputs.historical,
+      inputs.sales,
       sfPercentByCompany,
+      inputs.contractDateByCompany,
     );
 
     return NextResponse.json({ rows, kpis, sfBehavior, filterOptions });

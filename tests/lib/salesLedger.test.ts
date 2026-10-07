@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildLedgerDocument, classifyLine, toSalesRule, type ErpDocument, type ErpLine, type SalesRule } from '@/lib/salesLedger/classify';
+import { buildLedgerDocument, classifyLine, makeEarnsSupportFund, toSalesRule, type ErpDocument, type ErpLine, type SalesRule } from '@/lib/salesLedger/classify';
 import { linkDocumentToOrder } from '@/lib/salesLedger/sync';
 import { reconcileCompany } from '@/lib/salesLedger/reconcile';
 import { fetchErpDocuments } from '@/lib/salesLedger/netsuite';
@@ -9,8 +9,10 @@ const RULE: SalesRule = {
   productSkuPrefixes: ['FPS', 'KIT', 'TOL', 'PROMO', 'ACC', 'SAM'],
   discountItemNames: ['Customer Discount'],
 };
-const CATALOG = new Map<string, number>([
-  ['FPS0016', 2], ['FPS0018', 4], ['FPS0025', 11], ['FPS0027', 13], ['KIT0034', 22],
+const P = (id: number, earnsSupportFund = true) => ({ id, earnsSupportFund });
+const CATALOG = new Map([
+  ['FPS0016', P(2)], ['FPS0018', P(4)], ['FPS0025', P(11)], ['FPS0027', P(13)],
+  ['KIT0030', P(30, false)], ['KIT0034', P(22, false)],
 ]);
 
 let n = 0;
@@ -129,6 +131,58 @@ describe('buildLedgerDocument (real invoices from the 2026-10-06 audit)', () => 
     expect(toSalesRule({ history_start_date: '2023-01-01', product_sku_prefixes: [' FPS ', ''], discount_item_names: null }))
       .toEqual({ historyStartDate: '2023-01-01', productSkuPrefixes: ['FPS'], discountItemNames: [] });
     expect(toSalesRule(null).historyStartDate).toBeNull();
+  });
+});
+
+describe('support-funds earning base (credit_base_amount)', () => {
+  it('kits never earn; items outside the catalog follow their family', () => {
+    const earns = makeEarnsSupportFund(CATALOG);
+    expect(earns('FPS0016')).toBe(true);
+    expect(earns('KIT0034')).toBe(false);
+    expect(earns('FPS0007')).toBe(true); // discontinued FPS — family earns
+    expect(earns('KIT0017')).toBe(false); // non-catalog kit — every catalog kit doesn't earn
+    expect(earns('ACC0005')).toBe(true); // no family in the catalog — earns by default
+  });
+
+  it('a mixed invoice earns only on its earning share', () => {
+    const d = buildLedgerDocument(doc({
+      foreignTotal: 1000,
+      lines: [line('FPS0016', 'Assembly', -60, -600), line('KIT0034', 'Kit', -4, -400)],
+    }), RULE, CATALOG);
+    expect(d).toMatchObject({ sales_amount: 1000, credit_base_amount: 600 });
+  });
+
+  it('Hub-pushed invoice: goods paid with support funds do not earn more support funds', () => {
+    // 5,000 regular + 500 SF goods at full price, then the 500 support-fund discount.
+    const d = buildLedgerDocument(doc({
+      foreignTotal: 5000,
+      lines: [
+        line('FPS0016', 'Assembly', -500, -5000),
+        line('FPS0018', 'Assembly', -50, -500),
+        line('Partners Support Funds', 'Discount', null, 500),
+      ],
+    }), RULE, CATALOG);
+    expect(d).toMatchObject({ sales_amount: 5000, support_fund: 500, credit_base_amount: 5000 });
+  });
+
+  it('free goods at $0 with an informational discount: base = what was paid', () => {
+    const d = buildLedgerDocument(doc({
+      foreignTotal: 2064,
+      lines: [line('FPS0025', 'Assembly', -96, -2064), line('FPS0018', 'Assembly', -12, 0), line(null, 'Discount', null, 102)],
+    }), RULE, CATALOG);
+    expect(d.credit_base_amount).toBe(2064);
+  });
+
+  it('a product return reduces the base; a credit with no products earns nothing back', () => {
+    const ret = buildLedgerDocument(doc({ type: 'credit_memo', foreignTotal: -300, lines: [line('FPS0016', 'Assembly', 25, 300)] }), RULE, CATALOG);
+    expect(ret.credit_base_amount).toBe(-300);
+    const fee = buildLedgerDocument(doc({ type: 'credit_memo', foreignTotal: -50, lines: [line('Other charge', 'OthCharge', 1, 50)] }), RULE, CATALOG);
+    expect(fee).toMatchObject({ sales_amount: 0, credit_base_amount: 0 });
+  });
+
+  it('foreign currency: the base is converted too', () => {
+    const d = buildLedgerDocument(doc({ currency: 'EUR', exchangeRate: 1.1, foreignTotal: 100, lines: [line('FPS0016', 'Assembly', -10, -100)] }), RULE, CATALOG);
+    expect(d.credit_base_amount).toBe(110);
   });
 });
 

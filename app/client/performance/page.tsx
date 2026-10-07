@@ -117,15 +117,16 @@ export default function ClientPerformancePage() {
           )}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          Revenue counts orders when they were completed (plus any historical sales recorded
-          before the Hub).
+          Sales are what was invoiced to you (products only, minus credit notes), whether you ordered
+          through the Hub or not. Purchases before your agreement started don&apos;t count toward
+          your targets.
         </p>
       </div>
 
       {/* To-date tiles */}
       <div className={`grid grid-cols-2 ${isEnrolled ? 'lg:grid-cols-5' : 'lg:grid-cols-2'} gap-3 sm:gap-4`}>
         <Tile label="Total sales to date" value={loading && !data ? '—' : money(data?.toDate.sales ?? 0)} />
-        <Tile label="Orders to date" value={loading && !data ? '—' : String(data?.toDate.orders ?? 0)} />
+        <Tile label="Invoices to date" value={loading && !data ? '—' : String(data?.toDate.invoices ?? 0)} />
         {isEnrolled && (
           <>
             <Tile label="SF earned to date" value={loading && !data ? '—' : money(data?.toDate.sfEarned ?? 0)} />
@@ -286,7 +287,7 @@ export default function ClientPerformancePage() {
         <CardContent className="space-y-4">
           <div className={`grid grid-cols-2 ${isEnrolled ? 'lg:grid-cols-6' : 'lg:grid-cols-4'} gap-3 sm:gap-4`}>
             <Tile label="Sales" value={loading ? '—' : money(data?.window.sales ?? 0)} />
-            <Tile label="Orders" value={loading ? '—' : String(data?.window.orders ?? 0)} />
+            <Tile label="Invoices" value={loading ? '—' : String(data?.window.invoices ?? 0)} />
             <Tile label="Units" value={loading ? '—' : String(data?.window.units ?? 0)} />
             <Tile label="Distinct products" value={loading ? '—' : String(data?.window.productCount ?? 0)} />
             {isEnrolled && (
@@ -301,7 +302,7 @@ export default function ClientPerformancePage() {
             <p className="text-sm font-semibold mb-2">Top products in period</p>
             <TopTable
               rows={data?.window.topProducts ?? []}
-              emptyMessage={loading ? 'Loading…' : 'No completed orders in this period.'}
+              emptyMessage={loading ? 'Loading…' : 'Nothing invoiced in this period.'}
               columns={[
                 { header: '#', key: 'rank', width: 'w-8', render: (row: any) => (data?.window.topProducts ?? []).indexOf(row) + 1 },
                 { header: 'Product', key: 'name', render: (row: any) => row.name ?? '—' },
