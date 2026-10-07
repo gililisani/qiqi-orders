@@ -5,9 +5,9 @@ import {
   computeCompanyMetrics,
   computePeriodMetrics,
   computeSfBehaviorDistribution,
-  sfEarnedFor,
   type LedgerProductLine,
   type LedgerSale,
+  type SfEvent,
 } from '@/lib/companyPerformance';
 
 const NOW = new Date('2026-07-15T12:00:00Z');
@@ -31,19 +31,36 @@ const PERIODS = [
 const sale = (o: Partial<LedgerSale> & Pick<LedgerSale, 'doc_date' | 'sales_amount'>): LedgerSale => ({
   company_id: 'c1',
   doc_type: 'invoice',
-  support_fund: 0,
-  credit_base_amount: o.sales_amount,
   ...o,
 });
 
 // The ledger: what NetSuite billed.
 const SALES: LedgerSale[] = [
-  sale({ doc_date: '2025-09-10', sales_amount: 40000 }), // earns 800
-  sale({ doc_date: '2026-03-05', sales_amount: 70000, support_fund: 1200 }), // earns 1400
-  sale({ doc_date: '2026-07-10', sales_amount: 20000, support_fund: 500 }), // earns 400 → top-up
-  sale({ doc_date: '2026-07-20', doc_type: 'credit_memo', sales_amount: -1000 }), // return: −20 earned
+  sale({ doc_date: '2025-09-10', sales_amount: 40000 }),
+  sale({ doc_date: '2026-03-05', sales_amount: 70000 }),
+  sale({ doc_date: '2026-07-10', sales_amount: 20000 }),
+  sale({ doc_date: '2026-07-20', doc_type: 'credit_memo', sales_amount: -1000 }), // a return
   sale({ doc_date: '2024-01-01', sales_amount: 1234 }), // before the agreement
-  sale({ doc_date: '2025-08-15', sales_amount: 5000, credit_base_amount: 0 }), // kits only — earns nothing
+  sale({ doc_date: '2025-08-15', sales_amount: 5000 }),
+];
+
+const ev = (o: Partial<SfEvent> & Pick<SfEvent, 'day'>): SfEvent => ({
+  company_id: 'c1',
+  source: 'order',
+  earned: 0,
+  used: 0,
+  ...o,
+});
+
+// Support funds (support_fund_events): Hub orders carry what they earned and
+// claimed when placed; NetSuite-only invoices carry what was redeemed (and an
+// estimate only before the first Hub order — computed by the view).
+const SF_EVENTS: SfEvent[] = [
+  ev({ day: '2025-09-12', earned: 800, used: 800 }),
+  ev({ day: '2026-03-07', earned: 1400, used: 1200 }),
+  ev({ day: '2026-07-12', earned: 400, used: 500 }), // topped up
+  ev({ day: '2024-01-01', source: 'erp', earned: 0, used: 50 }), // before the agreement
+  ev({ day: '2025-08-15', source: 'erp', earned: 100, used: 0 }), // pre-Hub invoice, estimated
 ];
 
 const PRODUCT_LINES: LedgerProductLine[] = [
@@ -60,6 +77,7 @@ function build(windowFrom: Date, windowTo: Date) {
     company: COMPANY,
     periods: PERIODS,
     sales: SALES,
+    sfEvents: SF_EVENTS,
     productLines: PRODUCT_LINES,
     windowFrom,
     windowTo,
@@ -73,21 +91,24 @@ describe('computeCompanyMetrics (sales ledger)', () => {
     expect(result.toDate.sales).toBe(134000); // 40000 + 70000 + 20000 − 1000 + 5000
     expect(result.toDate.salesBeforeAgreement).toBe(1234);
     expect(result.toDate.invoices).toBe(4); // credit memo is not an invoice
-    expect(result.toDate.sfEarned).toBeCloseTo(2580, 6); // 800 + 1400 + 400 − 20 (+0 kits)
-    expect(result.toDate.sfUsed).toBe(1700);
-    expect(result.toDate.sfBalance).toBeCloseTo(880, 6);
+  });
+
+  it('support funds to date come from the events since the agreement, not from billing', () => {
+    expect(result.toDate.sfEarned).toBe(2700); // 800 + 1400 + 400 + 100
+    expect(result.toDate.sfUsed).toBe(2500); // the pre-agreement 50 is left out
+    expect(result.toDate.sfBalance).toBe(200);
   });
 
   it('attributes billed sales to periods by document date', () => {
     const year1 = result.periods.find((p) => p.periodName === 'Year 1')!;
     expect(year1.actual).toBe(115000); // 40000 + 70000 + 5000
     expect(year1.status).toBe('Complete');
-    expect(year1.sfEarned).toBeCloseTo(2200, 6);
-    expect(year1.sfUsed).toBe(1200);
+    expect(year1.sfEarned).toBe(2300);
+    expect(year1.sfUsed).toBe(2000);
 
     const year2 = result.periods.find((p) => p.periodName === 'Year 2')!;
     expect(year2.actual).toBe(19000); // 20000 − 1000 credit memo
-    expect(year2.sfBalance).toBeCloseTo(-120, 6); // earned 380, redeemed 500 → top-up
+    expect(year2.sfBalance).toBe(-100); // earned 400, claimed 500 → top-up; the return doesn't touch SF
   });
 
   it('windows sales, invoices, units and the product mix (returns subtract)', () => {
@@ -96,6 +117,8 @@ describe('computeCompanyMetrics (sales ledger)', () => {
     expect(result.window.units).toBe(14);
     expect(result.window.topProducts[0]).toMatchObject({ sku: 'FPS0018', units: 9, revenue: 11000 });
     expect(result.window.productCount).toBe(2); // the zero-value line is not a product bought
+    expect(result.window.sfEarned).toBe(400);
+    expect(result.window.sfUsed).toBe(500);
   });
 
   it('reports agreement span from first to last period', () => {
@@ -103,11 +126,12 @@ describe('computeCompanyMetrics (sales ledger)', () => {
     expect(result.company.agreementEnd).toBe('2027-06-30');
   });
 
-  it('a wider window picks up everything billed in it, but SF earned only after the agreement', () => {
+  it('a wider window picks up everything billed and every support-fund event in it', () => {
     const wide = build(new Date('2023-01-01T00:00:00Z'), new Date('2026-12-31T23:59:59Z'));
     expect(wide.window.sales).toBe(135234); // includes the pre-agreement 1234
     expect(wide.window.invoices).toBe(5);
-    expect(wide.window.sfEarned).toBeCloseTo(2580, 6); // the 1234 earns nothing
+    expect(wide.window.sfEarned).toBe(2700);
+    expect(wide.window.sfUsed).toBe(2550);
     expect(wide.window.topProducts[0]).toMatchObject({ sku: 'FPS0018', units: 108 });
   });
 
@@ -129,7 +153,7 @@ describe('computeCompanyMetrics (sales ledger)', () => {
 describe('computePeriodMetrics', () => {
   it('active period ahead of schedule → Ahead, with day/pace math', () => {
     // Year 2 started 2026-07-01; NOW is 15 days in.
-    const m = computePeriodMetrics(NOW, { start_date: '2026-07-01', end_date: '2027-06-30', target_amount: 130000 }, SALES, 2, '2025-07-01');
+    const m = computePeriodMetrics(NOW, { start_date: '2026-07-01', end_date: '2027-06-30', target_amount: 130000 }, SALES, SF_EVENTS);
     expect(m.actual).toBe(19000);
     expect(m.daysTotal).toBe(365);
     expect(m.daysElapsed).toBe(15);
@@ -138,8 +162,15 @@ describe('computePeriodMetrics', () => {
     expect(m.expectedPct).toBeCloseTo(4.11, 1);
     expect(m.paceDeltaPct).toBeCloseTo(m.progressPct - m.expectedPct, 6);
     expect(m.status).toBe('Ahead');
-    expect(m.sfEarned).toBeCloseTo(380, 6);
+    expect(m.sfEarned).toBe(400);
     expect(m.sfUsed).toBe(500);
+  });
+
+  it('without events, support funds are zero (target recalculation passes sales only)', () => {
+    const m = computePeriodMetrics(NOW, { start_date: '2026-07-01', end_date: '2027-06-30', target_amount: 130000 }, SALES);
+    expect(m.actual).toBe(19000);
+    expect(m.sfEarned).toBe(0);
+    expect(m.sfUsed).toBe(0);
   });
 
   it('ended period with target met → Complete; days fully elapsed', () => {
@@ -176,16 +207,6 @@ describe('computePeriodMetrics', () => {
   });
 });
 
-describe('sfEarnedFor', () => {
-  it('SF% of the earning base, only on/after the agreement', () => {
-    expect(sfEarnedFor(sale({ doc_date: '2025-07-01', sales_amount: 1000 }), 10, '2025-07-01')).toBe(100);
-    expect(sfEarnedFor(sale({ doc_date: '2025-06-30', sales_amount: 1000 }), 10, '2025-07-01')).toBe(0);
-    expect(sfEarnedFor(sale({ doc_date: '2025-06-30', sales_amount: 1000 }), 10, null)).toBe(100);
-    expect(sfEarnedFor(sale({ doc_date: '2025-08-01', sales_amount: 1000, credit_base_amount: 400 }), 10, null)).toBe(40);
-    expect(sfEarnedFor(sale({ doc_date: '2025-08-01', sales_amount: 1000 }), null, null)).toBe(0);
-  });
-});
-
 describe('buildFirstDoneMap (order-based Support Funds report)', () => {
   it('keeps the EARLIEST Done timestamp when an order was marked Done twice', () => {
     const map = buildFirstDoneMap([
@@ -212,21 +233,19 @@ describe('buildSfUsedByOrder (order-based Support Funds report)', () => {
   });
 });
 
-describe('computeSfBehaviorDistribution (per invoice)', () => {
+describe('computeSfBehaviorDistribution (per purchase)', () => {
   const ENROLLED = [{ company_id: 'c1', start_date: '2025-07-01', end_date: '2026-06-30' }];
-  const PCT = new Map([['c1', 10]]);
-  const S: LedgerSale[] = [
-    sale({ doc_date: '2025-09-01', sales_amount: 8000, support_fund: 800 }), // fully redeemed
-    sale({ doc_date: '2025-10-01', sales_amount: 14000, support_fund: 1200 }), // leftover 200
-    sale({ doc_date: '2026-01-01', sales_amount: 1000, support_fund: 300 }), // topped up 200
-    sale({ doc_date: '2026-08-01', sales_amount: 5000, support_fund: 0 }), // outside period → skipped
-    sale({ company_id: 'c2', doc_date: '2025-09-01', sales_amount: 5000 }), // not enrolled → skipped
-    sale({ doc_date: '2025-11-01', sales_amount: 2000, credit_base_amount: 0 }), // nothing earned/claimed → skipped
-    sale({ doc_date: '2025-12-01', doc_type: 'credit_memo', sales_amount: -500 }), // not a purchase → skipped
+  const E: SfEvent[] = [
+    ev({ day: '2025-09-01', earned: 800, used: 800 }), // fully redeemed
+    ev({ day: '2025-10-01', earned: 1400, used: 1200 }), // leftover 200
+    ev({ day: '2026-01-01', source: 'erp', earned: 100, used: 300 }), // topped up 200
+    ev({ day: '2026-08-01', earned: 500, used: 0 }), // outside the period → skipped
+    ev({ company_id: 'c2', day: '2025-09-01', earned: 500 }), // not enrolled → skipped
+    ev({ day: '2025-11-01', source: 'erp' }), // nothing earned or claimed → skipped
   ];
 
-  it('classifies invoices by redemption behavior inside enrolled periods only', () => {
-    const d = computeSfBehaviorDistribution(ENROLLED, S, PCT);
+  it('classifies Hub orders and NetSuite-only invoices inside enrolled periods only', () => {
+    const d = computeSfBehaviorDistribution(ENROLLED, E);
     expect(d.sampleSize).toBe(3);
     expect(d.fullyRedeemedPct).toBeCloseTo(33.33, 1);
     expect(d.underRedeemedPct).toBeCloseTo(33.33, 1);
@@ -235,16 +254,8 @@ describe('computeSfBehaviorDistribution (per invoice)', () => {
     expect(d.avgTopUp).toBeCloseTo(200, 6);
   });
 
-  it('pre-agreement invoices earn nothing', () => {
-    const d = computeSfBehaviorDistribution(ENROLLED, S, PCT, new Map([['c1', '2026-01-01']]));
-    // only the 2026-01-01 invoice (earned 100, redeemed 300) still carries a signal, plus the
-    // pre-agreement ones that redeemed support funds (earned 0, claimed > 0 → topped up)
-    expect(d.sampleSize).toBe(3);
-    expect(d.toppedUpPct).toBe(100);
-  });
-
   it('returns all zeros for an empty sample', () => {
-    const d = computeSfBehaviorDistribution([], [], new Map());
+    const d = computeSfBehaviorDistribution([], []);
     expect(d).toEqual({ underRedeemedPct: 0, fullyRedeemedPct: 0, toppedUpPct: 0, avgTopUp: 0, avgLeftover: 0, sampleSize: 0 });
   });
 });

@@ -9,9 +9,12 @@ import { createServiceRoleClient, requireAdminWithPermission } from '../../../..
  *
  * Data sources:
  *   - Sales / Active Partners / Top Companies / Top Products / Trend /
- *     Support Fund Used / Invoices / Avg invoice value: the SALES LEDGER
- *     (sales_documents — what NetSuite billed, by document date, credit
- *     memos negative; owner 2026-10-06).
+ *     Invoices / Avg invoice value: the SALES LEDGER (sales_documents —
+ *     what NetSuite billed, by document date, credit memos negative; owner
+ *     2026-10-06).
+ *   - Support Fund Used: support_fund_events — SF items claimed on Hub
+ *     orders (dated first Done) plus SF redeemed on NetSuite-only invoices
+ *     (support funds are earned on Hub orders, owner 2026-10-07).
  *   - Order Status Funnel: Hub orders, live (order flow, not sales).
  *
  * Presets (30d / 90d / ytd) read pre-rolled MVs; custom windows aggregate
@@ -64,7 +67,7 @@ interface DailyRow {
 
 interface DailyAgg {
   revenue: number;          // billed sales, net of credit memos
-  supportFundUsed: number;  // redeemed on the documents
+  supportFundUsed: number;  // claimed on Hub orders + redeemed on NetSuite-only invoices
   orders: number;           // invoices + cash sales
   ordersRevenue: number;    // their sales — numerator of the average invoice value
 }

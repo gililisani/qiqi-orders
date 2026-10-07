@@ -13,9 +13,12 @@
  * (companies.contract_execution_date) never count toward targets or
  * support funds.
  *
- * Support funds: used = SF redeemed on each document; earned = SF% of the
- * document's earning base (credit_base_amount — kits and goods paid with
- * support funds don't earn). Balance = earned − used.
+ * Support funds come from HUB ORDERS, not billing (owner 2026-10-07: a
+ * client earns support funds while placing the order). They're read from
+ * the support_fund_events view — Hub orders (credit_earned + SF items
+ * claimed, dated first Done) plus NetSuite-only invoices (redeemed; earned
+ * estimated only before the client's first Hub order). The rule lives in
+ * that view alone. Balance = earned − used.
  *
  * Design: `fetchRevenueInputs` loads everything in a FIXED number of
  * queries regardless of how many companies/periods are involved, and
@@ -128,18 +131,21 @@ export interface PeriodMetrics {
 }
 
 
-/**
- * One ledger document as the revenue math sees it (sales_documents row).
- * Amounts in USD. support_fund = SF redeemed on the document;
- * credit_base_amount = the part of sales that earns support funds.
- */
+/** One ledger document as the revenue math sees it (sales_documents row, USD). */
 export interface LedgerSale {
   company_id: string;
   doc_date: string; // YYYY-MM-DD
   doc_type: string; // invoice | credit_memo | cash_sale | cash_refund
   sales_amount: number | string | null;
-  support_fund: number | string | null;
-  credit_base_amount: number | string | null;
+}
+
+/** One support_fund_events row: what a purchase earned and redeemed (USD). */
+export interface SfEvent {
+  company_id: string;
+  day: string; // YYYY-MM-DD — first Done (Hub order) or document date
+  source: string; // order | erp
+  earned: number | string | null;
+  used: number | string | null;
 }
 
 /** One product line of a ledger document, flattened with its document date. */
@@ -156,25 +162,17 @@ export interface LedgerProductLine {
 const num = (v: unknown) => Number(v) || 0;
 const isInvoice = (s: Pick<LedgerSale, 'doc_type'>) => s.doc_type === 'invoice' || s.doc_type === 'cash_sale';
 
-/** Support funds a document earned: SF% of its earning base, only on/after the agreement. */
-export function sfEarnedFor(sale: LedgerSale, sfPercent: number | null | undefined, contractDate: string | null): number {
-  const pct = Number(sfPercent) || 0;
-  if (!pct) return 0;
-  if (contractDate && sale.doc_date < contractDate) return 0;
-  return (pct / 100) * num(sale.credit_base_amount);
-}
-
 /**
- * Pure per-period math over ledger documents already scoped to the period's
- * company. A document counts when its date falls inside the period (periods
- * start at the agreement, so earlier sales never count toward a target).
+ * Pure per-period math over ledger documents and support-fund events
+ * already scoped to the period's company. A row counts when its date falls
+ * inside the period (periods start at the agreement, so earlier sales never
+ * count toward a target).
  */
 export function computePeriodMetrics(
   now: Date,
   period: { start_date: string; end_date: string; target_amount: number | string | null },
   sales: LedgerSale[],
-  sfPercent?: number | null,
-  contractDate: string | null = null
+  sfEvents: SfEvent[] = []
 ): PeriodMetrics {
   const startDate = new Date(`${period.start_date}T00:00:00.000Z`);
   const endDate = new Date(`${period.end_date}T23:59:59.999Z`);
@@ -186,8 +184,11 @@ export function computePeriodMetrics(
   for (const sale of sales) {
     if (sale.doc_date < period.start_date || sale.doc_date > period.end_date) continue;
     actual += num(sale.sales_amount);
-    sfUsed += num(sale.support_fund);
-    sfEarned += sfEarnedFor(sale, sfPercent, contractDate);
+  }
+  for (const e of sfEvents) {
+    if (e.day < period.start_date || e.day > period.end_date) continue;
+    sfEarned += num(e.earned);
+    sfUsed += num(e.used);
   }
 
   const daysTotal = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000));
@@ -281,18 +282,14 @@ export interface SfBehaviorDistribution {
 }
 
 /**
- * Per-INVOICE redemption behavior across enrolled companies: earned = the
- * invoice's SF accrual (SF% of its earning base), claimed = the support
- * funds redeemed on it. An invoice counts when its date falls inside one
- * of its company's enrolled periods; invoices with zero earned AND zero
- * claimed carry no signal and are skipped. Credit memos are not purchases
- * and never count as a sample.
+ * Per-PURCHASE redemption behavior across enrolled companies: one sample per
+ * support-fund event (a Done Hub order, or a NetSuite-only invoice) whose
+ * date falls inside one of its company's enrolled periods. Events with zero
+ * earned AND zero claimed carry no signal and are skipped.
  */
 export function computeSfBehaviorDistribution(
   enrolledPeriods: Array<{ company_id: string; start_date: string; end_date: string }>,
-  sales: LedgerSale[],
-  sfPercentByCompany: Map<string, number>,
-  contractDateByCompany: Map<string, string | null> = new Map()
+  sfEvents: SfEvent[]
 ): SfBehaviorDistribution {
   const periodsByCompany = new Map<string, Array<{ s: string; e: string }>>();
   for (const p of enrolledPeriods) {
@@ -308,12 +305,11 @@ export function computeSfBehaviorDistribution(
     leftoverSum = 0;
   let total = 0;
 
-  for (const sale of sales) {
-    if (!isInvoice(sale)) continue;
-    const ranges = periodsByCompany.get(sale.company_id) ?? [];
-    if (!ranges.some((r) => sale.doc_date >= r.s && sale.doc_date <= r.e)) continue;
-    const earned = sfEarnedFor(sale, sfPercentByCompany.get(sale.company_id) ?? 0, contractDateByCompany.get(sale.company_id) ?? null);
-    const claimed = num(sale.support_fund);
+  for (const e of sfEvents) {
+    const ranges = periodsByCompany.get(e.company_id) ?? [];
+    if (!ranges.some((r) => e.day >= r.s && e.day <= r.e)) continue;
+    const earned = num(e.earned);
+    const claimed = num(e.used);
     if (earned === 0 && claimed === 0) continue;
     total += 1;
     const delta = earned - claimed;
@@ -343,17 +339,18 @@ interface RawInputs {
   company: any; // id, company_name, netsuite_number, support_fund_id, support_fund(percent), subsidiary(name), contract_execution_date
   periods: any[];
   sales: LedgerSale[]; // this company's ledger documents
+  sfEvents?: SfEvent[]; // this company's support-fund events
   productLines: LedgerProductLine[]; // this company's product lines
   windowFrom: Date;
   windowTo: Date;
 }
 
 export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
-  const { now, company, periods, sales, productLines, windowFrom, windowTo } = inputs;
+  const { now, company, periods, sales, sfEvents = [], productLines, windowFrom, windowTo } = inputs;
   const sfPercent =
     (Array.isArray(company.support_fund) ? company.support_fund[0] : company.support_fund)?.percent ?? null;
   const contractDate: string | null = company.contract_execution_date ?? null;
-  const sinceAgreement = (s: LedgerSale) => !contractDate || s.doc_date >= contractDate;
+  const sinceAgreement = (day: string) => !contractDate || day >= contractDate;
 
   // ---- To-date: everything since the agreement ------------------------------
   let toDateSales = 0;
@@ -362,19 +359,22 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
   let toDateSfUsed = 0;
   let beforeAgreement = 0;
   for (const sale of sales) {
-    if (!sinceAgreement(sale)) {
+    if (!sinceAgreement(sale.doc_date)) {
       beforeAgreement += num(sale.sales_amount);
       continue;
     }
     toDateSales += num(sale.sales_amount);
     if (isInvoice(sale)) toDateInvoices += 1;
-    toDateSfUsed += num(sale.support_fund);
-    toDateSfEarned += sfEarnedFor(sale, sfPercent, contractDate);
+  }
+  for (const e of sfEvents) {
+    if (!sinceAgreement(e.day)) continue;
+    toDateSfEarned += num(e.earned);
+    toDateSfUsed += num(e.used);
   }
 
   // ---- Per-period rows -----------------------------------------------------
   const periodRows: CompanyPeriodRow[] = periods.map((p) => {
-    const m = computePeriodMetrics(now, p, sales, sfPercent, contractDate);
+    const m = computePeriodMetrics(now, p, sales, sfEvents);
     return {
       periodId: p.id,
       periodName: p.period_name ?? '',
@@ -403,8 +403,11 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
     if (!inWindow(sale.doc_date)) continue;
     windowSales += num(sale.sales_amount);
     if (isInvoice(sale)) windowInvoices += 1;
-    windowSfUsed += num(sale.support_fund);
-    windowSfEarned += sfEarnedFor(sale, sfPercent, contractDate);
+  }
+  for (const e of sfEvents) {
+    if (!inWindow(e.day)) continue;
+    windowSfEarned += num(e.earned);
+    windowSfUsed += num(e.used);
   }
 
   const productAgg = new Map<string, TopProductRow>();
@@ -474,10 +477,11 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
 
 export interface RevenueInputs {
   sales: LedgerSale[];
+  sfEvents: SfEvent[];
   contractDateByCompany: Map<string, string | null>;
 }
 
-const SALE_COLUMNS = 'company_id, doc_date, doc_type, sales_amount, support_fund, credit_base_amount';
+const SALE_COLUMNS = 'company_id, doc_date, doc_type, sales_amount';
 
 /** Every row of a query, past PostgREST's 1,000-row page. */
 async function selectAll<T>(build: (from: number, to: number) => PromiseLike<{ data: any; error: any }>): Promise<T[]> {
@@ -491,15 +495,26 @@ async function selectAll<T>(build: (from: number, to: number) => PromiseLike<{ d
 }
 
 /**
- * Batched fetch of the ledger for a set of companies — two queries (paged)
- * regardless of company/period count. Throws on any query error: callers
- * must never render partial zeros as real numbers.
+ * Batched fetch of the ledger and support-fund events for a set of
+ * companies — three queries (paged) regardless of company/period count.
+ * Throws on any query error: callers must never render partial zeros as
+ * real numbers.
  */
 export async function fetchRevenueInputs(supabase: SupabaseClient, companyIds: string[]): Promise<RevenueInputs> {
-  if (companyIds.length === 0) return { sales: [], contractDateByCompany: new Map() };
-  const [sales, companies] = await Promise.all([
+  if (companyIds.length === 0) return { sales: [], sfEvents: [], contractDateByCompany: new Map() };
+  const [sales, sfEvents, companies] = await Promise.all([
     selectAll<LedgerSale>((a, b) =>
       supabase.from('sales_documents').select(SALE_COLUMNS).in('company_id', companyIds).order('id').range(a, b)
+    ),
+    selectAll<SfEvent>((a, b) =>
+      supabase
+        .from('support_fund_events')
+        .select('company_id, day, source, earned, used')
+        .in('company_id', companyIds)
+        .order('day')
+        .order('order_id')
+        .order('document_id')
+        .range(a, b)
     ),
     selectAll<{ id: string; contract_execution_date: string | null }>((a, b) =>
       supabase.from('companies').select('id, contract_execution_date').in('id', companyIds).order('id').range(a, b)
@@ -507,6 +522,7 @@ export async function fetchRevenueInputs(supabase: SupabaseClient, companyIds: s
   ]);
   return {
     sales,
+    sfEvents,
     contractDateByCompany: new Map(companies.map((c) => [String(c.id), c.contract_execution_date ?? null])),
   };
 }
@@ -547,6 +563,7 @@ export async function buildCompanyPerformance(
     company: companyRes.data,
     periods: periodsRes.data ?? [],
     sales: inputs.sales,
+    sfEvents: inputs.sfEvents,
     productLines: productLines.map((row: any) => {
       const doc = Array.isArray(row.doc) ? row.doc[0] : row.doc;
       const product = Array.isArray(row.product) ? row.product[0] : row.product;

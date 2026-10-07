@@ -743,7 +743,7 @@ function SfBehaviorBlock({
   if (data.sampleSize === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        No Done orders with support-fund activity in the selected periods.
+        No purchases with support-fund activity in the selected periods.
         {notEnrolledCount > 0 && (
           <>
             {' '}
@@ -760,8 +760,8 @@ function SfBehaviorBlock({
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
         <p className="text-xs text-muted-foreground mb-2">
-          Distribution across {data.sampleSize} order
-          {data.sampleSize === 1 ? '' : 's'}
+          Distribution across {data.sampleSize} purchase
+          {data.sampleSize === 1 ? '' : 's'} (Done Hub orders + invoices billed outside the Hub)
           {notEnrolledCount > 0 && ` · ${notEnrolledCount} partner${notEnrolledCount === 1 ? '' : 's'} excluded (not enrolled)`}
         </p>
         <div className="flex h-3 w-full overflow-hidden rounded-full bg-secondary">
@@ -796,7 +796,7 @@ function SfBehaviorBlock({
             {formatCurrency(data.avgTopUp)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            among topped-up orders
+            among topped-up purchases
           </p>
         </div>
         <div className="rounded-md border border-border bg-secondary/30 p-4">
@@ -807,7 +807,7 @@ function SfBehaviorBlock({
             {formatCurrency(data.avgLeftover)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            among under-redeemed orders
+            among under-redeemed purchases
           </p>
         </div>
       </div>

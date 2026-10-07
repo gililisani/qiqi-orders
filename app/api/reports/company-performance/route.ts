@@ -9,6 +9,7 @@ import {
   fetchRevenueInputs,
   type LedgerSale,
   type PeriodStatus,
+  type SfEvent,
 } from '../../../../lib/companyPerformance';
 
 /**
@@ -24,9 +25,10 @@ import {
  * builder, so every view agrees.
  *
  * Revenue = the sales ledger (what NetSuite billed, dated by document).
- * Support funds: used = SF redeemed on the period's documents; earned =
- * SF% of their earning base. Balance = earned − used: positive → leftover
- * (under-redeemed), negative → top-up.
+ * Support funds = the support_fund_events view: what Hub orders earned and
+ * claimed when placed (counted when Done), plus NetSuite-only invoices.
+ * Balance = earned − used: positive → leftover (under-redeemed), negative →
+ * top-up.
  *
  * Companies whose `companies.support_fund_id` is NULL are flagged
  * `isEnrolled = false` and excluded from SF KPIs / SF behavior — they
@@ -125,7 +127,7 @@ export async function GET(request: NextRequest) {
     let periodsQuery = supabase
       .from('target_periods')
       .select(
-        'id, company_id, period_name, start_date, end_date, target_amount, company:companies(id, company_name, netsuite_number, subsidiary_id, support_fund_id, support_fund:support_fund_levels(percent))',
+        'id, company_id, period_name, start_date, end_date, target_amount, company:companies(id, company_name, netsuite_number, subsidiary_id, support_fund_id)',
       )
       .order('end_date', { ascending: true });
 
@@ -168,24 +170,23 @@ export async function GET(request: NextRequest) {
       list.push(sale);
       salesByCompany.set(sale.company_id, list);
     }
+    const sfEventsByCompany = new Map<string, SfEvent[]>();
+    for (const e of inputs.sfEvents) {
+      const list = sfEventsByCompany.get(e.company_id) ?? [];
+      list.push(e);
+      sfEventsByCompany.set(e.company_id, list);
+    }
 
     // ---- Per-period rows (pure — no queries) ----
-    const sfPercentByCompany = new Map<string, number>();
     const rows: PeriodRow[] = periods.map((p: any) => {
       const company = Array.isArray(p.company) ? p.company[0] : p.company;
       const isEnrolled = company?.support_fund_id != null;
-      const sfl = Array.isArray(company?.support_fund)
-        ? company?.support_fund[0]
-        : company?.support_fund;
-      const sfPercent = Number(sfl?.percent) || 0;
-      if (isEnrolled) sfPercentByCompany.set(p.company_id, sfPercent);
 
       const m = computePeriodMetrics(
         now,
         p,
         salesByCompany.get(p.company_id) ?? [],
-        sfPercent,
-        inputs.contractDateByCompany.get(p.company_id) ?? null,
+        sfEventsByCompany.get(p.company_id) ?? [],
       );
 
       return {
@@ -218,12 +219,7 @@ export async function GET(request: NextRequest) {
     const enrolledPeriods = periods.filter(
       (p: any) => companyOptionsMap.get(p.company_id)?.isEnrolled,
     );
-    const sfBehavior = computeSfBehaviorDistribution(
-      enrolledPeriods,
-      inputs.sales,
-      sfPercentByCompany,
-      inputs.contractDateByCompany,
-    );
+    const sfBehavior = computeSfBehaviorDistribution(enrolledPeriods, inputs.sfEvents);
 
     return NextResponse.json({ rows, kpis, sfBehavior, filterOptions });
   } catch (err: any) {

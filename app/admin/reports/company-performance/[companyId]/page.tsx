@@ -129,7 +129,9 @@ export default function CompanyPerformancePage() {
         <p className="text-xs text-muted-foreground mt-1">
           Sales are what NetSuite billed (invoices minus credit memos, products only), dated by the
           invoice — whether or not the order came through the Hub. Same definition as the Company
-          Performance report and target periods.
+          Performance report and target periods. Support funds are what Hub orders earned and
+          claimed when placed (counted when Done), plus what was redeemed on invoices billed outside
+          the Hub; before the client&apos;s first Hub order, earnings are estimated at their %.
           {data && data.toDate.salesBeforeAgreement !== 0 && (
             <> Billed before the agreement (not in targets): {money(data.toDate.salesBeforeAgreement)}.</>
           )}

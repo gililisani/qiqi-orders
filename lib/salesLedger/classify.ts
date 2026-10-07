@@ -17,9 +17,14 @@
  *    card fees / surcharges, services, private label, other charges, tax).
  *  - Amounts are converted to the reporting currency with the exchange rate
  *    recorded on the document.
- *  - support_fund (SF redeemed) = every product/discount line that reduces
- *    an invoice or cash sale ("all discounts are support funds", owner
- *    2026-08-20). Credit memos redeem nothing.
+ *  - support_fund (SF redeemed) = the discount lines that reduce an invoice
+ *    or cash sale ("all discounts are support funds", owner 2026-08-20).
+ *    A negative-priced product line NEXT TO a discount line is that same
+ *    discount applied to the line (gross − discount: INVIL10879 shows
+ *    24 × 5.95 − 4,649.40 = −4,506.60) — counting both doubled the figure
+ *    (all 86 such invoices, and every Hub-linked one matched the Hub's
+ *    claimed SF once fixed, 2026-10-07). Negative product lines count only
+ *    on documents with no discount line. Credit memos redeem nothing.
  *  - credit_base_amount = the part of sales that EARNS support funds: the
  *    document's sales split by the share of products that earn (catalog
  *    flag `qualifies_for_credit_earning`; an item outside the catalog
@@ -153,7 +158,8 @@ export function buildLedgerDocument(
   const redeems = doc.type === 'invoice' || doc.type === 'cash_sale';
 
   let excludedForeign = 0;
-  let sfForeign = 0;
+  let discountRedeemed = 0;
+  let productRedeemed = 0;
   let productsForeign = 0;
   let earningForeign = 0;
   const lines: LedgerLine[] = [];
@@ -162,7 +168,10 @@ export function buildLedgerDocument(
     const effect = -(Number(line.foreignAmount) || 0); // effect on the document total
     const units = -(Number(line.quantity) || 0);
     if (kind === 'excluded') excludedForeign += effect;
-    if (redeems && kind !== 'excluded' && effect < 0) sfForeign += -effect;
+    if (redeems && effect < 0) {
+      if (kind === 'discount') discountRedeemed += -effect;
+      else if (kind === 'product') productRedeemed += -effect;
+    }
     if (kind === 'product') {
       productsForeign += effect;
       if (earns(line.sku ?? '')) earningForeign += effect;
@@ -181,6 +190,7 @@ export function buildLedgerDocument(
   }
 
   const salesForeign = doc.foreignTotal - excludedForeign;
+  const sfForeign = discountRedeemed > 0 ? discountRedeemed : productRedeemed;
   // Earning share of the net sales; 0 when there are no product lines or the
   // signs disagree (e.g. a credit that isn't a product return).
   const earningShare =

@@ -119,7 +119,7 @@ export default function ClientPerformancePage() {
         <p className="text-xs text-muted-foreground mt-1">
           Sales are what was invoiced to you (products only, minus credit notes), whether you ordered
           through the Hub or not. Purchases before your agreement started don&apos;t count toward
-          your targets.
+          your targets. Support funds are what your orders earned when you placed them.
         </p>
       </div>
 

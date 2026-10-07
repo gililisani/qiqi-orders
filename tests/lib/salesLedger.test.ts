@@ -53,16 +53,38 @@ describe('buildLedgerDocument (real invoices from the 2026-10-06 audit)', () => 
       lines: [
         line('FPS0018', 'Assembly', -1140, -9690),
         line('FPS0030', 'Assembly', -1080, -14688),
-        line('FPS0027', 'Assembly', -48, 5858.2), // negative-priced product line = SF
+        line('FPS0027', 'Assembly', -48, 5858.2), // 48 × 4.25 − 6,062.20: the discount applied to this line
         line('FPS0017', 'Assembly', -2484, -34493.4),
-        line(null, 'Discount', null, 6062.2), // net-0 header discount (SF value)
+        line(null, 'Discount', null, 6062.2), // net-0 header discount = the SF value
       ],
     }), RULE, CATALOG);
     expect(d.sales_amount).toBe(53013.2);
     expect(d.excluded_amount).toBe(0);
-    expect(d.support_fund).toBe(11920.4);
+    expect(d.support_fund).toBe(6062.2); // once — not 11,920.40 (the same money twice)
     const fps27 = d.lines.find((l) => l.sku === 'FPS0027')!;
     expect(fps27).toMatchObject({ kind: 'product', quantity: 48, amount: -5858.2, product_id: 13 });
+  });
+
+  it('Cyprus INVIL10879: SF redeemed equals what the Hub order claimed', () => {
+    const d = buildLedgerDocument(doc({
+      tranid: 'INVIL10879', foreignTotal: 5939.4, // 3,612 + 6,834 − 4,506.60
+      lines: [
+        line('FPS0025', 'Assembly', -168, -3612),
+        line('FPS0018', 'Assembly', -804, -6834),
+        line('FPS0027', 'Assembly', -24, 4506.6), // 24 × 5.95 − 4,649.40
+        line(null, 'Discount', null, 4649.4), // informational: the SF value
+      ],
+    }), RULE, CATALOG);
+    expect(d.sales_amount).toBe(5939.4);
+    expect(d.support_fund).toBe(4649.4); // Hub order 1B577D claimed 4,649.40
+  });
+
+  it('a negative-priced product line counts as SF when the invoice has no discount line', () => {
+    const d = buildLedgerDocument(doc({
+      foreignTotal: 900,
+      lines: [line('FPS0016', 'Assembly', -100, -1000), line('FPS0018', 'Assembly', -10, 100)],
+    }), RULE, CATALOG);
+    expect(d).toMatchObject({ sales_amount: 900, support_fund: 100 });
   });
 
   it('NOT ANOTHER INVIL10573: shipping excluded, free goods kept as units', () => {
