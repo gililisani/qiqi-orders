@@ -45,6 +45,7 @@ import {
 
 import ClientOrderDocumentsView from './ClientOrderDocumentsView';
 import ClientOrderHistoryView from './ClientOrderHistoryView';
+import OrderCredits from '../shared/OrderCredits';
 import { InvoiceDownloadButton } from '../shared/InvoiceDownloadButton';
 import { shipmentTypeLabel } from '../../../lib/shipmentTypes';
 
@@ -403,6 +404,10 @@ export default function ClientOrderDetailsView({ orderId }: Props) {
       {order.invoice_number && (
         <InvoiceCard order={order} />
       )}
+
+      {/* Credits an admin attached to this order (damaged / short-shipped
+          products); renders nothing when there are none. */}
+      <OrderCredits endpoint={`/api/client/orders/${order.id}/credits`} orderTotal={Number(order.total_value) || 0} />
 
       {/* Items */}
       <Card>

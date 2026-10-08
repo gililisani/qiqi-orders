@@ -51,3 +51,19 @@ export function buildOrderSearchOr(term: string, companyIds: string[] = []): str
   }
   return parts.join(',');
 }
+
+/**
+ * The same search for rows that aren't Hub orders (client order list:
+ * invoices billed externally): a date term matches the day, an amount term
+ * matches the total (±1¢), anything else matches the document number.
+ */
+export function matchesSearch(term: string, row: { number: string; date: string; total: number }): boolean {
+  const t = term.trim();
+  if (!t) return true;
+  const day = parseSearchDate(t);
+  if (day) return row.date.slice(0, 10) === day;
+  const amount = parseSearchAmount(t);
+  if (amount !== null && Math.abs(row.total - amount) <= 0.01) return true;
+  const needle = sanitizeSearchTerm(t).toLowerCase();
+  return !!needle && row.number.toLowerCase().includes(needle);
+}

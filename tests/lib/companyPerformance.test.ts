@@ -5,6 +5,8 @@ import {
   computeCompanyMetrics,
   computePeriodMetrics,
   computeSfBehaviorDistribution,
+  type EntryProductLine,
+  type SalesEntry,
 } from '@/lib/companyPerformance';
 
 const NOW = new Date('2026-07-15T12:00:00Z');
@@ -14,6 +16,7 @@ const COMPANY = {
   company_name: 'Evolve',
   netsuite_number: 'C1001',
   support_fund_id: 'sf1',
+  support_fund: { percent: 10 },
   subsidiary: { name: 'Qiqi INC.' },
 };
 
@@ -22,34 +25,31 @@ const PERIODS = [
   { id: 'p2', period_name: 'Year 2', start_date: '2026-07-01', end_date: '2027-06-30', target_amount: 130000 },
 ];
 
-const DONE_ORDERS = [
-  { id: 'o1', total_value: 40000, credit_earned: 800 },
-  { id: 'o2', total_value: 70000, credit_earned: 1400 }, // done in Year 1
-  { id: 'o3', total_value: 20000, credit_earned: 400 },  // done in Year 2 window
-  { id: 'o4', total_value: 9999, credit_earned: 0 },     // Done status but NO history → excluded
+const entry = (o: Partial<SalesEntry> & Pick<SalesEntry, 'day' | 'amount'>): SalesEntry => ({
+  company_id: 'c1',
+  source: 'hub_order',
+  order_id: null,
+  document_id: null,
+  sf_earned: 0,
+  sf_used: 0,
+  ...o,
+});
+
+// The sales_entries view, as the module receives it.
+const ENTRIES: SalesEntry[] = [
+  entry({ day: '2025-08-10', source: 'billed_externally', document_id: 'inv1', amount: 40000, sf_earned: 900, sf_used: 900 }),
+  entry({ day: '2025-08-10', source: 'credit', document_id: 'cm1', amount: -1000 }), // credit on inv1
+  entry({ day: '2026-03-05', order_id: 'o1', amount: 70000, sf_earned: 7000, sf_used: 6000 }),
+  entry({ day: '2026-03-05', source: 'credit', order_id: 'o1', document_id: 'cm2', amount: -500 }), // credit on o1
+  entry({ day: '2026-07-10', order_id: 'o2', amount: 20000, sf_earned: 2000, sf_used: 2500 }), // topped up
+  entry({ day: '2026-07-20', source: 'credit', document_id: 'cm3', amount: -300 }), // company credit
 ];
 
-const FIRST_DONE = new Map<string, Date>([
-  ['o1', new Date('2025-09-10T10:00:00Z')],
-  ['o2', new Date('2026-03-05T10:00:00Z')],
-  ['o3', new Date('2026-07-10T10:00:00Z')],
-]);
-
-const HISTORICAL = [
-  { amount: 5000, sale_date: '2025-08-15' }, // inside Year 1
-  { amount: 1234, sale_date: '2024-01-01' }, // before any period — to-date only
-];
-
-const SF_ITEMS = [
-  { order_id: 'o2', total_price: 900 },
-  { order_id: 'o2', total_price: 300 },
-  { order_id: 'o3', total_price: 500 },
-];
-
-const PRODUCT_ITEMS = [
-  { order_id: 'o3', product_id: 1, quantity: 10, total_price: 12000, product: { sku: 'FPS0018', item_name: 'Shampoo' } },
-  { order_id: 'o3', product_id: 2, quantity: 5, total_price: 8000, product: { sku: 'FPS0030', item_name: 'Masque' } },
-  { order_id: 'o1', product_id: 1, quantity: 99, total_price: 40000, product: { sku: 'FPS0018', item_name: 'Shampoo' } }, // outside window
+const PRODUCT_LINES: EntryProductLine[] = [
+  { day: '2026-07-10', product_id: 1, sku: 'FPS0018', name: 'Shampoo', quantity: 10, amount: 12000 },
+  { day: '2026-07-10', product_id: 2, sku: 'FPS0030', name: 'Masque', quantity: 5, amount: 8000 },
+  { day: '2026-07-20', product_id: 1, sku: 'FPS0018', name: 'Shampoo', quantity: -1, amount: -300 }, // credited
+  { day: '2025-08-10', product_id: 1, sku: 'FPS0018', name: 'Shampoo', quantity: 99, amount: 40000 }, // outside the window
 ];
 
 function build(windowFrom: Date, windowTo: Date) {
@@ -57,99 +57,69 @@ function build(windowFrom: Date, windowTo: Date) {
     now: NOW,
     company: COMPANY,
     periods: PERIODS,
-    doneOrders: DONE_ORDERS,
-    firstDone: FIRST_DONE,
-    historical: HISTORICAL,
-    sfItems: SF_ITEMS,
-    productItems: PRODUCT_ITEMS,
+    entries: ENTRIES,
+    productLines: PRODUCT_LINES,
     windowFrom,
     windowTo,
   });
 }
 
-describe('computeCompanyMetrics', () => {
+describe('computeCompanyMetrics (sales entries)', () => {
   const result = build(new Date('2026-07-01T00:00:00Z'), new Date('2026-07-31T23:59:59Z'));
 
-  it('computes to-date totals from Done orders + historical, excluding orders without a Done timestamp', () => {
-    // 40000 + 70000 + 20000 (o4 excluded) + 5000 + 1234 historical
-    expect(result.toDate.sales).toBe(136234);
+  it('to date = every entry; orders = Hub orders + invoices billed externally', () => {
+    expect(result.toDate.sales).toBe(128200); // 40000 − 1000 + 70000 − 500 + 20000 − 300
     expect(result.toDate.orders).toBe(3);
-    expect(result.toDate.sfEarned).toBe(2600);
-    expect(result.toDate.sfUsed).toBe(1700);
-    expect(result.toDate.sfBalance).toBe(900);
+    expect(result.toDate.sfEarned).toBe(9900);
+    expect(result.toDate.sfUsed).toBe(9400);
+    expect(result.toDate.sfBalance).toBe(500);
   });
 
-  it('attributes actuals to periods by first-Done date + historical by sale date', () => {
+  it('attributes entries to periods by their day; credits reduce the period they land in', () => {
     const year1 = result.periods.find((p) => p.periodName === 'Year 1')!;
-    expect(year1.actual).toBe(115000); // 40000 + 70000 + 5000 historical
-    expect(year1.status).toBe('Complete'); // period over, target met
-    expect(year1.sfEarned).toBe(2200);
-    expect(year1.sfUsed).toBe(1200);
+    expect(year1.actual).toBe(108500); // 39000 + 69500
+    expect(year1.status).toBe('Complete');
+    expect(year1.sfEarned).toBe(7900);
+    expect(year1.sfUsed).toBe(6900);
 
     const year2 = result.periods.find((p) => p.periodName === 'Year 2')!;
-    expect(year2.actual).toBe(20000);
-    expect(year2.sfBalance).toBe(-100); // earned 400, claimed 500 → top-up
+    expect(year2.actual).toBe(19700); // 20000 − 300 company credit
+    expect(year2.sfBalance).toBe(-500); // topped up
   });
 
-  it('windows sales, units, and top products by Done date', () => {
-    expect(result.window.sales).toBe(20000); // only o3
+  it('windows sales, orders, units and the product mix (credited products subtract)', () => {
+    expect(result.window.sales).toBe(19700);
     expect(result.window.orders).toBe(1);
-    expect(result.window.units).toBe(15);
-    expect(result.window.topProducts[0]).toMatchObject({ sku: 'FPS0018', units: 10, revenue: 12000 });
+    expect(result.window.units).toBe(14);
+    expect(result.window.topProducts[0]).toMatchObject({ sku: 'FPS0018', units: 9, revenue: 11700 });
     expect(result.window.productCount).toBe(2);
+    expect(result.window.sfEarned).toBe(2000);
+    expect(result.window.sfUsed).toBe(2500);
   });
 
-  it('reports agreement span from first to last period', () => {
+  it('reports the agreement span from first to last period', () => {
     expect(result.company.agreementStart).toBe('2025-07-01');
     expect(result.company.agreementEnd).toBe('2027-06-30');
-  });
-
-  it('a wider window picks up more orders and historical rows', () => {
-    const wide = build(new Date('2025-01-01T00:00:00Z'), new Date('2026-12-31T23:59:59Z'));
-    expect(wide.window.orders).toBe(3);
-    expect(wide.window.sales).toBe(135000); // 130000 orders + 5000 historical
-    // o1's 99 units now included
-    expect(wide.window.units).toBe(114);
-    expect(wide.window.topProducts[0]).toMatchObject({ sku: 'FPS0018', units: 109 });
+    expect(result.company.sfPercent).toBe(10);
   });
 });
 
 describe('computePeriodMetrics', () => {
-  const SF_USED = buildSfUsedByOrder(SF_ITEMS);
-
   it('active period ahead of schedule → Ahead, with day/pace math', () => {
     // Year 2 started 2026-07-01; NOW is 15 days in.
-    const m = computePeriodMetrics(
-      NOW,
-      { start_date: '2026-07-01', end_date: '2027-06-30', target_amount: 130000 },
-      DONE_ORDERS,
-      FIRST_DONE,
-      SF_USED,
-      HISTORICAL
-    );
-    expect(m.actual).toBe(20000); // only o3 done in range
+    const m = computePeriodMetrics(NOW, { start_date: '2026-07-01', end_date: '2027-06-30', target_amount: 130000 }, ENTRIES);
+    expect(m.actual).toBe(19700);
     expect(m.daysTotal).toBe(365);
     expect(m.daysElapsed).toBe(15);
     expect(m.daysRemaining).toBe(350);
-    expect(m.progressPct).toBeCloseTo(15.38, 1);
+    expect(m.progressPct).toBeCloseTo(15.15, 1);
     expect(m.expectedPct).toBeCloseTo(4.11, 1);
     expect(m.paceDeltaPct).toBeCloseTo(m.progressPct - m.expectedPct, 6);
     expect(m.status).toBe('Ahead');
-    expect(m.sfEarned).toBe(400);
-    expect(m.sfUsed).toBe(500);
-    expect(m.sfBalance).toBe(-100); // top-up
   });
 
   it('ended period with target met → Complete; days fully elapsed', () => {
-    const m = computePeriodMetrics(
-      NOW,
-      { start_date: '2025-07-01', end_date: '2026-06-30', target_amount: 100000 },
-      DONE_ORDERS,
-      FIRST_DONE,
-      SF_USED,
-      HISTORICAL
-    );
-    expect(m.actual).toBe(115000); // o1 + o2 + 5000 historical
+    const m = computePeriodMetrics(NOW, { start_date: '2025-07-01', end_date: '2026-06-30', target_amount: 100000 }, ENTRIES);
     expect(m.status).toBe('Complete');
     expect(m.daysElapsed).toBe(m.daysTotal);
     expect(m.daysRemaining).toBe(0);
@@ -157,68 +127,68 @@ describe('computePeriodMetrics', () => {
   });
 
   it('ended period with target missed → Fail, never Slipping', () => {
-    const m = computePeriodMetrics(
-      NOW,
-      { start_date: '2025-07-01', end_date: '2026-06-30', target_amount: 200000 },
-      DONE_ORDERS,
-      FIRST_DONE,
-      SF_USED,
-      HISTORICAL
-    );
+    const m = computePeriodMetrics(NOW, { start_date: '2025-07-01', end_date: '2026-06-30', target_amount: 200000 }, ENTRIES);
     expect(m.status).toBe('Fail');
   });
 
   it('future period → Not Started with zero elapsed', () => {
-    const m = computePeriodMetrics(
-      NOW,
-      { start_date: '2027-07-01', end_date: '2028-06-30', target_amount: 50000 },
-      DONE_ORDERS,
-      FIRST_DONE,
-      SF_USED,
-      HISTORICAL
-    );
+    const m = computePeriodMetrics(NOW, { start_date: '2027-07-01', end_date: '2028-06-30', target_amount: 50000 }, ENTRIES);
     expect(m.status).toBe('Not Started');
     expect(m.daysElapsed).toBe(0);
-    expect(m.expectedPct).toBe(0);
     expect(m.actual).toBe(0);
   });
 
   it('active period far behind schedule → Slipping', () => {
-    // Covers o2 (70000, done 2026-03-05) + o3 (20000, done 2026-07-10),
-    // but the target is huge.
-    const m = computePeriodMetrics(
-      NOW,
-      { start_date: '2026-01-01', end_date: '2026-12-31', target_amount: 1000000 },
-      DONE_ORDERS,
-      FIRST_DONE,
-      SF_USED,
-      HISTORICAL
-    );
-    expect(m.actual).toBe(90000);
-    expect(m.progressPct).toBe(9);
-    // ~196 of 365 days elapsed → expected ~53.7%; 9 < 33.7 → Slipping
+    const m = computePeriodMetrics(NOW, { start_date: '2026-01-01', end_date: '2026-12-31', target_amount: 1000000 }, ENTRIES);
+    expect(m.actual).toBe(89200);
     expect(m.status).toBe('Slipping');
   });
 
-  it('excludes Done orders that have no first-Done timestamp', () => {
-    // o4 (9999) has Done status but no history row — must never count.
-    const m = computePeriodMetrics(
-      NOW,
-      { start_date: '2024-01-01', end_date: '2027-12-31', target_amount: 0 },
-      DONE_ORDERS,
-      FIRST_DONE,
-      SF_USED,
-      HISTORICAL
-    );
-    expect(m.actual).toBe(136234); // all counted orders + all historical
+  it('period boundaries are inclusive calendar days', () => {
+    const m = computePeriodMetrics(NOW, { start_date: '2026-07-10', end_date: '2026-07-20', target_amount: 1 }, ENTRIES);
+    expect(m.actual).toBe(19700);
   });
 });
 
-describe('buildFirstDoneMap', () => {
+describe('computeSfBehaviorDistribution', () => {
+  const ENROLLED = [{ company_id: 'c1', start_date: '2025-07-01', end_date: '2026-06-30' }];
+  const E: SalesEntry[] = [
+    entry({ day: '2025-09-01', order_id: 'a', amount: 1, sf_earned: 800, sf_used: 800 }), // fully redeemed
+    entry({ day: '2025-10-01', order_id: 'b', amount: 1, sf_earned: 1400, sf_used: 1200 }), // leftover 200
+    entry({ day: '2026-01-01', order_id: 'c', amount: 1, sf_earned: 100, sf_used: 300 }), // topped up 200
+    entry({ day: '2026-08-01', order_id: 'd', amount: 1, sf_earned: 500 }), // outside the period
+    entry({ company_id: 'c2', day: '2025-09-01', order_id: 'e', amount: 1, sf_earned: 500 }), // not enrolled
+    entry({ day: '2025-11-01', order_id: 'f', amount: 1 }), // no signal
+    entry({ day: '2025-12-01', source: 'billed_externally', document_id: 'x', amount: 1, sf_earned: 90, sf_used: 90 }), // unknowable → left out
+  ];
+
+  it('classifies Hub orders inside enrolled periods; invoices billed externally are left out', () => {
+    const d = computeSfBehaviorDistribution(ENROLLED, E);
+    expect(d.sampleSize).toBe(3);
+    expect(d.fullyRedeemedPct).toBeCloseTo(33.33, 1);
+    expect(d.underRedeemedPct).toBeCloseTo(33.33, 1);
+    expect(d.toppedUpPct).toBeCloseTo(33.33, 1);
+    expect(d.avgLeftover).toBeCloseTo(200, 6);
+    expect(d.avgTopUp).toBeCloseTo(200, 6);
+  });
+
+  it('returns all zeros for an empty sample', () => {
+    expect(computeSfBehaviorDistribution([], [])).toEqual({
+      underRedeemedPct: 0,
+      fullyRedeemedPct: 0,
+      toppedUpPct: 0,
+      avgTopUp: 0,
+      avgLeftover: 0,
+      sampleSize: 0,
+    });
+  });
+});
+
+describe('buildFirstDoneMap (order-based Support Funds report)', () => {
   it('keeps the EARLIEST Done timestamp when an order was marked Done twice', () => {
     const map = buildFirstDoneMap([
       { order_id: 'o1', created_at: '2026-01-01T10:00:00Z' },
-      { order_id: 'o1', created_at: '2026-03-01T10:00:00Z' }, // re-done later — ignored
+      { order_id: 'o1', created_at: '2026-03-01T10:00:00Z' },
       { order_id: 'o2', created_at: '2026-02-01T10:00:00Z' },
     ]);
     expect(map.get('o1')).toEqual(new Date('2026-01-01T10:00:00Z'));
@@ -227,129 +197,15 @@ describe('buildFirstDoneMap', () => {
   });
 });
 
-describe('buildSfUsedByOrder', () => {
+describe('buildSfUsedByOrder (order-based Support Funds report)', () => {
   it('sums SF line items per order', () => {
-    const map = buildSfUsedByOrder(SF_ITEMS);
-    expect(map.get('o2')).toBe(1200); // 900 + 300
+    const map = buildSfUsedByOrder([
+      { order_id: 'o2', total_price: 900 },
+      { order_id: 'o2', total_price: 300 },
+      { order_id: 'o3', total_price: 500 },
+    ]);
+    expect(map.get('o2')).toBe(1200);
     expect(map.get('o3')).toBe(500);
     expect(map.has('o1')).toBe(false);
-  });
-});
-
-describe('computeSfBehaviorDistribution', () => {
-  const ENROLLED_PERIODS = [
-    { company_id: 'c1', start_date: '2025-07-01', end_date: '2026-06-30' },
-  ];
-  const ORDERS = [
-    { id: 'oA', company_id: 'c1', credit_earned: 800 },  // fully redeemed
-    { id: 'oB', company_id: 'c1', credit_earned: 1400 }, // under (leftover 200)
-    { id: 'oC', company_id: 'c1', credit_earned: 100 },  // topped up 200
-    { id: 'oD', company_id: 'c1', credit_earned: 500 },  // done OUTSIDE period → skipped
-    { id: 'oE', company_id: 'c2', credit_earned: 500 },  // company not enrolled → skipped
-    { id: 'oF', company_id: 'c1', credit_earned: 0 },    // no earned, no claimed → skipped
-  ];
-  const DONE_AT = new Map<string, Date>([
-    ['oA', new Date('2025-09-01T10:00:00Z')],
-    ['oB', new Date('2025-10-01T10:00:00Z')],
-    ['oC', new Date('2026-01-01T10:00:00Z')],
-    ['oD', new Date('2026-07-10T10:00:00Z')],
-    ['oE', new Date('2025-09-01T10:00:00Z')],
-    ['oF', new Date('2025-09-01T10:00:00Z')],
-  ]);
-  const SF_USED = buildSfUsedByOrder([
-    { order_id: 'oA', total_price: 500 },
-    { order_id: 'oA', total_price: 300 },
-    { order_id: 'oB', total_price: 1200 },
-    { order_id: 'oC', total_price: 300 },
-  ]);
-
-  it('classifies orders by redemption behavior inside enrolled periods only', () => {
-    const d = computeSfBehaviorDistribution(ENROLLED_PERIODS, ORDERS, DONE_AT, SF_USED);
-    expect(d.sampleSize).toBe(3);
-    expect(d.underRedeemedPct).toBeCloseTo(33.33, 1);
-    expect(d.fullyRedeemedPct).toBeCloseTo(33.33, 1);
-    expect(d.toppedUpPct).toBeCloseTo(33.33, 1);
-    expect(d.avgLeftover).toBe(200);
-    expect(d.avgTopUp).toBe(200);
-  });
-
-  it('returns all zeros for an empty sample', () => {
-    const d = computeSfBehaviorDistribution([], [], new Map(), new Map());
-    expect(d.sampleSize).toBe(0);
-    expect(d.underRedeemedPct).toBe(0);
-    expect(d.avgTopUp).toBe(0);
-  });
-});
-
-describe('historical support funds + imported line items', () => {
-  const HIST_WITH_SF = [
-    { amount: 5000, sale_date: '2025-08-15', support_fund: 250 }, // Year 1
-    { amount: 1234, sale_date: '2024-01-01', support_fund: 60 },  // pre-period
-  ];
-  const HIST_ITEMS = [
-    // Matched to catalog product 1 → merges with the order-derived row.
-    { sale_date: '2026-07-12', product_id: 1, sku: 'FPS0018', item_name: 'Shampoo', quantity: 7, amount: 3000, product: { sku: 'FPS0018', item_name: 'Shampoo' } },
-    // Unmatched legacy kit → its own row, keyed by SKU.
-    { sale_date: '2026-07-12', product_id: null, sku: 'KIT0034', item_name: 'Old Kit', quantity: 2, amount: 900, product: null },
-    // Outside the window → ignored.
-    { sale_date: '2025-08-15', product_id: 1, sku: 'FPS0018', item_name: 'Shampoo', quantity: 50, amount: 20000, product: { sku: 'FPS0018', item_name: 'Shampoo' } },
-  ];
-
-  const result = computeCompanyMetrics({
-    now: NOW,
-    // 10% SF level: historical accrual is ESTIMATED at SF% × amount.
-    company: { ...COMPANY, support_fund: { percent: 10 } },
-    periods: PERIODS,
-    doneOrders: DONE_ORDERS,
-    firstDone: FIRST_DONE,
-    historical: HIST_WITH_SF,
-    sfItems: SF_ITEMS,
-    productItems: PRODUCT_ITEMS,
-    historicalItems: HIST_ITEMS,
-    windowFrom: new Date('2026-07-01T00:00:00Z'),
-    windowTo: new Date('2026-07-31T23:59:59Z'),
-  });
-
-  it('historical support_fund counts as SF USED; earned is SF% × amount', () => {
-    // Earned: orders 800+1400+400, historical 10% × (5000 + 1234).
-    expect(result.toDate.sfEarned).toBeCloseTo(2600 + 623.4, 5);
-    // Used: orders 1200+500, historical discounts 250 + 60.
-    expect(result.toDate.sfUsed).toBeCloseTo(1700 + 310, 5);
-    const year1 = result.periods.find((p) => p.periodName === 'Year 1')!;
-    expect(year1.sfEarned).toBeCloseTo(800 + 1400 + 500, 5); // + 10% × 5000
-    expect(year1.sfUsed).toBeCloseTo(1200 + 250, 5);
-  });
-
-  it('historical sales populate the SF behavior distribution', () => {
-    const dist = computeSfBehaviorDistribution(
-      [{ company_id: 'c1', start_date: '2025-07-01', end_date: '2026-06-30' }],
-      [],
-      new Map(),
-      new Map(),
-      [
-        // earned 10% × 5000 = 500, claimed 250 → under-redeemed
-        { company_id: 'c1', sale_date: '2025-08-15', amount: 5000, support_fund: 250 },
-        // earned 100, claimed 400 → topped up
-        { company_id: 'c1', sale_date: '2025-09-01', amount: 1000, support_fund: 400 },
-        // outside enrolled periods → ignored
-        { company_id: 'c1', sale_date: '2024-01-01', amount: 9999, support_fund: 10 },
-      ],
-      new Map([['c1', 10]])
-    );
-    expect(dist.sampleSize).toBe(2);
-    expect(dist.underRedeemedPct).toBe(50);
-    expect(dist.toppedUpPct).toBe(50);
-    expect(dist.avgLeftover).toBeCloseTo(250, 5);
-    expect(dist.avgTopUp).toBeCloseTo(300, 5);
-  });
-
-  it('merges matched historical items into the same product row and keeps unmatched separate', () => {
-    const shampoo = result.window.topProducts.find((p) => p.sku === 'FPS0018')!;
-    expect(shampoo.units).toBe(10 + 7); // order units + in-window historical units
-    expect(shampoo.revenue).toBe(12000 + 3000);
-    const kit = result.window.topProducts.find((p) => p.sku === 'KIT0034')!;
-    expect(kit.units).toBe(2);
-    expect(kit.revenue).toBe(900);
-    expect(result.window.topProducts.find((p) => p.units === 50)).toBeUndefined();
   });
 });

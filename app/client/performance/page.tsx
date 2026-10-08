@@ -117,8 +117,8 @@ export default function ClientPerformancePage() {
           )}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          Revenue counts orders when they were completed (plus any historical sales recorded
-          before the Hub).
+          Sales count your orders once they&apos;re completed or paid in full, plus purchases billed
+          externally; credits reduce them.
         </p>
       </div>
 

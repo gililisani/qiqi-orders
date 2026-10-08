@@ -1,19 +1,16 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import {
-  buildSfUsedByOrder,
-  computePeriodMetrics,
-  fetchRevenueInputs,
-} from './companyPerformance';
+import { computePeriodMetrics, fetchRevenueInputs } from './companyPerformance';
 
 /**
  * Recalculate and update current_progress for all target periods of a
- * company. Call this when an order status changes to/from Done.
+ * company from the counted entries (sales_entries — the same math as the
+ * Company Performance report). Called when an order changes and after a
+ * NetSuite review decision.
  *
  * Batched: a fixed number of queries regardless of period count, via
  * lib/companyPerformance. THROWS on any fetch/update error instead of
  * writing zeros — a transient query failure must never persist wrong
- * progress. The sole caller (the target-periods/recalculate route)
- * catches and reports.
+ * progress. Callers catch and report.
  */
 export async function recalculateCompanyTargetPeriods(
   supabase: SupabaseClient,
@@ -27,18 +24,10 @@ export async function recalculateCompanyTargetPeriods(
   if (!targetPeriods || targetPeriods.length === 0) return;
 
   const inputs = await fetchRevenueInputs(supabase, [companyId]);
-  const sfUsedByOrder = buildSfUsedByOrder(inputs.sfItems);
   const now = new Date();
 
   for (const period of targetPeriods) {
-    const metrics = computePeriodMetrics(
-      now,
-      period,
-      inputs.doneOrders,
-      inputs.firstDone,
-      sfUsedByOrder,
-      inputs.historical
-    );
+    const metrics = computePeriodMetrics(now, period, inputs.entries);
 
     const { error: updateError } = await supabase
       .from('target_periods')

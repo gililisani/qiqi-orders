@@ -91,7 +91,7 @@ import {
 import OrderDocumentUpload from '../shared/OrderDocumentUpload';
 import AdminOrderDocumentsView from './AdminOrderDocumentsView';
 import AdminOrderHistoryView from './AdminOrderHistoryView';
-import OrderNetSuiteCredits from './OrderNetSuiteCredits';
+import OrderCredits from '../shared/OrderCredits';
 import CreateSLIModal from '../modals/CreateSLIModal';
 
 import { useToast } from '../ui/ToastProvider';
@@ -1803,7 +1803,11 @@ export default function AdminOrderDetailsView({
       {order.invoice_number && <AdminInvoiceCard order={order} />}
 
       {/* Credits / invoices attached on the NetSuite review page (renders nothing when none). */}
-      <OrderNetSuiteCredits orderId={order.id} orderTotal={Number(order.total_value) || 0} />
+      <OrderCredits
+        endpoint={`/api/orders/${order.id}/netsuite-credits`}
+        orderTotal={Number(order.total_value) || 0}
+        title="NetSuite credits"
+      />
 
       {/* Credit-card payment (Stripe) — only for companies with it enabled. */}
       {ccEnabled && (

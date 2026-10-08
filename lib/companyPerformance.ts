@@ -1,25 +1,23 @@
 /**
- * Company performance — single source of truth for Done-based revenue math.
+ * Company performance — the math behind every "how much did a company sell"
+ * view: the Company Performance report, the per-company drill-down (admin and
+ * client), the client dashboard and target-period progress.
  *
- * Every consumer of "how much did a company sell in a date range" goes
- * through this module: the Company Performance report (multi-company), the
- * per-company drill-down, and target-period recalculation. All revenue is
- * DONE-based (an order counts when it was first marked Done, per
- * order_history) plus historical_sales — so numbers always agree across
- * views.
+ * What counts is defined ONCE, in the database view `sales_entries` (owner
+ * 2026-10-08, Hub first): Hub orders once Done or paid in full, plus the
+ * NetSuite documents an admin approved on the NetSuite review page —
+ * invoices billed externally and credits. This module only sums those
+ * entries by date, so every view agrees.
  *
- * Design: `fetchRevenueInputs` loads everything in a FIXED number of
- * queries regardless of how many companies/periods/orders are involved,
- * and THROWS on any query error — no silent partial zeros (that failure
- * mode caused the 2026-07 reporting incident). The math over the fetched
- * rows is pure and unit-tested (`computePeriodMetrics`,
- * `computeCompanyMetrics`, `computeSfBehaviorDistribution`).
+ * Support funds: a Hub order carries what it earned (credit_earned) and what
+ * the client claimed (its SF items — orders.support_fund_used is capped at
+ * earned, so the items are the truth). An invoice billed externally carries
+ * its discount as both earned and used. Credits never carry support funds.
+ * Balance = earned − used: positive → leftover, negative → top-up.
  *
- * Support-fund semantics (see useOrderFormController.ts):
- * `orders.support_fund_used` is CAPPED at `credit_earned`, so what the
- * client actually claimed lives in the SF line items —
- * `order_items.total_price` WHERE `is_support_fund_item = true`.
- * Balance = earned − claimed. Positive → leftover, negative → top-up.
+ * `fetchRevenueInputs` loads everything in a FIXED number of queries and
+ * THROWS on any query error — no silent partial zeros (2026-07 incident).
+ * The math is pure and unit-tested.
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -69,8 +67,8 @@ export interface CompanyPerformance {
     agreementEnd: string | null; // last period end
   };
   toDate: {
-    sales: number; // done orders + historical, all time
-    orders: number; // done orders count
+    sales: number; // every counted entry, all time
+    orders: number; // Hub orders + invoices billed externally
     sfEarned: number;
     sfUsed: number;
     sfBalance: number;
@@ -125,21 +123,30 @@ export interface PeriodMetrics {
   status: PeriodStatus;
 }
 
+/** One row of the `sales_entries` view. */
+export interface SalesEntry {
+  company_id: string;
+  day: string; // YYYY-MM-DD — the day it counts
+  source: string; // hub_order | billed_externally | credit
+  order_id: string | null;
+  document_id: string | null;
+  amount: number | string | null;
+  sf_earned: number | string | null;
+  sf_used: number | string | null;
+}
+
+const num = (v: unknown) => Number(v) || 0;
+/** Entries that are orders to the client: Hub orders and invoices billed externally. */
+const isPurchase = (e: Pick<SalesEntry, 'source'>) => e.source === 'hub_order' || e.source === 'billed_externally';
+
 /**
- * Pure per-period math. `doneOrders` and `historical` must already be
- * scoped to the period's company; an order counts when its first-Done
- * timestamp falls inside the period (orders with Done status but no
- * history row are excluded — not countable).
+ * Pure per-period math over one company's entries. An entry counts when its
+ * day falls inside the period (inclusive calendar days).
  */
 export function computePeriodMetrics(
   now: Date,
   period: { start_date: string; end_date: string; target_amount: number | string | null },
-  doneOrders: Array<{ id: string; total_value?: number | null; credit_earned?: number | null }>,
-  firstDone: Map<string, Date>,
-  sfUsedByOrder: Map<string, number>,
-  historical: Array<{ amount: number | string | null; sale_date: string; support_fund?: number | string | null }>,
-  // Company SF % — used to ESTIMATE the accrual side of historical sales.
-  historicalSfPercent?: number | null
+  entries: SalesEntry[]
 ): PeriodMetrics {
   const startDate = new Date(`${period.start_date}T00:00:00.000Z`);
   const endDate = new Date(`${period.end_date}T23:59:59.999Z`);
@@ -148,25 +155,11 @@ export function computePeriodMetrics(
   let actual = 0;
   let sfEarned = 0;
   let sfUsed = 0;
-  for (const order of doneOrders) {
-    const doneAt = firstDone.get(order.id);
-    if (!doneAt || doneAt < startDate || doneAt > endDate) continue;
-    actual += Number(order.total_value) || 0;
-    sfEarned += Number(order.credit_earned) || 0;
-    sfUsed += sfUsedByOrder.get(order.id) ?? 0;
-  }
-  // Historical SF semantics (owner-corrected 2026-08-20): the imported
-  // support_fund is the DISCOUNT on the invoice = SF REDEEMED → sfUsed.
-  // The accrual side is estimated as SF% × sale amount, mirroring how Hub
-  // orders earn credit.
-  const histPct = Number(historicalSfPercent) || 0;
-  for (const sale of historical) {
-    if (sale.sale_date >= period.start_date && sale.sale_date <= period.end_date) {
-      const amt = Number(sale.amount) || 0;
-      actual += amt;
-      sfUsed += Number(sale.support_fund) || 0;
-      sfEarned += (histPct / 100) * amt;
-    }
+  for (const e of entries) {
+    if (e.day < period.start_date || e.day > period.end_date) continue;
+    actual += num(e.amount);
+    sfEarned += num(e.sf_earned);
+    sfUsed += num(e.sf_used);
   }
 
   const daysTotal = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000));
@@ -226,8 +219,8 @@ export function resolveWindowRange(
   return { from: new Date(Date.UTC(y, m, 1)), to: now };
 }
 
-/** First-Done timestamp per order — "first Done wins" is the canonical
- *  done-date rule everywhere. Rows must be sorted created_at ascending. */
+/** First-Done timestamp per order — "first Done wins". Rows must be sorted
+ *  created_at ascending. (Order-based Support Funds report.) */
 export function buildFirstDoneMap(
   historyRows: Array<{ order_id: string; created_at: string }>
 ): Map<string, Date> {
@@ -238,7 +231,8 @@ export function buildFirstDoneMap(
   return map;
 }
 
-/** Sum SF line items per order — the canonical "what the client claimed". */
+/** Sum SF line items per order — "what the client claimed" on a Hub order.
+ *  (Order-based Support Funds report.) */
 export function buildSfUsedByOrder(
   sfItems: Array<{ order_id: string; total_price: number | string | null }>
 ): Map<string, number> {
@@ -259,34 +253,20 @@ export interface SfBehaviorDistribution {
 }
 
 /**
- * Per-ORDER redemption behavior across enrolled companies. An order counts
- * when its first-Done date falls inside one of its company's enrolled
- * periods. Orders with zero earned AND zero claimed carry no signal and
- * are skipped.
+ * Per-ORDER redemption behavior across enrolled companies: one sample per
+ * Hub order whose day falls inside one of its company's enrolled periods.
+ * Invoices billed externally are left out — their discount is all we know,
+ * so whether the client topped up or left funds unused is unknowable.
+ * Orders with zero earned AND zero claimed carry no signal and are skipped.
  */
 export function computeSfBehaviorDistribution(
   enrolledPeriods: Array<{ company_id: string; start_date: string; end_date: string }>,
-  doneOrders: Array<{ id: string; company_id: string; credit_earned?: number | null }>,
-  firstDone: Map<string, Date>,
-  sfUsedByOrder: Map<string, number>,
-  // Historical sales participate too — pre-Hub companies otherwise show an
-  // empty behavior box. earned = SF% × amount (estimate), claimed = the
-  // imported invoice discount.
-  historical?: Array<{
-    company_id: string;
-    sale_date: string;
-    amount: number | string | null;
-    support_fund?: number | string | null;
-  }>,
-  sfPercentByCompany?: Map<string, number>
+  entries: SalesEntry[]
 ): SfBehaviorDistribution {
-  const periodsByCompany = new Map<string, Array<{ s: Date; e: Date }>>();
+  const periodsByCompany = new Map<string, Array<{ s: string; e: string }>>();
   for (const p of enrolledPeriods) {
     const list = periodsByCompany.get(p.company_id) ?? [];
-    list.push({
-      s: new Date(`${p.start_date}T00:00:00.000Z`),
-      e: new Date(`${p.end_date}T23:59:59.999Z`),
-    });
+    list.push({ s: p.start_date, e: p.end_date });
     periodsByCompany.set(p.company_id, list);
   }
 
@@ -297,8 +277,13 @@ export function computeSfBehaviorDistribution(
     leftoverSum = 0;
   let total = 0;
 
-  const classify = (earned: number, claimed: number) => {
-    if (earned === 0 && claimed === 0) return;
+  for (const entry of entries) {
+    if (entry.source !== 'hub_order') continue;
+    const ranges = periodsByCompany.get(entry.company_id) ?? [];
+    if (!ranges.some((r) => entry.day >= r.s && entry.day <= r.e)) continue;
+    const earned = num(entry.sf_earned);
+    const claimed = num(entry.sf_used);
+    if (earned === 0 && claimed === 0) continue;
     total += 1;
     const delta = earned - claimed;
     if (Math.abs(delta) < 0.01) {
@@ -310,23 +295,6 @@ export function computeSfBehaviorDistribution(
       over += 1;
       topUpSum += -delta;
     }
-  };
-
-  for (const o of doneOrders) {
-    const doneAt = firstDone.get(o.id);
-    if (!doneAt) continue;
-    const ranges = periodsByCompany.get(o.company_id) ?? [];
-    if (!ranges.some((r) => doneAt >= r.s && doneAt <= r.e)) continue;
-    classify(Number(o.credit_earned) || 0, sfUsedByOrder.get(o.id) ?? 0);
-  }
-
-  for (const h of historical ?? []) {
-    const ranges = periodsByCompany.get(h.company_id) ?? [];
-    const at = new Date(`${h.sale_date}T12:00:00.000Z`);
-    if (Number.isNaN(at.getTime())) continue;
-    if (!ranges.some((r) => at >= r.s && at <= r.e)) continue;
-    const pct = sfPercentByCompany?.get(h.company_id) ?? 0;
-    classify((pct / 100) * (Number(h.amount) || 0), Number(h.support_fund) || 0);
   }
 
   return {
@@ -339,59 +307,48 @@ export function computeSfBehaviorDistribution(
   };
 }
 
+/** One product line of a counted entry, dated by the entry's day. Hub orders
+ *  give their order items; NetSuite documents give their product lines
+ *  (credits negative). */
+export interface EntryProductLine {
+  day: string;
+  product_id: number | null;
+  sku: string | null;
+  name: string | null;
+  quantity: number | string | null;
+  amount: number | string | null;
+}
+
 interface RawInputs {
   now: Date;
-  company: any;
+  company: any; // id, company_name, netsuite_number, support_fund_id, support_fund(percent), subsidiary(name)
   periods: any[];
-  doneOrders: any[]; // id, total_value, credit_earned
-  firstDone: Map<string, Date>; // order_id → first Done timestamp
-  historical: any[]; // amount, sale_date, support_fund
-  sfItems: any[]; // order_id, total_price (support-fund lines)
-  productItems: any[]; // order_id, product_id, quantity, total_price, product meta
-  // NS-imported lines of historical sales: sale_date, product_id, sku,
-  // item_name, quantity, amount, product meta. Optional — older callers
-  // (and companies with totals-only rows) simply have none.
-  historicalItems?: any[];
+  entries: SalesEntry[]; // this company's entries
+  productLines: EntryProductLine[]; // this company's product lines
   windowFrom: Date;
   windowTo: Date;
 }
 
 export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
-  const {
-    now, company, periods, doneOrders, firstDone, historical,
-    sfItems, productItems, historicalItems = [], windowFrom, windowTo,
-  } = inputs;
-
-  const sfUsedByOrder = buildSfUsedByOrder(sfItems);
+  const { now, company, periods, entries, productLines, windowFrom, windowTo } = inputs;
   const sfPercent =
-    (Array.isArray(company.support_fund) ? company.support_fund[0] : company.support_fund)
-      ?.percent ?? null;
-  const histPct = Number(sfPercent) || 0;
+    (Array.isArray(company.support_fund) ? company.support_fund[0] : company.support_fund)?.percent ?? null;
 
-  // ---- To-date totals -----------------------------------------------------
+  // ---- To date: every counted entry ---------------------------------------
   let toDateSales = 0;
   let toDateOrders = 0;
   let toDateSfEarned = 0;
   let toDateSfUsed = 0;
-  for (const order of doneOrders) {
-    if (!firstDone.has(order.id)) continue; // no Done timestamp → not countable
-    toDateSales += Number(order.total_value) || 0;
-    toDateOrders += 1;
-    toDateSfEarned += Number(order.credit_earned) || 0;
-    toDateSfUsed += sfUsedByOrder.get(order.id) ?? 0;
-  }
-  // Historical: the imported support_fund is the invoice DISCOUNT = SF
-  // redeemed; the accrual side is estimated at the company's SF %.
-  for (const sale of historical) {
-    const amt = Number(sale.amount) || 0;
-    toDateSales += amt;
-    toDateSfUsed += Number(sale.support_fund) || 0;
-    toDateSfEarned += (histPct / 100) * amt;
+  for (const e of entries) {
+    toDateSales += num(e.amount);
+    if (isPurchase(e)) toDateOrders += 1;
+    toDateSfEarned += num(e.sf_earned);
+    toDateSfUsed += num(e.sf_used);
   }
 
-  // ---- Per-period rows ----------------------------------------------------
+  // ---- Per-period rows -----------------------------------------------------
   const periodRows: CompanyPeriodRow[] = periods.map((p) => {
-    const m = computePeriodMetrics(now, p, doneOrders, firstDone, sfUsedByOrder, historical, sfPercent);
+    const m = computePeriodMetrics(now, p, entries);
     return {
       periodId: p.id,
       periodName: p.period_name ?? '',
@@ -408,42 +365,34 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
     };
   });
 
-  // ---- Windowed metrics + product mix -------------------------------------
-  const windowOrderIds = new Set<string>();
-  let windowSales = 0;
-  let windowSfEarned = 0;
-  let windowSfUsed = 0;
-  for (const order of doneOrders) {
-    const doneAt = firstDone.get(order.id);
-    if (!doneAt || doneAt < windowFrom || doneAt > windowTo) continue;
-    windowOrderIds.add(order.id);
-    windowSales += Number(order.total_value) || 0;
-    windowSfEarned += Number(order.credit_earned) || 0;
-    windowSfUsed += sfUsedByOrder.get(order.id) ?? 0;
-  }
+  // ---- Window ----------------------------------------------------------------
   const windowFromDay = windowFrom.toISOString().slice(0, 10);
   const windowToDay = windowTo.toISOString().slice(0, 10);
-  for (const sale of historical) {
-    if (sale.sale_date >= windowFromDay && sale.sale_date <= windowToDay) {
-      const amt = Number(sale.amount) || 0;
-      windowSales += amt;
-      windowSfUsed += Number(sale.support_fund) || 0;
-      windowSfEarned += (histPct / 100) * amt;
-    }
+  const inWindow = (d: string) => d >= windowFromDay && d <= windowToDay;
+  let windowSales = 0;
+  let windowOrders = 0;
+  let windowSfEarned = 0;
+  let windowSfUsed = 0;
+  for (const e of entries) {
+    if (!inWindow(e.day)) continue;
+    windowSales += num(e.amount);
+    if (isPurchase(e)) windowOrders += 1;
+    windowSfEarned += num(e.sf_earned);
+    windowSfUsed += num(e.sf_used);
   }
 
   const productAgg = new Map<string, TopProductRow>();
   let windowUnits = 0;
-  for (const item of productItems) {
-    if (!windowOrderIds.has(item.order_id)) continue;
-    const units = Number(item.quantity) || 0;
-    const revenue = Number(item.total_price) || 0;
+  for (const line of productLines) {
+    if (!inWindow(line.day)) continue;
+    const units = num(line.quantity);
+    const revenue = num(line.amount);
     windowUnits += units;
-    const key = String(item.product_id ?? item.product?.item_name ?? 'unknown');
+    const key = String(line.product_id ?? line.sku ?? line.name ?? 'unknown');
     const entry = productAgg.get(key) ?? {
-      productId: item.product_id ?? null,
-      sku: item.product?.sku ?? null,
-      name: item.product?.item_name ?? null,
+      productId: line.product_id ?? null,
+      sku: line.sku ?? null,
+      name: line.name ?? null,
       units: 0,
       revenue: 0,
     };
@@ -451,27 +400,9 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
     entry.revenue += revenue;
     productAgg.set(key, entry);
   }
-  // Historical (NS-imported) lines join the same mix, keyed by product_id
-  // when the SKU matched the catalog — so pre-Hub and Hub volumes of the
-  // same product merge into one row.
-  for (const item of historicalItems) {
-    if (item.sale_date < windowFromDay || item.sale_date > windowToDay) continue;
-    const units = Number(item.quantity) || 0;
-    const revenue = Number(item.amount) || 0;
-    windowUnits += units;
-    const key = String(item.product_id ?? item.sku ?? item.item_name ?? 'unknown');
-    const entry = productAgg.get(key) ?? {
-      productId: item.product_id ?? null,
-      sku: item.product?.sku ?? item.sku ?? null,
-      name: item.product?.item_name ?? item.item_name ?? null,
-      units: 0,
-      revenue: 0,
-    };
-    entry.units += units;
-    entry.revenue += revenue;
-    productAgg.set(key, entry);
-  }
-  const allProducts = Array.from(productAgg.values()).sort((a, b) => b.revenue - a.revenue);
+  const allProducts = Array.from(productAgg.values())
+    .filter((p) => Math.abs(p.units) > 0.001 || Math.abs(p.revenue) > 0.001)
+    .sort((a, b) => b.revenue - a.revenue);
 
   const firstPeriod = periods.length
     ? periods.reduce((min, p) => (p.start_date < min ? p.start_date : min), periods[0].start_date)
@@ -504,7 +435,7 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
       from: windowFrom.toISOString(),
       to: windowTo.toISOString(),
       sales: windowSales,
-      orders: windowOrderIds.size,
+      orders: windowOrders,
       units: windowUnits,
       topProducts: allProducts.slice(0, 10),
       productCount: allProducts.length,
@@ -514,73 +445,93 @@ export function computeCompanyMetrics(inputs: RawInputs): CompanyPerformance {
   };
 }
 
+/** Every row of a query, past PostgREST's 1,000-row page. */
+async function selectAll<T>(build: (from: number, to: number) => PromiseLike<{ data: any; error: any }>): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await build(from, from + 999);
+    if (error) throw new Error(error.message);
+    out.push(...((data ?? []) as T[]));
+    if (!data || data.length < 1000) return out;
+  }
+}
+
+/** Run an `.in()` query in chunks (long id lists overflow the URL). */
+async function inChunks<T>(ids: string[], run: (part: string[]) => PromiseLike<{ data: any; error: any }>): Promise<T[]> {
+  const out: T[] = [];
+  for (let i = 0; i < ids.length; i += 150) {
+    const { data, error } = await run(ids.slice(i, i + 150));
+    if (error) throw new Error(error.message);
+    out.push(...((data ?? []) as T[]));
+  }
+  return out;
+}
+
 export interface RevenueInputs {
-  doneOrders: Array<{
-    id: string;
-    company_id: string;
-    total_value: number | null;
-    credit_earned: number | null;
-  }>;
-  firstDone: Map<string, Date>; // order_id → first Done timestamp
-  sfItems: Array<{ order_id: string; total_price: number | null }>;
-  historical: Array<{ company_id: string; amount: number | string | null; sale_date: string }>;
+  entries: SalesEntry[];
 }
 
 /**
- * Batched fetch of everything needed to compute Done-based revenue for a
- * set of companies — 4 queries total, regardless of company/period/order
- * count. Throws on any query error: callers must never render partial
- * zeros as real numbers.
+ * Batched fetch of the counted entries for a set of companies — one paged
+ * query regardless of company/period count. Throws on any query error:
+ * callers must never render partial zeros as real numbers.
  */
-export async function fetchRevenueInputs(
-  supabase: SupabaseClient,
-  companyIds: string[]
-): Promise<RevenueInputs> {
-  if (companyIds.length === 0) {
-    return { doneOrders: [], firstDone: new Map(), sfItems: [], historical: [] };
-  }
+export async function fetchRevenueInputs(supabase: SupabaseClient, companyIds: string[]): Promise<RevenueInputs> {
+  if (companyIds.length === 0) return { entries: [] };
+  const entries = await selectAll<SalesEntry>((a, b) =>
+    supabase
+      .from('sales_entries')
+      .select('company_id, day, source, order_id, document_id, amount, sf_earned, sf_used')
+      .in('company_id', companyIds)
+      .order('day')
+      .order('source')
+      .order('order_id')
+      .order('document_id')
+      .range(a, b)
+  );
+  return { entries };
+}
 
-  const [ordersRes, historicalRes] = await Promise.all([
-    supabase
-      .from('orders')
-      .select('id, company_id, total_value, credit_earned')
-      .eq('status', 'Done')
-      .in('company_id', companyIds),
-    supabase
-      .from('historical_sales')
-      .select('company_id, amount, sale_date, support_fund')
-      .in('company_id', companyIds),
+/** Product lines behind a company's counted entries (Hub order items + the
+ *  approved NetSuite documents' product lines), dated by the entry's day. */
+async function fetchEntryProductLines(supabase: SupabaseClient, entries: SalesEntry[]): Promise<EntryProductLine[]> {
+  const orderDay = new Map<string, string>();
+  const docDay = new Map<string, string>();
+  for (const e of entries) {
+    if (e.source === 'hub_order' && e.order_id) orderDay.set(e.order_id, e.day);
+    else if (e.document_id) docDay.set(e.document_id, e.day);
+  }
+  const [items, lines] = await Promise.all([
+    inChunks<any>(Array.from(orderDay.keys()), (part) =>
+      supabase.from('order_items').select('order_id, product_id, quantity, total_price, product:Products(sku, item_name)').in('order_id', part)
+    ),
+    inChunks<any>(Array.from(docDay.keys()), (part) =>
+      supabase
+        .from('sales_document_lines')
+        .select('document_id, product_id, sku, item_name, quantity, amount, product:Products(sku, item_name)')
+        .eq('kind', 'product')
+        .in('document_id', part)
+    ),
   ]);
-  if (ordersRes.error) throw new Error(`orders: ${ordersRes.error.message}`);
-  if (historicalRes.error) throw new Error(`historical: ${historicalRes.error.message}`);
-
-  const doneOrders = (ordersRes.data ?? []) as RevenueInputs['doneOrders'];
-  const orderIds = doneOrders.map((o) => o.id);
-
-  let firstDone = new Map<string, Date>();
-  let sfItems: RevenueInputs['sfItems'] = [];
-  if (orderIds.length > 0) {
-    const [historyRes, sfRes] = await Promise.all([
-      supabase
-        .from('order_history')
-        .select('order_id, created_at')
-        .in('order_id', orderIds)
-        .eq('status_to', 'Done')
-        .order('created_at', { ascending: true }),
-      supabase
-        .from('order_items')
-        .select('order_id, total_price')
-        .in('order_id', orderIds)
-        .eq('is_support_fund_item', true),
-    ]);
-    if (historyRes.error) throw new Error(`history: ${historyRes.error.message}`);
-    if (sfRes.error) throw new Error(`sf items: ${sfRes.error.message}`);
-
-    firstDone = buildFirstDoneMap(historyRes.data ?? []);
-    sfItems = (sfRes.data ?? []) as RevenueInputs['sfItems'];
-  }
-
-  return { doneOrders, firstDone, sfItems, historical: historicalRes.data ?? [] };
+  const one = (p: any) => (Array.isArray(p) ? p[0] : p);
+  return [
+    ...items.map((i) => ({
+      day: orderDay.get(i.order_id)!,
+      product_id: i.product_id ?? null,
+      sku: one(i.product)?.sku ?? null,
+      name: one(i.product)?.item_name ?? null,
+      quantity: i.quantity,
+      amount: i.total_price,
+    })),
+    ...lines.map((l) => ({
+      day: docDay.get(l.document_id)!,
+      product_id: l.product_id ?? null,
+      sku: one(l.product)?.sku ?? l.sku ?? null,
+      name: one(l.product)?.item_name ?? l.item_name ?? null,
+      quantity: l.quantity,
+      amount: l.amount,
+    })),
+  ];
 }
 
 /** Fetch everything for one company's drill-down and compute. Throws on
@@ -597,48 +548,19 @@ export async function buildCompanyPerformance(
       .select('id, company_name, netsuite_number, support_fund_id, support_fund:support_fund_levels(percent), subsidiary:subsidiaries(name)')
       .eq('id', companyId)
       .single(),
-    supabase
-      .from('target_periods')
-      .select('id, period_name, start_date, end_date, target_amount')
-      .eq('company_id', companyId),
+    supabase.from('target_periods').select('id, period_name, start_date, end_date, target_amount').eq('company_id', companyId),
     fetchRevenueInputs(supabase, [companyId]),
   ]);
   if (companyRes.error) throw new Error(`company: ${companyRes.error.message}`);
   if (periodsRes.error) throw new Error(`periods: ${periodsRes.error.message}`);
 
-  const orderIds = inputs.doneOrders.map((o) => o.id);
-  let productItems: any[] = [];
-  if (orderIds.length > 0) {
-    const itemsRes = await supabase
-      .from('order_items')
-      .select('order_id, product_id, quantity, total_price, product:Products(sku, item_name)')
-      .in('order_id', orderIds);
-    if (itemsRes.error) throw new Error(`items: ${itemsRes.error.message}`);
-    productItems = itemsRes.data ?? [];
-  }
-
-  // NS-imported lines of this company's historical sales (inner join scopes
-  // by company; the parent's sale_date is flattened for window filtering).
-  const histItemsRes = await supabase
-    .from('historical_sale_items')
-    .select('product_id, sku, item_name, quantity, amount, product:Products(sku, item_name), sale:historical_sales!inner(company_id, sale_date)')
-    .eq('sale.company_id', companyId);
-  if (histItemsRes.error) throw new Error(`historical items: ${histItemsRes.error.message}`);
-  const historicalItems = (histItemsRes.data ?? []).map((row: any) => {
-    const sale = Array.isArray(row.sale) ? row.sale[0] : row.sale;
-    return { ...row, sale_date: sale?.sale_date ?? '' };
-  });
-
+  const productLines = await fetchEntryProductLines(supabase, inputs.entries);
   return computeCompanyMetrics({
     now: new Date(),
     company: companyRes.data,
     periods: periodsRes.data ?? [],
-    doneOrders: inputs.doneOrders,
-    firstDone: inputs.firstDone,
-    historical: inputs.historical,
-    sfItems: inputs.sfItems,
-    productItems,
-    historicalItems,
+    entries: inputs.entries,
+    productLines,
     windowFrom,
     windowTo,
   });

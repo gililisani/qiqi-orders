@@ -29,6 +29,7 @@ interface RefreshableOrder {
   netsuite_invoice_status: string | null;
   invoice_amount_remaining: number | null;
   hold: string | null;
+  paid_at: string | null;
 }
 
 /** An invoice that is fully settled can't change — skip it in nightly runs. */
@@ -41,6 +42,23 @@ export function isSettled(o: {
   return paid && Number(o.invoice_amount_remaining) === 0;
 }
 
+/**
+ * paid_at for an invoice the Hub just saw settle (open → Paid In Full).
+ * Wires recorded in NetSuite carry no payment date the Hub can read, so the
+ * day the Hub sees the change stands in for it (the nightly refresh sees it
+ * within a day). Only on the transition — refreshing an already-settled
+ * invoice never stamps a date. A Hub order counts toward the client's goals
+ * once Done or paid in full (sales_entries), so this date matters.
+ */
+export function paidAtOnSettle(
+  prev: { netsuite_invoice_status: string | null; invoice_amount_remaining: number | null; paid_at?: string | null },
+  next: { netsuite_invoice_status: string | null; invoice_amount_remaining: number | null },
+  now: Date = new Date(),
+): { paid_at: string } | Record<string, never> {
+  if (prev.paid_at || isSettled(prev) || !isSettled(next)) return {};
+  return { paid_at: now.toISOString() };
+}
+
 export async function refreshInvoices(
   supabase: SupabaseClient,
   ns: NetSuiteAPI,
@@ -48,7 +66,7 @@ export async function refreshInvoices(
 ): Promise<RefreshResult> {
   let query = supabase
     .from('orders')
-    .select('id, netsuite_invoice_id, po_number, netsuite_invoice_status, invoice_amount_remaining, hold')
+    .select('id, netsuite_invoice_id, po_number, netsuite_invoice_status, invoice_amount_remaining, hold, paid_at')
     .not('netsuite_invoice_id', 'is', null);
 
   if (opts.onlyMissing) {
@@ -81,6 +99,10 @@ export async function refreshInvoices(
               netsuite_invoice_status: inv.status || null,
               invoice_amount_remaining: inv.amountRemaining,
               invoice_due_date: inv.dueDate,
+              ...paidAtOnSettle(o, {
+                netsuite_invoice_status: inv.status ?? null,
+                invoice_amount_remaining: inv.amountRemaining,
+              }),
             })
             .eq('id', o.id);
           if (updateErr) throw updateErr;

@@ -7,8 +7,9 @@ import { buildCompanyPerformance, resolveWindowRange } from '../../../../../lib/
  *   ?window=this-month|last-month|this-year|last-year|custom
  *   &from=YYYY-MM-DD&to=YYYY-MM-DD   (custom only)
  *
- * Single-company performance dashboard payload. All revenue is Done-based
- * (+ historical_sales) — same definition as the report and target periods.
+ * Single-company performance dashboard payload. Sales = the sales_entries
+ * view (Hub orders + approved NetSuite) — same definition as the report and
+ * target periods.
  * The client-facing twin lives at /api/client/performance (same builder,
  * company locked to the caller's own).
  */

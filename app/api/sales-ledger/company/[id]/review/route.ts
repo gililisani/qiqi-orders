@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../../platform/auth/guards';
 import { undoBlockers, validateDecision, type ReviewDecision } from '../../../../../../lib/salesLedger/review';
 import { loadReviewState } from '../../../../../../lib/salesLedger/reviewData';
+import { recalculateCompanyTargetPeriods } from '../../../../../../lib/targetPeriods';
+
+/** Decisions change what counts — keep the stored goal progress in step (best effort). */
+async function recalcTargets(supabase: ReturnType<typeof createServiceRoleClient>, companyId: string) {
+  try {
+    await recalculateCompanyTargetPeriods(supabase, companyId);
+  } catch (err) {
+    console.error('[netsuite-review] target recalculation failed:', companyId, err);
+  }
+}
 
 /**
  * NetSuite review decisions for one company (distributors:edit).
@@ -82,6 +92,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     }));
     const { error } = await supabase.from('sales_document_reviews').upsert(rows, { onConflict: 'document_id' });
     if (error) throw new Error(error.message);
+    await recalcTargets(supabase, companyId);
     return NextResponse.json({ saved: rows.length });
   } catch (err: any) {
     if (err instanceof Response) return err;
@@ -114,6 +125,7 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
       const { error } = await supabase.from('sales_document_reviews').delete().in('document_id', ids.slice(i, i + 150));
       if (error) throw new Error(error.message);
     }
+    await recalcTargets(supabase, companyId);
     return NextResponse.json({ undone: ids.length });
   } catch (err: any) {
     if (err instanceof Response) return err;

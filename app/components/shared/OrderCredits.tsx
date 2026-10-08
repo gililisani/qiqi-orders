@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * NetSuite documents an admin attached to this Hub order on the NetSuite
- * review page: credits (damaged or short-shipped products — never support
- * funds) with the products credited and the order value after credits, plus
- * invoices that bill this order but weren't linked by NetSuite. Renders
- * nothing when there are none.
+ * Credits on an order (admin and client order pages): NetSuite credits an
+ * admin attached to it on the NetSuite review page — damaged or
+ * short-shipped products, never support funds — with the products credited
+ * and the order value after credits. The admin view also lists invoices an
+ * admin attached to the order. Renders nothing when there are none.
  */
 
 import { useEffect, useState } from 'react';
@@ -15,16 +15,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '../qq/card';
 
 interface AttachedDoc {
   id: string;
-  tranid: string;
+  number: string;
   date: string;
   amount: number;
-  netsuiteId: string | null;
   products: Array<{ sku: string | null; name: string | null; quantity: number; amount: number }>;
 }
 
+// Admin endpoint says `tranid`, client endpoint says `number`.
+const normalize = (d: any): AttachedDoc => ({ ...d, number: d.number ?? d.tranid ?? '' });
+
 const money = (n: number) => (n < 0 ? `−${formatCurrency(-n)}` : formatCurrency(n));
 
-export default function OrderNetSuiteCredits({ orderId, orderTotal }: { orderId: string; orderTotal: number }) {
+export default function OrderCredits({
+  endpoint,
+  orderTotal,
+  title = 'Credits',
+}: {
+  endpoint: string; // /api/orders/[id]/netsuite-credits (admin) or /api/client/orders/[id]/credits
+  orderTotal: number;
+  title?: string;
+}) {
   const [credits, setCredits] = useState<AttachedDoc[]>([]);
   const [invoices, setInvoices] = useState<AttachedDoc[]>([]);
 
@@ -32,12 +42,12 @@ export default function OrderNetSuiteCredits({ orderId, orderTotal }: { orderId:
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetchWithAuth(`/api/orders/${orderId}/netsuite-credits`);
+        const res = await fetchWithAuth(endpoint);
         if (!res.ok) return;
         const json = await res.json();
         if (cancelled) return;
-        setCredits(json.credits ?? []);
-        setInvoices(json.invoices ?? []);
+        setCredits((json.credits ?? []).map(normalize));
+        setInvoices((json.invoices ?? []).map(normalize));
       } catch {
         // Informational card — the order page works without it.
       }
@@ -45,7 +55,7 @@ export default function OrderNetSuiteCredits({ orderId, orderTotal }: { orderId:
     return () => {
       cancelled = true;
     };
-  }, [orderId]);
+  }, [endpoint]);
 
   if (!credits.length && !invoices.length) return null;
   const creditTotal = credits.reduce((s, c) => s + c.amount, 0);
@@ -53,7 +63,7 @@ export default function OrderNetSuiteCredits({ orderId, orderTotal }: { orderId:
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm">NetSuite credits</CardTitle>
+        <CardTitle className="text-sm">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         {credits.map((c) => (
@@ -84,7 +94,7 @@ export default function OrderNetSuiteCredits({ orderId, orderTotal }: { orderId:
         {credits.length > 0 && <p className="text-xs text-muted-foreground">Support funds on this order are unchanged.</p>}
         {invoices.length > 0 && (
           <div>
-            <p className="text-xs text-muted-foreground mb-1">Also billed in NetSuite (attached by an admin):</p>
+            <p className="text-xs text-muted-foreground mb-1">Also billed in NetSuite (attached on the NetSuite review page):</p>
             {invoices.map((i) => (
               <div key={i.id} className="flex items-baseline justify-between gap-3">
                 <DocLink doc={i} />
@@ -101,7 +111,7 @@ export default function OrderNetSuiteCredits({ orderId, orderTotal }: { orderId:
 function DocLink({ doc }: { doc: AttachedDoc }) {
   return (
     <span>
-      <span className="font-mono">{doc.tranid}</span>
+      <span className="font-mono">{doc.number}</span>
       <span className="text-xs text-muted-foreground"> · {formatDate(doc.date)}</span>
     </span>
   );

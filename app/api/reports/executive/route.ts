@@ -8,10 +8,12 @@ import { createServiceRoleClient, requireAdminWithPermission } from '../../../..
  *   { period, prevPeriod, kpis, trend, funnel, topCompanies, topProducts }
  *
  * Data sources:
- *   - Revenue / Active Partners / Top Companies / Trend: orders (committed)
- *     UNION historical_sales (pre-NetSuite backfill table).
- *   - AOV: orders only (historical_sales has no order concept).
- *   - Top Products / Order Status Funnel / Support Fund Used: orders only.
+ *   - Revenue / Active Partners / Top Companies / Trend / Support Fund Used:
+ *     Hub orders (committed, by creation date) plus the NetSuite documents
+ *     an admin approved on the NetSuite review page (sales_entries:
+ *     invoices billed externally and credits, by their day).
+ *   - Orders / AOV: Hub orders only.
+ *   - Top Products / Order Status Funnel: Hub orders only.
  *
  * Presets (30d / 90d / ytd) read pre-rolled MVs; custom windows aggregate
  * live (slower, exact, admin-only so volume is low).
@@ -54,17 +56,17 @@ function periodRange(window: WindowKey, fromParam: string | null, toParam: strin
 
 interface DailyRow {
   day: string;
-  source: 'orders' | 'historical';
+  source: 'orders' | 'netsuite';
   orders: number | string | null;
   revenue: number | string | null;
   support_fund_used: number | string | null;
 }
 
 interface DailyAgg {
-  revenue: number;          // orders + historical
-  supportFundUsed: number;  // orders only (historical contributes 0)
-  orders: number;           // orders only
-  ordersRevenue: number;    // orders only — denominator-side of AOV
+  revenue: number;          // Hub orders + approved NetSuite entries
+  supportFundUsed: number;  // Hub orders + invoices billed externally
+  orders: number;           // Hub orders only
+  ordersRevenue: number;    // Hub orders only — numerator of AOV
 }
 
 function aggregateDaily(rows: DailyRow[]): Map<string, DailyAgg> {
@@ -81,8 +83,10 @@ function aggregateDaily(rows: DailyRow[]): Map<string, DailyAgg> {
     const ord = Number(r.orders) || 0;
     entry.revenue += rev;
     entry.supportFundUsed += sf;
-    entry.orders += ord;
-    if (r.source === 'orders') entry.ordersRevenue += rev;
+    if (r.source === 'orders') {
+      entry.orders += ord;
+      entry.ordersRevenue += rev;
+    }
     out.set(r.day, entry);
   }
   return out;
@@ -99,7 +103,7 @@ export async function GET(request: NextRequest) {
     const { from, to, prevFrom, prevTo } = periodRange(window, fromParam, toParam);
     const supabase = createServiceRoleClient();
 
-    // --- KPIs + sales trend: from mv_daily_sales (orders + historical). ---
+    // --- KPIs + sales trend: from mv_daily_sales (orders + approved NetSuite). ---
     const fetchDaily = () =>
       Promise.all([
         supabase
@@ -179,13 +183,13 @@ export async function GET(request: NextRequest) {
     }
     const prevAov = prevOrders > 0 ? prevOrdersRevenue / prevOrders : 0;
 
-    // --- Active partners: union of committed-order companies + historical
-    //     companies in the period. ---
+    // --- Active partners: committed-order companies + companies with
+    //     approved invoices billed externally in the period. ---
     const [
       { data: orderPartnerRows, error: orderPartnerErr },
-      { data: histPartnerRows, error: histPartnerErr },
+      { data: netsuitePartnerRows, error: netsuitePartnerErr },
       { data: prevOrderPartnerRows, error: prevOrderPartnerErr },
-      { data: prevHistPartnerRows, error: prevHistPartnerErr },
+      { data: prevNetsuitePartnerRows, error: prevNetsuitePartnerErr },
     ] = await Promise.all([
       supabase
         .from('orders')
@@ -195,10 +199,11 @@ export async function GET(request: NextRequest) {
         .in('status', COMMITTED_STATUSES)
         .not('company_id', 'is', null),
       supabase
-        .from('historical_sales')
+        .from('sales_entries')
         .select('company_id')
-        .gte('sale_date', from.toISOString().slice(0, 10))
-        .lte('sale_date', to.toISOString().slice(0, 10)),
+        .eq('source', 'billed_externally')
+        .gte('day', from.toISOString().slice(0, 10))
+        .lte('day', to.toISOString().slice(0, 10)),
       supabase
         .from('orders')
         .select('company_id')
@@ -207,25 +212,26 @@ export async function GET(request: NextRequest) {
         .in('status', COMMITTED_STATUSES)
         .not('company_id', 'is', null),
       supabase
-        .from('historical_sales')
+        .from('sales_entries')
         .select('company_id')
-        .gte('sale_date', prevFrom.toISOString().slice(0, 10))
-        .lte('sale_date', prevTo.toISOString().slice(0, 10)),
+        .eq('source', 'billed_externally')
+        .gte('day', prevFrom.toISOString().slice(0, 10))
+        .lte('day', prevTo.toISOString().slice(0, 10)),
     ]);
 
     if (orderPartnerErr) throw orderPartnerErr;
-    if (histPartnerErr) throw histPartnerErr;
+    if (netsuitePartnerErr) throw netsuitePartnerErr;
     if (prevOrderPartnerErr) throw prevOrderPartnerErr;
-    if (prevHistPartnerErr) throw prevHistPartnerErr;
+    if (prevNetsuitePartnerErr) throw prevNetsuitePartnerErr;
 
     const partnerSet = new Set<string>();
     for (const r of orderPartnerRows ?? []) if (r.company_id) partnerSet.add(r.company_id);
-    for (const r of histPartnerRows ?? []) if (r.company_id) partnerSet.add(r.company_id);
+    for (const r of netsuitePartnerRows ?? []) if (r.company_id) partnerSet.add(r.company_id);
     const activePartners = partnerSet.size;
 
     const prevPartnerSet = new Set<string>();
     for (const r of prevOrderPartnerRows ?? []) if (r.company_id) prevPartnerSet.add(r.company_id);
-    for (const r of prevHistPartnerRows ?? []) if (r.company_id) prevPartnerSet.add(r.company_id);
+    for (const r of prevNetsuitePartnerRows ?? []) if (r.company_id) prevPartnerSet.add(r.company_id);
     const prevActivePartners = prevPartnerSet.size;
 
     // --- Order status funnel: live, current period, orders only. ---
@@ -334,8 +340,9 @@ export async function GET(request: NextRequest) {
         };
       });
     } else {
-      // Custom window: live aggregate across orders + historical_sales.
-      const [liveOrdersRes, liveHistRes] = await Promise.all([
+      // Custom window: live aggregate across Hub orders + approved NetSuite
+      // entries (views can't embed company names — they're looked up below).
+      const [liveOrdersRes, liveNetSuiteRes] = await Promise.all([
         supabase
           .from('orders')
           .select('id, company_id, total_value, companies:company_id(company_name)')
@@ -343,14 +350,16 @@ export async function GET(request: NextRequest) {
           .lte('created_at', to.toISOString())
           .in('status', COMMITTED_STATUSES),
         supabase
-          .from('historical_sales')
-          .select('company_id, amount, companies:company_id(company_name)')
-          .gte('sale_date', from.toISOString().slice(0, 10))
-          .lte('sale_date', to.toISOString().slice(0, 10)),
+          .from('sales_entries')
+          .select('company_id, amount')
+          .in('source', ['billed_externally', 'credit'])
+          .gte('day', from.toISOString().slice(0, 10))
+          .lte('day', to.toISOString().slice(0, 10))
+          .range(0, 19999),
       ]);
 
       if (liveOrdersRes.error) throw liveOrdersRes.error;
-      if (liveHistRes.error) throw liveHistRes.error;
+      if (liveNetSuiteRes.error) throw liveNetSuiteRes.error;
       const liveOrders = liveOrdersRes.data ?? [];
 
       const compMap = new Map<string, { name: string; orders: number; revenue: number }>();
@@ -365,10 +374,18 @@ export async function GET(request: NextRequest) {
         entry.revenue += Number(o.total_value) || 0;
         compMap.set(o.company_id, entry);
       }
-      for (const h of liveHistRes.data ?? []) {
+      const missingNames = Array.from(
+        new Set((liveNetSuiteRes.data ?? []).map((h: any) => h.company_id).filter((id: string) => id && !compMap.has(id)))
+      );
+      const namesRes = missingNames.length
+        ? await supabase.from('companies').select('id, company_name').in('id', missingNames)
+        : { data: [], error: null };
+      if (namesRes.error) throw namesRes.error;
+      const nameById = new Map((namesRes.data ?? []).map((c: any) => [c.id, c.company_name ?? 'Unknown']));
+      for (const h of liveNetSuiteRes.data ?? []) {
         if (!h.company_id) continue;
         const entry = compMap.get(h.company_id) ?? {
-          name: (h as any).companies?.company_name ?? 'Unknown',
+          name: nameById.get(h.company_id) ?? 'Unknown',
           orders: 0,
           revenue: 0,
         };

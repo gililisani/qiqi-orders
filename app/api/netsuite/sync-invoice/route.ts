@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { createNetSuiteAPI } from '../../../../lib/netsuite';
+import { paidAtOnSettle } from '../../../../lib/invoiceRefresh';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, netsuite_invoice_id')
+      .select('id, netsuite_invoice_id, netsuite_invoice_status, invoice_amount_remaining, paid_at')
       .eq('id', orderId)
       .single();
 
@@ -63,6 +64,10 @@ export async function POST(request: NextRequest) {
         netsuite_invoice_status: result.status,
         invoice_amount_remaining: result.amountRemaining,
         invoice_due_date: result.dueDate,
+        ...paidAtOnSettle(order as any, {
+          netsuite_invoice_status: result.status ?? null,
+          invoice_amount_remaining: result.amountRemaining,
+        }),
       })
       .eq('id', orderId);
 

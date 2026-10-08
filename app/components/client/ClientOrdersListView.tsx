@@ -8,6 +8,10 @@
  *   - No company filter chip (RLS scopes everything)
  *   - No Download CSV (admin convenience)
  *   - Drafts are shown only when explicitly filtered (not always-on)
+ *   - Invoices an admin approved as billed externally (NetSuite review page)
+ *     appear among the orders, read-only, marked "Billed Externally" (owner
+ *     2026-10-08). The list is merged and paged here — a company has at
+ *     most a few hundred of each.
  */
 
 import { useEffect, useState } from 'react';
@@ -17,7 +21,8 @@ import Link from 'next/link';
 import { Search, Plus, MoreHorizontal, Eye } from 'lucide-react';
 
 import { supabase } from '../../../lib/supabaseClient';
-import { buildOrderSearchOr, parseSearchDate } from '../../../lib/orderSearch';
+import { buildOrderSearchOr, matchesSearch, parseSearchDate } from '../../../lib/orderSearch';
+import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 
 import { PageHeader } from '../qq/page-header';
 import { Card } from '../qq/card';
@@ -30,6 +35,7 @@ import { StatusBadge } from '../qq/status-badge';
 import { displayOrderStatus } from '../../../lib/orderBadges';
 import { HoldBadge } from '../shared/OrderBadges';
 import { SupportFundBadge } from '../qq/support-fund-badge';
+import { Badge } from '../qq/badge';
 import {
   Table,
   TableHeader,
@@ -62,13 +68,29 @@ interface Order {
   company_id?: string;
 }
 
-const STATUS_OPTIONS = ORDER_STATUSES;
+interface ExternalSale {
+  id: string;
+  invoiceNumber: string;
+  date: string; // YYYY-MM-DD
+  total: number;
+  supportFund: number;
+  credits: number;
+}
+
+type Row = { kind: 'order'; at: string; order: Order } | { kind: 'external'; at: string; sale: ExternalSale };
+
+const BILLED_EXTERNALLY = 'Billed Externally';
+const STATUS_OPTIONS = [...ORDER_STATUSES, BILLED_EXTERNALLY];
 const ALL_STATUSES = '__all__';
+const money = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+// An invoice date (YYYY-MM-DD) in the same format as order dates; local noon so it never shifts a day.
+const invoiceDay = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString();
 
 export default function ClientOrdersListView() {
   const router = useRouter();
 
   const [orders, setOrders] = useState<Order[]>([]);
+  const [externals, setExternals] = useState<ExternalSale[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
 
   const [error, setError] = useState('');
@@ -77,7 +99,6 @@ export default function ClientOrdersListView() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  const [totalOrders, setTotalOrders] = useState(0);
 
   // Resolve client's company once
   useEffect(() => {
@@ -92,6 +113,13 @@ export default function ClientOrdersListView() {
           .single();
         if (error) throw error;
         if (!data?.company_id) throw new Error('No company linked to your account.');
+        // Invoices billed externally — informational, the list works without them.
+        try {
+          const res = await fetchWithAuth('/api/client/external-sales');
+          if (res.ok) setExternals((await res.json()).sales ?? []);
+        } catch {
+          /* ignore */
+        }
         setCompanyId(data.company_id);
       } catch (err: any) {
         setError(err.message || 'Failed to load company.');
@@ -105,7 +133,7 @@ export default function ClientOrdersListView() {
     if (!companyId) return;
     fetchOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyId, currentPage, pageSize, statusFilter]);
+  }, [companyId, statusFilter]);
 
   // Debounced search
   useEffect(() => {
@@ -123,35 +151,35 @@ export default function ClientOrdersListView() {
     setLoading(true);
     setError('');
     try {
-      let query = supabase
-        .from('orders')
-        .select('*', { count: 'exact' })
-        .eq('company_id', companyId);
-
-      if (statusFilter) {
-        query = query.eq('status', statusFilter);
+      if (statusFilter === BILLED_EXTERNALLY) {
+        setOrders([]);
+        return;
       }
-
-      if (searchTerm.trim()) {
-        const day = parseSearchDate(searchTerm);
-        if (day) {
-          query = query.gte('created_at', `${day}T00:00:00`).lte('created_at', `${day}T23:59:59`);
-        } else {
-          // PO / SO / invoice number or amount, OR-ed (lib/orderSearch).
-          const filter = buildOrderSearchOr(searchTerm);
-          if (filter) query = query.or(filter);
+      // Every matching order (a company has at most a few hundred) — the
+      // list merges them with invoices billed externally and pages below.
+      const all: Order[] = [];
+      for (let from = 0; ; from += 1000) {
+        let query = supabase.from('orders').select('*').eq('company_id', companyId);
+        if (statusFilter) query = query.eq('status', statusFilter);
+        if (searchTerm.trim()) {
+          const day = parseSearchDate(searchTerm);
+          if (day) {
+            query = query.gte('created_at', `${day}T00:00:00`).lte('created_at', `${day}T23:59:59`);
+          } else {
+            // PO / SO / invoice number or amount, OR-ed (lib/orderSearch).
+            const filter = buildOrderSearchOr(searchTerm);
+            if (filter) query = query.or(filter);
+          }
         }
+        const { data, error: orderError } = await query
+          .order('created_at', { ascending: false })
+          .order('id')
+          .range(from, from + 999);
+        if (orderError) throw orderError;
+        all.push(...((data ?? []) as Order[]));
+        if (!data || data.length < 1000) break;
       }
-
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
-      const { data, error: orderError, count } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
-      if (orderError) throw orderError;
-
-      setTotalOrders(count || 0);
-      setOrders(data || []);
+      setOrders(all);
     } catch (err: any) {
       setError(err.message || 'Failed to load orders.');
     } finally {
@@ -159,8 +187,19 @@ export default function ClientOrdersListView() {
     }
   }
 
+  const visibleExternals =
+    statusFilter && statusFilter !== BILLED_EXTERNALLY
+      ? []
+      : externals.filter((x) => matchesSearch(searchTerm, { number: x.invoiceNumber, date: x.date, total: x.total }));
+  const rows: Row[] = [
+    ...orders.map((order): Row => ({ kind: 'order', at: order.created_at, order })),
+    // Invoice dates sort with order timestamps at noon UTC, the invoice's day.
+    ...visibleExternals.map((sale): Row => ({ kind: 'external', at: `${sale.date}T12:00:00Z`, sale })),
+  ].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+  const totalOrders = rows.length;
   const totalPages = Math.max(1, Math.ceil(totalOrders / pageSize));
-  const showEmpty = !loading && orders.length === 0;
+  const pageRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const showEmpty = !loading && rows.length === 0;
 
   return (
     <div className="px-6 py-8">
@@ -267,73 +306,17 @@ export default function ClientOrdersListView() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders.map((order) => (
-                  <TableRow
-                    key={order.id}
-                    className="cursor-pointer"
-                    onClick={() => router.push(`/client/orders/${order.id}`)}
-                  >
-                    <TableCell className="font-mono text-sm">
-                      <div className="max-w-[160px] sm:max-w-none">
-                        <div className="truncate">
-                          {order.po_number || order.id.substring(0, 6)}
-                        </div>
-                        <div className="md:hidden mt-1 font-sans">
-                          <div className="text-[11px] text-muted-foreground">
-                            {new Date(order.created_at).toLocaleDateString()}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center gap-1.5 flex-wrap">
-                        <StatusBadge status={displayOrderStatus(order as any)} />
-                        <HoldBadge hold={(order as any).hold} />
-                      </span>
-                    </TableCell>
-                    <TableCell
-                      className={`text-right font-mono text-sm ${
-                        order.status === 'Cancelled' ? 'text-muted-foreground line-through' : ''
-                      }`}
-                    >
-                      ${(order.total_value || 0).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-right">
-                      {order.support_fund_used > 0 ? (
-                        <SupportFundBadge
-                          percent={Math.round(
-                            (order.support_fund_used / Math.max(1, order.total_value)) * 100
-                          )}
-                          amount={`$${order.support_fund_used.toFixed(2)}`}
-                        />
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                      {new Date(order.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" aria-label="Row actions">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => router.push(`/client/orders/${order.id}`)}
-                          >
-                            <Eye className="h-4 w-4 mr-2" /> View
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {pageRows.map((row) =>
+                  row.kind === 'external' ? (
+                    <ExternalSaleRow
+                      key={`x-${row.sale.id}`}
+                      sale={row.sale}
+                      onOpen={() => router.push(`/client/orders/external/${row.sale.id}`)}
+                    />
+                  ) : (
+                    <OrderRow key={row.order.id} order={row.order} onOpen={() => router.push(`/client/orders/${row.order.id}`)} />
+                  )
+                )}
               </TableBody>
             </Table>
 
@@ -354,5 +337,97 @@ export default function ClientOrdersListView() {
         )}
       </Card>
     </div>
+  );
+}
+
+function OrderRow({ order, onOpen }: { order: Order; onOpen: () => void }) {
+  return (
+    <TableRow className="cursor-pointer" onClick={onOpen}>
+      <TableCell className="font-mono text-sm">
+        <div className="max-w-[160px] sm:max-w-none">
+          <div className="truncate">{order.po_number || order.id.substring(0, 6)}</div>
+          <div className="md:hidden mt-1 font-sans">
+            <div className="text-[11px] text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</div>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <span className="inline-flex items-center gap-1.5 flex-wrap">
+          <StatusBadge status={displayOrderStatus(order as any)} />
+          <HoldBadge hold={(order as any).hold} />
+        </span>
+      </TableCell>
+      <TableCell
+        className={`text-right font-mono text-sm ${order.status === 'Cancelled' ? 'text-muted-foreground line-through' : ''}`}
+      >
+        {money(order.total_value || 0)}
+      </TableCell>
+      <TableCell className="hidden lg:table-cell text-right">
+        {order.support_fund_used > 0 ? (
+          <SupportFundBadge
+            percent={Math.round((order.support_fund_used / Math.max(1, order.total_value)) * 100)}
+            amount={`$${order.support_fund_used.toFixed(2)}`}
+          />
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+        {new Date(order.created_at).toLocaleDateString()}
+      </TableCell>
+      <TableCell onClick={(e) => e.stopPropagation()}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Row actions">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onOpen}>
+              <Eye className="h-4 w-4 mr-2" /> View
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+/** An invoice billed externally — read-only, opens its detail page. */
+function ExternalSaleRow({ sale, onOpen }: { sale: ExternalSale; onOpen: () => void }) {
+  return (
+    <TableRow className="cursor-pointer" onClick={onOpen}>
+      <TableCell className="font-mono text-sm">
+        <div className="max-w-[160px] sm:max-w-none">
+          <div className="truncate">{sale.invoiceNumber}</div>
+          <div className="md:hidden mt-1 font-sans text-[11px] text-muted-foreground">{invoiceDay(sale.date)}</div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge variant="outline">Billed Externally</Badge>
+      </TableCell>
+      <TableCell className="text-right font-mono text-sm">
+        {money(sale.total)}
+        {sale.credits ? (
+          <div className="text-[11px] text-muted-foreground font-sans">credit −{money(Math.abs(sale.credits))}</div>
+        ) : null}
+      </TableCell>
+      <TableCell className="hidden lg:table-cell text-right">
+        {sale.supportFund > 0 ? (
+          <SupportFundBadge
+            percent={Math.round((sale.supportFund / Math.max(1, sale.total + sale.supportFund)) * 100)}
+            amount={money(sale.supportFund)}
+          />
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{invoiceDay(sale.date)}</TableCell>
+      <TableCell onClick={(e) => e.stopPropagation()}>
+        <Button variant="ghost" size="icon" aria-label="View" onClick={onOpen}>
+          <Eye className="h-4 w-4" />
+        </Button>
+      </TableCell>
+    </TableRow>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildOrderSearchOr, parseSearchAmount, parseSearchDate, sanitizeSearchTerm } from '@/lib/orderSearch';
+import { buildOrderSearchOr, matchesSearch, parseSearchAmount, parseSearchDate, sanitizeSearchTerm } from '@/lib/orderSearch';
 
 describe('order search', () => {
   it('identifiers with digits are NOT treated as amounts (the bug)', () => {
@@ -40,5 +40,19 @@ describe('order search', () => {
   it('strips characters that would break the filter; empty → no filter', () => {
     expect(sanitizeSearchTerm(' A(1),"x"* ')).toBe('A 1 x');
     expect(buildOrderSearchOr('(),')).toBe('');
+  });
+});
+
+describe('matchesSearch (rows that are not Hub orders)', () => {
+  const row = { number: 'INVIL10927', date: '2026-03-05', total: 1704.5 };
+  it('matches the document number, the day, or the amount', () => {
+    expect(matchesSearch('', row)).toBe(true);
+    expect(matchesSearch('il10927', row)).toBe(true);
+    expect(matchesSearch('2026-03-05', row)).toBe(true);
+    expect(matchesSearch('3/5/2026', row)).toBe(true);
+    expect(matchesSearch('$1,704.50', row)).toBe(true);
+    expect(matchesSearch('1704', row)).toBe(false);
+    expect(matchesSearch('2026-03-06', row)).toBe(false);
+    expect(matchesSearch('INVUS', row)).toBe(false);
   });
 });

@@ -5,7 +5,7 @@
  * Performance report. Agreement span, every target period (year) with its
  * pace, to-date totals, and a windowed view (this/last month, this/last
  * year, custom) of sales, units, and the products the company buys.
- * All revenue is Done-based + historical — matching the report.
+ * Sales = the sales_entries definition (Hub orders + approved NetSuite) — matching the report.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -127,8 +127,9 @@ export default function CompanyPerformancePage() {
           )}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          Revenue counts orders when they were marked Done (plus historical sales) — same definition
-          as the Company Performance report and target periods.
+          Sales count Hub orders once they&apos;re Done or paid in full, plus NetSuite invoices billed externally
+          and credits approved on the NetSuite review page — same definition as the Company Performance report
+          and target periods.
         </p>
       </div>
 
