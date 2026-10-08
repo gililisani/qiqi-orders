@@ -1,19 +1,22 @@
 'use client';
 
 /**
- * Sales (NetSuite) for one company — the sales ledger next to the Hub.
+ * NetSuite review for one company (owner 2026-10-08: Hub first).
  *
- * What NetSuite actually billed this customer (invoices, credit memos, cash
- * sales; mirrored nightly, read-only) and how it lines up with Hub orders:
- * which orders are fully billed, partly billed (backorders / price
- * differences) or not billed yet, and which sales happened outside the Hub.
- * Documents dated before the client's agreement never count toward targets.
+ * Nothing from NetSuite counts toward the client's sales until an admin
+ * decides here. Invoices NetSuite links to a Hub order (same sales order)
+ * need no decision; everything else waits in "To review":
+ *   invoices with no Hub order → add to sales / attach to a Hub order / ignore
+ *   credits (never support funds) → attach to an order / record for the
+ *   company / ignore
+ * Every decision shows who made it and when, and can be undone. The rules
+ * live in lib/salesLedger/review.ts.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronRight, MoreHorizontal, RefreshCw } from 'lucide-react';
 
 import { fetchWithAuth } from '../../../../../lib/fetchWithAuth';
 import { formatCurrency, formatDate, formatDateTime } from '../../../../../lib/formatters';
@@ -23,92 +26,52 @@ import { Badge } from '../../../../components/qq/badge';
 import { Button } from '../../../../components/qq/button';
 import { Alert, AlertDescription } from '../../../../components/qq/alert';
 import { EmptyState } from '../../../../components/qq/empty-state';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../components/qq/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/qq/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../../../components/qq/dropdown-menu';
 import { useToast } from '../../../../components/ui/ToastProvider';
-
-type OrderState = 'billed' | 'partly_billed' | 'billed_more' | 'not_billed' | 'cancelled_but_billed';
-
-interface LedgerLine {
-  line_no: number;
-  kind: 'product' | 'discount' | 'excluded';
-  sku: string | null;
-  item_name: string | null;
-  quantity: number;
-  amount: number;
-}
-
-interface LedgerDoc {
-  id: string;
-  doc_type: string;
-  tranid: string;
-  doc_date: string;
-  currency: string;
-  totalForeign: number;
-  totalAmount: number;
-  sales_amount: number;
-  support_fund: number;
-  excluded_amount: number;
-  order_id: string | null;
-  po_ref: string | null;
-  memo: string | null;
-  so_tranid: string | null;
-  origin: 'hub' | 'outside_hub';
-  beforeAgreement: boolean;
-  suggestedOrder: { id: string; poNumber: string } | null;
-  lines: LedgerLine[];
-}
-
-interface Payload {
-  company: { id: string; name: string; netsuiteNumber: string | null; linked: boolean; contractDate: string | null };
-  historyStartDate: string | null;
-  sync: { last_synced_at: string | null; last_error: string | null; document_count: number } | null;
-  totals: {
-    sales: number;
-    salesSinceAgreement: number;
-    salesBeforeAgreement: number;
-    outsideHub: number;
-    supportFund: number;
-    unbilledHubOrders: number;
-  };
-  orders: Array<{
-    orderId: string;
-    poNumber: string | null;
-    status: string;
-    hubTotal: number;
-    billed: number;
-    difference: number;
-    documents: string[];
-    state: OrderState;
-  }>;
-  documents: LedgerDoc[];
-}
+import { DocumentLines } from '../../../../components/admin/netsuiteReview/DocumentLines';
+import { AttachDialog, type AttachChoice } from '../../../../components/admin/netsuiteReview/AttachDialog';
+import { IgnoreDialog } from '../../../../components/admin/netsuiteReview/IgnoreDialog';
+import {
+  DOC_TYPE,
+  isCredit,
+  type OrderState,
+  type ReviewDecision,
+  type ReviewDocument,
+  type ReviewPayload,
+} from '../../../../components/admin/netsuiteReview/types';
 
 const STATE: Record<OrderState, { label: string; variant: 'success' | 'warning' | 'muted' | 'destructive' }> = {
   billed: { label: 'Billed', variant: 'success' },
-  partly_billed: { label: 'Partly billed', variant: 'warning' },
+  partly_billed: { label: 'Billed less', variant: 'warning' },
   billed_more: { label: 'Billed more', variant: 'warning' },
   not_billed: { label: 'Not billed yet', variant: 'muted' },
   cancelled_but_billed: { label: 'Cancelled but billed', variant: 'destructive' },
 };
 
-const DOC_TYPE: Record<string, string> = {
-  invoice: 'Invoice',
-  credit_memo: 'Credit memo',
-  cash_sale: 'Cash sale',
-  cash_refund: 'Cash refund',
-};
-
 const money = (n: number) => (n < 0 ? `−${formatCurrency(-n)}` : formatCurrency(n));
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-export default function CompanySalesLedgerPage() {
+export default function NetSuiteReviewPage() {
   const params = useParams<{ id: string }>();
   const companyId = params?.id as string;
   const toast = useToast();
-  const [data, setData] = useState<Payload | null>(null);
+  const [data, setData] = useState<ReviewPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState('review');
   const [open, setOpen] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [attachDoc, setAttachDoc] = useState<ReviewDocument | null>(null);
+  const [ignoreIds, setIgnoreIds] = useState<string[]>([]);
 
   const load = async () => {
     setLoading(true);
@@ -151,16 +114,121 @@ export default function CompanySalesLedgerPage() {
     }
   };
 
-  const toggle = (id: string) =>
-    setOpen((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const decide = async (ids: string[], decision: ReviewDecision, extra: Record<string, string> = {}) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetchWithAuth(`/api/sales-ledger/company/${companyId}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentIds: ids, decision, ...extra }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Failed to save.');
+      toast.success(`${json.saved} document${json.saved === 1 ? '' : 's'} decided.`);
+      setSelected(new Set());
+      setAttachDoc(null);
+      setIgnoreIds([]);
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+      setAttachDoc(null);
+      setIgnoreIds([]);
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  const t = data?.totals;
+  const undo = async (doc: ReviewDocument) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetchWithAuth(`/api/sales-ledger/company/${companyId}/review`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentIds: [doc.id] }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Failed to undo.');
+      toast.success(`${doc.tranid} is back in To review.`);
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggle = (set: Set<string>, id: string) => {
+    const next = new Set(set);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  };
+
+  const docs = useMemo(() => data?.documents ?? [], [data]);
+  const toReview = docs.filter((d) => d.status === 'to_review');
+  const invoices = toReview.filter((d) => !isCredit(d.docType));
+  const credits = toReview.filter((d) => isCredit(d.docType));
+  const decided = useMemo(
+    () => docs.filter((d) => d.status === 'decided').sort((a, b) => (a.review!.decidedAt < b.review!.decidedAt ? 1 : -1)),
+    [docs]
+  );
+  const nothing = docs.filter((d) => d.status === 'nothing_to_count');
+  const ordersToCheck = (data?.orders ?? []).filter(
+    (o) => o.state === 'partly_billed' || o.state === 'billed_more' || o.state === 'cancelled_but_billed'
+  ).length;
+  const poById = new Map((data?.orders ?? []).map((o) => [o.orderId, o.poNumber]));
+  const tranidById = new Map(docs.map((d) => [d.id, d.tranid]));
   const contract = data?.company.contractDate ?? null;
+  const allSelected = invoices.length > 0 && invoices.every((d) => selected.has(d.id));
+
+  const decisionText = (d: ReviewDocument) => {
+    const r = d.review!;
+    if (r.decision === 'outside_sale') return 'Added to sales (billed externally)';
+    if (r.decision === 'company_credit') return 'Credit recorded for the company';
+    if (r.decision === 'ignore') return `Ignored — ${r.reason}`;
+    if (r.orderId) return `Attached to Hub order ${poById.get(r.orderId) || '—'}`;
+    return `Attached to ${tranidById.get(r.attachedDocumentId ?? '') ?? 'an invoice'} (billed externally)`;
+  };
+
+  const docCell = (d: ReviewDocument) => (
+    <>
+      <span className="font-mono whitespace-nowrap">{d.tranid}</span>
+      <div className="flex flex-wrap gap-1 mt-1">
+        {d.docType !== 'invoice' && <Badge variant="outline">{DOC_TYPE[d.docType] ?? d.docType}</Badge>}
+        {contract && d.date < contract && <Badge variant="muted">Before agreement</Badge>}
+        {d.currency !== 'USD' && (
+          <Badge variant="muted">
+            {d.currency} {formatCurrency(d.totalForeign, false)}
+          </Badge>
+        )}
+      </div>
+    </>
+  );
+
+  const expandRow = (d: ReviewDocument, colSpan: number) =>
+    open.has(d.id) && (
+      <TableRow>
+        <TableCell />
+        <TableCell colSpan={colSpan} className="bg-muted/30">
+          <DocumentLines doc={d} />
+        </TableCell>
+      </TableRow>
+    );
+
+  const chevron = (d: ReviewDocument) => (
+    <button type="button" className="text-muted-foreground" onClick={() => setOpen((s) => toggle(s, d.id))} aria-label="Show lines">
+      {open.has(d.id) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+    </button>
+  );
+
+  const suggestionNote = (d: ReviewDocument) =>
+    d.suggestion && (
+      <p className="text-xs text-emerald-700 mt-1">
+        Likely {d.suggestion.kind === 'order' ? `Hub order ${d.suggestion.label}` : d.suggestion.label} ({d.suggestion.why})
+      </p>
+    );
 
   return (
     <div className="px-6 py-8 space-y-6">
@@ -174,7 +242,7 @@ export default function CompanySalesLedgerPage() {
       </div>
 
       <PageHeader
-        title="Sales (NetSuite)"
+        title="NetSuite review"
         description={
           data
             ? `${data.company.name}${data.company.netsuiteNumber ? ` · NetSuite #${data.company.netsuiteNumber}` : ''}`
@@ -192,11 +260,10 @@ export default function CompanySalesLedgerPage() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
       {data && !data.company.linked && (
         <Alert>
           <AlertDescription>
-            This company has no NetSuite customer ID, so its NetSuite sales can&apos;t be read. Add it on the
+            This company has no NetSuite customer ID, so its NetSuite documents can&apos;t be read. Add it on the
             company&apos;s edit page.
           </AlertDescription>
         </Alert>
@@ -204,7 +271,7 @@ export default function CompanySalesLedgerPage() {
       {data && data.company.linked && !data.historyStartDate && (
         <Alert>
           <AlertDescription>
-            The sales sync is off until a history start date is set in{' '}
+            The NetSuite sync is off until a history start date is set in{' '}
             <Link href="/admin/settings?tab=sales" className="underline">
               Settings → Sales
             </Link>
@@ -213,216 +280,372 @@ export default function CompanySalesLedgerPage() {
         </Alert>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        Everything NetSuite billed this customer since {data?.historyStartDate ? formatDate(data.historyStartDate) : '—'}
-        , whether or not it started as a Hub order. Amounts are products only, in USD.
-        {contract ? ` Agreement since ${formatDate(contract)} — earlier sales never count toward targets.` : ' No agreement date — nothing counts toward targets.'}
+      <p className="text-sm text-muted-foreground">
+        The Hub comes first: nothing from NetSuite counts toward this client&apos;s sales until it&apos;s decided here.
+        Invoices NetSuite links to a Hub order need no decision. Credits never touch support funds. Decisions don&apos;t
+        change any report yet. Amounts are products only, in USD.
         {data?.sync?.last_synced_at ? ` Last synced ${formatDateTime(data.sync.last_synced_at)}.` : ' Not synced yet.'}
         {data?.sync?.last_error ? ` Last sync failed: ${data.sync.last_error}` : ''}
       </p>
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-        <Tile label="Sales since agreement" value={t ? money(t.salesSinceAgreement) : '—'} />
-        <Tile label="Before agreement" value={t ? money(t.salesBeforeAgreement) : '—'} sub="not in targets" />
-        <Tile label="Sold outside the Hub" value={t ? money(t.outsideHub) : '—'} />
-        <Tile label="Support funds redeemed" value={t ? money(t.supportFund) : '—'} />
-        <Tile label="Hub orders not yet billed" value={t ? money(t.unbilledHubOrders) : '—'} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Tile
+          label="To review"
+          value={data ? String(data.counts.toReviewInvoices + data.counts.toReviewCredits) : '—'}
+          sub={data ? `${plural(data.counts.toReviewInvoices, 'invoice')} · ${plural(data.counts.toReviewCredits, 'credit')}` : undefined}
+        />
+        <Tile label="Added to sales" value={data ? money(data.decidedTotals.outsideSales) : '—'} sub="billed externally" />
+        <Tile label="Credits recorded" value={data ? money(data.decidedTotals.credits) : '—'} sub="attached or for the company" />
+        <Tile label="Hub orders to check" value={data ? String(ordersToCheck) : '—'} sub="billed less, more, or cancelled" />
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Hub orders vs NetSuite billing</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Partly billed = NetSuite has invoiced less than the Hub order (a backorder still open, or a price
-            difference).
-          </p>
-        </CardHeader>
-        <CardContent className="px-0 pb-0">
-          {data && data.orders.length === 0 ? (
-            <p className="text-sm text-muted-foreground px-6 pb-4">No Hub orders.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order</TableHead>
-                  <TableHead className="hidden md:table-cell">Hub status</TableHead>
-                  <TableHead className="text-right">Hub total</TableHead>
-                  <TableHead className="text-right">Billed</TableHead>
-                  <TableHead className="text-right hidden md:table-cell">Difference</TableHead>
-                  <TableHead>Billing</TableHead>
-                  <TableHead className="hidden lg:table-cell">NetSuite documents</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(data?.orders ?? []).map((o) => (
-                  <TableRow key={o.orderId}>
-                    <TableCell className="text-sm font-medium">
-                      <Link href={`/admin/orders/${o.orderId}`} className="hover:underline">
-                        {o.poNumber || '—'}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{o.status}</TableCell>
-                    <TableCell className="text-right tabular-nums text-sm">{money(o.hubTotal)}</TableCell>
-                    <TableCell className="text-right tabular-nums text-sm">{o.documents.length ? money(o.billed) : '—'}</TableCell>
-                    <TableCell className="text-right tabular-nums text-sm hidden md:table-cell">
-                      {o.documents.length && Math.abs(o.difference) > 0.01 ? money(o.difference) : '—'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={STATE[o.state].variant}>{STATE[o.state].label}</Badge>
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-xs text-muted-foreground font-mono">
-                      {o.documents.join(', ') || '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="review">To review ({toReview.length})</TabsTrigger>
+          <TabsTrigger value="orders">Hub orders ({data?.orders.length ?? 0})</TabsTrigger>
+          <TabsTrigger value="decided">Decided ({decided.length})</TabsTrigger>
+          <TabsTrigger value="nothing">Nothing to count ({nothing.length})</TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">NetSuite documents</CardTitle>
-          <p className="text-sm text-muted-foreground">Click a document to see its lines and what counted.</p>
-        </CardHeader>
-        <CardContent className="px-0 pb-0">
+        {/* ---------------- To review ---------------- */}
+        <TabsContent value="review" className="pt-4 space-y-6">
           {loading && !data ? (
-            <p className="text-sm text-muted-foreground px-6 pb-4">Loading…</p>
-          ) : data && data.documents.length === 0 ? (
-            <div className="px-6 pb-6">
-              <EmptyState title="No documents yet" description="Run a sync to mirror this customer's NetSuite billing." />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8" />
-                  <TableHead>Date</TableHead>
-                  <TableHead>Document</TableHead>
-                  <TableHead>From</TableHead>
-                  <TableHead className="text-right">Sales</TableHead>
-                  <TableHead className="text-right hidden md:table-cell">Support funds</TableHead>
-                  <TableHead className="text-right hidden lg:table-cell">Not counted</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(data?.documents ?? []).map((d) => {
-                  const isOpen = open.has(d.id);
-                  return (
-                    <React.Fragment key={d.id}>
-                      <TableRow className="cursor-pointer" onClick={() => toggle(d.id)}>
-                        <TableCell className="text-muted-foreground">
-                          {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        </TableCell>
-                        <TableCell className="text-sm whitespace-nowrap">{formatDate(d.doc_date)}</TableCell>
-                        <TableCell className="text-sm">
-                          <span className="font-mono">{d.tranid}</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {d.doc_type !== 'invoice' && <Badge variant="outline">{DOC_TYPE[d.doc_type] ?? d.doc_type}</Badge>}
-                            {d.beforeAgreement && <Badge variant="muted">Before agreement</Badge>}
-                            {d.currency !== 'USD' && (
-                              <Badge variant="muted">
-                                {d.currency} {formatCurrency(d.totalForeign, false)}
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {d.order_id ? (
-                            <Link
-                              href={`/admin/orders/${d.order_id}`}
-                              className="hover:underline"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              Hub order{d.so_tranid ? ` · ${d.so_tranid}` : ''}
-                            </Link>
-                          ) : (
-                            <div>
-                              <Badge variant="accent">Outside the Hub</Badge>
-                              {d.suggestedOrder && (
-                                <p className="text-xs text-amber-700 mt-1">
-                                  PO matches Hub order{' '}
-                                  <Link
-                                    href={`/admin/orders/${d.suggestedOrder.id}`}
-                                    className="underline"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {d.suggestedOrder.poNumber}
-                                  </Link>
-                                  , which isn&apos;t linked to NetSuite
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums text-sm">{money(d.sales_amount)}</TableCell>
-                        <TableCell className="text-right tabular-nums text-sm hidden md:table-cell">
-                          {d.support_fund ? money(d.support_fund) : '—'}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums text-sm hidden lg:table-cell text-muted-foreground">
-                          {d.excluded_amount ? money(d.excluded_amount) : '—'}
-                        </TableCell>
-                      </TableRow>
-                      {isOpen && (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : toReview.length === 0 ? (
+            <EmptyState title="Nothing to review" description="Every NetSuite document for this company is decided or linked to a Hub order." />
+          ) : null}
+
+          {invoices.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Invoices with no Hub order ({invoices.length})</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Add to sales when the client bought it outside the Hub. Attach it when it bills a Hub order NetSuite
+                  didn&apos;t link. Ignore it when it shouldn&apos;t count.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                  <span className="text-sm text-muted-foreground">{selected.size} selected</span>
+                  <Button size="sm" disabled={!selected.size || saving} onClick={() => decide(Array.from(selected), 'outside_sale')}>
+                    Add selected to sales
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={!selected.size || saving} onClick={() => setIgnoreIds(Array.from(selected))}>
+                    Ignore selected…
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="px-0 pb-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-8">
+                        <input
+                          type="checkbox"
+                          aria-label="Select all"
+                          checked={allSelected}
+                          onChange={() => setSelected(allSelected ? new Set() : new Set(invoices.map((d) => d.id)))}
+                        />
+                      </TableHead>
+                      <TableHead className="w-8" />
+                      <TableHead>Date</TableHead>
+                      <TableHead>Invoice</TableHead>
+                      <TableHead className="hidden md:table-cell">PO / memo</TableHead>
+                      <TableHead className="text-right">Products</TableHead>
+                      <TableHead className="text-right hidden md:table-cell">Support funds</TableHead>
+                      <TableHead className="text-right">Decide</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invoices.map((d) => (
+                      <React.Fragment key={d.id}>
                         <TableRow>
-                          <TableCell />
-                          <TableCell colSpan={6} className="bg-muted/30">
-                            {d.memo && <p className="text-xs text-muted-foreground mb-2">Memo: {d.memo}</p>}
-                            {d.po_ref && <p className="text-xs text-muted-foreground mb-2">PO: {d.po_ref}</p>}
-                            <table className="w-full text-xs">
-                              <thead>
-                                <tr className="text-muted-foreground">
-                                  <th className="text-left font-normal py-1">Line</th>
-                                  <th className="text-left font-normal py-1">Counts as</th>
-                                  <th className="text-right font-normal py-1">Qty</th>
-                                  <th className="text-right font-normal py-1">Amount (USD)</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {d.lines.map((l) => (
-                                  <tr key={l.line_no} className="border-t border-border/50">
-                                    <td className="py-1">
-                                      <span className="font-mono">{l.sku || '—'}</span>
-                                      {l.item_name && l.item_name !== l.sku && (
-                                        <span className="text-muted-foreground"> · {l.item_name}</span>
-                                      )}
-                                    </td>
-                                    <td className="py-1">
-                                      {l.kind === 'product'
-                                        ? l.amount === 0
-                                          ? 'Sale (free goods)'
-                                          : 'Sale'
-                                        : l.kind === 'discount'
-                                          ? 'Support fund / discount'
-                                          : 'Not counted'}
-                                    </td>
-                                    <td className="py-1 text-right tabular-nums">{l.kind === 'product' ? l.quantity : ''}</td>
-                                    <td className="py-1 text-right tabular-nums">
-                                      {l.kind === 'discount' ? money(Math.abs(l.amount)) : money(l.amount)}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Document total {money(d.totalAmount)}
-                              {d.excluded_amount ? ` − not counted ${money(d.excluded_amount)}` : ''} = sales{' '}
-                              {money(d.sales_amount)}. Support-fund lines show the value redeemed; the reduction is
-                              already inside the document total.
-                            </p>
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              aria-label={`Select ${d.tranid}`}
+                              checked={selected.has(d.id)}
+                              onChange={() => setSelected((s) => toggle(s, d.id))}
+                            />
+                          </TableCell>
+                          <TableCell>{chevron(d)}</TableCell>
+                          <TableCell className="text-sm whitespace-nowrap">{formatDate(d.date)}</TableCell>
+                          <TableCell className="text-sm">
+                            {docCell(d)}
+                            {suggestionNote(d)}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-xs text-muted-foreground max-w-[16rem] truncate">
+                            {[d.poRef, d.memo].filter(Boolean).join(' · ') || '—'}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-sm">{money(d.sales)}</TableCell>
+                          <TableCell className="text-right tabular-nums text-sm hidden md:table-cell">
+                            {d.supportFund ? money(d.supportFund) : '—'}
+                          </TableCell>
+                          <TableCell className="text-right whitespace-nowrap">
+                            <Button size="sm" variant="outline" disabled={saving} onClick={() => decide([d.id], 'outside_sale')}>
+                              Add to sales
+                            </Button>
+                            <RowMenu
+                              items={[
+                                { label: 'Attach to a Hub order…', onSelect: () => setAttachDoc(d) },
+                                { label: 'Ignore…', onSelect: () => setIgnoreIds([d.id]) },
+                              ]}
+                            />
                           </TableCell>
                         </TableRow>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                        {expandRow(d, 7)}
+                      </React.Fragment>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+
+          {credits.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Credits ({credits.length})</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Attach each credit to the order it credits; it lowers that order&apos;s value. When it covers more than
+                  one order, record it for the company. Support funds are never touched.
+                </p>
+              </CardHeader>
+              <CardContent className="px-0 pb-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-8" />
+                      <TableHead>Date</TableHead>
+                      <TableHead>Credit</TableHead>
+                      <TableHead className="hidden md:table-cell">PO / memo</TableHead>
+                      <TableHead className="text-right">Products</TableHead>
+                      <TableHead className="text-right">Decide</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {credits.map((d) => (
+                      <React.Fragment key={d.id}>
+                        <TableRow>
+                          <TableCell>{chevron(d)}</TableCell>
+                          <TableCell className="text-sm whitespace-nowrap">{formatDate(d.date)}</TableCell>
+                          <TableCell className="text-sm">
+                            {docCell(d)}
+                            {suggestionNote(d)}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-xs text-muted-foreground max-w-[16rem] truncate">
+                            {[d.poRef, d.memo].filter(Boolean).join(' · ') || '—'}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-sm">{money(d.sales)}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">
+                            <Button size="sm" variant="outline" disabled={saving} onClick={() => setAttachDoc(d)}>
+                              Attach…
+                            </Button>
+                            <RowMenu
+                              items={[
+                                { label: 'Record for the company', onSelect: () => decide([d.id], 'company_credit') },
+                                { label: 'Ignore…', onSelect: () => setIgnoreIds([d.id]) },
+                              ]}
+                            />
+                          </TableCell>
+                        </TableRow>
+                        {expandRow(d, 5)}
+                      </React.Fragment>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* ---------------- Hub orders ---------------- */}
+        <TabsContent value="orders" className="pt-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Hub orders and what NetSuite billed</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Billed less = NetSuite invoiced less than the Hub order (an open backorder or a price difference).
+                Credits attached here lower the order&apos;s value.
+              </p>
+            </CardHeader>
+            <CardContent className="px-0 pb-0">
+              {data && data.orders.length === 0 ? (
+                <p className="text-sm text-muted-foreground px-6 pb-4">No Hub orders.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order</TableHead>
+                      <TableHead className="hidden md:table-cell">Status</TableHead>
+                      <TableHead className="text-right">Hub total</TableHead>
+                      <TableHead className="text-right">Billed</TableHead>
+                      <TableHead>Billing</TableHead>
+                      <TableHead className="text-right hidden md:table-cell">Credits</TableHead>
+                      <TableHead className="text-right hidden md:table-cell">After credits</TableHead>
+                      <TableHead className="hidden lg:table-cell">NetSuite</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(data?.orders ?? []).map((o) => (
+                      <TableRow key={o.orderId}>
+                        <TableCell className="text-sm font-medium">
+                          <Link href={`/admin/orders/${o.orderId}`} className="hover:underline">
+                            {o.poNumber || '—'}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{o.status}</TableCell>
+                        <TableCell className="text-right tabular-nums text-sm">{money(o.hubTotal)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-sm">{o.documents.length ? money(o.billed) : '—'}</TableCell>
+                        <TableCell>
+                          <Badge variant={STATE[o.state].variant}>{STATE[o.state].label}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-sm hidden md:table-cell">
+                          {o.credits ? money(o.credits) : '—'}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-sm hidden md:table-cell">
+                          {o.credits ? money(o.valueAfterCredits) : '—'}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-xs text-muted-foreground font-mono">
+                          {[...o.documents, ...o.creditDocuments].join(', ') || '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ---------------- Decided ---------------- */}
+        <TabsContent value="decided" className="pt-4">
+          <Card>
+            <CardContent className="px-0 py-0">
+              {decided.length === 0 ? (
+                <p className="text-sm text-muted-foreground px-6 py-4">No decisions yet.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-8" />
+                      <TableHead>Date</TableHead>
+                      <TableHead>Document</TableHead>
+                      <TableHead className="text-right">Products</TableHead>
+                      <TableHead>Decision</TableHead>
+                      <TableHead className="hidden md:table-cell">By</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {decided.map((d) => (
+                      <React.Fragment key={d.id}>
+                        <TableRow>
+                          <TableCell>{chevron(d)}</TableCell>
+                          <TableCell className="text-sm whitespace-nowrap">{formatDate(d.date)}</TableCell>
+                          <TableCell className="text-sm">{docCell(d)}</TableCell>
+                          <TableCell className="text-right tabular-nums text-sm">
+                            {money(d.sales)}
+                            {d.creditsAttached ? (
+                              <span className="block text-xs text-muted-foreground">credits {money(d.creditsAttached)}</span>
+                            ) : null}
+                          </TableCell>
+                          <TableCell className="text-sm">{decisionText(d)}</TableCell>
+                          <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                            {d.review!.decidedBy ?? '—'}
+                            <span className="block">{formatDateTime(d.review!.decidedAt)}</span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button size="sm" variant="ghost" disabled={saving} onClick={() => undo(d)}>
+                              Undo
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                        {expandRow(d, 6)}
+                      </React.Fragment>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ---------------- Nothing to count ---------------- */}
+        <TabsContent value="nothing" className="pt-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <p className="text-sm text-muted-foreground">
+                NetSuite documents with no Qiqi products and no support funds (private label, shipping-only, $0). They
+                can never count, so they need no decision.
+              </p>
+            </CardHeader>
+            <CardContent className="px-0 pb-0">
+              {nothing.length === 0 ? (
+                <p className="text-sm text-muted-foreground px-6 pb-4">None.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-8" />
+                      <TableHead>Date</TableHead>
+                      <TableHead>Document</TableHead>
+                      <TableHead className="text-right">Document total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {nothing.map((d) => (
+                      <React.Fragment key={d.id}>
+                        <TableRow>
+                          <TableCell>{chevron(d)}</TableCell>
+                          <TableCell className="text-sm whitespace-nowrap">{formatDate(d.date)}</TableCell>
+                          <TableCell className="text-sm">{docCell(d)}</TableCell>
+                          <TableCell className="text-right tabular-nums text-sm">{money(d.totalAmount)}</TableCell>
+                        </TableRow>
+                        {expandRow(d, 3)}
+                      </React.Fragment>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {data && (
+        <AttachDialog
+          doc={attachDoc}
+          targets={data.attachTargets}
+          saving={saving}
+          onClose={() => setAttachDoc(null)}
+          onConfirm={(choice: AttachChoice) => attachDoc && decide([attachDoc.id], 'attach', choice as Record<string, string>)}
+        />
+      )}
+      <IgnoreDialog
+        count={ignoreIds.length}
+        saving={saving}
+        onClose={() => setIgnoreIds([])}
+        onConfirm={(reason) => decide(ignoreIds, 'ignore', { reason })}
+      />
     </div>
+  );
+}
+
+function RowMenu({ items }: { items: Array<{ label: string; onSelect: () => void }> }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" variant="ghost" className="ml-1 px-2" aria-label="More decisions">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {items.map((i) => (
+          <DropdownMenuItem key={i.label} onSelect={i.onSelect}>
+            {i.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

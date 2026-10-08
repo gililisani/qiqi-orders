@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../platform/auth/guards';
 import { reconcileCompany } from '../../../../../lib/salesLedger/reconcile';
+import { isCredit, suggestTarget } from '../../../../../lib/salesLedger/review';
+import { adminNames, loadReviewState, statusesFor } from '../../../../../lib/salesLedger/reviewData';
 
 /**
- * One company's sales ledger next to its Hub orders (distributors:view):
- * documents with their lines, each Hub order's billing state, totals, and
- * the sync status. Read-only.
+ * One company's NetSuite review (distributors:view): every NetSuite document
+ * with its review status and decision, the Hub orders with what NetSuite
+ * billed and credited against them, and the targets an admin can attach
+ * documents to. Read-only.
  */
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
@@ -13,46 +16,71 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     await requireAdminWithPermission(request, 'distributors:view');
     const supabase = createServiceRoleClient();
 
-    const [companyRes, ordersRes, docsRes, syncRes, settingsRes] = await Promise.all([
+    const [companyRes, syncRes, settingsRes, state] = await Promise.all([
       supabase
         .from('companies')
         .select('id, company_name, netsuite_number, netsuite_internal_id, contract_execution_date')
         .eq('id', id)
         .maybeSingle(),
-      supabase
-        .from('orders')
-        .select('id, po_number, status, total_value, created_at')
-        .eq('company_id', id)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('sales_documents')
-        .select(
-          'id, doc_type, tranid, doc_date, currency, total_foreign, total_amount, sales_amount, excluded_amount, support_fund, order_id, po_ref, memo, so_tranid, netsuite_id, ' +
-            'lines:sales_document_lines(line_no, kind, sku, item_name, quantity, amount)'
-        )
-        .eq('company_id', id)
-        .order('doc_date', { ascending: false })
-        .range(0, 4999),
       supabase.from('sales_company_sync').select('*').eq('company_id', id).maybeSingle(),
       supabase.from('sales_settings').select('history_start_date').eq('id', 1).maybeSingle(),
+      loadReviewState(supabase, [id], { withLines: true }),
     ]);
-    for (const r of [companyRes, ordersRes, docsRes, syncRes, settingsRes]) {
+    for (const r of [companyRes, syncRes, settingsRes]) {
       if (r.error) throw new Error(r.error.message);
     }
     if (!companyRes.data) return NextResponse.json({ error: 'Company not found' }, { status: 404 });
 
-    const documents = (docsRes.data ?? []) as any[];
+    const { docs, orders, reviews } = state;
+    const statuses = statusesFor(docs, orders, reviews);
+    const names = await adminNames(supabase, Array.from(reviews.values()).map((r) => r.decided_by ?? ''));
+    const byId = new Map(docs.map((d) => [d.id, d]));
+
+    // Billing per Hub order: invoices NetSuite linked (same sales order) plus
+    // invoices an admin attached; credits attached reduce the order's value.
+    const billingDocs = docs
+      .filter((d) => !isCredit(d.doc_type))
+      .map((d) => {
+        const r = reviews.get(d.id);
+        const orderId = r?.decision === 'attach' && r.order_id ? r.order_id : statuses.get(d.id) === 'auto' ? d.order_id : null;
+        return { ...d, order_id: orderId };
+      });
     const recon = reconcileCompany({
       contractDate: companyRes.data.contract_execution_date ?? null,
-      orders: (ordersRes.data ?? []) as any[],
-      documents: documents.map((d) => ({
-        ...d,
-        sales_amount: Number(d.sales_amount),
-        support_fund: Number(d.support_fund),
-        excluded_amount: Number(d.excluded_amount),
-      })),
+      orders: orders as any[],
+      documents: billingDocs as any[],
     });
-    const extraById = new Map(documents.map((d) => [d.id, d]));
+    const creditsByOrder = new Map<string, { amount: number; documents: string[] }>();
+    const creditsByOutsideSale = new Map<string, { amount: number; documents: string[] }>();
+    for (const r of reviews.values()) {
+      const d = byId.get(r.document_id);
+      if (!d || !isCredit(d.doc_type) || r.decision !== 'attach') continue;
+      const map = r.order_id ? creditsByOrder : creditsByOutsideSale;
+      const key = (r.order_id ?? r.attached_document_id)!;
+      const entry = map.get(key) ?? { amount: 0, documents: [] };
+      entry.amount += d.sales_amount;
+      entry.documents.push(d.tranid);
+      map.set(key, entry);
+    }
+
+    const counts = { toReviewInvoices: 0, toReviewCredits: 0, toReviewAmount: 0, decided: 0, auto: 0, nothingToCount: 0 };
+    for (const d of docs) {
+      const s = statuses.get(d.id)!;
+      if (s === 'to_review') {
+        if (isCredit(d.doc_type)) counts.toReviewCredits += 1;
+        else counts.toReviewInvoices += 1;
+        counts.toReviewAmount += d.sales_amount;
+      } else if (s === 'decided') counts.decided += 1;
+      else if (s === 'auto') counts.auto += 1;
+      else counts.nothingToCount += 1;
+    }
+    const decidedTotals = { outsideSales: 0, credits: 0 };
+    for (const r of reviews.values()) {
+      const d = byId.get(r.document_id);
+      if (!d) continue;
+      if (r.decision === 'outside_sale') decidedTotals.outsideSales += d.sales_amount;
+      if (isCredit(d.doc_type) && (r.decision === 'attach' || r.decision === 'company_credit')) decidedTotals.credits += d.sales_amount;
+    }
 
     return NextResponse.json({
       company: {
@@ -64,21 +92,62 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       },
       historyStartDate: settingsRes.data?.history_start_date ?? null,
       sync: syncRes.data ?? null,
-      totals: recon.totals,
-      orders: recon.orders,
-      documents: recon.documents.map((d) => {
-        const raw = extraById.get(d.id);
+      counts,
+      decidedTotals,
+      orders: recon.orders.map((o) => {
+        const credits = creditsByOrder.get(o.orderId);
         return {
-          ...d,
-          netsuiteId: raw?.netsuite_id ?? null,
-          totalForeign: Number(raw?.total_foreign ?? 0),
-          totalAmount: Number(raw?.total_amount ?? 0),
-          lines: ((raw?.lines ?? []) as any[]).sort((a, b) => a.line_no - b.line_no),
+          ...o,
+          credits: credits?.amount ?? 0,
+          creditDocuments: credits?.documents ?? [],
+          valueAfterCredits: o.hubTotal + (credits?.amount ?? 0),
         };
       }),
+      documents: docs.map((d) => {
+        const r = reviews.get(d.id) ?? null;
+        const credits = creditsByOutsideSale.get(d.id);
+        return {
+          id: d.id,
+          docType: d.doc_type,
+          tranid: d.tranid,
+          date: d.doc_date,
+          currency: d.currency,
+          totalForeign: d.total_foreign,
+          totalAmount: d.total_amount,
+          sales: d.sales_amount,
+          supportFund: d.support_fund,
+          excluded: d.excluded_amount,
+          poRef: d.po_ref,
+          memo: d.memo,
+          soTranid: d.so_tranid,
+          linkedOrderId: d.order_id,
+          suggestion: statuses.get(d.id) === 'to_review' ? suggestTarget(d, orders, docs) : null,
+          status: statuses.get(d.id),
+          review: r
+            ? {
+                decision: r.decision,
+                orderId: r.order_id,
+                attachedDocumentId: r.attached_document_id,
+                reason: r.reason,
+                decidedBy: r.decided_by ? names.get(r.decided_by) ?? 'Admin' : null,
+                decidedAt: r.decided_at,
+              }
+            : null,
+          creditsAttached: credits?.amount ?? 0,
+          lines: d.lines ?? [],
+        };
+      }),
+      attachTargets: {
+        orders: orders
+          .filter((o) => o.status !== 'Draft' && o.status !== 'Cancelled')
+          .map((o) => ({ id: o.id, poNumber: o.po_number, status: o.status, total: Number(o.total_value) || 0, createdAt: o.created_at })),
+        outsideSales: docs
+          .filter((d) => reviews.get(d.id)?.decision === 'outside_sale')
+          .map((d) => ({ id: d.id, tranid: d.tranid, date: d.doc_date, sales: d.sales_amount })),
+      },
     });
   } catch (err: any) {
     if (err instanceof Response) return err;
-    return NextResponse.json({ error: err?.message || 'Failed to load the sales ledger.' }, { status: 500 });
+    return NextResponse.json({ error: err?.message || 'Failed to load the NetSuite review.' }, { status: 500 });
   }
 }

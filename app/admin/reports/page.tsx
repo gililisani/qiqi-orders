@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ArrowRight, BarChart3, Boxes, Building2, PiggyBank } from 'lucide-react';
+import { ArrowRight, BarChart3, Boxes, Building2, PiggyBank, Receipt } from 'lucide-react';
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 import { formatCurrency, formatNumber } from '../../../lib/formatters';
 import { PageHeader } from '../../components/qq/page-header';
@@ -59,6 +59,12 @@ const OTHER_REPORTS = [
     description: 'Pivot any dimension × any other, with CSV/XLSX export',
     href: '/admin/reports/sales-explorer',
     icon: BarChart3,
+  },
+  {
+    name: 'NetSuite Review',
+    description: 'NetSuite invoices and credits waiting for a decision, per company',
+    href: '/admin/reports/netsuite-review',
+    icon: Receipt,
   },
 ];
 

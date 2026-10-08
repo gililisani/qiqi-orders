@@ -261,7 +261,7 @@ export default function CompanyViewPage() {
             </Link>
             <Link href={`/admin/companies/${company.id}/sales`}>
               <Button variant="outline" size="sm">
-                <Receipt className="h-4 w-4" /> Sales (NetSuite)
+                <Receipt className="h-4 w-4" /> NetSuite review
               </Button>
             </Link>
             <Link href={`/admin/companies/${company.id}/historical-sales`}>
