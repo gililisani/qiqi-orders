@@ -130,7 +130,7 @@ export default function ExecutiveDashboardPage() {
           deltaPct={data?.kpis.activePartners.deltaPct ?? null}
         />
         <KpiCard
-          label="Avg Invoice Value"
+          label="Avg Order Value"
           value={loading || !data ? '—' : formatCurrency(data.kpis.aov.value)}
           deltaPct={data?.kpis.aov.deltaPct ?? null}
         />
@@ -147,7 +147,7 @@ export default function ExecutiveDashboardPage() {
           <CardHeader className="flex-row items-baseline justify-between space-y-0 pb-2">
             <CardTitle>Sales trend</CardTitle>
             <span className="text-xs text-muted-foreground">
-              Daily, billed by NetSuite (credit memos subtract)
+              Daily, committed orders only
             </span>
           </CardHeader>
           <CardContent>
@@ -178,7 +178,7 @@ export default function ExecutiveDashboardPage() {
               columns={[
                 { header: 'Company', key: 'name' },
                 {
-                  header: 'Invoices',
+                  header: 'Orders',
                   key: 'orders',
                   align: 'right',
                   render: (r) => formatNumber(r.orders),

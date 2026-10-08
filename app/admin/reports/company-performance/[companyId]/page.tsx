@@ -127,21 +127,15 @@ export default function CompanyPerformancePage() {
           )}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          Sales are what NetSuite billed (invoices minus credit memos, products only), dated by the
-          invoice — whether or not the order came through the Hub. Same definition as the Company
-          Performance report and target periods. Support funds are what Hub orders earned and
-          claimed when placed (counted when Done), plus what was redeemed on invoices billed outside
-          the Hub; before the client&apos;s first Hub order, earnings are estimated at their %.
-          {data && data.toDate.salesBeforeAgreement !== 0 && (
-            <> Billed before the agreement (not in targets): {money(data.toDate.salesBeforeAgreement)}.</>
-          )}
+          Revenue counts orders when they were marked Done (plus historical sales) — same definition
+          as the Company Performance report and target periods.
         </p>
       </div>
 
       {/* To-date tiles */}
       <div className={`grid grid-cols-2 ${isEnrolled ? 'lg:grid-cols-5' : 'lg:grid-cols-2'} gap-3 sm:gap-4`}>
         <Tile label="Total sales to date" value={loading && !data ? '—' : money(data?.toDate.sales ?? 0)} />
-        <Tile label="Invoices to date" value={loading && !data ? '—' : String(data?.toDate.invoices ?? 0)} />
+        <Tile label="Orders to date" value={loading && !data ? '—' : String(data?.toDate.orders ?? 0)} />
         {isEnrolled && (
           <>
             <Tile label="SF earned to date" value={loading && !data ? '—' : money(data?.toDate.sfEarned ?? 0)} />
@@ -252,7 +246,7 @@ export default function CompanyPerformancePage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Tile label="Sales" value={loading ? '—' : money(data?.window.sales ?? 0)} />
-            <Tile label="Invoices" value={loading ? '—' : String(data?.window.invoices ?? 0)} />
+            <Tile label="Orders" value={loading ? '—' : String(data?.window.orders ?? 0)} />
             <Tile label="Units" value={loading ? '—' : String(data?.window.units ?? 0)} />
             <Tile label="Distinct products" value={loading ? '—' : String(data?.window.productCount ?? 0)} />
           </div>
@@ -261,7 +255,7 @@ export default function CompanyPerformancePage() {
             <p className="text-sm font-semibold mb-2">Top products in period</p>
             <TopTable
               rows={data?.window.topProducts ?? []}
-              emptyMessage={loading ? 'Loading…' : 'Nothing billed in this period.'}
+              emptyMessage={loading ? 'Loading…' : 'No Done orders in this period.'}
               columns={[
                 { header: '#', key: 'rank', width: 'w-8', render: (row: any) => (data?.window.topProducts ?? []).indexOf(row) + 1 },
                 { header: 'Product', key: 'name', render: (row: any) => row.name ?? '—' },

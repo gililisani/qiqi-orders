@@ -7,6 +7,10 @@
  * document is linked to the Hub order whose sales order billed it (falling
  * back to the order's recorded invoice). Read-only towards the ERP.
  *
+ * A mirror only: no report reads it (owner 2026-10-08 — Hub first; sales
+ * from NetSuite count only after an admin approves them). It feeds the
+ * company Sales (NetSuite) page.
+ *
  * Not atomic per company (PostgREST): a failure mid-company leaves that
  * company partly written and recorded in sales_company_sync.last_error; the
  * next run repairs it (everything is idempotent).
@@ -16,13 +20,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { NetSuiteAPI } from '../netsuite';
 import { buildLedgerDocument, toSalesRule, type CatalogProduct, type ErpDocument, type LedgerDocument, type SalesRule } from './classify';
 import { fetchErpDocuments } from './netsuite';
-import { recalculateCompanyTargetPeriods } from '../targetPeriods';
 
 export interface SyncSummary {
   skipped?: string;
   companies: number;
-  targetsRecalculated: number;
-  reportsRefreshed: boolean;
   documents: number;
   lines: number;
   removed: number;
@@ -93,8 +94,6 @@ export async function syncSalesLedger(
   const started = Date.now();
   const summary: SyncSummary = {
     companies: 0,
-    targetsRecalculated: 0,
-    reportsRefreshed: false,
     documents: 0,
     lines: 0,
     removed: 0,
@@ -213,22 +212,6 @@ export async function syncSalesLedger(
         .upsert({ company_id: companyId, last_error: message.slice(0, 500) });
     }
   }
-
-  // The ledger drives targets and the executive dashboard — bring them in
-  // line with what was just synced.
-  for (const company of companies) {
-    const companyId = String(company.id);
-    if (summary.errors.some((e) => e.companyId === companyId)) continue;
-    try {
-      await recalculateCompanyTargetPeriods(supabase, companyId);
-      summary.targetsRecalculated += 1;
-    } catch (err: any) {
-      summary.errors.push({ companyId, company: String(company.company_name), error: `targets: ${String(err?.message || err)}` });
-    }
-  }
-  const { error: refreshError } = await supabase.rpc('refresh_executive_reports');
-  if (refreshError) summary.errors.push({ companyId: '', company: 'Executive dashboard', error: refreshError.message });
-  else summary.reportsRefreshed = true;
 
   summary.durationMs = Date.now() - started;
   return summary;

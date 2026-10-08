@@ -4,12 +4,12 @@ import {
   requireAdminWithPermission,
 } from '../../../../platform/auth/guards';
 import {
+  buildSfUsedByOrder,
   computePeriodMetrics,
   computeSfBehaviorDistribution,
   fetchRevenueInputs,
-  type LedgerSale,
   type PeriodStatus,
-  type SfEvent,
+  type RevenueInputs,
 } from '../../../../lib/companyPerformance';
 
 /**
@@ -24,11 +24,16 @@ import {
  * per-company drill-down and target-period recalculation use the same
  * builder, so every view agrees.
  *
- * Revenue = the sales ledger (what NetSuite billed, dated by document).
- * Support funds = the support_fund_events view: what Hub orders earned and
- * claimed when placed (counted when Done), plus NetSuite-only invoices.
- * Balance = earned − used: positive → leftover (under-redeemed), negative →
- * top-up.
+ * Support-fund semantics (important — see useOrderFormController.ts):
+ *   `orders.support_fund_used` is CAPPED at `orders.credit_earned`, so
+ *   it can never directly reveal a top-up. What the client actually
+ *   claimed lives in the SF line items — `order_items.total_price`
+ *   where `is_support_fund_item = true`. That sum is the canonical
+ *   "credit used" from the user's perspective, and balance is:
+ *       balance = credit_earned − credit_claimed
+ *   Positive → leftover (under-redeemed). Negative → top-up
+ *   (client claimed more SF products than they earned and paid the
+ *   difference). Zero → exact match.
  *
  * Companies whose `companies.support_fund_id` is NULL are flagged
  * `isEnrolled = false` and excluded from SF KPIs / SF behavior — they
@@ -127,7 +132,7 @@ export async function GET(request: NextRequest) {
     let periodsQuery = supabase
       .from('target_periods')
       .select(
-        'id, company_id, period_name, start_date, end_date, target_amount, company:companies(id, company_name, netsuite_number, subsidiary_id, support_fund_id)',
+        'id, company_id, period_name, start_date, end_date, target_amount, company:companies(id, company_name, netsuite_number, subsidiary_id, support_fund_id, support_fund:support_fund_levels(percent))',
       )
       .order('end_date', { ascending: true });
 
@@ -163,30 +168,40 @@ export async function GET(request: NextRequest) {
     // ---- Batched inputs: fixed query count regardless of period count ----
     const companyIds = Array.from(new Set(periods.map((p: any) => p.company_id)));
     const inputs = await fetchRevenueInputs(supabase, companyIds);
+    const sfUsedByOrder = buildSfUsedByOrder(inputs.sfItems);
 
-    const salesByCompany = new Map<string, LedgerSale[]>();
-    for (const sale of inputs.sales) {
-      const list = salesByCompany.get(sale.company_id) ?? [];
-      list.push(sale);
-      salesByCompany.set(sale.company_id, list);
+    const ordersByCompany = new Map<string, RevenueInputs['doneOrders']>();
+    for (const o of inputs.doneOrders) {
+      const list = ordersByCompany.get(o.company_id) ?? [];
+      list.push(o);
+      ordersByCompany.set(o.company_id, list);
     }
-    const sfEventsByCompany = new Map<string, SfEvent[]>();
-    for (const e of inputs.sfEvents) {
-      const list = sfEventsByCompany.get(e.company_id) ?? [];
-      list.push(e);
-      sfEventsByCompany.set(e.company_id, list);
+    const historicalByCompany = new Map<string, RevenueInputs['historical']>();
+    for (const h of inputs.historical) {
+      const list = historicalByCompany.get(h.company_id) ?? [];
+      list.push(h);
+      historicalByCompany.set(h.company_id, list);
     }
 
     // ---- Per-period rows (pure — no queries) ----
+    const sfPercentByCompany = new Map<string, number>();
     const rows: PeriodRow[] = periods.map((p: any) => {
       const company = Array.isArray(p.company) ? p.company[0] : p.company;
       const isEnrolled = company?.support_fund_id != null;
+      const sfl = Array.isArray(company?.support_fund)
+        ? company?.support_fund[0]
+        : company?.support_fund;
+      const sfPercent = Number(sfl?.percent) || 0;
+      if (isEnrolled) sfPercentByCompany.set(p.company_id, sfPercent);
 
       const m = computePeriodMetrics(
         now,
         p,
-        salesByCompany.get(p.company_id) ?? [],
-        sfEventsByCompany.get(p.company_id) ?? [],
+        ordersByCompany.get(p.company_id) ?? [],
+        inputs.firstDone,
+        sfUsedByOrder,
+        historicalByCompany.get(p.company_id) ?? [],
+        sfPercent,
       );
 
       return {
@@ -219,7 +234,14 @@ export async function GET(request: NextRequest) {
     const enrolledPeriods = periods.filter(
       (p: any) => companyOptionsMap.get(p.company_id)?.isEnrolled,
     );
-    const sfBehavior = computeSfBehaviorDistribution(enrolledPeriods, inputs.sfEvents);
+    const sfBehavior = computeSfBehaviorDistribution(
+      enrolledPeriods,
+      inputs.doneOrders,
+      inputs.firstDone,
+      sfUsedByOrder,
+      inputs.historical,
+      sfPercentByCompany,
+    );
 
     return NextResponse.json({ rows, kpis, sfBehavior, filterOptions });
   } catch (err: any) {

@@ -1,18 +1,19 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { computePeriodMetrics, fetchRevenueInputs } from './companyPerformance';
+import { SupabaseClient } from '@supabase/supabase-js';
+import {
+  buildSfUsedByOrder,
+  computePeriodMetrics,
+  fetchRevenueInputs,
+} from './companyPerformance';
 
 /**
- * Recalculate `target_periods.current_progress` for one company from the
- * sales ledger (what NetSuite billed in each period — the same math as the
- * Company Performance report, see lib/companyPerformance.ts).
+ * Recalculate and update current_progress for all target periods of a
+ * company. Call this when an order status changes to/from Done.
  *
- * Runs after every sales-ledger sync (nightly + "Sync now") and from the
- * older triggers (order status → Done), which are now harmless no-ops for
- * the number: a Hub order counts when NetSuite bills it, not when it's Done.
- *
- * Throws on any query or write error. Callers fire this as a best-effort
- * follow-up, so they wrap it, but they must never get partial progress
- * written silently.
+ * Batched: a fixed number of queries regardless of period count, via
+ * lib/companyPerformance. THROWS on any fetch/update error instead of
+ * writing zeros — a transient query failure must never persist wrong
+ * progress. The sole caller (the target-periods/recalculate route)
+ * catches and reports.
  */
 export async function recalculateCompanyTargetPeriods(
   supabase: SupabaseClient,
@@ -26,10 +27,19 @@ export async function recalculateCompanyTargetPeriods(
   if (!targetPeriods || targetPeriods.length === 0) return;
 
   const inputs = await fetchRevenueInputs(supabase, [companyId]);
+  const sfUsedByOrder = buildSfUsedByOrder(inputs.sfItems);
   const now = new Date();
 
   for (const period of targetPeriods) {
-    const metrics = computePeriodMetrics(now, period, inputs.sales);
+    const metrics = computePeriodMetrics(
+      now,
+      period,
+      inputs.doneOrders,
+      inputs.firstDone,
+      sfUsedByOrder,
+      inputs.historical
+    );
+
     const { error: updateError } = await supabase
       .from('target_periods')
       .update({ current_progress: metrics.actual })
