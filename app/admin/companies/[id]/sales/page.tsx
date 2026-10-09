@@ -114,18 +114,23 @@ export default function NetSuiteReviewPage() {
     }
   };
 
+  const postDecision = async (ids: string[], decision: ReviewDecision, extra: Record<string, string> = {}) => {
+    const res = await fetchWithAuth(`/api/sales-ledger/company/${companyId}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documentIds: ids, decision, ...extra }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || 'Failed to save.');
+    return Number(json.saved) || 0;
+  };
+
   const decide = async (ids: string[], decision: ReviewDecision, extra: Record<string, string> = {}) => {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(`/api/sales-ledger/company/${companyId}/review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentIds: ids, decision, ...extra }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Failed to save.');
-      toast.success(`${json.saved} document${json.saved === 1 ? '' : 's'} decided.`);
+      const saved = await postDecision(ids, decision, extra);
+      toast.success(`${saved} document${saved === 1 ? '' : 's'} decided.`);
       setSelected(new Set());
       setAttachDoc(null);
       setIgnoreIds([]);
@@ -135,6 +140,39 @@ export default function NetSuiteReviewPage() {
       setAttachDoc(null);
       setIgnoreIds([]);
     } finally {
+      setSaving(false);
+    }
+  };
+
+  /** Credits with a NetSuite link: one click applies what NetSuite says. */
+  const quickAction = (d: ReviewDocument): { label: string; decision: ReviewDecision; extra: Record<string, string> } | null => {
+    const sug = d.suggestion;
+    if (!data || !sug || !isCredit(d.docType)) return null;
+    if (sug.kind === 'order' && sug.id && data.attachTargets.orders.some((o) => o.id === sug.id)) {
+      return { label: `Attach to ${sug.label}`, decision: 'attach', extra: { orderId: sug.id } };
+    }
+    if (sug.kind === 'document' && sug.id && data.attachTargets.outsideSales.some((x) => x.id === sug.id)) {
+      return { label: `Attach to ${sug.label}`, decision: 'attach', extra: { attachedDocumentId: sug.id } };
+    }
+    if (sug.kind === 'ignore') return { label: 'Ignore like its invoice', decision: 'ignore', extra: { reason: sug.label } };
+    return null;
+  };
+
+  const acceptAllSuggestions = async (list: ReviewDocument[]) => {
+    setSaving(true);
+    setError(null);
+    let done = 0;
+    try {
+      for (const d of list) {
+        const q = quickAction(d);
+        if (!q) continue;
+        done += await postDecision([d.id], q.decision, q.extra);
+      }
+      toast.success(`${done} credit${done === 1 ? '' : 's'} decided from NetSuite's links.`);
+    } catch (err: any) {
+      setError(`${done} decided, then: ${err.message}`);
+    } finally {
+      await load();
       setSaving(false);
     }
   };
@@ -223,12 +261,19 @@ export default function NetSuiteReviewPage() {
     </button>
   );
 
-  const suggestionNote = (d: ReviewDocument) =>
-    d.suggestion && (
+  const suggestionNote = (d: ReviewDocument) => {
+    const sug = d.suggestion;
+    if (!sug) return null;
+    if (sug.kind === 'note') return <p className="text-xs text-muted-foreground mt-1">{sug.why}</p>;
+    if (sug.kind === 'ignore') return <p className="text-xs text-amber-700 mt-1">{sug.why} — ignore it too?</p>;
+    const waiting = sug.kind === 'document' && !data?.attachTargets.outsideSales.some((x) => x.id === sug.id);
+    return (
       <p className="text-xs text-emerald-700 mt-1">
-        Likely {d.suggestion.kind === 'order' ? `Hub order ${d.suggestion.label}` : d.suggestion.label} ({d.suggestion.why})
+        Likely {sug.kind === 'order' ? `Hub order ${sug.label}` : sug.label} ({sug.why})
+        {waiting && <span className="text-amber-700"> — add {sug.label} to sales first</span>}
       </p>
     );
+  };
 
   return (
     <div className="px-6 py-8 space-y-6">
@@ -282,8 +327,8 @@ export default function NetSuiteReviewPage() {
 
       <p className="text-sm text-muted-foreground">
         The Hub comes first: nothing from NetSuite counts toward this client&apos;s sales until it&apos;s decided here.
-        Invoices NetSuite links to a Hub order need no decision. Credits never touch support funds. Decisions don&apos;t
-        change any report yet. Amounts are products only, in USD.
+        Invoices NetSuite links to a Hub order need no decision. Credits never touch support funds. Decisions count
+        toward the client&apos;s sales and goals right away. Amounts are products only, in USD.
         {data?.sync?.last_synced_at ? ` Last synced ${formatDateTime(data.sync.last_synced_at)}.` : ' Not synced yet.'}
         {data?.sync?.last_error ? ` Last sync failed: ${data.sync.last_error}` : ''}
       </p>
@@ -408,6 +453,14 @@ export default function NetSuiteReviewPage() {
                   Attach each credit to the order it credits; it lowers that order&apos;s value. When it covers more than
                   one order, record it for the company. Support funds are never touched.
                 </p>
+                {credits.some((d) => quickAction(d)) && (
+                  <div className="pt-2">
+                    <Button size="sm" disabled={saving} onClick={() => acceptAllSuggestions(credits)}>
+                      Accept NetSuite&apos;s link for {credits.filter((d) => quickAction(d)).length} credit
+                      {credits.filter((d) => quickAction(d)).length === 1 ? '' : 's'}
+                    </Button>
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="px-0 pb-0">
                 <Table>
@@ -436,11 +489,21 @@ export default function NetSuiteReviewPage() {
                           </TableCell>
                           <TableCell className="text-right tabular-nums text-sm">{money(d.sales)}</TableCell>
                           <TableCell className="text-right whitespace-nowrap">
-                            <Button size="sm" variant="outline" disabled={saving} onClick={() => setAttachDoc(d)}>
-                              Attach…
-                            </Button>
+                            {(() => {
+                              const q = quickAction(d);
+                              return q ? (
+                                <Button size="sm" variant="outline" disabled={saving} onClick={() => decide([d.id], q.decision, q.extra)}>
+                                  {q.label}
+                                </Button>
+                              ) : (
+                                <Button size="sm" variant="outline" disabled={saving} onClick={() => setAttachDoc(d)}>
+                                  Attach…
+                                </Button>
+                              );
+                            })()}
                             <RowMenu
                               items={[
+                                ...(quickAction(d) ? [{ label: 'Attach to another order…', onSelect: () => setAttachDoc(d) }] : []),
                                 { label: 'Record for the company', onSelect: () => decide([d.id], 'company_credit') },
                                 { label: 'Ignore…', onSelect: () => setIgnoreIds([d.id]) },
                               ]}

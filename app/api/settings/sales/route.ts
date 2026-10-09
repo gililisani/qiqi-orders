@@ -5,12 +5,13 @@ import { toSalesRule } from '../../../../lib/salesLedger/classify';
 /**
  * Settings → Sales: what counts as sales in the sales ledger.
  *
- * GET (config:view) — the rule + per-company sync status.
- * PUT (config:edit) — { historyStartDate, productSkuPrefixes[], discountItemNames[] }.
- *     The ledger re-classifies on the next sync (nightly or "Sync now").
+ * GET (config:view) — the rule, alert emails + per-company sync status.
+ * PUT (config:edit) — { historyStartDate, productSkuPrefixes[], discountItemNames[], alertEmails[] }.
+ *     Documents re-classify on the next sync (nightly or "Sync now").
  */
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function cleanList(value: unknown, field: string): string[] {
   if (!Array.isArray(value)) throw new Error(`${field} must be a list.`);
@@ -30,6 +31,7 @@ async function loadStatus(supabase: ReturnType<typeof createServiceRoleClient>) 
   const syncByCompany = new Map((syncRes.data ?? []).map((s: any) => [String(s.company_id), s]));
   return {
     rule: toSalesRule(settingsRes.data),
+    alertEmails: ((settingsRes.data?.alert_emails ?? []) as string[]),
     updatedAt: settingsRes.data?.updated_at ?? null,
     netsuiteConfigured: !!process.env.NETSUITE_ACCOUNT_ID,
     companies: (companiesRes.data ?? []).map((c: any) => {
@@ -72,6 +74,13 @@ export async function PUT(request: NextRequest) {
         history_start_date: start,
         product_sku_prefixes: cleanList(body?.productSkuPrefixes ?? [], 'Product SKU prefixes').map((p) => p.toUpperCase()),
         discount_item_names: cleanList(body?.discountItemNames ?? [], 'Discount items'),
+        alert_emails: (() => {
+          const list = cleanList(body?.alertEmails ?? [], 'Alert emails').map((e) => e.toLowerCase());
+          const bad = list.find((e) => !EMAIL.test(e));
+          if (bad) throw new Error(`Not an email address: ${bad}`);
+          if (list.length > 10) throw new Error('Alert emails: at most 10.');
+          return list;
+        })(),
         updated_at: new Date().toISOString(),
         updated_by: user.id,
       };

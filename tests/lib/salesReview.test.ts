@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   allowedDecisions,
   reviewStatus,
+  suggestFromNetSuite,
   suggestTarget,
   undoBlockers,
   validateDecision,
@@ -137,3 +138,48 @@ describe('suggestTarget', () => {
     expect(suggestTarget({ id: 'x', doc_type: 'invoice', po_ref: null, memo: null }, orders, docs)).toBeNull();
   });
 });
+
+describe('suggestFromNetSuite', () => {
+  const orders = new Map([
+    ['o1', { po_number: 'P00806', status: 'Done' }],
+    ['o-x', { po_number: 'XX', status: 'Cancelled' }],
+  ]);
+  const docsByNsId = new Map([
+    ['100', { id: 'inv-hub', company_id: 'c1', tranid: 'INVUS15458', order_id: 'o1' }],
+    ['101', { id: 'inv-out', company_id: 'c1', tranid: 'INVIL10927', order_id: null }],
+    ['102', { id: 'inv-ign', company_id: 'c1', tranid: 'INVIL10237', order_id: null }],
+    ['103', { id: 'inv-new', company_id: 'c1', tranid: 'INVIL11000', order_id: null }],
+    ['104', { id: 'inv-c2', company_id: 'c2', tranid: 'INVUS1', order_id: null }],
+  ]);
+  const reviews = new Map<string, any>([
+    ['inv-out', { decision: 'outside_sale', order_id: null, reason: null }],
+    ['inv-ign', { decision: 'ignore', order_id: null, reason: 'Before Engagement' }],
+  ]);
+  const ctx = { docsByNsId, reviews, orders };
+  const credit = (ids: string[], tranids: string[], link = 'created_from') => ({
+    id: 'cm', company_id: 'c1', doc_type: 'credit_memo', credited_invoice_ns_ids: ids, credited_invoice_tranids: tranids, credit_link: link,
+  });
+
+  it('points at the Hub order behind the invoice NetSuite links', () => {
+    expect(suggestFromNetSuite(credit(['100'], ['INVUS15458']), ctx)).toMatchObject({ kind: 'order', id: 'o1', label: 'P00806', why: 'NetSuite: created from INVUS15458' });
+  });
+  it('points at an invoice billed externally; says which link it came through', () => {
+    expect(suggestFromNetSuite(credit(['101'], ['INVIL10927'], 'return_authorization'), ctx)).toMatchObject({
+      kind: 'document', id: 'inv-out', why: 'NetSuite: return authorization on INVIL10927',
+    });
+  });
+  it('suggests ignoring when its invoice was ignored or is outside the Hub history', () => {
+    expect(suggestFromNetSuite(credit(['102'], ['INVIL10237']), ctx)).toMatchObject({ kind: 'ignore', label: 'Credit on ignored invoice INVIL10237 (Before Engagement)' });
+    expect(suggestFromNetSuite(credit(['999'], ['INVIL10194']), ctx)).toMatchObject({ kind: 'ignore' });
+    expect(suggestFromNetSuite(credit(['104'], ['INVUS1']), ctx)).toMatchObject({ kind: 'ignore' }); // another company's invoice
+  });
+  it('an undecided invoice is still the suggestion (add it to sales first)', () => {
+    expect(suggestFromNetSuite(credit(['103'], ['INVIL11000']), ctx)).toMatchObject({ kind: 'document', id: 'inv-new' });
+  });
+  it('several invoices → a note; no link or not a credit → nothing', () => {
+    expect(suggestFromNetSuite(credit(['100', '101'], ['INVUS15458', 'INVIL10927'], 'return_authorization_order'), ctx)).toMatchObject({ kind: 'note' });
+    expect(suggestFromNetSuite(credit([], []), ctx)).toBeNull();
+    expect(suggestFromNetSuite({ ...credit(['100'], ['X']), doc_type: 'invoice' }, ctx)).toBeNull();
+  });
+});
+

@@ -18,7 +18,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { NetSuiteAPI } from '../netsuite';
-import { buildLedgerDocument, toSalesRule, type CatalogProduct, type ErpDocument, type LedgerDocument, type SalesRule } from './classify';
+import { buildLedgerDocument, narrowCreditedInvoices, toSalesRule, type CatalogProduct, type ErpDocument, type LedgerDocument, type SalesRule } from './classify';
 import { fetchErpDocuments } from './netsuite';
 
 export interface SyncSummary {
@@ -144,7 +144,8 @@ export async function syncSalesLedger(
     try {
       const erpDocs: ErpDocument[] = byCustomer.get(String(company.netsuite_internal_id).trim()) ?? [];
       const companyOrders = orders.filter((o) => o.company_id === companyId);
-      const built = erpDocs.map((d) => buildLedgerDocument(d, rule, catalog));
+      const byErpId = new Map(erpDocs.map((d) => [d.erpId, d]));
+      const built = erpDocs.map((d) => buildLedgerDocument(narrowCreditedInvoices(d, byErpId), rule, catalog));
       const now = new Date().toISOString();
 
       const rows = built.map(({ lines, ...doc }) => ({

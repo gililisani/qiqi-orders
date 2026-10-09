@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildLedgerDocument, classifyLine, makeEarnsSupportFund, toSalesRule, type ErpDocument, type ErpLine, type SalesRule } from '@/lib/salesLedger/classify';
+import { buildLedgerDocument, classifyLine, makeEarnsSupportFund, narrowCreditedInvoices, toSalesRule, type ErpDocument, type ErpLine, type SalesRule } from '@/lib/salesLedger/classify';
 import { linkDocumentToOrder } from '@/lib/salesLedger/sync';
 import { reconcileCompany } from '@/lib/salesLedger/reconcile';
-import { fetchErpDocuments } from '@/lib/salesLedger/netsuite';
+import { fetchErpDocuments, traceCreditedInvoices } from '@/lib/salesLedger/netsuite';
 
 const RULE: SalesRule = {
   historyStartDate: '2023-01-01',
@@ -271,6 +271,8 @@ describe('fetchErpDocuments (NetSuite adapter, read-only)', () => {
           { id: '13', type: 'SalesOrd', tranid: 'SO13', trandate: '01/01/2025', foreigntotal: '5', entity: '58392' },
         ];
       }
+      if (q.startsWith('SELECT DISTINCT transaction, createdfrom')) return [{ transaction: '11', createdfrom: '10' }];
+      if (q.startsWith('SELECT id, tranid, type FROM transaction')) return [{ id: '10', tranid: 'INV10', type: 'CustInvc' }];
       if (q.includes('FROM transactionline')) {
         return [
           { transaction: '10', lineid: '2', taxline: 'F', itemid: 'FPS0016', displayname: 'Spray', itemtype: 'Assembly', quantity: '-10', foreignamount: '-100' },
@@ -288,6 +290,8 @@ describe('fetchErpDocuments (NetSuite adapter, read-only)', () => {
     expect(docs[0]).toMatchObject({ type: 'invoice', date: '2026-04-23', soErpId: '99', soTranid: 'SOIL10728' });
     expect(docs[0].lines.map((l) => [l.sku, l.itemType, l.foreignAmount])).toEqual([['FPS0016', 'Assembly', -100], [null, 'Discount', 5]]);
     expect(docs[1]).toMatchObject({ type: 'credit_memo', date: '2025-06-30', currency: 'EUR', exchangeRate: 1.1, poRef: 'PO-9' });
+    expect(docs[1]).toMatchObject({ creditLink: 'created_from', creditedInvoices: [{ erpId: '10', tranid: 'INV10' }] });
+    expect(docs[0].creditedInvoices).toBeUndefined();
     // Read-only: only SELECT queries were issued.
     expect(suiteQLPaged.mock.calls.every(([q]) => String(q).startsWith('SELECT'))).toBe(true);
   });
@@ -296,3 +300,74 @@ describe('fetchErpDocuments (NetSuite adapter, read-only)', () => {
     await expect(fetchErpDocuments({ suiteQLPaged: vi.fn() } as any, [1], "2023-01-01'; --")).rejects.toThrow();
   });
 });
+
+describe('traceCreditedInvoices (NetSuite links, read-only)', () => {
+  // Credits: 21 created from invoice 1; 22 from a Return Authorization (hidden
+  // from the transaction table) made from invoice 2; 23 from a Return
+  // Authorization made from sales order 3, billed in invoices 4 and 5;
+  // 24 has no created-from (only an "applied to" link, which is ignored).
+  const suiteQLPaged = vi.fn(async (q: string) => {
+    if (q.startsWith('SELECT DISTINCT transaction, createdfrom')) {
+      return [
+        { transaction: '21', createdfrom: '1' },
+        { transaction: '22', createdfrom: '901' },
+        { transaction: '23', createdfrom: '902' },
+      ];
+    }
+    if (q.startsWith('SELECT id, tranid, type FROM transaction')) {
+      const all: Record<string, any> = {
+        '1': { id: '1', tranid: 'INV1', type: 'CustInvc' },
+        '2': { id: '2', tranid: 'INV2', type: 'CustInvc' },
+        '3': { id: '3', tranid: 'SO3', type: 'SalesOrd' },
+        '4': { id: '4', tranid: 'INV4', type: 'CustInvc' },
+        '5': { id: '5', tranid: 'INV5', type: 'CustInvc' },
+      }; // 901 / 902 (Return Authorizations) are not readable
+      const ids = q.match(/IN \(([^)]*)\)/)![1].split(',');
+      return ids.map((i) => all[i]).filter(Boolean);
+    }
+    if (q.includes("linktype = 'SaleRet'")) return [{ previousdoc: '2', nextdoc: '901' }, { previousdoc: '3', nextdoc: '902' }];
+    if (q.includes("linktype = 'OrdBill'")) return [{ previousdoc: '3', nextdoc: '4' }, { previousdoc: '3', nextdoc: '5' }];
+    throw new Error(`unexpected query ${q}`);
+  });
+
+  it('follows created-from, Return Authorization → invoice, and Return Authorization → sales order → invoices', async () => {
+    const out = await traceCreditedInvoices({ suiteQLPaged } as any, [21, 22, 23, 24]);
+    expect(out.get('21')).toEqual({ via: 'created_from', invoices: [{ erpId: '1', tranid: 'INV1' }] });
+    expect(out.get('22')).toEqual({ via: 'return_authorization', invoices: [{ erpId: '2', tranid: 'INV2' }] });
+    expect(out.get('23')).toEqual({
+      via: 'return_authorization_order',
+      invoices: [{ erpId: '4', tranid: 'INV4' }, { erpId: '5', tranid: 'INV5' }],
+    });
+    expect(out.has('24')).toBe(false); // "applied to" links are never used
+    expect(suiteQLPaged.mock.calls.every(([q]) => String(q).startsWith('SELECT'))).toBe(true);
+  });
+});
+
+describe('narrowCreditedInvoices', () => {
+  const inv = (erpId: string, skus: string[]) =>
+    doc({ erpId, tranid: erpId, lines: skus.map((s) => line(s, 'Assembly', -1, -10)) });
+  const credit = doc({
+    erpId: 'cm', type: 'credit_memo',
+    lines: [line('FPS0007', 'Assembly', 2, 20)],
+    creditedInvoices: [{ erpId: 'a', tranid: 'INVA' }, { erpId: 'b', tranid: 'INVB' }],
+    creditLink: 'return_authorization_order',
+  });
+
+  it('keeps the one invoice that holds every returned product', () => {
+    const docs = new Map([['a', inv('a', ['FPS0016'])], ['b', inv('b', ['FPS0007', 'FPS0016'])]]);
+    expect(narrowCreditedInvoices(credit, docs).creditedInvoices).toEqual([{ erpId: 'b', tranid: 'INVB' }]);
+  });
+
+  it('leaves the candidates when none or several match', () => {
+    const both = new Map([['a', inv('a', ['FPS0007'])], ['b', inv('b', ['FPS0007'])]]);
+    expect(narrowCreditedInvoices(credit, both).creditedInvoices).toHaveLength(2);
+    expect(narrowCreditedInvoices(credit, new Map()).creditedInvoices).toHaveLength(2);
+  });
+
+  it('the ledger row carries the link', () => {
+    const d = buildLedgerDocument({ ...credit, creditedInvoices: [{ erpId: 'b', tranid: 'INVB' }], foreignTotal: -20 }, RULE, CATALOG);
+    expect(d).toMatchObject({ credited_invoice_ns_ids: ['b'], credited_invoice_tranids: ['INVB'], credit_link: 'return_authorization_order' });
+    expect(buildLedgerDocument(doc({ foreignTotal: 0 }), RULE, CATALOG)).toMatchObject({ credited_invoice_ns_ids: [], credit_link: null });
+  });
+});
+

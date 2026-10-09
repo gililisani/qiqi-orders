@@ -7,11 +7,12 @@
  * date filters need TO_DATE; `type` codes, not recordtype; assembly
  * component sub-lines have NULL amounts and are skipped; invoice → sales
  * order lives in nexttransactionlink (linktype 'OrdBill', previousdoc = SO).
+ * Credits are traced to the invoice they credit (traceCreditedInvoices).
  */
 
 import type { NetSuiteAPI } from '../netsuite';
 import { normalizeNsDate } from '../netsuite';
-import type { ErpDocType, ErpDocument, ErpLine } from './classify';
+import type { CreditLink, ErpDocType, ErpDocument, ErpLine } from './classify';
 
 const TYPE_MAP: Record<string, ErpDocType> = {
   CustInvc: 'invoice',
@@ -100,6 +101,12 @@ export async function fetchErpDocuments(
     for (const r of rows) soTranid.set(String(r.id), String(r.tranid));
   }
 
+  const creditIds = live
+    .filter((h) => TYPE_MAP[String(h.type)] === 'credit_memo' || TYPE_MAP[String(h.type)] === 'cash_refund')
+    .map((h) => Number(h.id))
+    .filter(Number.isFinite);
+  const credited = await traceCreditedInvoices(ns, creditIds);
+
   for (const h of live) {
     const id = String(h.id);
     const date = normalizeNsDate(h.trandate);
@@ -119,10 +126,112 @@ export async function fetchErpDocuments(
       soErpId: so,
       soTranid: so ? soTranid.get(so) ?? null : null,
       lines: (linesByDoc.get(id) ?? []).sort((a, b) => a.lineNo - b.lineNo),
+      creditedInvoices: credited.get(id)?.invoices,
+      creditLink: credited.get(id)?.via ?? null,
     };
     const key = String(h.entity);
     if (!byCustomer.has(key)) byCustomer.set(key, []);
     byCustomer.get(key)!.push(doc);
   }
   return byCustomer;
+}
+
+const LINK_STRENGTH: Record<CreditLink, number> = { created_from: 3, return_authorization: 2, return_authorization_order: 1 };
+
+/**
+ * The invoice(s) each credit memo / refund credits, from NetSuite's own links
+ * (none of this shows on NetSuite's screens):
+ *  - line-level createdfrom → an invoice ("created from"), or
+ *  - → a Return Authorization (this account's integration role can't read
+ *    RtnAuth records, but the link INTO them is readable: linktype 'SaleRet'
+ *    from the invoice or sales order it was made from) → that invoice, or
+ *    that sales order's invoices (linktype 'OrdBill').
+ * "Applied to" (Payment links) is deliberately ignored — credits are often
+ * applied to a later, unrelated invoice. Read-only.
+ */
+export async function traceCreditedInvoices(
+  ns: Pick<NetSuiteAPI, 'suiteQLPaged'>,
+  creditIds: number[]
+): Promise<Map<string, { via: CreditLink; invoices: Array<{ erpId: string; tranid: string }> }>> {
+  const out = new Map<string, { via: CreditLink; invoices: Array<{ erpId: string; tranid: string }> }>();
+  if (creditIds.length === 0) return out;
+
+  // 1. What each credit was created from.
+  const createdFrom = new Map<string, Set<string>>(); // credit → source ids
+  for (const part of chunks(creditIds, CHUNK)) {
+    const rows = await ns.suiteQLPaged<Record<string, any>>(
+      `SELECT DISTINCT transaction, createdfrom FROM transactionline ` +
+        `WHERE transaction IN (${part.join(',')}) AND createdfrom IS NOT NULL`
+    );
+    for (const r of rows) {
+      const key = String(r.transaction);
+      if (!createdFrom.has(key)) createdFrom.set(key, new Set());
+      createdFrom.get(key)!.add(String(r.createdfrom));
+    }
+  }
+
+  const docs = new Map<string, { tranid: string; type: string }>();
+  const resolve = async (ids: string[]) => {
+    const missing = ids.filter((i) => !docs.has(i));
+    for (const part of chunks(missing, 500)) {
+      const rows = await ns.suiteQLPaged<Record<string, any>>(
+        `SELECT id, tranid, type FROM transaction WHERE id IN (${part.join(',')})`
+      );
+      for (const r of rows) docs.set(String(r.id), { tranid: String(r.tranid ?? r.id), type: String(r.type ?? '') });
+    }
+  };
+  await resolve([...new Set([...createdFrom.values()].flatMap((v) => [...v]))]);
+
+  // 2. Return Authorizations (unreadable here, or typed RtnAuth) → what they came from.
+  const raIds = [...new Set([...createdFrom.values()].flatMap((v) => [...v]))].filter((i) => {
+    const t = docs.get(i)?.type;
+    return !t || t === 'RtnAuth';
+  });
+  const raSource = new Map<string, string>();
+  for (const part of chunks(raIds, CHUNK)) {
+    const rows = await ns.suiteQLPaged<Record<string, any>>(
+      `SELECT previousdoc, nextdoc FROM nexttransactionlink WHERE nextdoc IN (${part.join(',')}) AND linktype = 'SaleRet'`
+    );
+    for (const r of rows) if (!raSource.has(String(r.nextdoc))) raSource.set(String(r.nextdoc), String(r.previousdoc));
+  }
+  await resolve([...new Set(raSource.values())]);
+
+  // 3. Sales orders behind those → their invoices.
+  const soIds = [...new Set(raSource.values())].filter((i) => docs.get(i)?.type === 'SalesOrd');
+  const soInvoices = new Map<string, string[]>();
+  for (const part of chunks(soIds, CHUNK)) {
+    const rows = await ns.suiteQLPaged<Record<string, any>>(
+      `SELECT previousdoc, nextdoc FROM nexttransactionlink WHERE previousdoc IN (${part.join(',')}) AND linktype = 'OrdBill'`
+    );
+    for (const r of rows) {
+      const key = String(r.previousdoc);
+      if (!soInvoices.has(key)) soInvoices.set(key, []);
+      soInvoices.get(key)!.push(String(r.nextdoc));
+    }
+  }
+  await resolve([...new Set([...soInvoices.values()].flat())]);
+
+  for (const [credit, sources] of createdFrom) {
+    let via: CreditLink | null = null;
+    const invoices = new Map<string, string>();
+    const take = (link: CreditLink, ids: string[]) => {
+      for (const i of ids) if (docs.get(i)?.type === 'CustInvc') invoices.set(i, docs.get(i)!.tranid);
+      if (ids.some((i) => docs.get(i)?.type === 'CustInvc') && (!via || LINK_STRENGTH[link] > LINK_STRENGTH[via])) via = link;
+    };
+    for (const src of sources) {
+      const type = docs.get(src)?.type;
+      if (type === 'CustInvc') take('created_from', [src]);
+      else if (!type || type === 'RtnAuth') {
+        const origin = raSource.get(src);
+        if (!origin) continue;
+        const originType = docs.get(origin)?.type;
+        if (originType === 'CustInvc') take('return_authorization', [origin]);
+        else if (originType === 'SalesOrd') take('return_authorization_order', soInvoices.get(origin) ?? []);
+      }
+    }
+    if (via && invoices.size) {
+      out.set(credit, { via, invoices: [...invoices].map(([erpId, tranid]) => ({ erpId, tranid })) });
+    }
+  }
+  return out;
 }

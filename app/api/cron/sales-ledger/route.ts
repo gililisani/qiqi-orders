@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '../../../../platform/auth/guards';
 import { createNetSuiteAPI } from '../../../../lib/netsuite';
 import { syncSalesLedger } from '../../../../lib/salesLedger/sync';
+import { runReviewAlerts } from '../../../../lib/salesLedger/alerts';
 
 // Route-level export: vercel.json maxDuration is not honored for Next routes.
 export const maxDuration = 300;
 
 /**
  * Nightly (vercel.json): mirror every linked customer's NetSuite billing
- * documents into the sales ledger. Read-only towards NetSuite.
+ * documents for the NetSuite review page (read-only towards NetSuite), then
+ * email what's new to review (lib/salesLedger/alerts — once per item).
  */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -25,7 +27,17 @@ export async function GET(request: NextRequest) {
     console.log(
       `[cron/sales-ledger] ${summary.skipped ?? `${summary.companies} companies, ${summary.documents} documents, ${summary.removed} removed`} in ${summary.durationMs}ms`
     );
-    return NextResponse.json({ success: true, ...summary });
+    let alerts: unknown = null;
+    if (!summary.skipped) {
+      try {
+        alerts = await runReviewAlerts(createServiceRoleClient());
+        console.log('[cron/sales-ledger] alerts:', JSON.stringify(alerts));
+      } catch (err: any) {
+        alerts = { error: err?.message ?? String(err) };
+        console.error('[cron/sales-ledger] alerts failed:', err);
+      }
+    }
+    return NextResponse.json({ success: true, ...summary, alerts });
   } catch (err: any) {
     console.error('[cron/sales-ledger] error:', err);
     return NextResponse.json({ error: err?.message || 'Sync failed' }, { status: 500 });

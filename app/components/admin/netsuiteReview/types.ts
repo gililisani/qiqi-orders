@@ -28,7 +28,9 @@ export interface ReviewDocument {
   memo: string | null;
   soTranid: string | null;
   linkedOrderId: string | null;
-  suggestion: { kind: 'order' | 'document'; id: string; label: string; why: string } | null;
+  /** order / document: attach there; ignore: ignore it (label = the reason); note: information only. */
+  suggestion: { kind: 'order' | 'document' | 'ignore' | 'note'; id?: string; label: string; why: string } | null;
+  creditedInvoices?: string[]; // credits: the invoice(s) NetSuite links them to
   status: ReviewStatus;
   review: {
     decision: ReviewDecision;

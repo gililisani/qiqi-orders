@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdminWithPermission } from '../../../../../platform/auth/guards';
 import { reconcileCompany } from '../../../../../lib/salesLedger/reconcile';
-import { isCredit, suggestTarget } from '../../../../../lib/salesLedger/review';
+import { isCredit, suggestFromNetSuite, suggestTarget } from '../../../../../lib/salesLedger/review';
 import { adminNames, loadReviewState, statusesFor } from '../../../../../lib/salesLedger/reviewData';
 
 /**
@@ -82,6 +82,12 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       if (isCredit(d.doc_type) && (r.decision === 'attach' || r.decision === 'company_credit')) decidedTotals.credits += d.sales_amount;
     }
 
+    // NetSuite's own credit → invoice links (traced by the sync) beat memo / PO guesses.
+    const linkCtx = {
+      docsByNsId: new Map(docs.map((d) => [d.netsuite_id, d])),
+      reviews,
+      orders: new Map(orders.map((o) => [o.id, o])),
+    };
     return NextResponse.json({
       company: {
         id: companyRes.data.id,
@@ -121,7 +127,8 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
           memo: d.memo,
           soTranid: d.so_tranid,
           linkedOrderId: d.order_id,
-          suggestion: statuses.get(d.id) === 'to_review' ? suggestTarget(d, orders, docs) : null,
+          suggestion: statuses.get(d.id) === 'to_review' ? suggestFromNetSuite(d, linkCtx) ?? suggestTarget(d, orders, docs) : null,
+          creditedInvoices: d.credited_invoice_tranids ?? [],
           status: statuses.get(d.id),
           review: r
             ? {

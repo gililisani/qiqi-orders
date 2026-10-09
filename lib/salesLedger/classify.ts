@@ -35,6 +35,8 @@
  */
 
 export type ErpDocType = 'invoice' | 'credit_memo' | 'cash_sale' | 'cash_refund';
+/** How NetSuite links a credit to the invoice it credits (see netsuite.ts traceCreditedInvoices). */
+export type CreditLink = 'created_from' | 'return_authorization' | 'return_authorization_order';
 export type LineKind = 'product' | 'discount' | 'excluded';
 
 export interface SalesRule {
@@ -67,6 +69,9 @@ export interface ErpDocument {
   soErpId: string | null;
   soTranid: string | null;
   lines: ErpLine[];
+  /** Credits only: the invoice(s) NetSuite links the credit to, and how. */
+  creditedInvoices?: Array<{ erpId: string; tranid: string }>;
+  creditLink?: CreditLink | null;
 }
 
 export interface LedgerLine {
@@ -103,6 +108,9 @@ export interface LedgerDocument {
   po_ref: string | null;
   memo: string | null;
   ns_status: string | null;
+  credited_invoice_ns_ids: string[];
+  credited_invoice_tranids: string[];
+  credit_link: CreditLink | null;
   lines: LedgerLine[];
 }
 
@@ -216,8 +224,32 @@ export function buildLedgerDocument(
     po_ref: doc.poRef?.trim() || null,
     memo: doc.memo?.trim() || null,
     ns_status: doc.status,
+    credited_invoice_ns_ids: (doc.creditedInvoices ?? []).map((i) => i.erpId),
+    credited_invoice_tranids: (doc.creditedInvoices ?? []).map((i) => i.tranid),
+    credit_link: doc.creditedInvoices?.length ? doc.creditLink ?? null : null,
     lines,
   };
+}
+
+/**
+ * When NetSuite points a credit at several invoices (a Return Authorization
+ * on a sales order billed in more than one invoice), keep the one invoice
+ * that holds every product the credit returns — if exactly one does.
+ * Otherwise the candidates stay as they are (the admin picks).
+ */
+export function narrowCreditedInvoices(credit: ErpDocument, docsByErpId: Map<string, ErpDocument>): ErpDocument {
+  const candidates = credit.creditedInvoices ?? [];
+  if (candidates.length < 2) return credit;
+  const skusOf = (d: ErpDocument) => new Set(d.lines.map((l) => norm(l.sku)).filter(Boolean));
+  const returned = skusOf(credit);
+  if (returned.size === 0) return credit;
+  const holding = candidates.filter((c) => {
+    const inv = docsByErpId.get(c.erpId);
+    if (!inv) return false;
+    const sold = skusOf(inv);
+    return [...returned].every((sku) => sold.has(sku));
+  });
+  return holding.length === 1 ? { ...credit, creditedInvoices: holding } : credit;
 }
 
 export function toSalesRule(row: any): SalesRule {

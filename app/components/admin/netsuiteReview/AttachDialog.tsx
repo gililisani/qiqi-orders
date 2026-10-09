@@ -36,7 +36,8 @@ export function AttachDialog({
 
   useEffect(() => {
     setQuery('');
-    setPicked(doc?.suggestion ? `${doc.suggestion.kind === 'order' ? 'o' : 'd'}:${doc.suggestion.id}` : null);
+    const sug = doc?.suggestion;
+    setPicked(sug && sug.id && (sug.kind === 'order' || sug.kind === 'document') ? `${sug.kind === 'order' ? 'o' : 'd'}:${sug.id}` : null);
   }, [doc]);
 
   const credit = doc ? isCredit(doc.docType) : false;
@@ -109,7 +110,7 @@ export function AttachDialog({
         </div>
         {credit && doc?.suggestion?.kind === 'document' && !targets.outsideSales.some((s) => s.id === doc.suggestion!.id) && (
           <p className="text-xs text-amber-700">
-            The memo names {doc.suggestion.label}, which isn’t added to sales yet — add it first, then attach this credit.
+            {doc.suggestion.why}: {doc.suggestion.label} isn’t added to sales yet — add it first, then attach this credit.
           </p>
         )}
         <DialogFooter>

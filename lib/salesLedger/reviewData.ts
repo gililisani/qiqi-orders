@@ -24,6 +24,9 @@ export interface LoadedDoc extends ReviewDoc {
   memo: string | null;
   so_tranid: string | null;
   netsuite_id: string;
+  credited_invoice_ns_ids: string[];
+  credited_invoice_tranids: string[];
+  credit_link: string | null;
   lines?: Array<{ line_no: number; kind: string; sku: string | null; item_name: string | null; quantity: number; amount: number }>;
 }
 
@@ -59,7 +62,7 @@ async function selectAll<T>(build: (from: number, to: number) => PromiseLike<{ d
 }
 
 const DOC_COLUMNS =
-  'id, company_id, doc_type, tranid, doc_date, currency, total_foreign, total_amount, sales_amount, excluded_amount, support_fund, order_id, po_ref, memo, so_tranid, netsuite_id';
+  'id, company_id, doc_type, tranid, doc_date, currency, total_foreign, total_amount, sales_amount, excluded_amount, support_fund, order_id, po_ref, memo, so_tranid, netsuite_id, credited_invoice_ns_ids, credited_invoice_tranids, credit_link';
 
 /** Documents, orders and decisions for a set of companies (all of them when `companyIds` is null). */
 export async function loadReviewState(

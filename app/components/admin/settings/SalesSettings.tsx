@@ -1,11 +1,12 @@
 'use client';
 
 /**
- * Settings → Sales: what counts as sales in the sales ledger (mirrored from
- * NetSuite billing), how far back history goes, and the sync status per
- * company. Hub catalog products always count; prefixes add items outside
- * the catalog (e.g. discontinued versions); everything that is neither a
- * product nor a discount (shipping, fees, services…) is excluded.
+ * Settings → Sales: how NetSuite documents are read for the NetSuite review
+ * page (what counts as a product, how far back), who gets the nightly review
+ * alert, and the sync status per company. Hub catalog products always count;
+ * prefixes add items outside the catalog (e.g. discontinued versions);
+ * everything that is neither a product nor a discount (shipping, fees,
+ * services…) is left out.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -33,6 +34,7 @@ interface CompanyStatus {
 
 interface StatePayload {
   rule: { historyStartDate: string | null; productSkuPrefixes: string[]; discountItemNames: string[] };
+  alertEmails: string[];
   netsuiteConfigured: boolean;
   companies: CompanyStatus[];
 }
@@ -49,6 +51,7 @@ export function SalesSettings() {
   const [startDate, setStartDate] = useState('');
   const [prefixes, setPrefixes] = useState('');
   const [discounts, setDiscounts] = useState('');
+  const [alertEmails, setAlertEmails] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -59,6 +62,7 @@ export function SalesSettings() {
     setStartDate(json.rule.historyStartDate ?? '');
     setPrefixes(json.rule.productSkuPrefixes.join(', '));
     setDiscounts(json.rule.discountItemNames.join(', '));
+    setAlertEmails((json.alertEmails ?? []).join(', '));
   };
 
   const load = async () => {
@@ -85,7 +89,8 @@ export function SalesSettings() {
     !!data &&
     (startDate !== (data.rule.historyStartDate ?? '') ||
       toList(prefixes).join(',') !== data.rule.productSkuPrefixes.join(',') ||
-      toList(discounts).join(',') !== data.rule.discountItemNames.join(','));
+      toList(discounts).join(',') !== data.rule.discountItemNames.join(',') ||
+      toList(alertEmails).join(',').toLowerCase() !== (data.alertEmails ?? []).join(','));
 
   const save = async () => {
     setSaving(true);
@@ -98,6 +103,7 @@ export function SalesSettings() {
           historyStartDate: startDate || null,
           productSkuPrefixes: toList(prefixes),
           discountItemNames: toList(discounts),
+          alertEmails: toList(alertEmails),
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -149,12 +155,15 @@ export function SalesSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">What counts as sales</CardTitle>
+          <CardTitle className="text-sm">Reading NetSuite documents</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Sales come from NetSuite billing — every invoice, credit memo and cash sale of a linked customer, whether
-            or not it started as a Hub order. A document counts at its total minus everything that is not a product or
-            a discount (shipping, card fees and surcharges, services, other charges). Foreign-currency documents are
-            converted to USD at the rate NetSuite recorded on the document.
+            Every invoice, credit memo and cash sale of a linked customer is read from NetSuite every night for the{' '}
+            <Link href="/admin/reports/netsuite-review" className="underline">
+              NetSuite review
+            </Link>
+            . Nothing counts toward a client&apos;s sales until an admin decides on it there; invoices NetSuite links to a
+            Hub order are recognized automatically. A document&apos;s amount is its products only — shipping, card fees and
+            surcharges, services and other charges are left out — converted to USD at the rate NetSuite recorded.
           </p>
         </CardHeader>
         <CardContent className="space-y-4 max-w-2xl">
@@ -178,6 +187,13 @@ export function SalesSettings() {
             helper="Comma-separated NetSuite item names. Only needed for items that work as discounts but aren't set up as discount items in NetSuite."
           >
             <Input id="sales-discounts" value={discounts} onChange={(e) => setDiscounts(e.target.value)} placeholder="Customer Discount" />
+          </FormField>
+          <FormField
+            label="Alert emails"
+            htmlFor="sales-alerts"
+            helper="Comma-separated. After the nightly sync, these addresses get one email with anything new: NetSuite documents waiting for a decision, Hub orders NetSuite billed differently, and sync failures. Each item is emailed once. Empty = no email."
+          >
+            <Input id="sales-alerts" value={alertEmails} onChange={(e) => setAlertEmails(e.target.value)} placeholder="orders@yourcompany.com" />
           </FormField>
           <div className="flex gap-2">
             <Button onClick={save} disabled={!dirty || saving}>

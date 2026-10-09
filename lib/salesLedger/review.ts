@@ -111,9 +111,11 @@ export function undoBlockers(documentId: string, reviews: ReviewRow[]): string[]
 }
 
 export interface SuggestedTarget {
-  kind: 'order' | 'document';
-  id: string;
-  label: string; // PO number or invoice number
+  /** order / document: attach there. ignore: ignore it (its invoice is
+   *  ignored or outside the Hub's history). note: information only. */
+  kind: 'order' | 'document' | 'ignore' | 'note';
+  id?: string;
+  label: string; // PO number, invoice number, or the reason to reuse
   why: string;
 }
 
@@ -148,4 +150,65 @@ export function suggestTarget(
   }
   const byPo = orders.find((o) => live(o) && norm(o.po_number).length >= 4 && text.includes(norm(o.po_number)));
   return byPo ? { kind: 'order', id: byPo.id, label: String(byPo.po_number), why: `PO ${byPo.po_number}` } : null;
+}
+
+export interface CreditLinkInfo {
+  id: string;
+  company_id: string;
+  doc_type: string;
+  credited_invoice_ns_ids?: string[] | null;
+  credited_invoice_tranids?: string[] | null;
+  credit_link?: string | null;
+}
+
+const LINK_WHY: Record<string, (tranid: string) => string> = {
+  created_from: (t) => `NetSuite: created from ${t}`,
+  return_authorization: (t) => `NetSuite: return authorization on ${t}`,
+  return_authorization_order: (t) => `NetSuite: return authorization on the sales order billed in ${t}`,
+};
+
+/**
+ * What a credit belongs to, from NetSuite's own links (credited_invoice_*,
+ * traced by the sync). Stronger than the memo / PO guess in suggestTarget;
+ * null when NetSuite links the credit to nothing.
+ */
+export function suggestFromNetSuite(
+  credit: CreditLinkInfo,
+  ctx: {
+    docsByNsId: Map<string, { id: string; company_id: string; tranid: string; order_id: string | null }>;
+    reviews: Map<string, Pick<ReviewRow, 'decision' | 'order_id' | 'reason'>>;
+    orders: Map<string, { po_number: string | null; status: string }>;
+  }
+): SuggestedTarget | null {
+  if (!isCredit(credit.doc_type)) return null;
+  const nsIds = credit.credited_invoice_ns_ids ?? [];
+  const tranids = credit.credited_invoice_tranids ?? [];
+  if (!nsIds.length) return null;
+  const why = LINK_WHY[credit.credit_link ?? 'created_from'] ?? LINK_WHY.created_from;
+  if (nsIds.length > 1) {
+    return { kind: 'note', label: tranids.join(' or '), why: why(tranids.join(' or ')) };
+  }
+  const tranid = tranids[0] ?? nsIds[0];
+  const inv = ctx.docsByNsId.get(nsIds[0]);
+  if (!inv || inv.company_id !== credit.company_id) {
+    return { kind: 'ignore', label: `Credits ${tranid}, which is outside the Hub's history`, why: `${why(tranid)}, which is outside the Hub's history` };
+  }
+  const review = ctx.reviews.get(inv.id);
+  const live = (orderId: string | null | undefined) => {
+    const o = orderId ? ctx.orders.get(orderId) : undefined;
+    return o && o.status !== 'Draft' && o.status !== 'Cancelled' ? o : null;
+  };
+  if (review?.decision === 'ignore') {
+    return { kind: 'ignore', label: `Credit on ignored invoice ${tranid}${review.reason ? ` (${review.reason})` : ''}`, why: `${why(tranid)}, which you ignored` };
+  }
+  if (review?.decision === 'attach' && review.order_id && live(review.order_id)) {
+    const o = live(review.order_id)!;
+    return { kind: 'order', id: review.order_id, label: o.po_number || tranid, why: why(tranid) };
+  }
+  if (review?.decision === 'outside_sale') return { kind: 'document', id: inv.id, label: tranid, why: why(tranid) };
+  if (!review && live(inv.order_id)) {
+    return { kind: 'order', id: inv.order_id!, label: live(inv.order_id)!.po_number || tranid, why: why(tranid) };
+  }
+  // Not decided yet: point at the invoice; it has to be added to sales first.
+  return { kind: 'document', id: inv.id, label: tranid, why: why(tranid) };
 }
