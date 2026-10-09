@@ -18,6 +18,7 @@ import {
   PieChart,
   DollarSign,
   LineChart,
+  Receipt,
   Plug,
   Package,
   Building,
@@ -121,6 +122,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Product Insights',     href: '/admin/reports/product-insights',    icon: <PieChart />,   permission: 'insights' },
       { label: 'Support Funds',        href: '/admin/reports/support-funds',       icon: <DollarSign />, permission: 'insights' },
       { label: 'Sales Explorer',       href: '/admin/reports/sales-explorer',      icon: <LineChart />,  permission: 'insights' },
+      { label: 'NetSuite Review',      href: '/admin/reports/netsuite-review',     icon: <Receipt />,    permission: 'insights' },
     ],
   },
   {
