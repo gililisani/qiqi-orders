@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ensureRefunds } from '@/lib/shopify/engine/refund';
-import { PipelineError, type NsApi } from '@/lib/shopify/engine/pipeline';
+import type { NsApi } from '@/lib/shopify/engine/pipeline';
 import { ENGINE_CONFIG } from '@/lib/shopify/engine/config';
 import { buildOrderPlan } from '@/lib/shopify/core/orderTransform';
 import { buildRefundPlans } from '@/lib/shopify/core/refundTransform';
@@ -71,13 +71,17 @@ describe('ensureRefunds', () => {
     expect(Math.round(lines[0].amount * 100)).toBe(2990);
   });
 
-  it('physical return (restock on a fulfilled order) parks for v2', async () => {
+  it('restock ticked on a shipped order (#7459) books the money only, never stock', async () => {
     const { orderPlan, refunds } = load('refunded-full');
-    const { ns, creates } = fakeNs();
-    await expect(
-      ensureRefunds(refunds, orderPlan, '999', ns, ENGINE_CONFIG, { orderHasNsFulfillment: true }),
-    ).rejects.toThrow(PipelineError);
-    expect(creates).toEqual([]);
+    expect(refunds[0].lines.some((l) => l.restock)).toBe(true);
+    const { ns, creates, transforms } = fakeNs();
+    const r = await ensureRefunds(refunds, orderPlan, '999', ns, ENGINE_CONFIG, { orderHasNsFulfillment: true });
+    expect(r.created).toEqual({ creditMemos: 1, refunds: 1 });
+    const lines = creates.find((c) => c.type === 'creditMemo')!.payload.item.items;
+    expect(lines.every((l: any) => l.item.id === ENGINE_CONFIG.refundAdjustmentItemId)).toBe(true);
+    expect(lines[0].description).toBe('Refund · FPS0020 ×1 · restock ticked in Shopify, stock not moved');
+    expect(lines.reduce((s: number, l: any) => s + Math.round(l.amount * 100), 0)).toBe(3890);
+    expect(transforms.find((t) => t.to === 'customerrefund')!.body.account.id).toBe('1019');
   });
 
   it('re-run adopts everything, creates nothing', async () => {

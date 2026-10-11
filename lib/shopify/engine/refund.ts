@@ -9,14 +9,17 @@
  *
  * Keys: CM = SHOPCM-<refundId>, refund = SHOPRFD-<transactionId>.
  *
- * Inventory rule: a CM line with an inventory item FORCES a lot-level
- * restock in NS. So refunded product lines book on the Refund Adjustment
- * item (revenue reversal, no inventory, SKU in the description) whenever
- * inventory must NOT move: order not fulfilled in NS (cancelled before
- * shipping) or Shopify says no restock. Physical returns (restock=true on
- * a fulfilled order) PARK for v2 (lot-level receipt design). Residuals
- * (shipping refunds, amount-only refunds) also book on the adjustment
- * item — one mechanism, CPA re-points the account at will.
+ * Inventory rule: a refund is money only. Refunded product lines always
+ * book on the Refund Adjustment item (revenue reversal, no inventory, SKU
+ * in the description) — never an inventory line, which would FORCE a
+ * lot-level restock in NS. Stock follows the warehouse, not Shopify's
+ * restock tick (2026-10-11): BrandFox's ShipHero shows no return
+ * for any of 2026's nine "restocked" refunds on shipped orders (#7459:
+ * both return requests declined, refund ticked restock). Goods that do
+ * come back show up on the Inventory Check page (ShipHero above NetSuite)
+ * and are corrected there. Residuals (shipping refunds, amount-only
+ * refunds) also book on the adjustment item — one mechanism, CPA
+ * re-points the account at will.
  */
 import { centsToDecimal } from '../core/money';
 import { storeDate } from '../core/dates';
@@ -61,21 +64,16 @@ export async function ensureRefunds(
       const lines: Array<Record<string, unknown>> = [];
       let taxCents = 0;
       for (const l of refund.lines) {
-        if (l.restock && opts.orderHasNsFulfillment) {
-          // Physical return of shipped goods — restocking needs lot-level
-          // receipt (v2). Park loudly rather than book without inventory.
-          throw new PipelineError({
-            code: 'UNSUPPORTED_SOURCE',
-            message: `${refund.orderName} refund ${refund.shopifyRefundId}: physical return with restock — lot-level receipt not implemented yet (v2)`,
-          });
-        }
+        // Shipped goods ticked "restock" in Shopify: say so on the line, so
+        // the bookkeeper sees stock was deliberately not moved.
+        const restockNote = l.restock && opts.orderHasNsFulfillment ? ' · restock ticked in Shopify, stock not moved' : '';
         lines.push({
           item: { id: config.refundAdjustmentItemId },
           quantity: l.quantity,
           price: { id: '-1' },
           rate: Math.round(l.subtotalCents / l.quantity) / 100,
           amount: Number(centsToDecimal(l.subtotalCents)),
-          description: `Refund · ${l.sku ?? 'item'} ×${l.quantity}`,
+          description: `Refund · ${l.sku ?? 'item'} ×${l.quantity}${restockNote}`,
         });
         taxCents += l.taxCents;
       }

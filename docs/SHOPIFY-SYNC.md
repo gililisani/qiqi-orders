@@ -245,6 +245,11 @@ NetScore's prod output) → `live`. NS credentials resolve per mode
 - **Refunds credit the same clearing account as the original payment.**
 - **Restock only when Shopify's refund says restock** (restockType);
   refunds without restock create no NS inventory movement.
+  SUPERSEDED 2026-10-11: a Shopify refund is money only — stock follows
+  the warehouse, never Shopify's restock tick. BrandFox's ShipHero shows
+  no return for any of 2026's nine restock-ticked refunds on shipped
+  orders (#7459: both return requests declined, refund ticked restock).
+  Goods that do come back surface on the Inventory Check page.
 - **Chargebacks**: currently unhandled anywhere — we SHOULD handle them;
   post through 100501. Design into Loop E (payouts report disputes).
 - **Posting periods: relaxed.** Months close 45–60+ days later. Post with
@@ -780,7 +785,7 @@ Processing · Error orders (expand once an error exists) · Next payout
 (mode/cursor/links) secondary. qq/* components per the design system.
 
 ### Post-production queue (unchanged)
-Restock v2 (lot-level returns), settings page (lift ENGINE_CONFIG to
+Restock v2 (DROPPED 2026-10-11 — refunds are money only), settings page (lift ENGINE_CONFIG to
 table + admin UI — LAST task), PayPal/Affirm payout automation,
 historical cleanup (56 dup email groups, EUR-period orders, NetScore's
 410000 VAT reclass — CPA), backfill boundary 2026-07-16.
