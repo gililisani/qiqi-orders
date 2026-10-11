@@ -159,7 +159,7 @@ export default function TopNavbar() {
                   <Link href="/admin/incoterms" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Incoterms</Link>
                   <Link href="/admin/payment-terms" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Payment Terms</Link>
                   <Link href="/admin/netsuite" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">NetSuite</Link>
-                  <Link href="/admin/inventory" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Inventory Sync</Link>
+                  <Link href="/admin/inventory" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Inventory Check</Link>
                   <div className="my-1 border-t border-gray-200"></div>
                   <Link href="/admin/dam" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Digital Asset Manager</Link>
                   <Link href="/admin/dam/campaigns" className="block rounded px-3 py-2 text-gray-700 hover:bg-gray-50">Campaigns</Link>
@@ -264,7 +264,7 @@ export default function TopNavbar() {
                   <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/incoterms">Incoterms</Link>
                   <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/payment-terms">Payment Terms</Link>
                   <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/netsuite">NetSuite</Link>
-                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/inventory">Inventory Sync</Link>
+                  <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/inventory">Inventory Check</Link>
                   <div className="my-1 border-t border-gray-200"></div>
                   <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam">Digital Asset Manager</Link>
                   <Link className="px-2 py-1 rounded hover:bg-gray-50" href="/admin/dam/campaigns">Campaigns</Link>

@@ -69,13 +69,6 @@ export interface NSInvoiceResult {
   dueDate: string | null;
 }
 
-export interface NSInventoryItem {
-  sku: string;
-  locationId: string;
-  quantityOnHand: number;
-  quantityAvailable: number;
-}
-
 // One row from the as-of-date inventory RESTlet.
 export interface AsOfInventoryRow {
   itemId: string;
@@ -1050,43 +1043,6 @@ export class NetSuiteAPI {
       if (e?.message?.includes('NetSuite 404')) return;
       throw e;
     }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Inventory sync — returns on-hand quantities by location
-  // locationNsId: the NS internal ID of the location (from Locations.netsuite_id)
-  // ---------------------------------------------------------------------------
-  async getInventoryByLocation(locationNsId: string): Promise<NSInventoryItem[]> {
-    // inventoryBalance can return multiple rows per (item, location) when an
-    // item is stocked in multiple bins / lots / serials. Aggregate at the
-    // SuiteQL layer so the caller gets exactly one row per item — otherwise
-    // the downstream upsert against (product_id, location_id) errors with
-    // "ON CONFLICT DO UPDATE command cannot affect row a second time".
-    const rows = await this.suiteQL<{
-      item: string;
-      location: string;
-      quantityonhand: string;
-      quantityavailable: string;
-      itemid: string;
-    }>(
-      `SELECT il.item,
-              il.location,
-              SUM(il.quantityonhand)    AS quantityonhand,
-              SUM(il.quantityavailable) AS quantityavailable,
-              i.itemid
-         FROM inventoryBalance il
-         JOIN item i ON i.id = il.item
-        WHERE il.location = ${locationNsId}
-          AND i.itemid IS NOT NULL
-        GROUP BY il.item, il.location, i.itemid`
-    );
-
-    return rows.map(r => ({
-      sku: r.itemid,
-      locationId: String(r.location),
-      quantityOnHand: parseFloat(r.quantityonhand) || 0,
-      quantityAvailable: parseFloat(r.quantityavailable) || 0,
-    }));
   }
 
   // ---------------------------------------------------------------------------

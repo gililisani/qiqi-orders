@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { RefreshCw, ArrowRight } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 import { PageHeader } from '../../components/qq/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/qq/card';
@@ -91,23 +90,6 @@ export default function NetSuitePage() {
               </AlertDescription>
             </Alert>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Inventory Sync */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Inventory sync</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Pull current inventory levels from NetSuite by location and view them in the Hub.
-          </p>
-          <Link href="/admin/inventory">
-            <Button size="sm" variant="outline">
-              Go to inventory sync <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
         </CardContent>
       </Card>
 

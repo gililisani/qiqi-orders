@@ -90,6 +90,12 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: 'Warehouse',
+    items: [
+      { label: 'Inventory Check', href: '/admin/inventory', icon: <Package />, permission: 'orders:view' },
+    ],
+  },
+  {
     label: 'Users',
     items: [
       { label: 'Users',  href: '/admin/users',  icon: <Users />,  permission: 'users:view' },
@@ -144,7 +150,6 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Settings',             href: '/admin/settings',      icon: <Settings />, permission: 'config:view' },
       { label: 'NetSuite Data',        href: '/admin/netsuite-data', icon: <Building />, permission: 'config:view' },
       { label: 'NetSuite Integration', href: '/admin/netsuite',      icon: <Plug />,     permission: 'config:view' },
-      { label: 'NS Inventory Sync',    href: '/admin/inventory',     icon: <Package />,  permission: 'config:view' },
       { label: 'SLI Settings',         href: '/admin/sli/settings',  icon: <Settings />, permission: 'config:view' },
     ],
   },
@@ -180,7 +185,7 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: string }> = [
   { prefix: '/admin/reports', permission: 'insights' },
   { prefix: '/admin/netsuite/amazon-fba', permission: 'amazon:view' },
   { prefix: '/admin/netsuite', permission: 'config:view' },
-  { prefix: '/admin/inventory', permission: 'config:view' },
+  { prefix: '/admin/inventory', permission: 'orders:view' },
   { prefix: '/admin/amazon', permission: 'amazon:view' },
   { prefix: '/admin/shopify', permission: 'shopify:view' },
 ];

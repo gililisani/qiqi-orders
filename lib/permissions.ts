@@ -32,13 +32,13 @@ export interface AdminPermissionGroup {
 
 export const ADMIN_PERMISSION_GROUPS: readonly AdminPermissionGroup[] = [
   { category: 'Dashboard', single: 'dashboard', description: 'The admin home dashboard' },
-  { category: 'Orders', view: 'orders:view', edit: 'orders:edit', description: 'Orders, acceptance, NetSuite/warehouse actions, SLI documents' },
+  { category: 'Orders', view: 'orders:view', edit: 'orders:edit', description: 'Orders, acceptance, NetSuite/warehouse actions, SLI documents, inventory check' },
   { category: 'Catalog', view: 'catalog:view', edit: 'catalog:edit', description: 'Products, categories, price list, compliance docs' },
   { category: 'Assets', view: 'assets:view', edit: 'assets:edit', description: 'Media library, campaigns, asset settings, announcements' },
   { category: 'Insights', single: 'insights', description: 'Reports and dashboards (read-only area)' },
   { category: 'Amazon', view: 'amazon:view', edit: 'amazon:edit', description: 'FBA financials and Amazon insights' },
   { category: 'Shopify', view: 'shopify:view', edit: 'shopify:edit', description: 'Shopify sync dashboard and actions' },
-  { category: 'Configurations', view: 'config:view', edit: 'config:edit', description: 'NetSuite data/integration, inventory sync, SLI settings, lookup tables' },
+  { category: 'Configurations', view: 'config:view', edit: 'config:edit', description: 'NetSuite data/integration, SLI settings, lookup tables' },
   { category: 'Distributors', view: 'distributors:view', edit: 'distributors:edit', description: 'Partner companies — onboarding, contracts, historical sales' },
   { category: 'Users', view: 'users:view', edit: 'users:edit', description: 'Client users AND admin accounts' },
 ] as const;
