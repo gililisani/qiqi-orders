@@ -120,7 +120,7 @@ export default function InventoryCheckPage() {
 
   const check = view?.check ?? null;
   const location = view?.locations.find((l) => l.id === locationId);
-  const warehouses = check?.warehouses.length ? check.warehouses.join(', ') : 'ShipHero';
+  const warehouseLabel = check?.warehouses.length ? `ShipHero ${check.warehouses.join(', ')}` : 'ShipHero';
 
   const download = () => {
     if (!check) return;
@@ -140,7 +140,7 @@ export default function InventoryCheckPage() {
         description="NetSuite stock compared with the warehouse's own system (ShipHero at BrandFox), per SKU. Checked every night and whenever you click Check now."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {check && (
+            {check && !check.error && (
               <Button variant="outline" size="sm" onClick={download}>
                 <Download className="h-4 w-4" />
                 Download CSV
@@ -223,7 +223,7 @@ export default function InventoryCheckPage() {
             )}
             <p className="text-sm text-muted-foreground pb-2">
               {check
-                ? `NetSuite location ${location?.name ?? ''} vs ShipHero ${warehouses}. Checked ${formatDateTime(check.checkedAt)}${check.checkedBy ? ` by ${check.checkedBy}` : check.trigger === 'nightly' ? ' (nightly)' : ''}.`
+                ? `NetSuite location ${location?.name ?? ''} vs ${warehouseLabel}. Checked ${formatDateTime(check.checkedAt)}${check.checkedBy ? ` by ${check.checkedBy}` : check.trigger === 'nightly' ? ' (nightly)' : ''}.`
                 : `${location?.name ?? 'This location'} has not been checked yet.`}
             </p>
           </div>
@@ -370,7 +370,9 @@ function StockTable({
                         </p>
                       </>
                     )}
-                    {changed && <p className="text-xs text-muted-foreground">was {was === undefined ? '—' : signed(was)}</p>}
+                    {changed && (
+                      <p className="text-xs text-muted-foreground">{was === undefined ? 'new since last check' : `was ${signed(was)}`}</p>
+                    )}
                   </TableCell>
                 </TableRow>
               );
