@@ -175,6 +175,27 @@ describe('pollOrders', () => {
     expect(states.get(orderId)).toBe('skipped');
   });
 
+  it('a NetScore-era order that would fail the gate is skipped, not parked as an error (#6602)', async () => {
+    const { store, states, calls } = fakeStore('live');
+    const order = withUpdatedAt('gateway-shop-cash', '2026-10-08T19:18:29Z');
+    order.transactions = order.transactions.filter((t) => t.gateway !== 'shop_cash'); // payment mismatch
+    const orderId = order.id.replace(/^.*\//, '');
+    const r = await pollOrders({
+      store,
+      fetchOrdersUpdatedSince: async () => [order],
+      loadKnownSkus: async () => SKUS,
+      nsTarget: 'production',
+      isNetscoreEra: async (id) => id === orderId,
+      execute: async () => {
+        throw new Error('must not execute a NetScore-era order');
+      },
+    });
+    expect(r).toMatchObject({ skipped: 1, errored: 0 });
+    expect(states.get(orderId)).toBe('skipped');
+    expect(calls.state.find((c: any) => c.id === orderId)).toMatchObject({ reason: 'NETSCORE_ERA' });
+    expect(calls.events.some((e) => e.event === 'gate_error')).toBe(false);
+  });
+
   it('sandbox target never consults the NetScore guard (QA re-books deliberately)', async () => {
     const { store } = fakeStore('sandbox');
     const order = withUpdatedAt('b2c-latest', '2026-08-17T10:00:00Z');

@@ -86,6 +86,31 @@ describe('gateOrder over real fixtures', () => {
     expect((r as any).issues.some((i: any) => i.code === 'PAYMENT_MISMATCH')).toBe(true);
   });
 
+  it('a refund with a goodwill amount reconciles against the total before refunds (#6602)', () => {
+    // #7084 refunded its $29.90 shipping; add $10 goodwill on top. Shopify
+    // takes the shipping off the current total but never the goodwill, so
+    // current + refunded over-counts by $10 — the total before refunds is right.
+    const order = loadOrder('refunded-partial') as any;
+    order.totalRefundedSet.shopMoney.amount = '39.9';
+    order.refunds[0].totalRefundedSet.shopMoney.amount = '39.9';
+    for (const t of [...order.transactions, ...order.refunds[0].transactions.nodes]) {
+      if (t.kind === 'REFUND') t.amountSet.shopMoney.amount = '39.9';
+    }
+    const without = gateOrder(order, SKUS);
+    expect((without as any).issues?.map((i: any) => i.code)).toEqual(['PAYMENT_MISMATCH']);
+
+    order.totalPriceSet = { shopMoney: { amount: '129.9' } };
+    expect(gateOrder(order, SKUS)).toEqual({ outcome: 'proceed' });
+  });
+
+  it('an unpaid balance still fails with the total before refunds present', () => {
+    const order = loadOrder('gateway-shop-cash') as any;
+    order.transactions = order.transactions.filter((t: any) => t.gateway !== 'shop_cash');
+    order.totalPriceSet = { shopMoney: { amount: order.currentTotalPriceSet.shopMoney.amount } };
+    const r = gateOrder(order, SKUS);
+    expect((r as any).issues.some((i: any) => i.code === 'PAYMENT_MISMATCH')).toBe(true);
+  });
+
   it('skips test orders and unpaid orders without erroring', () => {
     const test = loadOrder('b2c-latest');
     test.test = true;

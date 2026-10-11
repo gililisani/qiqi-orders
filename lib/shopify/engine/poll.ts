@@ -136,6 +136,23 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
         }
       }
 
+      // Cutover guard BEFORE the gate: a NetScore-era order is never ours to
+      // book, so its numbers are never ours to validate either. (Checked
+      // after the gate, an old order touched by a late update — #6602, a
+      // ShipHero tracking update in Oct on a May order — parked as a money
+      // error instead of skipping.)
+      if (writeMode && deps.nsTarget === 'production' && deps.isNetscoreEra && (await deps.isNetscoreEra(orderId))) {
+        await store.seenOrder(order, null);
+        await store.markSkipped(
+          orderId,
+          'NETSCORE_ERA',
+          `${order.name} was booked by NetScore — updates to it are not auto-booked; handle any late fulfillment/refund manually in NS`,
+        );
+        await store.event('orders', 'netscore_era_skip', orderId, {});
+        skipped += 1;
+        continue;
+      }
+
       const gate = gateOrder(order, knownSkus);
 
       if (gate.outcome === 'skip') {
@@ -164,16 +181,6 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
       proceeded += 1;
 
       if (writeMode && deps.execute) {
-        if (deps.nsTarget === 'production' && deps.isNetscoreEra && (await deps.isNetscoreEra(orderId))) {
-          await store.markSkipped(
-            orderId,
-            'NETSCORE_ERA',
-            `${order.name} was booked by NetScore — updates to it are not auto-booked; handle any late fulfillment/refund manually in NS`,
-          );
-          await store.event('orders', 'netscore_era_skip', orderId, {});
-          skipped += 1;
-          continue;
-        }
         try {
           const outcome = await deps.execute(order, plan);
           await store.setState(orderId, outcome.state, {

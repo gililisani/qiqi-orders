@@ -30,6 +30,7 @@ export const ORDER_SELECTION = `
   currentShippingPriceSet { shopMoney { amount } }
   currentTotalPriceSet { shopMoney { amount currencyCode } }
   originalTotalPriceSet { shopMoney { amount } }
+  totalPriceSet { shopMoney { amount } }
   netPaymentSet { shopMoney { amount } }
   totalRefundedSet { shopMoney { amount } }
   taxesIncluded taxExempt

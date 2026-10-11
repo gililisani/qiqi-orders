@@ -134,6 +134,8 @@ export interface ShopifyOrder {
   currentTotalDutiesSet?: MoneyBag | null;
   currentShippingPriceSet: MoneyBag;
   currentTotalPriceSet: MoneyBag;
+  /** After order edits, before refunds/returns (older fixtures lack it). */
+  totalPriceSet?: MoneyBag | null;
   netPaymentSet: MoneyBag;
   totalRefundedSet: MoneyBag;
   taxesIncluded: boolean;

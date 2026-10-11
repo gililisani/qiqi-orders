@@ -138,17 +138,29 @@ export function gateOrder(order: ShopifyOrder, knownSkus: ReadonlySet<string>): 
     .filter((t) => (t.kind === 'SALE' || t.kind === 'CAPTURE') && t.status === 'SUCCESS')
     .reduce((sum, t) => sum + money(t.amountSet, `txn ${t.id}`), 0);
   // A CAPTURE follows its AUTHORIZATION; both appear but only capture moves money.
+  //
+  // What was charged, two ways — either reconciling to the cent is proof:
+  //  - current total + refunded: right when every refunded dollar left the
+  //    current total (line refunds, shipping refunds, cancelled lines —
+  //    #6650's cancel lowers totalPrice too);
+  //  - totalPrice (after edits, before refunds): right when a refund carries
+  //    a goodwill amount, which Shopify never takes off the current total
+  //    (#6602: $31.80 shipping + $38.50 goodwill refunded — current+refunded
+  //    over-counts the $38.50). Checked over every 2026 refunded order.
+  // An unpaid balance fails both.
   const originalTotal = money(order.currentTotalPriceSet, 'total') + money(order.totalRefundedSet, 'refunded');
+  const totalBeforeRefunds = order.totalPriceSet ? money(order.totalPriceSet, 'total before refunds') : null;
   // Presentment orders: Shopify converts lines and transactions separately,
   // so the USD received differs from the USD order total by cents (or a few
   // dollars when a refund happens weeks later at another rate). Tolerate
   // up to 2% / $10 and let the plan carry the difference as FX rounding.
   const fxTolerance = presentmentFx ? Math.max(1000, Math.round(originalTotal * 0.02)) : 0;
-  if (Math.abs(paidCents - originalTotal) > fxTolerance) {
+  const reconciles = (charged: number) => Math.abs(paidCents - charged) <= fxTolerance;
+  if (!reconciles(originalTotal) && !(totalBeforeRefunds !== null && reconciles(totalBeforeRefunds))) {
     issues.push({
       code: 'PAYMENT_MISMATCH',
       message: `${order.name} successful payments ${paidCents} != charged total ${originalTotal} (cents)`,
-      detail: { paidCents, originalTotal },
+      detail: { paidCents, originalTotal, totalBeforeRefunds },
     });
   }
 
