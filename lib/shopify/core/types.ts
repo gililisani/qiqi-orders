@@ -44,7 +44,7 @@ export interface ShopifyLineItem {
   originalTotalSet: MoneyBag;
   discountedTotalSet: MoneyBag;
   totalDiscountSet: MoneyBag;
-  discountAllocations: Array<{ allocatedAmountSet: MoneyBag }>;
+  discountAllocations: Array<{ allocatedAmountSet: MoneyBag; discountApplication?: { index?: number } | null }>;
   taxLines: ShopifyTaxLine[];
 }
 
@@ -147,6 +147,8 @@ export interface ShopifyOrder {
       code: string | null;
       originalPriceSet: MoneyBag;
       discountedPriceSet: MoneyBag;
+      /** Older fixtures lack it. */
+      discountAllocations?: Array<{ allocatedAmountSet: MoneyBag; discountApplication?: { index?: number } | null }>;
       taxLines: ShopifyTaxLine[];
     }>;
   };

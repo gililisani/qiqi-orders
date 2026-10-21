@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { centsToDecimal, toCents } from '@/lib/shopify/core/money';
 import { gateOrder } from '@/lib/shopify/core/validate';
-import { buildOrderPlan } from '@/lib/shopify/core/orderTransform';
+import { buildOrderPlan, salesOrderMemo } from '@/lib/shopify/core/orderTransform';
 import { decideCustomerMatch, extractBuyer } from '@/lib/shopify/core/customerMatch';
 import type { NsCustomerCandidate, ShopifyOrder } from '@/lib/shopify/core/types';
 import { allFixtureNames, fixtureSkus, loadOrder } from '../helpers/shopifyFixtures';
@@ -169,6 +169,39 @@ describe('buildOrderPlan', () => {
     expect(gross - discount + plan.totals.shippingCents + plan.totals.taxCents + plan.totals.dutiesCents).toBe(
       plan.totals.totalCents,
     );
+  });
+
+  it('memo lists only discounts that took money off, each name once (0% "Free Gift", Oct 2026)', () => {
+    const order = loadOrder('discounted') as any;
+    // Pack10 (index 0) is the real code discount on the lines.
+    order.discountApplications.nodes[0].index = 0;
+    for (const li of order.lineItems.nodes) for (const a of li.discountAllocations) a.discountApplication = { index: 0 };
+    order.discountApplications.nodes.push(
+      { __typename: 'AutomaticDiscountApplication', index: 1, title: 'Free Gift', value: { __typename: 'PricingPercentageValue', percentage: 0 } },
+      { __typename: 'DiscountCodeApplication', index: 2, code: 'FREESHIP', value: { __typename: 'PricingPercentageValue', percentage: 100 } },
+    );
+    order.shippingLines.nodes[0].discountAllocations = [{ allocatedAmountSet: { shopMoney: { amount: '5.0' } }, discountApplication: { index: 2 } }];
+    const plan = buildOrderPlan(order);
+    expect(plan.discountCodes).toEqual(['Pack10', 'FREESHIP']);
+    expect(salesOrderMemo(plan)).toBe(`Shopify ${order.name} · discount: Pack10, FREESHIP`);
+
+    // A real gift: two 100% "Free Gift" applications that allocate → named once.
+    order.discountApplications.nodes.push({ __typename: 'AutomaticDiscountApplication', index: 3, title: 'Free Gift', value: { __typename: 'PricingPercentageValue', percentage: 100 } });
+    order.lineItems.nodes[0].discountAllocations.push(
+      { allocatedAmountSet: { shopMoney: { amount: '1.0' } }, discountApplication: { index: 3 } },
+      { allocatedAmountSet: { shopMoney: { amount: '0.0' } }, discountApplication: { index: 1 } },
+    );
+    expect(buildOrderPlan(order).discountCodes).toEqual(['Pack10', 'FREESHIP', 'Free Gift']);
+  });
+
+  it('a 0% discount alone leaves no discount in the memo', () => {
+    const order = loadOrder('b2c-latest') as any;
+    order.discountApplications.nodes = [
+      { __typename: 'AutomaticDiscountApplication', index: 0, title: 'Free Gift', value: { __typename: 'PricingPercentageValue', percentage: 0 } },
+    ];
+    const plan = buildOrderPlan(order);
+    expect(plan.discountCodes).toEqual([]);
+    expect(salesOrderMemo(plan)).toBe(`Shopify ${order.name}`);
   });
 
   it('records charged prices, not catalog prices, on discounted orders', () => {

@@ -16,6 +16,7 @@
 import { centsToDecimal } from '../core/money';
 import { storeDate } from '../core/dates';
 import { decideCustomerMatch } from '../core/customerMatch';
+import { salesOrderMemo } from '../core/orderTransform';
 import type { NsCustomerCandidate, OrderPlan, SyncIssue } from '../core/types';
 import { gatewayAccountId, type EngineConfig } from './config';
 import { normalizeNsDate } from '../../netsuite';
@@ -205,7 +206,7 @@ export async function runOrderPipeline(
       // in full — always.
       terms: { id: config.termsId },
       otherRefNum: plan.poNumber ?? plan.orderName,
-      memo: `Shopify ${plan.orderName}${plan.discountCodes.length ? ` · discount: ${plan.discountCodes.join(', ')}` : ''}${plan.presentment ? ` · presented in ${plan.presentment.currency} ${plan.presentment.amount}` : ''}`,
+      memo: salesOrderMemo(plan),
       shippingCost: plan.shipping ? Number(centsToDecimal(plan.shipping.amountCents)) : 0,
       ...(plan.shipping ? { shipMethod: { id: config.shipMethodId } } : {}),
       ...(discountCents > 0

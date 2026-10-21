@@ -81,9 +81,36 @@ export function buildOrderPlan(order: ShopifyOrder): OrderPlan {
           : null,
     }));
 
-  const discountCodes = order.discountApplications.nodes
-    .map((d) => (typeof d.code === 'string' ? d.code : typeof d.title === 'string' ? (d.title as string) : null))
-    .filter((c): c is string => !!c);
+  // Discount names for the NS memo: only discounts that actually took money
+  // off an item or the shipping, each name once. The site lists a 0%
+  // "Free Gift" automatic discount on every checkout (81 orders, Oct 2026,
+  // memo said "discount: Free Gift" with no gift). Judged by allocations,
+  // not by the stated value — function discounts can state $0 and still
+  // allocate. Orders without application indexes (older fixtures) keep
+  // every name, as before.
+  const allocated = new Map<number, number>();
+  let indexed = order.discountApplications.nodes.length > 0;
+  const allocations = [
+    ...order.lineItems.nodes.flatMap((li) => li.discountAllocations),
+    ...order.shippingLines.nodes.flatMap((s) => s.discountAllocations ?? []),
+  ];
+  for (const a of allocations) {
+    const idx = a.discountApplication?.index;
+    if (typeof idx !== 'number') {
+      indexed = false;
+      continue;
+    }
+    allocated.set(idx, (allocated.get(idx) ?? 0) + toCents(a.allocatedAmountSet.shopMoney.amount));
+  }
+  if (order.discountApplications.nodes.some((d) => typeof d.index !== 'number')) indexed = false;
+  const discountCodes = [
+    ...new Set(
+      order.discountApplications.nodes
+        .filter((d) => !indexed || (allocated.get(d.index as number) ?? 0) > 0)
+        .map((d) => (typeof d.code === 'string' ? d.code : typeof d.title === 'string' ? (d.title as string) : null))
+        .filter((c): c is string => !!c),
+    ),
+  ];
 
   const dutiesCents = order.currentTotalDutiesSet ? toCents(order.currentTotalDutiesSet.shopMoney.amount) : 0;
   const taxLines = planTaxLines(order.taxLines);
@@ -128,4 +155,9 @@ export function buildOrderPlan(order: ShopifyOrder): OrderPlan {
     },
     discountCodes,
   };
+}
+
+/** The NS sales order memo (the invoice inherits it when transformed from the SO). */
+export function salesOrderMemo(plan: Pick<OrderPlan, 'orderName' | 'discountCodes' | 'presentment'>): string {
+  return `Shopify ${plan.orderName}${plan.discountCodes.length ? ` · discount: ${plan.discountCodes.join(', ')}` : ''}${plan.presentment ? ` · presented in ${plan.presentment.currency} ${plan.presentment.amount}` : ''}`;
 }

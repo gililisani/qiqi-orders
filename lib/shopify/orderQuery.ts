@@ -37,7 +37,7 @@ export const ORDER_SELECTION = `
   taxLines { title rate ratePercentage channelLiable priceSet { shopMoney { amount } } }
   discountApplications(first: 10) {
     nodes {
-      __typename allocationMethod targetSelection targetType
+      __typename index allocationMethod targetSelection targetType
       ... on DiscountCodeApplication { code }
       ... on AutomaticDiscountApplication { title }
       ... on ManualDiscountApplication { title description }
@@ -49,6 +49,7 @@ export const ORDER_SELECTION = `
       title code source
       originalPriceSet { shopMoney { amount } }
       discountedPriceSet { shopMoney { amount } }
+      discountAllocations { allocatedAmountSet { shopMoney { amount } } discountApplication { index } }
       taxLines { title ratePercentage channelLiable priceSet { shopMoney { amount } } }
     }
   }
@@ -62,7 +63,7 @@ export const ORDER_SELECTION = `
       originalTotalSet { shopMoney { amount } }
       discountedTotalSet { shopMoney { amount } }
       totalDiscountSet { shopMoney { amount } }
-      discountAllocations { allocatedAmountSet { shopMoney { amount } } discountApplication { __typename } }
+      discountAllocations { allocatedAmountSet { shopMoney { amount } } discountApplication { __typename index } }
       taxLines { title rate ratePercentage channelLiable priceSet { shopMoney { amount } } }
     }
   }
