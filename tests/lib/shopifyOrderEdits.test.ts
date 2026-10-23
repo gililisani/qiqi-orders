@@ -254,6 +254,21 @@ describe('order edit engine steps (#7641 shape)', () => {
     expect(again.calls.filter((c) => c.type === 'creditMemo' && c.op === 'update')).toEqual([]);
   });
 
+  it('a cancelled order with nothing refunded ($0 replacement, #7559) closes every unshipped line', async () => {
+    const order = editedOrder();
+    order.cancelledAt = '2026-09-30T18:45:58Z';
+    order.refunds = [];
+    order.fulfillments = [];
+    for (const li of order.lineItems.nodes) li.currentQuantity = li.quantity; // Shopify leaves these untouched
+    const lines = [so({ lineId: 1, itemId: '19' }), so({ lineId: 2, itemId: '17' }), so({ lineId: 3, itemId: '30' })];
+    const { ns } = fakeNs(lines);
+    expect(await closeUnshippableLines(order, buildOrderPlan(order), 'so-1', ns)).toEqual([1, 2, 3]);
+    // Not cancelled → the same untouched quantities close nothing.
+    order.cancelledAt = null;
+    const again = fakeNs([so({ lineId: 1, itemId: '19' }), so({ lineId: 2, itemId: '17' }), so({ lineId: 3, itemId: '30' })]);
+    expect(await closeUnshippableLines(order, buildOrderPlan(order), 'so-1', again.ns)).toEqual([]);
+  });
+
   it('after the shipment, the removed line closes and nothing else', async () => {
     const order = editedOrder();
     const lines = [

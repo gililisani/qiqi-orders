@@ -51,12 +51,16 @@ export interface ShopifyLineState {
 
 export function shopifyLineStates(order: ShopifyOrder, plan: OrderPlan): ShopifyLineState[] {
   const current = new Map(order.lineItems.nodes.map((li) => [li.id.replace(/^.*\//, ''), li.currentQuantity]));
+  // A cancelled order ships nothing more. Shopify only lowers currentQuantity
+  // when items are refunded or edited out; a cancellation with nothing to
+  // refund (a $0 replacement — #7559) leaves it untouched.
+  const cancelled = !!order.cancelledAt;
   return plan.lines.map((l) => ({
     shopifyLineItemId: l.shopifyLineItemId,
     sku: l.sku,
     description: l.description,
     quantity: l.quantity,
-    currentQuantity: current.get(l.shopifyLineItemId) ?? l.quantity,
+    currentQuantity: cancelled ? 0 : current.get(l.shopifyLineItemId) ?? l.quantity,
     netAmountCents: l.netAmountCents,
     discountCents: l.discountCents,
     taxLines: l.taxLines,
