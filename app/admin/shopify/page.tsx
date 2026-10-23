@@ -1,12 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ExternalLink, RefreshCw } from 'lucide-react';
+import { ExternalLink, RefreshCw, Search, X } from 'lucide-react';
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 import { PageHeader } from '../../components/qq/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/qq/card';
 import { Skeleton } from '../../components/qq/skeleton';
 import { Button } from '../../components/qq/button';
+import { Input } from '../../components/qq/input';
 import { ReportsCard } from './reports-card';
 import { StatementsTab } from './statements-tab';
 import { PayoutsTab } from './payouts-tab';
@@ -197,12 +198,19 @@ export default function ShopifySyncDashboard() {
   const [page, setPage] = useState(0);
   const [pageBusy, setPageBusy] = useState(false);
   const pageRef = useRef<number>(0);
+  const [tab, setTab] = useState('orders');
+  // Order search: what's typed, and the query applied (debounced) — kept in
+  // a ref too so the 60s refresh keeps showing the search results.
+  const [searchInput, setSearchInput] = useState('');
+  const [query, setQuery] = useState('');
+  const queryRef = useRef('');
 
   const PAGE_SIZE = 20;
   const load = useCallback(async (toPage?: number) => {
     try {
       const target = toPage ?? pageRef.current;
-      const res = await fetchWithAuth(`/api/shopify/sync/overview?ordersOffset=${target * PAGE_SIZE}&ordersLimit=${PAGE_SIZE}`);
+      const q = queryRef.current ? `&ordersSearch=${encodeURIComponent(queryRef.current)}` : '';
+      const res = await fetchWithAuth(`/api/shopify/sync/overview?ordersOffset=${target * PAGE_SIZE}&ordersLimit=${PAGE_SIZE}${q}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
       pageRef.current = target;
@@ -228,6 +236,19 @@ export default function ShopifySyncDashboard() {
     const t = setInterval(load, 60_000);
     return () => clearInterval(t);
   }, [load]);
+
+  useEffect(() => {
+    const next = searchInput.trim();
+    if (next === queryRef.current) return;
+    const t = setTimeout(async () => {
+      queryRef.current = next;
+      setQuery(next);
+      if (next) setTab('orders');
+      await goToPage(0);
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
 
   const act = async (path: string, body: Record<string, unknown>, busyKey: string) => {
     setRetrying(busyKey);
@@ -266,7 +287,8 @@ export default function ShopifySyncDashboard() {
     if (importName.trim()) act('/api/shopify/sync/import-order', { orderName: importName.trim() }, 'import');
   };
   const errors = data?.errors ?? [];
-  const nonErrors = data?.orders.filter((o) => o.state !== 'error') ?? [];
+  // Searching shows every match, error-state orders included.
+  const nonErrors = (query ? data?.orders : data?.orders.filter((o) => o.state !== 'error')) ?? [];
   const sums = data?.financials?.periods?.[period] ?? null;
 
   return (
@@ -542,21 +564,44 @@ export default function ShopifySyncDashboard() {
             </Card>
           )}
 
-          <Tabs defaultValue="orders" className="mt-6">
-            <TabsList>
-              <TabsTrigger value="orders">Orders</TabsTrigger>
-              <TabsTrigger value="payouts">Payouts</TabsTrigger>
-              <TabsTrigger value="replacements">Replacements</TabsTrigger>
-              <TabsTrigger value="reports">Finance reports</TabsTrigger>
-              <TabsTrigger value="statements">Statements (OFX)</TabsTrigger>
-            </TabsList>
+          <Tabs value={tab} onValueChange={setTab} className="mt-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <TabsList>
+                <TabsTrigger value="orders">Orders</TabsTrigger>
+                <TabsTrigger value="payouts">Payouts</TabsTrigger>
+                <TabsTrigger value="replacements">Replacements</TabsTrigger>
+                <TabsTrigger value="reports">Finance reports</TabsTrigger>
+                <TabsTrigger value="statements">Statements (OFX)</TabsTrigger>
+              </TabsList>
+              <div className="relative w-full sm:w-72">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Escape' && setSearchInput('')}
+                  placeholder="Search order #, customer or email"
+                  aria-label="Search orders"
+                  className="h-9 pl-9 pr-8"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchInput('')}
+                    aria-label="Clear search"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
 
             <TabsContent value="orders">
           {/* Orders table */}
           <Card className="mt-6">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Orders</CardTitle>
+                <CardTitle>{query ? `Orders matching “${query}”` : 'Orders'}</CardTitle>
                 <span className="text-xs text-muted-foreground">
                   {data.ordersTotal === 0 ? '0 orders' : `${page * 20 + 1}–${page * 20 + data.orders.length} of ${data.ordersTotal}`}
                 </span>
@@ -575,6 +620,13 @@ export default function ShopifySyncDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {query && nonErrors.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-6 text-center text-sm text-muted-foreground">
+                        No orders match “{query}”.
+                      </TableCell>
+                    </TableRow>
+                  )}
                   {nonErrors.map((o) => (
                     <TableRow key={o.shopify_order_id}>
                       <TableCell className="font-medium">

@@ -39,6 +39,14 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const ordersLimit = Math.min(Math.max(Number(url.searchParams.get('ordersLimit')) || 20, 1), 200);
     const ordersOffset = Math.max(Number(url.searchParams.get('ordersOffset')) || 0, 0);
+    // Search (owner 2026-10-23): order number, customer name, company or
+    // email, across every order. Characters that would break the PostgREST
+    // or() filter are dropped; "#7559" and "7559" both work.
+    const search = (url.searchParams.get('ordersSearch') ?? '')
+      .replace(/[^\p{L}\p{N}@.\-_+ ]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 60);
 
     const ORDER_FIELDS =
       'shopify_order_id, order_name, order_created_at, buyer_kind, state, skip_reason, total_cents, refunded_cents, ns_target, ns_customer_id, ns_so_id, ns_invoice_id, ns_payment_ids, ns_fulfillment_ids, ns_credit_memo_ids, error_code, error_message, error_detail, ignore_note, updated_at';
@@ -46,11 +54,21 @@ export async function GET(request: NextRequest) {
     const [{ data: config }, { data: orders, count: ordersTotal }, { data: errorRows }, { data: payouts }, { data: events }, paidC, fulfilledC, refundedC] =
       await Promise.all([
         db.from('shopify_sync_config').select('*').eq('id', 1).single(),
-        db
-          .from('shopify_order_sync')
-          .select(ORDER_FIELDS, { count: 'exact' })
-          .order('order_created_at', { ascending: false })
-          .range(ordersOffset, ordersOffset + ordersLimit - 1),
+        (() => {
+          let q = db.from('shopify_order_sync').select(ORDER_FIELDS, { count: 'exact' });
+          if (search) {
+            const p = `*${search}*`;
+            q = q.or(
+              [
+                `order_name.ilike.${p}`,
+                `plan->buyer->>displayName.ilike.${p}`,
+                `plan->buyer->>companyName.ilike.${p}`,
+                `plan->buyer->>email.ilike.${p}`,
+              ].join(','),
+            );
+          }
+          return q.order('order_created_at', { ascending: false }).range(ordersOffset, ordersOffset + ordersLimit - 1);
+        })(),
         // Errors ALWAYS load in full — visibility must never depend on how
         // deep the recent-orders window happens to be.
         db
