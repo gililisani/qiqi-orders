@@ -90,9 +90,12 @@ describe('ensureItemFulfillments', () => {
     expect(transforms).toEqual([]);
   });
 
-  it('a fulfilled SKU with no matching SO line errors', async () => {
+  it('a shipped item that exists in NetSuite but is not on the SO is NOT_ON_SALES_ORDER, not an unknown SKU (#7641)', async () => {
     const { ns } = fakeNs({ soLines: [], lots: [] });
-    await expect(ensureItemFulfillments([PLAN], '423000', ns, ENGINE_CONFIG)).rejects.toThrow(/no matching SO line/);
+    const err = await ensureItemFulfillments([PLAN], '423000', ns, ENGINE_CONFIG).catch((e) => e);
+    expect(err).toBeInstanceOf(PipelineError);
+    expect(err.issue.code).toBe('NOT_ON_SALES_ORDER');
+    expect(err.message).toMatch(/not on the NetSuite sales order/);
   });
 
   it('no fulfillment plans → no-op', async () => {

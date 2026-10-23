@@ -32,6 +32,13 @@ export interface RefundPlanTransaction {
 }
 
 export interface RefundPlan {
+  /**
+   * 'removal' = items taken off the order with no money moving (an order
+   * edit, e.g. an out-of-stock swap — #7641): Shopify records it as a $0
+   * refund carrying the removed lines. Booked as a credit memo with no
+   * customer refund (engine/refund.ts); the rest are ordinary refunds.
+   */
+  kind: 'refund' | 'removal';
   shopifyRefundId: string; // numeric
   shopifyOrderId: string; // numeric
   orderName: string;
@@ -77,6 +84,21 @@ export function buildRefundPlans(order: ShopifyOrder): RefundTransformResult {
       }));
 
     const linesTotal = lines.reduce((s, l) => s + l.subtotalCents + l.taxCents, 0);
+    if (totalCents === 0 && transactions.length === 0 && lines.length > 0) {
+      plans.push({
+        kind: 'removal',
+        shopifyRefundId: gidNum(refund.id),
+        shopifyOrderId: gidNum(order.id),
+        orderName: order.name,
+        createdAt: refund.createdAt,
+        note: refund.note,
+        lines,
+        residualCents: 0,
+        transactions: [],
+        totalCents: 0,
+      });
+      continue;
+    }
     const residualCents = totalCents - linesTotal;
     if (residualCents < 0) {
       issues.push({
@@ -97,6 +119,7 @@ export function buildRefundPlans(order: ShopifyOrder): RefundTransformResult {
     }
 
     plans.push({
+      kind: 'refund',
       shopifyRefundId: gidNum(refund.id),
       shopifyOrderId: gidNum(order.id),
       orderName: order.name,

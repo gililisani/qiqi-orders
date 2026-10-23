@@ -178,7 +178,11 @@ export type SyncErrorCode =
   /** Loop D: order exists in Shopify but was never synced (the NetScore lost-order bug, now detected). */
   | 'MISSING_ORDER'
   /** Loop D: NS records exist but disagree with Shopify (totals/chain) to the cent. */
-  | 'RECON_MISMATCH';
+  | 'RECON_MISMATCH'
+  /** A shipped item has no line on the NS sales order (the order changed after booking). */
+  | 'NOT_ON_SALES_ORDER'
+  /** The order was edited after booking in a way that moved money — a human books it. */
+  | 'ORDER_EDIT_NEEDS_REVIEW';
 
 export interface SyncIssue {
   code: SyncErrorCode;

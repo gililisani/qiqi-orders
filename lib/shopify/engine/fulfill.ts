@@ -82,10 +82,20 @@ export async function ensureItemFulfillments(
       const free = soLines.filter((s) => s.itemId === itemId && !usedSoLines.has(s.lineId));
       const soLine = free.find((s) => s.quantity === line.quantity) ?? free[0];
       if (soLine) usedSoLines.add(soLine.lineId);
-      if (!itemId || !soLine) {
+      if (!itemId) {
         throw new PipelineError({
           code: 'UNKNOWN_SKU',
-          message: `${plan.orderName} fulfillment ${plan.shopifyFulfillmentId}: SKU "${line.sku}" has no matching SO line`,
+          message: `${plan.orderName} fulfillment ${plan.shopifyFulfillmentId}: SKU "${line.sku}" not found in NetSuite`,
+          detail: { sku: line.sku },
+        });
+      }
+      if (!soLine) {
+        // The item exists in NetSuite — it just isn't (or no longer) on this
+        // order's sales order. Not an unknown SKU (#7641 was misreported).
+        throw new PipelineError({
+          code: 'NOT_ON_SALES_ORDER',
+          message: `${plan.orderName}: shipped ${line.quantity} × ${line.sku}, which is not on the NetSuite sales order (the order changed after it was booked)`,
+          detail: { sku: line.sku },
         });
       }
       const assignments = isLotItem.get(itemId)

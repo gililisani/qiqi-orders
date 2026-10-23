@@ -190,10 +190,13 @@ export async function reconcileOrders(deps: ReconcileDeps): Promise<ReconcileRes
     if (!invId) {
       problems.push('invoice missing in NS');
     } else {
+      // The original invoice plus any order-edit invoices (SHOPINVE-<id>-…)
+      // together carry the as-sold total.
       const rows = await ns.suiteQL<{ foreigntotal: string }>(
-        `SELECT foreigntotal FROM transaction WHERE id = ${Number(invId)}`,
+        `SELECT foreigntotal FROM transaction WHERE id = ${Number(invId)}
+            OR (type = 'CustInvc' AND externalid LIKE 'SHOPINVE-${orderId.replace(/[^0-9]/g, '')}-%')`,
       );
-      const nsCents = Math.round(Math.abs(Number(rows[0]?.foreigntotal ?? 0)) * 100);
+      const nsCents = rows.reduce((s, r) => s + Math.round(Math.abs(Number(r.foreigntotal ?? 0)) * 100), 0);
       const expected = expectedInvoiceCents(plan);
       if (nsCents !== expected) {
         problems.push(`invoice total ${(nsCents / 100).toFixed(2)} != Shopify as-sold ${(expected / 100).toFixed(2)}`);

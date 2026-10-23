@@ -1,8 +1,10 @@
 /**
  * L3 ENGINE — per-order executor: chains Loop A (customer/SO/invoice/
- * payments), Loop B (item fulfillments) and Loop C (credit memos/refunds)
- * for one order. Called by the poller in sandbox/live modes; every step
- * is an ensure, so re-execution after any partial failure is safe.
+ * payments), order edits (items added after booking), Loop B (item
+ * fulfillments), Loop C (credit memos/refunds) and finally closes SO lines
+ * that will never ship, for one order. Called by the poller in sandbox/live
+ * modes; every step is an ensure, so re-execution after any partial failure
+ * is safe.
  */
 import type { ShopifyOrder } from '../core/types';
 import type { OrderPlan } from '../core/types';
@@ -11,6 +13,7 @@ import { buildRefundPlans } from '../core/refundTransform';
 import { runOrderPipeline, PipelineError, type NsApi } from './pipeline';
 import { ensureItemFulfillments } from './fulfill';
 import { ensureRefunds } from './refund';
+import { closeUnshippableLines, ensureOrderEdits } from './edits';
 import type { EngineConfig } from './config';
 
 export interface ExecutionOutcome {
@@ -38,12 +41,16 @@ export async function executeOrder(
   // Loop A — the money chain.
   const a = await runOrderPipeline(plan, ns, config, opts);
 
+  // Order edits — items added after the SO was booked get SO lines and an
+  // edit invoice (the shipment below needs those lines).
+  const { plans: refundPlans, issues } = buildRefundPlans(order);
+  await ensureOrderEdits(order, plan, refundPlans, a.nsSoId, ns, config, opts);
+
   // Loop B — one IF per Shopify fulfillment.
   const fulfillmentPlans = buildFulfillmentPlans(order);
   const b = await ensureItemFulfillments(fulfillmentPlans, a.nsSoId, ns, config);
 
-  // Loop C — refunds, if any.
-  const { plans: refundPlans, issues } = buildRefundPlans(order);
+  // Loop C — refunds and removals, if any.
   if (issues.length > 0) {
     throw new PipelineError(issues[0]);
   }
@@ -51,7 +58,12 @@ export async function executeOrder(
     orderHasNsFulfillment: b.nsFulfillmentIds.length > 0,
   });
 
-  const state = c.nsCreditMemoIds.length > 0 ? 'refunded' : b.nsFulfillmentIds.length > 0 ? 'fulfilled' : 'paid';
+  // Units that will never ship (removed or cancelled) stop waiting on the SO.
+  await closeUnshippableLines(order, plan, a.nsSoId, ns, opts);
+
+  // A removal (no money back) is not a refund for the state label.
+  const moneyRefunded = refundPlans.some((r) => r.kind === 'refund');
+  const state = moneyRefunded && c.nsCreditMemoIds.length > 0 ? 'refunded' : b.nsFulfillmentIds.length > 0 ? 'fulfilled' : 'paid';
 
   return {
     state,

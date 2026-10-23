@@ -63,17 +63,20 @@ export async function ensureRefunds(
     if (!cmId) {
       const lines: Array<Record<string, unknown>> = [];
       let taxCents = 0;
+      const removal = refund.kind === 'removal';
       for (const l of refund.lines) {
         // Shipped goods ticked "restock" in Shopify: say so on the line, so
         // the bookkeeper sees stock was deliberately not moved.
-        const restockNote = l.restock && opts.orderHasNsFulfillment ? ' · restock ticked in Shopify, stock not moved' : '';
+        const restockNote = !removal && l.restock && opts.orderHasNsFulfillment ? ' · restock ticked in Shopify, stock not moved' : '';
         lines.push({
           item: { id: config.refundAdjustmentItemId },
           quantity: l.quantity,
           price: { id: '-1' },
           rate: Math.round(l.subtotalCents / l.quantity) / 100,
           amount: Number(centsToDecimal(l.subtotalCents)),
-          description: `Refund · ${l.sku ?? 'item'} ×${l.quantity}${restockNote}`,
+          description: removal
+            ? `Removed from order · ${l.sku ?? 'item'} ×${l.quantity}`
+            : `Refund · ${l.sku ?? 'item'} ×${l.quantity}${restockNote}`,
         });
         taxCents += l.taxCents;
       }
@@ -124,12 +127,19 @@ export async function ensureRefunds(
         // tested 2026-08-18, not viable for money-only CMs.)
         otherRefNum: refund.orderName,
         tranDate: storeDate(refund.createdAt),
-        memo: `Shopify refund ${refund.orderName}${refund.note ? ` · ${refund.note}` : ''}`,
+        memo: removal
+          ? `Shopify ${refund.orderName} · items removed in an order edit (no money refunded)`
+          : `Shopify refund ${refund.orderName}${refund.note ? ` · ${refund.note}` : ''}`,
         item: { items: lines },
       });
       result.created.creditMemos += 1;
     }
     result.nsCreditMemoIds.push(cmId);
+
+    // A removal moves no money: its credit pays down the order's open
+    // invoice instead (the edit invoice for a swap, or the original invoice
+    // when the order was booked after the edit).
+    if (refund.kind === 'removal') await applyCreditToOpenInvoices(ns, cmId, refund.shopifyOrderId, refund.orderName);
 
     // Money back through the same clearing account, one per gateway txn.
     for (const txn of refund.transactions) {
@@ -156,4 +166,33 @@ export async function ensureRefunds(
   }
 
   return result;
+}
+
+/** Apply a credit memo's unapplied amount to the order's invoices with an open balance. */
+async function applyCreditToOpenInvoices(ns: NsApi, cmId: string, shopifyOrderId: string, orderName: string): Promise<void> {
+  const [cm] = await ns.suiteQL<{ foreignamountunpaid: string | null }>(
+    `SELECT foreignamountunpaid FROM transaction WHERE id = ${Number(cmId)}`,
+  );
+  let credit = Math.round(Math.abs(Number(cm?.foreignamountunpaid ?? 0)) * 100);
+  if (credit <= 0) return;
+  const id = shopifyOrderId.replace(/[^0-9]/g, '');
+  const open = await ns.suiteQL<{ id: string; foreignamountunpaid: string | null }>(
+    `SELECT id, foreignamountunpaid FROM transaction WHERE type = 'CustInvc'
+      AND (externalid = 'SHOPINV-${id}' OR externalid LIKE 'SHOPINVE-${id}-%') ORDER BY id`,
+  );
+  const apply: Array<{ doc: number; apply: true; amount: number }> = [];
+  for (const inv of open) {
+    const due = Math.round(Math.abs(Number(inv.foreignamountunpaid ?? 0)) * 100);
+    if (due <= 0 || credit <= 0) continue;
+    const amt = Math.min(due, credit);
+    apply.push({ doc: Number(inv.id), apply: true, amount: Number(centsToDecimal(amt)) });
+    credit -= amt;
+  }
+  if (!apply.length) {
+    throw new PipelineError({
+      code: 'ORDER_EDIT_NEEDS_REVIEW',
+      message: `${orderName}: items were removed with no money refunded, but no invoice of this order has an open balance to take the credit — check it in NetSuite`,
+    });
+  }
+  await ns.updateRecord('creditMemo', cmId, { apply: { items: apply } });
 }

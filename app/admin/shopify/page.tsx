@@ -120,6 +120,10 @@ const STATE_STYLES: Record<string, string> = {
 const ERROR_GUIDANCE: Record<string, string> = {
   UNKNOWN_SKU:
     'This SKU does not exist in NetSuite. Create the item in NS (or fix the SKU on the Shopify product), then Retry.',
+  NOT_ON_SALES_ORDER:
+    'An item that shipped is not on the NetSuite sales order — the order changed after it was booked. Retry; if it stays, check the order in NetSuite.',
+  ORDER_EDIT_NEEDS_REVIEW:
+    'The order was edited after it was booked in a way that changed the money (customer paid more, or is owed money). Book the difference in NetSuite by hand, then Ignore.',
   MISSING_SKU: 'A line on this order has no SKU (custom item). Fix the product in Shopify, then Retry.',
   AMBIGUOUS_CUSTOMER:
     'Same buyer, several NetSuite records. Pick the right one below (usually the one with the history) — the choice is permanent. Inactivating the empty duplicate in NS afterwards is tidy but optional.',
