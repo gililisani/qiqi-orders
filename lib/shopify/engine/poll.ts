@@ -10,7 +10,7 @@
  * change, and we deliberately re-poll an overlap window). State rows are
  * upserts; the pipeline's ensure-steps make NS writes re-runnable.
  */
-import { gateOrder } from '../core/validate';
+import { gateOrder, zeroOrderDeferral } from '../core/validate';
 import { buildOrderPlan } from '../core/orderTransform';
 import type { OrderPlan, ShopifyOrder } from '../core/types';
 import type { ShopifySyncStore } from '../store';
@@ -53,7 +53,7 @@ export interface PollResult {
 }
 
 /** States whose NS chain is complete for the executed watermark. */
-const DONE_STATES = new Set(['paid', 'fulfilled', 'refunded']);
+const DONE_STATES = new Set(['paid', 'fulfilled', 'refunded', 'cancelled']);
 
 /**
  * True when this exact order version needs no work: already executed to NS
@@ -172,6 +172,18 @@ export async function pollOrders(deps: PollDeps): Promise<PollResult> {
       }
 
       const plan = buildOrderPlan(order);
+
+      // $0 orders (replacements) are booked when they ship. One already in
+      // NetSuite still runs, so a cancellation closes its lines (#7559).
+      const deferral = writeMode ? zeroOrderDeferral(order) : null;
+      if (deferral && !(await store.getOrderRow(orderId))?.ns_so_id) {
+        await store.seenOrder(order, plan);
+        await store.markSkipped(orderId, deferral.reason, deferral.message);
+        await store.event('orders', 'zero_deferred', orderId, { reason: deferral.reason });
+        skipped += 1;
+        continue;
+      }
+
       await store.seenOrder(order, plan);
       await store.event('orders', 'planned', orderId, {
         totalCents: plan.totals.totalCents,

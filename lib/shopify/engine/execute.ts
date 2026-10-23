@@ -17,7 +17,7 @@ import { closeUnshippableLines, ensureOrderEdits } from './edits';
 import type { EngineConfig } from './config';
 
 export interface ExecutionOutcome {
-  state: 'paid' | 'fulfilled' | 'refunded';
+  state: 'paid' | 'fulfilled' | 'refunded' | 'cancelled';
   nsIds: {
     ns_customer_id: string;
     ns_so_id: string;
@@ -63,7 +63,14 @@ export async function executeOrder(
 
   // A removal (no money back) is not a refund for the state label.
   const moneyRefunded = refundPlans.some((r) => r.kind === 'refund');
-  const state = moneyRefunded && c.nsCreditMemoIds.length > 0 ? 'refunded' : b.nsFulfillmentIds.length > 0 ? 'fulfilled' : 'paid';
+  const state =
+    moneyRefunded && c.nsCreditMemoIds.length > 0
+      ? 'refunded'
+      : b.nsFulfillmentIds.length > 0
+        ? 'fulfilled'
+        : order.cancelledAt
+          ? 'cancelled'
+          : 'paid';
 
   return {
     state,

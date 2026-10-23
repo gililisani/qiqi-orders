@@ -10,6 +10,7 @@ import { Button } from '../../components/qq/button';
 import { ReportsCard } from './reports-card';
 import { StatementsTab } from './statements-tab';
 import { PayoutsTab } from './payouts-tab';
+import { ReplacementsTab } from './replacements-tab';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/qq/tabs';
 import {
   Table,
@@ -110,6 +111,7 @@ const STATE_STYLES: Record<string, string> = {
   paid: 'bg-[#DBEAFE] text-[#1D4ED8] border-[#BFDBFE]',
   fulfilled: 'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]',
   refunded: 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]',
+  cancelled: 'bg-secondary text-muted-foreground border-border',
   closed: 'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]',
   skipped: 'bg-secondary text-muted-foreground border-border',
   pending: 'bg-secondary text-muted-foreground border-border',
@@ -544,6 +546,7 @@ export default function ShopifySyncDashboard() {
             <TabsList>
               <TabsTrigger value="orders">Orders</TabsTrigger>
               <TabsTrigger value="payouts">Payouts</TabsTrigger>
+              <TabsTrigger value="replacements">Replacements</TabsTrigger>
               <TabsTrigger value="reports">Finance reports</TabsTrigger>
               <TabsTrigger value="statements">Statements (OFX)</TabsTrigger>
             </TabsList>
@@ -623,6 +626,10 @@ export default function ShopifySyncDashboard() {
               {/* Full-2026 payout activity: Shopify / PayPal / Affirm, each
                   paged at 10 rows (payouts-tab.tsx). */}
               <PayoutsTab />
+            </TabsContent>
+
+            <TabsContent value="replacements">
+              <ReplacementsTab />
             </TabsContent>
 
             <TabsContent value="reports">

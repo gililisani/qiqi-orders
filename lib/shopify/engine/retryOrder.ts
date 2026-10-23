@@ -6,7 +6,7 @@
  */
 import { shopifyGraphQL } from '../client';
 import { ORDER_SELECTION } from '../orderQuery';
-import { gateOrder } from '../core/validate';
+import { gateOrder, zeroOrderDeferral } from '../core/validate';
 import { buildOrderPlan } from '../core/orderTransform';
 import type { ShopifyOrder } from '../core/types';
 import { executeOrder } from './execute';
@@ -74,6 +74,13 @@ export async function retryOrder(order: ShopifyOrder, store: ShopifySyncStore): 
   }
 
   const plan = buildOrderPlan(order);
+  // $0 orders are booked when they ship (unless already in NetSuite).
+  const deferral = zeroOrderDeferral(order);
+  if (deferral && !(await store.getOrderRow(shopifyOrderId))?.ns_so_id) {
+    await store.seenOrder(order, plan);
+    await store.markSkipped(shopifyOrderId, deferral.reason, deferral.message);
+    return { result: 'skipped', reason: deferral.reason, message: deferral.message, orderName: order.name };
+  }
   await store.seenOrder(order, plan);
   try {
     const outcome = await executeOrder(order, plan, ns, engineConfigForTarget(nsTarget), {

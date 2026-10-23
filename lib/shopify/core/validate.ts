@@ -171,3 +171,22 @@ export function gateOrder(order: ShopifyOrder, knownSkus: ReadonlySet<string>): 
   // the IF is the point. (Shopify TEST orders are still skipped above.)
   return { outcome: 'proceed' };
 }
+
+/**
+ * $0 orders (replacements) are booked in NetSuite when they ship, not when
+ * they're created (owner 2026-10-23): a replacement cancelled before it
+ * ships (#7559) then never reaches NetSuite. Null = book now. The caller
+ * still books an order already in NetSuite, so its cancellation closes lines.
+ */
+export function zeroOrderDeferral(order: ShopifyOrder): { reason: 'ZERO_NOT_SHIPPED' | 'ZERO_CANCELLED'; message: string } | null {
+  const charged = toCents((order.totalPriceSet ?? order.currentTotalPriceSet).shopMoney.amount);
+  const paid = order.transactions
+    .filter((t) => (t.kind === 'SALE' || t.kind === 'CAPTURE') && t.status === 'SUCCESS')
+    .reduce((s, t) => s + toCents(t.amountSet.shopMoney.amount), 0);
+  if (charged !== 0 || paid !== 0) return null;
+  if (order.fulfillments.some((f) => f.status === 'SUCCESS')) return null;
+  return order.cancelledAt
+    ? { reason: 'ZERO_CANCELLED', message: `${order.name} is a $0 order cancelled before it shipped — nothing to book in NetSuite` }
+    : { reason: 'ZERO_NOT_SHIPPED', message: `${order.name} is a $0 order (e.g. a replacement) — booked in NetSuite when it ships` };
+}
+

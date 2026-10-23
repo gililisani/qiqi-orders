@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { pollOrders } from '@/lib/shopify/engine/poll';
 import type { ShopifySyncStore } from '@/lib/shopify/store';
 import type { ShopifyOrder } from '@/lib/shopify/core/types';
-import { fixtureSkus, loadOrder } from '../helpers/shopifyFixtures';
+import { fixtureSkus, loadOrder, zeroOrder } from '../helpers/shopifyFixtures';
 
 /** In-memory stand-in for ShopifySyncStore, recording everything. */
 function fakeStore(mode: string, cursor: string | null = null, seedRows: Record<string, any> = {}) {
@@ -36,6 +36,9 @@ function fakeStore(mode: string, cursor: string | null = null, seedRows: Record<
       states.set(id, 'error');
       rows.set(id, { ...(rows.get(id) ?? {}), state: 'error' });
       calls.state.push({ id, state: 'error', issues });
+    },
+    async getOrderRow(id: string) {
+      return rows.get(id) ?? null;
     },
     async getOrderState(id: string) {
       const r = rows.get(id);
@@ -359,6 +362,72 @@ describe('pollOrders', () => {
     });
     expect(r.unchanged).toBe(0);
     expect(calls.events.filter((e) => e.event === 'planned')).toHaveLength(1);
+  });
+
+  it('a $0 replacement not shipped yet is deferred, not booked', async () => {
+    const { store, calls, states } = fakeStore('live');
+    const order = zeroOrder() as any;
+    order.updatedAt = '2026-10-23T10:00:00Z';
+    const orderId = order.id.replace(/^.*\//, '');
+    let executed = 0;
+    const r = await pollOrders({
+      store,
+      fetchOrdersUpdatedSince: async () => [order],
+      loadKnownSkus: async () => SKUS,
+      nsTarget: 'production',
+      execute: async () => {
+        executed += 1;
+        return PAID_OUTCOME;
+      },
+    });
+    expect(executed).toBe(0);
+    expect(r.skipped).toBe(1);
+    expect(states.get(orderId)).toBe('skipped');
+    expect(calls.state[0]).toMatchObject({ reason: 'ZERO_NOT_SHIPPED' });
+    // The plan is stored so the Replacements tab lists it while it waits.
+    expect(calls.seen[0]).toMatchObject({ hasPlan: true });
+  });
+
+  it('a cancelled $0 order already in NetSuite still runs, so its lines close (#7559)', async () => {
+    const order = zeroOrder() as any;
+    order.updatedAt = '2026-10-23T10:00:00Z';
+    order.cancelledAt = '2026-10-22T10:00:00Z';
+    const orderId = order.id.replace(/^.*\//, '');
+    const { store } = fakeStore('live', null, { [orderId]: { state: 'paid', ns_so_id: '2' } });
+    let executed = 0;
+    await pollOrders({
+      store,
+      fetchOrdersUpdatedSince: async () => [order],
+      loadKnownSkus: async () => SKUS,
+      nsTarget: 'production',
+      execute: async () => {
+        executed += 1;
+        return { ...PAID_OUTCOME, state: 'cancelled' as const };
+      },
+    });
+    expect(executed).toBe(1);
+  });
+
+  it('a skipped $0 order is re-checked when it ships', async () => {
+    const order = zeroOrder() as any;
+    order.updatedAt = '2026-10-24T10:00:00Z';
+    order.fulfillments = loadOrder('b2c-latest').fulfillments;
+    const orderId = order.id.replace(/^.*\//, '');
+    const { store } = fakeStore('live', null, {
+      [orderId]: { state: 'skipped', shopify_updated_at: '2026-10-23T10:00:00+00:00' },
+    });
+    let executed = 0;
+    await pollOrders({
+      store,
+      fetchOrdersUpdatedSince: async () => [order],
+      loadKnownSkus: async () => SKUS,
+      nsTarget: 'production',
+      execute: async () => {
+        executed += 1;
+        return { ...PAID_OUTCOME, state: 'fulfilled' as const };
+      },
+    });
+    expect(executed).toBe(1);
   });
 
   it('one order throwing does not stop the others', async () => {

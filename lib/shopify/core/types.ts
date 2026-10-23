@@ -202,7 +202,11 @@ export type SkipReason =
    * re-book it through our pipeline. Handle any late IF/CM manually in NS.
    * Production target only; sandbox QA deliberately re-books these.
    */
-  | 'NETSCORE_ERA';
+  | 'NETSCORE_ERA'
+  /** $0 order (typically a replacement) not shipped yet — booked in NS when it ships. */
+  | 'ZERO_NOT_SHIPPED'
+  /** $0 order cancelled before it shipped — nothing to book. */
+  | 'ZERO_CANCELLED';
 
 export type GateResult =
   | { outcome: 'proceed' }
@@ -288,6 +292,11 @@ export interface OrderPlan {
     totalCents: number; // what the customer was charged
   };
   discountCodes: string[];
+  /**
+   * Replacement order (tag "Replacement", or a note "Replacement for #7369 –
+   * damaged"): which order it replaces and why. Null for normal orders.
+   */
+  replacement: { forOrder: string | null; reason: string | null } | null;
 }
 
 // ---------------------------------------------------------------------------

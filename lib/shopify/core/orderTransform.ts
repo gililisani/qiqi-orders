@@ -26,6 +26,19 @@ function gidNum(gid: string): string {
   return m ? m[1] : gid;
 }
 
+/**
+ * Replacement orders (owner 2026-10-23): staff tag them "Replacement" and
+ * note "Replacement for #7369 – damaged". Either marks the order; the note
+ * names the order it replaces and the reason (free text after the dash).
+ */
+export function replacementInfo(order: Pick<ShopifyOrder, 'tags' | 'note'>): OrderPlan['replacement'] {
+  const tagged = (order.tags ?? []).some((t) => String(t).trim().toLowerCase() === 'replacement');
+  const m = /replacement\s+for\s+#?\s*(\d+)\s*(?:[–—:-]+\s*(.*))?/i.exec(order.note ?? '');
+  if (!tagged && !m) return null;
+  const reason = m?.[2]?.trim().replace(/\s+/g, ' ').slice(0, 80) || null;
+  return { forOrder: m ? `#${m[1]}` : null, reason };
+}
+
 export function buildOrderPlan(order: ShopifyOrder): OrderPlan {
   const buyer = extractBuyer(order);
 
@@ -154,10 +167,15 @@ export function buildOrderPlan(order: ShopifyOrder): OrderPlan {
       totalCents: toCents(order.currentTotalPriceSet.shopMoney.amount),
     },
     discountCodes,
+    replacement: replacementInfo(order),
   };
 }
 
 /** The NS sales order memo (the invoice inherits it when transformed from the SO). */
-export function salesOrderMemo(plan: Pick<OrderPlan, 'orderName' | 'discountCodes' | 'presentment'>): string {
-  return `Shopify ${plan.orderName}${plan.discountCodes.length ? ` · discount: ${plan.discountCodes.join(', ')}` : ''}${plan.presentment ? ` · presented in ${plan.presentment.currency} ${plan.presentment.amount}` : ''}`;
+export function salesOrderMemo(plan: Pick<OrderPlan, 'orderName' | 'discountCodes' | 'presentment' | 'replacement'>): string {
+  const r = plan.replacement;
+  const replacement = r
+    ? ` · replacement${r.forOrder ? ` for ${r.forOrder}` : ''}${r.reason ? ` (${r.reason})` : ''}`
+    : '';
+  return `Shopify ${plan.orderName}${replacement}${plan.discountCodes.length ? ` · discount: ${plan.discountCodes.join(', ')}` : ''}${plan.presentment ? ` · presented in ${plan.presentment.currency} ${plan.presentment.amount}` : ''}`;
 }

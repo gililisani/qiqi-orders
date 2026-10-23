@@ -26,3 +26,38 @@ export function fixtureSkus(): Set<string> {
   }
   return skus;
 }
+
+/**
+ * A $0 replacement built from a real fixture: every line 100% discounted,
+ * no tax, free shipping, no payment, not shipped (#7507/#7559 shape).
+ */
+export function zeroOrder(name = 'b2c-latest'): ShopifyOrder {
+  const o = loadOrder(name) as any;
+  const zero = () => ({ shopMoney: { amount: '0.00', currencyCode: 'USD' } });
+  o.discountApplications = { nodes: [{ index: 0, title: 'Replacement', code: null }] };
+  for (const li of o.lineItems.nodes) {
+    li.discountAllocations = [{ allocatedAmountSet: li.originalTotalSet, discountApplication: { index: 0 } }];
+    li.taxLines = [];
+  }
+  for (const s of o.shippingLines.nodes) {
+    s.discountedPriceSet = zero();
+    s.taxLines = [];
+    s.discountAllocations = [];
+  }
+  o.taxLines = [];
+  o.currentSubtotalPriceSet = zero();
+  o.currentTotalTaxSet = zero();
+  o.currentShippingPriceSet = zero();
+  o.currentTotalPriceSet = zero();
+  o.totalPriceSet = zero();
+  o.totalRefundedSet = zero();
+  delete o.currentTotalDutiesSet;
+  o.transactions = [];
+  o.fulfillments = [];
+  o.refunds = [];
+  o.displayFinancialStatus = 'PAID';
+  o.cancelledAt = null;
+  o.tags = ['Replacement'];
+  o.note = 'Replacement for #7369 – damaged in transit';
+  return o;
+}
