@@ -204,21 +204,31 @@ export default function ShopifySyncDashboard() {
   const [searchInput, setSearchInput] = useState('');
   const [query, setQuery] = useState('');
   const queryRef = useRef('');
+  const [searching, setSearching] = useState(false);
+  // The unfiltered list as last loaded, so clearing the search is instant.
+  const baseRef = useRef<{ orders: OrderRow[]; ordersTotal: number; page: number } | null>(null);
+  // Only the newest request may update the page (a slow earlier search
+  // must not overwrite the results of the next keystroke).
+  const seqRef = useRef(0);
 
   const PAGE_SIZE = 20;
   const load = useCallback(async (toPage?: number) => {
+    const seq = ++seqRef.current;
+    const searchFor = queryRef.current;
     try {
       const target = toPage ?? pageRef.current;
-      const q = queryRef.current ? `&ordersSearch=${encodeURIComponent(queryRef.current)}` : '';
+      const q = searchFor ? `&ordersSearch=${encodeURIComponent(searchFor)}` : '';
       const res = await fetchWithAuth(`/api/shopify/sync/overview?ordersOffset=${target * PAGE_SIZE}&ordersLimit=${PAGE_SIZE}${q}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      if (seq !== seqRef.current) return;
       pageRef.current = target;
       setPage(target);
       setData(json);
+      if (!searchFor) baseRef.current = { orders: json.orders, ordersTotal: json.ordersTotal, page: target };
       setLoadError(null);
     } catch (err: any) {
-      setLoadError(String(err?.message ?? err));
+      if (seq === seqRef.current) setLoadError(String(err?.message ?? err));
     }
   }, []);
 
@@ -240,12 +250,31 @@ export default function ShopifySyncDashboard() {
   useEffect(() => {
     const next = searchInput.trim();
     if (next === queryRef.current) return;
+    if (!next) {
+      // Cleared: show the list we already have at once, refresh it quietly.
+      queryRef.current = '';
+      setQuery('');
+      setSearching(false);
+      const base = baseRef.current;
+      if (base) {
+        pageRef.current = base.page;
+        setPage(base.page);
+        setData((d) => (d ? { ...d, orders: base.orders, ordersTotal: base.ordersTotal } : d));
+      }
+      load();
+      return;
+    }
     const t = setTimeout(async () => {
       queryRef.current = next;
       setQuery(next);
-      if (next) setTab('orders');
-      await goToPage(0);
-    }, 300);
+      setTab('orders');
+      setSearching(true);
+      try {
+        await load(0);
+      } finally {
+        if (queryRef.current === next) setSearching(false);
+      }
+    }, 250);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
@@ -603,11 +632,15 @@ export default function ShopifySyncDashboard() {
               <div className="flex items-center justify-between">
                 <CardTitle>{query ? `Orders matching “${query}”` : 'Orders'}</CardTitle>
                 <span className="text-xs text-muted-foreground">
-                  {data.ordersTotal === 0 ? '0 orders' : `${page * 20 + 1}–${page * 20 + data.orders.length} of ${data.ordersTotal}`}
+                  {searching
+                    ? 'Searching…'
+                    : data.ordersTotal === 0
+                      ? '0 orders'
+                      : `${page * 20 + 1}–${page * 20 + data.orders.length} of ${data.ordersTotal}`}
                 </span>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className={cn('transition-opacity', searching && 'opacity-50')}>
               <Table>
                 <TableHeader>
                   <TableRow>
