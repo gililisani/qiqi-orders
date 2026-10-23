@@ -99,9 +99,12 @@ export interface EngineConfig {
 }
 
 /**
- * SANDBOX config — the build/QA target (Apr-2025 prod copy). Exported as
- * ENGINE_CONFIG for the sandbox-only scripts; target-aware entry points
- * must use engineConfigForTarget() instead.
+ * TEST FIXTURE — record ids of the ORIGINAL build sandbox (an Apr-2025 prod
+ * copy). That sandbox was refreshed from production on 2026-09-09, so these
+ * ids are stale there (1433 is now "Packaging Materials", 1534/1432 are
+ * gone). Unit tests and the historical scripts in scripts/shopify keep using
+ * it as sample data; never point it at a live account — live targets go
+ * through engineConfigForTarget().
  */
 export const ENGINE_CONFIG: EngineConfig = {
   // Verified from prod data: Pure Art Salon (Shopify-era customer) carries
@@ -232,7 +235,9 @@ export const PRODUCTION_ENGINE_CONFIG: EngineConfig = {
  * alerts) instead of sending placeholder refs to the prod ledger.
  */
 export function engineConfigForTarget(target: 'sandbox' | 'production'): EngineConfig {
-  if (target === 'sandbox') return ENGINE_CONFIG;
+  // The sandbox was refreshed from production on 2026-09-09: same record ids
+  // (verified 2026-10-23: items 1565/1464/1564/1056, locations 31/46,
+  // accounts 1019/938/1573/1859/2445, vendor 69810, fulfill RESTlet 2032).
   const c = PRODUCTION_ENGINE_CONFIG;
   const pending: string[] = [];
   const scan = (obj: Record<string, unknown>, prefix: string) => {

@@ -307,7 +307,10 @@ describe('engine config sanity', () => {
   });
   it('production target throws while PROD-PENDING ids remain (live mode cannot start on placeholders)', async () => {
     const { engineConfigForTarget, PRODUCTION_ENGINE_CONFIG } = await import('@/lib/shopify/engine/config');
-    expect(engineConfigForTarget('sandbox')).toBe(ENGINE_CONFIG);
+    // The sandbox was refreshed from production (2026-09-09): same ids as prod,
+    // never the stale build-sandbox fixture (its 1433 is "Packaging Materials" now).
+    expect(engineConfigForTarget('sandbox')).toBe(PRODUCTION_ENGINE_CONFIG);
+    expect(engineConfigForTarget('sandbox')).not.toBe(ENGINE_CONFIG);
     if (JSON.stringify(PRODUCTION_ENGINE_CONFIG).includes('PROD-PENDING')) {
       expect(() => engineConfigForTarget('production')).toThrow(/setup-production/);
     } else {
