@@ -110,6 +110,8 @@ export async function ensureOrderEdits(
         tranDate: storeDate(editDate ?? new Date().toISOString()),
         terms: { id: config.termsId },
         memo: `Shopify ${plan.orderName} · order edit`,
+        // Shipping was billed on the original invoice — never again here.
+        shippingCost: 0,
         ...(taxLines.length ? { item: { items: taxLines } } : {}),
         // Always explicit: the transform would otherwise copy the SO's
         // header discount (as a percentage) onto the added lines.

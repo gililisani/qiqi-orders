@@ -167,7 +167,6 @@ function fakeNs(soLines: SoLineState[], opts: { invoiceTotal?: string; openInvoi
       }
       if (q.includes('SELECT foreigntotal')) return [{ foreigntotal: opts.invoiceTotal ?? '56' }] as any;
       if (q.includes("type = 'CustInvc'")) return (opts.openInvoices ?? []) as any;
-      if (q.includes('SELECT foreignamountunpaid FROM transaction WHERE id')) return [{ foreignamountunpaid: '-56' }] as any;
       return [];
     },
     async resolveItemIdsBySku(skus) {
@@ -214,7 +213,7 @@ describe('order edit engine steps (#7641 shape)', () => {
     expect(add.payload.item.items[0]).not.toHaveProperty('line');
     const inv = calls.find((c) => c.op === 'transform')!;
     expect(inv.type).toBe('salesOrder→invoice');
-    expect(inv.payload).toMatchObject({ externalId: `SHOPINVE-${p.shopifyOrderId}-3`, discountRate: -8, tranDate: '2026-10-22' });
+    expect(inv.payload).toMatchObject({ externalId: `SHOPINVE-${p.shopifyOrderId}-3`, discountRate: -8, shippingCost: 0, tranDate: '2026-10-22' });
     expect(soLines).toHaveLength(3);
   });
 
@@ -248,6 +247,11 @@ describe('order edit engine steps (#7641 shape)', () => {
       apply: { items: [{ doc: 502, apply: true, amount: 56 }] },
     });
     expect(calls.some((c) => c.op === 'transform')).toBe(false); // no customer refund
+
+    // Re-run once applied: nothing owed any more → no second application, no error.
+    const again = fakeNs([], { openInvoices: [{ id: '502', foreignamountunpaid: '0' }] });
+    await ensureRefunds(buildRefundPlans(order).plans, p, 'cust', again.ns, ENGINE_CONFIG, { orderHasNsFulfillment: true });
+    expect(again.calls.filter((c) => c.type === 'creditMemo' && c.op === 'update')).toEqual([]);
   });
 
   it('after the shipment, the removed line closes and nothing else', async () => {

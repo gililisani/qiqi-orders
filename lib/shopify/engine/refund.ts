@@ -139,7 +139,7 @@ export async function ensureRefunds(
     // A removal moves no money: its credit pays down the order's open
     // invoice instead (the edit invoice for a swap, or the original invoice
     // when the order was booked after the edit).
-    if (refund.kind === 'removal') await applyCreditToOpenInvoices(ns, cmId, refund.shopifyOrderId, refund.orderName);
+    if (refund.kind === 'removal') await applyCreditToOpenInvoices(ns, cmId, refund.shopifyOrderId);
 
     // Money back through the same clearing account, one per gateway txn.
     for (const txn of refund.transactions) {
@@ -169,11 +169,14 @@ export async function ensureRefunds(
 }
 
 /** Apply a credit memo's unapplied amount to the order's invoices with an open balance. */
-async function applyCreditToOpenInvoices(ns: NsApi, cmId: string, shopifyOrderId: string, orderName: string): Promise<void> {
-  const [cm] = await ns.suiteQL<{ foreignamountunpaid: string | null }>(
-    `SELECT foreignamountunpaid FROM transaction WHERE id = ${Number(cmId)}`,
+async function applyCreditToOpenInvoices(ns: NsApi, cmId: string, shopifyOrderId: string): Promise<void> {
+  // SuiteQL has no "unapplied" amount for credit memos (foreignamountunpaid
+  // is empty — #7641), so take the credit's total; what the order's invoices
+  // still owe bounds it, and once applied nothing is owed (re-runs no-op).
+  const [cm] = await ns.suiteQL<{ foreigntotal: string | null }>(
+    `SELECT foreigntotal FROM transaction WHERE id = ${Number(cmId)}`,
   );
-  let credit = Math.round(Math.abs(Number(cm?.foreignamountunpaid ?? 0)) * 100);
+  let credit = Math.round(Math.abs(Number(cm?.foreigntotal ?? 0)) * 100);
   if (credit <= 0) return;
   const id = shopifyOrderId.replace(/[^0-9]/g, '');
   const open = await ns.suiteQL<{ id: string; foreignamountunpaid: string | null }>(
@@ -188,11 +191,8 @@ async function applyCreditToOpenInvoices(ns: NsApi, cmId: string, shopifyOrderId
     apply.push({ doc: Number(inv.id), apply: true, amount: Number(centsToDecimal(amt)) });
     credit -= amt;
   }
-  if (!apply.length) {
-    throw new PipelineError({
-      code: 'ORDER_EDIT_NEEDS_REVIEW',
-      message: `${orderName}: items were removed with no money refunded, but no invoice of this order has an open balance to take the credit — check it in NetSuite`,
-    });
-  }
+  // Nothing owed: already applied on an earlier run (the edit check made
+  // sure an open invoice existed before this credit was created).
+  if (!apply.length) return;
   await ns.updateRecord('creditMemo', cmId, { apply: { items: apply } });
 }
