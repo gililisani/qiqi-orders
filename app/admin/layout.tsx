@@ -29,6 +29,7 @@ import {
   Newspaper,
   ShieldCheck,
   ListOrdered,
+  FileInput,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabaseClient';
@@ -145,6 +146,12 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: 'Finance',
+    items: [
+      { label: 'Accounts Payable', href: '/admin/ap', icon: <FileInput />, permission: 'ap:view' },
+    ],
+  },
+  {
     label: 'Configuration',
     items: [
       { label: 'Settings',             href: '/admin/settings',      icon: <Settings />, permission: 'config:view' },
@@ -188,6 +195,7 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: string }> = [
   { prefix: '/admin/inventory', permission: 'orders:view' },
   { prefix: '/admin/amazon', permission: 'amazon:view' },
   { prefix: '/admin/shopify', permission: 'shopify:view' },
+  { prefix: '/admin/ap', permission: 'ap:view' },
 ];
 
 function isAdminPathAllowed(pathname: string, permissions: string[]): boolean {

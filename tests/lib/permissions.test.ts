@@ -9,10 +9,10 @@ import {
 } from '@/lib/permissions';
 
 describe('admin permission catalog (2026-09 category model)', () => {
-  it('has the 10 owner-specified categories', () => {
+  it('has the owner-specified categories (+ Accounts Payable, 2026-10)', () => {
     expect(ADMIN_PERMISSION_GROUPS.map((g) => g.category)).toEqual([
       'Dashboard', 'Orders', 'Catalog', 'Assets', 'Insights',
-      'Amazon', 'Shopify', 'Configurations', 'Distributors', 'Users',
+      'Amazon', 'Shopify', 'Accounts Payable', 'Configurations', 'Distributors', 'Users',
     ]);
   });
 
@@ -48,6 +48,7 @@ describe('admin permission catalog (2026-09 category model)', () => {
     expect(firstAllowedAdminArea(['orders:view'])).toBe('/admin/orders');
     expect(firstAllowedAdminArea(['insights'])).toBe('/admin/reports');
     expect(firstAllowedAdminArea(['shopify:view'])).toBe('/admin/shopify');
+    expect(firstAllowedAdminArea(['ap:view'])).toBe('/admin/ap');
     expect(firstAllowedAdminArea([])).toBeNull();
   });
 });

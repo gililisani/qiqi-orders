@@ -38,6 +38,7 @@ export const ADMIN_PERMISSION_GROUPS: readonly AdminPermissionGroup[] = [
   { category: 'Insights', single: 'insights', description: 'Reports and dashboards (read-only area)' },
   { category: 'Amazon', view: 'amazon:view', edit: 'amazon:edit', description: 'FBA financials and Amazon insights' },
   { category: 'Shopify', view: 'shopify:view', edit: 'shopify:edit', description: 'Shopify sync dashboard and actions' },
+  { category: 'Accounts Payable', view: 'ap:view', edit: 'ap:edit', description: 'Vendor invoices — inbox, upload, vendor profiles, settings (approving is limited to the approvers chosen in AP settings)' },
   { category: 'Configurations', view: 'config:view', edit: 'config:edit', description: 'NetSuite data/integration, SLI settings, lookup tables' },
   { category: 'Distributors', view: 'distributors:view', edit: 'distributors:edit', description: 'Partner companies — onboarding, contracts, historical sales' },
   { category: 'Users', view: 'users:view', edit: 'users:edit', description: 'Client users AND admin accounts' },
@@ -132,6 +133,7 @@ export function firstAllowedAdminArea(
   if (has('insights')) return '/admin/reports';
   if (has('amazon:view')) return '/admin/amazon';
   if (has('shopify:view')) return '/admin/shopify';
+  if (has('ap:view')) return '/admin/ap';
   if (has('config:view')) return '/admin/netsuite-data';
   if (has('users:view')) return '/admin/users';
   return null;
