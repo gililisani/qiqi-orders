@@ -28,6 +28,7 @@ interface ApDocument {
   currency: string | null;
   error: string | null;
   created_at: string;
+  attachments: Array<{ id: string; file_name: string | null; document_type: string | null }> | null;
 }
 
 const GROUPS = [
@@ -243,6 +244,9 @@ export function InboxTab() {
                         <div className="truncate font-medium">{d.file_name ?? d.email_subject ?? '—'}</div>
                         <div className="truncate text-xs text-muted-foreground">
                           {d.source === 'email' ? `Email from ${d.email_from ?? 'unknown'}` : 'Uploaded'}
+                          {d.attachments?.length
+                            ? ` · + ${d.attachments.map((a) => (a.document_type === 'receipt' ? 'receipt' : 'copy')).join(', ')}`
+                            : ''}
                         </div>
                       </TableCell>
                       <TableCell>{d.vendor_name ?? <span className="text-muted-foreground">—</span>}</TableCell>

@@ -20,6 +20,7 @@ export const STATUS: Record<string, { label: string; variant: 'success' | 'warni
   rejected: { label: 'Rejected', variant: 'muted' },
   not_invoice: { label: 'Not an invoice', variant: 'muted' },
   unpaid: { label: 'Unpaid — handle manually', variant: 'warning' },
-  duplicate: { label: 'Duplicate', variant: 'muted' },
+  duplicate: { label: 'Already in NetSuite', variant: 'muted' },
+  attached: { label: 'Attached to its invoice', variant: 'muted' },
   error: { label: 'Error', variant: 'destructive' },
 };

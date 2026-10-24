@@ -14,7 +14,7 @@ const PAGE = 25;
 const GROUPS: Record<string, string[]> = {
   open: ['received', 'reading', 'needs_review', 'unpaid', 'error', 'posting'],
   posted: ['posted'],
-  closed: ['rejected', 'not_invoice', 'duplicate'],
+  closed: ['rejected', 'not_invoice', 'duplicate', 'attached'],
 };
 
 /**
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     let q = db
       .from('ap_documents')
-      .select('id, source, email_from, email_subject, email_received_at, file_name, status, ns_vendor_id, invoice_number, invoice_date, total, currency, ns_target, ns_bill_id, ns_payment_id, error, created_at')
+      .select('id, source, email_from, email_subject, email_received_at, file_name, status, ns_vendor_id, invoice_number, invoice_date, total, currency, ns_target, ns_bill_id, ns_payment_id, error, created_at, primary_document_id, attachments:proposal->attachments')
       .order('created_at', { ascending: false })
       .order('id', { ascending: false })
       .limit(PAGE + 1);

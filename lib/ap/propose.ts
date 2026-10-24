@@ -19,6 +19,7 @@ export interface ProposalProfile {
   payment_account_id: string | null;
   payment_account_name: string | null;
   memo_label: string | null;
+  memo_style?: 'month' | 'range';
   bill_count: number;
   amount_min: number | null;
   amount_max: number | null;
@@ -85,9 +86,23 @@ export interface NetSuiteFacts {
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const close = (a: number, b: number) => Math.abs(a - b) <= 0.02;
 
-/** "Supabase 09.26": the month the charges cover (service period), else the invoice month. */
-export function billMemo(label: string, extraction: Pick<InvoiceExtraction, 'service_period' | 'invoice_date'>): string {
-  const d = extraction.service_period.from ?? extraction.invoice_date;
+/**
+ * The memo in the vendor's own style (learned): "<Vendor> MM.YY" for the
+ * month the charges cover (service period, else the invoice month), or
+ * "<Vendor> DD.MM-DD.MM.YY" for vendors booked with the exact period
+ * ("Anthropic 23.09-23.10.26").
+ */
+export function billMemo(
+  label: string,
+  extraction: Pick<InvoiceExtraction, 'service_period' | 'invoice_date'>,
+  style: 'month' | 'range' = 'month',
+): string {
+  const { from, to } = extraction.service_period;
+  if (style === 'range' && from && to) {
+    const dm = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
+    return `${label} ${dm(from)}-${dm(to)}.${to.slice(2, 4)}`;
+  }
+  const d = from ?? extraction.invoice_date;
   return d ? `${label} ${d.slice(5, 7)}.${d.slice(2, 4)}` : label;
 }
 
@@ -104,7 +119,7 @@ export function buildProposal(
   // tax code; NetSuite adds the VAT. Otherwise tax is part of the expense.
   const vatCoded = !!coding?.taxcode_id;
   const lineAmount = vatCoded ? net : total;
-  const memo = billMemo(profile?.memo_label ?? x.vendor.name ?? 'Invoice', x);
+  const memo = billMemo(profile?.memo_label ?? x.vendor.name ?? 'Invoice', x, profile?.memo_style);
 
   let payment: BillProposal['payment'] = { record: false, account_id: null, account_name: null, date: null, amount: null, source: null };
   if (x.payment.status === 'paid' && total !== null) {

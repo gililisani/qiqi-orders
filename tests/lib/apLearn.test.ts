@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPaymentAccounts, buildVendorProfiles, cardLast4, memoLabel, type BillLineRow } from '@/lib/ap/learn';
+import { buildPaymentAccounts, buildVendorProfiles, cardLast4, memoLabel, memoStyle, type BillLineRow } from '@/lib/ap/learn';
 
 const header = (id: string, entity: string, total: number, memo: string, date = '04/10/2026', extra: Partial<BillLineRow> = {}): BillLineRow => ({
   id, entity, trandate: date, currency_name: 'USD', foreigntotal: -total, memo,
@@ -17,8 +17,19 @@ describe('memoLabel', () => {
     expect(memoLabel('Supabase 09.26')).toBe('Supabase');
     expect(memoLabel('Vercel Inc 09/2026')).toBe('Vercel Inc');
     expect(memoLabel('Klaviyo - Oct 2026')).toBe('Klaviyo');
+    expect(memoLabel('Anthropic 23.09-23.10.26')).toBe('Anthropic');
+    expect(memoLabel('Anthropic 17.05-17.06.26')).toBe('Anthropic');
+    expect(memoLabel('16-31/07/2026')).toBeNull();
     expect(memoLabel('Upwork')).toBe('Upwork');
     expect(memoLabel('')).toBeNull();
+  });
+});
+
+describe('memoStyle', () => {
+  it('learns whether a vendor is booked by month or by exact period', () => {
+    expect(memoStyle(['Anthropic 23.09-23.10.26', 'Anthropic 23.08-23.09.26', 'Anthropic 06.26'])).toBe('range');
+    expect(memoStyle(['Supabase 09.26', 'Supabase 08.26'])).toBe('month');
+    expect(memoStyle([])).toBe('month');
   });
 });
 

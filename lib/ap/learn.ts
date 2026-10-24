@@ -87,6 +87,8 @@ export interface VendorProfile {
   payment_account_id: string | null;
   payment_account_name: string | null;
   memo_label: string | null;
+  /** How its memos write the period: "09.26" (month) or "23.09-23.10.26" (range). */
+  memo_style: 'month' | 'range';
   bill_count: number;
   consistency: number | null;
   amount_median: number | null;
@@ -124,12 +126,26 @@ const median = (xs: number[]): number | null => {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
 
-/** "Supabase 09.26" → "Supabase"; "Vercel Inc 09/2026" → "Vercel Inc". */
+/**
+ * The vendor part of a "<Vendor> <period>" memo: "Supabase 09.26" →
+ * "Supabase"; "Anthropic 23.09-23.10.26" → "Anthropic"; "Klaviyo - Oct 2026"
+ * → "Klaviyo". The period is whatever trails in digits, separators and
+ * month names.
+ */
 export function memoLabel(memo: string | null | undefined): string | null {
   const s = (memo ?? '')
-    .replace(/\s*[-–—]?\s*(\d{1,2}[.\/-]\d{2,4}|\d{4}[.\/-]\d{1,2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*\d{2,4})\s*$/i, '')
+    .replace(/(?:\s*[-–—]\s*|\s+)(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?|[\d.\/\-–\s])+$/i, '')
     .trim();
-  return s || null;
+  return /\p{L}/u.test(s) ? s : null;
+}
+
+const RANGE_MEMO = /\d{1,2}\.\d{1,2}\s*[-–]\s*\d{1,2}\.\d{1,2}\.\d{2,4}\s*$/;
+
+/** 'range' when most of the vendor's recent memos carry a DD.MM-DD.MM.YY period. */
+export function memoStyle(memos: Array<string | null | undefined>): 'month' | 'range' {
+  const recent = memos.filter((m): m is string => !!m).slice(0, RECENT_BILLS);
+  const ranged = recent.filter((m) => RANGE_MEMO.test(m)).length;
+  return recent.length && ranged * 2 > recent.length ? 'range' : 'month';
 }
 
 /** Card last 4 from an account name: "IDB Qiqi INC Visa 5335" → "5335". */
@@ -235,6 +251,7 @@ export function buildVendorProfiles(lines: BillLineRow[], payments: PaymentRow[]
       payment_account_id: payAccount,
       payment_account_name: pays.find((p) => p.account === payAccount)?.account_name ?? null,
       memo_label: label && labelCoverage >= 0.5 ? label : name,
+      memo_style: memoStyle(headers.map((h) => h.memo)),
       bill_count: headers.length,
       consistency: codings.length ? codings[0].share : null,
       amount_median: median(amounts),

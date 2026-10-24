@@ -21,7 +21,8 @@ Rules:
 - payment.status is "paid" only when the document shows the charge was made (a receipt, "Paid", "Amount due 0.00", "charged to your card…"); "unpaid" when it asks for payment or shows an amount due; otherwise "unknown". card_last4 only when the digits are printed.
 - service_period: the period the charges cover, when shown (subscriptions usually show it).
 - is_invoice is false for statements, quotes, order confirmations, shipping notices, newsletters and anything that is not a bill or a receipt.
-- warnings: short notes for the bookkeeper about anything unclear, cut off, unreadable, or not adding up.`;
+- invoice_number: the invoice number. On a receipt, the number of the invoice it pays when printed, otherwise the receipt number.
+- warnings: only what a bookkeeper must act on — unreadable or cut-off parts, totals that don't add up, a date or amount you are unsure of. Don't note normal things (no tax shown, a receipt number next to the invoice number).`;
 
 export function createClaudeReader(client: Anthropic = new Anthropic()): InvoiceReader {
   return {

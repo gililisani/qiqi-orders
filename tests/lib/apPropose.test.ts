@@ -117,6 +117,11 @@ describe('bill proposal', () => {
 
   it('memo month follows the service period, else the invoice date', () => {
     expect(billMemo('Vercel', { service_period: { from: null, to: null }, invoice_date: '2026-09-22' })).toBe('Vercel 09.26');
+    expect(billMemo('Supabase', { service_period: { from: '2026-09-01', to: '2026-09-30' }, invoice_date: '2026-10-04' })).toBe('Supabase 09.26');
+    // A vendor booked with the exact period gets the range style…
+    expect(billMemo('Anthropic', { service_period: { from: '2026-10-23', to: '2026-11-23' }, invoice_date: '2026-10-23' }, 'range')).toBe('Anthropic 23.10-23.11.26');
+    // …one booked by month keeps MM.YY even with a mid-month period.
+    expect(billMemo('Vercel Inc', { service_period: { from: '2026-09-22', to: '2026-10-21' }, invoice_date: '2026-09-22' })).toBe('Vercel Inc 09.26');
   });
 });
 
@@ -163,5 +168,30 @@ describe('normalizeExtraction', () => {
     expect(n.invoice_date).toBeNull();
     expect(n.currency).toBe('USD');
     expect(n.payment).toMatchObject({ method: null, card_last4: null });
+  });
+});
+
+describe('invoice + receipt pairing', () => {
+  it('the invoice is the primary, whatever arrives first', async () => {
+    const { choosePrimary } = await import('@/lib/ap/process');
+    const receipt = { id: 'r', created_at: '2026-10-24T10:00:00Z', extraction: extraction({ document_type: 'receipt' }) };
+    const invoice = { id: 'i', created_at: '2026-10-24T10:00:05Z', extraction: extraction({ document_type: 'invoice' }) };
+    expect(choosePrimary([receipt, invoice]).id).toBe('i');
+    expect(choosePrimary([invoice, receipt]).id).toBe('i');
+    const copy = { ...invoice, id: 'i2', created_at: '2026-10-24T11:00:00Z' };
+    expect(choosePrimary([copy, invoice]).id).toBe('i');
+  });
+
+  it('an unpaid invoice takes the payment from its receipt', async () => {
+    const { mergePayment } = await import('@/lib/ap/process');
+    const unpaid = extraction({ payment: { status: 'unpaid', method: null, card_brand: null, card_last4: null, paid_date: null } });
+    const receipt = extraction({ document_type: 'receipt' });
+    expect(mergePayment(unpaid, [receipt])).toEqual({
+      payment: { status: 'paid', method: 'card', card_brand: 'Visa', card_last4: '5335', paid_date: '2026-11-04' },
+      fromReceipt: true,
+    });
+    expect(mergePayment(unpaid, []).fromReceipt).toBe(false);
+    // A paid invoice that shows its card keeps its own payment.
+    expect(mergePayment(extraction(), [receipt]).fromReceipt).toBe(false);
   });
 });
