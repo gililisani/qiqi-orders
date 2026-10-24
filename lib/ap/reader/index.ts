@@ -5,7 +5,8 @@
  */
 import type { InvoiceExtraction } from './schema';
 
-export type ReaderMime = 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/webp';
+/** text/plain = an email whose body is the receipt (no attachment). */
+export type ReaderMime = 'application/pdf' | 'image/png' | 'image/jpeg' | 'image/webp' | 'text/plain';
 
 export interface ReadInput {
   bytes: Uint8Array;

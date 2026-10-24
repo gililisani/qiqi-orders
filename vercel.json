@@ -86,6 +86,10 @@
     {
       "path": "/api/cron/inventory-check",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/ap-mailbox",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

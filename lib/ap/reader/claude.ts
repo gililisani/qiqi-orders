@@ -30,9 +30,11 @@ export function createClaudeReader(client: Anthropic = new Anthropic()): Invoice
     async read(input: ReadInput): Promise<ReadResult> {
       const data = Buffer.from(input.bytes).toString('base64');
       const file: Anthropic.Beta.BetaContentBlockParam =
-        input.mime === 'application/pdf'
-          ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } }
-          : { type: 'image', source: { type: 'base64', media_type: input.mime, data } };
+        input.mime === 'text/plain'
+          ? { type: 'document', source: { type: 'text', media_type: 'text/plain', data: Buffer.from(input.bytes).toString('utf8') } }
+          : input.mime === 'application/pdf'
+            ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } }
+            : { type: 'image', source: { type: 'base64', media_type: input.mime, data } };
       const context = input.emailContext
         ? `\n\nIt arrived by email — from: ${input.emailContext.from ?? 'unknown'}; subject: ${input.emailContext.subject ?? ''}.`
         : '';

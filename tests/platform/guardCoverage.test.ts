@@ -33,6 +33,7 @@ const ALLOWLIST: Record<string, string> = {
   'cron/fulfillment-poll': 'cron secret auth',
   'cron/sales-ledger': 'cron secret auth',
   'cron/inventory-check': 'cron secret auth',
+  'cron/ap-mailbox': 'cron secret auth',
   'stripe/webhook': 'Stripe signature verification',
   'fulfillment/shiphero/webhook': 'HMAC signature verification (fails closed)',
 };

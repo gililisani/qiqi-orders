@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Search, Upload, X } from 'lucide-react';
+import { Mail, RefreshCw, Search, Upload, X } from 'lucide-react';
 import { fetchWithAuth } from '../../../lib/fetchWithAuth';
 import { supabase } from '../../../lib/supabaseClient';
 import { formatDateTime } from '../../../lib/formatters';
@@ -74,6 +74,42 @@ export function InboxTab() {
   const [dragOver, setDragOver] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const seq = useRef(0);
+  const [mailbox, setMailbox] = useState<{ address: string | null; checkedAt: string | null; error: string | null } | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  const loadMailbox = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth('/api/ap/settings');
+      const json = await res.json();
+      if (res.ok) {
+        setMailbox({ address: json.settings.mailbox, checkedAt: json.settings.mailbox_checked_at, error: json.settings.mailbox_error });
+      }
+    } catch {
+      // The inbox works without it.
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMailbox();
+  }, [loadMailbox]);
+
+  const checkMailbox = async () => {
+    setChecking(true);
+    try {
+      const res = await fetchWithAuth('/api/ap/mailbox/check', { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Checking the mailbox failed.');
+      if (json.skipped) toast.error(json.skipped);
+      else if (json.errors?.length) toast.error(json.errors[0]);
+      else toast.success(json.documents ? `${json.documents} new document${json.documents === 1 ? '' : 's'} from ${json.emails} email${json.emails === 1 ? '' : 's'}.` : 'No new invoices in the mailbox.');
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setChecking(false);
+      loadMailbox();
+      load();
+    }
+  };
 
   const load = useCallback(async (append: string | null = null) => {
     const mine = ++seq.current;
@@ -181,6 +217,23 @@ export function InboxTab() {
           )}
         </CardContent>
       </Card>
+
+      {mailbox?.address && (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Mail className="h-4 w-4" />
+            <span>
+              Reading <span className="font-medium text-foreground">{mailbox.address}</span> every 5 minutes
+              {mailbox.checkedAt ? ` · last checked ${formatDateTime(mailbox.checkedAt)}` : ''}
+            </span>
+            {mailbox.error && <span className="text-brand-magenta">· {mailbox.error}</span>}
+          </div>
+          <Button size="sm" variant="outline" onClick={checkMailbox} disabled={checking}>
+            <RefreshCw className={cn('mr-2 h-4 w-4', checking && 'animate-spin')} />
+            {checking ? 'Checking…' : 'Check mailbox now'}
+          </Button>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1">
