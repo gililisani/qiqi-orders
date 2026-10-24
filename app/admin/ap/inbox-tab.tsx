@@ -104,6 +104,18 @@ export function InboxTab() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  // While invoices are being read, refresh every few seconds (stops on its own).
+  const inFlight = (docs ?? []).some((d) => d.status === 'received' || d.status === 'reading');
+  useEffect(() => {
+    if (!inFlight) return;
+    const t = setInterval(() => load(), 4000);
+    const stop = setTimeout(() => clearInterval(t), 180_000);
+    return () => {
+      clearInterval(t);
+      clearTimeout(stop);
+    };
+  }, [inFlight, load]);
+
   const onFiles = async (files: FileList | File[]) => {
     const list = Array.from(files);
     if (!list.length) return;
