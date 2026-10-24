@@ -1,6 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdminWithPermission } from '../../../../platform/auth/guards';
 import { AP_BUCKET, AP_MAX_BYTES, apEvent, safeFileName, sha256, sniffMime } from '../../../../lib/ap/store';
+import { liveApDeps } from '../../../../lib/ap/deps';
+import { processDocument } from '../../../../lib/ap/process';
+
+// Route-level export: vercel.json maxDuration is not honored for Next routes.
+// Reading runs after the response (after()), inside this budget.
+export const maxDuration = 60;
 
 const PAGE = 25;
 
@@ -113,6 +119,14 @@ export async function POST(request: NextRequest) {
       .single();
     if (error) throw new Error(error.message);
     await apEvent(db, doc.id, 'uploaded', { file_name: doc.file_name, bytes: bytes.byteLength }, user.id);
+    // Read it right away, after answering the browser.
+    after(async () => {
+      try {
+        await processDocument(db, doc.id, await liveApDeps(db));
+      } catch (err) {
+        console.error('[ap/documents] read after upload', err);
+      }
+    });
     return NextResponse.json({ document: doc, duplicate: false });
   } catch (err: any) {
     if (err instanceof Response) return err;
